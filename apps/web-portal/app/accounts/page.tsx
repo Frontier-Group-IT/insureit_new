@@ -14,7 +14,7 @@ export default async function AccountsPage() {
       <div className="mx-auto max-w-[1560px] space-y-2.5 pb-6">
         <section className="flex items-center justify-between rounded-2xl border border-[#dbe3ee] bg-white px-4 py-2.5 shadow-sm">
           <h1 className="text-[17px] font-semibold text-[#17365D]">Accounts</h1>
-          <Link href="/reports/accounts" title="Accounts reports" aria-label="Accounts reports" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8e1ec] bg-white text-[#17365D] hover:bg-[#f8fafc]"><BarChart3 className="h-4 w-4" /></Link>
+          <Link prefetch={false} href="/reports/accounts" title="Accounts reports" aria-label="Accounts reports" className="grid h-8 w-8 place-items-center rounded-lg border border-[#d8e1ec] bg-white text-[#17365D] hover:bg-[#f8fafc]"><BarChart3 className="h-4 w-4" /></Link>
         </section>
 
         <section className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
@@ -34,5 +34,5 @@ export default async function AccountsPage() {
 }
 
 function WorkspaceCard({ href, icon: Icon, title }: { href: string; icon: typeof Landmark; title: string }) {
-  return <Link href={href} className="group rounded-2xl border border-[#dbe3ee] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#9fb7c7] hover:shadow-md"><div className="flex items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e8f5f3] text-[#0f766e]"><Icon className="h-4.5 w-4.5" /></span><h2 className="min-w-0 flex-1 text-[11px] font-semibold text-[#17365D]">{title}</h2><ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#98a2b3] transition group-hover:translate-x-0.5" /></div></Link>;
+  return <Link prefetch={false} href={href} className="group rounded-2xl border border-[#dbe3ee] bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-[#9fb7c7] hover:shadow-md"><div className="flex items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e8f5f3] text-[#0f766e]"><Icon className="h-4.5 w-4.5" /></span><h2 className="min-w-0 flex-1 text-[11px] font-semibold text-[#17365D]">{title}</h2><ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#98a2b3] transition group-hover:translate-x-0.5" /></div></Link>;
 }
