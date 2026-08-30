@@ -18,6 +18,7 @@
     "vehicle-registration:regression": "node --experimental-strip-types scripts/vehicle-registration-regression.mjs",
     "register-prefetch:regression": "node scripts/register-workflow-prefetch-regression.mjs",
     "commercial-reports-prefetch:regression": "node scripts/commercial-reports-prefetch-regression.mjs",
+    "register-performance-observability:regression": "node scripts/register-performance-observability-regression.mjs",
     "dashboard-performance:regression": "node scripts/dashboard-performance-regression.mjs",
     "policy-ocr:iffco-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-regression.ts",
     "policy-ocr:iffco-structured-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-structured-regression.ts",
