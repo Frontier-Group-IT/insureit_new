@@ -1,22 +1,24 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerField } from '@/components/ui/partner-field';
+import { partnerTheme } from '@/lib/theme';
 import { signIn } from '@/lib/partner-session';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { refresh } = usePartnerSession();
+  const passwordRef = useRef<TextInput>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,68 +45,122 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      accessibilityLabel="INSUREIT Partner sign in"
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={styles.brandBlock}>
-        <View style={styles.mark}><Text style={styles.markText}>I</Text></View>
-        <Text style={styles.brand}>INSUREIT</Text>
+        <View accessible={false} style={styles.mark}><Text style={styles.markText}>I</Text></View>
+        <Text accessibilityRole="header" style={styles.brand}>INSUREIT</Text>
         <Text style={styles.partner}>PARTNER</Text>
         <Text style={styles.tagline}>Your insurance business workspace</Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.title}>Welcome back</Text>
+        <Text accessibilityRole="header" style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Sign in with your registered Partner or employee account.</Text>
 
-        <Text style={styles.label}>EMAIL</Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-          placeholder="name@example.com"
-          placeholderTextColor="#94A3B8"
-          style={styles.input}
-        />
+        <View style={styles.field}>
+          <PartnerField
+            label="Email"
+            value={email}
+            onChangeText={(value) => {
+              setEmail(value);
+              if (message) setMessage('');
+            }}
+            editable={!busy}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            textContentType="username"
+            placeholder="name@example.com"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => passwordRef.current?.focus()}
+          />
+        </View>
 
-        <Text style={styles.label}>PASSWORD</Text>
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoComplete="current-password"
-          placeholder="Enter password"
-          placeholderTextColor="#94A3B8"
-          style={styles.input}
-          onSubmitEditing={submit}
-        />
+        <View style={styles.field}>
+          <PartnerField
+            ref={passwordRef}
+            label="Password"
+            value={password}
+            onChangeText={(value) => {
+              setPassword(value);
+              if (message) setMessage('');
+            }}
+            editable={!busy}
+            secureTextEntry
+            autoComplete="current-password"
+            textContentType="password"
+            placeholder="Enter password"
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              if (!busy) void submit();
+            }}
+          />
+        </View>
 
-        {message ? <Text style={styles.error}>{message}</Text> : null}
+        {message ? (
+          <Text accessibilityLiveRegion="assertive" accessibilityRole="alert" style={styles.error}>
+            {message}
+          </Text>
+        ) : null}
 
-        <Pressable disabled={busy} onPress={submit} style={({ pressed }) => [styles.button, pressed && styles.buttonPressed, busy && styles.buttonDisabled]}>
-          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Sign in</Text>}
-        </Pressable>
+        <View style={styles.button}>
+          <PartnerButton
+            label="Sign in"
+            loading={busy}
+            disabled={busy}
+            onPress={() => void submit()}
+          />
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, backgroundColor: '#F4F6FB' },
+  screen: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: partnerTheme.spacing.xl,
+    backgroundColor: partnerTheme.colors.canvas,
+  },
   brandBlock: { alignItems: 'center', marginBottom: 28 },
-  mark: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#1D2A55', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  mark: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: '#1D2A55',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
   markText: { color: '#FFFFFF', fontSize: 24, fontWeight: '800' },
   brand: { color: '#17203A', fontSize: 22, fontWeight: '800', letterSpacing: 1.2 },
   partner: { marginTop: 2, color: '#6254E7', fontSize: 10, fontWeight: '800', letterSpacing: 2.4 },
-  tagline: { marginTop: 8, color: '#64748B', fontSize: 12 },
-  card: { borderRadius: 22, backgroundColor: '#FFFFFF', padding: 22, borderWidth: 1, borderColor: '#E1E6EF' },
-  title: { color: '#17203A', fontSize: 22, fontWeight: '700' },
-  subtitle: { marginTop: 6, marginBottom: 22, color: '#64748B', fontSize: 12, lineHeight: 18 },
-  label: { marginBottom: 7, marginTop: 12, color: '#667085', fontSize: 10, fontWeight: '700', letterSpacing: 0.8 },
-  input: { height: 48, borderRadius: 12, borderWidth: 1, borderColor: '#D8DFEA', paddingHorizontal: 14, color: '#17203A', backgroundColor: '#FBFCFE' },
-  error: { marginTop: 14, color: '#B42318', fontSize: 11, lineHeight: 16 },
-  button: { height: 50, marginTop: 20, borderRadius: 13, backgroundColor: '#5548D9', alignItems: 'center', justifyContent: 'center' },
-  buttonPressed: { opacity: 0.9 },
-  buttonDisabled: { opacity: 0.65 },
-  buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+  tagline: { marginTop: 8, color: '#64748B', ...partnerTheme.typography.caption },
+  card: {
+    borderRadius: partnerTheme.radius.xl,
+    backgroundColor: partnerTheme.colors.surface,
+    padding: 22,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  title: { color: partnerTheme.colors.ink, ...partnerTheme.typography.pageTitle },
+  subtitle: {
+    marginTop: 6,
+    marginBottom: partnerTheme.spacing.md,
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.body,
+  },
+  field: { marginTop: partnerTheme.spacing.md },
+  error: {
+    marginTop: partnerTheme.spacing.md,
+    color: partnerTheme.colors.danger,
+    ...partnerTheme.typography.caption,
+  },
+  button: { marginTop: partnerTheme.spacing.lg },
 });
