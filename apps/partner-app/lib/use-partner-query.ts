@@ -15,6 +15,7 @@ export type PartnerQueryState<T> = {
   error: string;
   updatedAt: number | null;
   refresh: () => Promise<void>;
+  ensureFresh: () => Promise<void>;
 };
 
 export function usePartnerQuery<T>({
@@ -90,6 +91,7 @@ export function usePartnerQuery<T>({
   }, [enabled, key, run, scopeKey]);
 
   const refresh = useCallback(() => run(true), [run]);
+  const ensureFresh = useCallback(() => run(false), [run]);
 
-  return { data, loading, refreshing, stale, offline, error, updatedAt, refresh };
+  return { data, loading, refreshing, stale, offline, error, updatedAt, refresh, ensureFresh };
 }
