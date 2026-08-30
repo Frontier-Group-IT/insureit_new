@@ -35,14 +35,14 @@
     },
     "owner": "antnish",
     "updates": {
-      "url": "https://u.expo.dev/e47d2267-489e-4d16-bef7-72479717464e",
+      "url": "https://u.expo.dev/8ade82c1-4c96-4f09-b90b-802270fb406d",
       "checkAutomatically": "ON_LOAD",
       "fallbackToCacheTimeout": 10000
     },
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e47d2267-489e-4d16-bef7-72479717464e"
+        "projectId": "8ade82c1-4c96-4f09-b90b-802270fb406d"
       }
     }
   }
