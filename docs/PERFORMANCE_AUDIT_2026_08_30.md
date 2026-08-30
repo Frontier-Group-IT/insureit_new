@@ -105,13 +105,9 @@ This reduces unrelated route hydration/bundle work without changing policy workf
 
 ## Region remediation experiment
 
-This performance branch configures:
+A move from Vercel `iad1` to `icn1` remains the highest-impact infrastructure candidate because `icn1` is close to the Seoul Supabase region.
 
-```json
-"regions": ["icn1"]
-```
-
-for an exact-code Vercel region experiment, because `icn1` is close to the Seoul Supabase region.
+The region change is intentionally **not included in this safe performance PR**. It must be isolated in a separate critical-approval change.
 
 **This is not authorization to change production.**
 
@@ -185,7 +181,6 @@ Draft PR:
 `#825 — Audit and remediate web portal performance`
 
 Scope in this PR:
-- `icn1` region experiment configuration
 - expensive workflow prefetch suppression
 - prefetch regression guard
 - duplicate permission/scope lookup removal
@@ -200,6 +195,6 @@ Do not merge or deploy until:
 - canonical web verification is green on the exact final head;
 - branch is synchronized with current `main`;
 - changed-file review confirms no unrelated workflow/security changes;
-- region change has explicit user approval after the findings are presented.
+- any region change remains isolated from this PR and receives explicit user approval.
 
 After production deployment, repeat the authenticated India route benchmark and compare against the August baseline.
