@@ -57,6 +57,8 @@ jobs:
         run: npm run vehicle-registration:regression
       - name: Register workflow prefetch regression
         run: npm run register-prefetch:regression
+      - name: Commercial and reports prefetch regression
+        run: npm run commercial-reports-prefetch:regression
       - name: Dashboard performance regression
         run: npm run dashboard-performance:regression
       - name: IFFCO structured regression
