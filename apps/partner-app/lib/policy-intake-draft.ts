@@ -12,7 +12,7 @@ async function key() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   if (!userId) return null;
-  return `insureit-partner:policy-intake-draft:${userId}`;
+  return `insureit-partner.policy-intake-draft.${userId}`;
 }
 
 export async function loadPartnerPolicyIntakeDraft(): Promise<PartnerPolicyIntakeDraft | null> {
