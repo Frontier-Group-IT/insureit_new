@@ -25,6 +25,7 @@ export default function CustomersScreen() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +50,7 @@ export default function CustomersScreen() {
     return () => {
       cancelled = true;
     };
-  }, [appliedSearch]);
+  }, [appliedSearch, reloadKey]);
 
   return (
     <PartnerScreen
@@ -84,7 +85,7 @@ export default function CustomersScreen() {
               title="Customers could not be loaded"
               message={error}
               actionLabel="Try again"
-              onAction={() => setAppliedSearch((value) => value)}
+              onAction={() => setReloadKey((value) => value + 1)}
             />
           ) : (
             <>
