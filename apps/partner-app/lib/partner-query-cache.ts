@@ -84,10 +84,15 @@ export async function fetchPartnerQuery<T>({
   return request;
 }
 
-export function setPartnerQueryCache<T>(scopeKey: string, key: string, data: T) {
+export function setPartnerQueryCache<T>(
+  scopeKey: string,
+  key: string,
+  data: T,
+  updatedAt = Date.now(),
+) {
   cache.set(scopedKey(scopeKey, key), {
     data,
-    updatedAt: Date.now(),
+    updatedAt,
     scopeKey,
   });
 }
