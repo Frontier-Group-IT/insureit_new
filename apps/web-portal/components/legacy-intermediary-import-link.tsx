@@ -11,11 +11,11 @@ export function LegacyIntermediaryImportLink() {
 
   useEffect(() => {
     if (!LEGACY_IMPORT_ENABLED) return;
+    const match = pathname.match(REVIEW_ROUTE);
+    if (!match) return;
+    const applicationId = match[1];
 
     const addReviewLink = () => {
-      const match = pathname.match(REVIEW_ROUTE);
-      if (!match) return;
-      const applicationId = match[1];
       if (document.querySelector("[data-legacy-intermediary-import-link='true']")) return;
 
       const actions = Array.from(document.querySelectorAll<HTMLAnchorElement | HTMLButtonElement>("a, button"));
