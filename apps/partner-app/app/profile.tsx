@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { ScopeCard } from '@/components/scope-card';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -19,9 +20,7 @@ export default function ProfileScreen() {
       eyebrow="ACCOUNT"
       title="Profile & registration"
       action={
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close profile" onPress={() => router.back()} />
       }
     >
       <View style={styles.hero}>
