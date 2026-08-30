@@ -63,10 +63,18 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       lastResolvedAt.current = Date.now();
       return nextContext;
     } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Partner access could not be resolved.';
+
+      if (!blocking && contextRef.current) {
+        setError(message);
+        setStatus('ready');
+        return contextRef.current;
+      }
+
       clearPartnerQueryCache(activeScopeKey.current);
       contextRef.current = null;
       setContext(null);
-      setError(cause instanceof Error ? cause.message : 'Partner access could not be resolved.');
+      setError(message);
       setStatus('denied');
       return null;
     }
