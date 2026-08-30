@@ -132,7 +132,7 @@ export default function ClaimsScreen() {
         meta={collection.loading ? 'Searching…' : `${collection.total} records`}
       />
 
-      {collection.error && collection.rows.length ? (
+      {collection.error && collection.rows.length && !collection.stale ? (
         <View style={styles.inlineBanner}>
           <PartnerBanner tone="warning" message={collection.error} />
         </View>
