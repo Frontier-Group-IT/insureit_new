@@ -80,6 +80,8 @@ expectAll('app/policy-intake-new.tsx', [
   [/savePartnerPolicyIntakeDraft/, 'Policy Intake must persist draft metadata'],
   [/clearPartnerPolicyIntakeDraft/, 'Policy Intake must clear draft only after successful submission'],
   [/accessibilityLiveRegion="polite"/, 'upload progress must be announced'],
+  [/accessibilityRole="progressbar"/, 'upload progress must expose progressbar semantics'],
+  [/accessibilityValue=\{\{ min: 0, max: 100, now:/, 'upload progress must expose a numeric accessibility value'],
   [/Retry submission/, 'failed submissions must expose retry behavior'],
   [/Your selected policy copy and entered details are still here/, 'failed submissions must preserve entered state'],
 ]);
@@ -87,6 +89,8 @@ expectAll('app/policy-intake-new.tsx', [
 expectAll('app/policy-intakes/[id].tsx', [
   [/actionLabel="Try again"/, 'Policy Intake detail load errors must expose retry'],
   [/accessibilityLiveRegion="polite"/, 'replacement upload progress must be announced'],
+  [/accessibilityRole="progressbar"/, 'Policy Intake status/replacement progress must expose progressbar semantics'],
+  [/Step \${activeStep} of 4/, 'Policy Intake stage progress must expose a text step description'],
   [/submitPartnerPolicyIntakeReplacement/, 'attention-required flow must support replacement submission'],
 ]);
 
