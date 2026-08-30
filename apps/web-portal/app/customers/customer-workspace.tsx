@@ -176,7 +176,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
         {selectedRows.length ? (
           <div className="flex flex-wrap items-center gap-2 border-b border-[#D9E2EE] bg-[#EEF2FF] px-3 py-2.5 text-[11px]">
             <span className="mr-1 font-semibold text-[#312E81]">{selectedRows.length} selected</span>
-            {selectedRows.length === 1 ? <Link href={`/customers/${selectedRows[0].id}/edit`} className="rounded-lg border border-[#C7D2FE] bg-white px-3 py-2 font-semibold">Open</Link> : null}
+            {selectedRows.length === 1 ? <Link prefetch={false} href={`/customers/${selectedRows[0].id}/edit`} className="rounded-lg border border-[#C7D2FE] bg-white px-3 py-2 font-semibold">Open</Link> : null}
             <button type="button" onClick={copyMobiles} className="rounded-lg border border-[#C7D2FE] bg-white px-3 py-2 font-semibold">{copied ? "Copied" : "Copy mobiles"}</button>
             <button type="button" onClick={exportSelected} className="inline-flex items-center gap-1 rounded-lg border border-[#C7D2FE] bg-white px-3 py-2 font-semibold"><Download className="h-3.5 w-3.5" />Export</button>
             <button type="button" onClick={() => setSelectedIds(new Set())} className="ml-auto px-2 py-2 font-semibold text-[#64748B]">Clear</button>
@@ -206,7 +206,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
                 <tr key={customer.id} className={`h-11 ${selectedIds.has(customer.id) ? "bg-[#F5F3FF]" : "hover:bg-[#FAFCFF]"}`}>
                   <td className="px-2.5"><input aria-label={`Select ${customer.contact_name}`} type="checkbox" checked={selectedIds.has(customer.id)} onChange={() => toggleRow(customer.id)} className="h-4 w-4" /></td>
                   <td className="px-2.5">
-                    <Link href={`/customers/${customer.id}/edit`} className="block truncate text-[12.5px] font-bold text-[#0F172A] hover:text-[#17365D]">{customer.contact_name}</Link>
+                    <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[12.5px] font-bold text-[#0F172A] hover:text-[#17365D]">{customer.contact_name}</Link>
                   </td>
                   <td className="px-2.5">
                     <p className="truncate font-semibold text-[#334155]">{customer.partner_type ? partnerLabels[customer.partner_type] ?? customer.partner_type : "Not classified"}</p>
@@ -236,7 +236,7 @@ function CustomerMobileCard({ customer, selected, onToggle }: { customer: Custom
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <Link href={`/customers/${customer.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{customer.contact_name}</Link>
+              <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{customer.contact_name}</Link>
               <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{customer.company_name ?? customer.customer_code}</p>
             </div>
             <CustomerStatus status={customer.onboarding_status} />
@@ -253,8 +253,8 @@ function CustomerMobileCard({ customer, selected, onToggle }: { customer: Custom
             </div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <Link href={`/customers/${customer.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111a35] px-3 text-[12px] font-bold text-white">Open customer</Link>
-            <Link href={`/vehicles/new?customer_id=${customer.id}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Add vehicle</Link>
+            <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111a35] px-3 text-[12px] font-bold text-white">Open customer</Link>
+            <Link prefetch={false} href={`/vehicles/new?customer_id=${customer.id}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Add vehicle</Link>
           </div>
         </div>
       </div>
@@ -278,9 +278,9 @@ function RowActions({ customer }: { customer: CustomerRow }) {
     <details className="relative inline-block">
       <summary aria-label={`Actions for ${customer.contact_name}`} className="grid h-9 w-9 cursor-pointer list-none place-items-center rounded-lg hover:bg-[#EEF2F7] [&::-webkit-details-marker]:hidden"><MoreVertical className="h-4 w-4" /></summary>
       <div className="absolute right-0 z-30 mt-1 w-44 rounded-xl border border-[#E2E8F0] bg-white p-1 shadow-xl">
-        <Link href={`/customers/${customer.id}/edit`} className="block rounded-lg px-2 py-2 hover:bg-[#F8FAFC]">View / Edit</Link>
-        {customer.onboarding_status !== "active" ? <Link href={`/customers/${customer.id}/edit#documents`} className="block rounded-lg px-2 py-2 font-medium text-amber-700 hover:bg-amber-50">Upload Documents</Link> : null}
-        <Link href={`/vehicles/new?customer_id=${customer.id}`} className="block rounded-lg px-2 py-2 hover:bg-[#F8FAFC]">Add Vehicle</Link>
+        <Link prefetch={false} href={`/customers/${customer.id}/edit`} className="block rounded-lg px-2 py-2 hover:bg-[#F8FAFC]">View / Edit</Link>
+        {customer.onboarding_status !== "active" ? <Link prefetch={false} href={`/customers/${customer.id}/edit#documents`} className="block rounded-lg px-2 py-2 font-medium text-amber-700 hover:bg-amber-50">Upload Documents</Link> : null}
+        <Link prefetch={false} href={`/vehicles/new?customer_id=${customer.id}`} className="block rounded-lg px-2 py-2 hover:bg-[#F8FAFC]">Add Vehicle</Link>
       </div>
     </details>
   );
@@ -291,9 +291,9 @@ function CustomerStatus({ status }: { status: string }) {
 }
 
 function NextAction({ customer }: { customer: CustomerRow }) {
-  if (customer.onboarding_status !== "active") return <Link href={`/customers/${customer.id}/edit#documents`} className="font-bold text-amber-700 hover:underline">Complete KYC</Link>;
-  if (vehicleCount(customer) === 0) return <Link href={`/vehicles/new?customer_id=${customer.id}`} className="font-bold text-[#174EA6] hover:underline">Add vehicle</Link>;
-  if (policyCount(customer) === 0) return <Link href="/policies/new" className="font-bold text-[#174EA6] hover:underline">Add policy</Link>;
+  if (customer.onboarding_status !== "active") return <Link prefetch={false} href={`/customers/${customer.id}/edit#documents`} className="font-bold text-amber-700 hover:underline">Complete KYC</Link>;
+  if (vehicleCount(customer) === 0) return <Link prefetch={false} href={`/vehicles/new?customer_id=${customer.id}`} className="font-bold text-[#174EA6] hover:underline">Add vehicle</Link>;
+  if (policyCount(customer) === 0) return <Link prefetch={false} href="/policies/new" className="font-bold text-[#174EA6] hover:underline">Add policy</Link>;
   return <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><ShieldCheck className="h-3.5 w-3.5" />Portfolio active</span>;
 }
 
