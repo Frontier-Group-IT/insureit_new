@@ -64,9 +64,9 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Link href="/reports/management-pack/archive" className="r2-action"><Archive className="h-3.5 w-3.5" /> Archive</Link>
-              <Link href={pack ? `/reports/export/management-pack?month=${pack.filters.month}` : "/reports/management-pack"} className="r2-action"><FileDown className="h-3.5 w-3.5" /> Export</Link>
-              <Link href="/reports/management-pack" className="r2-action r2-action--primary"><CalendarRange className="h-3.5 w-3.5" /> Month End</Link>
+              <Link prefetch={false} href="/reports/management-pack/archive" className="r2-action"><Archive className="h-3.5 w-3.5" /> Archive</Link>
+              <Link prefetch={false} href={pack ? `/reports/export/management-pack?month=${pack.filters.month}` : "/reports/management-pack"} className="r2-action"><FileDown className="h-3.5 w-3.5" /> Export</Link>
+              <Link prefetch={false} href="/reports/management-pack" className="r2-action r2-action--primary"><CalendarRange className="h-3.5 w-3.5" /> Month End</Link>
             </div>
           </div>
         </section>
@@ -85,7 +85,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
             <section className="r2-main-grid">
               <article className="r2-panel overflow-hidden">
-                <div className="r2-section-head"><h2>Premium & Policy Trend</h2><Link href="/reports/business" className="r2-section-link">Business <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
+                <div className="r2-section-head"><h2>Premium & Policy Trend</h2><Link prefetch={false} href="/reports/business" className="r2-section-link">Business <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
                 <div className="r2-trend">
                   {trend.length ? trend.map((row) => (
                     <div key={row.month} className="r2-trend-row">
@@ -99,7 +99,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               </article>
 
               <article className="r2-panel overflow-hidden">
-                <div className="r2-section-head"><h2>Attention</h2><Link href="/reports/readiness" className="r2-section-link">Data Quality <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
+                <div className="r2-section-head"><h2>Attention</h2><Link prefetch={false} href="/reports/readiness" className="r2-section-link">Data Quality <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
                 <div className="r2-attention-list">
                   <Attention label="Renewals due within 30 days" value={pack.renewals.summary.due_30_count} tone="warn" />
                   {commercialAccess ? <Attention label="Pending partner payout" value={pack.finance.summary.pending_payout_count} tone="warn" /> : null}
@@ -112,7 +112,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
             <section className="grid gap-4 xl:grid-cols-2">
               <article className="r2-panel overflow-hidden">
-                <div className="r2-section-head"><h2>Insurer Business · YTD</h2><Link href="/reports/business" className="r2-section-link">View business</Link></div>
+                <div className="r2-section-head"><h2>Insurer Business · YTD</h2><Link prefetch={false} href="/reports/business" className="r2-section-link">View business</Link></div>
                 {topInsurers.length ? (
                   <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Insurer</th><th className="r2-num">Policies</th><th className="r2-num">Premium</th><th className="r2-num">Share</th></tr></thead><tbody>
                     {topInsurers.map((row) => <tr key={`${row.id}-${row.name}`}><td><strong>{row.name || "Unassigned"}</strong></td><td className="r2-num">{number(row.policy_count)}</td><td className="r2-num">{compactMoney(row.gross_premium)}</td><td className="r2-num">{row.share_percent.toFixed(1)}%</td></tr>)}
@@ -121,7 +121,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               </article>
 
               <article className="r2-panel overflow-hidden">
-                <div className="r2-section-head"><h2>Upcoming Renewals</h2><Link href="/reports/renewals" className="r2-section-link">View portfolio</Link></div>
+                <div className="r2-section-head"><h2>Upcoming Renewals</h2><Link prefetch={false} href="/reports/renewals" className="r2-section-link">View portfolio</Link></div>
                 {renewals.length ? (
                   <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Customer</th><th>Risk / Asset</th><th>Insurer</th><th className="r2-num">Days</th><th className="r2-num">Premium</th></tr></thead><tbody>
                     {renewals.map((row) => <tr key={row.id}><td><strong>{row.customer_name}</strong></td><td>{row.risk_reference || row.vehicle_no || "—"}</td><td>{row.insurer_name || "—"}</td><td className="r2-num">{number(row.days_to_expiry)}</td><td className="r2-num">{compactMoney(row.gross_premium)}</td></tr>)}
@@ -141,7 +141,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               </div>
               <div className="r2-month-end">
                 <div className="r2-month-end__copy"><strong>Month-end reporting</strong><span>Review the live pack, freeze the eligible month, or open a previous frozen snapshot.</span></div>
-                <div className="flex flex-wrap gap-2"><Link href="/reports/management-pack" className="r2-action">Management Pack</Link><Link href="/reports/management-pack/archive" className="r2-action">Frozen Packs</Link></div>
+                <div className="flex flex-wrap gap-2"><Link prefetch={false} href="/reports/management-pack" className="r2-action">Management Pack</Link><Link prefetch={false} href="/reports/management-pack/archive" className="r2-action">Frozen Packs</Link></div>
               </div>
             </section>
           </>
@@ -160,7 +160,7 @@ function Attention({ label, value, tone }: { label: string; value: number; tone?
 }
 
 function Position({ label, value, href }: { label: string; value: string | number; href: string }) {
-  return <Link href={href} className="group border-b border-r border-[#e8ecf1] px-4 py-4 transition hover:bg-[#fafbfd]"><div className="text-[9.5px] font-semibold text-[#667085]">{label}</div><div className="mt-2 flex items-center justify-between gap-2 text-[14px] font-bold tabular-nums text-[#26364f]"><span>{value}</span><ArrowRight className="h-3.5 w-3.5 text-[#98a2b3] transition group-hover:translate-x-0.5" /></div></Link>;
+  return <Link prefetch={false} href={href} className="group border-b border-r border-[#e8ecf1] px-4 py-4 transition hover:bg-[#fafbfd]"><div className="text-[9.5px] font-semibold text-[#667085]">{label}</div><div className="mt-2 flex items-center justify-between gap-2 text-[14px] font-bold tabular-nums text-[#26364f]"><span>{value}</span><ArrowRight className="h-3.5 w-3.5 text-[#98a2b3] transition group-hover:translate-x-0.5" /></div></Link>;
 }
 
 function money(value: number) {
