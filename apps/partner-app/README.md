@@ -32,9 +32,13 @@ The repository now contains separate Partner EAS profiles:
 - Android package: `com.insureit.partner`
 - iOS bundle ID: `com.insureit.partner`
 
-The Partner app is intentionally **not linked to an Expo/EAS project ID yet**. Linking requires authorization to the Expo owner account and must create a new project distinct from the Customer app.
+The Partner app is linked to its dedicated Expo/EAS project and must remain separate from the Customer app.
 
-After a dedicated Partner EAS project is created, run Expo's normal project/update configuration for `apps/partner-app`. The resulting `expo.extra.eas.projectId` and `expo.updates.url` must be committed. Both release workflows refuse to run if those values are missing or reuse the Customer app project/update identity.
+Current Partner EAS project ID:
+
+- `8ade82c1-4c96-4f09-b90b-802270fb406d`
+
+Both release workflows verify the configured project identity and preflight the GitHub `EXPO_TOKEN` against the linked Expo project before any APK build or OTA publish begins. If the token cannot access that project, the workflow stops before consuming an EAS build.
 
 GitHub workflows:
 
