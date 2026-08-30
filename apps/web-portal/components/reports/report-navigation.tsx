@@ -32,7 +32,7 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance, role }
       <div className="reports-v2-nav">
         <div className="reports-v2-nav__desktop">
           {visibleWorkspaces.map((workspace) => (
-            <Link key={workspace.key} href={workspace.href} className={workspaceClass(activeKey === workspace.key)}>
+            <Link prefetch={false} key={workspace.key} href={workspace.href} className={workspaceClass(activeKey === workspace.key)}>
               {workspace.label}
             </Link>
           ))}
@@ -50,7 +50,7 @@ export function ReportNavigation({ canViewGovernance: _canViewGovernance, role }
         {activeWorkspace?.sections?.length ? (
           <div className="reports-v2-subnav" aria-label={`${activeWorkspace.label} report sections`}>
             {activeWorkspace.sections.map((section) => (
-              <Link key={section.href} href={section.href} className={sectionClass(activeSection?.href === section.href)}>
+              <Link prefetch={false} key={section.href} href={section.href} className={sectionClass(activeSection?.href === section.href)}>
                 {section.label}
               </Link>
             ))}
