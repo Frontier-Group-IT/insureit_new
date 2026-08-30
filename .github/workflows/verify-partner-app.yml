@@ -24,7 +24,7 @@ env:
 
 jobs:
   verify:
-    name: typecheck, lint and Expo web review build
+    name: resilience contracts, typecheck, lint and Expo web review build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -73,6 +73,9 @@ jobs:
       - name: Verify Partner route integrity
         run: npm --workspace apps/partner-app run verify:routes
 
+      - name: Verify Phase 5 resilience and accessibility contracts
+        run: npm --workspace apps/partner-app run verify:phase5
+
       - name: Partner app typecheck
         run: npm run typecheck:partner
 
@@ -100,6 +103,8 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Dependency lockfile: synchronized"
             echo "- Route/deep-link integrity: verified"
+            echo "- Phase 5 resilience/accessibility contracts: verified"
+            echo "- Frozen smoke route contracts: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Review build: Expo web export"
             echo "- Production deployment: not triggered by this workflow"

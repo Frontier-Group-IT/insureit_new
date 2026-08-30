@@ -271,7 +271,13 @@ function UploadProgress({ progress }: { progress: PartnerPolicyIntakeUploadProgr
       : Math.max(12, Math.min(92, progress.percent ?? 12));
 
   return (
-    <View accessibilityLiveRegion="polite" style={styles.progressCard}>
+    <View
+      accessibilityLabel={`${progressLabel(progress)}. ${progressMessage(progress)}`}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(percent), text: `${Math.round(percent)} percent` }}
+      style={styles.progressCard}
+    >
       <View style={styles.progressTop}>
         <View>
           <Text style={styles.progressTitle}>{progressLabel(progress)}</Text>

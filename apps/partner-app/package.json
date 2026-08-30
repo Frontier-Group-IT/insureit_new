@@ -10,6 +10,7 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "verify:routes": "node scripts/verify-routes.mjs",
+    "verify:phase5": "node scripts/verify-phase5-contracts.mjs",
     "build:web": "expo export --platform web --output-dir dist-web"
   },
   "dependencies": {
