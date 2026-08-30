@@ -9,7 +9,8 @@
     "android": {
       "package": "com.insureit.partner",
       "softwareKeyboardLayoutMode": "pan",
-      "versionCode": 1
+      "versionCode": 1,
+      "icon": "./assets/partner-app-icon.jpg"
     },
     "ios": {
       "bundleIdentifier": "com.insureit.partner",
@@ -17,7 +18,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "icon": "./assets/partner-app-icon.jpg"
     },
     "web": {
       "bundler": "metro"
@@ -44,6 +46,7 @@
       "eas": {
         "projectId": "8ade82c1-4c96-4f09-b90b-802270fb406d"
       }
-    }
+    },
+    "icon": "./assets/partner-app-icon.jpg"
   }
 }
