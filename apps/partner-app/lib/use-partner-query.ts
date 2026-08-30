@@ -63,8 +63,8 @@ export function usePartnerQuery<T>({
       setUpdatedAt(result.updatedAt);
       setStale(result.stale);
       if (result.stale) {
-        setOffline(true);
-        setError('Refresh failed. Showing the last successfully loaded information.');
+        setOffline(Boolean(result.fallbackError?.offline));
+        setError(result.fallbackError?.message || 'Refresh failed. Showing the last successfully loaded information.');
       }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Data could not be loaded.');
