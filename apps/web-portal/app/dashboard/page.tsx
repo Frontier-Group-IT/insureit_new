@@ -1,6 +1,6 @@
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { accessRank, getEffectivePermissionAccessMap } from "@/lib/effective-permissions";
 import { getOperationsDashboardData } from "@/lib/operations-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getDashboardCurrentData, type DashboardAccess } from "../dashboard-v2/dashboard-data";
@@ -16,38 +16,28 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const accessToken = await getServerAccessToken();
   const [{ profile }, base] = await Promise.all([
     getAuthenticatedProfile(accessToken),
-    getOperationsDashboardData(supabase),
+    getOperationsDashboardData(supabase, accessToken),
   ]);
 
-  const [
-    viewPolicies,
-    editPolicies,
-    createPolicies,
-    viewVehicles,
-    viewClaims,
-    viewIntermediaries,
-    viewPolicyIntakes,
-    reviewPolicyIntakes,
-    createPolicyIntakes,
-    viewCustomers,
-    viewTasks,
-    viewKyc,
-    accountsCapability,
-  ] = await Promise.all([
-    hasEffectiveCapability(profile, "view_policies", "view"),
-    hasEffectiveCapability(profile, "view_policies", "edit"),
-    hasEffectiveCapability(profile, "create_policies", "edit"),
-    hasEffectiveCapability(profile, "view_vehicles", "view"),
-    hasEffectiveCapability(profile, "view_claims", "view"),
-    hasEffectiveCapability(profile, "view_intermediaries", "view"),
-    hasEffectiveCapability(profile, "view_policy_intakes", "view"),
-    hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
-    hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
-    hasEffectiveCapability(profile, "view_customers", "view"),
-    hasEffectiveCapability(profile, "view_tasks", "view"),
-    hasEffectiveCapability(profile, "view_kyc", "view"),
-    hasEffectiveCapability(profile, "view_accounts", "view"),
-  ]);
+  const permissionMap = await getEffectivePermissionAccessMap(profile);
+  const can = (
+    capability: keyof typeof permissionMap,
+    minimum: "view" | "edit" | "approve" = "view",
+  ) => accessRank[permissionMap[capability] ?? "none"] >= accessRank[minimum];
+
+  const viewPolicies = can("view_policies");
+  const editPolicies = can("view_policies", "edit");
+  const createPolicies = can("create_policies", "edit");
+  const viewVehicles = can("view_vehicles");
+  const viewClaims = can("view_claims");
+  const viewIntermediaries = can("view_intermediaries");
+  const viewPolicyIntakes = can("view_policy_intakes");
+  const reviewPolicyIntakes = can("review_policy_intakes", "edit");
+  const createPolicyIntakes = can("create_policy_intakes", "edit");
+  const viewCustomers = can("view_customers");
+  const viewTasks = can("view_tasks");
+  const viewKyc = can("view_kyc");
+  const accountsCapability = can("view_accounts");
 
   const commercial = canAccessPolicyCommercials(profile);
   const access: DashboardAccess = {
