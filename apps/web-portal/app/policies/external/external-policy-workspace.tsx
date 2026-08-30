@@ -178,7 +178,7 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
         searchPlaceholder="Search policy, customer, vehicle or insurer"
         activeViewLabel={`${filteredRows.length} in current view`}
         action={canEdit ? (
-          <Link href="/policies/external/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]">
+          <Link prefetch={false} href="/policies/external/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]">
             <Plus className="h-4 w-4" />Add External Policy
           </Link>
         ) : undefined}
@@ -265,7 +265,7 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
               <tr key={policy.id} className="h-11 transition hover:bg-[#FAFCFF]">
                 <td className="px-2.5">
                   {canEdit ? (
-                    <Link href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
+                    <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
                       {policy.policy_no}
                     </Link>
                   ) : (
@@ -332,7 +332,7 @@ function ExternalPolicyMobileCard({ policy, canEdit }: { policy: ExternalPolicyV
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           {canEdit ? (
-            <Link href={`/policies/external/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
+            <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
           ) : (
             <p className="truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</p>
           )}
