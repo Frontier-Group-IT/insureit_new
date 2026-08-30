@@ -8,6 +8,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
+  vehicle_id: string;
+  policy_id: string;
   current_status: ClaimStatus;
   accident_at: string | null;
   accident_description: string | null;
@@ -42,12 +44,37 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   const admin = createSupabaseAdminClient();
   const { data: claim, error } = await admin
     .from("claims")
-    .select("id, claim_no, insurer_claim_no, customer_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
+    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
     .eq("id", id)
     .maybeSingle<ClaimDetail>();
 
   if (error || !claim) notFound();
   if (!(await canAccessCustomer(profile.id, profile.role, claim.customer_id, "view_claims"))) notFound();
+
+  const { data: vehiclePolicies } = await admin
+    .from("policies")
+    .select("id, vehicle_id, customer_id, policy_no, policy_type, start_date, end_date")
+    .eq("vehicle_id", claim.vehicle_id)
+    .eq("customer_id", claim.customer_id)
+    .order("end_date", { ascending: false });
+
+  const incidentDate = claim.accident_at?.slice(0, 10) ?? null;
+  const exactClaimPolicy = (vehiclePolicies ?? []).find((policy) => policy.id === claim.policy_id) ?? null;
+  const policyCoveringIncident = incidentDate
+    ? (vehiclePolicies ?? []).find((policy) => policy.start_date <= incidentDate && policy.end_date >= incidentDate) ?? null
+    : null;
+  const vehicleRegisterPolicy = exactClaimPolicy ?? policyCoveringIncident ?? vehiclePolicies?.[0] ?? null;
+  const claimForVerification: ClaimDetail = {
+    ...claim,
+    policies: vehicleRegisterPolicy
+      ? {
+          policy_no: vehicleRegisterPolicy.policy_no,
+          policy_type: vehicleRegisterPolicy.policy_type,
+          start_date: vehicleRegisterPolicy.start_date,
+          end_date: vehicleRegisterPolicy.end_date
+        }
+      : claim.policies
+  };
 
   const [{ data: documents }, { data: verificationRows }, { data: stageRows }] = await Promise.all([
     admin
@@ -87,7 +114,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
         document_id: documentId,
         document_type: documentType,
         verification_type: verificationTypeFromDocument(documentType),
-        incident_date: typeof details.incident_date === "string" ? details.incident_date : claim.accident_at,
+        incident_date: typeof details.incident_date === "string" ? details.incident_date : claimForVerification.accident_at,
         is_valid: details.is_valid !== false,
         invalid_reason: typeof details.invalid_reason === "string" ? details.invalid_reason : null,
         details,
@@ -97,13 +124,13 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
-  const queue = operationsQueueForStatus(claim.current_status);
+  const queue = operationsQueueForStatus(claimForVerification.current_status);
   const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
-  const title = `Documents Verification - ${claim.claim_no}${claim.insurer_claim_no ? ` / ${claim.insurer_claim_no}` : ""}`;
+  const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotSurveyWorkspace claim={claim} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
+      <SpotSurveyWorkspace claim={claimForVerification} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
     </ClaimManagerShell>
   );
 }
