@@ -2,6 +2,11 @@ name: Publish Partner preview OTA
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/partner-app/.trigger-preview-ota'
 
 permissions:
   contents: read
