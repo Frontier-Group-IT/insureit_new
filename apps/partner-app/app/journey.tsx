@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerJourney, type PartnerJourneyData } from '@/lib/journey';
 import { partnerTheme } from '@/lib/theme';
 
@@ -39,9 +40,7 @@ export default function JourneyScreen() {
       eyebrow="MY JOURNEY"
       title="Progress, not a leaderboard"
       action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close journey" onPress={() => router.back()} />
       }
     >
       {loading ? (
