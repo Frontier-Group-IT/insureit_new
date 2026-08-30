@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerCustomerDetail, type PartnerCustomerDetail } from '@/lib/customers';
 import { partnerTheme } from '@/lib/theme';
 
@@ -36,9 +37,7 @@ export default function CustomerDetailScreen() {
       eyebrow="CUSTOMER STORY"
       title={data?.customer.customer_name || 'Customer'}
       action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close customer detail" onPress={() => router.back()} />
       }
     >
       {loading ? (

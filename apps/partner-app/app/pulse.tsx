@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { partnerTheme } from '@/lib/theme';
 
@@ -34,9 +35,7 @@ export default function PulseScreen() {
       eyebrow="INSUREIT PULSE"
       title="Your business today"
       action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close business pulse" onPress={() => router.back()} />
       }
     >
       {loading ? (

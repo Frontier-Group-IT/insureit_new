@@ -1,66 +1,147 @@
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function MoreScreen() {
   const router = useRouter();
   const { context, signOut } = usePartnerSession();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
   if (!context) return null;
 
   async function logout() {
-    await signOut();
-    router.replace('/login');
+    setLoggingOut(true);
+    setLogoutError('');
+    try {
+      await signOut();
+      router.replace('/login');
+    } catch {
+      setLogoutError('We could not sign you out. Please try again.');
+      setLoggingOut(false);
+      setLogoutOpen(false);
+    }
   }
 
   return (
-    <PartnerScreen eyebrow="ACCOUNT" title="More">
-      <View style={styles.profileCard}>
+    <PartnerScreen eyebrow="EXPLORE" title="More">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open profile and registration"
+        onPress={() => router.push('/profile')}
+        style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
+      >
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials(context.identity.display_name)}</Text></View>
         <View style={styles.profileBody}>
           <Text style={styles.profileName}>{context.identity.display_name}</Text>
-          <Text style={styles.profileMeta}>{context.identity.actor_kind === 'employee' ? humanize(context.identity.role) : humanize(context.identity.intermediary_type)}</Text>
+          <Text style={styles.profileMeta}>
+            {context.identity.actor_kind === 'employee' ? humanize(context.identity.role) : humanize(context.identity.intermediary_type)}
+          </Text>
         </View>
-      </View>
-
-      <View style={styles.menu}>
-        <MenuRow icon="document-text-outline" title="Policy Intake" subtitle="Submit policy copies to the existing Operations review queue." onPress={() => router.push('/policy-intakes')} />
-        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Policies due in the next 30 days and expired policies." onPress={() => router.push('/renewals')} />
-        <MenuRow icon="people-outline" title="Customers" subtitle="Authorized customer book for your commercial scope." onPress={() => router.push('/customers')} />
-        <MenuRow icon="calendar-outline" title="Your Week" subtitle="A visual recap of premium, policies, customers, claims and what comes next." onPress={() => router.push('/weekly-story')} />
-        <MenuRow icon="sparkles-outline" title="Recognition" subtitle="Real milestones, learning rhythm and renewal readiness—without public ranking." onPress={() => router.push('/recognition')} />
-        <MenuRow icon="bulb-outline" title="60-Second Learn" subtitle="One short interactive insurance learning card each day." onPress={() => router.push('/learn')} />
-        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" subtitle="Your Today, Impact, Journey and Business in an interactive format." onPress={() => router.push('/stories')} />
-        <MenuRow icon="heart-outline" title="My Impact" subtitle="Protection footprint, customers served and claims assisted." onPress={() => router.push('/impact')} />
-        <MenuRow icon="trail-sign-outline" title="My Journey" subtitle="A real timeline of your recorded business milestones." onPress={() => router.push('/journey')} />
-        <MenuRow icon="notifications-outline" title="Activity" subtitle="Policies, claims, Operations and learning activity in one smart timeline." onPress={() => router.push('/activity')} />
-        <MenuRow icon="headset-outline" title="Support" subtitle="Your relationship contact and current Operations work queues." onPress={() => router.push('/support')} />
-        <MenuRow icon="person-outline" title="Profile & registration" subtitle="Your resolved Partner or employee identity and scope." onPress={() => router.push('/profile')} />
-      </View>
-
-      <Pressable onPress={logout} style={styles.logout}>
-        <Ionicons name="log-out-outline" size={17} color={partnerTheme.colors.danger} />
-        <Text style={styles.logoutText}>Sign out</Text>
+        <Ionicons name="chevron-forward" size={17} color="#C5CCDA" />
       </Pressable>
+
+      {logoutError ? (
+        <View style={styles.feedback}>
+          <PartnerBanner tone="danger" message={logoutError} />
+        </View>
+      ) : null}
+
+      <MenuSection title="Work">
+        <MenuRow icon="document-text-outline" title="Policy Intake" subtitle="Submit and track policy copies sent to Operations." onPress={() => router.push('/policy-intakes')} />
+        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Upcoming and overdue policies that need follow-up." onPress={() => router.push('/renewals')} />
+        <MenuRow icon="people-outline" title="Customers" subtitle="Your authorized customer book and linked business." onPress={() => router.push('/customers')} last />
+      </MenuSection>
+
+      <MenuSection title="Insights">
+        <MenuRow icon="calendar-outline" title="Your Week" subtitle="A compact recap of business, service and upcoming work." onPress={() => router.push('/weekly-story')} />
+        <MenuRow icon="heart-outline" title="My Impact" subtitle="Protection footprint, customers served and claims assisted." onPress={() => router.push('/impact')} />
+        <MenuRow icon="trail-sign-outline" title="My Journey" subtitle="A timeline of your recorded business milestones." onPress={() => router.push('/journey')} />
+        <MenuRow icon="time-outline" title="Activity" subtitle="Recent policy, claim and Operations events." onPress={() => router.push('/activity')} last />
+      </MenuSection>
+
+      <MenuSection title="Grow & Learn">
+        <MenuRow icon="bulb-outline" title="60-Second Learn" subtitle="One short interactive insurance learning card each day." onPress={() => router.push('/learn')} />
+        <MenuRow icon="sparkles-outline" title="Recognition" subtitle="Milestones and progress without public ranking." onPress={() => router.push('/recognition')} />
+        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" subtitle="Interactive stories from your business, impact and journey." onPress={() => router.push('/stories')} last />
+      </MenuSection>
+
+      <MenuSection title="Account">
+        <MenuRow icon="person-outline" title="Profile & registration" subtitle="Your resolved identity, registration and authorized scope." onPress={() => router.push('/profile')} />
+        <MenuRow icon="headset-outline" title="Support" subtitle="Relationship contact and current Operations support." onPress={() => router.push('/support')} last />
+      </MenuSection>
+
+      <View style={styles.logout}>
+        <PartnerButton
+          label="Sign out"
+          icon="log-out-outline"
+          variant="danger"
+          onPress={() => setLogoutOpen(true)}
+        />
+      </View>
+
+      <PartnerConfirmDialog
+        visible={logoutOpen}
+        title="Sign out of INSUREIT Partner?"
+        message="You will need to sign in again to access your business and service workspace."
+        confirmLabel="Sign out"
+        destructive
+        busy={loggingOut}
+        onCancel={() => setLogoutOpen(false)}
+        onConfirm={() => void logout()}
+      />
     </PartnerScreen>
   );
 }
 
-function MenuRow({ icon, title, subtitle, onPress }: { icon: 'document-text-outline' | 'refresh-outline' | 'people-outline' | 'calendar-outline' | 'sparkles-outline' | 'bulb-outline' | 'play-circle-outline' | 'heart-outline' | 'trail-sign-outline' | 'notifications-outline' | 'headset-outline' | 'person-outline'; title: string; subtitle: string; onPress?: () => void }) {
-  const content = (
-    <View style={styles.row}>
-      <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
+function MenuSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <>
+      <PartnerSectionHeader title={title} />
+      <View style={styles.menu}>{children}</View>
+    </>
+  );
+}
+
+function MenuRow({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  last = false,
+}: {
+  icon: IconName;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  last?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${subtitle}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, !last && styles.rowDivider, pressed && styles.rowPressed]}
+    >
+      <View style={styles.rowIcon}><Ionicons name={icon} size={19} color={partnerTheme.colors.brand} /></View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowSubtitle}>{subtitle}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#A0A8B6" />
-    </View>
+      <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
+    </Pressable>
   );
-  return onPress ? <Pressable onPress={onPress}>{content}</Pressable> : content;
 }
 
 function initials(value: string) {
@@ -72,18 +153,41 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  profileCard: { flexDirection: 'row', alignItems: 'center', gap: 13, borderRadius: partnerTheme.radius.lg, padding: 17, backgroundColor: partnerTheme.colors.nav },
-  avatar: { width: 44, height: 44, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
-  avatarText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  profileCard: {
+    minHeight: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 13,
+    borderRadius: partnerTheme.radius.lg,
+    paddingHorizontal: 17,
+    backgroundColor: partnerTheme.colors.nav,
+  },
+  avatar: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
+  avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
   profileBody: { flex: 1 },
-  profileName: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  profileMeta: { marginTop: 3, color: '#C5CCDA', fontSize: 9.5 },
-  menu: { marginTop: 16, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  row: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  rowIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  rowBody: { flex: 1 },
-  rowTitle: { color: partnerTheme.colors.ink, fontSize: 11.5, fontWeight: '700' },
-  rowSubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 9, lineHeight: 13 },
-  logout: { marginTop: 16, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: partnerTheme.radius.md, borderWidth: 1, borderColor: '#F2C8C5', backgroundColor: '#FFF7F6' },
-  logoutText: { color: partnerTheme.colors.danger, fontSize: 11, fontWeight: '700' },
+  profileName: { color: '#FFFFFF', ...partnerTheme.typography.cardTitle },
+  profileMeta: { marginTop: 3, color: '#C5CCDA', ...partnerTheme.typography.caption },
+  feedback: { marginTop: partnerTheme.spacing.md },
+  menu: {
+    overflow: 'hidden',
+    borderRadius: partnerTheme.radius.lg,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  row: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 15,
+  },
+  rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  rowPressed: { backgroundColor: partnerTheme.colors.surfaceMuted },
+  rowIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  rowBody: { flex: 1, paddingVertical: 10 },
+  rowTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  rowSubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  logout: { marginTop: partnerTheme.spacing.xl },
+  pressed: { opacity: 0.8 },
 });

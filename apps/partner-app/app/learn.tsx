@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import {
   getPartnerLearningToday,
   submitPartnerLearningAnswer,
@@ -60,9 +61,7 @@ export default function LearnScreen() {
       eyebrow="60 SEC LEARN"
       title="One useful idea a day"
       action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close learning" onPress={() => router.back()} />
       }
     >
       {loading ? (

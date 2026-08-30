@@ -1096,8 +1096,8 @@ Use this section as the compact source of progress.
 
 | Phase | Status | Native build? | Notes |
 | --- | --- | ---: | --- |
-| 0 — Shared mobile foundation | READY FOR REVIEW | No | PR #800 merged; preview OTA published; installed-device visual check pending |
-| 1 — Navigation / Home / global states | LOCKED | No | Starts after Phase 0 gate |
+| 0 — Shared mobile foundation | VERIFIED COMPLETE | No | PR #800 merged; OTA applied; Customers + New Policy Intake visually verified on installed Android app |
+| 1 — Navigation / Home / global states | IN PROGRESS | No | Branch: `feat/partner-phase-1-navigation-home` |
 | 2 — Customers / Policies / Renewals / Claims | LOCKED | No | |
 | 3 — Policy Intake / Business / Payout / Support | LOCKED | No | |
 | 4 — Data/cache/offline/auth lifecycle | LOCKED | Mostly No | |
@@ -1137,9 +1137,9 @@ The user has approved freezing this plan and executing it phase-by-phase.
 
 The next implementation work is therefore:
 
-> **Phase 0 — Shared mobile foundation**
+> **Phase 1 — Navigation, Home and global interaction states**
 
-**READY FOR REVIEW:** Phase 0 implementation merged in PR #800 as `5841fe44ed9e049aa39b1524e6e34337ed523236`. Canonical Partner verification run #38 passed route integrity, release identity, TypeScript, lint and Expo web review export. The deliberate main-only OTA trigger path was added in PR #801 and merged as `12908201517d0689dfac635ca56f2273c7670ccf`. Partner preview OTA run `33300628248` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `536b65c6-a13a-4c6a-b794-506a4222ae1a`, exact Git commit `12908201517d0689dfac635ca56f2273c7670ccf`. Remaining gate: visually verify representative Customers and New Policy Intake screens on the installed Partner preview APK after OTA application. Phase 1 remains locked until that installed-device check is confirmed.
+**VERIFIED COMPLETE:** Phase 0 implementation merged in PR #800 as `5841fe44ed9e049aa39b1524e6e34337ed523236`. Canonical Partner verification run #38 passed route integrity, release identity, TypeScript, lint and Expo web review export. The deliberate main-only OTA trigger path was added in PR #801 and merged as `12908201517d0689dfac635ca56f2273c7670ccf`. Partner preview OTA run `33300628248` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `536b65c6-a13a-4c6a-b794-506a4222ae1a`, exact Git commit `12908201517d0689dfac635ca56f2273c7670ccf`. On 2026-08-30, user-provided installed-device screenshots directly verified the refined Customers screen and New Policy Intake screen rendering correctly after OTA. Phase 0 is complete and Phase 1 is unlocked/in progress.
 
-No later phase is authorized to be mixed into Phase 0 merely for convenience.
+No later phase is authorized to be mixed into Phase 1 merely for convenience.
 

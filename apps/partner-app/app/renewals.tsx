@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import {
   getPartnerRenewalSummary,
   listPartnerPolicies,
@@ -61,9 +62,7 @@ export default function RenewalsScreen() {
       eyebrow="RENEWALS"
       title="Renewal work queue"
       action={
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close renewals" onPress={() => router.back()} />
       }
     >
       {loading ? (
