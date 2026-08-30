@@ -210,7 +210,19 @@ function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
   const rejected = row.status === 'rejected';
 
   return (
-    <View style={styles.progressWrap}>
+    <View
+      accessibilityLabel={rejected
+        ? `Policy Intake status: rejected at ${statusLabel(row)}`
+        : `Policy Intake progress: step ${activeStep} of 4, ${statusLabel(row)}`}
+      accessibilityRole="progressbar"
+      accessibilityValue={{
+        min: 1,
+        max: 4,
+        now: activeStep,
+        text: rejected ? `Rejected: ${statusLabel(row)}` : `Step ${activeStep} of 4: ${statusLabel(row)}`,
+      }}
+      style={styles.progressWrap}
+    >
       {['Uploaded', 'Read', 'Review', 'Done'].map((label, index) => {
         const step = index + 1;
         const complete = !rejected && step <= activeStep;
@@ -237,7 +249,13 @@ function ReplacementProgress({ progress }: { progress: PartnerPolicyIntakeUpload
       : Math.max(12, Math.min(92, progress.percent ?? 12));
 
   return (
-    <View accessibilityLiveRegion="polite" style={styles.replacementProgress}>
+    <View
+      accessibilityLabel={`${replacementLabel(progress)}, ${Math.round(percent)} percent`}
+      accessibilityLiveRegion="polite"
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(percent), text: `${Math.round(percent)} percent` }}
+      style={styles.replacementProgress}
+    >
       <View style={styles.replacementProgressTop}>
         <Text style={styles.replacementProgressText}>{replacementLabel(progress)}</Text>
         <Text style={styles.replacementProgressText}>{Math.round(percent)}%</Text>
