@@ -1,10 +1,15 @@
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { StoryRail } from '@/components/story-rail';
+import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { partnerTheme } from '@/lib/theme';
@@ -13,14 +18,18 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context } = usePartnerSession();
+  const hasLoaded = useRef(false);
   const [data, setData] = useState<PartnerHomeData | null>(null);
   const [stories, setStories] = useState<PartnerStory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (manualRefresh = false) => {
+    if (manualRefresh) setRefreshing(true);
+    else if (!hasLoaded.current) setLoading(true);
     setError('');
+
     try {
       const [homeResult, storiesResult] = await Promise.allSettled([
         getPartnerHome(),
@@ -31,14 +40,16 @@ export default function PartnerHomeScreen() {
       setData(homeResult.value);
       setStories(storiesResult.status === 'fulfilled' ? storiesResult.value.items : []);
     } catch {
-      setError('Your business Home could not be loaded.');
+      setError('Your business Home could not be refreshed.');
     } finally {
+      hasLoaded.current = true;
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
   useFocusEffect(useCallback(() => {
-    void load();
+    void load(false);
   }, [load]));
 
   if (!context) return null;
@@ -52,73 +63,94 @@ export default function PartnerHomeScreen() {
       title={greeting(identity.display_name)}
       action={
         <View style={styles.headerActions}>
-          <Pressable onPress={() => router.push('/activity')} style={styles.headerIcon}>
-            <Ionicons name="notifications-outline" size={18} color={partnerTheme.colors.ink} />
-          </Pressable>
-          <Pressable onPress={() => router.push('/profile')} style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials(identity.display_name)}</Text>
+          <PartnerIconButton
+            icon="time-outline"
+            label="View recent activity"
+            onPress={() => router.push('/activity')}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials(identity.display_name)}</Text>
+            </View>
           </Pressable>
         </View>
       }
+      scrollProps={{
+        refreshControl: (
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void load(true)}
+            tintColor={partnerTheme.colors.brand}
+            colors={[partnerTheme.colors.brand]}
+          />
+        ),
+      }}
     >
-      <Text style={styles.role}>{role}</Text>
+      <View style={styles.identityLine}>
+        <Text style={styles.role}>{role}</Text>
+        {data ? <Text style={styles.updated}>{formatUpdatedAt(data.generated_at)}</Text> : null}
+      </View>
 
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
-      ) : error || !data ? (
-        <View style={styles.errorCard}>
-          <Ionicons name="cloud-offline-outline" size={24} color="#94A3B8" />
-          <Text style={styles.errorText}>{error || 'Home is unavailable.'}</Text>
-          <Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable>
-        </View>
+        <HomeSkeleton />
+      ) : !data ? (
+        <PartnerStateView
+          state="error"
+          title="Home is unavailable"
+          message={error || 'We could not load your Partner workspace.'}
+          actionLabel="Try again"
+          onAction={() => void load(true)}
+        />
       ) : (
         <>
-          <Pressable onPress={() => router.push('/pulse')} style={styles.pulseCard}>
-            <View style={styles.pulseTop}>
-              <View>
-                <Text style={styles.pulseEyebrow}>YOUR PULSE</Text>
-                <Text style={styles.pulseTitle}>{pulseTitle(data)}</Text>
-              </View>
-              <View style={styles.pulseOrb}><Ionicons name="pulse-outline" size={24} color="#FFFFFF" /></View>
+          {error ? (
+            <View style={styles.refreshWarning}>
+              <PartnerBanner
+                tone="warning"
+                message="We could not refresh just now. The information below is the last successfully loaded snapshot."
+              />
             </View>
+          ) : null}
 
-            <View style={styles.pulseSignals}>
-              <Signal label="Business" value={humanize(data.pulse.business_momentum)} />
-              <Signal label="Renewals" value={data.business.renewals_7_days ? `${data.business.renewals_7_days} due` : 'Clear'} />
-              <Signal label="Service" value={data.service.claims_need_attention ? `${data.service.claims_need_attention} attention` : 'Steady'} />
-            </View>
-
-            <View style={styles.pulseFooter}>
-              <Text style={styles.pulseFooterText}>See what is shaping today</Text>
-              <Ionicons name="arrow-forward" size={14} color="#D8D6FF" />
-            </View>
-          </Pressable>
-
-          <StoryRail stories={stories} />
-
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today</Text>
-            <Text style={styles.sectionMeta}>{todayLabel()}</Text>
-          </View>
+          <PartnerSectionHeader
+            title="Needs your attention"
+            meta={attentionMeta(data)}
+          />
 
           {data.today.length ? (
             <View style={styles.todayList}>
               {data.today.map((item) => (
-                <Pressable key={item.kind} onPress={() => router.push(item.route as never)} style={styles.todayRow}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.title}. ${item.subtitle}`}
+                  key={item.kind}
+                  onPress={() => router.push(item.route as never)}
+                  style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
+                >
                   <View style={[styles.todayIcon, todayIconTone(item.kind)]}>
-                    <Ionicons name={todayIcon(item.kind)} size={18} color={todayIconColor(item.kind)} />
+                    <Ionicons name={todayIcon(item.kind)} size={20} color={todayIconColor(item.kind)} />
                   </View>
                   <View style={styles.todayBody}>
-                    <Text style={styles.todayTitle}>{item.title}</Text>
+                    <View style={styles.todayTitleRow}>
+                      <Text style={styles.todayTitle}>{item.title}</Text>
+                      {item.count > 0 ? <Text style={styles.todayCount}>{item.count}</Text> : null}
+                    </View>
                     <Text style={styles.todaySubtitle}>{item.subtitle}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color="#A0A8B6" />
+                  <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
                 </Pressable>
               ))}
             </View>
           ) : (
             <View style={styles.clearCard}>
-              <View style={styles.clearIcon}><Ionicons name="checkmark-circle-outline" size={22} color={partnerTheme.colors.success} /></View>
+              <View style={styles.clearIcon}>
+                <Ionicons name="checkmark-circle-outline" size={24} color={partnerTheme.colors.success} />
+              </View>
               <View style={styles.clearBody}>
                 <Text style={styles.clearTitle}>You are clear for now</Text>
                 <Text style={styles.clearText}>No urgent renewal, claim or Policy Intake action is waiting.</Text>
@@ -126,28 +158,33 @@ export default function PartnerHomeScreen() {
             </View>
           )}
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick actions</Text>
-          </View>
+          <PartnerSectionHeader title="Quick actions" />
           <View style={styles.quickGrid}>
-            <QuickAction icon="add-circle-outline" label="New business" onPress={() => router.push('/policy-intake-new')} />
-            <QuickAction icon="refresh-outline" label="Renewal" onPress={() => router.push('/renewals')} />
-            <QuickAction icon="shield-outline" label="Claim" onPress={() => router.push('/(tabs)/claims')} />
-            <QuickAction icon="person-outline" label="Customer" onPress={() => router.push('/customers')} />
+            <QuickAction icon="add-circle-outline" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+            <QuickAction icon="refresh-outline" label="Renewals" onPress={() => router.push('/renewals')} />
+            <QuickAction icon="shield-outline" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+            <QuickAction icon="people-outline" label="Customers" onPress={() => router.push('/customers')} />
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My business</Text>
-            <Pressable onPress={() => router.push('/(tabs)/business')}>
-              <Text style={styles.sectionAction}>View business</Text>
-            </Pressable>
-          </View>
+          <PartnerSectionHeader
+            title="My business"
+            meta="This month"
+            action={
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View business"
+                onPress={() => router.push('/(tabs)/business')}
+                hitSlop={8}
+              >
+                <Text style={styles.sectionAction}>View business</Text>
+              </Pressable>
+            }
+          />
 
           <View style={styles.businessCard}>
             <View style={styles.businessMain}>
-              <Text style={styles.businessEyebrow}>THIS MONTH</Text>
+              <Text style={styles.businessEyebrow}>GROSS PREMIUM</Text>
               <Text style={styles.businessPremium}>{formatMoney(data.business.premium_this_month)}</Text>
-              <Text style={styles.businessPremiumLabel}>gross premium</Text>
               <Trend value={Number(data.business.premium_change_percent || 0)} hasPrevious={Number(data.business.premium_last_month || 0) > 0} />
             </View>
 
@@ -159,29 +196,106 @@ export default function PartnerHomeScreen() {
             </View>
           </View>
 
-          <Pressable onPress={() => router.push('/impact')} style={styles.characterCard}>
-            <View style={styles.characterIcon}><Ionicons name="heart-outline" size={20} color={partnerTheme.colors.accent} /></View>
+          <PartnerSectionHeader title="Business pulse" />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open business pulse. ${pulseTitle(data)}`}
+            onPress={() => router.push('/pulse')}
+            style={({ pressed }) => [styles.pulseCard, pressed && styles.pressed]}
+          >
+            <View style={styles.pulseTop}>
+              <View style={styles.pulseHeading}>
+                <Text style={styles.pulseEyebrow}>YOUR PULSE</Text>
+                <Text style={styles.pulseTitle}>{pulseTitle(data)}</Text>
+              </View>
+              <View style={styles.pulseOrb}>
+                <Ionicons name="pulse-outline" size={24} color="#FFFFFF" />
+              </View>
+            </View>
+
+            <View style={styles.pulseSignals}>
+              <Signal label="Business" value={humanize(data.pulse.business_momentum)} />
+              <Signal label="Renewals" value={data.business.renewals_7_days ? `${data.business.renewals_7_days} due` : 'Clear'} />
+              <Signal label="Service" value={data.service.claims_need_attention ? `${data.service.claims_need_attention} attention` : 'Steady'} />
+            </View>
+
+            <View style={styles.pulseFooter}>
+              <Text style={styles.pulseFooterText}>See what is shaping today</Text>
+              <Ionicons name="arrow-forward" size={15} color="#D8D6FF" />
+            </View>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open impact. ${impactTitle(data)}`}
+            onPress={() => router.push('/impact')}
+            style={({ pressed }) => [styles.characterCard, pressed && styles.pressed]}
+          >
+            <View style={styles.characterIcon}>
+              <Ionicons name="heart-outline" size={21} color={partnerTheme.colors.accent} />
+            </View>
             <View style={styles.characterBody}>
               <Text style={styles.characterEyebrow}>YOUR IMPACT</Text>
               <Text style={styles.characterTitle}>{impactTitle(data)}</Text>
               <Text style={styles.characterText}>{impactText(data)}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color="#7F9896" />
+            <Ionicons name="chevron-forward" size={17} color="#7F9896" />
           </Pressable>
+
+          {stories.length ? (
+            <View style={styles.stories}>
+              <StoryRail stories={stories} />
+            </View>
+          ) : null}
         </>
       )}
     </PartnerScreen>
   );
 }
 
+function HomeSkeleton() {
+  return (
+    <View>
+      <View style={styles.skeletonHeader}>
+        <PartnerSkeleton width="58%" height={18} />
+        <PartnerSkeleton width={74} height={14} />
+      </View>
+      <View style={styles.skeletonList}>
+        <PartnerSkeleton height={78} radius={16} />
+        <PartnerSkeleton height={78} radius={16} />
+      </View>
+      <View style={styles.skeletonHeader}>
+        <PartnerSkeleton width="35%" height={18} />
+      </View>
+      <View style={styles.quickGrid}>
+        <PartnerSkeleton width="23%" height={88} radius={16} />
+        <PartnerSkeleton width="23%" height={88} radius={16} />
+        <PartnerSkeleton width="23%" height={88} radius={16} />
+        <PartnerSkeleton width="23%" height={88} radius={16} />
+      </View>
+      <View style={styles.skeletonHeader}>
+        <PartnerSkeleton width="42%" height={18} />
+      </View>
+      <PartnerSkeleton height={160} radius={22} />
+    </View>
+  );
+}
+
 function QuickAction({ icon, label, onPress }: {
-  icon: 'add-circle-outline' | 'refresh-outline' | 'shield-outline' | 'person-outline';
+  icon: 'add-circle-outline' | 'refresh-outline' | 'shield-outline' | 'people-outline';
   label: string;
   onPress: () => void;
 }) {
   return (
-    <Pressable onPress={onPress} style={styles.quickAction}>
-      <View style={styles.quickIcon}><Ionicons name={icon} size={21} color={partnerTheme.colors.brand} /></View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
+    >
+      <View style={styles.quickIcon}>
+        <Ionicons name={icon} size={22} color={partnerTheme.colors.brand} />
+      </View>
       <Text style={styles.quickLabel}>{label}</Text>
     </Pressable>
   );
@@ -191,7 +305,7 @@ function Signal({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.signal}>
       <Text style={styles.signalLabel}>{label}</Text>
-      <Text style={styles.signalValue}>{value}</Text>
+      <Text numberOfLines={1} style={styles.signalValue}>{value}</Text>
     </View>
   );
 }
@@ -210,7 +324,11 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
   const positive = value >= 0;
   return (
     <View style={styles.trend}>
-      <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={13} color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning} />
+      <Ionicons
+        name={positive ? 'trending-up' : 'trending-down'}
+        size={14}
+        color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning}
+      />
       <Text style={[styles.trendText, { color: positive ? partnerTheme.colors.success : partnerTheme.colors.warning }]}>
         {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} last month
       </Text>
@@ -280,75 +398,182 @@ function formatMoney(value: number | string) {
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
-function todayLabel() {
-  return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(new Date());
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Pull down to refresh';
+  return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
+}
+
+function attentionMeta(data: PartnerHomeData) {
+  const count = data.today.reduce((sum, item) => sum + Math.max(item.count || 0, 1), 0);
+  if (!count) return 'All clear';
+  return `${count} ${count === 1 ? 'item' : 'items'}`;
 }
 
 const styles = StyleSheet.create({
-  role: { marginTop: -11, marginBottom: 15, color: partnerTheme.colors.inkMuted, fontSize: 11 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  avatar: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  avatarText: { color: partnerTheme.colors.brandStrong, fontSize: 12, fontWeight: '800' },
-  loading: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
-  errorCard: { minHeight: 190, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  errorText: { marginTop: 9, color: partnerTheme.colors.inkMuted, fontSize: 10 },
-  retry: { marginTop: 10, color: partnerTheme.colors.brand, fontSize: 10, fontWeight: '800' },
-
-  pulseCard: { borderRadius: partnerTheme.radius.xl, padding: 18, backgroundColor: partnerTheme.colors.nav },
-  pulseTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  pulseEyebrow: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.3 },
-  pulseTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 20, fontWeight: '800' },
-  pulseOrb: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
-  pulseSignals: { marginTop: 17, flexDirection: 'row', gap: 7 },
-  signal: { flex: 1, minHeight: 53, borderRadius: 13, padding: 10, backgroundColor: '#1C2637' },
-  signalLabel: { color: '#8F9BAD', fontSize: 7.5, fontWeight: '700' },
-  signalValue: { marginTop: 4, color: '#FFFFFF', fontSize: 9, fontWeight: '800' },
-  pulseFooter: { marginTop: 14, paddingTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4659' },
-  pulseFooterText: { color: '#D8D6FF', fontSize: 8.5, fontWeight: '700' },
-
-  sectionHeader: { marginTop: 21, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '800' },
-  sectionMeta: { color: partnerTheme.colors.inkMuted, fontSize: 9 },
-  sectionAction: { color: partnerTheme.colors.brand, fontSize: 9.5, fontWeight: '800' },
+  identityLine: {
+    marginTop: -10,
+    marginBottom: partnerTheme.spacing.md,
+    minHeight: 22,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: partnerTheme.spacing.md,
+  },
+  role: { flex: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  avatarTouch: {
+    width: partnerTheme.control.minTouchTarget,
+    height: partnerTheme.control.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
+  refreshWarning: { marginBottom: 2 },
+  pressed: { opacity: 0.78 },
 
   todayList: { gap: 8 },
-  todayRow: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, borderRadius: 16, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  todayIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  todayIconWarn: { backgroundColor: '#FFF2DD' },
+  todayRow: {
+    minHeight: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingHorizontal: 13,
+    borderRadius: 16,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  todayIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  todayIconWarn: { backgroundColor: partnerTheme.colors.warningSoft },
   todayIconBrand: { backgroundColor: partnerTheme.colors.brandSoft },
   todayIconAccent: { backgroundColor: partnerTheme.colors.accentSoft },
   todayBody: { flex: 1 },
-  todayTitle: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
-  todaySubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13 },
-  clearCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, borderRadius: 16, backgroundColor: '#F6FCF8', borderWidth: 1, borderColor: '#D7ECDC' },
-  clearIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F6ED' },
+  todayTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  todayTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  todayCount: {
+    minWidth: 24,
+    overflow: 'hidden',
+    borderRadius: partnerTheme.radius.pill,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    color: partnerTheme.colors.brandStrong,
+    backgroundColor: partnerTheme.colors.brandSoft,
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+  },
+  todaySubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  clearCard: {
+    minHeight: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingHorizontal: 13,
+    borderRadius: 16,
+    backgroundColor: '#F6FCF8',
+    borderWidth: 1,
+    borderColor: '#D7ECDC',
+  },
+  clearIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F6ED' },
   clearBody: { flex: 1 },
-  clearTitle: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
-  clearText: { marginTop: 3, color: '#5F7967', fontSize: 8.5, lineHeight: 13 },
+  clearTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  clearText: { marginTop: 3, color: '#5F7967', ...partnerTheme.typography.caption },
 
   quickGrid: { flexDirection: 'row', gap: 8 },
-  quickAction: { flex: 1, minHeight: 80, alignItems: 'center', justifyContent: 'center', borderRadius: 16, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  quickIcon: { width: 37, height: 37, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  quickLabel: { marginTop: 7, color: partnerTheme.colors.ink, fontSize: 8.5, fontWeight: '700', textAlign: 'center' },
+  quickAction: {
+    flex: 1,
+    minHeight: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 4,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  quickIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  quickLabel: { marginTop: 7, color: partnerTheme.colors.ink, textAlign: 'center', ...partnerTheme.typography.meta },
 
-  businessCard: { flexDirection: 'row', gap: 14, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  businessMain: { width: '46%', paddingRight: 13, borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: partnerTheme.colors.line },
-  businessEyebrow: { color: partnerTheme.colors.brand, fontSize: 7.5, fontWeight: '800', letterSpacing: 1 },
-  businessPremium: { marginTop: 6, color: partnerTheme.colors.ink, fontSize: 24, fontWeight: '800' },
-  businessPremiumLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
+  sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  businessCard: {
+    flexDirection: 'row',
+    gap: 14,
+    borderRadius: partnerTheme.radius.xl,
+    padding: 17,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  businessMain: {
+    width: '46%',
+    paddingRight: 13,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: partnerTheme.colors.line,
+  },
+  businessEyebrow: { color: partnerTheme.colors.brand, letterSpacing: 0.8, ...partnerTheme.typography.meta },
+  businessPremium: { marginTop: 6, color: partnerTheme.colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '800' },
   trend: { marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  trendText: { fontSize: 7.5, fontWeight: '700' },
-  trendNeutral: { marginTop: 9, color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
+  trendText: { flex: 1, ...partnerTheme.typography.meta },
+  trendNeutral: { marginTop: 9, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   businessStats: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 12 },
   businessStat: { width: '50%' },
-  businessStatValue: { color: partnerTheme.colors.ink, fontSize: 16, fontWeight: '800' },
-  businessStatLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
+  businessStatValue: { color: partnerTheme.colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  businessStatLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
 
-  characterCard: { marginTop: 12, flexDirection: 'row', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.accentSoft },
-  characterIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  pulseCard: { borderRadius: partnerTheme.radius.xl, padding: 18, backgroundColor: partnerTheme.colors.nav },
+  pulseTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  pulseHeading: { flex: 1 },
+  pulseEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
+  pulseTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 19, lineHeight: 25, fontWeight: '800' },
+  pulseOrb: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
+  pulseSignals: { marginTop: 17, flexDirection: 'row', gap: 7 },
+  signal: { flex: 1, minHeight: 56, borderRadius: 13, padding: 10, backgroundColor: '#1C2637' },
+  signalLabel: { color: '#A6B0C0', ...partnerTheme.typography.meta },
+  signalValue: { marginTop: 4, color: '#FFFFFF', ...partnerTheme.typography.caption },
+  pulseFooter: {
+    marginTop: 14,
+    paddingTop: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#3B4659',
+  },
+  pulseFooterText: { color: '#D8D6FF', ...partnerTheme.typography.caption },
+
+  characterCard: {
+    marginTop: 12,
+    minHeight: 82,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: partnerTheme.radius.lg,
+    padding: 15,
+    backgroundColor: partnerTheme.colors.accentSoft,
+  },
+  characterIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   characterBody: { flex: 1 },
-  characterEyebrow: { color: '#3C7B78', fontSize: 7.5, fontWeight: '800', letterSpacing: 1 },
-  characterTitle: { marginTop: 4, color: partnerTheme.colors.ink, fontSize: 11.5, fontWeight: '800' },
-  characterText: { marginTop: 3, color: '#56716F', fontSize: 8.5, lineHeight: 13 },
+  characterEyebrow: { color: '#3C7B78', letterSpacing: 0.8, ...partnerTheme.typography.meta },
+  characterTitle: { marginTop: 4, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  characterText: { marginTop: 3, color: '#56716F', ...partnerTheme.typography.caption },
+  stories: { marginTop: partnerTheme.spacing.md },
+
+  skeletonHeader: {
+    marginTop: partnerTheme.spacing.xl,
+    marginBottom: partnerTheme.spacing.sm,
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  skeletonList: { gap: 8 },
 });
