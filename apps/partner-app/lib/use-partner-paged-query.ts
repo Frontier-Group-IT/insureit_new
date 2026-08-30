@@ -43,12 +43,11 @@ export function usePartnerPagedQuery<T>({
   const [error, setError] = useState('');
   const [updatedAt, setUpdatedAt] = useState<number | null>(cached?.updatedAt ?? null);
 
-  const storeAggregate = useCallback((nextRows: T[], nextTotal: number) => {
+  const storeAggregate = useCallback((nextRows: T[], nextTotal: number, fetchedAt = Date.now()) => {
     setRows(nextRows);
     setTotal(nextTotal);
-    setPartnerQueryCache(scopeKey, aggregateKey, { rows: nextRows, total: nextTotal });
-    const stored = getPartnerQueryCache<Aggregate<T>>(scopeKey, aggregateKey);
-    setUpdatedAt(stored?.updatedAt ?? Date.now());
+    setPartnerQueryCache(scopeKey, aggregateKey, { rows: nextRows, total: nextTotal }, fetchedAt);
+    setUpdatedAt(fetchedAt);
   }, [aggregateKey, scopeKey]);
 
   const loadFirst = useCallback(async (force = false) => {
@@ -67,7 +66,7 @@ export function usePartnerPagedQuery<T>({
         fetcher: () => fetchPage({ limit: pageSize, offset: 0 }),
       });
 
-      storeAggregate(result.data.rows, result.data.total);
+      storeAggregate(result.data.rows, result.data.total, result.updatedAt);
       setStale(result.stale);
       if (result.stale) {
         setOffline(Boolean(result.fallbackError?.offline));
@@ -99,6 +98,14 @@ export function usePartnerPagedQuery<T>({
       setTotal(existing.data.total);
       setUpdatedAt(existing.updatedAt);
       setLoading(false);
+    } else {
+      setRows([]);
+      setTotal(0);
+      setUpdatedAt(null);
+      setStale(false);
+      setOffline(false);
+      setError('');
+      setLoading(true);
     }
     void loadFirst(false);
   }, [aggregateKey, loadFirst, scopeKey]);
@@ -117,7 +124,8 @@ export function usePartnerPagedQuery<T>({
         fetcher: () => fetchPage({ limit: pageSize, offset }),
       });
       const combined = [...rows, ...result.data.rows];
-      storeAggregate(combined, result.data.total);
+      const aggregateFetchedAt = updatedAt ?? result.updatedAt;
+      storeAggregate(combined, result.data.total, aggregateFetchedAt);
       setStale(result.stale);
       if (result.stale) {
         setOffline(Boolean(result.fallbackError?.offline));
@@ -129,7 +137,7 @@ export function usePartnerPagedQuery<T>({
     } finally {
       setLoadingMore(false);
     }
-  }, [fetchPage, key, loadingMore, pageSize, rows, scopeKey, staleTimeMs, storeAggregate, total]);
+  }, [fetchPage, key, loadingMore, pageSize, rows, scopeKey, staleTimeMs, storeAggregate, total, updatedAt]);
 
   const refresh = useCallback(async () => {
     invalidatePartnerQueryCache(scopeKey, key);
