@@ -82,7 +82,7 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
         searchPlaceholder="Search registration, customer, permit, make or model"
         activeViewLabel={`${filtered.length} in current view`}
-        action={<Link href="/vehicles/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Vehicle</Link>}
+        action={<Link prefetch={false} href="/vehicles/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Vehicle</Link>}
       >
         <RegisterViewTabs
           value={view}
@@ -121,7 +121,7 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
             {pageRows.map((vehicle) => (
               <tr key={vehicle.id} className="h-12 transition hover:bg-[#FAFCFF]">
                 <td className="px-3">
-                  <Link href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleNo(vehicle)}</Link>
+                  <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleNo(vehicle)}</Link>
                   <p className="truncate text-[9px] leading-4 text-[#64748B]">{vehicle.vehicle_type || "Type not set"}</p>
                 </td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{vehicle.customers?.contact_name ?? "-"}</p></td>
@@ -145,7 +145,7 @@ function VehicleMobileCard({ vehicle }: { vehicle: VehicleRow }) {
     <article className="mobile-record-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[15px] font-extrabold text-[#12203B]">{displayVehicleNo(vehicle)}</Link>
+          <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[15px] font-extrabold text-[#12203B]">{displayVehicleNo(vehicle)}</Link>
           <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.vehicle_type}</p>
         </div>
         <RegistrationPill vehicle={vehicle} />
@@ -159,8 +159,8 @@ function VehicleMobileCard({ vehicle }: { vehicle: VehicleRow }) {
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Link href={`/vehicles/${vehicle.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111A35] px-3 text-[12px] font-bold text-white">Open vehicle</Link>
-        <Link href="/policies/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Add policy</Link>
+        <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111A35] px-3 text-[12px] font-bold text-white">Open vehicle</Link>
+        <Link prefetch={false} href="/policies/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Add policy</Link>
       </div>
     </article>
   );
@@ -173,7 +173,7 @@ function RegistrationPill({ vehicle }: { vehicle: VehicleRow }) {
 
 function NextAction({ vehicle }: { vehicle: VehicleRow }) {
   if (isRegistrationPending(vehicle)) return <span className="inline-flex items-center gap-1 font-bold text-amber-700"><ShieldAlert className="h-3.5 w-3.5" />Update RC</span>;
-  if (policyCount(vehicle) === 0) return <Link href="/policies/new" className="inline-flex items-center gap-1 font-bold text-[#174EA6] hover:underline"><FileText className="h-3.5 w-3.5" />Add policy</Link>;
+  if (policyCount(vehicle) === 0) return <Link prefetch={false} href="/policies/new" className="inline-flex items-center gap-1 font-bold text-[#174EA6] hover:underline"><FileText className="h-3.5 w-3.5" />Add policy</Link>;
   return <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><Wrench className="h-3.5 w-3.5" />Maintained</span>;
 }
 

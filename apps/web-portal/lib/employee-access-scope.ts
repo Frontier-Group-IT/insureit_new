@@ -1,5 +1,6 @@
 import type { AppRole, Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getActiveEmployeePermissionOverride } from "@/lib/permission-management";
 import { cache } from "react";
 
 const organizationWideRoles: AppRole[] = [
@@ -37,14 +38,8 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
       : "self";
 
   if (capability) {
-    const { data: override } = await admin
-      .from("employee_permission_overrides")
-      .select("scope_type,expires_at")
-      .eq("profile_id", profileId)
-      .eq("capability", capability)
-      .maybeSingle<ScopeOverride>();
-    const valid = override && (!override.expires_at || new Date(override.expires_at).getTime() > Date.now());
-    if (valid && override.scope_type !== "inherit") {
+    const override = await getActiveEmployeePermissionOverride(profileId, capability) as ScopeOverride | null;
+    if (override && override.scope_type !== "inherit") {
       requestedMode = override.scope_type === "organization" ? "organization" : override.scope_type === "hierarchy" ? "hierarchy" : "self";
     }
   }
