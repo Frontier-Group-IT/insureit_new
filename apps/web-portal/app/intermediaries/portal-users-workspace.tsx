@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { FormSubmitButton } from "@/components/form-submit-button";
+import { createIntermediaryPortalLogin } from "./portal-account-actions";
+import { resendIntermediaryPortalInvite } from "./resend-portal-invite-action";
 import type { PortalUserRow } from "./portal-users/page";
 
 type StatusFilter = "all" | "active" | "inactive";
 
 const PORTAL_USERS_PAGE_SIZE = 10;
 
-export function IntermediaryPortalUsersWorkspace({ rows, initialQuery, initialStatus, loadError }: { rows: PortalUserRow[]; initialQuery: string; initialStatus: StatusFilter; loadError: boolean }) {
+export function IntermediaryPortalUsersWorkspace({ rows, initialQuery, initialStatus, success, error, loadError }: { rows: PortalUserRow[]; initialQuery: string; initialStatus: StatusFilter; success?: string; error?: string; loadError: boolean }) {
   const [query, setQuery] = useState(initialQuery);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(initialStatus);
   const [currentPage, setCurrentPage] = useState(1);
@@ -51,7 +54,12 @@ export function IntermediaryPortalUsersWorkspace({ rows, initialQuery, initialSt
     setCurrentPage(1);
   }
 
-  return <div className="mx-auto max-w-[1480px] pb-8">
+  const successMessage = success === "portal_login_invited" ? "Portal account created and password setup invitation sent." : success === "portal_invite_resent" ? "A fresh password setup invitation has been sent." : null;
+  const errorMessage = portalErrorMessage(error);
+
+  return <div className="mx-auto max-w-[1480px] space-y-3 pb-8">
+    {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-semibold text-emerald-700">{successMessage}</div> : null}
+    {errorMessage ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{errorMessage}</div> : null}
     <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b bg-[#F8FAFC] px-4 py-3 lg:flex-row lg:items-center">
         <div className="shrink-0"><h2 className="text-[12px] font-semibold text-[#0F172A]">Partner Portal Users</h2></div>
@@ -73,10 +81,10 @@ export function IntermediaryPortalUsersWorkspace({ rows, initialQuery, initialSt
       {loadError ? <div className="px-4 py-12 text-center"><p className="text-[11px] font-semibold text-red-700">Partner portal users are temporarily unavailable.</p><p className="mt-1 text-[9.5px] text-[#64748B]">Please refresh the page or try again shortly.</p></div> : pageRows.length ? (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-[10.5px]">
-            <thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner</th><th className="px-3 py-3">Account</th><th className="px-3 py-3">Portal status</th><th className="px-3 py-3">Invitation sent</th><th className="px-3 py-3">Application</th></tr></thead>
+            <thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner</th><th className="px-3 py-3">Account</th><th className="px-3 py-3">Portal status</th><th className="px-3 py-3">Invitation sent</th><th className="px-3 py-3">Application</th><th className="px-3 py-3 text-right">Portal action</th></tr></thead>
             <tbody className="divide-y">{pageRows.map((row) => {
               const { intermediary, account } = row;
-              return <tr key={intermediary.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{intermediary.display_name}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{intermediary.intermediary_code ?? "Partner ID pending"}</p></td><td className="px-3 py-3"><p className="text-[#334155]">{account?.email ?? intermediary.email ?? "Email not recorded"}</p></td><td className="px-3 py-3"><Status value={resolvedStatus(row)} /></td><td className="px-3 py-3 text-[#475569]">{formatDateTime(account?.invited_at)}</td><td className="px-3 py-3">{intermediary.application_id ? <Link href={`/intermediaries/applications/${intermediary.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link> : <span className="text-[#94A3B8]">Unavailable</span>}</td></tr>;
+              return <tr key={intermediary.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-semibold text-[#0F2A55]">{intermediary.display_name}</p><p className="mt-0.5 text-[8.5px] text-[#64748B]">{intermediary.intermediary_code ?? "Partner ID pending"}</p></td><td className="px-3 py-3"><p className="text-[#334155]">{account?.email ?? intermediary.email ?? "Email not recorded"}</p></td><td className="px-3 py-3"><Status value={resolvedStatus(row)} /></td><td className="px-3 py-3 text-[#475569]">{formatDateTime(account?.invited_at)}</td><td className="px-3 py-3">{intermediary.application_id ? <Link href={`/intermediaries/applications/${intermediary.application_id}`} className="font-semibold text-[#4F46E5] hover:underline">Open account</Link> : <span className="text-[#94A3B8]">Direct partner</span>}</td><td className="px-3 py-3 text-right"><PortalAction row={row} /></td></tr>;
             })}</tbody>
           </table>
         </div>
@@ -135,4 +143,42 @@ function Status({ value }: { value: string }) {
         ? "border-red-200 bg-red-50 text-red-700"
         : "border-amber-200 bg-amber-50 text-amber-700";
   return <span className={`inline-flex rounded-full border px-2 py-1 text-[8.5px] font-semibold capitalize ${style}`}>{label}</span>;
+}
+
+
+function PortalAction({ row }: { row: PortalUserRow }) {
+  const { intermediary, account } = row;
+  const status = resolvedStatus(row);
+  const email = account?.email ?? intermediary.email;
+
+  if (status === "not_created") {
+    if (!email) return <span className="text-[9px] font-semibold text-amber-700" title="Add an email address to the intermediary before creating portal access.">Email required</span>;
+    return <form action={createIntermediaryPortalLogin} className="inline-flex">
+      <input type="hidden" name="intermediary_id" value={intermediary.id} />
+      <input type="hidden" name="return_path" value="/intermediaries/portal-users" />
+      <FormSubmitButton label="Create Portal Account" pendingLabel="Creating..." className="inline-flex h-8 items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 px-3 text-[9px] font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60" />
+    </form>;
+  }
+
+  if (status === "invited") {
+    return <form action={resendIntermediaryPortalInvite} className="inline-flex">
+      <input type="hidden" name="intermediary_id" value={intermediary.id} />
+      <input type="hidden" name="return_path" value="/intermediaries/portal-users" />
+      <FormSubmitButton label="Resend Invite" pendingLabel="Sending..." className="inline-flex h-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-3 text-[9px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60" />
+    </form>;
+  }
+
+  if (status === "active") return <span className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[9px] font-bold text-emerald-700">Active</span>;
+  if (status === "disabled" || status === "suspended") return <span className="text-[9px] font-semibold text-[#94A3B8]">Managed from account review</span>;
+  return <span className="text-[9px] text-[#94A3B8]">—</span>;
+}
+
+function portalErrorMessage(error?: string) {
+  if (!error) return null;
+  if (error === "portal_login_email_required") return "Portal account cannot be created until an email address is recorded for this partner.";
+  if (error === "portal_login_exists") return "A portal account already exists for this partner.";
+  if (error === "portal_login_partner_family_unresolved") return "This partner does not currently resolve to one valid Partner family, so portal access was not created.";
+  if (error === "portal_login_not_authorized") return "You do not have permission to manage this partner portal account.";
+  if (error === "portal_resend_not_available") return "A portal invitation can only be resent while the account is awaiting activation.";
+  return "The portal account action could not be completed. Please try again or review the partner account details.";
 }
