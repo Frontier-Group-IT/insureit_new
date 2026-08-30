@@ -1,8 +1,10 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 
 import { PartnerButton } from '@/components/ui/partner-button';
 import { partnerTheme } from '@/lib/theme';
+import { reportPartnerError } from '@/lib/partner-observability';
 
 type Props = {
   children: ReactNode;
@@ -20,13 +22,24 @@ export class PartnerErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (__DEV__) {
-      console.error('Partner app render error', error, info.componentStack);
-    }
+    reportPartnerError(error, {
+      area: 'app-shell',
+      operation: 'render',
+      recoverable: true,
+      metadata: {
+        componentStack: info.componentStack || '',
+      },
+    });
   }
 
   private recover = () => {
     this.setState({ hasError: false });
+  };
+
+  private returnHome = () => {
+    this.setState({ hasError: false }, () => {
+      router.replace('/');
+    });
   };
 
   render() {
@@ -47,7 +60,14 @@ export class PartnerErrorBoundary extends Component<Props, State> {
           <Text style={styles.message}>
             Your session is still safe. Try reopening the screen. If the problem continues, close and reopen INSUREIT Partner.
           </Text>
-          <PartnerButton label="Try again" onPress={this.recover} />
+          <View style={styles.actions}>
+            <View style={styles.action}>
+              <PartnerButton label="Try again" onPress={this.recover} />
+            </View>
+            <View style={styles.action}>
+              <PartnerButton label="Return to Home" variant="secondary" onPress={this.returnHome} />
+            </View>
+          </View>
         </View>
       </View>
     );
@@ -77,5 +97,11 @@ const styles = StyleSheet.create({
     marginBottom: partnerTheme.spacing.lg,
     color: partnerTheme.colors.inkMuted,
     ...partnerTheme.typography.body,
+  },
+  actions: {
+    gap: partnerTheme.spacing.sm,
+  },
+  action: {
+    minHeight: partnerTheme.control.minTouchTarget,
   },
 });
