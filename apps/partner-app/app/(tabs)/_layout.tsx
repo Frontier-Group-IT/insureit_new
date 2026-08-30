@@ -22,9 +22,11 @@ export default function PartnerTabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarHideOnKeyboard: true,
-        tabBarActiveTintColor: partnerTheme.colors.brand,
+        tabBarActiveTintColor: partnerTheme.colors.brandStrong,
         tabBarInactiveTintColor: '#8993A4',
         tabBarLabelStyle: styles.label,
+        tabBarIconStyle: styles.icon,
+        tabBarItemStyle: styles.item,
         tabBarStyle: styles.tabBar,
       }}
     >
@@ -38,19 +40,24 @@ export default function PartnerTabsLayout() {
 }
 
 function tabIcon(inactive: IconName, active: IconName) {
-  return function PartnerTabIcon({ color, size, focused }: { color: string; size: number; focused: boolean }) {
-    return <Ionicons name={focused ? active : inactive} color={color} size={size} />;
+  return function PartnerTabIcon({ color, focused }: { color: string; size: number; focused: boolean }) {
+    return <Ionicons name={focused ? active : inactive} color={color} size={22} />;
   };
 }
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.canvas },
   tabBar: {
-    height: 76,
-    paddingTop: 8,
-    paddingBottom: 12,
+    height: 80,
+    paddingTop: 7,
+    paddingBottom: 10,
     backgroundColor: partnerTheme.colors.surface,
     borderTopColor: partnerTheme.colors.line,
   },
-  label: { fontSize: 9.5, fontWeight: '700' },
+  item: {
+    minHeight: partnerTheme.control.minTouchTarget,
+    paddingTop: 2,
+  },
+  icon: { marginTop: 1 },
+  label: { marginTop: 1, ...partnerTheme.typography.meta },
 });
