@@ -233,7 +233,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
               <RotateCcw className="h-4 w-4" />
             </button>
           </div>
-          <Link href="/policies/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>
+          <Link prefetch={false} href="/policies/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Policy</Link>
         </div>
       </div>
 
@@ -336,7 +336,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
     <article className="mobile-record-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link href={`/policies/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
+          <Link prefetch={false} href={`/policies/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
           <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{policyBusinessLine(policy)} · {policyCategory(policy)}</p>
         </div>
         <PolicyStatus policy={policy} />
@@ -354,8 +354,8 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
         </div>
       </div>
       <div className={`mt-3 grid gap-2 ${isNonMotor ? "grid-cols-1" : "grid-cols-2"}`}>
-        <Link href={`/policies/${policy.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111A35] px-3 text-[12px] font-bold text-white">Open policy</Link>
-        {!isNonMotor ? <Link href="/claims/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Report claim</Link> : null}
+        <Link prefetch={false} href={`/policies/${policy.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111A35] px-3 text-[12px] font-bold text-white">Open policy</Link>
+        {!isNonMotor ? <Link prefetch={false} href="/claims/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Report claim</Link> : null}
       </div>
     </article>
   );
@@ -375,7 +375,7 @@ function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy:
   const policyCopy = policy.policy_documents?.find((document) => document.document_type === "policy_copy") ?? null;
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <Link href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
+      <Link prefetch={false} href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
         <span className="block truncate"><span className="font-bold">{businessLine}</span><span aria-hidden="true" className="mx-1 text-[11px] font-normal">•</span><span className="font-normal">{category || "-"}</span></span>
         {product && product.toLowerCase() !== category.toLowerCase() ? <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{product}</span> : null}
       </Link>
