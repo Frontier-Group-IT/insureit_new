@@ -70,7 +70,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
             Updated {data.generatedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
           </span>
           {canCreatePolicy ? (
-            <Link
+            <Link prefetch={false}
               href="/policies/new"
               className="inline-flex h-9 items-center gap-1.5 border border-[#BFCBDA] bg-white px-3 text-[8.5px] font-bold text-[#1E2E4A] transition hover:border-[#8298B5] hover:bg-[#F8FAFC]"
             >
@@ -78,7 +78,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
             </Link>
           ) : null}
           {canCreatePolicyIntake ? (
-            <Link
+            <Link prefetch={false}
               href="/policy-intakes/new"
               className="inline-flex h-9 items-center gap-1.5 bg-[#203A63] px-3 text-[8.5px] font-bold text-white transition hover:bg-[#173157]"
             >
@@ -282,7 +282,7 @@ function NeedsAttention({ items }: { items: AttentionSignal[] }) {
     <section className="mt-5 border-y border-[#D8E0EA] bg-white">
       <div className="flex items-center justify-between px-4 py-2.5 sm:px-5">
         <h2 className="text-[10.5px] font-bold text-[#1D2C49]">Needs attention</h2>
-        <Link href="/notifications" className="text-[8px] font-bold text-[#6E7D92] hover:text-[#203A63]">
+        <Link prefetch={false} href="/notifications" className="text-[8px] font-bold text-[#6E7D92] hover:text-[#203A63]">
           View all ↗
         </Link>
       </div>
@@ -407,7 +407,7 @@ function BusinessFilterPopover({ business }: { business: DashboardBusinessData }
           </details>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E5EAF1] bg-[#FBFCFE] px-5 py-3">
-            <Link
+            <Link prefetch={false}
               href="/dashboard"
               className="inline-flex h-8 items-center gap-1.5 px-1 text-[8px] font-bold text-[#718096] hover:text-[#203A63]"
             >
@@ -499,7 +499,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <BusinessFilterPopover business={business} />
-          <Link
+          <Link prefetch={false}
             href="/reports/business"
             className="inline-flex h-9 items-center px-2 text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]"
           >
@@ -565,7 +565,7 @@ function CommercialOperations({ business }: { business: DashboardBusinessData })
             <p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.11em] text-[#8A96A8]">{business.periodLabel}</p>
           </div>
         </div>
-        <Link href="/policies/commercial-review" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Open control ↗</Link>
+        <Link prefetch={false} href="/policies/commercial-review" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Open control ↗</Link>
       </div>
 
       <div className="grid border-t border-[#E7ECF2] md:grid-cols-3 xl:grid-cols-5">
@@ -697,7 +697,7 @@ function FleetHealth({ fleet, divided }: { fleet: NonNullable<DashboardCurrentDa
           </div>
         ))}
       </div>
-      <Link href="/vehicles" className="mt-4 inline-flex items-center gap-1 text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">
+      <Link prefetch={false} href="/vehicles" className="mt-4 inline-flex items-center gap-1 text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">
         Vehicle Register <ArrowUpRight className="h-3 w-3" />
       </Link>
     </div>
@@ -731,7 +731,7 @@ function RenewalHealth({ renewals, total, divided }: { renewals: NonNullable<Das
           </div>
         ))}
       </div>
-      <Link href="/policies" className="mt-4 inline-flex items-center gap-1 text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">
+      <Link prefetch={false} href="/policies" className="mt-4 inline-flex items-center gap-1 text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">
         Policy Register <ArrowUpRight className="h-3 w-3" />
       </Link>
     </div>
@@ -752,7 +752,7 @@ function WorkMovement({ data, access }: { data: DashboardCurrentData; access: Da
       {showClaims ? (
         <WorkStream title="Claim movement" href="/claims" divided={showIntakes}>
           {data.claims!.recent.map((row) => (
-            <Link key={row.id} href={`/claims/${row.id}`} className="group flex items-center gap-3 border-t border-[#EEF2F6] px-4 py-3.5 first:border-t-0 sm:px-5">
+            <Link prefetch={false} key={row.id} href={`/claims/${row.id}`} className="group flex items-center gap-3 border-t border-[#EEF2F6] px-4 py-3.5 first:border-t-0 sm:px-5">
               <Icon src={DASHBOARD_ICON_ASSETS.claims} size={27} />
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
@@ -840,11 +840,11 @@ function Leaderboard({ title, rows, totalAmount, href, divided = false, compact 
           <p className="text-[7.5px] font-black uppercase tracking-[.11em] text-[#8290A3]">Ranked by net premium</p>
           <h3 className="mt-1 text-[11px] font-bold text-[#1A2A46]">{title}</h3>
         </div>
-        <Link href={href} className="text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">View all ↗</Link>
+        <Link prefetch={false} href={href} className="text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">View all ↗</Link>
       </div>
       <div className="mt-3 divide-y divide-[#EEF2F6] border-t border-[#E7ECF2]">
         {rows.slice(0, compact ? 5 : 6).map((row, index) => (
-          <Link key={row.key} href={href} className="group grid grid-cols-[34px_minmax(0,1fr)_minmax(86px,auto)] items-center gap-3 py-3 hover:bg-[#FAFBFD] sm:px-1">
+          <Link prefetch={false} key={row.key} href={href} className="group grid grid-cols-[34px_minmax(0,1fr)_minmax(86px,auto)] items-center gap-3 py-3 hover:bg-[#FAFBFD] sm:px-1">
             <span className="portal-display text-[14px] font-semibold text-[#A2ACBB]">{String(index + 1).padStart(2, "0")}</span>
             <div className="min-w-0">
               <p className="whitespace-normal break-words text-[9.5px] font-bold leading-relaxed text-[#26344E]">{row.label || "Incomplete"}</p>
@@ -868,7 +868,7 @@ function WorkStream({ title, href, children, divided = false }: { title: string;
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2]`}>
       <div className="flex items-center justify-between px-4 py-3 sm:px-5">
         <h2 className="text-[11px] font-bold text-[#1E2E4B]">{title}</h2>
-        <Link href={href} className="text-[8px] font-bold text-[#6E7D91] hover:text-[#203A63]">View all ↗</Link>
+        <Link prefetch={false} href={href} className="text-[8px] font-bold text-[#6E7D91] hover:text-[#203A63]">View all ↗</Link>
       </div>
       <div className="border-t border-[#E7ECF2]">{children}</div>
     </div>
@@ -878,7 +878,7 @@ function WorkStream({ title, href, children, divided = false }: { title: string;
 function PolicyIntakeRow({ row }: { row: DashboardIntakeRow }) {
   const manual = row.ocr_status === "failed";
   return (
-    <Link href={`/policy-intakes/${row.id}`} className="group flex items-center gap-3 border-t border-[#EEF2F6] px-4 py-3.5 first:border-t-0 sm:px-5">
+    <Link prefetch={false} href={`/policy-intakes/${row.id}`} className="group flex items-center gap-3 border-t border-[#EEF2F6] px-4 py-3.5 first:border-t-0 sm:px-5">
       <Icon src={manual ? DASHBOARD_ICON_ASSETS.ocrManualReview : DASHBOARD_ICON_ASSETS.policyIntake} size={27} />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-start gap-x-2 gap-y-1">
@@ -896,7 +896,7 @@ function PolicyIntakeRow({ row }: { row: DashboardIntakeRow }) {
 
 function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
   return (
-    <Link href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-h-[94px] items-center gap-3 border-[#E3E9F0] px-4 py-3.5 transition hover:bg-[#FAFBFD]`}>
+    <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-h-[94px] items-center gap-3 border-[#E3E9F0] px-4 py-3.5 transition hover:bg-[#FAFBFD]`}>
       <Icon src={item.icon} size={35} />
       <div className="min-w-0 flex-1">
         <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
@@ -919,7 +919,7 @@ function AttentionItem({ item, divided }: { item: AttentionSignal; divided: bool
     slate: "bg-[#8A98AA]",
   }[item.tone];
   return (
-    <Link href={item.href} className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} group flex min-w-0 items-center gap-3 border-[#E7ECF2] px-4 py-3 hover:bg-[#FAFBFD]`}>
+    <Link prefetch={false} href={item.href} className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} group flex min-w-0 items-center gap-3 border-[#E7ECF2] px-4 py-3 hover:bg-[#FAFBFD]`}>
       <span className={`h-8 w-[3px] shrink-0 ${tone}`} />
       <Icon src={item.icon} size={27} />
       <div className="min-w-0 flex-1">
