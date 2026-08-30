@@ -32,6 +32,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
   const lastResolvedAt = useRef(0);
   const activeScopeKey = useRef('signed-out');
+  const contextRef = useRef<PartnerSessionContext | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
 
   const resolve = useCallback(async ({ blocking }: { blocking: boolean }) => {
@@ -43,6 +44,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       if (!session?.user) {
         clearPartnerQueryCache(activeScopeKey.current);
         activeScopeKey.current = 'signed-out';
+        contextRef.current = null;
         setContext(null);
         setStatus('signed_out');
         return null;
@@ -55,12 +57,14 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       }
 
       const nextContext = await resolvePartnerSession();
+      contextRef.current = nextContext;
       setContext(nextContext);
       setStatus('ready');
       lastResolvedAt.current = Date.now();
       return nextContext;
     } catch (cause) {
       clearPartnerQueryCache(activeScopeKey.current);
+      contextRef.current = null;
       setContext(null);
       setError(cause instanceof Error ? cause.message : 'Partner access could not be resolved.');
       setStatus('denied');
@@ -73,6 +77,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
   const clear = useCallback(() => {
     clearPartnerQueryCache(activeScopeKey.current);
     activeScopeKey.current = 'signed-out';
+    contextRef.current = null;
     setContext(null);
     setError(null);
     setStatus('signed_out');
@@ -98,7 +103,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
 
       if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
         setTimeout(() => {
-          void resolve({ blocking: !context });
+          void resolve({ blocking: !contextRef.current });
         }, 0);
       }
     });
@@ -127,7 +132,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
       appStateSubscription.remove();
       supabase.auth.stopAutoRefresh();
     };
-  }, [clear, context, resolve]);
+  }, [clear, resolve]);
 
   const cacheScopeKey = context?.identity.auth_user_id || activeScopeKey.current;
 
