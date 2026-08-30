@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import {
   listPartnerPolicyIntakes,
   submitPartnerPolicyIntakeReplacement,
@@ -69,9 +70,7 @@ export default function PolicyIntakeDetailScreen() {
       eyebrow="POLICY INTAKE"
       title={row?.intake_number || 'Submission'}
       action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
+        <PartnerIconButton icon="close" label="Close Policy Intake detail" onPress={() => router.back()} />
       }
     >
       {submitted === '1' ? (
