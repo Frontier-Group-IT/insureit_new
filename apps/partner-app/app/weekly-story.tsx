@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 
@@ -17,7 +18,7 @@ export default function WeeklyStoryScreen() {
   }, []);
 
   return (
-    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" action={<Pressable onPress={() => router.back()} style={styles.close}><Ionicons name="close" size={18} color={partnerTheme.colors.ink} /></Pressable>}>
+    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" action={<PartnerIconButton icon="close" label="Close weekly story" onPress={() => router.back()} />}>
       {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View> : (
         <>
           <View style={styles.hero}>
