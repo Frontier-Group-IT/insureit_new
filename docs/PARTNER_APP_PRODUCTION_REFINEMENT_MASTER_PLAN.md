@@ -1096,7 +1096,7 @@ Use this section as the compact source of progress.
 
 | Phase | Status | Native build? | Notes |
 | --- | --- | ---: | --- |
-| 0 — Shared mobile foundation | IN PROGRESS | No | Branch: `feat/partner-phase-0-foundation` |
+| 0 — Shared mobile foundation | READY FOR REVIEW | No | PR #800 merged; preview OTA published; installed-device visual check pending |
 | 1 — Navigation / Home / global states | LOCKED | No | Starts after Phase 0 gate |
 | 2 — Customers / Policies / Renewals / Claims | LOCKED | No | |
 | 3 — Policy Intake / Business / Payout / Support | LOCKED | No | |
@@ -1139,7 +1139,7 @@ The next implementation work is therefore:
 
 > **Phase 0 — Shared mobile foundation**
 
-**IN PROGRESS:** shared Partner design tokens and reusable UI primitives are being introduced without business-flow changes or native dependencies. A stale Partner CI slug assertion discovered during Phase 0 is treated as a P0 release-gate defect and corrected to match the already-linked Expo project (`insureit`).
+**READY FOR REVIEW:** Phase 0 implementation merged in PR #800 as `5841fe44ed9e049aa39b1524e6e34337ed523236`. Canonical Partner verification run #38 passed route integrity, release identity, TypeScript, lint and Expo web review export. The deliberate main-only OTA trigger path was added in PR #801 and merged as `12908201517d0689dfac635ca56f2273c7670ccf`. Partner preview OTA run `33300628248` succeeded on project `8ade82c1-4c96-4f09-b90b-802270fb406d`, branch `preview`, runtime `0.1.0`, update group `536b65c6-a13a-4c6a-b794-506a4222ae1a`, exact Git commit `12908201517d0689dfac635ca56f2273c7670ccf`. Remaining gate: visually verify representative Customers and New Policy Intake screens on the installed Partner preview APK after OTA application. Phase 1 remains locked until that installed-device check is confirmed.
 
 No later phase is authorized to be mixed into Phase 0 merely for convenience.
 
