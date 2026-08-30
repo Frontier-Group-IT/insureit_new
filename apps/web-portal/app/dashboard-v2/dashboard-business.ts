@@ -157,20 +157,35 @@ export async function getDashboardBusinessData(
   const vehicleIds = Array.from(new Set(allPolicies.map((row) => row.vehicle_id).filter((value): value is string => Boolean(value))));
   const insurerIds = Array.from(new Set(allPolicies.map((row) => row.insurance_company_id).filter((value): value is string => Boolean(value))));
 
-  const [vehicleResult, insurerResult] = await Promise.all([
-    vehicleIds.length
-      ? admin.from("vehicles").select("id,vehicle_type").in("id", vehicleIds).returns<VehicleClassRow[]>()
-      : Promise.resolve({ data: [] as VehicleClassRow[], error: null }),
-    insurerIds.length
-      ? admin.from("insurance_companies").select("id,name").in("id", insurerIds).returns<InsurerRow[]>()
-      : Promise.resolve({ data: [] as InsurerRow[], error: null }),
-  ]);
+  const insurerPromise = insurerIds.length
+    ? admin.from("insurance_companies").select("id,name").in("id", insurerIds).returns<InsurerRow[]>()
+    : Promise.resolve({ data: [] as InsurerRow[], error: null });
 
+  // Keep PostgREST query URLs bounded. A large policy book can contain hundreds
+  // of distinct vehicle UUIDs; sending them all through one .in("id", ids)
+  // request can exceed practical URL limits and make the dashboard show a
+  // false "Vehicle-class business mix could not be refreshed" warning.
+  const vehicleRows: VehicleClassRow[] = [];
+  let vehicleLookupError: string | null = null;
+  for (const batch of chunkValues(vehicleIds, 120)) {
+    const result = await admin
+      .from("vehicles")
+      .select("id,vehicle_type")
+      .in("id", batch)
+      .returns<VehicleClassRow[]>();
+    if (result.error) {
+      vehicleLookupError = result.error.message;
+      break;
+    }
+    vehicleRows.push(...(result.data ?? []));
+  }
+
+  const insurerResult = await insurerPromise;
   const warnings: string[] = [];
-  if (vehicleResult.error) warnings.push("Vehicle-class business mix could not be refreshed.");
+  if (vehicleLookupError) warnings.push("Vehicle-class business mix could not be refreshed.");
   if (insurerResult.error) warnings.push("Insurance-company business mix could not be refreshed.");
 
-  const vehicleClassById = new Map((vehicleResult.data ?? []).map((row) => [row.id, clean(row.vehicle_type) || "Incomplete"]));
+  const vehicleClassById = new Map(vehicleRows.map((row) => [row.id, clean(row.vehicle_type) || "Incomplete"]));
   const insurerById = new Map((insurerResult.data ?? []).map((row) => [row.id, row.name]));
 
   const filteredPolicies = allPolicies.filter((row) => {
@@ -550,6 +565,15 @@ function numberValue(value: unknown) {
 function payoutValue(row: PayoutRow) {
   const partner = row.partner_payout_amount;
   return partner === null || partner === undefined ? numberValue(row.gross_payout) : numberValue(partner);
+}
+
+function chunkValues<T>(values: T[], size: number) {
+  if (!values.length) return [] as T[][];
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
 }
 
 function optionSort(a: DashboardFilterOption, b: DashboardFilterOption) {
