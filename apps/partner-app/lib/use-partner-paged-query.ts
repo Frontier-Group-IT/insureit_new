@@ -70,8 +70,8 @@ export function usePartnerPagedQuery<T>({
       storeAggregate(result.data.rows, result.data.total);
       setStale(result.stale);
       if (result.stale) {
-        setOffline(true);
-        setError('Refresh failed. Showing the last successfully loaded information.');
+        setOffline(Boolean(result.fallbackError?.offline));
+        setError(result.fallbackError?.message || 'Refresh failed. Showing the last successfully loaded information.');
       }
     } catch (cause) {
       if (existing) {
@@ -120,8 +120,8 @@ export function usePartnerPagedQuery<T>({
       storeAggregate(combined, result.data.total);
       setStale(result.stale);
       if (result.stale) {
-        setOffline(true);
-        setError('More records could not be refreshed. Showing cached information.');
+        setOffline(Boolean(result.fallbackError?.offline));
+        setError(result.fallbackError?.message || 'More records could not be refreshed. Showing cached information.');
       }
     } catch (cause) {
       setOffline(isLikelyConnectivityError(cause));
