@@ -37,7 +37,7 @@ type StatusFilter = "all" | "active" | "inactive";
 export default async function IntermediaryPortalUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; success?: string; error?: string }>;
 }) {
   await requirePospMispManager();
   const query = await searchParams;
@@ -70,7 +70,7 @@ export default async function IntermediaryPortalUsersPage({
 
   return (
     <AppShell title="Intermediary Portal Users">
-      <IntermediaryPortalUsersWorkspace rows={allRows} initialQuery={q} initialStatus={statusFilter} loadError={Boolean(loadError)} />
+      <IntermediaryPortalUsersWorkspace rows={allRows} initialQuery={q} initialStatus={statusFilter} success={query.success} error={query.error} loadError={Boolean(loadError)} />
     </AppShell>
   );
 }
