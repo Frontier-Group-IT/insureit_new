@@ -153,7 +153,7 @@ export default function RenewalsScreen() {
         meta={collection.loading ? 'Loading…' : `${visibleRows.length} shown · ${collection.total} total`}
       />
 
-      {collection.error && collection.rows.length ? (
+      {collection.error && collection.rows.length && !collection.stale ? (
         <View style={styles.inlineBanner}>
           <PartnerBanner tone="warning" message={collection.error} />
         </View>
