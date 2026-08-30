@@ -59,7 +59,7 @@ jobs:
           const customer = require('./apps/mobile-app/app.json');
           const eas = require('./apps/partner-app/eas.json');
           const expo = app.expo || {};
-          if (expo.name !== 'INSUREIT Partner' || expo.slug !== 'insureit-partner') throw new Error('Unexpected Partner Expo name/slug.');
+          if (expo.name !== 'INSUREIT Partner' || expo.slug !== 'insureit') throw new Error('Unexpected Partner Expo name/slug.');
           if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') throw new Error('Unexpected Partner native package identity.');
           if (expo.android?.package === customer?.expo?.android?.package || expo.ios?.bundleIdentifier === customer?.expo?.ios?.bundleIdentifier) throw new Error('Partner native identity overlaps the Customer app.');
           if (expo.scheme === customer?.expo?.scheme) throw new Error('Partner URL scheme overlaps Customer app.');
