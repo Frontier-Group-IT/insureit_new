@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerField } from '@/components/ui/partner-field';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   listPartnerPolicyIntakes,
   submitPartnerPolicyIntake,
@@ -88,14 +93,10 @@ export default function NewPolicyIntakeScreen() {
     <PartnerScreen
       eyebrow="NEW POLICY INTAKE"
       title="Send policy to Operations"
-      action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
-      }
+      action={<PartnerIconButton icon="close" label="Close Policy Intake" onPress={() => router.back()} />}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Preparing Policy Intake" />
       ) : (
         <>
           <View style={styles.hero}>
@@ -113,12 +114,21 @@ export default function NewPolicyIntakeScreen() {
                 {sources.map((source) => {
                   const active = source.id === sourceId;
                   return (
-                    <Pressable key={source.id} onPress={() => setSourceId(source.id)} style={[styles.source, active && styles.sourceActive]}>
+                    <Pressable
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: active }}
+                      accessibilityLabel={`${source.display_name}, ${source.intermediary_type}`}
+                      key={source.id}
+                      onPress={() => setSourceId(source.id)}
+                      style={({ pressed }) => [styles.source, active && styles.sourceActive, pressed && styles.pressed]}
+                    >
                       <View style={styles.sourceBody}>
                         <Text style={[styles.sourceName, active && styles.sourceNameActive]}>{source.display_name}</Text>
-                        <Text style={[styles.sourceMeta, active && styles.sourceMetaActive]}>{source.intermediary_type.toUpperCase()}{source.intermediary_code ? ` · ${source.intermediary_code}` : ''}</Text>
+                        <Text style={[styles.sourceMeta, active && styles.sourceMetaActive]}>
+                          {source.intermediary_type.toUpperCase()}{source.intermediary_code ? ` · ${source.intermediary_code}` : ''}
+                        </Text>
                       </View>
-                      <Ionicons name={active ? 'radio-button-on' : 'radio-button-off'} size={18} color={active ? partnerTheme.colors.brandStrong : '#A0A8B6'} />
+                      <Ionicons name={active ? 'radio-button-on' : 'radio-button-off'} size={20} color={active ? partnerTheme.colors.brandStrong : '#A0A8B6'} />
                     </Pressable>
                   );
                 })}
@@ -128,46 +138,61 @@ export default function NewPolicyIntakeScreen() {
             <View style={styles.fixedSource}>
               <Text style={styles.label}>Lead source</Text>
               <Text style={styles.fixedSourceName}>{selectedSource?.display_name || 'Authorized account'}</Text>
-              <Text style={styles.fixedSourceMeta}>{selectedSource ? `${selectedSource.intermediary_type.toUpperCase()}${selectedSource.intermediary_code ? ` · ${selectedSource.intermediary_code}` : ''}` : ''}</Text>
+              <Text style={styles.fixedSourceMeta}>
+                {selectedSource ? `${selectedSource.intermediary_type.toUpperCase()}${selectedSource.intermediary_code ? ` · ${selectedSource.intermediary_code}` : ''}` : ''}
+              </Text>
             </View>
           )}
 
           <View style={styles.section}>
-            <Text style={styles.label}>Customer mobile</Text>
-            <TextInput
+            <PartnerField
+              label="Customer mobile"
               value={mobile}
               onChangeText={(value) => setMobile(value.replace(/\D/g, '').slice(0, 10))}
               keyboardType="phone-pad"
               placeholder="10 digit mobile number"
-              placeholderTextColor="#9AA3B2"
               maxLength={10}
-              style={styles.input}
+              error={mobile.length > 0 && !validMobile ? 'Enter a valid Indian mobile number.' : undefined}
             />
-            {mobile.length > 0 && !validMobile ? <Text style={styles.hintError}>Enter a valid Indian mobile number.</Text> : null}
           </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Policy copy</Text>
-            <Pressable onPress={pickFile} style={[styles.upload, file && styles.uploadSelected]}>
-              <View style={styles.uploadIcon}><Ionicons name={file ? 'checkmark-circle-outline' : 'cloud-upload-outline'} size={24} color={file ? partnerTheme.colors.success : partnerTheme.colors.brand} /></View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={file ? `Replace selected policy copy ${file.name}` : 'Choose policy PDF or image'}
+              onPress={pickFile}
+              style={({ pressed }) => [styles.upload, file && styles.uploadSelected, pressed && styles.pressed]}
+            >
+              <View style={styles.uploadIcon}>
+                <Ionicons name={file ? 'checkmark-circle-outline' : 'cloud-upload-outline'} size={24} color={file ? partnerTheme.colors.success : partnerTheme.colors.brand} />
+              </View>
               <View style={styles.uploadBody}>
-                <Text style={styles.uploadTitle}>{file ? file.name : 'Choose policy PDF or image'}</Text>
+                <Text numberOfLines={2} style={styles.uploadTitle}>{file ? file.name : 'Choose policy PDF or image'}</Text>
                 <Text style={styles.uploadMeta}>{file ? formatBytes(file.size || 0) : 'PDF, JPG, PNG or WebP · up to 15 MB'}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
+              <Ionicons name="chevron-forward" size={18} color="#A0A8B6" />
             </Pressable>
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <View style={styles.feedback}><PartnerBanner tone="danger" message={error} /></View> : null}
 
-          <Pressable disabled={!canSubmit} onPress={submit} style={[styles.submit, !canSubmit && styles.submitDisabled]}>
-            {submitting ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Ionicons name="send-outline" size={17} color="#FFFFFF" />}
-            <Text style={styles.submitText}>{submitting ? 'Submitting…' : 'Submit to Operations'}</Text>
-          </Pressable>
+          <View style={styles.submit}>
+            <PartnerButton
+              label={submitting ? 'Submitting…' : 'Submit to Operations'}
+              icon="send-outline"
+              loading={submitting}
+              disabled={!canSubmit}
+              onPress={submit}
+            />
+          </View>
 
           <View style={styles.note}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={partnerTheme.colors.accent} />
-            <Text style={styles.noteText}>The uploaded copy goes to the existing controlled Policy Intake queue. It does not book or alter a policy directly.</Text>
+            <PartnerBanner
+              tone="info"
+              icon="shield-checkmark-outline"
+              message="The uploaded copy goes to the existing controlled Policy Intake queue. It does not book or alter a policy directly."
+            />
           </View>
         </>
       )}
@@ -182,38 +207,66 @@ function formatBytes(value: number) {
 }
 
 const styles = StyleSheet.create({
-  close: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 260, alignItems: 'center', justifyContent: 'center' },
-  hero: { flexDirection: 'row', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 16, backgroundColor: partnerTheme.colors.nav },
-  heroIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3B4358' },
+  hero: {
+    flexDirection: 'row',
+    gap: 12,
+    borderRadius: partnerTheme.radius.xl,
+    padding: partnerTheme.spacing.lg,
+    backgroundColor: partnerTheme.colors.nav,
+  },
+  heroIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3B4358' },
   heroBody: { flex: 1 },
-  heroTitle: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '800' },
-  heroText: { marginTop: 4, color: '#C5CCDA', fontSize: 9.5, lineHeight: 14 },
-  section: { marginTop: 18 },
-  label: { marginBottom: 7, color: '#657084', fontSize: 8.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.75 },
-  fixedSource: { marginTop: 18, borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  fixedSourceName: { color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '800' },
-  fixedSourceMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 9 },
+  heroTitle: { color: '#FFFFFF', ...partnerTheme.typography.cardTitle },
+  heroText: { marginTop: 4, color: '#C5CCDA', ...partnerTheme.typography.caption },
+  section: { marginTop: partnerTheme.spacing.xl },
+  label: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
+  fixedSource: {
+    marginTop: partnerTheme.spacing.xl,
+    borderRadius: partnerTheme.radius.lg,
+    padding: partnerTheme.spacing.lg,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  fixedSourceName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  fixedSourceMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sourceList: { gap: 8 },
-  source: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  source: {
+    minHeight: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: partnerTheme.radius.md,
+    paddingHorizontal: 13,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
   sourceActive: { borderColor: partnerTheme.colors.brand, backgroundColor: partnerTheme.colors.brandSoft },
   sourceBody: { flex: 1 },
-  sourceName: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '700' },
+  sourceName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   sourceNameActive: { color: partnerTheme.colors.brandStrong },
-  sourceMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
+  sourceMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sourceMetaActive: { color: '#68629A' },
-  input: { height: 50, borderRadius: 14, paddingHorizontal: 14, color: partnerTheme.colors.ink, fontSize: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  hintError: { marginTop: 5, color: partnerTheme.colors.danger, fontSize: 8.5 },
-  upload: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderStyle: 'dashed', borderColor: '#C7D0DE' },
+  upload: {
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: partnerTheme.radius.lg,
+    padding: 13,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#C7D0DE',
+  },
   uploadSelected: { borderStyle: 'solid', borderColor: '#B7DBC8', backgroundColor: '#F7FCF9' },
-  uploadIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
+  uploadIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
   uploadBody: { flex: 1 },
-  uploadTitle: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '700' },
-  uploadMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
-  error: { marginTop: 14, color: partnerTheme.colors.danger, fontSize: 9.5, lineHeight: 14 },
-  submit: { minHeight: 50, marginTop: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, backgroundColor: partnerTheme.colors.brandStrong },
-  submitDisabled: { opacity: 0.42 },
-  submitText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '800' },
-  note: { marginTop: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 12, padding: 12, backgroundColor: partnerTheme.colors.accentSoft },
-  noteText: { flex: 1, color: '#56716F', fontSize: 8.5, lineHeight: 13 },
+  uploadTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  uploadMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  feedback: { marginTop: partnerTheme.spacing.lg },
+  submit: { marginTop: partnerTheme.spacing.xl },
+  note: { marginTop: partnerTheme.spacing.md },
+  pressed: { opacity: 0.82 },
 });

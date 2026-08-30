@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerSearchField } from '@/components/ui/partner-search-field';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import {
   getPartnerCustomerSummary,
   listPartnerCustomers,
@@ -20,6 +25,7 @@ export default function CustomersScreen() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,20 +50,16 @@ export default function CustomersScreen() {
     return () => {
       cancelled = true;
     };
-  }, [appliedSearch]);
+  }, [appliedSearch, reloadKey]);
 
   return (
     <PartnerScreen
       eyebrow="BUSINESS"
       title="Customers"
-      action={
-        <Pressable onPress={() => router.back()} style={styles.back}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
-      }
+      action={<PartnerIconButton icon="close" label="Close customers" onPress={() => router.back()} />}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading customers" />
       ) : (
         <>
           <View style={styles.summaryGrid}>
@@ -67,38 +69,50 @@ export default function CustomersScreen() {
             <SummaryCard label="With email" value={summary?.with_email ?? 0} />
           </View>
 
-          <View style={styles.searchWrap}>
-            <Ionicons name="search-outline" size={17} color="#8A94A6" />
-            <TextInput
+          <View style={styles.search}>
+            <PartnerSearchField
               value={query}
               onChangeText={setQuery}
-              onSubmitEditing={() => setAppliedSearch(query.trim())}
+              onSubmit={() => setAppliedSearch(query.trim())}
+              onClear={() => { setQuery(''); setAppliedSearch(''); }}
               placeholder="Search name, code, phone, email or city"
-              placeholderTextColor="#9AA3B2"
-              returnKeyType="search"
-              style={styles.searchInput}
             />
-            {query || appliedSearch ? (
-              <Pressable onPress={() => { setQuery(''); setAppliedSearch(''); }} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color="#9AA3B2" />
-              </Pressable>
-            ) : null}
           </View>
 
-          {error ? <Text style={styles.error}>{error}</Text> : null}
-
-          <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Customer book</Text>
-            <Text style={styles.listCount}>{rows[0]?.total_count ?? 0} records</Text>
-          </View>
-
-          {rows.length ? (
-            <View style={styles.list}>{rows.map((row) => <CustomerRow key={row.customer_id} row={row} onPress={() => router.push(`/customer/${row.customer_id}` as never)} />)}</View>
+          {error ? (
+            <PartnerStateView
+              state="error"
+              title="Customers could not be loaded"
+              message={error}
+              actionLabel="Try again"
+              onAction={() => setReloadKey((value) => value + 1)}
+            />
           ) : (
-            <View style={styles.empty}>
-              <Ionicons name="people-outline" size={30} color="#9AA3B2" />
-              <Text style={styles.emptyTitle}>No customers found</Text>
-            </View>
+            <>
+              <PartnerSectionHeader
+                title="Customer book"
+                meta={`${rows[0]?.total_count ?? 0} records`}
+              />
+
+              {rows.length ? (
+                <View style={styles.list}>
+                  {rows.map((row) => (
+                    <CustomerRow
+                      key={row.customer_id}
+                      row={row}
+                      onPress={() => router.push(`/customer/${row.customer_id}` as never)}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <PartnerStateView
+                  state="empty"
+                  icon="people-outline"
+                  title="No customers found"
+                  message={appliedSearch ? 'Try a different search term.' : 'Customers in your authorized business scope will appear here.'}
+                />
+              )}
+            </>
           )}
         </>
       )}
@@ -117,14 +131,19 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 
 function CustomerRow({ row, onPress }: { row: PartnerCustomerRow; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={styles.customerRow}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open customer ${row.customer_name}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.customerRow, pressed && styles.pressed]}
+    >
       <View style={styles.customerTop}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials(row.customer_name)}</Text></View>
         <View style={styles.customerIdentity}>
           <Text style={styles.customerName}>{row.customer_name}</Text>
           <Text style={styles.customerCode}>{row.customer_code || 'No customer code'}</Text>
         </View>
-        {row.customer_status ? <Text style={styles.status}>{humanize(row.customer_status)}</Text> : null}
+        {row.customer_status ? <PartnerStatusBadge label={humanize(row.customer_status)} tone="success" /> : null}
       </View>
 
       <View style={styles.metaGrid}>
@@ -133,7 +152,10 @@ function CustomerRow({ row, onPress }: { row: PartnerCustomerRow; onPress: () =>
         <Meta label="Location" value={[row.city, row.state].filter(Boolean).join(', ') || 'Not recorded'} />
         <Meta label="Intermediary" value={row.intermediary_code || 'Organization / unassigned'} />
       </View>
-      <View style={styles.openRow}><Text style={styles.openText}>Open customer story</Text><Ionicons name="chevron-forward" size={14} color={partnerTheme.colors.brand} /></View>
+      <View style={styles.openRow}>
+        <Text style={styles.openText}>Open customer story</Text>
+        <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+      </View>
     </Pressable>
   );
 }
@@ -148,41 +170,69 @@ function Meta({ label, value }: { label: string; value: string }) {
 }
 
 function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase()).join('') || 'CU';
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'CU';
 }
 
 function humanize(value: string) {
-  return value.replaceAll('_',' ').replace(/\b\w/g,(letter) => letter.toUpperCase());
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 const styles = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 260, alignItems: 'center', justifyContent: 'center' },
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  summaryCard: { width: '48%', minHeight: 88, justifyContent: 'center', borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, fontWeight: '700' },
-  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
-  searchWrap: { height: 48, marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.md, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  searchInput: { flex: 1, color: partnerTheme.colors.ink, fontSize: 11 },
-  error: { marginTop: 12, color: partnerTheme.colors.danger, fontSize: 10 },
-  listHeader: { marginTop: 22, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between' },
-  listTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '700' },
-  listCount: { color: partnerTheme.colors.inkMuted, fontSize: 9.5, fontWeight: '600' },
+  summaryCard: {
+    width: '48%',
+    minHeight: 92,
+    justifyContent: 'center',
+    borderRadius: partnerTheme.radius.lg,
+    padding: partnerTheme.spacing.lg,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  summaryValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.display },
+  summaryLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  search: { marginTop: partnerTheme.spacing.lg },
   list: { gap: 10 },
-  customerRow: { borderRadius: partnerTheme.radius.lg, padding: 16, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  customerRow: {
+    borderRadius: partnerTheme.radius.lg,
+    padding: partnerTheme.spacing.lg,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  pressed: { opacity: 0.82 },
   customerTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  avatar: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  avatarText: { color: partnerTheme.colors.brandStrong, fontSize: 11, fontWeight: '800' },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
   customerIdentity: { flex: 1 },
-  customerName: { color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '800' },
-  customerCode: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 8.5 },
-  status: { overflow: 'hidden', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 5, color: partnerTheme.colors.success, backgroundColor: '#E9F7EF', fontSize: 8, fontWeight: '800' },
-  metaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 11 },
+  customerName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.cardTitle },
+  customerCode: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  metaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 12 },
   meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', fontSize: 7.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '600' },
-  openRow: { marginTop: 12, paddingTop: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 3, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  openText: { color: partnerTheme.colors.brand, fontSize: 8, fontWeight: '800' },
-  empty: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '700' },
+  metaLabel: {
+    color: '#8A94A6',
+    textTransform: 'uppercase',
+    letterSpacing: 0.55,
+    ...partnerTheme.typography.meta,
+  },
+  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  openRow: {
+    minHeight: partnerTheme.control.minTouchTarget,
+    marginTop: 10,
+    paddingTop: 9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: partnerTheme.colors.line,
+  },
+  openText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
 });

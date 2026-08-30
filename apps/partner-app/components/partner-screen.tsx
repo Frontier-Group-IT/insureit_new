@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, type ScrollViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { partnerTheme } from '@/lib/theme';
@@ -9,16 +9,27 @@ export function PartnerScreen({
   eyebrow,
   action,
   children,
-}: PropsWithChildren<{ title: string; eyebrow?: string; action?: ReactNode }>) {
+  scrollProps,
+}: PropsWithChildren<{
+  title: string;
+  eyebrow?: string;
+  action?: ReactNode;
+  scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
+}>) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        {...scrollProps}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
+      >
         <View style={styles.header}>
           <View style={styles.headerText}>
             {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-            <Text style={styles.title}>{title}</Text>
+            <Text accessibilityRole="header" style={styles.title}>{title}</Text>
           </View>
-          {action}
+          {action ? <View style={styles.action}>{action}</View> : null}
         </View>
         {children}
       </ScrollView>
@@ -28,9 +39,33 @@ export function PartnerScreen({
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: partnerTheme.colors.canvas },
-  content: { flexGrow: 1, paddingHorizontal: 18, paddingBottom: 116 },
-  header: { minHeight: 76, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: partnerTheme.spacing.lg + 2,
+    paddingBottom: 116,
+  },
+  header: {
+    minHeight: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: partnerTheme.spacing.md,
+  },
   headerText: { flex: 1 },
-  eyebrow: { color: partnerTheme.colors.brand, fontSize: 9, fontWeight: '800', letterSpacing: 1.55 },
-  title: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '700' },
+  eyebrow: {
+    color: partnerTheme.colors.brand,
+    letterSpacing: 1.35,
+    ...partnerTheme.typography.eyebrow,
+  },
+  title: {
+    marginTop: 3,
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.pageTitle,
+  },
+  action: {
+    minWidth: partnerTheme.control.minTouchTarget,
+    minHeight: partnerTheme.control.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

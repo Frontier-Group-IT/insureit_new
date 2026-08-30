@@ -1096,7 +1096,7 @@ Use this section as the compact source of progress.
 
 | Phase | Status | Native build? | Notes |
 | --- | --- | ---: | --- |
-| 0 — Shared mobile foundation | NOT STARTED | No | First execution phase |
+| 0 — Shared mobile foundation | IN PROGRESS | No | Branch: `feat/partner-phase-0-foundation` |
 | 1 — Navigation / Home / global states | LOCKED | No | Starts after Phase 0 gate |
 | 2 — Customers / Policies / Renewals / Claims | LOCKED | No | |
 | 3 — Policy Intake / Business / Payout / Support | LOCKED | No | |
@@ -1138,6 +1138,8 @@ The user has approved freezing this plan and executing it phase-by-phase.
 The next implementation work is therefore:
 
 > **Phase 0 — Shared mobile foundation**
+
+**IN PROGRESS:** shared Partner design tokens and reusable UI primitives are being introduced without business-flow changes or native dependencies. A stale Partner CI slug assertion discovered during Phase 0 is treated as a P0 release-gate defect and corrected to match the already-linked Expo project (`insureit`).
 
 No later phase is authorized to be mixed into Phase 0 merely for convenience.
 
