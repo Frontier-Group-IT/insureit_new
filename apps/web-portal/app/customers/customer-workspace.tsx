@@ -170,7 +170,7 @@ export function CustomerWorkspace({ rows }: { rows: CustomerRow[] }) {
             <option value="all">All customer types</option>
             {Object.entries(partnerLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </RegisterSelect>
-          <Link href="/customers/applications" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155]"><FileCheck2 className="h-4 w-4" />KYC Applications</Link>
+          <Link prefetch={false} href="/customers/applications" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155]"><FileCheck2 className="h-4 w-4" />KYC Applications</Link>
         </BrokerRegisterToolbar>
 
         {selectedRows.length ? (
