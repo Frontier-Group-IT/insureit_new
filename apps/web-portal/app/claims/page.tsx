@@ -6,6 +6,7 @@ import { operationsQueueForKey } from "@/lib/claim-workflow";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { logPortalRoutePerformance } from "@/lib/performance-observability";
 import { ClaimsWorkspace } from "./claims-workspace";
 
 type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string };
@@ -28,11 +29,15 @@ const customerJourneyTitles: Record<string, string> = {
 };
 
 export default async function ClaimsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const startedAt = performance.now();
   const params = await searchParams;
+  const afterParams = performance.now();
   const profile = await requireCapability("view_claims");
+  const afterAuth = performance.now();
   if (!profile?.id) redirect("/access-denied");
 
   const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_claims");
+  const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
   let data: QueueClaimRow[] = [];
@@ -48,6 +53,14 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
     error = result.error;
   }
 
+  const finishedAt = performance.now();
+  logPortalRoutePerformance("/claims", {
+    params_ms: afterParams - startedAt,
+    auth_ms: afterAuth - afterParams,
+    scope_ms: afterScope - afterAuth,
+    data_ms: finishedAt - afterScope,
+    total_ms: finishedAt - startedAt,
+  });
   const title = titleForParams(params);
   const rows = data ?? [];
 

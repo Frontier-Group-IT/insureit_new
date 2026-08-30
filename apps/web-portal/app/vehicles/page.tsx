@@ -5,6 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { logPortalRoutePerformance } from "@/lib/performance-observability";
 import { VehicleWorkspace } from "./vehicle-workspace";
 
 type VehicleRow = {
@@ -24,13 +25,23 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function VehiclesPage() {
+  const startedAt = performance.now();
   const profile = await requireCapability("view_vehicles");
+  const afterAuth = performance.now();
   if (!profile) redirect("/access-denied");
 
   const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_vehicles");
+  const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) {
+    const finishedAt = performance.now();
+    logPortalRoutePerformance("/vehicles", {
+      auth_ms: afterAuth - startedAt,
+      scope_ms: afterScope - afterAuth,
+      data_ms: 0,
+      total_ms: finishedAt - startedAt,
+    });
     return <AppShell title="Vehicles">{profile.role === "backoffice_executive" ? <BackofficeVehicleRegister rows={[]} /> : <VehicleWorkspace rows={[]} />}</AppShell>;
   }
 
@@ -40,6 +51,13 @@ export default async function VehiclesPage() {
     .order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<VehicleRow[]>();
+  const finishedAt = performance.now();
+  logPortalRoutePerformance("/vehicles", {
+    auth_ms: afterAuth - startedAt,
+    scope_ms: afterScope - afterAuth,
+    data_ms: finishedAt - afterScope,
+    total_ms: finishedAt - startedAt,
+  });
   const rows = data ?? [];
 
   return (
