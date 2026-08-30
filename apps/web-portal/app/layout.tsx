@@ -7,8 +7,7 @@ import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { EmbeddedMasterSaveBridge } from "@/components/embedded-master-save-bridge";
 import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
-import { PolicyEditCopyFooterActions } from "@/components/policy-edit-copy-footer-actions";
-import { PolicySaveConfirmation } from "@/components/policy-save-confirmation";
+import { PolicyRouteEnhancements } from "@/components/policy-route-enhancements";
 import { SuccessPopup } from "@/components/success-popup";
 import { ProfessionalFormValidation } from "@/components/professional-form-validation";
 import "./globals.css";
@@ -46,8 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <EmbeddedMasterSaveBridge />
             <LegacyIntermediaryImportLink />
             <ProfessionalFormValidation />
-            <PolicyEditCopyFooterActions />
-            <PolicySaveConfirmation />
+            <PolicyRouteEnhancements />
             <SuccessPopup />
             <RouteProgressBar />
           </Suspense>
