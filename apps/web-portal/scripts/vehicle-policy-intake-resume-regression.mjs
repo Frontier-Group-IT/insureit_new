@@ -28,6 +28,8 @@ assert(uiFeedback.includes("document.body"));
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
 assert(vehiclePage.includes('"manage_customers"'));
+assert(forms.includes("SearchableCustomerSelect"));
+assert(forms.includes('placeholder="Select customer"'));
 
 const customerForm=read("app/customers/customer-onboarding-form.tsx");
 assert(customerForm.includes("CUSTOMER CREATED"));
