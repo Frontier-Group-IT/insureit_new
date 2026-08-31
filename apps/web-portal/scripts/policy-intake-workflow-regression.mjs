@@ -40,6 +40,10 @@ assert(workspace.includes("Policy Intake Queue"),"Operations intake queue must u
 assert(workspace.includes("Action Required")&&workspace.includes("RegisterPagination"),"Operations intake queue must expose status views and pagination");
 assert(workspace.includes("rowTones")&&workspace.includes("ready_for_review"),"Intake rows must retain status-based background coding");
 assert(workspace.includes("All lead sources")&&workspace.includes("All detail states")&&workspace.includes("From date")&&workspace.includes("To date"),"Operations queue must expose lead-source, OCR and date filters");
+assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'),"Global In Review count must include every in-review intake so status buckets reconcile to All");
+assert(workspace.includes('myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length'),"Personal active-work count must remain a separate reviewer subset");
+assert(workspace.includes('{ value: "in_review", label: "In Review", count: stats.inReview }'),"Reviewer queue must expose global In Review as a primary status bucket");
+assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
 assert(contextCard.includes("View Policy Copy"),"Onboarding sidebar must keep the intake policy copy available to Operations");
