@@ -10,11 +10,12 @@ assert(!forms.includes("+ Create new customer"));
 
 const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
 assert(vehicleSaveChooser.includes("Save Vehicle"));
-assert(vehicleSaveChooser.includes('type="button"'));
+assert(vehicleSaveChooser.includes('type="submit"'));
 assert(vehicleSaveChooser.includes('name="next_action"'));
 assert(vehicleSaveChooser.includes('value="post_save"'));
 assert(vehicleSaveChooser.includes("form.checkValidity()"));
-assert(vehicleSaveChooser.includes("form.requestSubmit()"));
+assert(vehicleSaveChooser.includes("onClick={validateBeforeSubmit}"));
+assert(vehicleSaveChooser.includes("event.preventDefault()"));
 assert(vehicleSaveChooser.includes("AlertModal"));
 assert(vehicleSaveChooser.includes("is required before the vehicle can be created."));
 assert(!vehicleSaveChooser.includes("ADD POLICY"));
