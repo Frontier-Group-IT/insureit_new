@@ -10,16 +10,11 @@ assert(!forms.includes("+ Create new customer"));
 
 const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
 assert(vehicleSaveChooser.includes("Save Vehicle"));
+assert(vehicleSaveChooser.includes('type="submit"'));
 assert(vehicleSaveChooser.includes('name="next_action"'));
-assert(vehicleSaveChooser.includes('value="vehicle"'));
-assert(vehicleSaveChooser.includes('value="policy"'));
-assert(vehicleSaveChooser.includes(">\n                OK\n              </button>"));
-assert(vehicleSaveChooser.includes(">\n                ADD POLICY\n              </button>"));
-assert(!vehicleSaveChooser.includes("Save Vehicle &amp; Continue to Policy"));
-assert(!vehicleSaveChooser.includes(">\n                Cancel\n              </button>"));
-assert(vehicleSaveChooser.includes("form.checkValidity()"));
-assert(vehicleSaveChooser.includes("form.reportValidity()"));
-assert(vehicleSaveChooser.includes("onClick={openSaveChoices}"));
+assert(vehicleSaveChooser.includes('value="post_save"'));
+assert(!vehicleSaveChooser.includes("ADD POLICY"));
+assert(!vehicleSaveChooser.includes("form.checkValidity()"));
 
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
