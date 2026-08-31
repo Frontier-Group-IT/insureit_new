@@ -13,6 +13,7 @@ import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
 import { getPartnerNetwork, type PartnerNetworkData } from '@/lib/network';
 import { getPartnerPayoutSummary, type PartnerPayoutSummary } from '@/lib/payout';
 import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/policies';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -124,7 +125,7 @@ export default function BusinessScreen() {
             <View style={styles.heroHeader}>
               <View>
                 <Text style={styles.heroEyebrow}>{monthLabel(performance.current_month).toUpperCase()}</Text>
-                <Text style={styles.heroValue}>{formatMoney(performance.premium_this_month)}</Text>
+                <Text style={styles.heroValue}>{formatIndianCurrency(performance.premium_this_month)}</Text>
                 <Text style={styles.heroLabel}>gross premium</Text>
               </View>
               <TrendBadge
@@ -145,7 +146,7 @@ export default function BusinessScreen() {
               icon="refresh-outline"
               value={renewals?.due_30_count ?? 0}
               label="Renewals in 30d"
-              meta={formatMoney(renewals?.due_30_premium ?? 0)}
+              meta={formatIndianCurrency(renewals?.due_30_premium ?? 0)}
               onPress={() => router.push('/renewals')}
             />
             <ActionStat
@@ -225,7 +226,7 @@ export default function BusinessScreen() {
                         {row.child_count ? ` · ${row.child_count} POSP/MISP` : ' · standalone'}
                       </Text>
                     </View>
-                    <Text style={styles.contributionValue}>{formatMoney(row.metrics.premium_this_month)}</Text>
+                    <Text style={styles.contributionValue}>{formatIndianCurrency(row.metrics.premium_this_month)}</Text>
                   </View>
                 ))}
               </View>
@@ -279,7 +280,7 @@ function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
                 <Text style={styles.payoutCustomer}>{row.customer_name}</Text>
               </View>
               <View style={styles.payoutRight}>
-                <Text style={styles.payoutAmount}>{formatMoney(row.amount)}</Text>
+                <Text style={styles.payoutAmount}>{formatIndianCurrency(row.amount)}</Text>
                 <PartnerStatusBadge
                   label={humanize(row.status || row.commercial_status || 'Recorded')}
                   tone={String(row.status).toLowerCase() === 'paid' ? 'success' : String(row.commercial_status).toLowerCase() === 'needs_review' ? 'warning' : 'info'}
@@ -304,7 +305,7 @@ function PayoutMetric({ label, value, meta, tone }: {
   return (
     <View style={[styles.payoutMetric, tone === 'success' ? styles.payoutMetricSuccess : styles.payoutMetricWarning]}>
       <Text style={styles.payoutMetricLabel}>{label}</Text>
-      <Text style={styles.payoutMetricValue}>{formatMoney(value)}</Text>
+      <Text style={styles.payoutMetricValue}>{formatIndianCurrency(value)}</Text>
       <Text style={styles.payoutMetricMeta}>{meta}</Text>
     </View>
   );
@@ -357,7 +358,7 @@ function TrendChart({ data }: { data: PartnerBusinessPerformance['trend'] }) {
           const height = Math.max(5, Math.round((premium / max) * 76));
           return (
             <View key={item.month} style={styles.barColumn}>
-              <Text style={styles.barValue}>{compactMoney(premium)}</Text>
+              <Text style={styles.barValue}>{formatIndianCurrency(premium)}</Text>
               <View style={styles.barTrack}><View style={[styles.bar, { height }]} /></View>
               <Text style={styles.barMonth}>{shortMonth(item.month)}</Text>
             </View>
@@ -374,25 +375,11 @@ function MixRow({ label, premium, policies, totalPremium }: { label: string; pre
     <View style={styles.mixRow}>
       <View style={styles.mixTop}>
         <Text style={styles.mixLabel}>{humanize(label)}</Text>
-        <Text style={styles.mixValue}>{formatMoney(premium)} · {policies} policies</Text>
+        <Text style={styles.mixValue}>{formatIndianCurrency(premium)} · {policies} policies</Text>
       </View>
       <View style={styles.mixTrack}><View style={[styles.mixFill, { width: `${percent}%` }]} /></View>
     </View>
   );
-}
-
-function formatMoney(value: number | string) {
-  const amount = Number(value || 0);
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
-}
-
-function compactMoney(value: number) {
-  if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
-  if (value >= 1000) return `${Math.round(value / 1000)}K`;
-  return String(Math.round(value));
 }
 
 function monthLabel(value: string) {

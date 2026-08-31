@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function WeeklyStoryScreen() {
@@ -23,7 +24,7 @@ export default function WeeklyStoryScreen() {
         <>
           <View style={styles.hero}>
             <Text style={styles.dates}>{formatDate(data.week_start)} — {formatDate(data.week_end)}</Text>
-            <Text style={styles.heroValue}>{formatMoney(data.premium_this_week)}</Text>
+            <Text style={styles.heroValue}>{formatIndianCurrency(data.premium_this_week)}</Text>
             <Text style={styles.heroLabel}>gross premium recorded this week</Text>
             <View style={styles.heroStats}>
               <Stat value={data.policies_this_week} label="Policies" inverse />
@@ -34,7 +35,7 @@ export default function WeeklyStoryScreen() {
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Compared with last week</Text></View>
           <View style={styles.compareCard}>
-            <View><Text style={styles.compareValue}>{formatMoney(data.premium_last_week)}</Text><Text style={styles.compareLabel}>last week premium</Text></View>
+            <View><Text style={styles.compareValue}>{formatIndianCurrency(data.premium_last_week)}</Text><Text style={styles.compareLabel}>last week premium</Text></View>
             <Trend value={Number(data.premium_change_percent || 0)} />
           </View>
 
@@ -43,7 +44,7 @@ export default function WeeklyStoryScreen() {
             <View style={styles.nextIcon}><Ionicons name="refresh-outline" size={21} color={partnerTheme.colors.brand} /></View>
             <View style={styles.nextBody}>
               <Text style={styles.nextTitle}>{data.renewals_next_week} renewal{data.renewals_next_week === 1 ? '' : 's'} next week</Text>
-              <Text style={styles.nextText}>{formatMoney(data.renewal_premium_next_week)} gross premium is approaching renewal.</Text>
+              <Text style={styles.nextText}>{formatIndianCurrency(data.renewal_premium_next_week)} gross premium is approaching renewal.</Text>
             </View>
             <Pressable onPress={() => router.push('/renewals')}><Ionicons name="chevron-forward" size={18} color="#9AA3B2" /></Pressable>
           </View>
@@ -65,14 +66,6 @@ function Stat({ value, label, inverse }: { value: number; label: string; inverse
 function Trend({ value }: { value: number }) {
   const positive = value >= 0;
   return <View style={[styles.trend, { backgroundColor: positive ? '#EAF7EF' : '#FFF2DD' }]}><Ionicons name={positive ? 'trending-up' : 'trending-down'} size={15} color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning} /><Text style={[styles.trendText,{ color: positive ? partnerTheme.colors.success : partnerTheme.colors.warning }]}>{Math.abs(value).toFixed(1)}%</Text></View>;
-}
-
-function formatMoney(value: number | string) {
-  const amount = Number(value || 0);
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}).format(amount)}`;
 }
 
 function formatDate(value: string) {

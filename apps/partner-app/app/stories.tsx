@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { getPartnerStories, type PartnerStory, type PartnerStoriesData } from '@/lib/stories';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function StoriesScreen() {
@@ -168,10 +169,7 @@ function storyToneStyle(tone: PartnerStory['tone']) {
 function formatMetric(story: PartnerStory) {
   const value = Number(story.metric || 0);
   if (story.metric_label?.toLowerCase().includes('idv') || story.metric_label?.toLowerCase().includes('premium')) {
-    if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)} Cr`;
-    if (value >= 100000) return `₹${(value / 100000).toFixed(1)} L`;
-    if (value >= 1000) return `₹${(value / 1000).toFixed(1)} K`;
-    return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value)}`;
+    return formatIndianCurrency(value);
   }
   return String(story.metric);
 }

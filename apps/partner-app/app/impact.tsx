@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerImpact, type PartnerImpactData } from '@/lib/impact';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function ImpactScreen() {
@@ -49,7 +50,7 @@ export default function ImpactScreen() {
         <>
           <View style={styles.hero}>
             <Text style={styles.heroEyebrow}>ACTIVE MOTOR PROTECTION</Text>
-            <Text style={styles.heroValue}>{formatMoney(data.active_motor_idv)}</Text>
+            <Text style={styles.heroValue}>{formatIndianCurrency(data.active_motor_idv)}</Text>
             <Text style={styles.heroLabel}>insured declared value currently covered in your authorized Motor book</Text>
           </View>
 
@@ -71,7 +72,7 @@ export default function ImpactScreen() {
           </View>
 
           <View style={styles.monthCard}>
-            <MonthStat label="Gross premium" value={formatMoney(data.gross_premium_this_month)} />
+            <MonthStat label="Gross premium" value={formatIndianCurrency(data.gross_premium_this_month)} />
             <MonthStat label="Policies" value={String(data.policies_this_month)} />
             <MonthStat label="Customers added" value={String(data.customers_this_month)} />
           </View>
@@ -81,7 +82,7 @@ export default function ImpactScreen() {
               <View style={styles.settlementIcon}><Ionicons name="heart-circle-outline" size={21} color={partnerTheme.colors.accent} /></View>
               <View style={styles.settlementBody}>
                 <Text style={styles.settlementEyebrow}>CLAIM OUTCOMES RECORDED</Text>
-                <Text style={styles.settlementValue}>{formatMoney(data.claim_settlement_value)}</Text>
+                <Text style={styles.settlementValue}>{formatIndianCurrency(data.claim_settlement_value)}</Text>
                 <Text style={styles.settlementText}>settlement value recorded across completed/assisted claims in this authorized book</Text>
               </View>
             </View>
@@ -121,14 +122,6 @@ function MonthStat({ label, value }: { label: string; value: string }) {
       <Text style={styles.monthLabel}>{label}</Text>
     </View>
   );
-}
-
-function formatMoney(value: number | string) {
-  const amount = Number(value || 0);
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 0 : 1)} Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)} L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)} K`;
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
 const styles = StyleSheet.create({

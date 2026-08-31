@@ -1,11 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { StoryRail } from '@/components/story-rail';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerListRow } from '@/components/ui/partner-list-row';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
@@ -17,6 +18,7 @@ import { PartnerTopTabs, type PartnerTopTab } from '@/components/ui/partner-top-
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -142,11 +144,12 @@ export default function PartnerHomeScreen() {
             </View>
           ) : null}
 
+          <PartnerEnter delay={20}>
           <View style={styles.businessBlock}>
             <View style={styles.businessHeading}>
               <View>
                 <Text style={styles.businessLabel}>MY BUSINESS · THIS MONTH</Text>
-                <Text style={styles.businessPremium}>{formatMoney(data.business.premium_this_month)}</Text>
+                <Text style={styles.businessPremium}>{formatIndianCurrency(data.business.premium_this_month)}</Text>
                 <Text style={styles.businessCaption}>Gross premium</Text>
               </View>
               <Pressable
@@ -181,7 +184,9 @@ export default function PartnerHomeScreen() {
               </View>
             </View>
           </View>
+          </PartnerEnter>
 
+          <PartnerEnter delay={80}>
           <View style={styles.workSection}>
             <View style={styles.workHeader}>
               <Text style={styles.workTitle}>My work</Text>
@@ -229,17 +234,21 @@ export default function PartnerHomeScreen() {
               )}
             </View>
           </View>
+          </PartnerEnter>
 
+          <PartnerEnter delay={140}>
           <View style={styles.quickSection}>
             <PartnerSectionHeader title="Quick actions" />
             <View style={styles.quickGrid}>
-              <QuickAction icon="add-circle-outline" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-              <QuickAction icon="refresh-outline" label="Renewals" onPress={() => router.push('/renewals')} />
-              <QuickAction icon="shield-outline" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
-              <QuickAction icon="people-outline" label="Customers" onPress={() => router.push('/customers')} />
+              <QuickAction icon="document-text" tone="brand" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+              <QuickAction icon="sync" tone="renewal" label="Renewals" onPress={() => router.push('/renewals')} />
+              <QuickAction icon="shield-checkmark" tone="claim" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+              <QuickAction icon="people" tone="customer" label="Customers" onPress={() => router.push('/customers')} />
             </View>
           </View>
+          </PartnerEnter>
 
+          <PartnerEnter delay={200}>
           <View style={styles.impactSection}>
             <PartnerSectionHeader
               title="Your impact"
@@ -257,13 +266,13 @@ export default function PartnerHomeScreen() {
 
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Open impact. ${formatMoney(data.impact.active_motor_idv)} active motor IDV protected`}
+              accessibilityLabel={`Open impact. ${formatIndianCurrency(data.impact.active_motor_idv)} active motor IDV protected`}
               onPress={() => router.push('/impact')}
               style={({ pressed }) => [styles.impactSummary, pressed && styles.pressed]}
             >
               <View style={styles.impactPrimary}>
                 <Text style={styles.impactLabel}>ACTIVE MOTOR IDV PROTECTED</Text>
-                <Text style={styles.impactValue}>{formatMoney(data.impact.active_motor_idv)}</Text>
+                <Text style={styles.impactValue}>{formatIndianCurrency(data.impact.active_motor_idv)}</Text>
               </View>
 
               <View style={styles.impactStats}>
@@ -273,6 +282,7 @@ export default function PartnerHomeScreen() {
               </View>
             </Pressable>
           </View>
+          </PartnerEnter>
 
           {stories.length ? (
             <View style={styles.stories}>
@@ -307,24 +317,61 @@ function HomeSkeleton() {
   );
 }
 
-function QuickAction({ icon, label, onPress }: {
-  icon: 'add-circle-outline' | 'refresh-outline' | 'shield-outline' | 'people-outline';
+function QuickAction({ icon, tone, label, onPress }: {
+  icon: 'document-text' | 'sync' | 'shield-checkmark' | 'people';
+  tone: 'brand' | 'renewal' | 'claim' | 'customer';
   label: string;
   onPress: () => void;
 }) {
+  const scale = useState(() => new Animated.Value(1))[0];
+  const lift = useState(() => new Animated.Value(0))[0];
+
+  const animate = (pressed: boolean) => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: pressed ? 0.96 : 1,
+        useNativeDriver: true,
+        speed: 28,
+        bounciness: 5,
+      }),
+      Animated.spring(lift, {
+        toValue: pressed ? -2 : 0,
+        useNativeDriver: true,
+        speed: 28,
+        bounciness: 5,
+      }),
+    ]).start();
+  };
+
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
+      onPressIn={() => animate(true)}
+      onPressOut={() => animate(false)}
+      style={styles.quickActionTouch}
     >
-      <View style={styles.quickIcon}>
-        <Ionicons name={icon} size={20} color={partnerTheme.colors.brand} />
-      </View>
-      <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
+      <Animated.View
+        style={[
+          styles.quickAction,
+          { transform: [{ scale }, { translateY: lift }] },
+        ]}
+      >
+        <View style={[styles.quickIcon, styles[`quickIcon_${tone}`]]}>
+          <Ionicons name={icon} size={22} color={quickActionColor(tone)} />
+        </View>
+        <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
+      </Animated.View>
     </Pressable>
   );
+}
+
+function quickActionColor(tone: 'brand' | 'renewal' | 'claim' | 'customer') {
+  if (tone === 'renewal') return partnerTheme.colors.warning;
+  if (tone === 'claim') return partnerTheme.colors.accent;
+  if (tone === 'customer') return partnerTheme.colors.success;
+  return partnerTheme.colors.brandStrong;
 }
 
 function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
@@ -386,13 +433,6 @@ function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function formatMoney(value: number | string) {
-  const amount = Number(value || 0);
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(amount >= 100000000 ? 0 : 1)}Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
-}
 
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
@@ -548,21 +588,30 @@ const styles = StyleSheet.create({
     backgroundColor: partnerTheme.colors.surface,
   },
   quickGrid: { flexDirection: 'row', gap: 6 },
+  quickActionTouch: {
+    flex: 1,
+    minHeight: 76,
+  },
   quickAction: {
     flex: 1,
-    minHeight: 68,
+    minHeight: 76,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
+    borderRadius: 14,
+    backgroundColor: '#FAFBFD',
   },
   quickIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 11,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.brandSoft,
   },
+  quickIcon_brand: { backgroundColor: partnerTheme.colors.brandSoft },
+  quickIcon_renewal: { backgroundColor: partnerTheme.colors.warningSoft },
+  quickIcon_claim: { backgroundColor: partnerTheme.colors.accentSoft },
+  quickIcon_customer: { backgroundColor: partnerTheme.colors.successSoft },
   quickLabel: {
     marginTop: 5,
     color: partnerTheme.colors.ink,

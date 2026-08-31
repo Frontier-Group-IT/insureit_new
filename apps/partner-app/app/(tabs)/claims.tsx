@@ -17,6 +17,7 @@ import {
   type PartnerClaimState,
   type PartnerClaimSummary,
 } from '@/lib/claims';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -252,12 +253,7 @@ function Meta({ label, value }: { label: string; value: string }) {
 
 function claimAmount(row: PartnerClaimRow) {
   const value = row.settlement_amount ?? row.approved_amount ?? row.estimated_loss;
-  return value == null ? 'Amount not recorded' : formatMoney(value);
-}
-
-function formatMoney(value: number | string) {
-  const amount = Number(value);
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(amount) ? amount : 0)}`;
+  return value == null ? 'Amount not recorded' : formatIndianCurrency(value);
 }
 
 function formatDate(value: string) {

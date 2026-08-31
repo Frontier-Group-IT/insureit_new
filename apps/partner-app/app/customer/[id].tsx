@@ -11,6 +11,7 @@ import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerCustomerDetail, type PartnerCustomerDetail } from '@/lib/customers';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function CustomerDetailScreen() {
@@ -121,7 +122,7 @@ export default function CustomerDetailScreen() {
                     <Text style={styles.itemText}>
                       {[policy.insurer_name, policy.vehicle_no].filter(Boolean).join(' · ') || 'Policy details'}
                     </Text>
-                    <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatMoney(policy.premium_amount)}</Text>
+                    <Text style={styles.itemMeta}>Ends {formatDate(policy.end_date)} · {formatIndianCurrency(policy.premium_amount)}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color="#9AA3B2" />
                 </Pressable>
@@ -244,11 +245,6 @@ function formatDate(value: string | null) {
 function formatMonthYear(value: string) {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? 'recorded date' : new Intl.DateTimeFormat('en-IN', { month: 'short', year: 'numeric' }).format(d);
-}
-
-function formatMoney(value: number | string | null) {
-  const amount = Number(value ?? 0);
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(amount) ? amount : 0)}`;
 }
 
 function daysUntil(value: string) {

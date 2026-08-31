@@ -10,6 +10,7 @@ import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerClaimDetail, type PartnerClaimDetail } from '@/lib/claims';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 type TimelineItem = { key: string; title: string; date: string; kind: 'created' | 'status' | 'stage' };
@@ -178,7 +179,7 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function Amount({ label, value }: { label: string; value: number | string | null }) {
-  return <View style={styles.amount}><Text style={styles.amountValue}>{value == null ? '—' : formatMoney(value)}</Text><Text style={styles.amountLabel}>{label}</Text></View>;
+  return <View style={styles.amount}><Text style={styles.amountValue}>{value == null ? '—' : formatIndianCurrency(value)}</Text><Text style={styles.amountLabel}>{label}</Text></View>;
 }
 
 function partnerActionText(data: PartnerClaimDetail) {
@@ -198,11 +199,6 @@ function claimTone(value: string | null): 'success' | 'warning' | 'info' {
 
 function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatMoney(value: number | string) {
-  const n = Number(value);
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(n) ? n : 0)}`;
 }
 
 function formatDateTime(value: string | null) {
