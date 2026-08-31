@@ -5,10 +5,11 @@ import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerButton } from '@/components/ui/partner-button';
-import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
+import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
+import { PartnerTopTabs } from '@/components/ui/partner-top-tabs';
 import { listPartnerPolicyIntakes, type PartnerPolicyIntake } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
 
@@ -78,26 +79,26 @@ export default function PolicyIntakesScreen() {
         ),
       }}
     >
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroBody}>
-            <Text style={styles.heroEyebrow}>OPERATIONS PIPELINE</Text>
-            <Text style={styles.heroTitle}>{counts.active} active submissions</Text>
-          </View>
-          <View style={styles.heroIcon}><Ionicons name="git-network-outline" size={22} color="#FFFFFF" /></View>
-        </View>
-        <View style={styles.heroStats}>
-          <PipelineStat value={counts.attention} label="Need you" warn />
-          <PipelineStat value={counts.progress} label="In progress" />
-          <PipelineStat value={counts.completed} label="Completed" />
-        </View>
-      </View>
+      <PartnerListSummaryStrip
+        items={[
+          { key: 'active', label: 'Active', value: counts.active },
+          { key: 'attention', label: 'Need you', value: counts.attention, tone: counts.attention ? 'warning' : 'default' },
+          { key: 'progress', label: 'In progress', value: counts.progress },
+          { key: 'completed', label: 'Completed', value: counts.completed, tone: 'success' },
+        ]}
+      />
 
-      <View style={styles.filters}>
-        <PartnerFilterChip label="All" active={filter === 'all'} onPress={() => setFilter('all')} />
-        <PartnerFilterChip label="Attention" active={filter === 'attention'} onPress={() => setFilter('attention')} />
-        <PartnerFilterChip label="In progress" active={filter === 'in_progress'} onPress={() => setFilter('in_progress')} />
-        <PartnerFilterChip label="Completed" active={filter === 'completed'} onPress={() => setFilter('completed')} />
+      <View style={styles.tabs}>
+        <PartnerTopTabs
+          activeKey={filter}
+          onChange={(key) => setFilter(key as IntakeFilter)}
+          tabs={[
+            { key: 'all', label: 'All', badge: rows.length },
+            { key: 'attention', label: 'Attention', badge: counts.attention },
+            { key: 'in_progress', label: 'In progress', badge: counts.progress },
+            { key: 'completed', label: 'Completed', badge: counts.completed },
+          ]}
+        />
       </View>
 
       <PartnerSectionHeader
@@ -119,45 +120,42 @@ export default function PolicyIntakesScreen() {
         <>
           {error ? <Text style={styles.inlineError}>{error}</Text> : null}
           <View style={styles.list}>
-            {visibleRows.map((row) => (
+            {visibleRows.map((row, index) => (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Open Policy Intake ${row.intake_number}. ${statusLabel(row)}`}
                 key={row.id}
                 onPress={() => router.push({ pathname: '/policy-intakes/[id]', params: { id: row.id } })}
-                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+                style={({ pressed }) => [
+                  styles.row,
+                  index < visibleRows.length - 1 && styles.rowDivider,
+                  pressed && styles.pressed,
+                ]}
               >
-                <View style={styles.top}>
+                <View style={styles.rowTop}>
                   <View style={styles.identity}>
                     <Text style={styles.number}>{row.intake_number}</Text>
-                    <Text style={styles.customer}>{row.customer_mobile} · {row.lead_source_name}</Text>
+                    <Text numberOfLines={1} style={styles.customer}>{row.customer_mobile} · {row.lead_source_name}</Text>
                   </View>
                   <PartnerStatusBadge label={statusLabel(row)} tone={statusTone(row)} />
                 </View>
 
-                <View style={styles.metaRow}>
-                  <Meta label="Policy" value={field(row, 'policy_number') || 'Fetching / review pending'} />
-                  <Meta label="Vehicle" value={field(row, 'vehicle_registration_number') || 'Fetching / review pending'} />
-                </View>
+                <Text numberOfLines={1} style={styles.metaLine}>
+                  {field(row, 'policy_number') || 'Policy pending'} · {field(row, 'vehicle_registration_number') || 'Vehicle pending'}
+                </Text>
 
                 <IntakeProgress row={row} />
 
                 {row.attention_reason ? (
                   <View style={styles.attention}>
-                    <Ionicons name="alert-circle-outline" size={17} color="#9A5B12" />
-                    <Text style={styles.attentionText}>{row.attention_reason}</Text>
+                    <Ionicons name="alert-circle-outline" size={16} color="#9A5B12" />
+                    <Text numberOfLines={2} style={styles.attentionText}>{row.attention_reason}</Text>
                   </View>
                 ) : null}
 
-                <View style={styles.footer}>
-                  <View>
-                    <Text style={styles.footerLabel}>UPDATED</Text>
-                    <Text style={styles.date}>{formatDate(row.updated_at || row.created_at)}</Text>
-                  </View>
-                  <View style={styles.open}>
-                    <Text style={styles.openText}>Open</Text>
-                    <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
-                  </View>
+                <View style={styles.rowFooter}>
+                  <Text style={styles.date}>Updated {formatDate(row.updated_at || row.created_at)}</Text>
+                  <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
                 </View>
               </Pressable>
             ))}
@@ -174,15 +172,6 @@ export default function PolicyIntakesScreen() {
         />
       )}
     </PartnerScreen>
-  );
-}
-
-function PipelineStat({ value, label, warn = false }: { value: number; label: string; warn?: boolean }) {
-  return (
-    <View style={styles.pipelineStat}>
-      <Text style={[styles.pipelineValue, warn && value > 0 && styles.pipelineValueWarn]}>{value}</Text>
-      <Text style={styles.pipelineLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -213,15 +202,6 @@ function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
           </View>
         );
       })}
-    </View>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.meta}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.metaValue}>{value}</Text>
     </View>
   );
 }
@@ -259,46 +239,54 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  heroBody: { flex: 1 },
-  heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  heroTitle: { marginTop: 3, color: '#FFFFFF', fontSize: 19, lineHeight: 25, fontWeight: '900' },
-  heroIcon: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
-  heroStats: { marginTop: 10, paddingTop: 9, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
-  pipelineStat: { flex: 1, alignItems: 'center' },
-  pipelineValue: { color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '800' },
-  pipelineValueWarn: { color: '#F1C687' },
-  pipelineLabel: { marginTop: 3, color: '#96A2B4', ...partnerTheme.typography.meta },
-  filters: { marginTop: 9, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  inlineError: { marginBottom: 10, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
-  list: { gap: 8 },
-  card: { borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  top: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-  identity: { flex: 1 },
+  tabs: { marginTop: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  inlineError: { marginBottom: 8, color: partnerTheme.colors.danger, textAlign: 'center', ...partnerTheme.typography.caption },
+  list: { marginTop: 1, backgroundColor: partnerTheme.colors.surface },
+  row: {
+    minHeight: 106,
+    paddingVertical: 11,
+    paddingHorizontal: 2,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  rowTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  identity: { flex: 1, minWidth: 0 },
   number: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   customer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  metaRow: { marginTop: 9, flexDirection: 'row' },
-  meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.6, ...partnerTheme.typography.meta },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  progressWrap: { marginTop: 10, paddingTop: 9, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  metaLine: { marginTop: 6, color: '#8A94A6', ...partnerTheme.typography.meta },
+  progressWrap: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
   progressStep: { flex: 1, alignItems: 'center' },
   progressLineWrap: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  progressDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#D6DCE6' },
+  progressDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#D6DCE6' },
   progressDotComplete: { backgroundColor: partnerTheme.colors.brand },
   progressDotCurrent: { borderWidth: 2, borderColor: '#CFCBFF' },
   progressDotRejected: { backgroundColor: partnerTheme.colors.danger, borderColor: '#F4B8B1' },
   progressLine: { position: 'absolute', left: '58%', width: '84%', height: 1, backgroundColor: '#DCE1E9' },
   progressLineComplete: { backgroundColor: '#AAA5FF' },
-  progressLabel: { marginTop: 6, color: '#98A2B3', ...partnerTheme.typography.meta },
+  progressLabel: { marginTop: 4, color: '#98A2B3', fontSize: 9, lineHeight: 12, fontWeight: '500' },
   progressLabelActive: { color: partnerTheme.colors.ink },
-  attention: { marginTop: 8, flexDirection: 'row', alignItems: 'flex-start', gap: 7, borderRadius: 11, padding: 10, backgroundColor: partnerTheme.colors.warningSoft },
-  attentionText: { flex: 1, color: '#80511A', ...partnerTheme.typography.caption },
-  footer: { marginTop: 9, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
-  date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  open: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  openText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  pressed: { opacity: 0.8 },
+  attention: {
+    marginTop: 7,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    backgroundColor: partnerTheme.colors.warningSoft,
+  },
+  attentionText: { flex: 1, color: '#80511A', ...partnerTheme.typography.meta },
+  rowFooter: {
+    marginTop: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  date: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  pressed: { opacity: 0.78 },
 });
