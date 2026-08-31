@@ -22,6 +22,14 @@ The complete evidence, staged plan, safety gates, and deferred work are in `docs
 
 No index, RLS, permission, region, storage, accounting, or workflow-state change is included in this pass. Apply the migration only after the feature PR is green and explicitly approved for merge/deployment.
 
+## 2026-08-31 policy business report enrichment pass
+
+**IMPLEMENTED, NOT APPLIED:** branch `perf/policy-business-report-enrichment` rewrites `public.get_policy_business_report_v3(...)` so customer, vehicle, and insurer display enrichment is deferred until after report filtering and register pagination. Summary/trend/category/RM calculations continue to use the same policy/premium/non-motor fields and the function signature, security mode, filters, pagination bounds, JSON keys, and ordering remain unchanged.
+
+**VERIFIED read-only production evidence before migration:** the existing live function returned the same JSON as the candidate query for the default 25-row page. On the same healthy Seoul Supabase project, the live function measured **74.400 ms / 9,649 shared-hit blocks** while the equivalent candidate query measured **13.084 ms / 220 shared-hit blocks**. Treat these as focused database execution measurements, not end-user p75/p95.
+
+No index, RLS, permission, region, accounting, storage, OCR, or workflow-state change is included in this pass. Apply only after the feature PR is green and approved for merge.
+
 ## 1. Why this file exists
 
 The portal was repeatedly slowed by architectural patterns that looked harmless in isolation:
