@@ -59,27 +59,27 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="Work">
-        <MenuRow icon="document-text-outline" title="Policy Intake" subtitle="Submit and track policy copies sent to Operations." onPress={() => router.push('/policy-intakes')} />
-        <MenuRow icon="refresh-outline" title="Renewals" subtitle="Upcoming and overdue policies that need follow-up." onPress={() => router.push('/renewals')} />
-        <MenuRow icon="people-outline" title="Customers" subtitle="Your authorized customer book and linked business." onPress={() => router.push('/customers')} last />
+        <MenuRow icon="document-text-outline" title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
+        <MenuRow icon="refresh-outline" title="Renewals" onPress={() => router.push('/renewals')} />
+        <MenuRow icon="people-outline" title="Customers" onPress={() => router.push('/customers')} last />
       </MenuSection>
 
       <MenuSection title="Insights">
-        <MenuRow icon="calendar-outline" title="Your Week" subtitle="A compact recap of business, service and upcoming work." onPress={() => router.push('/weekly-story')} />
-        <MenuRow icon="heart-outline" title="My Impact" subtitle="Protection footprint, customers served and claims assisted." onPress={() => router.push('/impact')} />
-        <MenuRow icon="trail-sign-outline" title="My Journey" subtitle="A timeline of your recorded business milestones." onPress={() => router.push('/journey')} />
-        <MenuRow icon="time-outline" title="Activity" subtitle="Recent policy, claim and Operations events." onPress={() => router.push('/activity')} last />
+        <MenuRow icon="calendar-outline" title="Your Week" onPress={() => router.push('/weekly-story')} />
+        <MenuRow icon="heart-outline" title="My Impact" onPress={() => router.push('/impact')} />
+        <MenuRow icon="trail-sign-outline" title="My Journey" onPress={() => router.push('/journey')} />
+        <MenuRow icon="time-outline" title="Activity" onPress={() => router.push('/activity')} last />
       </MenuSection>
 
       <MenuSection title="Grow & Learn">
-        <MenuRow icon="bulb-outline" title="60-Second Learn" subtitle="One short interactive insurance learning card each day." onPress={() => router.push('/learn')} />
-        <MenuRow icon="sparkles-outline" title="Recognition" subtitle="Milestones and progress without public ranking." onPress={() => router.push('/recognition')} />
-        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" subtitle="Interactive stories from your business, impact and journey." onPress={() => router.push('/stories')} last />
+        <MenuRow icon="bulb-outline" title="60-Second Learn" onPress={() => router.push('/learn')} />
+        <MenuRow icon="sparkles-outline" title="Recognition" onPress={() => router.push('/recognition')} />
+        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
       </MenuSection>
 
       <MenuSection title="Account">
-        <MenuRow icon="person-outline" title="Profile & registration" subtitle="Your resolved identity, registration and authorized scope." onPress={() => router.push('/profile')} />
-        <MenuRow icon="headset-outline" title="Support" subtitle="Relationship contact and current Operations support." onPress={() => router.push('/support')} last />
+        <MenuRow icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
+        <MenuRow icon="headset-outline" title="Support" onPress={() => router.push('/support')} last />
       </MenuSection>
 
       <View style={styles.logout}>
@@ -117,27 +117,24 @@ function MenuSection({ title, children }: { title: string; children: ReactNode }
 function MenuRow({
   icon,
   title,
-  subtitle,
   onPress,
   last = false,
 }: {
   icon: IconName;
   title: string;
-  subtitle: string;
   onPress: () => void;
   last?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${subtitle}`}
+      accessibilityLabel={title}
       onPress={onPress}
       style={({ pressed }) => [styles.row, !last && styles.rowDivider, pressed && styles.rowPressed]}
     >
       <View style={styles.rowIcon}><Ionicons name={icon} size={19} color={partnerTheme.colors.brand} /></View>
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.rowSubtitle}>{subtitle}</Text>
       </View>
       <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
     </Pressable>
@@ -154,15 +151,15 @@ function humanize(value: string) {
 
 const styles = StyleSheet.create({
   profileCard: {
-    minHeight: 78,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
     borderRadius: partnerTheme.radius.lg,
-    paddingHorizontal: 17,
+    paddingHorizontal: 14,
     backgroundColor: partnerTheme.colors.nav,
   },
-  avatar: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
+  avatar: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
   avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
   profileBody: { flex: 1 },
   profileName: { color: '#FFFFFF', ...partnerTheme.typography.cardTitle },
@@ -176,18 +173,17 @@ const styles = StyleSheet.create({
     borderColor: partnerTheme.colors.line,
   },
   row: {
-    minHeight: 72,
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 15,
+    gap: 10,
+    paddingHorizontal: 13,
   },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   rowPressed: { backgroundColor: partnerTheme.colors.surfaceMuted },
-  rowIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  rowBody: { flex: 1, paddingVertical: 10 },
+  rowIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  rowBody: { flex: 1, paddingVertical: 6 },
   rowTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  rowSubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  logout: { marginTop: partnerTheme.spacing.xl },
+  logout: { marginTop: partnerTheme.spacing.lg },
   pressed: { opacity: 0.8 },
 });
