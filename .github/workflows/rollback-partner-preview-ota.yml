@@ -40,13 +40,15 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Republish last known-good Partner preview update
+      - name: Roll Partner preview back to embedded APK bundle
         working-directory: apps/partner-app
         run: |
           set -euo pipefail
-          npx eas-cli update:republish \
-            --group f26dfd53-f135-4642-862e-63fc03b5ed21 \
-            --message "Emergency Partner preview rollback to last known-good update" \
+          npx eas-cli update:roll-back-to-embedded \
+            --channel preview \
+            --runtime-version 0.1.0 \
+            --platform all \
+            --message "Emergency Partner preview rollback to embedded APK bundle" \
             --non-interactive \
             --json > partner-preview-rollback.json
           cat partner-preview-rollback.json
@@ -57,7 +59,8 @@ jobs:
           {
             echo "## INSUREIT Partner preview rollback"
             echo
-            echo '- Restored update group: f26dfd53-f135-4642-862e-63fc03b5ed21'
-            echo '- Known-good source commit: e764653cb951e9c79ec6fb1cac0f378ee88d3dfc'
+            echo '- Recovery target: embedded Partner APK bundle'
+            echo '- Channel: preview'
+            echo '- Runtime: 0.1.0'
             echo '- Scope: Partner preview OTA only'
           } >> "$GITHUB_STEP_SUMMARY"
