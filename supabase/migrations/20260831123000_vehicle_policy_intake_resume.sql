@@ -1,3 +1,4 @@
+-- Deployment retrigger: dedicated GitHub Actions schema workflow
 begin;
 
 create table if not exists public.policy_intake_onboarding_drafts (
