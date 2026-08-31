@@ -1,7 +1,7 @@
 {
   "purpose": "Force Vercel to treat the web portal as affected and deploy current main to production.",
-  "requested_at": "2026-08-31T16:38:00+05:30",
+  "requested_at": "2026-08-31T17:34:00+05:30",
   "requested_by": "explicit user deploy request",
-  "includes": "PR #907 custom customers.png icon in CUSTOMER CREATED popup, plus all newer main changes",
-  "source_commit": "1bd925a61ed84528da3189042f3b8905aefa04f1"
+  "includes": "PR #911 VEHICLE ADDED success popup copy, plus all newer main changes",
+  "source_commit": "ae08be89952e14865901ef2a8f305bf1e0b3f10c"
 }
