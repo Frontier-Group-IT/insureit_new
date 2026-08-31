@@ -3,9 +3,8 @@ import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../components/policy-route-enhancements.tsx", import.meta.url), "utf8");
 
-assert.match(
-  source,
-  /const policyEditRoutePattern = ^?\/?/,
+assert.ok(
+  source.includes("const policyEditRoutePattern ="),
   "Policy route enhancements should define an edit-route matcher.",
 );
 assert.ok(
