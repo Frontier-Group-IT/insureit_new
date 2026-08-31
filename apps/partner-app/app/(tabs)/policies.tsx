@@ -111,7 +111,6 @@ export default function PoliciesScreen() {
           onClear={() => setQuery('')}
           placeholder="Search policy, customer, vehicle or insurer"
         />
-        <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
       </View>
 
       <View style={styles.filters}>
@@ -304,10 +303,10 @@ const styles = StyleSheet.create({
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: {
     width: '48%',
-    minHeight: 92,
+    minHeight: 76,
     justifyContent: 'center',
     borderRadius: partnerTheme.radius.lg,
-    padding: 15,
+    padding: 13,
     backgroundColor: partnerTheme.colors.surface,
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
@@ -317,13 +316,12 @@ const styles = StyleSheet.create({
   summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   banner: { marginTop: 10 },
   inlineBanner: { marginBottom: 10 },
-  search: { marginTop: 18 },
-  searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  filters: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  search: { marginTop: 12 },
+  filters: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   separator: { height: 10 },
   policyRow: {
     borderRadius: partnerTheme.radius.lg,
-    padding: 16,
+    padding: 13,
     backgroundColor: partnerTheme.colors.surface,
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
@@ -335,11 +333,11 @@ const styles = StyleSheet.create({
   policyNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   policyCustomer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   badges: { alignItems: 'flex-end', gap: 5 },
-  policyMetaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 11 },
+  policyMetaGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 9 },
   meta: { width: '50%', paddingRight: 8 },
   metaLabel: { color: '#8A94A6', letterSpacing: 0.65, textTransform: 'uppercase', ...partnerTheme.typography.meta },
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  policyFooter: { marginTop: 14, paddingTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  policyFooter: { marginTop: 9, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
   policyDates: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   policyOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
