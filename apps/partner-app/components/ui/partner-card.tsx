@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
     borderColor: partnerTheme.colors.line,
     backgroundColor: partnerTheme.colors.surface,
   },
-  padded: { padding: partnerTheme.spacing.lg },
+  padded: { padding: 14 },
   default: {},
   muted: { backgroundColor: partnerTheme.colors.surfaceMuted },
   brand: { backgroundColor: partnerTheme.colors.brandSoft, borderColor: '#D9D5FF' },
