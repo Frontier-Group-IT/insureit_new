@@ -1,7 +1,6 @@
-import { useCallback, useState } from 'react';
-import { Modal, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback } from 'react';
+import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -11,7 +10,7 @@ import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
+import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { partnerTheme } from '@/lib/theme';
@@ -20,73 +19,6 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
-  const [businessFilterOpen, setBusinessFilterOpen] = useState(false);
-  const [businessFromInput, setBusinessFromInput] = useState('');
-  const [businessToInput, setBusinessToInput] = useState('');
-  const [activeBusinessDatePicker, setActiveBusinessDatePicker] = useState<'from' | 'to' | null>(null);
-
-  const businessFromDate = parseDateInput(businessFromInput);
-  const businessToDate = parseDateInput(businessToInput);
-  const businessRangeValidation = validateBusinessRange(
-    businessFromInput,
-    businessToInput,
-    businessFromDate,
-    businessToDate,
-  );
-  const businessRangeEnabled = Boolean(
-    businessFromDate
-    && businessToDate
-    && !businessRangeValidation
-  );
-
-  const selectBusinessDate = useCallback((field: 'from' | 'to', selectedDate: Date) => {
-    const value = formatDateInput(selectedDate);
-    if (field === 'from') setBusinessFromInput(value);
-    else setBusinessToInput(value);
-  }, []);
-
-  const openBusinessDatePicker = useCallback((field: 'from' | 'to') => {
-    const input = field === 'from' ? businessFromInput : businessToInput;
-    const value = dateInputToLocalDate(input);
-    const minimumDate = field === 'from'
-      ? (businessToDate ? addDays(isoToLocalDate(businessToDate), -365) : undefined)
-      : (businessFromDate ? isoToLocalDate(businessFromDate) : undefined);
-    const maximumDate = field === 'from'
-      ? (businessToDate ? isoToLocalDate(businessToDate) : undefined)
-      : (businessFromDate ? addDays(isoToLocalDate(businessFromDate), 365) : undefined);
-
-    if (Platform.OS === 'android') {
-      DateTimePickerAndroid.open({
-        value,
-        mode: 'date',
-        display: 'default',
-        minimumDate,
-        maximumDate,
-        onChange: (event, selectedDate) => {
-          if (event.type === 'set' && selectedDate) selectBusinessDate(field, selectedDate);
-        },
-      });
-      return;
-    }
-
-    setActiveBusinessDatePicker(field);
-  }, [businessFromDate, businessFromInput, businessToDate, businessToInput, selectBusinessDate]);
-
-  const fetchBusinessRange = useCallback(async () => {
-    if (!businessFromDate || !businessToDate) {
-      throw new Error('Select both dates to load this business range.');
-    }
-    return getPartnerBusinessRange(businessFromDate, businessToDate);
-  }, [businessFromDate, businessToDate]);
-
-  const businessRange = usePartnerQuery({
-    scopeKey: cacheScopeKey,
-    key: `home:business-range:${businessFromDate || 'none'}:${businessToDate || 'none'}`,
-    fetcher: fetchBusinessRange,
-    staleTimeMs: 60_000,
-    enabled: businessRangeEnabled,
-  });
-
   const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
     const [homeResult, storiesResult] = await Promise.allSettled([
       getPartnerHome(),
@@ -113,10 +45,6 @@ export default function PartnerHomeScreen() {
 
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
-  const filteredBusiness = businessRangeEnabled ? businessRange.data : null;
-  const businessRangeLabel = businessRangeEnabled && businessFromDate && businessToDate
-    ? formatBusinessRangeLabel(businessFromDate, businessToDate)
-    : 'This month';
 
   if (!context) return null;
 
@@ -237,159 +165,46 @@ export default function PartnerHomeScreen() {
 
           <PartnerSectionHeader
             title="My business"
-            meta={businessRangeLabel}
+            meta="This month"
             action={
-              <View style={styles.businessHeaderActions}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="View business"
-                  onPress={() => router.push('/(tabs)/business')}
-                  hitSlop={6}
-                >
-                  <Text style={styles.sectionAction}>View business</Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={businessFilterOpen ? 'Hide business date filter' : 'Show business date filter'}
-                  accessibilityState={{ expanded: businessFilterOpen }}
-                  onPress={() => setBusinessFilterOpen((open) => !open)}
-                  style={({ pressed }) => [styles.businessFilterTouch, pressed && styles.pressed]}
-                >
-                  <View style={[styles.businessFilterButton, businessFilterOpen && styles.businessFilterButtonOpen]}>
-                    <Ionicons name="calendar-outline" size={18} color={partnerTheme.colors.brand} />
-                    {businessFilterOpen ? (
-                      <Ionicons name="chevron-up" size={14} color={partnerTheme.colors.brand} />
-                    ) : null}
-                  </View>
-                </Pressable>
-              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View business"
+                onPress={() => router.push('/(tabs)/business')}
+                hitSlop={6}
+              >
+                <Text style={styles.sectionAction}>View business</Text>
+              </Pressable>
             }
           />
-
-          {businessFilterOpen ? (
-            <View style={styles.businessDatePanel}>
-              <View style={styles.businessDateRow}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={businessFromInput ? `From Date, ${businessFromInput}. Open calendar` : 'From Date. Open calendar'}
-                  onPress={() => openBusinessDatePicker('from')}
-                  style={({ pressed }) => [styles.businessDateField, pressed && styles.businessDateFieldPressed]}
-                >
-                  <Ionicons name="calendar-outline" size={16} color="#7D8796" />
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.businessDateValue, !businessFromInput && styles.businessDatePlaceholder]}
-                  >
-                    {businessFromInput || 'From date'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={businessToInput ? `To Date, ${businessToInput}. Open calendar` : 'To Date. Open calendar'}
-                  onPress={() => openBusinessDatePicker('to')}
-                  style={({ pressed }) => [styles.businessDateField, pressed && styles.businessDateFieldPressed]}
-                >
-                  <Ionicons name="calendar-outline" size={16} color="#7D8796" />
-                  <Text
-                    numberOfLines={1}
-                    style={[styles.businessDateValue, !businessToInput && styles.businessDatePlaceholder]}
-                  >
-                    {businessToInput || 'To date'}
-                  </Text>
-                </Pressable>
-              </View>
-              {businessRangeValidation ? (
-                <Text style={styles.businessDateError}>{businessRangeValidation}</Text>
-              ) : businessRangeEnabled && businessRange.error && !filteredBusiness ? (
-                <Text style={styles.businessDateError}>{businessRange.error}</Text>
-              ) : null}
-            </View>
-          ) : null}
-
-          {Platform.OS === 'ios' && activeBusinessDatePicker ? (
-            <Modal
-              animationType="fade"
-              transparent
-              visible
-              onRequestClose={() => setActiveBusinessDatePicker(null)}
-            >
-              <Pressable style={styles.businessDateModalBackdrop} onPress={() => setActiveBusinessDatePicker(null)}>
-                <Pressable style={styles.businessDateModalCard} onPress={() => undefined}>
-                  <Text style={styles.businessDateModalTitle}>
-                    {activeBusinessDatePicker === 'from' ? 'From date' : 'To date'}
-                  </Text>
-                  <DateTimePicker
-                    value={dateInputToLocalDate(
-                      activeBusinessDatePicker === 'from' ? businessFromInput : businessToInput,
-                    )}
-                    mode="date"
-                    display="spinner"
-                    minimumDate={activeBusinessDatePicker === 'from'
-                      ? (businessToDate ? addDays(isoToLocalDate(businessToDate), -365) : undefined)
-                      : (businessFromDate ? isoToLocalDate(businessFromDate) : undefined)}
-                    maximumDate={activeBusinessDatePicker === 'from'
-                      ? (businessToDate ? isoToLocalDate(businessToDate) : undefined)
-                      : (businessFromDate ? addDays(isoToLocalDate(businessFromDate), 365) : undefined)}
-                    onChange={(_, selectedDate) => {
-                      if (selectedDate) selectBusinessDate(activeBusinessDatePicker, selectedDate);
-                    }}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Done selecting date"
-                    onPress={() => setActiveBusinessDatePicker(null)}
-                    style={({ pressed }) => [styles.businessDateDoneButton, pressed && styles.pressed]}
-                  >
-                    <Text style={styles.businessDateDoneText}>Done</Text>
-                  </Pressable>
-                </Pressable>
-              </Pressable>
-            </Modal>
-          ) : null}
 
           <View style={styles.businessCard}>
             <View style={styles.businessMain}>
               <Text style={styles.businessEyebrow}>GROSS PREMIUM</Text>
               <Text style={styles.businessPremium}>
-                {businessRangeEnabled && !filteredBusiness
-                  ? '—'
-                  : formatMoney(filteredBusiness?.premium ?? data.business.premium_this_month)}
+                {formatMoney(data.business.premium_this_month)}
               </Text>
-              {businessRangeEnabled ? (
-                filteredBusiness ? (
-                  <Trend
-                    value={Number(filteredBusiness.premium_change_percent || 0)}
-                    hasPrevious={Number(filteredBusiness.premium_previous_period || 0) > 0}
-                    comparisonLabel="previous period"
-                  />
-                ) : (
-                  <Text style={styles.trendNeutral}>
-                    {businessRange.error ? 'Range unavailable' : 'Updating range…'}
-                  </Text>
-                )
-              ) : (
-                <Trend
-                  value={Number(data.business.premium_change_percent || 0)}
-                  hasPrevious={Number(data.business.premium_last_month || 0) > 0}
-                />
-              )}
+              <Trend
+                value={Number(data.business.premium_change_percent || 0)}
+                hasPrevious={Number(data.business.premium_last_month || 0) > 0}
+              />
             </View>
 
             <View style={styles.businessStats}>
               <BusinessStat
-                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.policies ?? data.business.policies_this_month}
+                value={data.business.policies_this_month}
                 label="Policies"
               />
               <BusinessStat
-                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.customers ?? data.business.total_customers}
+                value={data.business.total_customers}
                 label="Customers"
               />
               <BusinessStat
-                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.renewals ?? data.business.renewals_30_days}
+                value={data.business.renewals_30_days}
                 label="Renewals"
               />
               <BusinessStat
-                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.claims ?? data.service.active_claims}
+                value={data.service.active_claims}
                 label="Claims"
               />
             </View>
@@ -597,67 +412,6 @@ function formatMoney(value: number | string) {
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
-function formatDateInput(value: Date) {
-  const day = value.getDate().toString().padStart(2, '0');
-  const month = (value.getMonth() + 1).toString().padStart(2, '0');
-  const year = value.getFullYear();
-  return `${day}/${month}/${year}`;
-}
-
-function dateInputToLocalDate(value: string) {
-  const iso = parseDateInput(value);
-  return iso ? isoToLocalDate(iso) : new Date();
-}
-
-function isoToLocalDate(value: string) {
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function addDays(value: Date, days: number) {
-  const result = new Date(value);
-  result.setDate(result.getDate() + days);
-  return result;
-}
-
-function parseDateInput(value: string) {
-  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
-  if (!match) return null;
-  const day = Number(match[1]);
-  const month = Number(match[2]);
-  const year = Number(match[3]);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (
-    date.getUTCFullYear() !== year
-    || date.getUTCMonth() !== month - 1
-    || date.getUTCDate() !== day
-  ) return null;
-  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-}
-
-function validateBusinessRange(fromInput: string, toInput: string, fromDate: string | null, toDate: string | null) {
-  if (fromInput.length === 10 && !fromDate) return 'Enter a valid From date.';
-  if (toInput.length === 10 && !toDate) return 'Enter a valid To date.';
-  if (!fromDate || !toDate) return '';
-  if (fromDate > toDate) return 'From date cannot be after To date.';
-  if (rangeDayCount(fromDate, toDate) > 366) return 'Select a range of 366 days or less.';
-  return '';
-}
-
-function rangeDayCount(fromDate: string, toDate: string) {
-  const from = Date.parse(`${fromDate}T00:00:00Z`);
-  const to = Date.parse(`${toDate}T00:00:00Z`);
-  return Math.floor((to - from) / 86_400_000) + 1;
-}
-
-function formatBusinessRangeLabel(fromDate: string, toDate: string) {
-  const format = (value: string) => {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(new Date(year, month - 1, day));
-  };
-  return `${format(fromDate)} – ${format(toDate)}`;
-}
-
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -769,98 +523,6 @@ const styles = StyleSheet.create({
   quickLabel: { marginTop: 5, color: partnerTheme.colors.ink, textAlign: 'center', ...partnerTheme.typography.meta },
 
   sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  businessHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  businessFilterTouch: {
-    width: partnerTheme.control.minTouchTarget,
-    height: partnerTheme.control.minTouchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  businessFilterButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  businessFilterButtonOpen: {
-    width: 50,
-    flexDirection: 'row',
-    gap: 2,
-    borderColor: '#C9C5FF',
-    backgroundColor: '#FAF9FF',
-  },
-  businessDatePanel: {
-    marginTop: -3,
-    marginBottom: 8,
-    borderRadius: 14,
-    padding: 9,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  businessDateRow: { flexDirection: 'row', gap: 8 },
-  businessDateField: {
-    flex: 1,
-    minHeight: 42,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    borderRadius: 11,
-    paddingHorizontal: 10,
-    backgroundColor: '#FCFCFE',
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  businessDateFieldPressed: {
-    backgroundColor: '#F7F6FF',
-    borderColor: '#C9C5FF',
-  },
-  businessDateValue: {
-    flex: 1,
-    color: partnerTheme.colors.ink,
-    ...partnerTheme.typography.caption,
-  },
-  businessDatePlaceholder: {
-    color: '#8A94A6',
-  },
-  businessDateModalBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    padding: 16,
-    backgroundColor: 'rgba(15, 23, 42, 0.35)',
-  },
-  businessDateModalCard: {
-    borderRadius: 18,
-    padding: 16,
-    backgroundColor: partnerTheme.colors.surface,
-  },
-  businessDateModalTitle: {
-    marginBottom: 8,
-    color: partnerTheme.colors.ink,
-    ...partnerTheme.typography.bodyStrong,
-  },
-  businessDateDoneButton: {
-    minHeight: 44,
-    marginTop: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    backgroundColor: partnerTheme.colors.brand,
-  },
-  businessDateDoneText: {
-    color: '#FFFFFF',
-    ...partnerTheme.typography.bodyStrong,
-  },
-  businessDateError: {
-    marginTop: 6,
-    paddingHorizontal: 2,
-    color: partnerTheme.colors.warning,
-    ...partnerTheme.typography.meta,
-  },
   businessCard: {
     flexDirection: 'row',
     gap: 14,
