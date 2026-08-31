@@ -29,6 +29,8 @@ export default function PolicyIntakeDetailScreen() {
   const [replacing, setReplacing] = useState(false);
   const [replacementProgress, setReplacementProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
   const [error, setError] = useState('');
+  const [showPolicyExtraction, setShowPolicyExtraction] = useState(false);
+  const [showVehicleExtraction, setShowVehicleExtraction] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -168,22 +170,35 @@ export default function PolicyIntakeDetailScreen() {
             <Detail label="Submitted" value={formatDate(row.created_at)} last />
           </View>
 
-          <PartnerSectionHeader title="Extracted policy details" meta={row.ocr_status === 'completed' ? 'OCR complete' : humanize(row.ocr_status)} />
-          <View style={styles.details}>
-            <Detail label="Policy number" value={fields.get('policy_number')?.value || pendingLabel(row)} />
-            <Detail label="Insurer" value={fields.get('insurer_name')?.value || pendingLabel(row)} />
-            <Detail label="Product" value={fields.get('policy_product')?.value || pendingLabel(row)} />
-            <Detail label="Valid from" value={fields.get('policy_start_date')?.value || pendingLabel(row)} />
-            <Detail label="Valid upto" value={fields.get('policy_end_date')?.value || pendingLabel(row)} last />
-          </View>
+          <PartnerSectionHeader title="Extracted details" meta={row.ocr_status === 'completed' ? 'OCR complete' : humanize(row.ocr_status)} />
+          <DetailDisclosure
+            title="Policy details"
+            summary={fields.get('policy_number')?.value || fields.get('insurer_name')?.value || pendingLabel(row)}
+            expanded={showPolicyExtraction}
+            onPress={() => setShowPolicyExtraction((value) => !value)}
+          >
+            <View style={styles.details}>
+              <Detail label="Policy number" value={fields.get('policy_number')?.value || pendingLabel(row)} />
+              <Detail label="Insurer" value={fields.get('insurer_name')?.value || pendingLabel(row)} />
+              <Detail label="Product" value={fields.get('policy_product')?.value || pendingLabel(row)} />
+              <Detail label="Valid from" value={fields.get('policy_start_date')?.value || pendingLabel(row)} />
+              <Detail label="Valid upto" value={fields.get('policy_end_date')?.value || pendingLabel(row)} last />
+            </View>
+          </DetailDisclosure>
 
-          <PartnerSectionHeader title="Extracted vehicle details" />
-          <View style={styles.details}>
-            <Detail label="Registration" value={fields.get('vehicle_registration_number')?.value || pendingLabel(row)} />
-            <Detail label="Make" value={fields.get('vehicle_make')?.value || pendingLabel(row)} />
-            <Detail label="Model" value={fields.get('vehicle_model')?.value || pendingLabel(row)} />
-            <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
-          </View>
+          <DetailDisclosure
+            title="Vehicle details"
+            summary={fields.get('vehicle_registration_number')?.value || [fields.get('vehicle_make')?.value, fields.get('vehicle_model')?.value].filter(Boolean).join(' · ') || pendingLabel(row)}
+            expanded={showVehicleExtraction}
+            onPress={() => setShowVehicleExtraction((value) => !value)}
+          >
+            <View style={styles.details}>
+              <Detail label="Registration" value={fields.get('vehicle_registration_number')?.value || pendingLabel(row)} />
+              <Detail label="Make" value={fields.get('vehicle_make')?.value || pendingLabel(row)} />
+              <Detail label="Model" value={fields.get('vehicle_model')?.value || pendingLabel(row)} />
+              <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
+            </View>
+          </DetailDisclosure>
 
         </>
       )}
@@ -255,6 +270,39 @@ function ReplacementProgress({ progress }: { progress: PartnerPolicyIntakeUpload
         <Text style={styles.replacementProgressText}>{Math.round(percent)}%</Text>
       </View>
       <View style={styles.replacementTrack}><View style={[styles.replacementFill, { width: `${percent}%` }]} /></View>
+    </View>
+  );
+}
+
+function DetailDisclosure({
+  title,
+  summary,
+  expanded,
+  onPress,
+  children,
+}: {
+  title: string;
+  summary: string;
+  expanded: boolean;
+  onPress: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={styles.disclosureWrap}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${expanded ? 'Hide' : 'Show'} ${title}`}
+        onPress={onPress}
+        style={({ pressed }) => [styles.disclosure, pressed && styles.pressed]}
+      >
+        <View style={styles.disclosureBody}>
+          <Text style={styles.disclosureTitle}>{title}</Text>
+          <Text numberOfLines={1} style={styles.disclosureSummary}>{summary}</Text>
+        </View>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color={partnerTheme.colors.brand} />
+      </Pressable>
+      {expanded ? <View style={styles.disclosureContent}>{children}</View> : null}
     </View>
   );
 }
@@ -343,6 +391,12 @@ const styles = StyleSheet.create({
   replacementTrack: { height: 7, marginTop: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: '#F0D7AE' },
   replacementFill: { height: '100%', borderRadius: 999, backgroundColor: '#A36A22' },
   replaceButton: { marginTop: 9 },
+  disclosureWrap: { marginBottom: 7 },
+  disclosure: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  disclosureBody: { flex: 1 },
+  disclosureTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  disclosureSummary: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  disclosureContent: { marginTop: 7 },
   details: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   detailRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   detailRowLast: { borderBottomWidth: 0 },
