@@ -268,6 +268,12 @@ export default function PartnerHomeScreen() {
           </View>
           </PartnerEnter>
 
+          {stories.length ? (
+            <View style={styles.stories}>
+              <StoryRail stories={stories} />
+            </View>
+          ) : null}
+
           <PartnerEnter delay={200}>
           <View style={styles.impactSection}>
             <PartnerSectionHeader
@@ -306,11 +312,7 @@ export default function PartnerHomeScreen() {
           </View>
           </PartnerEnter>
 
-          {stories.length ? (
-            <View style={styles.stories}>
-              <StoryRail stories={stories} />
-            </View>
-          ) : null}
+
         </>
       )}
     </PartnerScreen>
