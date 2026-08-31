@@ -69,11 +69,6 @@ export default function NetworkScreen() {
             <View style={styles.heroBody}>
               <Text style={styles.heroEyebrow}>AUTHORIZED NETWORK</Text>
               <Text style={styles.heroTitle}>{data.total_partners} Partner {data.total_partners === 1 ? 'family' : 'families'}</Text>
-              <Text style={styles.heroText}>
-                {data.total_groups > 0
-                  ? `${data.total_groups} active Intermediary Group${data.total_groups === 1 ? '' : 's'} in this scope.`
-                  : 'Partner families are currently shown without active Group containers.'}
-              </Text>
             </View>
           </View>
 
