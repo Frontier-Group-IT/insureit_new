@@ -134,7 +134,7 @@ export default function ClaimDetailScreen() {
               {visibleTimeline.map((item, index) => (
                 <View key={item.key} style={styles.timelineRow}>
                   <View style={styles.rail}>
-                    <View style={[styles.dot, index === timeline.length - 1 && styles.dotLatest]}>
+                    <View style={[styles.dot, index === visibleTimeline.length - 1 && styles.dotLatest]}>
                       {item.kind === 'stage' ? <View style={styles.innerDot} /> : null}
                     </View>
                     {index < visibleTimeline.length - 1 ? <View style={styles.line} /> : null}
