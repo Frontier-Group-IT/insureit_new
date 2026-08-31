@@ -17,6 +17,7 @@ import {
   type PartnerPolicyRow,
   type PartnerRenewalSummary,
 } from '@/lib/policies';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -97,7 +98,7 @@ export default function RenewalsScreen() {
           <View style={styles.heroTop}>
             <View style={styles.heroMain}>
               <Text style={styles.heroEyebrow}>NEXT 30 DAYS</Text>
-              <Text style={styles.heroPremium}>{formatMoney(summary.data?.due_30_premium ?? 0)}</Text>
+              <Text style={styles.heroPremium}>{formatIndianCurrency(summary.data?.due_30_premium ?? 0)}</Text>
               <Text style={styles.heroLabel}>gross premium in renewal window</Text>
             </View>
             <View style={styles.heroCount}>
@@ -253,7 +254,7 @@ function RenewalCard({
 
         <View style={styles.metaRow}>
           <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
-          <Meta label="Current premium" value={formatMoney(row.premium_amount)} />
+          <Meta label="Current premium" value={formatIndianCurrency(row.premium_amount)} />
         </View>
       </Pressable>
 
@@ -322,13 +323,6 @@ function formatDate(value: string | null) {
   if (!value) return '—';
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
-}
-
-function formatMoney(value: number | string | null) {
-  const amount = Number(value ?? 0);
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(amount) ? amount : 0)}`;
 }
 
 function formatUpdatedAt(value: number | null) {
