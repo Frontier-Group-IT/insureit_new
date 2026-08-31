@@ -4,6 +4,7 @@ import { UserPlus } from "lucide-react";
 import { FormSubmitButton } from "./form-submit-button";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
+import { VehicleSaveActionChooser } from "./vehicle-save-action-chooser";
 
 type FormAction = (formData: FormData) => void | Promise<void>;
 type SelectOption = { label: string; value: string };
@@ -81,10 +82,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
 
       <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
         <Link href="/vehicles" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
-        {allowPolicyContinuation ? <>
-          <button type="submit" name="next_action" value="vehicle" className="rounded-lg border border-[#9FB4CF] bg-white px-4 py-2 text-[11px] font-semibold text-[#17365D] transition hover:bg-[#F4F8FC]">Save Vehicle Only</button>
-          <button type="submit" name="next_action" value="policy" className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]">Save Vehicle &amp; Continue to Policy</button>
-        </> : <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />}
+        {allowPolicyContinuation ? <VehicleSaveActionChooser /> : <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />}
       </div>
     </form>
   </div>;

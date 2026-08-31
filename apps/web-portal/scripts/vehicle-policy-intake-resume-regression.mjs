@@ -3,10 +3,17 @@ import assert from "node:assert/strict";
 
 const read=(path)=>fs.readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
 const forms=read("components/forms.tsx");
-assert(forms.includes("Save Vehicle Only"));
-assert(forms.includes("Save Vehicle &amp; Continue to Policy"));
+assert(forms.includes("VehicleSaveActionChooser"));
+assert(!forms.includes("Save Vehicle Only"));
 assert(forms.includes('aria-label="Add new customer"'));
 assert(!forms.includes("+ Create new customer"));
+
+const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
+assert(vehicleSaveChooser.includes("Save Vehicle"));
+assert(vehicleSaveChooser.includes('name="next_action"'));
+assert(vehicleSaveChooser.includes('value="vehicle"'));
+assert(vehicleSaveChooser.includes('value="policy"'));
+assert(vehicleSaveChooser.includes("Save Vehicle &amp; Continue to Policy"));
 
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
