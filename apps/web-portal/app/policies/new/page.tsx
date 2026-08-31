@@ -1,3 +1,4 @@
+import { loadPolicyIntakeOnboardingDraft } from "@/app/policy-intakes/handoff-actions";
 import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
 import { type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
 import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-product-guard";
@@ -22,14 +23,40 @@ type ApplicationPartnerRow = { id: string; partner_record_id: string | null };
 type PartnerAssociateRow = { partner_record_id: string | null; associate_employee_id: string | null; created_at: string };
 type ManufacturerId = { id: string };
 type BrandOption = { manufacturer_id: string; brand_name: string };
+type PrefillVehicle = { id:string; customer_id:string; vehicle_no:string; registration_status:string|null; vehicle_type:string|null; make:string|null; model:string|null; fuel_type:string|null; year:number|null; chassis_no:string|null; engine_no:string|null; engine_capacity_cc:number|null; seating_capacity:number|null; gvw_kg:number|null; rto_state:string|null; rto_name:string|null };
+type PrefillCustomer = { id:string; contact_name:string; company_name:string|null; phone:string };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewPolicyPage() {
+export default async function NewPolicyPage({ searchParams }: { searchParams: Promise<{ intake_id?:string; customer_id?:string; vehicle_id?:string }> }) {
   const profile = await requirePolicyCreator();
   const commercialAccess = canAccessPolicyCommercials(profile);
   const admin = createSupabaseAdminClient();
+  const params = await searchParams;
+  let workflowInitialValues: import("@/components/policy-unified-form").PolicyUnifiedInitialValues | undefined;
+  let workflowRegistrationMode: "registered" | "unregistered" | undefined;
+  let preselectedCustomerId: string | null = null;
+  let sourceIntakeId: string | null = null;
+  let initialDraftRevision: number | null = null;
+
+  if (params.intake_id) {
+    const intakeDraft = await loadPolicyIntakeOnboardingDraft(params.intake_id);
+    if (!intakeDraft.ok) return <SetupError message={intakeDraft.error} />;
+    const { registrationMode, ...form } = intakeDraft.draft;
+    workflowInitialValues = form; workflowRegistrationMode = registrationMode;
+    preselectedCustomerId = intakeDraft.matchedCustomerId; sourceIntakeId = params.intake_id; initialDraftRevision = intakeDraft.draftRevision;
+  } else if (params.customer_id && params.vehicle_id) {
+    const [{data:customer},{data:vehicle}] = await Promise.all([
+      admin.from("customers").select("id,contact_name,company_name,phone").eq("id",params.customer_id).maybeSingle<PrefillCustomer>(),
+      admin.from("vehicles").select("id,customer_id,vehicle_no,registration_status,vehicle_type,make,model,fuel_type,year,chassis_no,engine_no,engine_capacity_cc,seating_capacity,gvw_kg,rto_state,rto_name").eq("id",params.vehicle_id).maybeSingle<PrefillVehicle>(),
+    ]);
+    if (!customer || !vehicle || vehicle.customer_id !== customer.id) return <SetupError message="The saved vehicle/customer handoff is no longer available." />;
+    const pending = vehicle.registration_status === "registration_pending" || /^(?:NEW|PENDING)-/i.test(vehicle.vehicle_no);
+    const capacity = vehicle.vehicle_type === "PCV" ? vehicle.seating_capacity : vehicle.vehicle_type === "GCV" || vehicle.vehicle_type === "CPM" ? vehicle.gvw_kg : vehicle.engine_capacity_cc;
+    workflowRegistrationMode = pending ? "unregistered" : "registered"; preselectedCustomerId = customer.id;
+    workflowInitialValues = { insuredName:customer.company_name?.trim()||customer.contact_name,phoneNo:customer.phone,registrationNo:pending?"":vehicle.vehicle_no,vehicleClass:vehicle.vehicle_type??"",make:vehicle.make??"",model:vehicle.model??"",fuelType:vehicle.fuel_type??"",manufacturingYear:vehicle.year?.toString()??"",capacity:capacity?.toString()??"",chassisNo:vehicle.chassis_no??"",engineNo:vehicle.engine_no??"",rtoState:vehicle.rto_state??"",rtoName:vehicle.rto_name??"",businessLine:"Motor" };
+  }
 
   let salesEmployees: Awaited<ReturnType<typeof loadPospMispAssociates>> = [];
   try {
@@ -138,17 +165,22 @@ export default async function NewPolicyPage() {
         sources={sourceOptions}
         manufacturers={manufacturerOptions}
         commercialAccess={commercialAccess}
+        initialValues={workflowInitialValues}
+        initialRegistrationMode={workflowRegistrationMode}
+        preselectedCustomerId={preselectedCustomerId}
+        sourceIntakeId={sourceIntakeId}
+        initialDraftRevision={initialDraftRevision}
       />
     </AppShell>
   );
 }
 
-function SetupError() {
+function SetupError({ message }: { message?: string }) {
   return (
     <AppShell title="Add Policy">
       <div className="mx-auto max-w-[900px] rounded-2xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
         <h2 className="text-[13px] font-semibold text-amber-900">Policy setup information is temporarily unavailable.</h2>
-        <p className="mt-1 text-[10.5px] leading-5 text-amber-800">Insurer, customer, intermediary or relationship master data could not be loaded. Refresh the page or try again shortly; no policy information has been changed.</p>
+        <p className="mt-1 text-[10.5px] leading-5 text-amber-800">{message ?? "Insurer, customer, intermediary or relationship master data could not be loaded. Refresh the page or try again shortly; no policy information has been changed."}</p>
       </div>
     </AppShell>
   );

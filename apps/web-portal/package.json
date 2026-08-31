@@ -14,6 +14,7 @@
     "access-control:release-blockers-regression": "node --experimental-strip-types scripts/release-blocker-security-regression.mjs",
     "access-control:backoffice-data-entry-regression": "node --experimental-strip-types scripts/backoffice-data-entry-regression.mjs",
     "policy-intake:workflow-regression": "node --experimental-strip-types scripts/policy-intake-workflow-regression.mjs",
+    "vehicle-policy-intake:resume-regression": "node scripts/vehicle-policy-intake-resume-regression.mjs",
     "vehicle-prefix:new-regression": "node scripts/new-vehicle-prefix-regression.mjs",
     "vehicle-registration:regression": "node --experimental-strip-types scripts/vehicle-registration-regression.mjs",
     "register-prefetch:regression": "node scripts/register-workflow-prefetch-regression.mjs",

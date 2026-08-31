@@ -22,7 +22,7 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
   </EnterpriseForm>;
 }
 
-export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode }) {
+export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions, createCustomerHref, allowPolicyContinuation = false }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode; createCustomerHref?: string; allowPolicyContinuation?: boolean }) {
   const defaultYear = values?.year?.toString() ?? "";
   const years = defaultYear && !vehicleYearOptions.includes(defaultYear) ? [defaultYear, ...vehicleYearOptions] : vehicleYearOptions;
   const yearOptions = years.map((year) => ({ value: year, label: year }));
@@ -33,7 +33,10 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       <VehicleOnboardingHeader />
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="six">
-        <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
+        <div className="min-w-0">
+          <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
+          {createCustomerHref ? <Link href={createCustomerHref} className="mt-1.5 inline-flex text-[9px] font-semibold text-[#315B9A] hover:underline">+ Create new customer</Link> : null}
+        </div>
         <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date} />
         <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
         <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
@@ -60,9 +63,12 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
 
       {beforeActions}
 
-      <div className="sticky bottom-0 z-20 flex items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
+      <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
         <Link href="/vehicles" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
-        <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />
+        {allowPolicyContinuation ? <>
+          <button type="submit" name="next_action" value="vehicle" className="rounded-lg border border-[#9FB4CF] bg-white px-4 py-2 text-[11px] font-semibold text-[#17365D] transition hover:bg-[#F4F8FC]">Save Vehicle Only</button>
+          <button type="submit" name="next_action" value="policy" className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]">Save Vehicle &amp; Continue to Policy</button>
+        </> : <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />}
       </div>
     </form>
   </div>;

@@ -1,6 +1,7 @@
 import { addVehicleMaster } from "@/app/vehicles/vehicle-master-actions";
 import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { requireAnyCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -12,9 +13,13 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string; error?: string }> }) {
-  await requireAnyCapability([
+  const profile = await requireAnyCapability([
     { capability: "view_vehicles", minimumAccess: "edit" },
     { capability: "create_vehicles", minimumAccess: "edit" },
+  ]);
+  const [canCreateCustomer, canCreatePolicy] = await Promise.all([
+    hasEffectiveCapability(profile, "create_customers", "edit"),
+    hasEffectiveCapability(profile, "create_policies", "edit"),
   ]);
   const admin = createSupabaseAdminClient();
   const params = await searchParams;
@@ -44,7 +49,15 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
   return (
     <AppShell title="Add Vehicle">
       {params.error ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{params.error}</div> : null}
-      <VehicleForm action={addVehicleMaster} customers={customerOptions} manufacturers={manufacturerOptions} values={{ customer_id: params.customer_id ?? null }} submitLabel="Create Vehicle" />
+      <VehicleForm
+        action={addVehicleMaster}
+        customers={customerOptions}
+        manufacturers={manufacturerOptions}
+        values={{ customer_id: params.customer_id ?? null }}
+        submitLabel="Create Vehicle"
+        createCustomerHref={canCreateCustomer ? "/vehicles/new-customer" : undefined}
+        allowPolicyContinuation={canCreatePolicy}
+      />
     </AppShell>
   );
 }

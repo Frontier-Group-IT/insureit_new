@@ -159,7 +159,7 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
         </section>
         {owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
         {reviewer && !["completed", "rejected"].includes(data.status) ? <PolicyIntakeReviewActions id={data.id} /> : null}
-        {finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} /> : null}
+        {finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} status={data.status} /> : null}
         <div className="rounded-xl bg-[#F3F7FB] px-3 py-2.5 text-[8.5px] leading-4 text-[#64748B]"><UserRound className="mb-1.5 h-3.5 w-3.5 text-[#315B9A]" />This is a pre-onboarding review sheet. The saved policy copy remains the source document; final corrections are made in Policy Onboarding.</div>
       </aside>
     </div>

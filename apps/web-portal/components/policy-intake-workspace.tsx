@@ -25,6 +25,7 @@ export type PolicyIntakeWorkspaceRow = {
   ocr_status: string;
   ocr_fields: PolicyIntakeOcrField[];
   file_name: string;
+  assigned_to_profile_id: string | null;
 };
 
 type ViewKey = "action" | "in_review" | "processing" | "completed" | "rejected" | "all";
@@ -91,7 +92,7 @@ function DateFilter({ label, value, min, max, onChange }: { label: string; value
   </label>;
 }
 
-export function PolicyIntakeWorkspace({ rows, reviewer, creator }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean }) {
+export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>(reviewer ? "action" : "all");
   const [source, setSource] = useState("all");
@@ -112,7 +113,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator }: { rows: Polic
   const stats = useMemo(() => ({
     all: baseFiltered.length,
     action: baseFiltered.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length,
-    inReview: baseFiltered.filter((row) => row.status === "in_review").length,
+    inReview: baseFiltered.filter((row) => row.status === "in_review" && (!reviewer || row.assigned_to_profile_id === currentProfileId)).length,
     processing: baseFiltered.filter((row) => row.status === "processing" && row.ocr_status !== "failed").length,
     completed: baseFiltered.filter((row) => row.status === "completed").length,
     rejected: baseFiltered.filter((row) => row.status === "rejected").length,
@@ -121,7 +122,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator }: { rows: Polic
   const filtered = useMemo(() => baseFiltered.filter((row) => {
     if (view === "all") return true;
     if (view === "action") return row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed");
-    if (view === "in_review") return row.status === "in_review";
+    if (view === "in_review") return row.status === "in_review" && (!reviewer || row.assigned_to_profile_id === currentProfileId);
     if (view === "processing") return row.status === "processing" && row.ocr_status !== "failed";
     return row.status === view;
   }), [baseFiltered, view]);
@@ -168,7 +169,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator }: { rows: Polic
 
     <div className="border-b border-[#E5ECF5] bg-[#FBFCFE] px-3 py-2 sm:px-4"><RegisterViewTabs value={view} onChange={changeView} options={reviewer ? [
       { value: "action", label: "Action Required", count: stats.action },
-      { value: "in_review", label: "In Review", count: stats.inReview },
+      { value: "in_review", label: "My Active Work", count: stats.inReview },
       { value: "processing", label: "Processing", count: stats.processing },
       { value: "completed", label: "Completed", count: stats.completed },
       { value: "rejected", label: "Rejected", count: stats.rejected },

@@ -14,9 +14,13 @@ export type PolicyIntakeDraft = {
 };
 
 export type PolicyIntakeHandoffResult =
-  | { ok:true; draft:PolicyIntakeDraft }
+  | { ok:true; draft:PolicyIntakeDraft; draftRevision:number; matchedCustomerId:string|null }
   | { ok:false; error:string; conflict?:false }
   | { ok:false; error:string; conflict:true; reviewerName:string };
+
+export type PolicyIntakeDraftSaveResult =
+  | { ok:true; revision:number }
+  | { ok:false; error:string; conflict?:boolean };
 
 type ManufacturerId={id:string};
 type BrandOption={manufacturer_id:string;brand_name:string};
@@ -64,6 +68,9 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
     return{ok:false,error:"The reviewer assignment changed while you were opening this intake. Refresh and try again."};
   }
 
+  const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
+  if(existingDraft?.draft_payload)return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId:intake.matched_customer_id};
+
   const [manufacturerResult,brandResult,insurerResult,customerResult]=await Promise.all([
     admin.from("vehicle_manufacturers").select("id").eq("is_active",true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id,brand_name").eq("is_active",true).order("brand_name").returns<BrandOption[]>(),
@@ -92,5 +99,28 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
     policyProduct:mapped.next.policyProduct,idv:mapped.next.idv,od:mapped.next.od,tp:mapped.next.tp,cpaOpted:"No",cpa:mapped.next.cpa,policyNo:mapped.next.policyNo,insurerId:mapped.next.insurerId,validFrom:mapped.next.validFrom,validUpto:mapped.next.validUpto,
     payoutBasis:"NET",projectedOdPercent:"",projectedTpPercent:"",insurerScheme:"",payinBillNo:"",payinBilledAmount:"",payinBillDate:"",payinStatus:"Unbilled",retention:"",payoutOdPercent:"",payoutTpPercent:"",payoutStatus:"Pending",payoutDate:"",payoutVoucherNo:"",remarks:`Policy Intake ${id}`,
   };
-  return{ok:true,draft};
+  const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
+  if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
+  return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId:intake.matched_customer_id};
+}
+
+export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
+  await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
+  const {data:intake}=await admin.from("policy_intake_requests").select("status,assigned_to_profile_id,matched_customer_id").eq("id",id).maybeSingle<{status:string;assigned_to_profile_id:string|null;matched_customer_id:string|null}>();
+  if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==reviewer.id)return{ok:false,error:"This intake is not assigned to you for Policy Onboarding."};
+  const {data,error}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
+  if(error||!data?.draft_payload)return{ok:false,error:"The saved Policy Onboarding draft is unavailable. Return to the intake and start review again."};
+  return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId:intake.matched_customer_id};
+}
+
+export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
+  await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
+  const {data:intake}=await admin.from("policy_intake_requests").select("status,assigned_to_profile_id").eq("id",id).maybeSingle<{status:string;assigned_to_profile_id:string|null}>();
+  if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==reviewer.id)return{ok:false,error:"This intake is no longer assigned to you.",conflict:true};
+  const {data,error}=await admin.from("policy_intake_onboarding_drafts")
+    .update({draft_payload:draft,revision:expectedRevision+1,updated_by_profile_id:reviewer.id,updated_at:new Date().toISOString()})
+    .eq("intake_id",id).eq("revision",expectedRevision).select("revision").maybeSingle<{revision:number}>();
+  if(error)return{ok:false,error:"The Policy Onboarding draft could not be saved."};
+  if(!data)return{ok:false,error:"This draft was updated elsewhere. Reload the latest version before continuing.",conflict:true};
+  return{ok:true,revision:data.revision};
 }

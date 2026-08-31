@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requirePolicyIntakeFinalizer } from "@/lib/policy-intake-server";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { resolvePolicyIntermediarySource } from "@/lib/policy-intermediary-source";
@@ -20,6 +21,8 @@ export type PolicyOnboardingPayload = {
   payout: Record<string, string | number | boolean | null | undefined>;
   authbridge: Record<string, string | boolean | null | undefined>;
   resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string; acceptCoverageGap?: boolean };
+  sourceIntakeId?: string;
+  draftRevision?: number;
 };
 export type PolicyOnboardingResult =
   | { ok: true; policyId: string; policyCode: string; customerId: string; vehicleId: string; status: "active" }
@@ -257,7 +260,15 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     };
 
     const admin = createSupabaseAdminClient();
-    const { data, error } = await admin.rpc("onboard_motor_policy_commercial_status_v2", { p_payload: rpcPayload });
+    let rpcResult;
+    if (payload.sourceIntakeId) {
+      await requirePolicyIntakeFinalizer();
+      if (!Number.isInteger(payload.draftRevision) || (payload.draftRevision ?? 0) < 1) return { ok:false, kind:"validation", error:"The Policy Intake draft version is missing. Reload the intake and try again." };
+      rpcResult = await admin.rpc("finalize_policy_intake_motor_v1", { p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
+    } else {
+      rpcResult = await admin.rpc("onboard_motor_policy_commercial_status_v2", { p_payload: rpcPayload });
+    }
+    const { data, error } = rpcResult;
     if (error) {
       const message = error.message ?? "";
       const lowerMessage = message.toLowerCase();
@@ -294,7 +305,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       vehicle ? VEHICLE_ACTIVITY_ACTIONS.VEHICLE_LINKED_TO_POLICY : VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED,
     );
 
-    revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles"); revalidatePath(`/vehicles/${result.vehicleId}/edit`);
+    revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles"); revalidatePath(`/vehicles/${result.vehicleId}/edit`); if(payload.sourceIntakeId){revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${payload.sourceIntakeId}`);}
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
   } catch {
     return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your entered form details are still intact. Review the details and try again." };
