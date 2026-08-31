@@ -80,12 +80,12 @@ export function PartnerListScreen<T>({
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: partnerTheme.colors.canvas },
   content: {
-    paddingHorizontal: partnerTheme.spacing.lg + 2,
-    paddingBottom: 116,
+    paddingHorizontal: partnerTheme.spacing.lg,
+    paddingBottom: 104,
   },
   contentEmpty: { flexGrow: 1 },
   header: {
-    minHeight: 80,
+    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     ...partnerTheme.typography.eyebrow,
   },
   title: {
-    marginTop: 3,
+    marginTop: 2,
     color: partnerTheme.colors.ink,
     ...partnerTheme.typography.pageTitle,
   },
