@@ -8,13 +8,10 @@ import { StoryRail } from '@/components/story-rail';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerEnter } from '@/components/ui/partner-enter';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
-import { PartnerListRow } from '@/components/ui/partner-list-row';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatBlock } from '@/components/ui/partner-stat-block';
-import { PartnerStatusIndicator } from '@/components/ui/partner-status-indicator';
-import { PartnerTopTabs, type PartnerTopTab } from '@/components/ui/partner-top-tabs';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -56,7 +53,7 @@ export default function PartnerHomeScreen() {
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
 
-  const workTabs = useMemo<PartnerTopTab[]>(() => {
+  const workTabs = useMemo(() => {
     if (!data) return [];
     return [
       { key: 'today', label: 'Today', badge: attentionCount(data) },
@@ -195,43 +192,59 @@ export default function PartnerHomeScreen() {
 
           <PartnerEnter delay={80}>
           <View style={styles.workSection}>
-            <View style={styles.workHeader}>
-              <Text style={styles.workTitle}>MY WORK</Text>
-              <PartnerStatusIndicator
-                label={attentionCount(data) ? `${attentionCount(data)} need attention` : 'All clear'}
-                tone={attentionCount(data) ? 'warning' : 'success'}
-              />
-            </View>
+            <Text style={styles.workTitle}>MY WORK</Text>
 
-            <View style={styles.tabsWrap}>
-              <PartnerTopTabs
-                activeKey={workTab}
-                onChange={(key) => setWorkTab(key as WorkTab)}
-                tabs={workTabs}
-              />
+            <View style={styles.workSelector}>
+              {workTabs.map((tab) => {
+                const active = tab.key === workTab;
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${tab.label}. ${tab.badge} items`}
+                    accessibilityState={{ selected: active }}
+                    key={tab.key}
+                    onPress={() => setWorkTab(tab.key as WorkTab)}
+                    style={({ pressed }) => [
+                      styles.workSelectorItem,
+                      active && styles.workSelectorItemActive,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <Text style={[styles.workSelectorLabel, active && styles.workSelectorLabelActive]}>
+                      {tab.label}
+                    </Text>
+                    <Text style={[styles.workSelectorCount, active && styles.workSelectorCountActive]}>
+                      {tab.badge}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
             <View style={styles.workList}>
               {visibleWork.length ? (
-                visibleWork.map((item) => (
-                  <PartnerListRow
+                visibleWork.map((item, index) => (
+                  <Pressable
+                    accessibilityRole="button"
                     accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.count} items`}
-                    divider
                     key={item.kind}
-                    leading={
-                      <View style={[styles.workIcon, workIconTone(item.kind)]}>
-                        <Ionicons
-                          name={workIcon(item.kind)}
-                          size={18}
-                          color={workIconColor(item.kind)}
-                        />
-                      </View>
-                    }
-                    meta={item.count ? String(item.count) : undefined}
                     onPress={() => router.push(item.route as never)}
-                    subtitle={item.subtitle}
-                    title={item.title}
-                  />
+                    style={({ pressed }) => [
+                      styles.workRow,
+                      index < visibleWork.length - 1 && styles.workRowDivider,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={[styles.workMarker, workMarkerTone(item.kind)]} />
+                    <View style={styles.workRowCopy}>
+                      <Text style={styles.workRowTitle}>{item.title}</Text>
+                      <Text numberOfLines={1} style={styles.workRowSubtitle}>{item.subtitle}</Text>
+                    </View>
+                    <View style={styles.workRowTrailing}>
+                      {item.count ? <Text style={styles.workRowCount}>{item.count}</Text> : null}
+                      <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
+                    </View>
+                  </Pressable>
                 ))
               ) : (
                 <View style={styles.clearRow}>
@@ -280,12 +293,7 @@ export default function PartnerHomeScreen() {
               <View style={styles.impactPrimary}>
                 <Text style={styles.impactLabel}>ACTIVE MOTOR IDV PROTECTED</Text>
                 <Text style={styles.impactValue}>
-                  {currencyParts(data.impact.active_motor_idv).whole}
-                  {currencyParts(data.impact.active_motor_idv).fraction ? (
-                    <Text style={styles.impactValueFraction}>
-                      .{currencyParts(data.impact.active_motor_idv).fraction}
-                    </Text>
-                  ) : null}
+                  {formatCompactIndianAmount(data.impact.active_motor_idv)}
                 </Text>
               </View>
 
@@ -407,22 +415,10 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
   );
 }
 
-function workIcon(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return 'document-text-outline' as const;
-  if (kind === 'renewal') return 'refresh-outline' as const;
-  return 'shield-outline' as const;
-}
-
-function workIconColor(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return partnerTheme.colors.warning;
-  if (kind === 'renewal') return partnerTheme.colors.brand;
-  return partnerTheme.colors.accent;
-}
-
-function workIconTone(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return styles.workIconWarn;
-  if (kind === 'renewal') return styles.workIconBrand;
-  return styles.workIconAccent;
+function workMarkerTone(kind: PartnerHomeData['today'][number]['kind']) {
+  if (kind === 'intake_attention') return styles.workMarkerWarn;
+  if (kind === 'renewal') return styles.workMarkerBrand;
+  return styles.workMarkerAccent;
 }
 
 function emptyWorkLabel(tab: WorkTab) {
@@ -447,6 +443,21 @@ function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+
+function formatCompactIndianAmount(value: number | string | null | undefined) {
+  const amount = Number(value ?? 0);
+  if (!Number.isFinite(amount)) return '₹0';
+
+  const format = (scaled: number, suffix: string) => {
+    const decimals = scaled >= 100 || Number.isInteger(scaled) ? 0 : 1;
+    return `₹${scaled.toFixed(decimals).replace(/\.0$/, '')}${suffix}`;
+  };
+
+  if (Math.abs(amount) >= 10000000) return format(amount / 10000000, 'Cr');
+  if (Math.abs(amount) >= 100000) return format(amount / 100000, 'L');
+  if (Math.abs(amount) >= 1000) return format(amount / 1000, 'K');
+  return formatIndianCurrency(amount);
+}
 
 function currencyParts(value: number | string | null | undefined) {
   const formatted = formatIndianCurrency(value);
@@ -574,20 +585,12 @@ const styles = StyleSheet.create({
   statCellLast: { flex: 1 },
 
   workSection: {
-    marginTop: 12,
+    marginTop: 14,
     paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 2,
+    paddingTop: 14,
+    paddingBottom: 10,
     borderRadius: 18,
     backgroundColor: partnerTheme.colors.surface,
-  },
-  workHeader: {
-    minHeight: 34,
-    paddingHorizontal: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 10,
   },
   workTitle: {
     color: partnerTheme.colors.inkMuted,
@@ -601,29 +604,99 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 1.15,
   },
-  tabsWrap: {
-    marginHorizontal: -14,
+  workSelector: {
+    marginTop: 10,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  workSelectorItem: {
+    flex: 1,
+    minHeight: 58,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 13,
+    justifyContent: 'center',
+    backgroundColor: '#F7F8FB',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  workSelectorItemActive: {
+    backgroundColor: partnerTheme.colors.brandSoft,
+    borderColor: '#D9D6FF',
+  },
+  workSelectorLabel: {
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.meta,
+  },
+  workSelectorLabelActive: {
+    color: partnerTheme.colors.brandStrong,
+    fontWeight: '700',
+  },
+  workSelectorCount: {
+    marginTop: 3,
+    color: partnerTheme.colors.ink,
+    fontSize: 16,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  workSelectorCountActive: {
+    color: partnerTheme.colors.brandStrong,
+  },
+  workList: {
+    marginTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: partnerTheme.colors.line,
+  },
+  workRow: {
+    minHeight: 70,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    paddingVertical: 10,
+  },
+  workRowDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: partnerTheme.colors.line,
   },
-  workList: { paddingHorizontal: 0 },
-  workIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+  workMarker: {
+    width: 4,
+    height: 30,
+    borderRadius: 999,
   },
-  workIconWarn: { backgroundColor: partnerTheme.colors.warningSoft },
-  workIconBrand: { backgroundColor: partnerTheme.colors.brandSoft },
-  workIconAccent: { backgroundColor: partnerTheme.colors.accentSoft },
+  workMarkerWarn: { backgroundColor: partnerTheme.colors.warning },
+  workMarkerBrand: { backgroundColor: partnerTheme.colors.brand },
+  workMarkerAccent: { backgroundColor: partnerTheme.colors.accent },
+  workRowCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  workRowTitle: {
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.bodyStrong,
+  },
+  workRowSubtitle: {
+    marginTop: 3,
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.caption,
+  },
+  workRowTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  workRowCount: {
+    minWidth: 20,
+    color: partnerTheme.colors.ink,
+    textAlign: 'right',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
   clearRow: {
-    minHeight: 58,
+    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: partnerTheme.colors.line,
   },
   clearText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
 
@@ -695,11 +768,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     lineHeight: 28,
     fontWeight: '500',
-  },
-  impactValueFraction: {
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '400',
   },
   impactStats: {
     marginTop: 10,
