@@ -49,23 +49,30 @@ export async function getAuthenticatedProfile(accessToken?: string) {
   }
 
   const supabase = createSupabaseWithAccessToken(accessToken);
-  const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(accessToken);
+  const claims = claimsData?.claims;
+  const userId = typeof claims?.sub === "string" ? claims.sub : null;
 
-  if (userError || !userData.user) {
-    return { user: null, profile: null, error: userError?.message ?? "Missing user" };
+  if (claimsError || !userId) {
+    return { user: null, profile: null, error: claimsError?.message ?? "Missing user" };
   }
+
+  const user = {
+    id: userId,
+    email: typeof claims.email === "string" ? claims.email : undefined,
+  };
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("id, full_name, role, is_active")
-    .eq("id", userData.user.id)
+    .eq("id", userId)
     .maybeSingle<Profile>();
 
   if (profileError) {
-    return { user: userData.user, profile: null, error: profileError.message };
+    return { user, profile: null, error: profileError.message };
   }
 
-  return { user: userData.user, profile, error: null };
+  return { user, profile, error: null };
 }
 
 export { isAuthorizedProfile };
