@@ -48,8 +48,10 @@ export async function getAuthenticatedProfile(accessToken?: string) {
     return { user: null, profile: null, error: "Missing session" };
   }
 
+  const startedAt = performance.now();
   const supabase = createSupabaseWithAccessToken(accessToken);
   const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(accessToken);
+  const afterClaims = performance.now();
   const claims = claimsData?.claims;
   const userId = typeof claims?.sub === "string" ? claims.sub : null;
 
@@ -67,6 +69,15 @@ export async function getAuthenticatedProfile(accessToken?: string) {
     .select("id, full_name, role, is_active")
     .eq("id", userId)
     .maybeSingle<Profile>();
+  const finishedAt = performance.now();
+
+  if (process.env.NODE_ENV === "production") {
+    console.info("portal_auth_perf", {
+      claims_ms: Math.max(0, Math.round(afterClaims - startedAt)),
+      profile_ms: Math.max(0, Math.round(finishedAt - afterClaims)),
+      total_ms: Math.max(0, Math.round(finishedAt - startedAt)),
+    });
+  }
 
   if (profileError) {
     return { user, profile: null, error: profileError.message };

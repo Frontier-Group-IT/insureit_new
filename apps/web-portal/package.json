@@ -23,6 +23,7 @@
     "remaining-register-prefetch:regression": "node scripts/remaining-register-prefetch-regression.mjs",
     "backoffice-register-prefetch:regression": "node scripts/backoffice-register-prefetch-regression.mjs",
     "server-auth-claims:regression": "node scripts/server-auth-claims-regression.mjs",
+    "auth-phase-observability:regression": "node scripts/auth-phase-observability-regression.mjs",
     "dashboard-performance:regression": "node scripts/dashboard-performance-regression.mjs",
     "portal-route-enhancements:regression": "node scripts/portal-route-enhancements-regression.mjs",
     "aadhaar-mask-performance:regression": "node scripts/aadhaar-mask-performance-regression.mjs",
