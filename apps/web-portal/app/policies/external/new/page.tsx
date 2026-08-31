@@ -3,11 +3,11 @@ import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireExternalPolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
 import { ExternalPolicyForm } from "../external-policy-form";
 
 type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string | null };
 type VehicleRow = { id: string; customer_id: string; vehicle_no: string; make: string | null; model: string | null; vehicle_type: string | null };
-type InsurerRow = { id: string; name: string };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -25,13 +25,13 @@ export default async function NewExternalPolicyPage() {
     vehicleQuery = vehicleQuery.in("customer_id", accessibleCustomerIds);
   }
 
-  const [customersResult, vehiclesResult, insurersResult] = await Promise.all([
+  const [customersResult, vehiclesResult, activeInsurerOptions] = await Promise.all([
     customerQuery.returns<CustomerRow[]>(),
     vehicleQuery.returns<VehicleRow[]>(),
-    admin.from("insurance_companies").select("id,name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerRow[]>(),
+    getActiveInsuranceCompanyOptions(),
   ]);
 
-  if (customersResult.error || vehiclesResult.error || insurersResult.error) throw new Error("Unable to load external policy setup data.");
+  if (customersResult.error || vehiclesResult.error) throw new Error("Unable to load external policy setup data.");
   const vehiclesByCustomer = new Map<string, VehicleRow[]>();
   for (const vehicle of vehiclesResult.data ?? []) {
     const list = vehiclesByCustomer.get(vehicle.customer_id) ?? [];
@@ -48,7 +48,7 @@ export default async function NewExternalPolicyPage() {
 
   return (
     <AppShell title="Add External Policy" backHref="/policies/external">
-      <ExternalPolicyForm mode="create" customers={customers} insurers={insurersResult.data ?? []} />
+      <ExternalPolicyForm mode="create" customers={customers} insurers={activeInsurerOptions.map((insurer) => ({ id: insurer.value, name: insurer.label }))} />
     </AppShell>
   );
 }
