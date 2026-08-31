@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Linking, Pressable, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
@@ -24,7 +24,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [draft, setDraft] = useState({ name: '', phone: '', email: '', address: '' });
   const [selectedDocType, setSelectedDocType] = useState('PAN Card');
@@ -337,7 +336,7 @@ export default function ProfileScreen() {
         </> : null}
       </View> : null}
 
-      <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage({ text: 'English is currently selected.', type: 'success' })} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
+      <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" onPress={() => router.push('/customer/notifications')} /></Section>
 
       <Section title="Account & Privacy" icon="shield-account-outline">
         <ActionRow icon="file-document-outline" label="Privacy & Legal Center" onPress={() => router.push('/customer/legal')} />

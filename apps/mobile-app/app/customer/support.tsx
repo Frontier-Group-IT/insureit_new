@@ -36,7 +36,7 @@ export default function SupportScreen() {
       supabase.from('support_tickets').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(6),
       supabase.from('claims').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }),
     ]);
-    if (ticketResult.error) setMessage('Support tickets could not be loaded. Apply the local support-ticket migration before using this section.');
+    if (ticketResult.error) setMessage('Support tickets could not be loaded right now. Please try again shortly.');
     setTickets(ticketResult.data ?? []);
     setClaims(claimsResult.data ?? []);
     setLoading(false);
