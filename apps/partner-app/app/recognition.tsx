@@ -21,8 +21,7 @@ export default function RecognitionScreen() {
         <>
           <View style={styles.hero}>
             <Ionicons name="sparkles-outline" size={24} color="#FFFFFF" />
-            <Text style={styles.heroTitle}>Built from real milestones</Text>
-            <Text style={styles.heroText}>No public rank, no fake XP. These highlights come from your recorded Journey, learning rhythm and renewal readiness.</Text>
+            <Text style={styles.heroTitle}>Your milestones</Text>
           </View>
 
           <View style={styles.list}>
@@ -51,9 +50,9 @@ function formatDate(value:string){const d=new Date(`${value}T00:00:00`); return 
 
 const styles=StyleSheet.create({
   close:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},loading:{minHeight:260,alignItems:'center',justifyContent:'center'},
-  hero:{borderRadius:partnerTheme.radius.xl,padding:20,backgroundColor:partnerTheme.colors.nav},heroTitle:{marginTop:9,color:'#FFFFFF',fontSize:18,fontWeight:'800'},heroText:{marginTop:6,color:'#C9D0DE',fontSize:9.5,lineHeight:14},
-  list:{marginTop:16,gap:9},card:{minHeight:82,flexDirection:'row',alignItems:'center',gap:12,borderRadius:17,padding:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  icon:{width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center'},journey:{backgroundColor:partnerTheme.colors.brandSoft},learn:{backgroundColor:'#FFF2DD'},clear:{backgroundColor:'#EAF7EF'},body:{flex:1},title:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},text:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},date:{marginTop:5,color:partnerTheme.colors.brand,fontSize:7.5,fontWeight:'700'},
-  empty:{minHeight:150,alignItems:'center',justifyContent:'center',padding:20,borderRadius:18,backgroundColor:partnerTheme.colors.surface},emptyTitle:{color:partnerTheme.colors.ink,fontSize:11,fontWeight:'800'},emptyText:{marginTop:5,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13,textAlign:'center'},
-  nextCard:{marginTop:16,borderRadius:18,padding:17,backgroundColor:partnerTheme.colors.brandSoft},nextEyebrow:{color:partnerTheme.colors.brand,fontSize:7.5,fontWeight:'800',letterSpacing:1},nextTitle:{marginTop:5,color:partnerTheme.colors.ink,fontSize:13,fontWeight:'800'},nextText:{marginTop:4,color:'#5D5A80',fontSize:8.5},track:{height:7,marginTop:12,overflow:'hidden',borderRadius:999,backgroundColor:'#DCD9FF'},fill:{height:'100%',borderRadius:999,backgroundColor:partnerTheme.colors.brand}
+  hero:{borderRadius:partnerTheme.radius.xl,padding:15,backgroundColor:partnerTheme.colors.nav},heroTitle:{marginTop:6,color:'#FFFFFF',fontSize:18,fontWeight:'800'},
+  list:{marginTop:11,gap:7},card:{minHeight:66,flexDirection:'row',alignItems:'center',gap:12,borderRadius:17,padding:11,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
+  icon:{width:36,height:36,borderRadius:14,alignItems:'center',justifyContent:'center'},journey:{backgroundColor:partnerTheme.colors.brandSoft},learn:{backgroundColor:'#FFF2DD'},clear:{backgroundColor:'#EAF7EF'},body:{flex:1},title:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},text:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},date:{marginTop:5,color:partnerTheme.colors.brand,fontSize:7.5,fontWeight:'700'},
+  empty:{minHeight:110,alignItems:'center',justifyContent:'center',padding:20,borderRadius:18,backgroundColor:partnerTheme.colors.surface},emptyTitle:{color:partnerTheme.colors.ink,fontSize:11,fontWeight:'800'},emptyText:{marginTop:5,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13,textAlign:'center'},
+  nextCard:{marginTop:11,borderRadius:18,padding:13,backgroundColor:partnerTheme.colors.brandSoft},nextEyebrow:{color:partnerTheme.colors.brand,fontSize:7.5,fontWeight:'800',letterSpacing:1},nextTitle:{marginTop:5,color:partnerTheme.colors.ink,fontSize:13,fontWeight:'800'},nextText:{marginTop:4,color:'#5D5A80',fontSize:8.5},track:{height:7,marginTop:9,overflow:'hidden',borderRadius:999,backgroundColor:'#DCD9FF'},fill:{height:'100%',borderRadius:999,backgroundColor:partnerTheme.colors.brand}
 });
