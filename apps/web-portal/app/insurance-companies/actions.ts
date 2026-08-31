@@ -194,6 +194,7 @@ export async function setInsuranceCompanyActive(id: string, nextActive: boolean)
   if (error || !data) redirect(errorUrl(`${INSURER_MASTER_PATH}/${id}`, `Status could not be updated: ${error?.message ?? "Unknown error"}`));
 
   await auditInsurerChange(profile?.id, nextActive ? "insurance_company_activated" : "insurance_company_deactivated", id, existing, data);
+  revalidateTag("reference:insurance-companies");
   revalidatePath(INSURER_MASTER_PATH);
   revalidatePath("/insurance-companies");
   revalidatePath(`${INSURER_MASTER_PATH}/${id}`);
