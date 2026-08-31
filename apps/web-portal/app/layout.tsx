@@ -4,11 +4,9 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
-import { EmbeddedMasterSaveBridge } from "@/components/embedded-master-save-bridge";
-import { LegacyIntermediaryImportLink } from "@/components/legacy-intermediary-import-link";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { PolicyRouteEnhancements } from "@/components/policy-route-enhancements";
-import { SuccessPopup } from "@/components/success-popup";
+import { PortalRouteEnhancements } from "@/components/portal-route-enhancements";
 import { ProfessionalFormValidation } from "@/components/professional-form-validation";
 import "./globals.css";
 import "./experience.css";
@@ -42,11 +40,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <Suspense fallback={null}>
             <AadhaarMaskNormalizer />
-            <EmbeddedMasterSaveBridge />
-            <LegacyIntermediaryImportLink />
+            <PortalRouteEnhancements />
             <ProfessionalFormValidation />
             <PolicyRouteEnhancements />
-            <SuccessPopup />
             <RouteProgressBar />
           </Suspense>
           <SpeedInsights />
