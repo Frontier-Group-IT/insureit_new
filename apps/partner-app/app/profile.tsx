@@ -52,10 +52,6 @@ export default function ProfileScreen() {
       <View style={styles.scopeHeading}><Text style={styles.scopeTitle}>Commercial access</Text></View>
       <ScopeCard scope={scope} />
 
-      <View style={styles.notice}>
-        <Ionicons name="lock-closed-outline" size={16} color={partnerTheme.colors.brand} />
-        <Text style={styles.noticeText}>Sensitive onboarding documents and identity numbers are intentionally not exposed in the mobile profile surface.</Text>
-      </View>
     </PartnerScreen>
   );
 }
@@ -79,18 +75,16 @@ function humanize(value: string) {
 
 const styles = StyleSheet.create({
   back: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  hero: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: partnerTheme.radius.xl, padding: 18, backgroundColor: partnerTheme.colors.nav },
-  avatar: { width: 52, height: 52, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  avatar: { width: 44, height: 44, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
   avatarText: { color: partnerTheme.colors.white, fontSize: 14, fontWeight: '800' },
   heroBody: { flex: 1 },
   name: { color: partnerTheme.colors.white, fontSize: 16, fontWeight: '800' },
   role: { marginTop: 4, color: '#C5CCDA', fontSize: 9.5 },
-  details: { marginTop: 14, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  detailRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  details: { marginTop: 9, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  detailRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   detailLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
   detailValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, fontSize: 10, fontWeight: '700' },
-  scopeHeading: { marginTop: 20, marginBottom: 10 },
+  scopeHeading: { marginTop: 14, marginBottom: 7 },
   scopeTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '700' },
-  notice: { marginTop: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: partnerTheme.radius.md, padding: 13, backgroundColor: partnerTheme.colors.brandSoft },
-  noticeText: { flex: 1, color: '#5D5A80', fontSize: 9.5, lineHeight: 14 },
 });
