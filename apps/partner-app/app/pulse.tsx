@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function PulseScreen() {
@@ -146,18 +147,14 @@ function pulseSummary(data: PartnerHomeData) {
 function premiumHint(data: PartnerHomeData) {
   const current = Number(data.business.premium_this_month || 0);
   const previous = Number(data.business.premium_last_month || 0);
-  if (!previous && current > 0) return `${formatMoney(current)} gross premium recorded this month.`;
+  if (!previous && current > 0) return `${formatIndianCurrency(current)} gross premium recorded this month.`;
   if (!previous && !current) return 'No gross premium has been recorded in the comparison period.';
   const change = Number(data.business.premium_change_percent || 0);
-  return `${formatMoney(current)} this month · ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'above' : 'below'} last month.`;
+  return `${formatIndianCurrency(current)} this month · ${Math.abs(change).toFixed(1)}% ${change >= 0 ? 'above' : 'below'} last month.`;
 }
 
 function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function formatMoney(value: number) {
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(value)}`;
 }
 
 const styles = StyleSheet.create({
