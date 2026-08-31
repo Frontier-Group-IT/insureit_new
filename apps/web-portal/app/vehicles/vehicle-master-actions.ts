@@ -148,8 +148,8 @@ export async function addVehicleMaster(formData: FormData) {
   await recordVehicleActivity(admin, vehicle.id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED);
   revalidatePath("/vehicles");
   const nextAction = requiredText(formData, "next_action");
-  if (nextAction === "policy") {
-    redirect(`/policies/new?customer_id=${encodeURIComponent(payload.customer_id)}&vehicle_id=${encodeURIComponent(vehicle.id)}`);
+  if (nextAction === "post_save") {
+    redirect(`/vehicles/new?vehicle_saved=1&customer_id=${encodeURIComponent(payload.customer_id)}&saved_vehicle_id=${encodeURIComponent(vehicle.id)}`);
   }
   redirect("/vehicles?success=vehicle_created");
 }

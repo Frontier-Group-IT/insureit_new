@@ -10,16 +10,11 @@ assert(!forms.includes("+ Create new customer"));
 
 const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
 assert(vehicleSaveChooser.includes("Save Vehicle"));
+assert(vehicleSaveChooser.includes('type="submit"'));
 assert(vehicleSaveChooser.includes('name="next_action"'));
-assert(vehicleSaveChooser.includes('value="vehicle"'));
-assert(vehicleSaveChooser.includes('value="policy"'));
-assert(vehicleSaveChooser.includes(">\n                OK\n              </button>"));
-assert(vehicleSaveChooser.includes(">\n                ADD POLICY\n              </button>"));
-assert(!vehicleSaveChooser.includes("Save Vehicle &amp; Continue to Policy"));
-assert(!vehicleSaveChooser.includes(">\n                Cancel\n              </button>"));
-assert(vehicleSaveChooser.includes("form.checkValidity()"));
-assert(vehicleSaveChooser.includes("form.reportValidity()"));
-assert(vehicleSaveChooser.includes("onClick={openSaveChoices}"));
+assert(vehicleSaveChooser.includes('value="post_save"'));
+assert(!vehicleSaveChooser.includes("ADD POLICY"));
+assert(!vehicleSaveChooser.includes("form.checkValidity()"));
 
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
@@ -36,9 +31,18 @@ assert(customerActions.includes('returnTo === "vehicle"'));
 assert(customerActions.includes("/vehicles/new?customer_id="));
 
 const vehicleActions=read("app/vehicles/vehicle-master-actions.ts");
-assert(vehicleActions.includes('nextAction === "policy"'));
-assert(vehicleActions.includes("/policies/new?customer_id="));
-assert(vehicleActions.includes("&vehicle_id="));
+assert(vehicleActions.includes('nextAction === "post_save"'));
+assert(vehicleActions.includes("/vehicles/new?vehicle_saved=1&customer_id="));
+assert(vehicleActions.includes("&saved_vehicle_id="));
+
+const vehicleCreatedPopup=read("components/vehicle-created-action-popup.tsx");
+assert(vehicleCreatedPopup.includes("createPortal"));
+assert(vehicleCreatedPopup.includes("fixed inset-0"));
+assert(vehicleCreatedPopup.includes("place-items-center"));
+assert(vehicleCreatedPopup.includes(">\n          OK\n        </Link>"));
+assert(vehicleCreatedPopup.includes(">\n          ADD POLICY\n        </Link>"));
+assert(vehicleCreatedPopup.includes("/policies/new?customer_id="));
+assert(vehicleCreatedPopup.includes("&vehicle_id="));
 
 const handoff=read("app/policy-intakes/handoff-actions.ts");
 assert(handoff.includes("policy_intake_onboarding_drafts"));
