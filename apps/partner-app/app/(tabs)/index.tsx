@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -10,7 +10,7 @@ import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
+import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { partnerTheme } from '@/lib/theme';
@@ -19,6 +19,38 @@ import { usePartnerSession } from '@/providers/partner-session-provider';
 export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
+  const [businessFilterOpen, setBusinessFilterOpen] = useState(false);
+  const [businessFromInput, setBusinessFromInput] = useState('');
+  const [businessToInput, setBusinessToInput] = useState('');
+
+  const businessFromDate = parseDateInput(businessFromInput);
+  const businessToDate = parseDateInput(businessToInput);
+  const businessRangeValidation = validateBusinessRange(
+    businessFromInput,
+    businessToInput,
+    businessFromDate,
+    businessToDate,
+  );
+  const businessRangeEnabled = Boolean(
+    businessFromDate
+    && businessToDate
+    && !businessRangeValidation
+  );
+
+  const fetchBusinessRange = useCallback(async () => {
+    if (!businessFromDate || !businessToDate) {
+      throw new Error('Select both dates to load this business range.');
+    }
+    return getPartnerBusinessRange(businessFromDate, businessToDate);
+  }, [businessFromDate, businessToDate]);
+
+  const businessRange = usePartnerQuery({
+    scopeKey: cacheScopeKey,
+    key: `home:business-range:${businessFromDate || 'none'}:${businessToDate || 'none'}`,
+    fetcher: fetchBusinessRange,
+    staleTimeMs: 60_000,
+    enabled: businessRangeEnabled,
+  });
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
     const [homeResult, storiesResult] = await Promise.allSettled([
@@ -46,6 +78,10 @@ export default function PartnerHomeScreen() {
 
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
+  const filteredBusiness = businessRangeEnabled ? businessRange.data : null;
+  const businessRangeLabel = businessRangeEnabled && businessFromDate && businessToDate
+    ? formatBusinessRangeLabel(businessFromDate, businessToDate)
+    : 'This month';
 
   if (!context) return null;
 
@@ -166,31 +202,118 @@ export default function PartnerHomeScreen() {
 
           <PartnerSectionHeader
             title="My business"
-            meta="This month"
+            meta={businessRangeLabel}
             action={
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="View business"
-                onPress={() => router.push('/(tabs)/business')}
-                hitSlop={8}
-              >
-                <Text style={styles.sectionAction}>View business</Text>
-              </Pressable>
+              <View style={styles.businessHeaderActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="View business"
+                  onPress={() => router.push('/(tabs)/business')}
+                  hitSlop={6}
+                >
+                  <Text style={styles.sectionAction}>View business</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={businessFilterOpen ? 'Hide business date filter' : 'Show business date filter'}
+                  accessibilityState={{ expanded: businessFilterOpen }}
+                  onPress={() => setBusinessFilterOpen((open) => !open)}
+                  style={({ pressed }) => [styles.businessFilterTouch, pressed && styles.pressed]}
+                >
+                  <View style={[styles.businessFilterButton, businessFilterOpen && styles.businessFilterButtonOpen]}>
+                    <Ionicons name="calendar-outline" size={18} color={partnerTheme.colors.brand} />
+                    {businessFilterOpen ? (
+                      <Ionicons name="chevron-up" size={14} color={partnerTheme.colors.brand} />
+                    ) : null}
+                  </View>
+                </Pressable>
+              </View>
             }
           />
+
+          {businessFilterOpen ? (
+            <View style={styles.businessDatePanel}>
+              <View style={styles.businessDateRow}>
+                <View style={styles.businessDateField}>
+                  <Ionicons name="calendar-outline" size={16} color="#7D8796" />
+                  <TextInput
+                    accessibilityLabel="From Date"
+                    value={businessFromInput}
+                    onChangeText={(value) => setBusinessFromInput(formatDateTyping(value))}
+                    placeholder="From date"
+                    placeholderTextColor="#8A94A6"
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    style={styles.businessDateInput}
+                  />
+                </View>
+                <View style={styles.businessDateField}>
+                  <Ionicons name="calendar-outline" size={16} color="#7D8796" />
+                  <TextInput
+                    accessibilityLabel="To Date"
+                    value={businessToInput}
+                    onChangeText={(value) => setBusinessToInput(formatDateTyping(value))}
+                    placeholder="To date"
+                    placeholderTextColor="#8A94A6"
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    style={styles.businessDateInput}
+                  />
+                </View>
+              </View>
+              {businessRangeValidation ? (
+                <Text style={styles.businessDateError}>{businessRangeValidation}</Text>
+              ) : businessRangeEnabled && businessRange.error && !filteredBusiness ? (
+                <Text style={styles.businessDateError}>{businessRange.error}</Text>
+              ) : null}
+            </View>
+          ) : null}
 
           <View style={styles.businessCard}>
             <View style={styles.businessMain}>
               <Text style={styles.businessEyebrow}>GROSS PREMIUM</Text>
-              <Text style={styles.businessPremium}>{formatMoney(data.business.premium_this_month)}</Text>
-              <Trend value={Number(data.business.premium_change_percent || 0)} hasPrevious={Number(data.business.premium_last_month || 0) > 0} />
+              <Text style={styles.businessPremium}>
+                {businessRangeEnabled && !filteredBusiness
+                  ? '—'
+                  : formatMoney(filteredBusiness?.premium ?? data.business.premium_this_month)}
+              </Text>
+              {businessRangeEnabled ? (
+                filteredBusiness ? (
+                  <Trend
+                    value={Number(filteredBusiness.premium_change_percent || 0)}
+                    hasPrevious={Number(filteredBusiness.premium_previous_period || 0) > 0}
+                    comparisonLabel="previous period"
+                  />
+                ) : (
+                  <Text style={styles.trendNeutral}>
+                    {businessRange.error ? 'Range unavailable' : 'Updating range…'}
+                  </Text>
+                )
+              ) : (
+                <Trend
+                  value={Number(data.business.premium_change_percent || 0)}
+                  hasPrevious={Number(data.business.premium_last_month || 0) > 0}
+                />
+              )}
             </View>
 
             <View style={styles.businessStats}>
-              <BusinessStat value={data.business.policies_this_month} label="Policies" />
-              <BusinessStat value={data.business.total_customers} label="Customers" />
-              <BusinessStat value={data.business.renewals_30_days} label="Renewals" />
-              <BusinessStat value={data.service.active_claims} label="Claims" />
+              <BusinessStat
+                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.policies ?? data.business.policies_this_month}
+                label="Policies"
+              />
+              <BusinessStat
+                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.customers ?? data.business.total_customers}
+                label="Customers"
+              />
+              <BusinessStat
+                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.renewals ?? data.business.renewals_30_days}
+                label="Renewals"
+              />
+              <BusinessStat
+                value={businessRangeEnabled && !filteredBusiness ? '—' : filteredBusiness?.claims ?? data.service.active_claims}
+                label="Claims"
+              />
             </View>
           </View>
 
@@ -308,7 +431,7 @@ function Signal({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BusinessStat({ value, label }: { value: number; label: string }) {
+function BusinessStat({ value, label }: { value: number | string; label: string }) {
   return (
     <View style={styles.businessStat}>
       <Text style={styles.businessStatValue}>{value}</Text>
@@ -317,8 +440,8 @@ function BusinessStat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
-  if (!hasPrevious) return <Text style={styles.trendNeutral}>First recorded comparison month</Text>;
+function Trend({ value, hasPrevious, comparisonLabel = 'last month' }: { value: number; hasPrevious: boolean; comparisonLabel?: string }) {
+  if (!hasPrevious) return <Text style={styles.trendNeutral}>First recorded comparison period</Text>;
   const positive = value >= 0;
   return (
     <View style={styles.trend}>
@@ -328,7 +451,7 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
         color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning}
       />
       <Text style={[styles.trendText, { color: positive ? partnerTheme.colors.success : partnerTheme.colors.warning }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} last month
+        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {comparisonLabel}
       </Text>
     </View>
   );
@@ -394,6 +517,51 @@ function formatMoney(value: number | string) {
   if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
   if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
+}
+
+function formatDateTyping(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function parseDateInput(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) return null;
+  return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+}
+
+function validateBusinessRange(fromInput: string, toInput: string, fromDate: string | null, toDate: string | null) {
+  if (fromInput.length === 10 && !fromDate) return 'Enter a valid From date.';
+  if (toInput.length === 10 && !toDate) return 'Enter a valid To date.';
+  if (!fromDate || !toDate) return '';
+  if (fromDate > toDate) return 'From date cannot be after To date.';
+  if (rangeDayCount(fromDate, toDate) > 366) return 'Select a range of 366 days or less.';
+  return '';
+}
+
+function rangeDayCount(fromDate: string, toDate: string) {
+  const from = Date.parse(`${fromDate}T00:00:00Z`);
+  const to = Date.parse(`${toDate}T00:00:00Z`);
+  return Math.floor((to - from) / 86_400_000) + 1;
+}
+
+function formatBusinessRangeLabel(fromDate: string, toDate: string) {
+  const format = (value: string) => {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(new Date(year, month - 1, day));
+  };
+  return `${format(fromDate)} – ${format(toDate)}`;
 }
 
 function formatCacheTime(value: number | null) {
@@ -507,6 +675,64 @@ const styles = StyleSheet.create({
   quickLabel: { marginTop: 7, color: partnerTheme.colors.ink, textAlign: 'center', ...partnerTheme.typography.meta },
 
   sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  businessHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  businessFilterTouch: {
+    width: partnerTheme.control.minTouchTarget,
+    height: partnerTheme.control.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  businessFilterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  businessFilterButtonOpen: {
+    width: 50,
+    flexDirection: 'row',
+    gap: 2,
+    borderColor: '#C9C5FF',
+    backgroundColor: '#FAF9FF',
+  },
+  businessDatePanel: {
+    marginTop: -3,
+    marginBottom: 8,
+    borderRadius: 14,
+    padding: 9,
+    backgroundColor: partnerTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  businessDateRow: { flexDirection: 'row', gap: 8 },
+  businessDateField: {
+    flex: 1,
+    minHeight: 42,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    borderRadius: 11,
+    paddingHorizontal: 10,
+    backgroundColor: '#FCFCFE',
+    borderWidth: 1,
+    borderColor: partnerTheme.colors.line,
+  },
+  businessDateInput: {
+    flex: 1,
+    paddingVertical: 0,
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.caption,
+  },
+  businessDateError: {
+    marginTop: 6,
+    paddingHorizontal: 2,
+    color: partnerTheme.colors.warning,
+    ...partnerTheme.typography.meta,
+  },
   businessCard: {
     flexDirection: 'row',
     gap: 14,
