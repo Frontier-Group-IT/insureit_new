@@ -1236,3 +1236,32 @@ Proceed with **R3 list refinement** for:
 
 R3 should reuse the shared flat-list/top-tab/filter interaction language, reduce unnecessary card chrome, preserve current data/auth/cache/offline behavior, and remain OTA-safe.
 
+
+
+### R3 list refinement — VERIFIED / DEPLOYED
+
+R3 was implemented in PR #928 and merged as `db84cd97b03b7e5317e1414751c179c8808511d6`.
+
+Delivered:
+- Customers, Policies, Claims, Renewals and Policy Intake history now share one flatter Kite-style list language;
+- 2x2 metric-card clusters were replaced by compact summary strips/panels;
+- lifecycle/state/pipeline filters use the shared top-tab interaction where appropriate;
+- rows are flatter and scan-oriented with hairline separation, concise status, and contextual actions;
+- Policies keep full Indian premium formatting on a dedicated readable line rather than compressing a long value into a narrow metric cell;
+- Renewals retain their secondary 0–7d / 8–15d / 16–30d windows;
+- Customers retain compact Call/WhatsApp actions;
+- existing pagination, search/debounce state, pull-to-refresh, cache/offline behavior, routes and server-authorized scope were preserved.
+
+Verification on final PR head `a50de86f138230330cdcf6a95ed0e451bac488c1`:
+- Partner Verify run #93 / `33421460050`: SUCCESS;
+- Web Verify run #2471 / `33421460104`: SUCCESS.
+
+Deployment:
+- OTA trigger PR #929 merged as `91c5caabc668d64838a8d11b80763eb539290573`;
+- Partner preview OTA run `33421816823`: SUCCESS;
+- runtime `0.1.0`;
+- update group `07f4cb1f-15bd-40a5-aed6-f93f540936ba`;
+- Android update `01a058f4-451c-7d98-96df-163050dcb02c`;
+- no APK/AAB, native dependency, backend/schema/RLS/auth change.
+
+**NEXT:** R4 detail-screen refinement is the next planned slice, but installed-device visual review of representative R3 lists should be used to catch density/hierarchy issues before propagating the same patterns further.
