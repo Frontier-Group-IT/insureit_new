@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import styles from "../accounts-copy-cleanup.module.css";
+import "../reconciliation-workbench.css";
 
 export default async function ReconciliationLayout({ children }: { children: ReactNode }) {
   const profile = await requireCapability("view_accounts");
