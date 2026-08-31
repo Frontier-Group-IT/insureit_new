@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 export type VehicleRegistrationMode = "registered" | "unregistered";
 
@@ -8,10 +8,12 @@ export function VehicleRegistrationFields({
   initialMode,
   initialVehicleNo,
   initialRegistrationDate,
+  children,
 }: {
   initialMode: VehicleRegistrationMode;
   initialVehicleNo?: string | null;
   initialRegistrationDate?: string | null;
+  children?: ReactNode;
 }) {
   const [mode, setMode] = useState<VehicleRegistrationMode>(initialMode);
   const [vehicleNo, setVehicleNo] = useState(initialMode === "registered" ? initialVehicleNo ?? "" : "");
@@ -51,46 +53,44 @@ export function VehicleRegistrationFields({
       </div>
 
       {mode === "registered" ? (
-        <div className="min-w-0">
-          <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor="vehicle_no">
-            RC / Registration number *
-          </label>
-          <input
-            id="vehicle_no"
-            name="vehicle_no"
-            value={vehicleNo}
-            onChange={(event) => setVehicleNo(event.target.value)}
-            placeholder="MP20CM6416"
-            required
-            autoComplete="off"
-            className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] uppercase text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
-          />
-        </div>
-      ) : (
-        <div className="min-w-0">
-          <span className="mb-1 block text-[10.5px] font-semibold text-[#344054]">Vehicle reference</span>
-          <div className="flex h-10 items-center rounded-xl border border-[#D8E2EE] bg-[#F7FAFD] px-3 text-[10.5px] font-semibold text-[#667085]">
-            Generated automatically from chassis number
+        <>
+          <div className="min-w-0">
+            <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor="vehicle_no">
+              RC / Registration number *
+            </label>
+            <input
+              id="vehicle_no"
+              name="vehicle_no"
+              value={vehicleNo}
+              onChange={(event) => setVehicleNo(event.target.value)}
+              placeholder="MP20CM6416"
+              required
+              autoComplete="off"
+              className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] uppercase text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
+            />
           </div>
-        </div>
+
+          <div className="min-w-0">
+            <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor="registration_date">
+              Registration date
+            </label>
+            <input
+              id="registration_date"
+              name="registration_date"
+              type="date"
+              value={registrationDate}
+              onChange={(event) => setRegistrationDate(event.target.value)}
+              className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
+            />
+          </div>
+
+          {children}
+        </>
+      ) : (
+        children
       )}
 
-      <div className="min-w-0">
-        <label className="mb-1 block text-[10.5px] font-semibold text-[#344054]" htmlFor="registration_date">
-          Registration date
-        </label>
-        <input
-          id="registration_date"
-          name="registration_date"
-          type="date"
-          value={registrationDate}
-          onChange={(event) => setRegistrationDate(event.target.value)}
-          disabled={mode === "unregistered"}
-          className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition disabled:bg-[#F7F9FC] disabled:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
-        />
-      </div>
-
-      {initialMode === "registered" && mode === "unregistered" ? (
+      {initialMode === "registered" && Boolean(initialVehicleNo) && mode === "unregistered" ? (
         <div className="md:col-span-2 lg:col-span-3 xl:col-span-6 rounded-xl border border-[#F5D7A8] bg-[#FFF9EF] px-3 py-2 text-[9.5px] leading-4 text-[#8A5A16]">
           Saving as Unregistered will replace the current registration number with a temporary chassis-based reference. Linked policies will remain attached to the same vehicle record.
         </div>
