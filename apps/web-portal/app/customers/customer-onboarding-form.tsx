@@ -77,10 +77,10 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
   }, [formState.error, formState.field]);
 
   useEffect(() => {
-    if (!returnToVehicle || !formState.customerId || formState.error) return;
+    if (!formState.customerId || formState.error) return;
     setIsDirty(false);
     setContinuationOpen(true);
-  }, [formState.customerId, formState.error, returnToVehicle]);
+  }, [formState.customerId, formState.error]);
 
   useEffect(() => {
     if (cityQuery.trim().length < 2 || selectedLocation?.city_name === cityQuery) { setLocations([]); return; }

@@ -36,13 +36,15 @@ assert(customerForm.includes(">ADD VEHICLE</button>"));
 assert(customerForm.includes('label="Save Customer"'));
 assert(!customerForm.includes("Save Customer &amp; Continue with Vehicle"));
 assert(customerForm.includes('name="return_to"'));
+assert(customerForm.includes('if (!formState.customerId || formState.error) return;'));
+assert(!customerForm.includes('if (!returnToVehicle || !formState.customerId || formState.error) return;'));
 assert(customerForm.includes('router.push(`/vehicles/new?customer_id='));
 assert(customerForm.includes('router.push(`/customers?success='));
 
 const customerActions=read("app/customers/actions.ts");
-assert(customerActions.includes('returnTo === "vehicle"'));
 assert(customerActions.includes("customerId: customer.id"));
-assert(!customerActions.includes('returnTo === "vehicle") redirect'));
+assert(!customerActions.includes('const returnTo = textValue(formData, "return_to")'));
+assert(!customerActions.includes('returnTo === "vehicle"'));
 
 const vehicleActions=read("app/vehicles/vehicle-master-actions.ts");
 assert(vehicleActions.includes('nextAction === "post_save"'));
