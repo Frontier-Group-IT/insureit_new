@@ -71,6 +71,8 @@ jobs:
         run: npm run dashboard-performance:regression
       - name: Portal route enhancement performance regression
         run: npm run portal-route-enhancements:regression
+      - name: Aadhaar mask observer performance regression
+        run: npm run aadhaar-mask-performance:regression
       - name: IFFCO structured regression
         run: npm run policy-ocr:iffco-structured-regression
       - name: IFFCO regression
