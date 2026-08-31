@@ -65,6 +65,8 @@ jobs:
         run: npm run register-performance-observability:regression
       - name: Remaining register prefetch regression
         run: npm run remaining-register-prefetch:regression
+      - name: Backoffice register prefetch regression
+        run: npm run backoffice-register-prefetch:regression
       - name: Server auth claims regression
         run: npm run server-auth-claims:regression
       - name: Dashboard performance regression
