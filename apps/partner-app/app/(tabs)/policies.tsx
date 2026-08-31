@@ -18,6 +18,7 @@ import {
   type PartnerPolicyRow,
   type PartnerPolicySummary,
 } from '@/lib/policies';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -90,7 +91,7 @@ export default function PoliciesScreen() {
           <SummaryCard label="Total policies" value={summary.data?.total_policies ?? 0} />
           <SummaryCard label="In force" value={summary.data?.in_force_policies ?? 0} />
           <SummaryCard label="Expiring in 30 days" value={summary.data?.expiring_30_days ?? 0} />
-          <SummaryCard label="Premium booked" value={formatMoney(summary.data?.total_premium ?? 0)} compact />
+          <SummaryCard label="Premium booked" value={formatIndianCurrency(summary.data?.total_premium ?? 0)} compact />
         </View>
       )}
 
@@ -236,7 +237,7 @@ function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => voi
         <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
         <Meta label="Risk / vehicle" value={row.vehicle_no || row.policy_product || 'Non-motor / not linked'} />
         <Meta label="Product" value={row.policy_product || row.policy_type || row.business_line || 'Not recorded'} />
-        <Meta label="Premium" value={formatMoney(row.premium_amount)} />
+        <Meta label="Premium" value={formatIndianCurrency(row.premium_amount)} />
       </View>
 
       <View style={styles.policyFooter}>
@@ -286,12 +287,6 @@ function formatDate(value: string | null) {
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
-}
-
-function formatMoney(value: number | string | null) {
-  const amount = Number(value ?? 0);
-  if (!Number.isFinite(amount)) return '₹0';
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
 function formatUpdatedAt(value: number | null) {
