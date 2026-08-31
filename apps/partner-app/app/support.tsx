@@ -70,7 +70,6 @@ export default function SupportScreen() {
               <View style={styles.teamIcon}><Ionicons name="people-outline" size={21} color={partnerTheme.colors.brand} /></View>
               <View style={styles.personBody}>
                 <Text style={styles.teamName}>INSUREIT Operations Desk</Text>
-                <Text style={styles.teamMeta}>Your work queues and service items are summarized below.</Text>
               </View>
             </View>
           )}
@@ -99,13 +98,6 @@ export default function SupportScreen() {
             <OpsStat value={data.operations.active_claims} label="Active claims" onPress={() => router.push('/(tabs)/claims')} last />
           </View>
 
-          <View style={styles.note}>
-            <PartnerBanner
-              tone="info"
-              icon="shield-checkmark-outline"
-              message="Support shows only your assigned relationship contact and work items already authorized for this Partner identity. Internal staff directories remain private."
-            />
-          </View>
         </>
       )}
     </PartnerScreen>
@@ -180,29 +172,28 @@ function formatUpdatedAt(value: string) {
 const styles = StyleSheet.create({
   freshness: { minHeight: 22, marginTop: -8, marginBottom: 8, alignItems: 'flex-end', justifyContent: 'center' },
   updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
-  personCard: { minHeight: 108, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.nav },
-  teamCard: { minHeight: 100, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  avatar: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
+  personCard: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  teamCard: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  avatar: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
   avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
-  teamIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  teamIcon: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   personBody: { flex: 1 },
   eyebrow: { color: '#AAA5FF', letterSpacing: 1, ...partnerTheme.typography.meta },
   name: { marginTop: 4, color: '#FFFFFF', ...partnerTheme.typography.sectionTitle },
   meta: { marginTop: 3, color: '#C5CCDA', ...partnerTheme.typography.caption },
   teamName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.cardTitle },
   teamMeta: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  contactRow: { marginTop: 9, flexDirection: 'row', gap: 8 },
+  contactRow: { marginTop: 7, flexDirection: 'row', gap: 8 },
   contactAction: { flex: 1, minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: partnerTheme.radius.md, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   contactText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
   disabled: { opacity: 0.45 },
   opsCard: { overflow: 'hidden', borderRadius: 18, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  opsRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14 },
+  opsRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14 },
   opsDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  opsIcon: { minWidth: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  opsIcon: { minWidth: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   opsIconWarn: { backgroundColor: partnerTheme.colors.warningSoft },
   opsValue: { color: partnerTheme.colors.brandStrong, fontSize: 17, lineHeight: 22, fontWeight: '800' },
   opsValueWarn: { color: partnerTheme.colors.warning },
   opsLabel: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  note: { marginTop: 14 },
   pressed: { opacity: 0.78 },
 });

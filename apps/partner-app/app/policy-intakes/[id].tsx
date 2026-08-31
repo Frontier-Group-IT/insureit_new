@@ -89,7 +89,7 @@ export default function PolicyIntakeDetailScreen() {
           <PartnerBanner
             tone="success"
             title={`Policy Intake ${row.intake_number} submitted`}
-            message="Operations has received this intake. Track extraction, review and final policy creation here."
+            message="Received by Operations. Track progress here."
           />
         </View>
       ) : null}
@@ -185,12 +185,6 @@ export default function PolicyIntakeDetailScreen() {
             <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
           </View>
 
-          <View style={styles.note}>
-            <PartnerBanner
-              tone="info"
-              message="OCR values are review aids only. Operations confirms the final customer, vehicle, policy and financial data during Policy Onboarding."
-            />
-          </View>
         </>
       )}
     </PartnerScreen>
@@ -319,14 +313,14 @@ function humanize(value: string) {
 
 const styles = StyleSheet.create({
   banner: { marginBottom: 10 },
-  statusCard: { borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.nav },
+  statusCard: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  statusIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   statusBody: { flex: 1 },
   statusLabel: { color: '#AEB8C8', letterSpacing: 0.7, ...partnerTheme.typography.meta },
   statusValue: { marginTop: 4, color: '#FFFFFF', ...partnerTheme.typography.sectionTitle },
-  statusHelp: { marginTop: 5, color: '#C5CCDA', ...partnerTheme.typography.caption },
-  progressWrap: { marginTop: 17, paddingTop: 13, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
+  statusHelp: { marginTop: 3, color: '#C5CCDA', ...partnerTheme.typography.caption },
+  progressWrap: { marginTop: 11, paddingTop: 9, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
   progressStep: { flex: 1, alignItems: 'center' },
   progressLineWrap: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   progressDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: '#647084' },
@@ -337,22 +331,21 @@ const styles = StyleSheet.create({
   progressLineComplete: { backgroundColor: '#AAA5FF' },
   progressLabel: { marginTop: 6, color: '#8995A7', ...partnerTheme.typography.meta },
   progressLabelActive: { color: '#FFFFFF' },
-  updated: { marginTop: 12, color: '#8F9BAD', textAlign: 'right', ...partnerTheme.typography.meta },
+  updated: { marginTop: 8, color: '#8F9BAD', textAlign: 'right', ...partnerTheme.typography.meta },
   finalPolicy: { marginTop: 10 },
-  attention: { marginTop: 14, borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: '#FFF7E8', borderWidth: 1, borderColor: '#F0D7AE' },
+  attention: { marginTop: 10, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: '#FFF7E8', borderWidth: 1, borderColor: '#F0D7AE' },
   attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   attentionTitle: { color: '#80511A', ...partnerTheme.typography.bodyStrong },
-  attentionText: { marginTop: 7, color: '#80511A', ...partnerTheme.typography.caption },
-  replacementProgress: { marginTop: 12 },
+  attentionText: { marginTop: 5, color: '#80511A', ...partnerTheme.typography.caption },
+  replacementProgress: { marginTop: 9 },
   replacementProgressTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   replacementProgressText: { color: '#80511A', ...partnerTheme.typography.meta },
   replacementTrack: { height: 7, marginTop: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: '#F0D7AE' },
   replacementFill: { height: '100%', borderRadius: 999, backgroundColor: '#A36A22' },
-  replaceButton: { marginTop: 12 },
+  replaceButton: { marginTop: 9 },
   details: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  detailRow: { minHeight: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  detailRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   detailRowLast: { borderBottomWidth: 0 },
   detailLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   detailValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
-  note: { marginTop: 14 },
 });

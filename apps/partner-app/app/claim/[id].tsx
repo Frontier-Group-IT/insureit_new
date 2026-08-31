@@ -110,7 +110,7 @@ export default function ClaimDetailScreen() {
             <GuidanceRow
               icon="arrow-forward-circle-outline"
               title="What happens next"
-              text="New recorded claim stages and status updates will appear in the journey below."
+              text="New claim updates will appear below."
               last
             />
           </View>
@@ -155,12 +155,6 @@ export default function ClaimDetailScreen() {
             <PartnerStateView state="empty" title="No journey events yet" message="Recorded claim stages and status updates will appear here." />
           )}
 
-          <View style={styles.note}>
-            <PartnerBanner
-              tone="info"
-              message="This Partner view shows recorded claim status and stage events only. Internal Operations notes are not exposed."
-            />
-          </View>
         </>
       )}
     </PartnerScreen>
@@ -218,43 +212,42 @@ function formatDateTime(value: string | null) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 19, backgroundColor: partnerTheme.colors.nav },
+  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   heroStatusBlock: { flex: 1 },
   heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  heroStatus: { marginTop: 7, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '900' },
-  heroMeta: { marginTop: 7, color: '#C4CCD8', ...partnerTheme.typography.caption },
-  heroFooter: { marginTop: 16, paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
+  heroStatus: { marginTop: 4, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '900' },
+  heroMeta: { marginTop: 5, color: '#C4CCD8', ...partnerTheme.typography.caption },
+  heroFooter: { marginTop: 10, paddingTop: 9, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
   heroFooterText: { flex: 1, color: '#8F9BAD', ...partnerTheme.typography.meta },
-  actions: { marginTop: 11, flexDirection: 'row', gap: 8 },
+  actions: { marginTop: 8, flexDirection: 'row', gap: 8 },
   action: { flex: 1, minHeight: partnerTheme.control.minTouchTarget, alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   actionText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
   guidanceCard: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  guidanceRow: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13 },
+  guidanceRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 11, padding: 11 },
   guidanceDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  guidanceIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  guidanceIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   guidanceBody: { flex: 1 },
   guidanceTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   guidanceText: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 13, borderRadius: 17, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, borderRadius: 17, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   info: { width: '50%', paddingRight: 8 },
   infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
   infoValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  amountRow: { flexDirection: 'row', borderRadius: 17, paddingVertical: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  amountRow: { flexDirection: 'row', borderRadius: 17, paddingVertical: 11, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   amount: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
   amountValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   amountLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
   timeline: { paddingLeft: 2 },
-  timelineRow: { minHeight: 76, flexDirection: 'row' },
+  timelineRow: { minHeight: 62, flexDirection: 'row' },
   rail: { width: 28, alignItems: 'center' },
   dot: { width: 12, height: 12, marginTop: 4, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#BFC5D1', borderWidth: 2, borderColor: partnerTheme.colors.canvas },
   dotLatest: { backgroundColor: partnerTheme.colors.brand },
   innerDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFFFFF' },
   line: { width: 1, flex: 1, marginTop: 3, backgroundColor: partnerTheme.colors.line },
-  timelineBody: { flex: 1, paddingBottom: 15 },
+  timelineBody: { flex: 1, paddingBottom: 10 },
   timelineDate: { color: partnerTheme.colors.brand, ...partnerTheme.typography.meta },
   timelineTitle: { marginTop: 4, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   timelineKind: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  note: { marginTop: 10 },
   pressed: { opacity: 0.78 },
 });
