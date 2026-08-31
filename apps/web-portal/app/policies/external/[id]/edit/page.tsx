@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requirePolicyEditor } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
 import { ExternalPolicyForm, type ExternalPolicyInitialValues } from "../../external-policy-form";
 
 type ExternalPolicyRow = {
@@ -46,13 +47,13 @@ export default async function EditExternalPolicyPage({ params }: { params: Promi
     vehicleQuery = vehicleQuery.in("customer_id", accessibleCustomerIds);
   }
 
-  const [customersResult, vehiclesResult, activeInsurersResult, currentInsurerResult] = await Promise.all([
+  const [customersResult, vehiclesResult, activeInsurerOptions, currentInsurerResult] = await Promise.all([
     customerQuery.returns<CustomerRow[]>(),
     vehicleQuery.returns<VehicleRow[]>(),
-    admin.from("insurance_companies").select("id,name,is_active").eq("is_active", true).order("name", { ascending: true }).returns<InsurerRow[]>(),
+    getActiveInsuranceCompanyOptions(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerRow>(),
   ]);
-  if (customersResult.error || vehiclesResult.error || activeInsurersResult.error || currentInsurerResult.error) throw new Error("Unable to load external policy edit data.");
+  if (customersResult.error || vehiclesResult.error || currentInsurerResult.error) throw new Error("Unable to load external policy edit data.");
 
   const vehiclesByCustomer = new Map<string, VehicleRow[]>();
   for (const vehicle of vehiclesResult.data ?? []) {
@@ -67,10 +68,14 @@ export default async function EditExternalPolicyPage({ params }: { params: Promi
     vehicles: vehiclesByCustomer.get(customer.id) ?? [],
   }));
 
-  const insurerById = new Map<string, InsurerRow>();
-  for (const insurer of activeInsurersResult.data ?? []) insurerById.set(insurer.id, insurer);
-  if (currentInsurerResult.data) insurerById.set(currentInsurerResult.data.id, currentInsurerResult.data);
-  const insurers = Array.from(insurerById.values()).sort((a, b) => a.name.localeCompare(b.name)).map((insurer) => ({ id: insurer.id, name: insurer.is_active ? insurer.name : `${insurer.name} — Inactive` }));
+  const insurerById = new Map(activeInsurerOptions.map((insurer) => [insurer.value, { id: insurer.value, name: insurer.label }]));
+  if (currentInsurerResult.data && !currentInsurerResult.data.is_active) {
+    insurerById.set(currentInsurerResult.data.id, {
+      id: currentInsurerResult.data.id,
+      name: `${currentInsurerResult.data.name} — Inactive`,
+    });
+  }
+  const insurers = Array.from(insurerById.values()).sort((a, b) => a.name.localeCompare(b.name));
 
   const initialValues: ExternalPolicyInitialValues = {
     policyId: policy.id,
