@@ -8,8 +8,8 @@ import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requirePolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getActiveInsuranceCompanyOptions, getActiveVehicleManufacturerOptions } from "@/lib/reference-data-cache";
 
-type InsurerOption = { id: string; name: string };
 type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string; email: string | null };
 type IntermediaryOption = {
   id: string;
@@ -21,8 +21,6 @@ type IntermediaryOption = {
 };
 type ApplicationPartnerRow = { id: string; partner_record_id: string | null };
 type PartnerAssociateRow = { partner_record_id: string | null; associate_employee_id: string | null; created_at: string };
-type ManufacturerId = { id: string };
-type BrandOption = { manufacturer_id: string; brand_name: string };
 type PrefillVehicle = { id:string; customer_id:string; vehicle_no:string; registration_status:string|null; vehicle_type:string|null; make:string|null; model:string|null; fuel_type:string|null; year:number|null; chassis_no:string|null; engine_no:string|null; engine_capacity_cc:number|null; seating_capacity:number|null; gvw_kg:number|null; rto_state:string|null; rto_name:string|null };
 type PrefillCustomer = { id:string; contact_name:string; company_name:string|null; phone:string };
 
@@ -65,21 +63,32 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     return <SetupError />;
   }
 
-  const [insurersResult, customersResult, intermediariesResult, manufacturersResult, brandsResult] = await Promise.all([
-    admin.from("insurance_companies").select("id, name").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
-    admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
-    admin
-      .from("intermediaries")
-      .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
-      .in("intermediary_type", ["posp", "misp", "partner"])
-      .eq("account_status", "active")
-      .order("display_name", { ascending: true })
-      .returns<IntermediaryOption[]>(),
-    admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
-    admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
-  ]);
+  let insurerOptions: Awaited<ReturnType<typeof getActiveInsuranceCompanyOptions>>;
+  let manufacturerOptions: string[];
+  let customersResult;
+  let intermediariesResult;
+  try {
+    const [cachedInsurers, cachedManufacturers, customers, intermediaries] = await Promise.all([
+      getActiveInsuranceCompanyOptions(),
+      getActiveVehicleManufacturerOptions(),
+      admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
+      admin
+        .from("intermediaries")
+        .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
+        .in("intermediary_type", ["posp", "misp", "partner"])
+        .eq("account_status", "active")
+        .order("display_name", { ascending: true })
+        .returns<IntermediaryOption[]>(),
+    ]);
+    insurerOptions = cachedInsurers;
+    manufacturerOptions = cachedManufacturers.map((option) => option.value);
+    customersResult = customers;
+    intermediariesResult = intermediaries;
+  } catch {
+    return <SetupError />;
+  }
 
-  if (insurersResult.error || customersResult.error || intermediariesResult.error || manufacturersResult.error || brandsResult.error) return <SetupError />;
+  if (customersResult.error || intermediariesResult.error) return <SetupError />;
 
   const intermediaryRows = intermediariesResult.data ?? [];
   const partnerApplicationIds = intermediaryRows
@@ -122,7 +131,6 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   }
 
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
-  const insurerOptions = (insurersResult.data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
   const customerOptions = (customersResult.data ?? []).map((row) => ({
     id: row.id,
     name: row.company_name?.trim() || row.contact_name,
@@ -130,9 +138,6 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     phone: row.phone,
     email: row.email ?? "",
   }));
-  const activeManufacturerIds = new Set((manufacturersResult.data ?? []).map((manufacturer) => manufacturer.id));
-  const makeNames = Array.from(new Set((brandsResult.data ?? []).filter((brand) => activeManufacturerIds.has(brand.manufacturer_id)).map((brand) => brand.brand_name))).sort((a, b) => a.localeCompare(b));
-  const manufacturerOptions = makeNames;
   const rmOptions: PolicyRmOption[] = salesEmployees.map((employee) => {
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
