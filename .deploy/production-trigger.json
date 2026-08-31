@@ -1,10 +1,10 @@
 {
-  "purpose": "Re-trigger deployment of External Policies register redesign to match Customer Register.",
-  "deploy_requested_at": "2026-08-22T11:41:00+05:30",
+  "purpose": "Force a production web deployment so the merged Add New Customer icon highlight and all newer main changes are actually published to Vercel.",
+  "deploy_requested_at": "2026-08-31T16:32:00+05:30",
   "requested_by": "explicit user deploy request",
   "source": "Re-deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "7eef50527cf67448c4b7417bbd3af39daf416ce6",
-  "release_scope": "Deploy the merged External Policies register redesign from PR #543. The register uses the shared Customer Register-style native table, toolbar, status tabs, insurer filter, reset action, and shared 10-row pagination instead of the MUI DataGrid fixed-height table and rows-per-page footer. Existing External Policy queries, permissions, add/edit/delete workflows, claim counts, status logic, and backend behavior remain unchanged.",
-  "verification": "PR #543 Verify web portal run 32555057314 (#1614) passed successfully on head b71bd38a963dbb38e7c077d952b9d00d60c86739, including regressions, TypeScript typecheck, lint, and the Next.js production build. This release has no Supabase migration. The protected production workflow must verify current main again before invoking the Vercel production deploy hook.",
+  "source_commit": "82c9b12b69583f781561ae6c36925e7517a12b55",
+  "release_scope": "Deploy current main, including PR #895 (bold green Add New Customer icon with unchanged size and no background), plus all newer merged changes already contained in main.",
+  "verification": "PR #895 Verify web portal run 33384866001 (#2425) passed successfully on head dee700d827da63ab5759d9a6e7678d25c5b47e34. This trigger intentionally changes a repository-global deployment marker so Vercel cannot skip the web project as unaffected.",
   "instructions": "Update this file only after explicit deployment approval."
 }
