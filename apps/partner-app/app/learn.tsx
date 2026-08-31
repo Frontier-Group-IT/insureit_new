@@ -59,7 +59,7 @@ export default function LearnScreen() {
   return (
     <PartnerScreen
       eyebrow="60 SEC LEARN"
-      title="One useful idea a day"
+      title="60-Second Learn"
       action={
         <PartnerIconButton icon="close" label="Close learning" onPress={() => router.back()} />
       }
@@ -93,9 +93,6 @@ export default function LearnScreen() {
           <View style={styles.questionCard}>
             <Text style={styles.questionMeta}>TODAY’S QUESTION</Text>
             <Text style={styles.question}>{data.card.prompt}</Text>
-            <Text style={styles.questionHint}>
-              {data.answered_today ? 'Completed for today' : 'Choose the strongest answer'}
-            </Text>
           </View>
 
           <View style={styles.options}>
@@ -206,13 +203,12 @@ const styles = StyleSheet.create({
   streak: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingHorizontal: 11, backgroundColor: '#FFF4E5' },
   streakText: { color: '#8A5518', fontSize: 8.5, fontWeight: '800' },
 
-  questionCard: { marginTop: 14, minHeight: 190, justifyContent: 'center', borderRadius: partnerTheme.radius.xl, padding: 21, backgroundColor: partnerTheme.colors.nav },
+  questionCard: { marginTop: 10, minHeight: 142, justifyContent: 'center', borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: partnerTheme.colors.nav },
   questionMeta: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.2 },
-  question: { marginTop: 10, color: '#FFFFFF', fontSize: 20, lineHeight: 28, fontWeight: '800' },
-  questionHint: { marginTop: 15, color: '#AEB7C5', fontSize: 8.5 },
+  question: { marginTop: 7, color: '#FFFFFF', fontSize: 20, lineHeight: 28, fontWeight: '800' },
 
-  options: { marginTop: 13, gap: 9 },
-  option: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 17, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  options: { marginTop: 9, gap: 7 },
+  option: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 17, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   optionSelected: { borderColor: '#ACA8FA', backgroundColor: '#F8F7FF' },
   optionCorrect: { borderColor: '#B7DEC7', backgroundColor: '#F4FBF7' },
   optionWrong: { borderColor: '#F0C7C2', backgroundColor: '#FFF7F6' },
@@ -224,7 +220,7 @@ const styles = StyleSheet.create({
   optionTextStrong: { fontWeight: '800' },
   inlineError: { marginTop: 9, color: partnerTheme.colors.danger, fontSize: 8.5 },
 
-  answerCard: { marginTop: 14, borderRadius: 18, padding: 16 },
+  answerCard: { marginTop: 10, borderRadius: 18, padding: 13 },
   answerCorrect: { backgroundColor: '#EFF9F3' },
   answerLearn: { backgroundColor: partnerTheme.colors.brandSoft },
   answerHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -234,14 +230,14 @@ const styles = StyleSheet.create({
   answerHeaderBody: { flex: 1 },
   answerEyebrow: { color: partnerTheme.colors.inkMuted, fontSize: 7.5, fontWeight: '800', letterSpacing: 0.8 },
   answerTitle: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 11.5, fontWeight: '800' },
-  selectedText: { marginTop: 12, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13 },
-  explanation: { marginTop: 9, color: '#4C586D', fontSize: 9.5, lineHeight: 15 },
+  selectedText: { marginTop: 8, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13 },
+  explanation: { marginTop: 6, color: '#4C586D', fontSize: 9.5, lineHeight: 15 },
 
-  statsCard: { marginTop: 14, flexDirection: 'row', borderRadius: 17, paddingVertical: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  statsCard: { marginTop: 10, flexDirection: 'row', borderRadius: 17, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   stat: { flex: 1, alignItems: 'center' },
   statValue: { color: partnerTheme.colors.ink, fontSize: 15, fontWeight: '800' },
   statLabel: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 7.2, textAlign: 'center' },
 
-  footnote: { marginTop: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 14, padding: 12, backgroundColor: partnerTheme.colors.accentSoft },
+  footnote: { marginTop: 9, flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderRadius: 14, padding: 10, backgroundColor: partnerTheme.colors.accentSoft },
   footnoteText: { flex: 1, color: '#56716F', fontSize: 8, lineHeight: 12 },
 });
