@@ -1095,3 +1095,27 @@ Verification:
 - no APK/AAB and no native dependency/config change.
 
 Next planned slice: **R4 detail screens** — Customer Detail, Policy Detail, Claim Detail and Policy Intake Detail. Use installed-device review of R3 first if any density/hierarchy adjustment is needed before R4.
+
+
+## INSUREIT Partner Home simplification OTA — 2026-08-31
+
+**VERIFIED / DEPLOYED TO PARTNER PREVIEW**
+
+- Feature PR #932 merged as `ebdefc672602181ee5270622afdcaddc8e34cad3`.
+- Partner Verify #95 / run `33423691651`: SUCCESS.
+- Web Verify #2475 / run `33423691560`: SUCCESS.
+- OTA trigger PR #933 merged as `a45be762890f5612778420c2f76a9661baafd02d`.
+- Partner preview OTA run `33424089808`: SUCCESS.
+- Runtime: `0.1.0`.
+- Update group: `7fc15d46-84a9-4664-a073-4c60288f6e05`.
+- Android update: `01a0590b-87f2-7bbd-9352-8c4491f5829b`.
+- iOS update: `01a0590b-87f2-7944-abd7-cb7c8faf44d8`.
+
+Deployed Home composition:
+1. greeting / role / freshness;
+2. My Business;
+3. Quick Actions;
+4. Your Impact;
+5. INSUREIT Stories.
+
+The My Work section is removed. INSUREIT Stories is the final Home section, has no See all action, and evenly distributes its visible story icons across the available width. Individual story icons remain tappable. No APK/AAB, native dependency/config, backend, schema, RLS or auth change was introduced.
