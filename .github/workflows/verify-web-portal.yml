@@ -63,6 +63,8 @@ jobs:
         run: npm run commercial-reports-prefetch:regression
       - name: Register performance observability regression
         run: npm run register-performance-observability:regression
+      - name: Policy register payload regression
+        run: npm run policy-register-payload:regression
       - name: Remaining register prefetch regression
         run: npm run remaining-register-prefetch:regression
       - name: Backoffice register prefetch regression
