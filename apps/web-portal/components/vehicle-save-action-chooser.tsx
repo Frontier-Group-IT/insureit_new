@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type MouseEvent } from "react";
 import { AlertModal } from "@/components/ui-feedback";
 
 export function VehicleSaveActionChooser() {
@@ -17,11 +17,15 @@ export function VehicleSaveActionChooser() {
     });
   }, [validationError?.field]);
 
-  function saveVehicle() {
+  function validateBeforeSubmit(event: MouseEvent<HTMLButtonElement>) {
     const form = triggerRef.current?.form;
-    if (!form) return;
+    if (!form) {
+      event.preventDefault();
+      return;
+    }
 
     if (!form.checkValidity()) {
+      event.preventDefault();
       const invalid = form.querySelector<HTMLElement>(":invalid");
       const label = invalid?.id
         ? document.querySelector<HTMLLabelElement>(`label[for="${CSS.escape(invalid.id)}"]`)?.textContent
@@ -37,7 +41,6 @@ export function VehicleSaveActionChooser() {
       return;
     }
 
-    form.requestSubmit();
   }
 
   return (
@@ -45,8 +48,8 @@ export function VehicleSaveActionChooser() {
       <input type="hidden" name="next_action" value="post_save" />
       <button
         ref={triggerRef}
-        type="button"
-        onClick={saveVehicle}
+        type="submit"
+        onClick={validateBeforeSubmit}
         className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]"
       >
         Save Vehicle
