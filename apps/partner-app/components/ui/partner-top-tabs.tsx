@@ -61,8 +61,8 @@ export function PartnerTopTabs({
 
 const styles = StyleSheet.create({
   content: {
-    gap: 18,
-    paddingHorizontal: 16,
+    gap: 20,
+    paddingHorizontal: 2,
   },
   tab: {
     minHeight: partnerTheme.control.minTouchTarget,
@@ -80,14 +80,16 @@ const styles = StyleSheet.create({
   },
   label: {
     color: partnerTheme.colors.inkMuted,
-    ...partnerTheme.typography.bodyStrong,
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
   },
   labelActive: {
     color: partnerTheme.colors.ink,
   },
   badge: {
-    minWidth: 20,
-    height: 20,
+    minWidth: 19,
+    height: 19,
     paddingHorizontal: 5,
     borderRadius: partnerTheme.radius.pill,
     alignItems: 'center',
