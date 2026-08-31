@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { FormSubmitButton } from "./form-submit-button";
+import { SearchableCustomerSelect } from "./searchable-customer-select";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
 import { VehicleSaveActionChooser } from "./vehicle-save-action-chooser";
@@ -35,25 +36,28 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       <VehicleOnboardingHeader />
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="six" reserveHeaderAction>
-        <SelectField
-          variant="onboarding"
-          label="Customer"
-          name="customer_id"
-          options={customers}
-          required
-          defaultValue={values?.customer_id ?? ""}
-          emptyLabel="Select customer"
-          labelAction={createCustomerHref ? (
-            <Link
-              href={createCustomerHref}
-              aria-label="Add new customer"
-              title="Add new customer"
-              className="inline-flex h-4 w-4 items-center justify-center rounded text-[#0B8F6A] transition hover:text-[#08765A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8FD9C4]"
-            >
-              <UserPlus className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden="true" />
-            </Link>
-          ) : null}
-        />
+        <div className="min-w-0">
+          <div className="mb-1 flex items-center gap-1.5">
+            <label className={onboardingLabelClass.replace("mb-1 ", "")} htmlFor="customer_id">Customer *</label>
+            {createCustomerHref ? (
+              <Link
+                href={createCustomerHref}
+                aria-label="Add new customer"
+                title="Add new customer"
+                className="inline-flex h-4 w-4 items-center justify-center rounded text-[#0B8F6A] transition hover:text-[#08765A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8FD9C4]"
+              >
+                <UserPlus className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden="true" />
+              </Link>
+            ) : null}
+          </div>
+          <SearchableCustomerSelect
+            name="customer_id"
+            options={customers}
+            required
+            defaultValue={values?.customer_id ?? ""}
+            placeholder="Select customer"
+          />
+        </div>
         <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date}>
           <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
           <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
