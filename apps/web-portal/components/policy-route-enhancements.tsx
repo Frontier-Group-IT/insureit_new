@@ -12,13 +12,15 @@ const PolicySaveConfirmation = dynamic(
   { ssr: false },
 );
 
+const policyEditRoutePattern = /^\/policies\/[0-9a-f-]{36}\/edit\/?$/i;
+
 export function PolicyRouteEnhancements() {
   const pathname = usePathname();
   if (!pathname.startsWith("/policies")) return null;
 
   return (
     <>
-      <PolicyEditCopyFooterActions />
+      {policyEditRoutePattern.test(pathname) ? <PolicyEditCopyFooterActions /> : null}
       <PolicySaveConfirmation />
     </>
   );
