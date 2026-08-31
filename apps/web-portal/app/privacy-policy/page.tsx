@@ -103,10 +103,6 @@ export default function PrivacyPolicyPage() {
           </section>
         </div>
 
-        <div className="mt-8 border-t border-[#E4ECF5] pt-5 text-xs leading-5 text-[#6A788C]">
-          This public page summarizes the same privacy framework presented inside the InsureIT app. The policy should
-          be reviewed and approved by the Company&apos;s qualified legal/compliance advisers before public app-store release.
-        </div>
       </article>
     </main>
   );
