@@ -9,6 +9,7 @@ import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function PolicyDetailScreen() {
@@ -72,7 +73,7 @@ export default function PolicyDetailScreen() {
 
             <View style={styles.heroPremiumRow}>
               <View>
-                <Text style={styles.heroPremium}>{formatMoney(data.premium.gross_premium)}</Text>
+                <Text style={styles.heroPremium}>{formatIndianCurrency(data.premium.gross_premium)}</Text>
                 <Text style={styles.heroPremiumLabel}>gross premium</Text>
               </View>
               <View style={styles.heroDateBlock}>
@@ -97,12 +98,12 @@ export default function PolicyDetailScreen() {
             <Info label="Business type" value={data.policy.business_type || 'Not recorded'} />
             <Info label="Issuance" value={formatDate(data.policy.issuance_date)} />
             <Info label="Status" value={humanize(data.policy.status || data.policy.lifecycle_status)} />
-            <Info label="IDV" value={data.policy.insured_declared_value != null ? formatMoney(data.policy.insured_declared_value) : 'Not recorded'} />
+            <Info label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
           </InfoCard>
 
           <PartnerSectionHeader title="Premium breakup" />
           <InfoCard>
-            <Info label="Gross premium" value={formatMoney(data.premium.gross_premium)} />
+            <Info label="Gross premium" value={formatIndianCurrency(data.premium.gross_premium)} />
             <Info label="Net premium" value={nullableMoney(data.premium.net_premium)} />
             <Info label="OD premium" value={nullableMoney(data.premium.od_premium)} />
             <Info label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
@@ -200,13 +201,8 @@ function formatDate(value: string | null) {
   return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(d);
 }
 
-function formatMoney(value: number | string | null) {
-  const n = Number(value ?? 0);
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number.isFinite(n) ? n : 0)}`;
-}
-
 function nullableMoney(value: number | string | null) {
-  return value == null ? 'Not recorded' : formatMoney(value);
+  return value == null ? 'Not recorded' : formatIndianCurrency(value);
 }
 
 const styles = StyleSheet.create({
