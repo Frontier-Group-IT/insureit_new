@@ -59,7 +59,7 @@ export async function getAuthenticatedProfile(accessToken?: string) {
 
   const user = {
     id: userId,
-    email: typeof claims.email === "string" ? claims.email : undefined,
+    email: typeof claims?.email === "string" ? claims.email : undefined,
   };
 
   const { data: profile, error: profileError } = await supabase
