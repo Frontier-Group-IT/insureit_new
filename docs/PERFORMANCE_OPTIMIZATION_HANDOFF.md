@@ -30,6 +30,14 @@ No index, RLS, permission, region, storage, accounting, or workflow-state change
 
 No index, RLS, permission, region, accounting, storage, OCR, or workflow-state change is included in this pass. Apply only after the feature PR is green and approved for merge.
 
+## 2026-08-31 finance report deferred enrichment pass
+
+**IMPLEMENTED, NOT APPLIED:** branch `perf/finance-report-deferred-enrichment` rewrites `public.get_finance_report_v3(...)` so customer and vehicle display enrichment happens only after finance filtering and register pagination. Insurer naming remains in the base because it participates in insurer summaries and filter options. The function signature, security mode, finance calculations, filter semantics, pagination bounds, JSON keys, and register row shape are preserved.
+
+**VERIFIED read-only production evidence before migration:** live default 25-row finance report measured about **121.320 ms / 13,907 shared-hit blocks**. The warmed equivalent candidate measured **17.301 ms / 272 shared-hit blocks** after one cold planning/execution pass. Summary, insurer summary, RM summary, billing summary, register rows, and total count matched the live response. Filter options matched semantically; the only byte-level mismatch observed was the pre-existing nondeterministic ordering of intermediaries that share the same display name because the live function orders that array by name only.
+
+No index, RLS, permission, region, accounting-rule, storage, OCR, or workflow-state change is included in this pass. Apply only after the feature PR is green and approved for merge.
+
 ## 1. Why this file exists
 
 The portal was repeatedly slowed by architectural patterns that looked harmless in isolation:
