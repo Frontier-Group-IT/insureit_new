@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Animated, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -149,7 +149,14 @@ export default function PartnerHomeScreen() {
             <View style={styles.businessHeading}>
               <View>
                 <Text style={styles.businessLabel}>MY BUSINESS · THIS MONTH</Text>
-                <Text style={styles.businessPremium}>{formatIndianCurrency(data.business.premium_this_month)}</Text>
+                <Text style={styles.businessPremium}>
+                  {currencyParts(data.business.premium_this_month).whole}
+                  {currencyParts(data.business.premium_this_month).fraction ? (
+                    <Text style={styles.businessPremiumFraction}>
+                      .{currencyParts(data.business.premium_this_month).fraction}
+                    </Text>
+                  ) : null}
+                </Text>
                 <Text style={styles.businessCaption}>Gross premium</Text>
               </View>
               <Pressable
@@ -189,7 +196,7 @@ export default function PartnerHomeScreen() {
           <PartnerEnter delay={80}>
           <View style={styles.workSection}>
             <View style={styles.workHeader}>
-              <Text style={styles.workTitle}>My work</Text>
+              <Text style={styles.workTitle}>MY WORK</Text>
               <PartnerStatusIndicator
                 label={attentionCount(data) ? `${attentionCount(data)} need attention` : 'All clear'}
                 tone={attentionCount(data) ? 'warning' : 'success'}
@@ -272,7 +279,14 @@ export default function PartnerHomeScreen() {
             >
               <View style={styles.impactPrimary}>
                 <Text style={styles.impactLabel}>ACTIVE MOTOR IDV PROTECTED</Text>
-                <Text style={styles.impactValue}>{formatIndianCurrency(data.impact.active_motor_idv)}</Text>
+                <Text style={styles.impactValue}>
+                  {currencyParts(data.impact.active_motor_idv).whole}
+                  {currencyParts(data.impact.active_motor_idv).fraction ? (
+                    <Text style={styles.impactValueFraction}>
+                      .{currencyParts(data.impact.active_motor_idv).fraction}
+                    </Text>
+                  ) : null}
+                </Text>
               </View>
 
               <View style={styles.impactStats}>
@@ -434,6 +448,16 @@ function humanize(value: string) {
 }
 
 
+function currencyParts(value: number | string | null | undefined) {
+  const formatted = formatIndianCurrency(value);
+  const dot = formatted.lastIndexOf('.');
+  if (dot < 0) return { whole: formatted, fraction: '' };
+  return {
+    whole: formatted.slice(0, dot),
+    fraction: formatted.slice(dot + 1),
+  };
+}
+
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -493,16 +517,28 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   businessLabel: {
-    color: partnerTheme.colors.brand,
-    letterSpacing: 0.7,
-    ...partnerTheme.typography.meta,
+    color: partnerTheme.colors.inkMuted,
+    fontFamily: Platform.select({
+      ios: 'Avenir Next',
+      android: 'sans-serif-medium',
+      default: undefined,
+    }),
+    fontSize: 10.5,
+    lineHeight: 15,
+    fontWeight: '600',
+    letterSpacing: 1.15,
   },
   businessPremium: {
     marginTop: 4,
     color: partnerTheme.colors.ink,
     fontSize: 30,
     lineHeight: 36,
-    fontWeight: '800',
+    fontWeight: '600',
+  },
+  businessPremiumFraction: {
+    fontSize: 18,
+    lineHeight: 23,
+    fontWeight: '500',
   },
   businessCaption: {
     marginTop: 1,
@@ -553,7 +589,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  workTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  workTitle: {
+    color: partnerTheme.colors.inkMuted,
+    fontFamily: Platform.select({
+      ios: 'Avenir Next',
+      android: 'sans-serif-medium',
+      default: undefined,
+    }),
+    fontSize: 10.5,
+    lineHeight: 15,
+    fontWeight: '600',
+    letterSpacing: 1.15,
+  },
   tabsWrap: {
     marginHorizontal: -14,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -647,7 +694,12 @@ const styles = StyleSheet.create({
     color: partnerTheme.colors.ink,
     fontSize: 22,
     lineHeight: 28,
-    fontWeight: '800',
+    fontWeight: '500',
+  },
+  impactValueFraction: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '400',
   },
   impactStats: {
     marginTop: 10,
