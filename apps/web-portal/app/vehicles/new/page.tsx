@@ -17,8 +17,8 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
     { capability: "view_vehicles", minimumAccess: "edit" },
     { capability: "create_vehicles", minimumAccess: "edit" },
   ]);
-  const [canCreateCustomer, canCreatePolicy] = await Promise.all([
-    hasEffectiveCapability(profile, "create_customers", "edit"),
+  const [canOnboardCustomer, canCreatePolicy] = await Promise.all([
+    hasEffectiveCapability(profile, "manage_customers", "edit"),
     hasEffectiveCapability(profile, "create_policies", "edit"),
   ]);
   const admin = createSupabaseAdminClient();
@@ -55,7 +55,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         manufacturers={manufacturerOptions}
         values={{ customer_id: params.customer_id ?? null }}
         submitLabel="Create Vehicle"
-        createCustomerHref={canCreateCustomer ? "/vehicles/new-customer" : undefined}
+        createCustomerHref={canOnboardCustomer ? "/customers/new?partner_type=individual_proprietor&return_to=vehicle" : undefined}
         allowPolicyContinuation={canCreatePolicy}
       />
     </AppShell>

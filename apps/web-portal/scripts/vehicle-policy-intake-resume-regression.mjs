@@ -5,7 +5,21 @@ const read=(path)=>fs.readFileSync(new URL(`../${path}`,import.meta.url),"utf8")
 const forms=read("components/forms.tsx");
 assert(forms.includes("Save Vehicle Only"));
 assert(forms.includes("Save Vehicle &amp; Continue to Policy"));
-assert(forms.includes("+ Create new customer"));
+assert(forms.includes('aria-label="Add new customer"'));
+assert(!forms.includes("+ Create new customer"));
+
+const vehiclePage=read("app/vehicles/new/page.tsx");
+assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
+assert(vehiclePage.includes('"manage_customers"'));
+
+const customerForm=read("app/customers/customer-onboarding-form.tsx");
+assert(customerForm.includes("Save Customer"));
+assert(customerForm.includes("Save Customer &amp; Continue with Vehicle"));
+assert(customerForm.includes('name="return_to"'));
+
+const customerActions=read("app/customers/actions.ts");
+assert(customerActions.includes('returnTo === "vehicle"'));
+assert(customerActions.includes("/vehicles/new?customer_id="));
 
 const vehicleActions=read("app/vehicles/vehicle-master-actions.ts");
 assert(vehicleActions.includes('nextAction === "policy"'));
