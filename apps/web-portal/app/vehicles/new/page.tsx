@@ -1,5 +1,6 @@
 import { addVehicleMaster } from "@/app/vehicles/vehicle-master-actions";
 import { VehicleForm } from "@/components/forms";
+import { VehicleCreatedActionPopup } from "@/components/vehicle-created-action-popup";
 import { AppShell } from "@/components/shell";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { requireAnyCapability } from "@/lib/master-data-server";
@@ -12,7 +13,7 @@ type BrandOption = { manufacturer_id: string; brand_name: string };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string; error?: string }> }) {
+export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string; error?: string; vehicle_saved?: string; saved_vehicle_id?: string }> }) {
   const profile = await requireAnyCapability([
     { capability: "view_vehicles", minimumAccess: "edit" },
     { capability: "create_vehicles", minimumAccess: "edit" },
@@ -58,6 +59,9 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         createCustomerHref={canOnboardCustomer ? "/customers/new?partner_type=individual_proprietor&return_to=vehicle" : undefined}
         allowPolicyContinuation={canCreatePolicy}
       />
+      {params.vehicle_saved === "1" && params.customer_id && params.saved_vehicle_id ? (
+        <VehicleCreatedActionPopup customerId={params.customer_id} vehicleId={params.saved_vehicle_id} />
+      ) : null}
     </AppShell>
   );
 }
