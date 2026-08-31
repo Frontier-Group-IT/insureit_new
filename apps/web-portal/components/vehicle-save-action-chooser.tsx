@@ -5,13 +5,13 @@ import { useEffect, useRef, useState } from "react";
 export function VehicleSaveActionChooser() {
   const [open, setOpen] = useState(false);
   const triggerButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const primaryActionRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    requestAnimationFrame(() => closeButtonRef.current?.focus());
+    requestAnimationFrame(() => primaryActionRef.current?.focus());
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -54,22 +54,25 @@ export function VehicleSaveActionChooser() {
             if (event.target === event.currentTarget) setOpen(false);
           }}
         >
-          <div className="w-full max-w-[430px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_28px_90px_rgba(7,21,45,.28)]">
-            <div className="border-b border-[#E2E8F0] px-5 py-4">
-              <h2 id="vehicle-save-action-title" className="text-[15px] font-semibold text-[#0F172A]">Save vehicle</h2>
-              <p className="mt-1.5 text-[11px] leading-5 text-[#64748B]">
-                Choose whether to save this vehicle only or continue directly to policy creation after saving.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 bg-[#F8FAFC] px-5 py-4 sm:flex-row sm:justify-end">
-              <button ref={closeButtonRef} type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">
-                Cancel
+          <div className="w-full max-w-[300px] rounded-xl border border-white/80 bg-white p-3 shadow-[0_20px_60px_rgba(7,21,45,.24)]">
+            <h2 id="vehicle-save-action-title" className="sr-only">Save vehicle</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                ref={primaryActionRef}
+                type="submit"
+                name="next_action"
+                value="vehicle"
+                className="h-9 rounded-lg border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#17365D] transition hover:bg-[#F8FAFC]"
+              >
+                OK
               </button>
-              <button type="submit" name="next_action" value="vehicle" className="h-10 rounded-lg border border-[#9FB4CF] bg-white px-4 text-[10.5px] font-semibold text-[#17365D] transition hover:bg-[#F4F8FC]">
-                Save Vehicle
-              </button>
-              <button type="submit" name="next_action" value="policy" className="h-10 rounded-lg bg-[#17365D] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#102A49]">
-                Save Vehicle &amp; Continue to Policy
+              <button
+                type="submit"
+                name="next_action"
+                value="policy"
+                className="h-9 rounded-lg bg-[#17365D] px-4 text-[10.5px] font-semibold text-white transition hover:bg-[#102A49]"
+              >
+                ADD POLICY
               </button>
             </div>
           </div>
