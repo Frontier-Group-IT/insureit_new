@@ -51,3 +51,27 @@ export async function getPartnerHome() {
   if (!data) throw new Error('Partner Home is unavailable.');
   return data as PartnerHomeData;
 }
+
+
+export type PartnerBusinessRangeSummary = {
+  generated_at: string;
+  from_date: string;
+  to_date: string;
+  premium: number | string;
+  premium_previous_period: number | string;
+  premium_change_percent: number | string;
+  policies: number;
+  customers: number;
+  renewals: number;
+  claims: number;
+};
+
+export async function getPartnerBusinessRange(fromDate: string, toDate: string) {
+  const { data, error } = await supabase.rpc('partner_app_business_range', {
+    p_from_date: fromDate,
+    p_to_date: toDate,
+  });
+  if (error) throw error;
+  if (!data) throw new Error('Business summary is unavailable for this date range.');
+  return data as PartnerBusinessRangeSummary;
+}
