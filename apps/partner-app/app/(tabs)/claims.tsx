@@ -101,11 +101,6 @@ export default function ClaimsScreen() {
         </View>
       ) : null}
 
-      <View style={styles.notice}>
-        <Ionicons name="shield-checkmark-outline" size={18} color={partnerTheme.colors.accent} />
-        <Text style={styles.noticeText}>Only claims within your authorized Partner scope are shown here.</Text>
-      </View>
-
       <View style={styles.search}>
         <PartnerSearchField
           value={query}
@@ -113,7 +108,6 @@ export default function ClaimsScreen() {
           onClear={() => setQuery('')}
           placeholder="Search claim, customer, vehicle or policy"
         />
-        <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
       </View>
 
       <View style={styles.filters}>
@@ -283,29 +277,26 @@ function formatUpdatedAt(value: number | null) {
 
 const styles = StyleSheet.create({
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  summaryCard: { width: '48%', minHeight: 88, justifyContent: 'center', borderRadius: partnerTheme.radius.lg, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  summaryCard: { width: '48%', minHeight: 76, justifyContent: 'center', borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '800' },
   summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   banner: { marginTop: 10 },
   inlineBanner: { marginBottom: 10 },
-  notice: { marginTop: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: partnerTheme.radius.md, padding: 12, backgroundColor: partnerTheme.colors.accentSoft },
-  noticeText: { flex: 1, color: '#56716F', ...partnerTheme.typography.caption },
-  search: { marginTop: 14 },
-  searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  filters: { marginTop: 12, flexDirection: 'row', gap: 7 },
+  search: { marginTop: 12 },
+  filters: { marginTop: 8, flexDirection: 'row', gap: 7 },
   separator: { height: 10 },
-  claimRow: { borderRadius: partnerTheme.radius.lg, padding: 16, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  claimRow: { borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   claimIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
   claimIdentity: { flex: 1 },
   claimNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   customer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   pressed: { opacity: 0.82 },
-  metaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 11 },
+  metaGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 9 },
   meta: { width: '50%', paddingRight: 8 },
   metaLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.6, ...partnerTheme.typography.meta },
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  footer: { marginTop: 14, paddingTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  footer: { marginTop: 9, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
   date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   claimOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
