@@ -19,25 +19,33 @@ export function VehicleRegistrationFields({
 
   return (
     <>
-      <div className="min-w-0">
-        <span className="mb-1 block text-[10.5px] font-semibold text-[#344054]">Registration status *</span>
+      <div className="absolute right-4 top-2.5 z-10 flex items-center gap-2 max-sm:left-3 max-sm:right-3 max-sm:top-[56px] max-sm:justify-end">
+        <span className="text-[9px] font-semibold text-[#667085]">Registration status</span>
         <input type="hidden" name="registration_mode" value={mode} />
-        <div className="grid h-10 grid-cols-2 rounded-xl border border-[#CBD5E1] bg-[#F8FAFC] p-1">
+        <div
+          className="inline-flex h-8 items-center rounded-full border border-[#D5E0EF] bg-white p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,.9),0_5px_14px_rgba(15,23,42,.06)]"
+          role="radiogroup"
+          aria-label="Vehicle registration status"
+        >
           <button
             type="button"
+            role="radio"
+            aria-checked={mode === "registered"}
             onClick={() => setMode("registered")}
-            className={`rounded-lg text-[10.5px] font-semibold transition ${mode === "registered" ? "bg-white text-[#17365D] shadow-sm" : "text-[#667085]"}`}
-            aria-pressed={mode === "registered"}
+            className={`relative inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[8.5px] font-bold transition ${mode === "registered" ? "bg-[#17365D] text-white shadow-[0_5px_12px_rgba(23,54,93,.22)]" : "text-[#667085] hover:bg-[#F5F8FC]"}`}
           >
-            Registered
+            <RegistrationBadgeIcon active={mode === "registered"} />
+            <span>Registered</span>
           </button>
           <button
             type="button"
+            role="radio"
+            aria-checked={mode === "unregistered"}
             onClick={() => setMode("unregistered")}
-            className={`rounded-lg text-[10.5px] font-semibold transition ${mode === "unregistered" ? "bg-white text-[#17365D] shadow-sm" : "text-[#667085]"}`}
-            aria-pressed={mode === "unregistered"}
+            className={`relative inline-flex h-7 items-center gap-1.5 rounded-full px-2.5 text-[8.5px] font-bold transition ${mode === "unregistered" ? "bg-[linear-gradient(135deg,#315B9A,#19A7A0)] text-white shadow-[0_5px_12px_rgba(25,167,160,.22)]" : "text-[#667085] hover:bg-[#F5F8FC]"}`}
           >
-            Unregistered
+            <PendingBadgeIcon active={mode === "unregistered"} />
+            <span>Unregistered</span>
           </button>
         </div>
       </div>
@@ -88,5 +96,27 @@ export function VehicleRegistrationFields({
         </div>
       ) : null}
     </>
+  );
+}
+
+
+function RegistrationBadgeIcon({ active }: { active: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={active ? 2.1 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3.5" y="5" width="13" height="10" rx="2.2" />
+      <path d="M6.5 8h7" />
+      <path d="M6.5 11h3.5" />
+      <path d="m12 12 1.1 1.1 2.2-2.7" />
+    </svg>
+  );
+}
+
+function PendingBadgeIcon({ active }: { active: boolean }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={active ? 2.1 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 6.5 10 3l5 3.5v7L10 17l-5-3.5z" />
+      <path d="M10 7.2v3.3" />
+      <path d="M10 13.5h.01" />
+    </svg>
   );
 }
