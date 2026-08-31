@@ -11,6 +11,10 @@ assert.ok(policyNew.includes("getActiveInsuranceCompanyOptions()"), "Policy New 
 assert.ok(policyNew.includes("getActiveVehicleManufacturerOptions()"), "Policy New should read cached manufacturer options.");
 assert.ok(!policyNew.includes('admin.from("insurance_companies").select("id, name")'), "Policy New should not directly query active insurer options.");
 assert.ok(!policyNew.includes('admin.from("vehicle_manufacturers").select("id")'), "Policy New should not directly query active manufacturer IDs.");
-assert.ok(insurerActions.includes('revalidateTag("reference:insurance-companies")'), "Insurer mutations should invalidate cached policy options.");
+assert.equal(
+  insurerActions.match(/revalidateTag\("reference:insurance-companies"\)/g)?.length,
+  3,
+  "Create, update, and active-status mutations should all invalidate cached policy options.",
+);
 
 console.log("Policy reference option cache regression passed.");
