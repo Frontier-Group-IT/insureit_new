@@ -22,8 +22,9 @@ type GroupOption = { value: string; label: string };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewCustomerPage({ searchParams }: { searchParams: Promise<{ partner_type?: string; dealership_type?: string }> }) {
-  const { partner_type: partnerType, dealership_type: dealershipType } = await searchParams;
+export default async function NewCustomerPage({ searchParams }: { searchParams: Promise<{ partner_type?: string; dealership_type?: string; return_to?: string }> }) {
+  const { partner_type: partnerType, dealership_type: dealershipType, return_to: returnTo } = await searchParams;
+  const returnToVehicle = returnTo === "vehicle";
   if (!partnerType || !supportedPartnerTypes.has(partnerType)) redirect("/customers?choose_partner=1");
 
   const admin = createSupabaseAdminClient();
@@ -84,7 +85,7 @@ export default async function NewCustomerPage({ searchParams }: { searchParams: 
 
   return (
     <AppShell title="Add New Customer">
-      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} />
+      <CustomerOnboardingForm action={createCustomerOnboarding} partnerType={partnerType} returnToVehicle={returnToVehicle} />
     </AppShell>
   );
 }

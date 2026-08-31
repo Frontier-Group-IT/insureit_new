@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { UserPlus } from "lucide-react";
 import { FormSubmitButton } from "./form-submit-button";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
@@ -33,10 +34,25 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       <VehicleOnboardingHeader />
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="six">
-        <div className="min-w-0">
-          <SelectField variant="onboarding" label="Customer" name="customer_id" options={customers} required defaultValue={values?.customer_id ?? ""} emptyLabel="Select customer" />
-          {createCustomerHref ? <Link href={createCustomerHref} className="mt-1.5 inline-flex text-[9px] font-semibold text-[#315B9A] hover:underline">+ Create new customer</Link> : null}
-        </div>
+        <SelectField
+          variant="onboarding"
+          label="Customer"
+          name="customer_id"
+          options={customers}
+          required
+          defaultValue={values?.customer_id ?? ""}
+          emptyLabel="Select customer"
+          labelAction={createCustomerHref ? (
+            <Link
+              href={createCustomerHref}
+              aria-label="Add new customer"
+              title="Add new customer"
+              className="inline-flex h-4 w-4 items-center justify-center rounded text-[#315B9A] transition hover:bg-[#E8F0FA] hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93B4DC]"
+            >
+              <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          ) : null}
+        />
         <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date} />
         <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
         <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
@@ -131,8 +147,12 @@ function Field({ label, name, placeholder = "", type = "text", required = false,
   return <div className="min-w-0"><label className={fieldLabelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} placeholder={placeholder} required={required} defaultValue={defaultValue ?? ""} className={`${fieldInputClass} ${uppercase ? "uppercase" : ""}`} {...props} /></div>;
 }
 
-function SelectField({ label, name, options, emptyLabel, required = false, defaultValue, variant = "default" }: { label: string; name: string; options: SelectOption[]; emptyLabel: string; required?: boolean; defaultValue?: string | null; variant?: "default" | "onboarding" }) {
+function SelectField({ label, name, options, emptyLabel, required = false, defaultValue, variant = "default", labelAction }: { label: string; name: string; options: SelectOption[]; emptyLabel: string; required?: boolean; defaultValue?: string | null; variant?: "default" | "onboarding"; labelAction?: ReactNode }) {
   const fieldInputClass = variant === "onboarding" ? onboardingInputClass : inputClass;
   const fieldLabelClass = variant === "onboarding" ? onboardingLabelClass : labelClass;
-  return <div className="min-w-0"><label className={fieldLabelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><select id={name} name={name} className={fieldInputClass} required={required} defaultValue={defaultValue ?? ""}><option value="">{emptyLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></div>;
+  const compactLabelClass = fieldLabelClass.replace("mb-1 ", "");
+  return <div className="min-w-0">
+    {labelAction ? <div className="mb-1 flex items-center gap-1.5"><label className={compactLabelClass} htmlFor={name}>{label}{required ? " *" : ""}</label>{labelAction}</div> : <label className={fieldLabelClass} htmlFor={name}>{label}{required ? " *" : ""}</label>}
+    <select id={name} name={name} className={fieldInputClass} required={required} defaultValue={defaultValue ?? ""}><option value="">{emptyLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+  </div>;
 }

@@ -28,6 +28,7 @@ function validateDocument(file: File | null, label: string, required = false) { 
 
 export async function createCustomerOnboarding(_previousState: CustomerOnboardingState, formData: FormData): Promise<CustomerOnboardingState> {
   const partnerType = textValue(formData, "partner_type");
+  const returnTo = textValue(formData, "return_to");
   const contactName = textValue(formData, "contact_name");
   const rawPhone = textValue(formData, "phone");
   const phone = rawPhone ? normalizeIndianPhone(rawPhone) : null;
@@ -165,5 +166,6 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   try { await approvePortalOnboardingApplication(admin, application.id, customer.id, profile.id); }
   catch (error) { return failure(`Customer was created, but the onboarding application could not be completed: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
+  if (returnTo === "vehicle") redirect(`/vehicles/new?customer_id=${encodeURIComponent(customer.id)}`);
   redirect(`/customers?success=${createdCustomer ? "customer_created" : "customer_updated"}`);
 }
