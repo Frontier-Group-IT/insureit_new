@@ -25,9 +25,9 @@ export function PartnerSectionHeader({
 
 const styles = StyleSheet.create({
   row: {
-    marginTop: partnerTheme.spacing.xl,
-    marginBottom: partnerTheme.spacing.sm,
-    minHeight: partnerTheme.control.minTouchTarget,
+    marginTop: partnerTheme.spacing.lg,
+    marginBottom: 6,
+    minHeight: 34,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
