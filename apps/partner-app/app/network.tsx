@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { getPartnerNetwork, type PartnerNetworkData, type PartnerNetworkRow } from '@/lib/network';
+import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 
 export default function NetworkScreen() {
@@ -107,7 +108,7 @@ export default function NetworkScreen() {
                           <Text style={styles.partnerCode}>{row.partner_code}</Text>
                         </View>
                         <View style={styles.partnerRight}>
-                          <Text style={styles.partnerPremium}>{formatMoney(row.metrics.premium_this_month)}</Text>
+                          <Text style={styles.partnerPremium}>{formatIndianCurrency(row.metrics.premium_this_month)}</Text>
                           <Text style={styles.partnerPremiumLabel}>this month</Text>
                         </View>
                         <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#9AA3B2" />
@@ -182,14 +183,6 @@ function LegendDot({ style, label }: { style: object; label: string }) {
 
 function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase()).join('') || 'P';
-}
-
-function formatMoney(value: number | string) {
-  const amount = Number(value || 0);
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(1)}K`;
-  return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
 const styles = StyleSheet.create({
