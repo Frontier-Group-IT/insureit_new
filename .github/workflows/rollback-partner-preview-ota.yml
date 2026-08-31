@@ -46,6 +46,7 @@ jobs:
           set -euo pipefail
           npx eas-cli update:republish \
             --group f26dfd53-f135-4642-862e-63fc03b5ed21 \
+            --message "Emergency Partner preview rollback to last known-good update" \
             --non-interactive \
             --json > partner-preview-rollback.json
           cat partner-preview-rollback.json
@@ -56,7 +57,7 @@ jobs:
           {
             echo "## INSUREIT Partner preview rollback"
             echo
-            echo "- Restored update group: `f26dfd53-f135-4642-862e-63fc03b5ed21`"
-            echo "- Known-good source commit: `e764653cb951e9c79ec6fb1cac0f378ee88d3dfc`"
-            echo "- Scope: Partner preview OTA only"
+            echo '- Restored update group: f26dfd53-f135-4642-862e-63fc03b5ed21'
+            echo '- Known-good source commit: e764653cb951e9c79ec6fb1cac0f378ee88d3dfc'
+            echo '- Scope: Partner preview OTA only'
           } >> "$GITHUB_STEP_SUMMARY"
