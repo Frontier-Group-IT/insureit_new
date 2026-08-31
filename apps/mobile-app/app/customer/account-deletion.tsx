@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingState, Message, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
@@ -31,7 +31,8 @@ export default function AccountDeletionScreen() {
 
         const customer = await getCustomerForUser(session.user.id);
         if (!customer) {
-          router.replace('/customer/home');
+          if (!active) return;
+          setUserId(session.user.id);
           return;
         }
 
@@ -138,7 +139,21 @@ export default function AccountDeletionScreen() {
         <Step number="3" text="Eligible account data is deleted and required retained records are handled under our Privacy Policy." />
       </View>
 
-      {existingRequest ? (
+      {!customerId ? (
+        <View style={styles.externalCard}>
+          <MaterialCommunityIcons name="web" size={24} color="#0B63CE" />
+          <View style={styles.pendingCopy}>
+            <Text style={styles.externalTitle}>Your customer profile is not active yet</Text>
+            <Text style={styles.pendingText}>
+              You can still request deletion of your InsureIT login account using our public deletion page. No completed customer profile is required.
+            </Text>
+            <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://portal.insureit.in/account-deletion')} style={styles.externalButton}>
+              <Text style={styles.externalButtonText}>Open deletion request page</Text>
+              <MaterialCommunityIcons name="open-in-new" size={16} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
+      ) : existingRequest ? (
         <View style={styles.pendingCard}>
           <MaterialCommunityIcons name="clock-check-outline" size={24} color="#B7791F" />
           <View style={styles.pendingCopy}>
@@ -211,6 +226,10 @@ const styles = StyleSheet.create({
   stepNumberText: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
   stepText: { flex: 1, color: palette.ink, fontSize: 11.2, lineHeight: 16, fontWeight: '700', paddingTop: 3 },
   pendingCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 17, borderWidth: 1, borderColor: '#F1D7A5', backgroundColor: '#FFF9EE', padding: 12, marginBottom: 10 },
+  externalCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 17, borderWidth: 1, borderColor: '#CFE0FF', backgroundColor: '#F8FBFF', padding: 12, marginBottom: 10 },
+  externalTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  externalButton: { alignSelf: 'flex-start', minHeight: 38, borderRadius: 11, backgroundColor: '#0B63CE', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 9 },
+  externalButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
   pendingCopy: { flex: 1 },
   pendingTitle: { color: '#805B18', fontSize: 12.5, fontWeight: '900' },
   pendingText: { color: '#7A6641', fontSize: 10.7, lineHeight: 15, fontWeight: '700', marginTop: 3 },
