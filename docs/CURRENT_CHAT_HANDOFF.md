@@ -1050,3 +1050,45 @@ After R3, continue the agreed sequence:
 - R7 Account/Profile/Settings/Support;
 - R8 universal search/cross-navigation/preserved context.
 
+
+
+### R3 list refinement completed — 2026-08-31
+
+**VERIFIED / DEPLOYED TO PARTNER PREVIEW**
+
+PR #928 merged as `db84cd97b03b7e5317e1414751c179c8808511d6`.
+
+Final R3 behavior:
+- **Customers:** one-line summary strip; flat customer rows; name/status first; customer/location/intermediary metadata reduced to scan lines; compact Call/WhatsApp actions retained.
+- **Policies:** full premium remains full Indian formatted and gets its own readable summary line; counts sit below in the shared summary strip; All/In force/Expiring/Expired/Upcoming use shared top tabs; each row prioritizes policy number/status, customer/insurer, risk/category, premium and expiry.
+- **Claims:** summary strip; All/Active/Completed top tabs; flat rows prioritize claim/status, customer/insurer, vehicle/policy, amount and date.
+- **Renewals:** dark hero removed in favor of a compact white 30-day summary; full Indian premium remains readable; Upcoming/Overdue use top tabs; 0–7d/8–15d/16–30d secondary windows remain; rows keep the customer shortcut.
+- **Policy Intake history:** dark pipeline hero removed; compact Active/Need you/In progress/Completed strip; top tabs; flatter submission rows retain lightweight progress state and attention warning only when required.
+
+Shared components:
+- `components/ui/partner-list-summary-strip.tsx`
+- refined `components/ui/partner-top-tabs.tsx`
+
+Preserved:
+- existing Partner backend/RPC behavior;
+- authorization/scope;
+- Customers/Policies/Claims/Renewals pagination where already present;
+- saved search/filter state where already present;
+- debounce/search;
+- cache/offline banners;
+- pull-to-refresh;
+- existing navigation/detail routes;
+- full Indian money-format rule, except the previously documented Home-only Active Motor IDV compact exception.
+
+Verification:
+- final R3 PR head: `a50de86f138230330cdcf6a95ed0e451bac488c1`
+- Partner Verify #93 / run `33421460050`: SUCCESS
+- Web Verify #2471 / run `33421460104`: SUCCESS
+- OTA trigger PR #929 source: `91c5caabc668d64838a8d11b80763eb539290573`
+- Partner preview OTA run `33421816823`: SUCCESS
+- runtime: `0.1.0`
+- update group: `07f4cb1f-15bd-40a5-aed6-f93f540936ba`
+- Android update: `01a058f4-451c-7d98-96df-163050dcb02c`
+- no APK/AAB and no native dependency/config change.
+
+Next planned slice: **R4 detail screens** — Customer Detail, Policy Detail, Claim Detail and Policy Intake Detail. Use installed-device review of R3 first if any density/hierarchy adjustment is needed before R4.
