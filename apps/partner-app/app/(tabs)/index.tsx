@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Animated, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -19,12 +19,10 @@ import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
-type WorkTab = 'today' | 'renewals' | 'claims' | 'intakes';
 
 export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
-  const [workTab, setWorkTab] = useState<WorkTab>('today');
 
   const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
     const [homeResult, storiesResult] = await Promise.allSettled([
@@ -52,24 +50,6 @@ export default function PartnerHomeScreen() {
 
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
-
-  const workTabs = useMemo(() => {
-    if (!data) return [];
-    return [
-      { key: 'today', label: 'Today', badge: attentionCount(data) },
-      { key: 'renewals', label: 'Renewals', badge: data.business.renewals_7_days },
-      { key: 'claims', label: 'Claims', badge: data.service.claims_need_attention },
-      { key: 'intakes', label: 'Intakes', badge: data.service.intakes_need_attention },
-    ];
-  }, [data]);
-
-  const visibleWork = useMemo(() => {
-    if (!data) return [];
-    if (workTab === 'today') return data.today;
-    if (workTab === 'renewals') return data.today.filter((item) => item.kind === 'renewal');
-    if (workTab === 'claims') return data.today.filter((item) => item.kind === 'claim');
-    return data.today.filter((item) => item.kind === 'intake_attention');
-  }, [data, workTab]);
 
   if (!context) return null;
 
@@ -190,72 +170,6 @@ export default function PartnerHomeScreen() {
           </View>
           </PartnerEnter>
 
-          <PartnerEnter delay={80}>
-          <View style={styles.workSection}>
-            <Text style={styles.workTitle}>MY WORK</Text>
-
-            <View style={styles.workSelector}>
-              {workTabs.map((tab) => {
-                const active = tab.key === workTab;
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${tab.label}. ${tab.badge} items`}
-                    accessibilityState={{ selected: active }}
-                    key={tab.key}
-                    onPress={() => setWorkTab(tab.key as WorkTab)}
-                    style={({ pressed }) => [
-                      styles.workSelectorItem,
-                      active && styles.workSelectorItemActive,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={[styles.workSelectorLabel, active && styles.workSelectorLabelActive]}>
-                      {tab.label}
-                    </Text>
-                    <Text style={[styles.workSelectorCount, active && styles.workSelectorCountActive]}>
-                      {tab.badge}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            <View style={styles.workList}>
-              {visibleWork.length ? (
-                visibleWork.map((item, index) => (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.count} items`}
-                    key={item.kind}
-                    onPress={() => router.push(item.route as never)}
-                    style={({ pressed }) => [
-                      styles.workRow,
-                      index < visibleWork.length - 1 && styles.workRowDivider,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <View style={[styles.workMarker, workMarkerTone(item.kind)]} />
-                    <View style={styles.workRowCopy}>
-                      <Text style={styles.workRowTitle}>{item.title}</Text>
-                      <Text numberOfLines={1} style={styles.workRowSubtitle}>{item.subtitle}</Text>
-                    </View>
-                    <View style={styles.workRowTrailing}>
-                      {item.count ? <Text style={styles.workRowCount}>{item.count}</Text> : null}
-                      <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
-                    </View>
-                  </Pressable>
-                ))
-              ) : (
-                <View style={styles.clearRow}>
-                  <Ionicons name="checkmark-circle-outline" size={19} color={partnerTheme.colors.success} />
-                  <Text style={styles.clearText}>{emptyWorkLabel(workTab)}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-          </PartnerEnter>
-
           <PartnerEnter delay={140}>
           <View style={styles.quickSection}>
             <PartnerSectionHeader title="Quick actions" />
@@ -267,12 +181,6 @@ export default function PartnerHomeScreen() {
             </View>
           </View>
           </PartnerEnter>
-
-          {stories.length ? (
-            <View style={styles.stories}>
-              <StoryRail stories={stories} />
-            </View>
-          ) : null}
 
           <PartnerEnter delay={200}>
           <View style={styles.impactSection}>
@@ -312,6 +220,14 @@ export default function PartnerHomeScreen() {
           </View>
           </PartnerEnter>
 
+          {stories.length ? (
+            <View style={styles.stories}>
+              <StoryRail stories={stories} />
+            </View>
+          ) : null}
+
+
+
 
         </>
       )}
@@ -324,11 +240,6 @@ function HomeSkeleton() {
     <View>
       <PartnerSkeleton height={164} radius={16} />
       <View style={styles.skeletonHeader}>
-        <PartnerSkeleton width="34%" height={18} />
-        <PartnerSkeleton width={88} height={14} />
-      </View>
-      <PartnerSkeleton height={156} radius={14} />
-      <View style={styles.skeletonHeader}>
         <PartnerSkeleton width="30%" height={18} />
       </View>
       <View style={styles.quickGrid}>
@@ -337,6 +248,10 @@ function HomeSkeleton() {
         <PartnerSkeleton width="23%" height={72} radius={14} />
         <PartnerSkeleton width="23%" height={72} radius={14} />
       </View>
+      <View style={styles.skeletonHeader}>
+        <PartnerSkeleton width="30%" height={18} />
+      </View>
+      <PartnerSkeleton height={126} radius={14} />
     </View>
   );
 }
@@ -417,19 +332,6 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
   );
 }
 
-function workMarkerTone(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return styles.workMarkerWarn;
-  if (kind === 'renewal') return styles.workMarkerBrand;
-  return styles.workMarkerAccent;
-}
-
-function emptyWorkLabel(tab: WorkTab) {
-  if (tab === 'renewals') return 'No urgent renewals.';
-  if (tab === 'claims') return 'No claims need attention.';
-  if (tab === 'intakes') return 'No Policy Intakes need attention.';
-  return 'You are clear for now.';
-}
-
 function greeting(name: string) {
   const firstName = name.trim().split(/\s+/)[0] || 'Partner';
   const hour = new Date().getHours();
@@ -482,9 +384,6 @@ function formatUpdatedAt(value: string) {
   return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
 }
 
-function attentionCount(data: PartnerHomeData) {
-  return data.today.reduce((sum, item) => sum + Math.max(item.count || 0, 1), 0);
-}
 
 const styles = StyleSheet.create({
   identityLine: {
@@ -585,122 +484,6 @@ const styles = StyleSheet.create({
     borderRightColor: partnerTheme.colors.line,
   },
   statCellLast: { flex: 1 },
-
-  workSection: {
-    marginTop: 14,
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 10,
-    borderRadius: 18,
-    backgroundColor: partnerTheme.colors.surface,
-  },
-  workTitle: {
-    color: partnerTheme.colors.inkMuted,
-    fontFamily: Platform.select({
-      ios: 'Avenir Next',
-      android: 'sans-serif-medium',
-      default: undefined,
-    }),
-    fontSize: 10.5,
-    lineHeight: 15,
-    fontWeight: '600',
-    letterSpacing: 1.15,
-  },
-  workSelector: {
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  workSelectorItem: {
-    flex: 1,
-    minHeight: 58,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 13,
-    justifyContent: 'center',
-    backgroundColor: '#F7F8FB',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  workSelectorItemActive: {
-    backgroundColor: partnerTheme.colors.brandSoft,
-    borderColor: '#D9D6FF',
-  },
-  workSelectorLabel: {
-    color: partnerTheme.colors.inkMuted,
-    ...partnerTheme.typography.meta,
-  },
-  workSelectorLabelActive: {
-    color: partnerTheme.colors.brandStrong,
-    fontWeight: '700',
-  },
-  workSelectorCount: {
-    marginTop: 3,
-    color: partnerTheme.colors.ink,
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: '600',
-  },
-  workSelectorCountActive: {
-    color: partnerTheme.colors.brandStrong,
-  },
-  workList: {
-    marginTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: partnerTheme.colors.line,
-  },
-  workRow: {
-    minHeight: 70,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    paddingVertical: 10,
-  },
-  workRowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: partnerTheme.colors.line,
-  },
-  workMarker: {
-    width: 4,
-    height: 30,
-    borderRadius: 999,
-  },
-  workMarkerWarn: { backgroundColor: partnerTheme.colors.warning },
-  workMarkerBrand: { backgroundColor: partnerTheme.colors.brand },
-  workMarkerAccent: { backgroundColor: partnerTheme.colors.accent },
-  workRowCopy: {
-    flex: 1,
-    minWidth: 0,
-  },
-  workRowTitle: {
-    color: partnerTheme.colors.ink,
-    ...partnerTheme.typography.bodyStrong,
-  },
-  workRowSubtitle: {
-    marginTop: 3,
-    color: partnerTheme.colors.inkMuted,
-    ...partnerTheme.typography.caption,
-  },
-  workRowTrailing: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  workRowCount: {
-    minWidth: 20,
-    color: partnerTheme.colors.ink,
-    textAlign: 'right',
-    fontSize: 14,
-    lineHeight: 18,
-    fontWeight: '700',
-  },
-  clearRow: {
-    minHeight: 66,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  clearText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
 
   quickSection: {
     marginTop: 12,

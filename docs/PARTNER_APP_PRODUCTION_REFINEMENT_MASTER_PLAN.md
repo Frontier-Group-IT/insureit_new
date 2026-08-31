@@ -1215,10 +1215,11 @@ Home has been reworked into a compact working console with:
 - My Business summary;
 - full Indian formatting for normal monetary values;
 - lighter Gross Premium typography with smaller fractional digits where present;
-- redesigned My Work selector and cleaner work rows;
+- My Work removed from the dashboard by explicit user direction;
 - stronger differentiated Quick Action icons;
 - lightweight staggered entrance and press feedback;
-- Your Stories placed before Your Impact;
+- Your Impact placed above INSUREIT Stories;
+- INSUREIT Stories moved to the bottom, with no See all control and evenly distributed story icons;
 - Your Impact summary showing protected motor IDV, vehicles, customers and claims assisted;
 - **Home-only exception:** Active Motor IDV Protected uses compact notation such as `₹32.6K`, `₹20L`, `₹2.4Cr` because the full value is visually too wide;
 - other Partner monetary values remain full Indian-formatted amounts such as `₹32,600`, `₹8,42,000`, `₹1,25,00,000`.

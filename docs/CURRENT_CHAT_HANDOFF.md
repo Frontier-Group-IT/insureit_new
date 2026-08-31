@@ -974,15 +974,16 @@ Home is now a working-console layout rather than a card-heavy dashboard.
 Current composition:
 1. greeting / role / freshness;
 2. My Business;
-3. My Work;
-4. Quick Actions;
-5. Your Stories;
-6. Your Impact.
+3. Quick Actions;
+4. Your Impact;
+5. INSUREIT Stories.
 
-My Work was redesigned after the first watchlist-style pass felt cramped. The current version:
-- removes the competing `need attention` status badge;
-- gives Today / Renewals / Claims / Intakes separate roomier selector cells with counts;
-- uses cleaner work rows with semantic side markers, stronger spacing and simpler title/subtitle hierarchy.
+Home change approved 2026-08-31:
+- the My Work section is removed from the dashboard;
+- Your Impact is restored above INSUREIT Stories;
+- INSUREIT Stories is the final Home section;
+- the Stories `See all` control is removed;
+- story icons share the available row width evenly.
 
 Quick Actions use stronger filled icons with differentiated semantic surfaces:
 - Policy Intake;
@@ -1008,7 +1009,9 @@ Money-format rule:
 - **Home-only visual exception:** Active Motor IDV Protected uses compact Indian notation such as `₹32.6K`, `₹20L`, `₹2.4Cr`.
 
 Home duplication decision:
-- the standalone Business Pulse / “A few things need you” block was removed from Home because My Work already provides the actionable attention surface and both were competing/redirecting toward overlapping insight;
+- the standalone Business Pulse / “A few things need you” block remains removed from Home;
+- My Work is also removed from Home by explicit user direction;
+- dedicated operational destinations remain available through Quick Actions, bottom navigation and secondary routes;
 - the dedicated Pulse route can remain for deeper insight.
 
 ### Compactness rule

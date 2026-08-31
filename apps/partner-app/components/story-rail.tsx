@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -13,16 +13,9 @@ export function StoryRail({ stories }: { stories: PartnerStory[] }) {
     <View>
       <View style={styles.header}>
         <Text style={styles.title}>INSUREIT Stories</Text>
-        <Pressable onPress={() => router.push('/stories')}>
-          <Text style={styles.action}>See all</Text>
-        </Pressable>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.rail}
-      >
+      <View style={styles.rail}>
         {stories.map((story) => (
           <Pressable
             key={story.kind}
@@ -42,7 +35,7 @@ export function StoryRail({ stories }: { stories: PartnerStory[] }) {
             <Text numberOfLines={1} style={styles.label}>{storyLabel(story)}</Text>
           </Pressable>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -82,11 +75,10 @@ function iconTone(tone: PartnerStory['tone']) {
 }
 
 const styles = StyleSheet.create({
-  header: { marginTop: 19, marginBottom: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  header: { marginTop: 19, marginBottom: 9 },
   title: { color: partnerTheme.colors.ink, fontSize: 13, fontWeight: '800' },
-  action: { color: partnerTheme.colors.brand, fontSize: 9, fontWeight: '800' },
-  rail: { gap: 13, paddingRight: 12 },
-  item: { width: 58, alignItems: 'center' },
+  rail: { flexDirection: 'row', alignItems: 'flex-start' },
+  item: { flex: 1, minWidth: 0, alignItems: 'center' },
   ring: { width: 56, height: 56, borderRadius: 19, padding: 2.5, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
   icon: { width: 47, height: 47, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   label: { marginTop: 5, maxWidth: 58, color: partnerTheme.colors.inkMuted, fontSize: 7.8, fontWeight: '700', textAlign: 'center' },
