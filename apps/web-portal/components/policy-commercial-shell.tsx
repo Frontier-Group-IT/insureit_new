@@ -21,6 +21,10 @@ export type PolicyCommercialShellProps = {
   initialValues?: PolicyUnifiedInitialValues;
   nonMotorInitialValues?: NonMotorUnifiedInitialValues;
   commercialAccess: boolean;
+  preselectedCustomerId?: string | null;
+  sourceIntakeId?: string | null;
+  initialDraftRevision?: number | null;
+  initialRegistrationMode?: "registered" | "unregistered";
 };
 
 export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
@@ -36,6 +40,10 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         initialValues={props.initialValues}
         nonMotorInitialValues={props.nonMotorInitialValues}
         commercialAccess={props.commercialAccess}
+        preselectedCustomerId={props.preselectedCustomerId}
+        sourceIntakeId={props.sourceIntakeId}
+        initialDraftRevision={props.initialDraftRevision}
+        initialRegistrationMode={props.initialRegistrationMode}
       />
       {props.mode === "create" ? <PolicyIntakeOnboardingContextCard /> : null}
     </PolicyCommercialAccessProvider>

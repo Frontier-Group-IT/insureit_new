@@ -51,6 +51,8 @@ jobs:
         run: npm run access-control:backoffice-data-entry-regression
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Vehicle and policy intake resume regression
+        run: npm run vehicle-policy-intake:resume-regression
       - name: Canonical NEW vehicle prefix regression
         run: npm run vehicle-prefix:new-regression
       - name: Vehicle registration regression

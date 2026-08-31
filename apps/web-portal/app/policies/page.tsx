@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { BackofficePolicyRegister } from "@/components/backoffice-policy-register";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
-import { PolicyIntakeCompletionBridge } from "@/components/policy-intake-completion-bridge";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -59,8 +58,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   const profile = await requireCapability("view_policies");
   const afterAuth = performance.now();
   if (!profile) redirect("/access-denied");
-  const params = searchParams ? await searchParams : undefined;
-  const completionBridge = <PolicyIntakeCompletionBridge policyCode={params?.success === "policy_created" ? params.policy ?? null : null} />;
+  if (searchParams) await searchParams;
   const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_policies");
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
@@ -74,7 +72,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
         data_ms: 0,
         total_ms: finishedAt - startedAt,
       });
-      return <AppShell title="Policies">{completionBridge}<BackofficePolicyRegister rows={[]} /></AppShell>;
+      return <AppShell title="Policies"><BackofficePolicyRegister rows={[]} /></AppShell>;
     }
     let safeQuery = admin.from("policies").select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name,created_by),vehicles(vehicle_no),insurance_companies(name)").order("created_at", { ascending: false });
     if (accessibleCustomerIds !== null) safeQuery = safeQuery.in("customer_id", accessibleCustomerIds);
@@ -86,7 +84,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       data_ms: finishedAt - afterScope,
       total_ms: finishedAt - startedAt,
     });
-    return <AppShell title="Policies">{completionBridge}{error ? <RegisterError /> : <BackofficePolicyRegister rows={data ?? []} />}</AppShell>;
+    return <AppShell title="Policies">{error ? <RegisterError /> : <BackofficePolicyRegister rows={data ?? []} />}</AppShell>;
   }
 
   const activeSourcesPromise = admin
@@ -107,7 +105,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       total_ms: finishedAt - startedAt,
     });
     const { sourceOptions } = buildPolicySourceOptions(sourceResult.error ? [] : (sourceResult.data ?? []));
-    return <AppShell title="Policies">{completionBridge}<PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
+    return <AppShell title="Policies"><PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
   }
 
   let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, start_date, end_date, insured_declared_value, premium_amount, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name, mime_type), customers!inner(company_name, contact_name, created_by), vehicles(vehicle_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
@@ -126,7 +124,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   const workspaceRows = rows.map((policy) => { const sourceType = policySourceDatabaseType(policy.intermediary_type); const sourceCode = policy.intermediary_code?.trim() ?? ""; return { ...policy, policy_documents: (policy.policy_documents ?? []).filter((document) => document.document_type === "policy_copy"), gross_premium: policy.policy_premium_details?.gross_premium ?? null, source_name: sourceType && sourceCode ? sourceNameByKey.get(sourceLookupKey(sourceType, sourceCode)) ?? null : null }; });
 
   return <AppShell title="Policies">
-    {completionBridge}
+    
     {profile.role === "it_super_user" && !error ? <ItSuperUserDeletePanel entity="policy" title="Delete policy master record" records={rows.map((policy) => ({ id: policy.id, label: policy.policy_no, detail: [policy.vehicles?.vehicle_no, policy.customers?.contact_name, policy.insurance_companies?.name].filter(Boolean).join(" • ") }))} /> : null}
     {error ? <RegisterError /> : <PolicyWorkspace rows={workspaceRows} sourceOptions={sourceOptions} />}
   </AppShell>;

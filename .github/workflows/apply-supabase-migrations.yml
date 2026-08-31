@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260822163000_prevent_duplicate_active_self_managed_claims.sql'
+      - 'supabase/migrations/20260831123000_vehicle_policy_intake_resume.sql'
       - '.github/workflows/apply-supabase-migrations.yml'
 
 permissions:
@@ -14,7 +15,7 @@ permissions:
 
 jobs:
   migrate:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '#547') || contains(github.event.head_commit.message, '#856')
     name: Apply database migrations
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -143,6 +144,23 @@ jobs:
               (select count(*) from public.policy_ocr_training_labels where processing_status = 'ready') as ready_jobs,
               (select count(*) from public.policy_ocr_training_labels where processing_status = 'exhausted') as exhausted_jobs
           "
+
+      - name: Apply Vehicle Register and Policy Intake resume migration
+        run: supabase db query --linked --file supabase/migrations/20260831123000_vehicle_policy_intake_resume.sql
+
+      - name: Record Vehicle Register and Policy Intake resume migration as applied
+        run: supabase migration repair --linked --status applied 20260831123000
+
+      - name: Verify Vehicle Register and Policy Intake resume schema
+        run: |
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.policy_intake_onboarding_drafts') is not null as draft_table_ready,
+              to_regprocedure('public.finalize_policy_intake_motor_v1(uuid,jsonb,integer)') is not null as finalize_rpc_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"draft_table_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"finalize_rpc_ready"[[:space:]]*:[[:space:]]*true'
 
       - name: Verify canonical NEW vehicle identities
         run: |
