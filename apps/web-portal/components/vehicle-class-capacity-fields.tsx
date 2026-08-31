@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const inputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#64748B]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
@@ -59,13 +59,30 @@ export function ManufacturerYearFields({ manufacturers, defaultMake = "", defaul
 export function VehicleSpecificationFields({ defaultClass = "", defaultChassis = "", defaultEngine = "", defaultFuel = "", defaultCapacity = "" }: SpecificationProps) {
   const [vehicleClass, setVehicleClass] = useState(defaultClass ?? "");
   const [capacity, setCapacity] = useState(defaultCapacity ?? "");
+  const [registrationMode, setRegistrationMode] = useState<"registered" | "unregistered">("registered");
   const vehicleMeta = vehicleClassMap[vehicleClass];
   const fuels = defaultFuel && !fuelOptions.includes(defaultFuel) ? [defaultFuel, ...fuelOptions] : fuelOptions;
+
+  useEffect(() => {
+    const initial = document.querySelector<HTMLInputElement>('input[name="registration_mode"]')?.value;
+    if (initial === "registered" || initial === "unregistered") setRegistrationMode(initial);
+
+    const handleMode = (event: Event) => {
+      const customEvent = event as CustomEvent<{ mode?: string }>;
+      if (customEvent.detail?.mode === "registered" || customEvent.detail?.mode === "unregistered") {
+        setRegistrationMode(customEvent.detail.mode);
+      }
+    };
+    window.addEventListener("insureit:vehicle-registration-mode", handleMode);
+    return () => window.removeEventListener("insureit:vehicle-registration-mode", handleMode);
+  }, []);
 
   function changeVehicleClass(value: string) {
     setVehicleClass(value);
     setCapacity("");
   }
+
+  const unregistered = registrationMode === "unregistered";
 
   return <>
     <div className="min-w-0">
@@ -76,12 +93,12 @@ export function VehicleSpecificationFields({ defaultClass = "", defaultChassis =
       </select>
     </div>
     <div className="min-w-0">
-      <label className={labelClass} htmlFor="chassis_no">Chassis number</label>
-      <input id="chassis_no" name="chassis_no" className={`${inputClass} uppercase`} defaultValue={defaultChassis ?? ""} placeholder="Chassis number" />
+      <label className={labelClass} htmlFor="chassis_no">Chassis number{unregistered ? " *" : ""}</label>
+      <input id="chassis_no" name="chassis_no" className={`${inputClass} uppercase`} defaultValue={defaultChassis ?? ""} placeholder="Chassis number" required={unregistered} />
     </div>
     <div className="min-w-0">
-      <label className={labelClass} htmlFor="engine_no">Engine number</label>
-      <input id="engine_no" name="engine_no" className={`${inputClass} uppercase`} defaultValue={defaultEngine ?? ""} placeholder="Engine number" />
+      <label className={labelClass} htmlFor="engine_no">Engine number{unregistered ? " *" : ""}</label>
+      <input id="engine_no" name="engine_no" className={`${inputClass} uppercase`} defaultValue={defaultEngine ?? ""} placeholder="Engine number" required={unregistered} />
     </div>
     <div className="min-w-0">
       <label className={labelClass} htmlFor="fuel_type">Fuel Type</label>
