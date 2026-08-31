@@ -21,6 +21,7 @@
     "commercial-reports-prefetch:regression": "node scripts/commercial-reports-prefetch-regression.mjs",
     "register-performance-observability:regression": "node scripts/register-performance-observability-regression.mjs",
     "policy-register-payload:regression": "node scripts/policy-register-payload-regression.mjs",
+    "register-customer-relation-payload:regression": "node scripts/register-customer-relation-payload-regression.mjs",
     "remaining-register-prefetch:regression": "node scripts/remaining-register-prefetch-regression.mjs",
     "backoffice-register-prefetch:regression": "node scripts/backoffice-register-prefetch-regression.mjs",
     "server-auth-claims:regression": "node scripts/server-auth-claims-regression.mjs",
