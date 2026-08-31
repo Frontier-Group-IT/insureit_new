@@ -63,32 +63,23 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     return <SetupError />;
   }
 
-  let insurerOptions: Awaited<ReturnType<typeof getActiveInsuranceCompanyOptions>>;
-  let manufacturerOptions: string[];
-  let customersResult;
-  let intermediariesResult;
-  try {
-    const [cachedInsurers, cachedManufacturers, customers, intermediaries] = await Promise.all([
-      getActiveInsuranceCompanyOptions(),
-      getActiveVehicleManufacturerOptions(),
-      admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
-      admin
-        .from("intermediaries")
-        .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
-        .in("intermediary_type", ["posp", "misp", "partner"])
-        .eq("account_status", "active")
-        .order("display_name", { ascending: true })
-        .returns<IntermediaryOption[]>(),
-    ]);
-    insurerOptions = cachedInsurers;
-    manufacturerOptions = cachedManufacturers.map((option) => option.value);
-    customersResult = customers;
-    intermediariesResult = intermediaries;
-  } catch {
-    return <SetupError />;
-  }
+  const referenceData = await Promise.all([
+    getActiveInsuranceCompanyOptions(),
+    getActiveVehicleManufacturerOptions(),
+    admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
+    admin
+      .from("intermediaries")
+      .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
+      .in("intermediary_type", ["posp", "misp", "partner"])
+      .eq("account_status", "active")
+      .order("display_name", { ascending: true })
+      .returns<IntermediaryOption[]>(),
+  ]).catch(() => null);
 
+  if (!referenceData) return <SetupError />;
+  const [insurerOptions, cachedManufacturers, customersResult, intermediariesResult] = referenceData;
   if (customersResult.error || intermediariesResult.error) return <SetupError />;
+  const manufacturerOptions = cachedManufacturers.map((option) => option.value);
 
   const intermediaryRows = intermediariesResult.data ?? [];
   const partnerApplicationIds = intermediaryRows
