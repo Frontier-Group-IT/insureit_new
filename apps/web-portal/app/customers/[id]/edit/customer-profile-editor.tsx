@@ -183,10 +183,13 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
         {beforeActions}
 
         <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]">
-          <div className="flex items-center justify-end gap-2 px-4 py-3">
-            <Link href="/customers" className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]">Back</Link>
-            {vehicles.length > 0 ? <Link href={`/customers/${customer.id}/fleet`} className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]">View Fleet</Link> : null}
-            <FormSubmitButton label="Save changes" className="h-9 rounded-md border border-[#315FEA] bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm hover:bg-[#2851D9]" />
+          <div className="flex items-center justify-between gap-2 px-4 py-3">
+            <Link href={`/vehicles/new?customer_id=${encodeURIComponent(customer.id)}`} className="inline-flex h-9 items-center justify-center rounded-md border border-[#315FEA] bg-white px-4 text-[10.5px] font-semibold text-[#315FEA] transition hover:bg-[#F5F7FF]">Add Vehicle</Link>
+            <div className="flex items-center justify-end gap-2">
+              <Link href="/customers" className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]">Back</Link>
+              {vehicles.length > 0 ? <Link href={`/customers/${customer.id}/fleet`} className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]">View Fleet</Link> : null}
+              <FormSubmitButton label="Save changes" className="h-9 rounded-md border border-[#315FEA] bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm hover:bg-[#2851D9]" />
+            </div>
           </div>
         </section>
       </form>
