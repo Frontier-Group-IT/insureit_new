@@ -6,11 +6,12 @@ import { useRouter } from 'expo-router';
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
-import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
+import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
+import { PartnerTopTabs } from '@/components/ui/partner-top-tabs';
 import {
   getPartnerPolicySummary,
   listPartnerPolicies,
@@ -87,11 +88,20 @@ export default function PoliciesScreen() {
       {summary.loading && !summary.data ? (
         <PartnerStateView state="loading" title="Loading policy summary" />
       ) : (
-        <View style={styles.summaryGrid}>
-          <SummaryCard label="Total policies" value={summary.data?.total_policies ?? 0} />
-          <SummaryCard label="In force" value={summary.data?.in_force_policies ?? 0} />
-          <SummaryCard label="Expiring in 30 days" value={summary.data?.expiring_30_days ?? 0} />
-          <SummaryCard label="Premium booked" value={formatIndianCurrency(summary.data?.total_premium ?? 0)} compact />
+        <View style={styles.summaryPanel}>
+          <View style={styles.premiumLine}>
+            <Text style={styles.premiumLabel}>PREMIUM BOOKED</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.premiumValue}>
+              {formatIndianCurrency(summary.data?.total_premium ?? 0)}
+            </Text>
+          </View>
+          <PartnerListSummaryStrip
+            items={[
+              { key: 'total', label: 'Policies', value: summary.data?.total_policies ?? 0 },
+              { key: 'force', label: 'In force', value: summary.data?.in_force_policies ?? 0, tone: 'success' },
+              { key: 'expiring', label: 'Expiring', value: summary.data?.expiring_30_days ?? 0, tone: 'warning' },
+            ]}
+          />
         </View>
       )}
 
@@ -114,15 +124,12 @@ export default function PoliciesScreen() {
         />
       </View>
 
-      <View style={styles.filters}>
-        {filters.map((filter) => (
-          <PartnerFilterChip
-            key={filter.value}
-            label={filter.label}
-            active={lifecycle === filter.value}
-            onPress={() => setLifecycle(filter.value)}
-          />
-        ))}
+      <View style={styles.tabs}>
+        <PartnerTopTabs
+          activeKey={lifecycle}
+          onChange={(key) => setLifecycle(key as PartnerPolicyLifecycle)}
+          tabs={filters.map((filter) => ({ key: filter.value, label: filter.label }))}
+        />
       </View>
 
       <PartnerSectionHeader
@@ -201,17 +208,9 @@ export default function PoliciesScreen() {
   );
 }
 
-function SummaryCard({ label, value, compact = false }: { label: string; value: string | number; compact?: boolean }) {
-  return (
-    <View style={styles.summaryCard}>
-      <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.summaryValue, compact && styles.summaryValueCompact]}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => void }) {
   const category = policyCategory(row);
+  const risk = row.vehicle_no || row.policy_product || 'Risk not linked';
   return (
     <Pressable
       accessibilityRole="button"
@@ -219,47 +218,29 @@ function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => voi
       onPress={onPress}
       style={({ pressed }) => [styles.policyRow, pressed && styles.pressed]}
     >
-      <View style={styles.policyTop}>
-        <View style={styles.policyIcon}>
-          <Ionicons name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'} size={19} color={partnerTheme.colors.brand} />
-        </View>
-        <View style={styles.policyIdentity}>
-          <Text style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
-          <Text style={styles.policyCustomer}>{row.customer_name}</Text>
-        </View>
-        <View style={styles.badges}>
-          <PartnerStatusBadge label={category} tone="brand" />
+      <View style={styles.policyIcon}>
+        <Ionicons
+          name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'}
+          size={18}
+          color={partnerTheme.colors.brand}
+        />
+      </View>
+
+      <View style={styles.policyIdentity}>
+        <View style={styles.policyTitleLine}>
+          <Text numberOfLines={1} style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
           <PartnerStatusBadge label={humanize(row.lifecycle_status)} tone={lifecycleTone(row.lifecycle_status)} />
         </View>
-      </View>
-
-      <View style={styles.policyMetaGrid}>
-        <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
-        <Meta label="Risk / vehicle" value={row.vehicle_no || row.policy_product || 'Non-motor / not linked'} />
-        <Meta label="Product" value={row.policy_product || row.policy_type || row.business_line || 'Not recorded'} />
-        <Meta label="Premium" value={formatIndianCurrency(row.premium_amount)} />
-      </View>
-
-      <View style={styles.policyFooter}>
-        <View>
-          <Text style={styles.footerLabel}>TERM</Text>
-          <Text style={styles.policyDates}>{formatDate(row.start_date)} → {formatDate(row.end_date)}</Text>
-        </View>
-        <View style={styles.policyOpen}>
-          <Text style={styles.policyIntermediary}>{row.intermediary_code || 'Direct'}</Text>
-          <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
+        <Text numberOfLines={1} style={styles.policyCustomer}>{row.customer_name} · {row.insurer_name || 'Insurer not recorded'}</Text>
+        <Text numberOfLines={1} style={styles.policyRisk}>{risk} · {category}</Text>
+        <View style={styles.policyBottom}>
+          <Text style={styles.policyPremium}>{formatIndianCurrency(row.premium_amount)}</Text>
+          <Text style={styles.policyDates}>{formatDate(row.end_date)}</Text>
         </View>
       </View>
+
+      <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
     </Pressable>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.meta}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.metaValue}>{value}</Text>
-    </View>
   );
 }
 
@@ -295,48 +276,51 @@ function formatUpdatedAt(value: number | null) {
 }
 
 const styles = StyleSheet.create({
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  summaryCard: {
-    width: '48%',
-    minHeight: 76,
-    justifyContent: 'center',
-    borderRadius: partnerTheme.radius.lg,
-    padding: 13,
+  summaryPanel: {
+    padding: 12,
+    borderRadius: 16,
     backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
   },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  summaryValueCompact: { fontSize: 18 },
-  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  banner: { marginTop: 10 },
-  inlineBanner: { marginBottom: 10 },
-  search: { marginTop: 12 },
-  filters: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  separator: { height: 10 },
+  premiumLine: {
+    marginBottom: 9,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  premiumLabel: { color: partnerTheme.colors.inkMuted, letterSpacing: 0.9, ...partnerTheme.typography.meta },
+  premiumValue: { flexShrink: 1, color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '600', textAlign: 'right' },
+  banner: { marginTop: 9 },
+  inlineBanner: { marginBottom: 8 },
+  search: { marginTop: 10 },
+  tabs: { marginTop: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
   policyRow: {
-    borderRadius: partnerTheme.radius.lg,
-    padding: 13,
+    minHeight: 94,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
     backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
   },
-  pressed: { opacity: 0.82 },
-  policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  policyIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  policyIdentity: { flex: 1 },
-  policyNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  pressed: { opacity: 0.78 },
+  policyIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  policyIdentity: { flex: 1, minWidth: 0 },
+  policyTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  policyNo: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   policyCustomer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  badges: { alignItems: 'flex-end', gap: 5 },
-  policyMetaGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 9 },
-  meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', letterSpacing: 0.65, textTransform: 'uppercase', ...partnerTheme.typography.meta },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  policyFooter: { marginTop: 9, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
-  policyDates: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  policyOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  policyIntermediary: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  policyRisk: { marginTop: 3, color: '#8A94A6', ...partnerTheme.typography.meta },
+  policyBottom: { marginTop: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  policyPremium: { color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  policyDates: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },

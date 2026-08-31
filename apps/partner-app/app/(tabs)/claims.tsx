@@ -5,11 +5,12 @@ import { useRouter } from 'expo-router';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
+import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
+import { PartnerTopTabs } from '@/components/ui/partner-top-tabs';
 import {
   getPartnerClaimSummary,
   listPartnerClaims,
@@ -84,12 +85,14 @@ export default function ClaimsScreen() {
       {summary.loading && !summary.data ? (
         <PartnerStateView state="loading" title="Loading claim summary" />
       ) : (
-        <View style={styles.summaryGrid}>
-          <SummaryCard label="Total claims" value={summary.data?.total_claims ?? 0} />
-          <SummaryCard label="Active" value={summary.data?.active_claims ?? 0} />
-          <SummaryCard label="Completed" value={summary.data?.completed_claims ?? 0} />
-          <SummaryCard label="Assistance open" value={summary.data?.assistance_requested ?? 0} />
-        </View>
+        <PartnerListSummaryStrip
+          items={[
+            { key: 'total', label: 'Claims', value: summary.data?.total_claims ?? 0 },
+            { key: 'active', label: 'Active', value: summary.data?.active_claims ?? 0, tone: 'warning' },
+            { key: 'done', label: 'Completed', value: summary.data?.completed_claims ?? 0, tone: 'success' },
+            { key: 'assist', label: 'Assistance', value: summary.data?.assistance_requested ?? 0 },
+          ]}
+        />
       )}
 
       {(collection.stale || summary.stale) ? (
@@ -111,15 +114,12 @@ export default function ClaimsScreen() {
         />
       </View>
 
-      <View style={styles.filters}>
-        {filters.map((filter) => (
-          <PartnerFilterChip
-            key={filter.value}
-            label={filter.label}
-            active={state === filter.value}
-            onPress={() => setState(filter.value)}
-          />
-        ))}
+      <View style={styles.tabs}>
+        <PartnerTopTabs
+          activeKey={state}
+          onChange={(key) => setState(key as PartnerClaimState)}
+          tabs={filters.map((filter) => ({ key: filter.value, label: filter.label }))}
+        />
       </View>
 
       <PartnerSectionHeader
@@ -190,16 +190,9 @@ export default function ClaimsScreen() {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <View style={styles.summaryCard}>
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function ClaimRow({ row, onPress }: { row: PartnerClaimRow; onPress: () => void }) {
+  const status = humanize(row.current_status || row.claim_state);
+  const vehiclePolicy = [row.vehicle_no || 'Vehicle not linked', row.policy_no || 'External policy'].join(' · ');
   return (
     <Pressable
       accessibilityRole="button"
@@ -207,47 +200,28 @@ function ClaimRow({ row, onPress }: { row: PartnerClaimRow; onPress: () => void 
       onPress={onPress}
       style={({ pressed }) => [styles.claimRow, pressed && styles.pressed]}
     >
-      <View style={styles.claimTop}>
-        <View style={styles.claimIcon}>
-          <Ionicons name="shield-outline" size={19} color={partnerTheme.colors.accent} />
-        </View>
-        <View style={styles.claimIdentity}>
-          <Text style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
-          <Text style={styles.customer}>{row.customer_name}</Text>
-        </View>
-        <PartnerStatusBadge
-          label={humanize(row.current_status || row.claim_state)}
-          tone={row.claim_state === 'completed' ? 'success' : 'warning'}
-        />
+      <View style={styles.claimIcon}>
+        <Ionicons name="shield-outline" size={18} color={partnerTheme.colors.accent} />
       </View>
 
-      <View style={styles.metaGrid}>
-        <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
-        <Meta label="Vehicle" value={row.vehicle_no || 'Not linked'} />
-        <Meta label="Policy" value={row.policy_no || 'External policy'} />
-        <Meta label="Service mode" value={humanize(row.claim_service_mode || 'not recorded')} />
-      </View>
-
-      <View style={styles.footer}>
-        <View>
-          <Text style={styles.footerLabel}>{row.accident_at ? 'ACCIDENT' : 'CREATED'}</Text>
+      <View style={styles.claimIdentity}>
+        <View style={styles.claimTitleLine}>
+          <Text numberOfLines={1} style={styles.claimNo}>{row.claim_no || 'Claim'}</Text>
+          <PartnerStatusBadge
+            label={status}
+            tone={row.claim_state === 'completed' ? 'success' : 'warning'}
+          />
+        </View>
+        <Text numberOfLines={1} style={styles.customer}>{row.customer_name} · {row.insurer_name || 'Insurer not recorded'}</Text>
+        <Text numberOfLines={1} style={styles.claimMeta}>{vehiclePolicy}</Text>
+        <View style={styles.claimBottom}>
+          <Text numberOfLines={1} style={styles.amount}>{claimAmount(row)}</Text>
           <Text style={styles.date}>{formatDate(row.accident_at || row.created_at)}</Text>
         </View>
-        <View style={styles.claimOpen}>
-          <Text style={styles.amount}>{claimAmount(row)}</Text>
-          <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
-        </View>
       </View>
-    </Pressable>
-  );
-}
 
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.meta}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.metaValue}>{value}</Text>
-    </View>
+      <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
+    </Pressable>
   );
 }
 
@@ -272,31 +246,37 @@ function formatUpdatedAt(value: number | null) {
 }
 
 const styles = StyleSheet.create({
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  summaryCard: { width: '48%', minHeight: 76, justifyContent: 'center', borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  summaryValue: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '800' },
-  summaryLabel: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  banner: { marginTop: 10 },
-  inlineBanner: { marginBottom: 10 },
-  search: { marginTop: 12 },
-  filters: { marginTop: 8, flexDirection: 'row', gap: 7 },
-  separator: { height: 10 },
-  claimRow: { borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  claimIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
-  claimIdentity: { flex: 1 },
-  claimNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  banner: { marginTop: 9 },
+  inlineBanner: { marginBottom: 8 },
+  search: { marginTop: 10 },
+  tabs: { marginTop: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
+  claimRow: {
+    minHeight: 94,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  claimIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.accentSoft,
+  },
+  claimIdentity: { flex: 1, minWidth: 0 },
+  claimTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  claimNo: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   customer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  pressed: { opacity: 0.82 },
-  metaGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 9 },
-  meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.6, ...partnerTheme.typography.meta },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  footer: { marginTop: 9, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
-  date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  claimOpen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  amount: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
+  claimMeta: { marginTop: 3, color: '#8A94A6', ...partnerTheme.typography.meta },
+  claimBottom: { marginTop: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  amount: { flex: 1, color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  date: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  pressed: { opacity: 0.78 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
