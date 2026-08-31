@@ -14,6 +14,9 @@ assert(vehicleSaveChooser.includes('name="next_action"'));
 assert(vehicleSaveChooser.includes('value="vehicle"'));
 assert(vehicleSaveChooser.includes('value="policy"'));
 assert(vehicleSaveChooser.includes("Save Vehicle &amp; Continue to Policy"));
+assert(vehicleSaveChooser.includes("form.checkValidity()"));
+assert(vehicleSaveChooser.includes("form.reportValidity()"));
+assert(vehicleSaveChooser.includes("onClick={openSaveChoices}"));
 
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));

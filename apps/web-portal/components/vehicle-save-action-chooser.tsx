@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 export function VehicleSaveActionChooser() {
   const [open, setOpen] = useState(false);
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -23,11 +24,21 @@ export function VehicleSaveActionChooser() {
     };
   }, [open]);
 
+  function openSaveChoices() {
+    const form = triggerButtonRef.current?.form;
+    if (form && !form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    setOpen(true);
+  }
+
   return (
     <>
       <button
+        ref={triggerButtonRef}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openSaveChoices}
         className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]"
       >
         Save Vehicle
