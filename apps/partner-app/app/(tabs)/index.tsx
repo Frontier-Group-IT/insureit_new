@@ -230,69 +230,49 @@ export default function PartnerHomeScreen() {
             </View>
           </View>
 
-          <PartnerSectionHeader title="Quick actions" />
-          <View style={styles.quickGrid}>
-            <QuickAction icon="add-circle-outline" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-            <QuickAction icon="refresh-outline" label="Renewals" onPress={() => router.push('/renewals')} />
-            <QuickAction icon="shield-outline" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
-            <QuickAction icon="people-outline" label="Customers" onPress={() => router.push('/customers')} />
+          <View style={styles.quickSection}>
+            <PartnerSectionHeader title="Quick actions" />
+            <View style={styles.quickGrid}>
+              <QuickAction icon="add-circle-outline" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+              <QuickAction icon="refresh-outline" label="Renewals" onPress={() => router.push('/renewals')} />
+              <QuickAction icon="shield-outline" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+              <QuickAction icon="people-outline" label="Customers" onPress={() => router.push('/customers')} />
+            </View>
           </View>
 
-          <PartnerSectionHeader
-            title="Business pulse"
-            action={
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Open business pulse"
-                hitSlop={8}
-                onPress={() => router.push('/pulse')}
-              >
-                <Text style={styles.sectionAction}>View</Text>
-              </Pressable>
-            }
-          />
+          <View style={styles.impactSection}>
+            <PartnerSectionHeader
+              title="Your impact"
+              action={
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="View impact"
+                  hitSlop={8}
+                  onPress={() => router.push('/impact')}
+                >
+                  <Text style={styles.sectionAction}>View</Text>
+                </Pressable>
+              }
+            />
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Open business pulse. ${pulseTitle(data)}`}
-            onPress={() => router.push('/pulse')}
-            style={({ pressed }) => [styles.pulseRow, pressed && styles.pressed]}
-          >
-            <View style={styles.pulseMain}>
-              <Text style={styles.pulseTitle}>{pulseTitle(data)}</Text>
-              <View style={styles.pulseSignals}>
-                <PartnerStatusIndicator
-                  label={`Business ${humanize(data.pulse.business_momentum)}`}
-                  tone={data.pulse.business_momentum === 'rising' ? 'success' : 'neutral'}
-                />
-                <PartnerStatusIndicator
-                  label={data.business.renewals_7_days ? `${data.business.renewals_7_days} renewals due` : 'Renewals clear'}
-                  tone={data.business.renewals_7_days ? 'warning' : 'success'}
-                />
-                <PartnerStatusIndicator
-                  label={data.service.claims_need_attention ? `${data.service.claims_need_attention} claims` : 'Claims steady'}
-                  tone={data.service.claims_need_attention ? 'warning' : 'success'}
-                />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open impact. ${formatMoney(data.impact.active_motor_idv)} active motor IDV protected`}
+              onPress={() => router.push('/impact')}
+              style={({ pressed }) => [styles.impactSummary, pressed && styles.pressed]}
+            >
+              <View style={styles.impactPrimary}>
+                <Text style={styles.impactLabel}>ACTIVE MOTOR IDV PROTECTED</Text>
+                <Text style={styles.impactValue}>{formatMoney(data.impact.active_motor_idv)}</Text>
               </View>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#9CA6B5" />
-          </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Open impact. ${impactTitle(data)}`}
-            onPress={() => router.push('/impact')}
-            style={({ pressed }) => [styles.impactRow, pressed && styles.pressed]}
-          >
-            <View style={styles.impactIcon}>
-              <Ionicons name="heart-outline" size={19} color={partnerTheme.colors.accent} />
-            </View>
-            <View style={styles.impactCopy}>
-              <Text style={styles.impactEyebrow}>YOUR IMPACT</Text>
-              <Text numberOfLines={1} style={styles.impactTitle}>{impactTitle(data)}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
-          </Pressable>
+              <View style={styles.impactStats}>
+                <PartnerStatBlock value={data.impact.active_vehicles} label="Vehicles" />
+                <PartnerStatBlock value={data.impact.customers_served} label="Customers" />
+                <PartnerStatBlock value={data.impact.claims_assisted} label="Claims assisted" />
+              </View>
+            </Pressable>
+          </View>
 
           {stories.length ? (
             <View style={styles.stories}>
@@ -364,20 +344,6 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
       </Text>
     </View>
   );
-}
-
-function pulseTitle(data: PartnerHomeData) {
-  const attention = data.service.intakes_need_attention + data.service.claims_need_attention + data.business.renewals_7_days;
-  if (attention === 0 && data.pulse.business_momentum === 'rising') return 'Strong momentum';
-  if (attention > 3) return 'Action-focused day';
-  if (attention > 0) return 'A few things need you';
-  return 'Steady and clear';
-}
-
-function impactTitle(data: PartnerHomeData) {
-  if (data.impact.active_vehicles > 0) return `${data.impact.active_vehicles} vehicles currently protected`;
-  if (data.impact.customers_served > 0) return `${data.impact.customers_served} customers in your authorized book`;
-  return 'Your impact starts with every customer you help';
 }
 
 function workIcon(kind: PartnerHomeData['today'][number]['kind']) {
@@ -475,9 +441,10 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.76 },
 
   businessBlock: {
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: partnerTheme.colors.line,
+    marginTop: 2,
+    padding: 14,
+    borderRadius: 18,
+    backgroundColor: partnerTheme.colors.surface,
   },
   businessHeading: {
     flexDirection: 'row',
@@ -530,7 +497,14 @@ const styles = StyleSheet.create({
   },
   statCellLast: { flex: 1 },
 
-  workSection: { marginTop: 14 },
+  workSection: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 2,
+    borderRadius: 18,
+    backgroundColor: partnerTheme.colors.surface,
+  },
   workHeader: {
     minHeight: 34,
     paddingHorizontal: 0,
@@ -541,7 +515,7 @@ const styles = StyleSheet.create({
   },
   workTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
   tabsWrap: {
-    marginHorizontal: -16,
+    marginHorizontal: -14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: partnerTheme.colors.line,
   },
@@ -566,6 +540,13 @@ const styles = StyleSheet.create({
   },
   clearText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
 
+  quickSection: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 10,
+    borderRadius: 18,
+    backgroundColor: partnerTheme.colors.surface,
+  },
   quickGrid: { flexDirection: 'row', gap: 6 },
   quickAction: {
     flex: 1,
@@ -590,53 +571,40 @@ const styles = StyleSheet.create({
   },
 
   sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  pulseRow: {
-    minHeight: 84,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: partnerTheme.colors.line,
-  },
-  pulseMain: { flex: 1 },
-  pulseTitle: { color: partnerTheme.colors.ink, fontSize: 16, lineHeight: 21, fontWeight: '800' },
-  pulseSignals: {
-    marginTop: 7,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 12,
-    rowGap: 4,
-  },
 
-  impactRow: {
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 7,
+  impactSection: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+    borderRadius: 18,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  impactSummary: {
+    minHeight: 108,
+    paddingTop: 2,
+  },
+  impactPrimary: {
+    paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: partnerTheme.colors.line,
   },
-  impactIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.accentSoft,
-  },
-  impactCopy: { flex: 1 },
-  impactEyebrow: {
+  impactLabel: {
     color: partnerTheme.colors.accent,
     letterSpacing: 0.6,
     ...partnerTheme.typography.meta,
   },
-  impactTitle: {
-    marginTop: 2,
+  impactValue: {
+    marginTop: 3,
     color: partnerTheme.colors.ink,
-    ...partnerTheme.typography.bodyStrong,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '800',
+  },
+  impactStats: {
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 14,
   },
   stories: { marginTop: 12 },
 
