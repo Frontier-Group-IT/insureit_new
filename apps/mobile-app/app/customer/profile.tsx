@@ -339,6 +339,11 @@ export default function ProfileScreen() {
 
       <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" value="All notifications" onPress={() => router.push('/customer/notifications')} /><ActionRow icon="translate" label="Language" value="English" onPress={() => setMessage({ text: 'English is currently selected.', type: 'success' })} /><View style={styles.preferenceToggle}><View style={styles.preferenceLeft}><View style={styles.rowIcon}><MaterialCommunityIcons name="weather-night" size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel}>Dark Mode</Text></View><Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#DCE4ED', true: '#8ACDB7' }} thumbColor={darkMode ? roleTheme.customer.accent : '#FFFFFF'} /></View></Section>
 
+      <Section title="Account & Privacy" icon="shield-account-outline">
+        <ActionRow icon="file-document-outline" label="Privacy & Legal Center" onPress={() => router.push('/customer/legal')} />
+        <ActionRow icon="account-remove-outline" label="Request account deletion" onPress={() => router.push('/customer/account-deletion')} />
+      </Section>
+
       <Pressable accessibilityRole="button" onPress={() => void signOut(router)} style={styles.signOut}><MaterialCommunityIcons name="logout" size={18} color="#C43838" /><Text style={styles.signOutText}>Sign out securely</Text></Pressable>
       </Screen>
 
