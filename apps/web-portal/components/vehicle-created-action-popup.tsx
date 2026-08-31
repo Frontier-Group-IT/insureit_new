@@ -33,13 +33,13 @@ export function VehicleCreatedActionPopup({
             id="vehicle-created-title"
             className="text-[14px] font-bold tracking-[0.03em] text-[#17203A]"
           >
-            VEHICLE CREATED
+            VEHICLE ADDED
           </h2>
           <p
             id="vehicle-created-description"
             className="mt-1 text-[11px] font-medium leading-4 text-[#667085]"
           >
-            The vehicle has been successfully created.
+            The vehicle has been successfully added.
           </p>
         </div>
 
