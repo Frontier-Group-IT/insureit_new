@@ -23,7 +23,9 @@ export function VehicleCreatedActionPopup({
       aria-modal="true"
       aria-label="Vehicle saved actions"
     >
-      <div className="grid w-full max-w-[300px] grid-cols-2 gap-2 rounded-xl border border-white/80 bg-white p-3 shadow-[0_20px_60px_rgba(7,21,45,.24)]">
+      <div className="w-full max-w-[320px] rounded-xl border border-white/80 bg-white p-3.5 shadow-[0_20px_60px_rgba(7,21,45,.24)]">
+        <div className="mb-3 text-center text-[11px] font-bold tracking-[0.04em] text-[#17203A]">VEHICLE CREATED</div>
+        <div className="grid grid-cols-2 gap-2">
         <Link
           href="/vehicles?success=vehicle_created"
           className="grid h-9 place-items-center rounded-lg border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#17365D] transition hover:bg-[#F8FAFC]"
@@ -36,6 +38,7 @@ export function VehicleCreatedActionPopup({
         >
           ADD POLICY
         </Link>
+        </div>
       </div>
     </div>,
     document.body,
