@@ -76,6 +76,15 @@ jobs:
       - name: Verify Phase 5 resilience and accessibility contracts
         run: npm --workspace apps/partner-app run verify:phase5
 
+      - name: Block native date picker from runtime 0.1.0 OTA source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R --line-number --fixed-string "@react-native-community/datetimepicker" apps/partner-app/app apps/partner-app/components apps/partner-app/lib; then
+            echo "::error::Partner runtime 0.1.0 APK does not embed @react-native-community/datetimepicker. Do not import it in OTA-delivered source until the next approved native build."
+            exit 1
+          fi
+
       - name: Partner app typecheck
         run: npm run typecheck:partner
 
