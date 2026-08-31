@@ -51,7 +51,6 @@ export default function WeeklyStoryScreen() {
           <View style={styles.endCard}>
             <Text style={styles.endEyebrow}>WEEKLY REFLECTION</Text>
             <Text style={styles.endTitle}>{data.policies_this_week > 0 ? 'Real progress, recorded.' : 'A quiet week is still useful data.'}</Text>
-            <Text style={styles.endText}>This recap is generated only from your authorized policies, customers, claim progress and upcoming renewals.</Text>
           </View>
         </>
       )}
@@ -84,17 +83,17 @@ function formatDate(value: string) {
 const styles = StyleSheet.create({
   close:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
   loading:{minHeight:280,alignItems:'center',justifyContent:'center'},
-  hero:{borderRadius:partnerTheme.radius.xl,padding:21,backgroundColor:partnerTheme.colors.nav},
+  hero:{borderRadius:partnerTheme.radius.xl,padding:15,backgroundColor:partnerTheme.colors.nav},
   dates:{color:'#AAA5FF',fontSize:8,fontWeight:'800',letterSpacing:1},
-  heroValue:{marginTop:8,color:'#FFFFFF',fontSize:30,fontWeight:'800'},
+  heroValue:{marginTop:5,color:'#FFFFFF',fontSize:30,fontWeight:'800'},
   heroLabel:{marginTop:3,color:'#AEB7C5',fontSize:9},
-  heroStats:{marginTop:18,paddingTop:14,flexDirection:'row',borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#3A4558'},
+  heroStats:{marginTop:12,paddingTop:10,flexDirection:'row',borderTopWidth:StyleSheet.hairlineWidth,borderTopColor:'#3A4558'},
   stat:{flex:1},statValue:{color:partnerTheme.colors.ink,fontSize:16,fontWeight:'800'},statLabel:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:7.5,lineHeight:10},inverse:{color:'#FFFFFF'},inverseMuted:{color:'#9EA9BA'},
-  sectionHeader:{marginTop:21,marginBottom:10},sectionTitle:{color:partnerTheme.colors.ink,fontSize:14,fontWeight:'800'},
-  compareCard:{minHeight:76,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderRadius:18,padding:16,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
+  sectionHeader:{marginTop:15,marginBottom:7},sectionTitle:{color:partnerTheme.colors.ink,fontSize:14,fontWeight:'800'},
+  compareCard:{minHeight:62,flexDirection:'row',alignItems:'center',justifyContent:'space-between',borderRadius:18,padding:12,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
   compareValue:{color:partnerTheme.colors.ink,fontSize:17,fontWeight:'800'},compareLabel:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8},
   trend:{flexDirection:'row',alignItems:'center',gap:5,borderRadius:999,paddingHorizontal:10,paddingVertical:7},trendText:{fontSize:9,fontWeight:'800'},
-  nextCard:{minHeight:82,flexDirection:'row',alignItems:'center',gap:11,borderRadius:18,padding:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  nextIcon:{width:42,height:42,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.brandSoft},nextBody:{flex:1},nextTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},nextText:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},
-  endCard:{marginTop:16,borderRadius:partnerTheme.radius.lg,padding:17,backgroundColor:partnerTheme.colors.accentSoft},endEyebrow:{color:'#3C7B78',fontSize:7.5,fontWeight:'800',letterSpacing:1},endTitle:{marginTop:5,color:partnerTheme.colors.ink,fontSize:12,fontWeight:'800'},endText:{marginTop:5,color:'#56716F',fontSize:8.5,lineHeight:13}
+  nextCard:{minHeight:66,flexDirection:'row',alignItems:'center',gap:11,borderRadius:18,padding:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
+  nextIcon:{width:36,height:36,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.brandSoft},nextBody:{flex:1},nextTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},nextText:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},
+  endCard:{marginTop:11,borderRadius:partnerTheme.radius.lg,padding:13,backgroundColor:partnerTheme.colors.accentSoft},endEyebrow:{color:'#3C7B78',fontSize:7.5,fontWeight:'800',letterSpacing:1},endTitle:{marginTop:5,color:partnerTheme.colors.ink,fontSize:12,fontWeight:'800'},
 });
