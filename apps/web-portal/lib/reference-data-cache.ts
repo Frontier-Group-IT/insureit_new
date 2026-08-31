@@ -29,6 +29,22 @@ export const getActiveBankOptions = unstable_cache(
   { revalidate: 300, tags: ["reference:banks"] },
 );
 
+export const getActiveInsuranceCompanyOptions = unstable_cache(
+  async (): Promise<SelectOption[]> => {
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("insurance_companies")
+      .select("id,name")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+      .returns<Array<{ id: string; name: string }>>();
+    if (error) throw error;
+    return (data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
+  },
+  ["reference-active-insurance-company-options"],
+  { revalidate: 300, tags: ["reference:insurance-companies"] },
+);
+
 export const getActiveVehicleManufacturerOptions = unstable_cache(
   async (): Promise<SelectOption[]> => {
     const admin = createSupabaseAdminClient();
