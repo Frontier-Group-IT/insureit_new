@@ -15,7 +15,6 @@ type PolicyDocument = {
   id: string;
   document_type: string;
   file_name: string;
-  mime_type: string | null;
 };
 
 type NonMotorDetails = { category: string | null; risk_title: string | null; risk_location: string | null; transit_from: string | null; transit_to: string | null; nature_of_business: string | null; liability_type: string | null; risk_details: Record<string, unknown> | null };
@@ -29,7 +28,6 @@ type PolicyRow = {
   start_date: string;
   end_date: string;
   insured_declared_value: number | null;
-  premium_amount: number | null;
   gross_premium: number | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
