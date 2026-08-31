@@ -48,9 +48,9 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
               href={createCustomerHref}
               aria-label="Add new customer"
               title="Add new customer"
-              className="inline-flex h-4 w-4 items-center justify-center rounded text-[#315B9A] transition hover:bg-[#E8F0FA] hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#93B4DC]"
+              className="inline-flex h-4 w-4 items-center justify-center rounded text-[#0B8F6A] transition hover:text-[#08765A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8FD9C4]"
             >
-              <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+              <UserPlus className="h-3.5 w-3.5" strokeWidth={2.75} aria-hidden="true" />
             </Link>
           ) : null}
         />
