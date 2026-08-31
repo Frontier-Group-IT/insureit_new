@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { partnerTheme } from '@/lib/theme';
 
@@ -34,6 +34,18 @@ const styles = StyleSheet.create({
     gap: partnerTheme.spacing.md,
   },
   text: { flex: 1 },
-  title: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  title: {
+    color: partnerTheme.colors.inkMuted,
+    fontFamily: Platform.select({
+      ios: 'Avenir Next',
+      android: 'sans-serif-medium',
+      default: undefined,
+    }),
+    fontSize: 10.5,
+    lineHeight: 15,
+    fontWeight: '600',
+    letterSpacing: 1.15,
+    textTransform: 'uppercase',
+  },
   meta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
 });
