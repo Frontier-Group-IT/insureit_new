@@ -88,14 +88,21 @@ export default function PoliciesScreen() {
       {summary.loading && !summary.data ? (
         <PartnerStateView state="loading" title="Loading policy summary" />
       ) : (
-        <PartnerListSummaryStrip
-          items={[
-            { key: 'total', label: 'Policies', value: summary.data?.total_policies ?? 0 },
-            { key: 'force', label: 'In force', value: summary.data?.in_force_policies ?? 0, tone: 'success' },
-            { key: 'expiring', label: 'Expiring', value: summary.data?.expiring_30_days ?? 0, tone: 'warning' },
-            { key: 'premium', label: 'Premium', value: formatIndianCurrency(summary.data?.total_premium ?? 0) },
-          ]}
-        />
+        <View style={styles.summaryPanel}>
+          <View style={styles.premiumLine}>
+            <Text style={styles.premiumLabel}>PREMIUM BOOKED</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={styles.premiumValue}>
+              {formatIndianCurrency(summary.data?.total_premium ?? 0)}
+            </Text>
+          </View>
+          <PartnerListSummaryStrip
+            items={[
+              { key: 'total', label: 'Policies', value: summary.data?.total_policies ?? 0 },
+              { key: 'force', label: 'In force', value: summary.data?.in_force_policies ?? 0, tone: 'success' },
+              { key: 'expiring', label: 'Expiring', value: summary.data?.expiring_30_days ?? 0, tone: 'warning' },
+            ]}
+          />
+        </View>
       )}
 
       {(collection.stale || summary.stale) ? (
@@ -269,6 +276,20 @@ function formatUpdatedAt(value: number | null) {
 }
 
 const styles = StyleSheet.create({
+  summaryPanel: {
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  premiumLine: {
+    marginBottom: 9,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  premiumLabel: { color: partnerTheme.colors.inkMuted, letterSpacing: 0.9, ...partnerTheme.typography.meta },
+  premiumValue: { flexShrink: 1, color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '600', textAlign: 'right' },
   banner: { marginTop: 9 },
   inlineBanner: { marginBottom: 8 },
   search: { marginTop: 10 },
