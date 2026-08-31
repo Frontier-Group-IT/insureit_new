@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -115,6 +115,7 @@ export async function createInsuranceCompanyMaster(formData: FormData) {
   if (error || !data) redirect(errorUrl(basePath, `Insurance company could not be created: ${error?.message ?? "Unknown error"}`));
 
   await auditInsurerChange(profile?.id, "insurance_company_created", data.id, null, data);
+  revalidateTag("reference:insurance-companies");
   revalidatePath(INSURER_MASTER_PATH);
   revalidatePath("/insurance-companies");
   revalidatePath("/policies/new");
@@ -162,6 +163,7 @@ export async function updateInsuranceCompanyMaster(id: string, formData: FormDat
   if (error || !data) redirect(errorUrl(basePath, `Insurance company could not be updated: ${error?.message ?? "Unknown error"}`));
 
   await auditInsurerChange(profile?.id, "insurance_company_updated", id, existing, data);
+  revalidateTag("reference:insurance-companies");
   revalidatePath(INSURER_MASTER_PATH);
   revalidatePath("/insurance-companies");
   revalidatePath(`${INSURER_MASTER_PATH}/${id}`);
