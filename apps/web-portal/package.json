@@ -28,6 +28,7 @@
     "policy-edit-helper-performance:regression": "node scripts/policy-edit-helper-performance-regression.mjs",
     "reconciliation-stylesheet-performance:regression": "node scripts/reconciliation-stylesheet-performance-regression.mjs",
     "policy-reference-cache:regression": "node scripts/policy-reference-cache-regression.mjs",
+    "policy-edit-insurer-cache:regression": "node scripts/policy-edit-insurer-cache-regression.mjs",
     "policy-ocr:iffco-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-regression.ts",
     "policy-ocr:iffco-structured-regression": "node --experimental-strip-types scripts/policy-ocr-iffco-structured-regression.ts",
     "policy-ocr:digit-regression": "node --experimental-strip-types scripts/policy-ocr-digit-regression.ts",
