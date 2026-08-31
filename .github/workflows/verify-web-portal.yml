@@ -69,6 +69,8 @@ jobs:
         run: npm run backoffice-register-prefetch:regression
       - name: Server auth claims regression
         run: npm run server-auth-claims:regression
+      - name: Auth phase observability regression
+        run: npm run auth-phase-observability:regression
       - name: Dashboard performance regression
         run: npm run dashboard-performance:regression
       - name: Portal route enhancement performance regression
