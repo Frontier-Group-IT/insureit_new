@@ -22,7 +22,6 @@ export function VehicleRegistrationFields({
   return (
     <>
       <div className="absolute right-4 top-2.5 z-10 flex items-center gap-2 max-sm:left-3 max-sm:right-3 max-sm:top-[56px] max-sm:justify-end">
-        <span className="text-[9px] font-semibold text-[#667085]">Registration status</span>
         <input type="hidden" name="registration_mode" value={mode} />
         <div
           className="inline-flex h-8 items-center rounded-full border border-[#D5E0EF] bg-white p-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,.9),0_5px_14px_rgba(15,23,42,.06)]"
