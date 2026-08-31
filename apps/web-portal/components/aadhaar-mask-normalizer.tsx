@@ -18,10 +18,16 @@ function maskAadhaarValues(root: ParentNode = document) {
   });
 }
 
+function routeCanRenderAadhaar(pathname: string) {
+  return pathname.startsWith("/customers") || pathname.startsWith("/intermediaries");
+}
+
 export function AadhaarMaskNormalizer() {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (!routeCanRenderAadhaar(pathname)) return;
+
     let frame: number | null = null;
     const scheduleMask = () => {
       if (frame !== null) return;
