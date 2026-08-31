@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -285,7 +285,7 @@ function DetailDisclosure({
   summary: string;
   expanded: boolean;
   onPress: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <View style={styles.disclosureWrap}>
