@@ -20,6 +20,9 @@ export default function CustomerDetailScreen() {
   const [data, setData] = useState<PartnerCustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAllPolicies, setShowAllPolicies] = useState(false);
+  const [showAllVehicles, setShowAllVehicles] = useState(false);
+  const [showAllClaims, setShowAllClaims] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -37,6 +40,10 @@ export default function CustomerDetailScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const visiblePolicies = data ? (showAllPolicies ? data.policies : data.policies.slice(0, 2)) : [];
+  const visibleVehicles = data ? (showAllVehicles ? data.vehicles : data.vehicles.slice(0, 2)) : [];
+  const visibleClaims = data ? (showAllClaims ? data.claims : data.claims.slice(0, 2)) : [];
 
   return (
     <PartnerScreen
@@ -94,8 +101,6 @@ export default function CustomerDetailScreen() {
 
           <PartnerSectionHeader title="Relationship" />
           <View style={styles.relationshipCard}>
-            <Info label="Phone" value={data.customer.phone || 'Not recorded'} />
-            <Info label="Email" value={data.customer.email || 'Not recorded'} />
             <Info label="Customer type" value={humanize(data.customer.customer_type || 'not recorded')} />
             <Info label="Fleet" value={humanize(data.customer.fleet_size_band || 'not recorded')} />
             <Info label="Intermediary" value={data.customer.intermediary_code || 'Organization / unassigned'} />
@@ -105,7 +110,7 @@ export default function CustomerDetailScreen() {
           <PartnerSectionHeader title="Policies" meta={`${data.summary.policies} total`} />
           {data.policies.length ? (
             <View style={styles.stack}>
-              {data.policies.map((policy) => (
+              {visiblePolicies.map((policy) => (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Open policy ${policy.policy_no || policy.policy_code || ''}`}
@@ -129,11 +134,19 @@ export default function CustomerDetailScreen() {
               ))}
             </View>
           ) : <EmptyLine text="No scoped policies recorded." />}
+          {data.policies.length > 2 ? (
+            <ExpandToggle
+              expanded={showAllPolicies}
+              total={data.policies.length}
+              label="policies"
+              onPress={() => setShowAllPolicies((value) => !value)}
+            />
+          ) : null}
 
           <PartnerSectionHeader title="Vehicles" meta={`${data.summary.vehicles} total`} />
           {data.vehicles.length ? (
             <View style={styles.stack}>
-              {data.vehicles.map((vehicle) => (
+              {visibleVehicles.map((vehicle) => (
                 <View key={vehicle.vehicle_id} style={styles.vehicleCard}>
                   <View style={styles.itemIcon}><Ionicons name="car-outline" size={18} color={partnerTheme.colors.accent} /></View>
                   <View style={styles.itemBody}>
@@ -151,11 +164,19 @@ export default function CustomerDetailScreen() {
               ))}
             </View>
           ) : <EmptyLine text="No vehicles recorded." />}
+          {data.vehicles.length > 2 ? (
+            <ExpandToggle
+              expanded={showAllVehicles}
+              total={data.vehicles.length}
+              label="vehicles"
+              onPress={() => setShowAllVehicles((value) => !value)}
+            />
+          ) : null}
 
           <PartnerSectionHeader title="Claims" meta={`${data.summary.claims} total`} />
           {data.claims.length ? (
             <View style={styles.stack}>
-              {data.claims.map((claim) => (
+              {visibleClaims.map((claim) => (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Open claim ${claim.claim_no || ''}`}
@@ -176,6 +197,14 @@ export default function CustomerDetailScreen() {
               ))}
             </View>
           ) : <EmptyLine text="No claims recorded." />}
+          {data.claims.length > 2 ? (
+            <ExpandToggle
+              expanded={showAllClaims}
+              total={data.claims.length}
+              label="claims"
+              onPress={() => setShowAllClaims((value) => !value)}
+            />
+          ) : null}
         </>
       )}
     </PartnerScreen>
@@ -200,6 +229,30 @@ function Expiry({ label, date }: { label: string; date: string | null }) {
   const days = daysUntil(date);
   const tone = days < 0 ? styles.expiryBad : days <= 30 ? styles.expiryWarn : styles.expiryGood;
   return <View style={[styles.expiry, tone]}><Text style={styles.expiryText}>{label} · {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d`}</Text></View>;
+}
+
+function ExpandToggle({
+  expanded,
+  total,
+  label,
+  onPress,
+}: {
+  expanded: boolean;
+  total: number;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={expanded ? `Show fewer ${label}` : `Show all ${total} ${label}`}
+      onPress={onPress}
+      style={({ pressed }) => [styles.expandToggle, pressed && styles.pressed]}
+    >
+      <Text style={styles.expandToggleText}>{expanded ? 'Show less' : `Show all ${total}`}</Text>
+      <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color={partnerTheme.colors.brand} />
+    </Pressable>
+  );
 }
 
 function EmptyLine({ text }: { text: string }) {
@@ -288,6 +341,8 @@ const styles = StyleSheet.create({
   expiryWarn: { backgroundColor: partnerTheme.colors.warningSoft },
   expiryBad: { backgroundColor: partnerTheme.colors.dangerSoft },
   expiryText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  expandToggle: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  expandToggleText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
   emptyLine: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
   emptyLineText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   pressed: { opacity: 0.8 },
