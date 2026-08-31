@@ -14,6 +14,7 @@ import { loadPolicyPayinBilling } from "@/app/policies/policy-payin-billing-acti
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getCustomerManager } from "@/lib/master-data-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
 
 type PolicyRow = {
   id: string; customer_id: string; vehicle_id: string | null; insurance_company_id: string;
@@ -105,7 +106,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     : { data: null as CreatorProfileRow | null, error: null };
   if (creatorResult.error) throw new Error(`Unable to load policy creator: ${creatorResult.error.message}`);
 
-  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurersResult, currentInsurerResult, salesEmployees, intermediariesResult, nonMotorDetailsResult, customersResult] = await Promise.all([
+  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurerOptions, currentInsurerResult, salesEmployees, intermediariesResult, nonMotorDetailsResult, customersResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,company_name,phone,email,address,customer_type,updated_at").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
     vehicleId
       ? admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>()
@@ -113,7 +114,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     admin.from("policy_premium_details").select("od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium").eq("policy_id", id).maybeSingle<PremiumRow>(),
     admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount,commercial_basis,projected_commission_percent,projected_commission_amount,commercial_status").eq("policy_id", id).maybeSingle<PayinRow>(),
     admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number,payout_basis,partner_payout_percent,partner_payout_amount,gross_payout,commercial_status").eq("policy_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle<PayoutRow>(),
-    admin.from("insurance_companies").select("id,name,is_active").eq("is_active", true).order("name", { ascending: true }).returns<InsurerOption[]>(),
+    getActiveInsuranceCompanyOptions(),
     admin.from("insurance_companies").select("id,name,is_active").eq("id", policy.insurance_company_id).maybeSingle<InsurerOption>(),
     loadPospMispAssociates(admin),
     admin.from("intermediaries")
@@ -138,7 +139,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     : { ok: true as const, billing: { billNumber: "", billedAmount: "", billDate: "", status: "Unbilled" } };
   if (!billingResult.ok) throw new Error(`Unable to load policy PayIn billing: ${billingResult.error}`);
 
-  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, activeInsurersResult.error, currentInsurerResult.error, intermediariesResult.error, nonMotorDetailsResult.error, customersResult.error].filter(Boolean);
+  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, currentInsurerResult.error, intermediariesResult.error, nonMotorDetailsResult.error, customersResult.error].filter(Boolean);
   if (errors.length) throw new Error(`Unable to load policy edit data: ${errors[0]?.message}`);
   if (!customerResult.data || (!isNonMotor && !vehicleResult.data)) throw new Error("The linked customer or vehicle record is missing.");
 
@@ -189,10 +190,14 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     || Number(payout?.gross_payout ?? 0) !== 0
   );
 
-  const insurerById = new Map<string, InsurerOption>();
-  for (const insurer of activeInsurersResult.data ?? []) insurerById.set(insurer.id, insurer);
-  if (currentInsurerResult.data) insurerById.set(currentInsurerResult.data.id, currentInsurerResult.data);
-  const insurerOptions = Array.from(insurerById.values()).sort((a,b)=>a.name.localeCompare(b.name)).map((insurer)=>({ value: insurer.id, label: insurer.is_active ? insurer.name : `${insurer.name} — Inactive` }));
+  const insurerOptionsById = new Map(activeInsurerOptions.map((insurer) => [insurer.value, insurer]));
+  if (currentInsurerResult.data && !currentInsurerResult.data.is_active) {
+    insurerOptionsById.set(currentInsurerResult.data.id, {
+      value: currentInsurerResult.data.id,
+      label: `${currentInsurerResult.data.name} — Inactive`,
+    });
+  }
+  const insurerOptions = Array.from(insurerOptionsById.values()).sort((a, b) => a.label.localeCompare(b.label));
 
   const employeeById = new Map(salesEmployees.map((employee) => [employee.id, employee]));
   const rmOptions: PolicyRmOption[] = salesEmployees.map((employee) => {
