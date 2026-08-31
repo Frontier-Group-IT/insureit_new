@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 export type VehicleRegistrationMode = "registered" | "unregistered";
 
@@ -18,6 +18,10 @@ export function VehicleRegistrationFields({
   const [mode, setMode] = useState<VehicleRegistrationMode>(initialMode);
   const [vehicleNo, setVehicleNo] = useState(initialMode === "registered" ? initialVehicleNo ?? "" : "");
   const [registrationDate, setRegistrationDate] = useState(initialRegistrationDate ?? "");
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("insureit:vehicle-registration-mode", { detail: { mode } }));
+  }, [mode]);
 
   return (
     <>
