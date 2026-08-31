@@ -1,7 +1,7 @@
 # Sankalp Insurance Brokers Private Limited Privacy Policy
 
 **Effective date:** 04 July 2026  
-**Last updated:** 04 July 2026
+**Last updated:** 31 August 2026
 
 **Company legal details:**
 
@@ -438,6 +438,15 @@ To exercise your rights, contact us using the details in the Grievance Redressal
 
 Certain requests may be declined or limited where we are legally required to retain information, where the information is necessary for an active claim or dispute, where deletion would affect legal compliance, or where the request is not permitted by applicable law.
 
+### 12.1 Account Deletion Requests
+
+If you created or use an InsureIT customer app account, you can request deletion of your account and associated personal data:
+
+- inside the InsureIT mobile app through **Profile → Account & Privacy → Request account deletion**; or
+- outside the app through the public InsureIT account deletion page or by emailing **insureit@frontiergroup.in**.
+
+We may verify your identity before processing an account deletion request. Account-linked personal data that is no longer required will be deleted or anonymized as appropriate. Certain policy, claim, payment, fraud-prevention, audit, tax, legal, or regulatory records may need to be retained for a lawful period. Where retention is required, access will be restricted and the information will not be retained merely to continue your app account.
+
 ## 13. Consent Withdrawal
 
 Where processing is based on your consent, you may withdraw consent by contacting us or by using available account or device settings.
@@ -475,7 +484,7 @@ If you have questions, concerns, complaints, or requests regarding this Privacy 
 **Name:** To be updated  
 **Company/App:** Sankalp Insurance Brokers Private Limited / InsureIT  
 **CIN:** U66220HR2025PTC137800  
-**Email:** To be updated  
+**Email:** insureit@frontiergroup.in  
 **Phone:** To be updated  
 **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
@@ -498,7 +507,7 @@ For privacy-related questions, requests, or complaints, contact:
 **Sankalp Insurance Brokers Private Limited Privacy Team**  
 **CIN:** U66220HR2025PTC137800  
 **Brand/App:** InsureIT  
-**Email:** To be updated  
+**Email:** insureit@frontiergroup.in  
 **Phone:** To be updated  
 **Registered Office:** A-1414, DLF City Ph I, Golf Course Road DLF QE, Gurgaon, Haryana, India - 122002
 
