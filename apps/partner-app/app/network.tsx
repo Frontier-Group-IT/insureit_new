@@ -144,7 +144,7 @@ export default function NetworkScreen() {
                           ) : (
                             <View style={styles.standalone}>
                               <Ionicons name="checkmark-circle-outline" size={16} color={partnerTheme.colors.success} />
-                              <Text style={styles.standaloneText}>Standalone Partner family · direct business is supported.</Text>
+                              <Text style={styles.standaloneText}>Standalone Partner family</Text>
                             </View>
                           )}
                           {row.owner.name ? (
@@ -204,14 +204,13 @@ const styles = StyleSheet.create({
   errorText: { color: partnerTheme.colors.inkMuted, fontSize: 10 },
   retry: { marginTop: 10, color: partnerTheme.colors.brand, fontSize: 10, fontWeight: '800' },
 
-  hero: { flexDirection: 'row', gap: 13, borderRadius: partnerTheme.radius.xl, padding: 18, backgroundColor: partnerTheme.colors.nav },
-  heroNode: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
+  hero: { flexDirection: 'row', gap: 11, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  heroNode: { width: 40, height: 40, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
   heroBody: { flex: 1 },
   heroEyebrow: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.1 },
   heroTitle: { marginTop: 4, color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-  heroText: { marginTop: 4, color: '#C9D0DE', fontSize: 9, lineHeight: 13 },
 
-  legend: { marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 3 },
+  legend: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 3 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 7, height: 7, borderRadius: 4 },
   legendPartner: { backgroundColor: partnerTheme.colors.brand },
@@ -219,18 +218,18 @@ const styles = StyleSheet.create({
   legendGroup: { backgroundColor: '#CBD0DC' },
   legendText: { color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
 
-  section: { marginTop: 18 },
-  sectionHeader: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#EEF1F5' },
+  section: { marginTop: 12 },
+  sectionHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#EEF1F5' },
   sectionHeaderGroup: { backgroundColor: partnerTheme.colors.brandSoft },
   sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   sectionHeaderBody: { flex: 1 },
   sectionName: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
   sectionMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 8 },
 
-  partnerList: { marginTop: 8, gap: 8 },
+  partnerList: { marginTop: 6, gap: 7 },
   partnerCard: { overflow: 'hidden', borderRadius: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  partnerTop: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12 },
-  partnerNode: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  partnerTop: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12 },
+  partnerNode: { width: 34, height: 34, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   partnerInitial: { color: partnerTheme.colors.brandStrong, fontSize: 10, fontWeight: '800' },
   partnerIdentity: { flex: 1 },
   partnerName: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
@@ -239,22 +238,22 @@ const styles = StyleSheet.create({
   partnerPremium: { color: partnerTheme.colors.ink, fontSize: 10, fontWeight: '800' },
   partnerPremiumLabel: { marginTop: 1, color: partnerTheme.colors.inkMuted, fontSize: 6.5 },
 
-  partnerMetrics: { flexDirection: 'row', paddingVertical: 10, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line, backgroundColor: '#FBFCFE' },
+  partnerMetrics: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line, backgroundColor: '#FBFCFE' },
   miniStat: { flex: 1, alignItems: 'center' },
   miniValue: { color: partnerTheme.colors.ink, fontSize: 11, fontWeight: '800' },
   miniLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 6.8 },
 
-  expanded: { position: 'relative', padding: 13, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  expanded: { position: 'relative', padding: 10, paddingTop: 9, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   connectionLine: { position: 'absolute', left: 30, top: 37, bottom: 18, width: 1, backgroundColor: '#D9E3E5' },
   expandedLabel: { marginBottom: 9, color: '#78908F', fontSize: 7, fontWeight: '800', letterSpacing: 0.8 },
-  childRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 3 },
+  childRow: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 3 },
   childNode: { zIndex: 1, width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
   childBody: { flex: 1 },
   childName: { color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '700' },
   childMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
   standalone: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 43, paddingHorizontal: 8, borderRadius: 11, backgroundColor: '#F5FBF7' },
   standaloneText: { flex: 1, color: '#5F7967', fontSize: 8.2, lineHeight: 12 },
-  ownerRow: { marginTop: 9, paddingTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  ownerRow: { marginTop: 7, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
   ownerLabel: { color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
   ownerValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, fontSize: 8.5, fontWeight: '700' },
 });
