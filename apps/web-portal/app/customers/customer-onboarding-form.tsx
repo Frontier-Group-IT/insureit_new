@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Paperclip } from "lucide-react";
@@ -167,8 +168,12 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
     <>
       <AlertModal open={Boolean(errorPopup)} message={errorPopup?.message ?? ""} onClose={closeErrorPopup} autoCloseMs={5000} />
       {continuationOpen ? <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/30 p-4" role="dialog" aria-modal="true" aria-label="Customer created actions">
-        <div className="w-full max-w-[320px] rounded-xl border border-[#D8E2EF] bg-white p-3.5 shadow-xl">
-          <div className="mb-3 text-center text-[11px] font-bold tracking-[0.04em] text-[#17203A]">CUSTOMER CREATED</div>
+        <div className="w-full max-w-[340px] rounded-2xl border border-[#D8E2EF] bg-white p-4 shadow-[0_20px_55px_rgba(15,23,42,0.22)]">
+          <div className="mx-auto mb-2.5 grid h-14 w-14 place-items-center rounded-full border border-emerald-200 bg-emerald-50/80 shadow-[0_8px_20px_rgba(16,185,129,0.12)]">
+            <Image src="/assets/Custom-Icons/optimized-128/customers.png" alt="" width={40} height={40} className="h-10 w-10 object-contain" aria-hidden="true" />
+          </div>
+          <div className="text-center text-[11.5px] font-bold tracking-[0.05em] text-[#17203A]">CUSTOMER CREATED</div>
+          <p className="mb-3 mt-1 text-center text-[10px] leading-4 text-[#667085]">The customer has been created successfully.</p>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => chooseContinuation("customers")} className="flex-1 rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">OK</button>
             <button type="button" onClick={() => chooseContinuation("vehicle")} className="flex-1 rounded-lg bg-[#17365D] px-3 py-2 text-[10.5px] font-semibold text-white hover:bg-[#102A49]">ADD VEHICLE</button>
