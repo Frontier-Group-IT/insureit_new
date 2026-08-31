@@ -19,6 +19,11 @@ assert(vehicleSaveChooser.includes("AlertModal"));
 assert(vehicleSaveChooser.includes("is required before the vehicle can be created."));
 assert(!vehicleSaveChooser.includes("ADD POLICY"));
 
+const uiFeedback=read("components/ui-feedback.tsx");
+assert(uiFeedback.includes("createPortal"));
+assert(uiFeedback.includes('className="fixed inset-0 z-[300] flex items-center justify-center'));
+assert(uiFeedback.includes("document.body"));
+
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
 assert(vehiclePage.includes('"manage_customers"'));
