@@ -75,6 +75,8 @@ jobs:
         run: npm run aadhaar-mask-performance:regression
       - name: Policy edit helper performance regression
         run: npm run policy-edit-helper-performance:regression
+      - name: Reconciliation stylesheet performance regression
+        run: npm run reconciliation-stylesheet-performance:regression
       - name: IFFCO structured regression
         run: npm run policy-ocr:iffco-structured-regression
       - name: IFFCO regression
