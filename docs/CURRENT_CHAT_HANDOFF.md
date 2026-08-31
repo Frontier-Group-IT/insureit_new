@@ -908,3 +908,145 @@ At this handoff update, `main` had advanced beyond the original #612 base, so #6
 - Deletion is rechecked server-side immediately before the destructive operation and successful deletes write an `audit_logs` entry with `deletion_source = it_super_user_financial_data_control`.
 - Existing database foreign keys and cascade rules are unchanged. Reconciliation lines/events and draft invoice lines/events are the only intended child cascades. Posted accounting history is never silently removed.
 - Receipt, TDS, partner-payment, partner-payable and posted-invoice cleanup remains outside this first phase because those flows require reversal-aware accounting semantics rather than generic deletion.
+
+
+## INSUREIT Partner Zerodha-style refinement handoff — 2026-08-31
+
+**CURRENT INSTALLED/PREVIEW BASELINE**
+
+- Partner app: `INSUREIT Partner`
+- Android package: `com.insureit.partner`
+- Runtime/app version: `0.1.0`
+- Current installed native baseline: Android versionCode 3, originally built from merge commit `71cc1d03b43d8526e02d06a6f7b59798ef458470`.
+- No new APK/AAB has been approved after that icon build.
+- Current preview OTA source immediately before this documentation slice: `d64a69b10e082e189dee86b85c13764266c5161c`.
+- Current successful preview update group immediately before this documentation slice: `c2e71b42-703f-464e-b205-6c9d7d503811`.
+
+### Critical OTA/native compatibility learning
+
+A native date-picker dependency was introduced after the versionCode 3 APK without a matching new native build. Later OTAs bundled code importing that module and the installed Android app auto-closed. Republishing another post-build OTA did not recover the app because it still contained the incompatible native code.
+
+Recovery and permanent rule:
+- rollback-to-embedded recovered the installed app and the user verified it opened correctly;
+- `@react-native-community/datetimepicker` was removed from Partner runtime `0.1.0` source/dependencies;
+- date-picker functionality is deferred until a future explicitly approved APK build;
+- Partner CI blocks that module from runtime `0.1.0` OTA source;
+- never publish a Partner OTA that introduces/imports a native module not embedded in the installed runtime;
+- no native build may be created without explicit user approval for that exact build.
+
+### UI/UX benchmark decision
+
+User approved **Zerodha Kite as the primary UX interaction benchmark** for INSUREIT Partner.
+
+Use Zerodha principles:
+- serious business-app density;
+- clean flat lists;
+- predictable action placement;
+- bottom-reachable/contextual actions;
+- bottom sheets instead of unnecessary full pages/modals;
+- progressive disclosure;
+- compact top/watchlist-style selectors;
+- semantic color;
+- minimal instructional copy;
+- preserved navigation/search/filter context;
+- restrained motion.
+
+MyJio/Airtel remain secondary references for selective dashboard polish/content treatment only.
+
+### Refinement foundation already merged
+
+Shared OTA-safe primitives exist for:
+- bottom sheet;
+- compact top tabs;
+- bottom action bar;
+- filter sheet;
+- overflow/context menu;
+- flat operational list row;
+- divider;
+- semantic status indicator;
+- compact stat block;
+- lightweight entrance animation.
+
+### Home refinement history/current rules
+
+Home is now a working-console layout rather than a card-heavy dashboard.
+
+Current composition:
+1. greeting / role / freshness;
+2. My Business;
+3. My Work;
+4. Quick Actions;
+5. Your Stories;
+6. Your Impact.
+
+My Work was redesigned after the first watchlist-style pass felt cramped. The current version:
+- removes the competing `need attention` status badge;
+- gives Today / Renewals / Claims / Intakes separate roomier selector cells with counts;
+- uses cleaner work rows with semantic side markers, stronger spacing and simpler title/subtitle hierarchy.
+
+Quick Actions use stronger filled icons with differentiated semantic surfaces:
+- Policy Intake;
+- Renewals;
+- Claims;
+- Customers.
+
+Motion:
+- subtle staggered Home section entrance;
+- subtle Quick Action scale/lift on press;
+- React Native Animated only;
+- no looping/promotional motion.
+
+Typography:
+- Home section labels are smaller ALL CAPS, lighter weight, refined tracking;
+- Gross Premium uses lighter weight;
+- decimal/fraction digits are visually smaller where present;
+- Active Motor IDV Protected is intentionally not heavily bold.
+
+Money-format rule:
+- default Partner rule is full Indian financial formatting: `₹32,600`, `₹8,42,000`, `₹1,25,00,000`;
+- do not abbreviate normal Partner money as K/L/Cr;
+- **Home-only visual exception:** Active Motor IDV Protected uses compact Indian notation such as `₹32.6K`, `₹20L`, `₹2.4Cr`.
+
+Home duplication decision:
+- the standalone Business Pulse / “A few things need you” block was removed from Home because My Work already provides the actionable attention surface and both were competing/redirecting toward overlapping insight;
+- the dedicated Pulse route can remain for deeper insight.
+
+### Compactness rule
+
+User preference is explicit:
+- remove unnecessary instructional/marketing copy;
+- arrange options horizontally where sensible;
+- minimize wasted padding;
+- preserve at least 48px interactive targets;
+- reduce visual footprint and surrounding whitespace, not tappable area;
+- retain only essential error, warning, offline, recovery, confirmation and destructive-action guidance.
+
+### Next authorized refinement work
+
+Start **R3 list UX refinement** on a separate branch for:
+- Customers;
+- Policies;
+- Claims;
+- Renewals;
+- Policy Intake history.
+
+R3 goals:
+- one consistent list language;
+- less card chrome;
+- compact top filters/tabs;
+- clean flat rows;
+- stronger scan hierarchy;
+- contextual status/actions;
+- preserve current server-authorized scope;
+- preserve existing cache/offline/refresh behavior;
+- no backend/schema/RLS/auth change unless separately justified and approved;
+- no native dependency;
+- no APK/AAB.
+
+After R3, continue the agreed sequence:
+- R4 detail screens;
+- R5 transactional journeys;
+- R6 Business/Payout/Network;
+- R7 Account/Profile/Settings/Support;
+- R8 universal search/cross-navigation/preserved context.
+
