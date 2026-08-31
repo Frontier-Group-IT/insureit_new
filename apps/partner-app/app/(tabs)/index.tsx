@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -7,18 +7,26 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { StoryRail } from '@/components/story-rail';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerListRow } from '@/components/ui/partner-list-row';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerSkeleton } from '@/components/ui/partner-skeleton';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerStatBlock } from '@/components/ui/partner-stat-block';
+import { PartnerStatusIndicator } from '@/components/ui/partner-status-indicator';
+import { PartnerTopTabs, type PartnerTopTab } from '@/components/ui/partner-top-tabs';
 import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
+type WorkTab = 'today' | 'renewals' | 'claims' | 'intakes';
+
 export default function PartnerHomeScreen() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
+  const [workTab, setWorkTab] = useState<WorkTab>('today');
+
   const fetchHomeWorkspace = useCallback(async (): Promise<{ home: PartnerHomeData; stories: PartnerStory[] }> => {
     const [homeResult, storiesResult] = await Promise.allSettled([
       getPartnerHome(),
@@ -46,10 +54,30 @@ export default function PartnerHomeScreen() {
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
 
+  const workTabs = useMemo<PartnerTopTab[]>(() => {
+    if (!data) return [];
+    return [
+      { key: 'today', label: 'Today', badge: attentionCount(data) },
+      { key: 'renewals', label: 'Renewals', badge: data.business.renewals_7_days },
+      { key: 'claims', label: 'Claims', badge: data.service.claims_need_attention },
+      { key: 'intakes', label: 'Intakes', badge: data.service.intakes_need_attention },
+    ];
+  }, [data]);
+
+  const visibleWork = useMemo(() => {
+    if (!data) return [];
+    if (workTab === 'today') return data.today;
+    if (workTab === 'renewals') return data.today.filter((item) => item.kind === 'renewal');
+    if (workTab === 'claims') return data.today.filter((item) => item.kind === 'claim');
+    return data.today.filter((item) => item.kind === 'intake_attention');
+  }, [data, workTab]);
+
   if (!context) return null;
 
   const { identity } = context;
-  const role = identity.actor_kind === 'employee' ? humanize(identity.role) : humanize(identity.intermediary_type);
+  const role = identity.actor_kind === 'employee'
+    ? humanize(identity.role)
+    : humanize(identity.intermediary_type);
 
   return (
     <PartnerScreen
@@ -114,46 +142,93 @@ export default function PartnerHomeScreen() {
             </View>
           ) : null}
 
-          <PartnerSectionHeader
-            title="Needs your attention"
-            meta={attentionMeta(data)}
-          />
+          <View style={styles.businessBlock}>
+            <View style={styles.businessHeading}>
+              <View>
+                <Text style={styles.businessLabel}>MY BUSINESS · THIS MONTH</Text>
+                <Text style={styles.businessPremium}>{formatMoney(data.business.premium_this_month)}</Text>
+                <Text style={styles.businessCaption}>Gross premium</Text>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="View business"
+                hitSlop={8}
+                onPress={() => router.push('/(tabs)/business')}
+                style={({ pressed }) => [styles.businessView, pressed && styles.pressed]}
+              >
+                <Text style={styles.businessViewText}>View</Text>
+                <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+              </Pressable>
+            </View>
 
-          {data.today.length ? (
-            <View style={styles.todayList}>
-              {data.today.map((item) => (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${item.title}. ${item.subtitle}`}
-                  key={item.kind}
-                  onPress={() => router.push(item.route as never)}
-                  style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]}
-                >
-                  <View style={[styles.todayIcon, todayIconTone(item.kind)]}>
-                    <Ionicons name={todayIcon(item.kind)} size={20} color={todayIconColor(item.kind)} />
-                  </View>
-                  <View style={styles.todayBody}>
-                    <View style={styles.todayTitleRow}>
-                      <Text style={styles.todayTitle}>{item.title}</Text>
-                      {item.count > 0 ? <Text style={styles.todayCount}>{item.count}</Text> : null}
-                    </View>
-                    <Text style={styles.todaySubtitle}>{item.subtitle}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
-                </Pressable>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.clearCard}>
-              <View style={styles.clearIcon}>
-                <Ionicons name="checkmark-circle-outline" size={24} color={partnerTheme.colors.success} />
+            <Trend
+              value={Number(data.business.premium_change_percent || 0)}
+              hasPrevious={Number(data.business.premium_last_month || 0) > 0}
+            />
+
+            <View style={styles.businessStats}>
+              <View style={styles.statCell}>
+                <PartnerStatBlock value={data.business.policies_this_month} label="Policies" />
               </View>
-              <View style={styles.clearBody}>
-                <Text style={styles.clearTitle}>You are clear for now</Text>
-                <Text style={styles.clearText}>No urgent renewal, claim or Policy Intake action is waiting.</Text>
+              <View style={styles.statCell}>
+                <PartnerStatBlock value={data.business.total_customers} label="Customers" />
+              </View>
+              <View style={styles.statCell}>
+                <PartnerStatBlock value={data.business.renewals_30_days} label="Renewals" />
+              </View>
+              <View style={styles.statCellLast}>
+                <PartnerStatBlock value={data.service.active_claims} label="Claims" />
               </View>
             </View>
-          )}
+          </View>
+
+          <View style={styles.workSection}>
+            <View style={styles.workHeader}>
+              <Text style={styles.workTitle}>My work</Text>
+              <PartnerStatusIndicator
+                label={attentionCount(data) ? `${attentionCount(data)} need attention` : 'All clear'}
+                tone={attentionCount(data) ? 'warning' : 'success'}
+              />
+            </View>
+
+            <View style={styles.tabsWrap}>
+              <PartnerTopTabs
+                activeKey={workTab}
+                onChange={(key) => setWorkTab(key as WorkTab)}
+                tabs={workTabs}
+              />
+            </View>
+
+            <View style={styles.workList}>
+              {visibleWork.length ? (
+                visibleWork.map((item) => (
+                  <PartnerListRow
+                    accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.count} items`}
+                    divider
+                    key={item.kind}
+                    leading={
+                      <View style={[styles.workIcon, workIconTone(item.kind)]}>
+                        <Ionicons
+                          name={workIcon(item.kind)}
+                          size={18}
+                          color={workIconColor(item.kind)}
+                        />
+                      </View>
+                    }
+                    meta={item.count ? String(item.count) : undefined}
+                    onPress={() => router.push(item.route as never)}
+                    subtitle={item.subtitle}
+                    title={item.title}
+                  />
+                ))
+              ) : (
+                <View style={styles.clearRow}>
+                  <Ionicons name="checkmark-circle-outline" size={19} color={partnerTheme.colors.success} />
+                  <Text style={styles.clearText}>{emptyWorkLabel(workTab)}</Text>
+                </View>
+              )}
+            </View>
+          </View>
 
           <PartnerSectionHeader title="Quick actions" />
           <View style={styles.quickGrid}>
@@ -164,96 +239,59 @@ export default function PartnerHomeScreen() {
           </View>
 
           <PartnerSectionHeader
-            title="My business"
-            meta="This month"
+            title="Business pulse"
             action={
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="View business"
-                onPress={() => router.push('/(tabs)/business')}
-                hitSlop={6}
+                accessibilityLabel="Open business pulse"
+                hitSlop={8}
+                onPress={() => router.push('/pulse')}
               >
-                <Text style={styles.sectionAction}>View business</Text>
+                <Text style={styles.sectionAction}>View</Text>
               </Pressable>
             }
           />
 
-          <View style={styles.businessCard}>
-            <View style={styles.businessMain}>
-              <Text style={styles.businessEyebrow}>GROSS PREMIUM</Text>
-              <Text style={styles.businessPremium}>
-                {formatMoney(data.business.premium_this_month)}
-              </Text>
-              <Trend
-                value={Number(data.business.premium_change_percent || 0)}
-                hasPrevious={Number(data.business.premium_last_month || 0) > 0}
-              />
-            </View>
-
-            <View style={styles.businessStats}>
-              <BusinessStat
-                value={data.business.policies_this_month}
-                label="Policies"
-              />
-              <BusinessStat
-                value={data.business.total_customers}
-                label="Customers"
-              />
-              <BusinessStat
-                value={data.business.renewals_30_days}
-                label="Renewals"
-              />
-              <BusinessStat
-                value={data.service.active_claims}
-                label="Claims"
-              />
-            </View>
-          </View>
-
-          <PartnerSectionHeader title="Business pulse" />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Open business pulse. ${pulseTitle(data)}`}
             onPress={() => router.push('/pulse')}
-            style={({ pressed }) => [styles.pulseCard, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.pulseRow, pressed && styles.pressed]}
           >
-            <View style={styles.pulseTop}>
-              <View style={styles.pulseHeading}>
-                <Text style={styles.pulseEyebrow}>YOUR PULSE</Text>
-                <Text style={styles.pulseTitle}>{pulseTitle(data)}</Text>
+            <View style={styles.pulseMain}>
+              <Text style={styles.pulseTitle}>{pulseTitle(data)}</Text>
+              <View style={styles.pulseSignals}>
+                <PartnerStatusIndicator
+                  label={`Business ${humanize(data.pulse.business_momentum)}`}
+                  tone={data.pulse.business_momentum === 'rising' ? 'success' : 'neutral'}
+                />
+                <PartnerStatusIndicator
+                  label={data.business.renewals_7_days ? `${data.business.renewals_7_days} renewals due` : 'Renewals clear'}
+                  tone={data.business.renewals_7_days ? 'warning' : 'success'}
+                />
+                <PartnerStatusIndicator
+                  label={data.service.claims_need_attention ? `${data.service.claims_need_attention} claims` : 'Claims steady'}
+                  tone={data.service.claims_need_attention ? 'warning' : 'success'}
+                />
               </View>
-              <View style={styles.pulseOrb}>
-                <Ionicons name="pulse-outline" size={24} color="#FFFFFF" />
-              </View>
             </View>
-
-            <View style={styles.pulseSignals}>
-              <Signal label="Business" value={humanize(data.pulse.business_momentum)} />
-              <Signal label="Renewals" value={data.business.renewals_7_days ? `${data.business.renewals_7_days} due` : 'Clear'} />
-              <Signal label="Service" value={data.service.claims_need_attention ? `${data.service.claims_need_attention} attention` : 'Steady'} />
-            </View>
-
-            <View style={styles.pulseFooter}>
-              <Text style={styles.pulseFooterText}>See what is shaping today</Text>
-              <Ionicons name="arrow-forward" size={15} color="#D8D6FF" />
-            </View>
+            <Ionicons name="chevron-forward" size={18} color="#9CA6B5" />
           </Pressable>
 
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Open impact. ${impactTitle(data)}`}
             onPress={() => router.push('/impact')}
-            style={({ pressed }) => [styles.characterCard, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.impactRow, pressed && styles.pressed]}
           >
-            <View style={styles.characterIcon}>
-              <Ionicons name="heart-outline" size={21} color={partnerTheme.colors.accent} />
+            <View style={styles.impactIcon}>
+              <Ionicons name="heart-outline" size={19} color={partnerTheme.colors.accent} />
             </View>
-            <View style={styles.characterBody}>
-              <Text style={styles.characterEyebrow}>YOUR IMPACT</Text>
-              <Text style={styles.characterTitle}>{impactTitle(data)}</Text>
-              <Text style={styles.characterText}>{impactText(data)}</Text>
+            <View style={styles.impactCopy}>
+              <Text style={styles.impactEyebrow}>YOUR IMPACT</Text>
+              <Text numberOfLines={1} style={styles.impactTitle}>{impactTitle(data)}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={17} color="#7F9896" />
+            <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
           </Pressable>
 
           {stories.length ? (
@@ -270,27 +308,21 @@ export default function PartnerHomeScreen() {
 function HomeSkeleton() {
   return (
     <View>
+      <PartnerSkeleton height={164} radius={16} />
       <View style={styles.skeletonHeader}>
-        <PartnerSkeleton width="58%" height={18} />
-        <PartnerSkeleton width={74} height={14} />
+        <PartnerSkeleton width="34%" height={18} />
+        <PartnerSkeleton width={88} height={14} />
       </View>
-      <View style={styles.skeletonList}>
-        <PartnerSkeleton height={78} radius={16} />
-        <PartnerSkeleton height={78} radius={16} />
-      </View>
+      <PartnerSkeleton height={156} radius={14} />
       <View style={styles.skeletonHeader}>
-        <PartnerSkeleton width="35%" height={18} />
+        <PartnerSkeleton width="30%" height={18} />
       </View>
       <View style={styles.quickGrid}>
-        <PartnerSkeleton width="23%" height={88} radius={16} />
-        <PartnerSkeleton width="23%" height={88} radius={16} />
-        <PartnerSkeleton width="23%" height={88} radius={16} />
-        <PartnerSkeleton width="23%" height={88} radius={16} />
+        <PartnerSkeleton width="23%" height={72} radius={14} />
+        <PartnerSkeleton width="23%" height={72} radius={14} />
+        <PartnerSkeleton width="23%" height={72} radius={14} />
+        <PartnerSkeleton width="23%" height={72} radius={14} />
       </View>
-      <View style={styles.skeletonHeader}>
-        <PartnerSkeleton width="42%" height={18} />
-      </View>
-      <PartnerSkeleton height={160} radius={22} />
     </View>
   );
 }
@@ -308,33 +340,17 @@ function QuickAction({ icon, label, onPress }: {
       style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}
     >
       <View style={styles.quickIcon}>
-        <Ionicons name={icon} size={22} color={partnerTheme.colors.brand} />
+        <Ionicons name={icon} size={20} color={partnerTheme.colors.brand} />
       </View>
-      <Text style={styles.quickLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
     </Pressable>
   );
 }
 
-function Signal({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.signal}>
-      <Text style={styles.signalLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.signalValue}>{value}</Text>
-    </View>
-  );
-}
-
-function BusinessStat({ value, label }: { value: number | string; label: string }) {
-  return (
-    <View style={styles.businessStat}>
-      <Text style={styles.businessStatValue}>{value}</Text>
-      <Text style={styles.businessStatLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function Trend({ value, hasPrevious, comparisonLabel = 'last month' }: { value: number; hasPrevious: boolean; comparisonLabel?: string }) {
-  if (!hasPrevious) return <Text style={styles.trendNeutral}>First recorded comparison period</Text>;
+function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
+  if (!hasPrevious) {
+    return <Text style={styles.trendNeutral}>First recorded comparison period</Text>;
+  }
   const positive = value >= 0;
   return (
     <View style={styles.trend}>
@@ -344,7 +360,7 @@ function Trend({ value, hasPrevious, comparisonLabel = 'last month' }: { value: 
         color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning}
       />
       <Text style={[styles.trendText, { color: positive ? partnerTheme.colors.success : partnerTheme.colors.warning }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} {comparisonLabel}
+        {Math.abs(value).toFixed(1)}% {positive ? 'above' : 'below'} last month
       </Text>
     </View>
   );
@@ -364,29 +380,29 @@ function impactTitle(data: PartnerHomeData) {
   return 'Your impact starts with every customer you help';
 }
 
-function impactText(data: PartnerHomeData) {
-  const parts = [];
-  if (data.impact.customers_served > 0) parts.push(`${data.impact.customers_served} customers served`);
-  if (data.impact.claims_assisted > 0) parts.push(`${data.impact.claims_assisted} claims assisted`);
-  return parts.length ? parts.join(' · ') : 'Business and service milestones will appear here as they happen.';
-}
-
-function todayIcon(kind: PartnerHomeData['today'][number]['kind']) {
+function workIcon(kind: PartnerHomeData['today'][number]['kind']) {
   if (kind === 'intake_attention') return 'document-text-outline' as const;
   if (kind === 'renewal') return 'refresh-outline' as const;
   return 'shield-outline' as const;
 }
 
-function todayIconColor(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return '#9A5B12';
+function workIconColor(kind: PartnerHomeData['today'][number]['kind']) {
+  if (kind === 'intake_attention') return partnerTheme.colors.warning;
   if (kind === 'renewal') return partnerTheme.colors.brand;
   return partnerTheme.colors.accent;
 }
 
-function todayIconTone(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return styles.todayIconWarn;
-  if (kind === 'renewal') return styles.todayIconBrand;
-  return styles.todayIconAccent;
+function workIconTone(kind: PartnerHomeData['today'][number]['kind']) {
+  if (kind === 'intake_attention') return styles.workIconWarn;
+  if (kind === 'renewal') return styles.workIconBrand;
+  return styles.workIconAccent;
+}
+
+function emptyWorkLabel(tab: WorkTab) {
+  if (tab === 'renewals') return 'No urgent renewals.';
+  if (tab === 'claims') return 'No claims need attention.';
+  if (tab === 'intakes') return 'No Policy Intakes need attention.';
+  return 'You are clear for now.';
 }
 
 function greeting(name: string) {
@@ -423,10 +439,8 @@ function formatUpdatedAt(value: string) {
   return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
 }
 
-function attentionMeta(data: PartnerHomeData) {
-  const count = data.today.reduce((sum, item) => sum + Math.max(item.count || 0, 1), 0);
-  if (!count) return 'All clear';
-  return `${count} ${count === 1 ? 'item' : 'items'}`;
+function attentionCount(data: PartnerHomeData) {
+  return data.today.reduce((sum, item) => sum + Math.max(item.count || 0, 1), 0);
 }
 
 const styles = StyleSheet.create({
@@ -457,134 +471,174 @@ const styles = StyleSheet.create({
     backgroundColor: partnerTheme.colors.brandSoft,
   },
   avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
-  refreshWarning: { marginBottom: 2 },
-  pressed: { opacity: 0.78 },
+  refreshWarning: { marginBottom: 6 },
+  pressed: { opacity: 0.76 },
 
-  todayList: { gap: 8 },
-  todayRow: {
-    minHeight: 66,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    paddingHorizontal: 13,
-    borderRadius: 16,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
+  businessBlock: {
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: partnerTheme.colors.line,
   },
-  todayIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  todayIconWarn: { backgroundColor: partnerTheme.colors.warningSoft },
-  todayIconBrand: { backgroundColor: partnerTheme.colors.brandSoft },
-  todayIconAccent: { backgroundColor: partnerTheme.colors.accentSoft },
-  todayBody: { flex: 1 },
-  todayTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  todayTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  todayCount: {
-    minWidth: 24,
-    overflow: 'hidden',
-    borderRadius: partnerTheme.radius.pill,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    color: partnerTheme.colors.brandStrong,
-    backgroundColor: partnerTheme.colors.brandSoft,
-    textAlign: 'center',
+  businessHeading: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  businessLabel: {
+    color: partnerTheme.colors.brand,
+    letterSpacing: 0.7,
     ...partnerTheme.typography.meta,
   },
-  todaySubtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  clearCard: {
-    minHeight: 66,
+  businessPremium: {
+    marginTop: 4,
+    color: partnerTheme.colors.ink,
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '800',
+  },
+  businessCaption: {
+    marginTop: 1,
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.caption,
+  },
+  businessView: {
+    minHeight: partnerTheme.control.minTouchTarget,
+    minWidth: partnerTheme.control.minTouchTarget,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
-    paddingHorizontal: 13,
-    borderRadius: 16,
-    backgroundColor: '#F6FCF8',
-    borderWidth: 1,
-    borderColor: '#D7ECDC',
+    justifyContent: 'flex-end',
+    gap: 2,
   },
-  clearIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E8F6ED' },
-  clearBody: { flex: 1 },
-  clearTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  clearText: { marginTop: 3, color: '#5F7967', ...partnerTheme.typography.caption },
-
-  quickGrid: { flexDirection: 'row', gap: 8 },
-  quickAction: {
-    flex: 1,
-    minHeight: 74,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 4,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  quickIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  quickLabel: { marginTop: 5, color: partnerTheme.colors.ink, textAlign: 'center', ...partnerTheme.typography.meta },
-
-  sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  businessCard: {
-    flexDirection: 'row',
-    gap: 14,
-    borderRadius: partnerTheme.radius.xl,
-    padding: 14,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  businessMain: {
-    width: '46%',
-    paddingRight: 13,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    borderRightColor: partnerTheme.colors.line,
-  },
-  businessEyebrow: { color: partnerTheme.colors.brand, letterSpacing: 0.8, ...partnerTheme.typography.meta },
-  businessPremium: { marginTop: 6, color: partnerTheme.colors.ink, fontSize: 24, lineHeight: 30, fontWeight: '800' },
-  trend: { marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  trendText: { flex: 1, ...partnerTheme.typography.meta },
-  trendNeutral: { marginTop: 9, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  businessStats: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', rowGap: 12 },
-  businessStat: { width: '50%' },
-  businessStatValue: { color: partnerTheme.colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '800' },
-  businessStatLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-
-  pulseCard: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
-  pulseTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  pulseHeading: { flex: 1 },
-  pulseEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  pulseTitle: { marginTop: 5, color: '#FFFFFF', fontSize: 19, lineHeight: 25, fontWeight: '800' },
-  pulseOrb: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
-  pulseSignals: { marginTop: 12, flexDirection: 'row', gap: 7 },
-  signal: { flex: 1, minHeight: 56, borderRadius: 13, padding: 10, backgroundColor: '#1C2637' },
-  signalLabel: { color: '#A6B0C0', ...partnerTheme.typography.meta },
-  signalValue: { marginTop: 4, color: '#FFFFFF', ...partnerTheme.typography.caption },
-  pulseFooter: {
+  businessViewText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  trend: { marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trendText: { ...partnerTheme.typography.meta },
+  trendNeutral: { marginTop: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  businessStats: {
     marginTop: 14,
     paddingTop: 11,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#3B4659',
+    borderTopColor: partnerTheme.colors.line,
   },
-  pulseFooterText: { color: '#D8D6FF', ...partnerTheme.typography.caption },
+  statCell: {
+    flex: 1,
+    paddingRight: 8,
+    marginRight: 8,
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderRightColor: partnerTheme.colors.line,
+  },
+  statCellLast: { flex: 1 },
 
-  characterCard: {
-    marginTop: 10,
-    minHeight: 68,
+  workSection: { marginTop: 14 },
+  workHeader: {
+    minHeight: 34,
+    paddingHorizontal: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    borderRadius: partnerTheme.radius.lg,
-    padding: 12,
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  workTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  tabsWrap: {
+    marginHorizontal: -16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: partnerTheme.colors.line,
+  },
+  workList: { paddingHorizontal: 0 },
+  workIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  workIconWarn: { backgroundColor: partnerTheme.colors.warningSoft },
+  workIconBrand: { backgroundColor: partnerTheme.colors.brandSoft },
+  workIconAccent: { backgroundColor: partnerTheme.colors.accentSoft },
+  clearRow: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: partnerTheme.colors.line,
+  },
+  clearText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+
+  quickGrid: { flexDirection: 'row', gap: 6 },
+  quickAction: {
+    flex: 1,
+    minHeight: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  quickIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  quickLabel: {
+    marginTop: 5,
+    color: partnerTheme.colors.ink,
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+  },
+
+  sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
+  pulseRow: {
+    minHeight: 84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: partnerTheme.colors.line,
+  },
+  pulseMain: { flex: 1 },
+  pulseTitle: { color: partnerTheme.colors.ink, fontSize: 16, lineHeight: 21, fontWeight: '800' },
+  pulseSignals: {
+    marginTop: 7,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 12,
+    rowGap: 4,
+  },
+
+  impactRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 7,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: partnerTheme.colors.line,
+  },
+  impactIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: partnerTheme.colors.accentSoft,
   },
-  characterIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
-  characterBody: { flex: 1 },
-  characterEyebrow: { color: '#3C7B78', letterSpacing: 0.8, ...partnerTheme.typography.meta },
-  characterTitle: { marginTop: 4, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  characterText: { marginTop: 3, color: '#56716F', ...partnerTheme.typography.caption },
-  stories: { marginTop: partnerTheme.spacing.md },
+  impactCopy: { flex: 1 },
+  impactEyebrow: {
+    color: partnerTheme.colors.accent,
+    letterSpacing: 0.6,
+    ...partnerTheme.typography.meta,
+  },
+  impactTitle: {
+    marginTop: 2,
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.bodyStrong,
+  },
+  stories: { marginTop: 12 },
 
   skeletonHeader: {
     marginTop: partnerTheme.spacing.xl,
@@ -594,5 +648,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  skeletonList: { gap: 8 },
 });
