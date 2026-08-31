@@ -53,11 +53,13 @@ assert(vehicleActions.includes("&saved_vehicle_id="));
 
 const vehicleCreatedPopup=read("components/vehicle-created-action-popup.tsx");
 assert(vehicleCreatedPopup.includes("VEHICLE CREATED"));
+assert(vehicleCreatedPopup.includes("The vehicle has been successfully created."));
+assert(vehicleCreatedPopup.includes("VehicleCreatedIcon"));
 assert(vehicleCreatedPopup.includes("createPortal"));
 assert(vehicleCreatedPopup.includes("fixed inset-0"));
 assert(vehicleCreatedPopup.includes("place-items-center"));
-assert(vehicleCreatedPopup.includes(">\n          OK\n        </Link>"));
-assert(vehicleCreatedPopup.includes(">\n          ADD POLICY\n        </Link>"));
+assert(vehicleCreatedPopup.includes(">\n            OK\n          </Link>"));
+assert(vehicleCreatedPopup.includes(">\n            ADD POLICY\n          </Link>"));
 assert(vehicleCreatedPopup.includes("/policies/new?customer_id="));
 assert(vehicleCreatedPopup.includes("&vehicle_id="));
 
