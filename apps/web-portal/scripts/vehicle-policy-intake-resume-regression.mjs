@@ -33,6 +33,8 @@ const customerForm=read("app/customers/customer-onboarding-form.tsx");
 assert(customerForm.includes("CUSTOMER CREATED"));
 assert(customerForm.includes(">OK</button>"));
 assert(customerForm.includes(">ADD VEHICLE</button>"));
+assert(customerForm.includes("/assets/Custom-Icons/optimized-128/customers.png"));
+assert(customerForm.includes("The customer has been created successfully."));
 assert(customerForm.includes('label="Save Customer"'));
 assert(!customerForm.includes("Save Customer &amp; Continue with Vehicle"));
 assert(customerForm.includes('name="return_to"'));
