@@ -28,7 +28,7 @@ export type PolicyIntakeWorkspaceRow = {
   assigned_to_profile_id: string | null;
 };
 
-type ViewKey = "action" | "in_review" | "processing" | "completed" | "rejected" | "all";
+type ViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "rejected" | "all";
 const PAGE_SIZE = 15;
 
 const rowTones: Record<string, string> = {
@@ -113,16 +113,18 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   const stats = useMemo(() => ({
     all: baseFiltered.length,
     action: baseFiltered.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length,
-    inReview: baseFiltered.filter((row) => row.status === "in_review" && (!reviewer || row.assigned_to_profile_id === currentProfileId)).length,
+    inReview: baseFiltered.filter((row) => row.status === "in_review").length,
+    myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length,
     processing: baseFiltered.filter((row) => row.status === "processing" && row.ocr_status !== "failed").length,
     completed: baseFiltered.filter((row) => row.status === "completed").length,
     rejected: baseFiltered.filter((row) => row.status === "rejected").length,
-  }), [baseFiltered]);
+  }), [baseFiltered, currentProfileId]);
 
   const filtered = useMemo(() => baseFiltered.filter((row) => {
     if (view === "all") return true;
     if (view === "action") return row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed");
-    if (view === "in_review") return row.status === "in_review" && (!reviewer || row.assigned_to_profile_id === currentProfileId);
+    if (view === "in_review") return row.status === "in_review";
+    if (view === "mine") return row.status === "in_review" && row.assigned_to_profile_id === currentProfileId;
     if (view === "processing") return row.status === "processing" && row.ocr_status !== "failed";
     return row.status === view;
   }), [baseFiltered, view]);
@@ -140,7 +142,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     icon={<ShieldCheck className="h-5 w-5" />}
     metrics={reviewer ? [
       { label: "Action required", value: stats.action, hint: "Ready / manual review", tone: "amber" },
-      { label: "In review", value: stats.inReview, hint: "Currently being handled", tone: "blue" },
+      { label: "In review", value: stats.inReview, hint: `${stats.myActiveWork} assigned to you`, tone: "blue" },
       { label: "Processing", value: stats.processing, hint: "Fetching policy details", tone: "navy" },
       { label: "Completed", value: stats.completed, hint: "Finalized intakes", tone: "green" },
     ] : [
@@ -167,20 +169,33 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
       </div>
     </div>
 
-    <div className="border-b border-[#E5ECF5] bg-[#FBFCFE] px-3 py-2 sm:px-4"><RegisterViewTabs value={view} onChange={changeView} options={reviewer ? [
-      { value: "action", label: "Action Required", count: stats.action },
-      { value: "in_review", label: "My Active Work", count: stats.inReview },
-      { value: "processing", label: "Processing", count: stats.processing },
-      { value: "completed", label: "Completed", count: stats.completed },
-      { value: "rejected", label: "Rejected", count: stats.rejected },
-      { value: "all", label: "All", count: stats.all },
-    ] : [
-      { value: "all", label: "All", count: stats.all },
-      { value: "processing", label: "Processing", count: stats.processing },
-      { value: "in_review", label: "In Review", count: stats.inReview },
-      { value: "completed", label: "Completed", count: stats.completed },
-      { value: "rejected", label: "Rejected", count: stats.rejected },
-    ]} /></div>
+    <div className="border-b border-[#E5ECF5] bg-[#FBFCFE] px-3 py-2 sm:px-4">
+      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+        <RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [
+          { value: "action", label: "Action Required", count: stats.action },
+          { value: "in_review", label: "In Review", count: stats.inReview },
+          { value: "processing", label: "Processing", count: stats.processing },
+          { value: "completed", label: "Completed", count: stats.completed },
+          { value: "rejected", label: "Rejected", count: stats.rejected },
+          { value: "all", label: "All", count: stats.all },
+        ] : [
+          { value: "all", label: "All", count: stats.all },
+          { value: "processing", label: "Processing", count: stats.processing },
+          { value: "in_review", label: "In Review", count: stats.inReview },
+          { value: "completed", label: "Completed", count: stats.completed },
+          { value: "rejected", label: "Rejected", count: stats.rejected },
+        ]} />
+        {reviewer ? <button
+          type="button"
+          onClick={() => changeView("mine")}
+          aria-pressed={view === "mine"}
+          className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg border px-3 text-[10px] font-bold transition ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`}
+          title="Show only policy intakes currently assigned to you"
+        >
+          My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>
+        </button> : null}
+      </div>
+    </div>
 
     <div className="p-3 md:hidden">{pageRows.map((row) => <Link key={row.id} href={`/policy-intakes/${row.id}`} className={`mb-2 block rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><div className="flex items-start justify-between gap-2"><div><p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">OCR:</span> {ocrLabel(row.ocr_status)}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted:</span> {formatDateTime(row.created_at)}</p></div></Link>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
 
