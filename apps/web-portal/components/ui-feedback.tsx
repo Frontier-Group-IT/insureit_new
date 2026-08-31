@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { primaryActionClassName, secondaryActionClassName } from "@/components/action-styles";
 
 export function FeedbackToast({
@@ -59,6 +60,12 @@ export function AlertModal({
   onClose: () => void;
   autoCloseMs?: number;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     if (!open) return;
     const timer = window.setTimeout(onClose, autoCloseMs);
@@ -72,10 +79,10 @@ export function AlertModal({
     };
   }, [autoCloseMs, message, onClose, open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-[#071D49]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="alert-title">
+  return createPortal(
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-[#071D49]/35 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="alert-title">
       <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-red-100 bg-white shadow-[0_24px_70px_rgba(7,29,73,0.25)]">
         <div className="border-b border-[#F3E5E5] px-5 py-4">
           <div className="flex items-start gap-3">
@@ -90,7 +97,8 @@ export function AlertModal({
           <button type="button" onClick={onClose} className={primaryActionClassName}>{buttonLabel}</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
