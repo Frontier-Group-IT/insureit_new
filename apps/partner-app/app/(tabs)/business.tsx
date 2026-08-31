@@ -139,7 +139,7 @@ export default function BusinessScreen() {
             </View>
           </View>
 
-          <PartnerSectionHeader title="Business & service today" />
+          <PartnerSectionHeader title="Today" />
           <View style={styles.actionGrid}>
             <ActionStat
               icon="refresh-outline"
@@ -177,7 +177,7 @@ export default function BusinessScreen() {
             )}
           </View>
 
-          <PartnerSectionHeader title="Payout" meta={payout?.available ? 'Your intermediary payout' : 'Restricted by account'} />
+          <PartnerSectionHeader title="Payout" meta={payout?.available ? undefined : 'Restricted'} />
           <PayoutSection payout={payout} />
 
           <PartnerSectionHeader
@@ -201,8 +201,8 @@ export default function BusinessScreen() {
               <Text style={styles.networkTitle}>{network.total_partners} Partner {network.total_partners === 1 ? 'family' : 'families'}</Text>
               <Text style={styles.networkText}>
                 {network.total_groups > 0
-                  ? `${network.total_groups} active Group${network.total_groups === 1 ? '' : 's'} · tap to explore Partner → POSP/MISP relationships.`
-                  : 'Tap to explore Partner → POSP/MISP relationships and standalone Partner families.'}
+                  ? `${network.total_groups} active Group${network.total_groups === 1 ? '' : 's'}`
+                  : 'Partner network'}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={17} color="#9AA3B2" />
@@ -248,7 +248,7 @@ function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
         <View style={styles.restrictedIcon}><Ionicons name="lock-closed-outline" size={21} color={partnerTheme.colors.brand} /></View>
         <View style={styles.restrictedBody}>
           <Text style={styles.restrictedTitle}>Commercial payout details are restricted</Text>
-          <Text style={styles.restrictedText}>{payout.reason} Internal pay-in and reconciliation calculations are not exposed here.</Text>
+          <Text style={styles.restrictedText}>{payout.reason}</Text>
         </View>
       </View>
     );
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
   scope: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
   feedback: { marginBottom: 10 },
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 19, backgroundColor: partnerTheme.colors.nav },
+  hero: { borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: partnerTheme.colors.nav },
   heroHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
   heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 28, lineHeight: 34, fontWeight: '800' },
@@ -436,25 +436,25 @@ const styles = StyleSheet.create({
   trendBadgeText: { ...partnerTheme.typography.meta },
   trendBadgeNeutral: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 8, backgroundColor: '#303A4D' },
   trendBadgeNeutralText: { color: '#C7CFDC', ...partnerTheme.typography.meta },
-  heroStats: { marginTop: 18, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3A4558', paddingTop: 13 },
+  heroStats: { marginTop: 13, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3A4558', paddingTop: 10 },
   heroStat: { flex: 1 },
   heroStatValue: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: '800' },
   heroStatLabel: { marginTop: 3, color: '#9EA9BA', ...partnerTheme.typography.meta },
   actionGrid: { flexDirection: 'row', gap: 9 },
-  actionStat: { flex: 1, minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  actionStat: { flex: 1, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   actionIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   actionBody: { flex: 1 },
   actionValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '800' },
   actionLabel: { marginTop: 2, color: partnerTheme.colors.ink, ...partnerTheme.typography.meta },
   actionMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  chartCard: { borderRadius: 18, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  chartCard: { borderRadius: 18, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   chart: { height: 126, flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   barColumn: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { height: 14, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   barTrack: { height: 80, width: '74%', justifyContent: 'flex-end', overflow: 'hidden', borderRadius: 7, backgroundColor: '#F0F2F7' },
   bar: { width: '100%', borderRadius: 7, backgroundColor: partnerTheme.colors.brand },
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  mixCard: { borderRadius: 18, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  mixCard: { borderRadius: 18, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   mixRow: { marginBottom: 13 },
   mixTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   mixLabel: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   mixFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.accent },
   noData: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
   payoutGrid: { flexDirection: 'row', gap: 9 },
-  payoutMetric: { flex: 1, minHeight: 100, borderRadius: partnerTheme.radius.lg, padding: 14, borderWidth: 1 },
+  payoutMetric: { flex: 1, minHeight: 84, borderRadius: partnerTheme.radius.lg, padding: 12, borderWidth: 1 },
   payoutMetricWarning: { backgroundColor: partnerTheme.colors.warningSoft, borderColor: '#F0D8B5' },
   payoutMetricSuccess: { backgroundColor: partnerTheme.colors.successSoft, borderColor: '#CDE8D8' },
   payoutMetricLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
@@ -477,13 +477,13 @@ const styles = StyleSheet.create({
   payoutCustomer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   payoutRight: { alignItems: 'flex-end', gap: 4 },
   payoutAmount: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  restrictedCard: { minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  restrictedCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   restrictedIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   restrictedBody: { flex: 1 },
   restrictedTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   restrictedText: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  networkCard: { minHeight: 92, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  networkCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   networkVisual: { width: 58, height: 64, alignItems: 'center' },
   networkRoot: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandStrong },
   networkLine: { width: 1, height: 9, backgroundColor: '#C8CFDB' },

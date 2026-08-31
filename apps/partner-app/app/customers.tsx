@@ -94,7 +94,6 @@ export default function CustomersScreen() {
           onClear={() => setQuery('')}
           placeholder="Search name, code, phone, email or city"
         />
-        <Text style={styles.searchHint}>Search updates automatically as you type.</Text>
       </View>
 
       <PartnerSectionHeader
@@ -246,10 +245,10 @@ const styles = StyleSheet.create({
   summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   summaryCard: {
     width: '48%',
-    minHeight: 92,
+    minHeight: 76,
     justifyContent: 'center',
     borderRadius: partnerTheme.radius.lg,
-    padding: partnerTheme.spacing.lg,
+    padding: 13,
     backgroundColor: partnerTheme.colors.surface,
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
@@ -258,12 +257,11 @@ const styles = StyleSheet.create({
   summaryLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   banner: { marginTop: 10 },
   inlineBanner: { marginBottom: 10 },
-  search: { marginTop: partnerTheme.spacing.lg },
-  searchHint: { marginTop: 6, marginLeft: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  search: { marginTop: partnerTheme.spacing.md },
   separator: { height: 10 },
   customerRow: {
     borderRadius: partnerTheme.radius.lg,
-    padding: partnerTheme.spacing.lg,
+    padding: 13,
     backgroundColor: partnerTheme.colors.surface,
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
@@ -282,7 +280,7 @@ const styles = StyleSheet.create({
   customerIdentity: { flex: 1 },
   customerName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.cardTitle },
   customerCode: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  metaGrid: { marginTop: 14, flexDirection: 'row', flexWrap: 'wrap', rowGap: 12 },
+  metaGrid: { marginTop: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 9 },
   meta: { width: '50%', paddingRight: 8 },
   metaLabel: {
     color: '#8A94A6',
@@ -293,8 +291,8 @@ const styles = StyleSheet.create({
   metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
   footer: {
     minHeight: partnerTheme.control.minTouchTarget,
-    marginTop: 10,
-    paddingTop: 9,
+    marginTop: 7,
+    paddingTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

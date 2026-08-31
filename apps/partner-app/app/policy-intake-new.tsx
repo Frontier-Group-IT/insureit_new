@@ -167,21 +167,13 @@ export default function NewPolicyIntakeScreen() {
         <PartnerStateView state="loading" title="Preparing Policy Intake" />
       ) : (
         <>
-          <View style={styles.hero}>
-            <View style={styles.heroIcon}><Ionicons name="document-text-outline" size={22} color="#FFFFFF" /></View>
-            <View style={styles.heroBody}>
-              <Text style={styles.heroTitle}>Three details only</Text>
-              <Text style={styles.heroText}>Choose the authorized lead source, enter the customer mobile number, and attach the policy copy. Operations completes the rest.</Text>
-            </View>
-          </View>
-
           {draftRestored ? (
             <View style={styles.draftBanner}>
               <PartnerBanner
                 tone="info"
                 icon="bookmark-outline"
                 title="Draft restored"
-                message="Your lead source and customer mobile were restored. For privacy and file reliability, choose the policy copy again before submitting."
+                message="Lead source and mobile restored. Re-select the policy file before submitting."
               />
             </View>
           ) : null}
@@ -274,13 +266,6 @@ export default function NewPolicyIntakeScreen() {
             />
           </View>
 
-          <View style={styles.note}>
-            <PartnerBanner
-              tone="info"
-              icon="shield-checkmark-outline"
-              message="The uploaded copy goes to the existing controlled Policy Intake queue. It does not book or alter a policy directly."
-            />
-          </View>
         </>
       )}
     </PartnerScreen>
@@ -322,9 +307,9 @@ function progressLabel(progress: PartnerPolicyIntakeUploadProgress | null) {
 }
 
 function progressMessage(progress: PartnerPolicyIntakeUploadProgress) {
-  if (progress.stage === 'preparing') return 'Creating a secure one-time upload destination.';
-  if (progress.stage === 'submitting') return 'Linking the uploaded document to the Operations queue.';
-  return progress.percent != null ? `${progress.percent}% of the policy copy uploaded` : 'Uploading securely to INSUREIT.';
+  if (progress.stage === 'preparing') return 'Preparing upload.';
+  if (progress.stage === 'submitting') return 'Submitting to Operations.';
+  return progress.percent != null ? `${progress.percent}% uploaded` : 'Uploading policy copy.';
 }
 
 function formatBytes(value: number) {
@@ -334,42 +319,36 @@ function formatBytes(value: number) {
 }
 
 const styles = StyleSheet.create({
-  hero: { flexDirection: 'row', gap: 12, borderRadius: partnerTheme.radius.xl, padding: partnerTheme.spacing.lg, backgroundColor: partnerTheme.colors.nav },
-  heroIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#3B4358' },
-  heroBody: { flex: 1 },
-  heroTitle: { color: '#FFFFFF', ...partnerTheme.typography.cardTitle },
-  heroText: { marginTop: 4, color: '#C5CCDA', ...partnerTheme.typography.caption },
-  draftBanner: { marginTop: partnerTheme.spacing.md },
-  section: { marginTop: partnerTheme.spacing.xl },
+  draftBanner: { marginTop: 2 },
+  section: { marginTop: partnerTheme.spacing.lg },
   label: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
-  fixedSource: { marginTop: partnerTheme.spacing.xl, borderRadius: partnerTheme.radius.lg, padding: partnerTheme.spacing.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  fixedSource: { marginTop: partnerTheme.spacing.lg, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   fixedSourceName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   fixedSourceMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sourceList: { gap: 8 },
-  source: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.md, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  source: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.md, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   sourceActive: { borderColor: partnerTheme.colors.brand, backgroundColor: partnerTheme.colors.brandSoft },
   sourceBody: { flex: 1 },
   sourceName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   sourceNameActive: { color: partnerTheme.colors.brandStrong },
   sourceMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sourceMetaActive: { color: '#68629A' },
-  upload: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderStyle: 'dashed', borderColor: '#C7D0DE' },
+  upload: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderStyle: 'dashed', borderColor: '#C7D0DE' },
   uploadSelected: { borderStyle: 'solid', borderColor: '#B7DBC8', backgroundColor: '#F7FCF9' },
   uploadIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
   uploadBody: { flex: 1 },
   uploadTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   uploadMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   disabled: { opacity: 0.55 },
-  progressCard: { marginTop: partnerTheme.spacing.lg, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.brandSoft, borderWidth: 1, borderColor: '#D9D5FF' },
+  progressCard: { marginTop: partnerTheme.spacing.md, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.brandSoft, borderWidth: 1, borderColor: '#D9D5FF' },
   progressTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   progressTitle: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.bodyStrong },
   progressText: { marginTop: 3, color: '#68629A', ...partnerTheme.typography.caption },
   progressPercent: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
   progressTrack: { height: 7, marginTop: 11, overflow: 'hidden', borderRadius: 999, backgroundColor: '#D8D5F5' },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.brandStrong },
-  feedback: { marginTop: partnerTheme.spacing.lg },
+  feedback: { marginTop: partnerTheme.spacing.md },
   retryHint: { marginTop: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  submit: { marginTop: partnerTheme.spacing.xl },
-  note: { marginTop: partnerTheme.spacing.md },
+  submit: { marginTop: partnerTheme.spacing.lg },
   pressed: { opacity: 0.82 },
 });
