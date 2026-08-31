@@ -10,11 +10,14 @@ assert(!forms.includes("+ Create new customer"));
 
 const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
 assert(vehicleSaveChooser.includes("Save Vehicle"));
-assert(vehicleSaveChooser.includes('type="submit"'));
+assert(vehicleSaveChooser.includes('type="button"'));
 assert(vehicleSaveChooser.includes('name="next_action"'));
 assert(vehicleSaveChooser.includes('value="post_save"'));
+assert(vehicleSaveChooser.includes("form.checkValidity()"));
+assert(vehicleSaveChooser.includes("form.requestSubmit()"));
+assert(vehicleSaveChooser.includes("AlertModal"));
+assert(vehicleSaveChooser.includes("is required before the vehicle can be created."));
 assert(!vehicleSaveChooser.includes("ADD POLICY"));
-assert(!vehicleSaveChooser.includes("form.checkValidity()"));
 
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
@@ -41,6 +44,7 @@ assert(vehicleActions.includes("/vehicles/new?vehicle_saved=1&customer_id="));
 assert(vehicleActions.includes("&saved_vehicle_id="));
 
 const vehicleCreatedPopup=read("components/vehicle-created-action-popup.tsx");
+assert(vehicleCreatedPopup.includes("VEHICLE CREATED"));
 assert(vehicleCreatedPopup.includes("createPortal"));
 assert(vehicleCreatedPopup.includes("fixed inset-0"));
 assert(vehicleCreatedPopup.includes("place-items-center"));
@@ -48,6 +52,14 @@ assert(vehicleCreatedPopup.includes(">\n          OK\n        </Link>"));
 assert(vehicleCreatedPopup.includes(">\n          ADD POLICY\n        </Link>"));
 assert(vehicleCreatedPopup.includes("/policies/new?customer_id="));
 assert(vehicleCreatedPopup.includes("&vehicle_id="));
+
+const registrationFields=read("components/vehicle-registration-fields.tsx");
+assert(registrationFields.includes("insureit:vehicle-registration-mode"));
+const specificationFields=read("components/vehicle-class-capacity-fields.tsx");
+assert(specificationFields.includes('registrationMode === "unregistered"'));
+assert(specificationFields.includes('Chassis number{unregistered ? " *" : ""}'));
+assert(specificationFields.includes('Engine number{unregistered ? " *" : ""}'));
+assert(specificationFields.includes("required={unregistered}"));
 
 const handoff=read("app/policy-intakes/handoff-actions.ts");
 assert(handoff.includes("policy_intake_onboarding_drafts"));
