@@ -34,7 +34,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
     <form action={action} className="space-y-3">
       <VehicleOnboardingHeader />
 
-      <VehicleSection number="01" title="Vehicle Ownership" columns="six">
+      <VehicleSection number="01" title="Vehicle Ownership" columns="six" reserveHeaderAction>
         <SelectField
           variant="onboarding"
           label="Customer"
@@ -121,16 +121,17 @@ function VehicleOnboardingHeader() {
   </section>;
 }
 
-function VehicleSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" | "six" }) {
+function VehicleSection({ number, title, children, columns, reserveHeaderAction = false }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" | "six"; reserveHeaderAction?: boolean }) {
   const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : columns === "six" ? "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
-  return <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
-    <div className="flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5">
+  const bodyPadding = reserveHeaderAction ? "px-3.5 pb-3.5 pt-[58px] sm:p-4" : "p-3.5 sm:p-4";
+  return <section className="relative overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+    <div className={`flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5 ${reserveHeaderAction ? "sm:pr-[305px]" : ""}`}>
       <div className="flex items-center gap-2.5">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9.5px] font-bold text-white">{number}</span>
         <h2 className="text-[13px] font-semibold text-[#17203A]">{title}</h2>
       </div>
     </div>
-    <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 p-3.5 sm:p-4 ${grid}`}>{children}</div>
+    <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 ${bodyPadding} ${grid}`}>{children}</div>
   </section>;
 }
 
