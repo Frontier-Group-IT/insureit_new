@@ -1153,3 +1153,86 @@ The next implementation work is therefore:
 
 No later phase is authorized to be mixed into Phase 5 merely for convenience.
 
+
+
+---
+
+## 15. UX refinement checkpoint — 2026-08-31
+
+**STATUS: VERIFIED / ACTIVE REFINEMENT BASELINE**
+
+After Phase 5 and the first approved Phase 6 icon build, the user approved a separate OTA-safe visual/interaction refinement track using Zerodha Kite as the primary UX benchmark and MyJio/Airtel only as secondary visual references.
+
+### Stable runtime boundary
+
+- Installed Partner preview binary remains Android versionCode 3 / runtime `0.1.0`.
+- The native date-picker experiment introduced after that binary caused an OTA/native-runtime compatibility failure.
+- The preview channel was recovered by rolling runtime `0.1.0` back to the embedded APK bundle; installed-device recovery was user-verified.
+- The native date-picker dependency/import was then removed from runtime `0.1.0` OTA source and deferred until a future explicitly approved APK build.
+- Partner CI now blocks `@react-native-community/datetimepicker` from runtime `0.1.0` OTA-delivered source.
+- Later compactness/refinement work was safely restored through OTA after that native mismatch was removed.
+- No new native build is authorized merely for UI refinement.
+
+### Locked UX direction
+
+Primary interaction benchmark: **Zerodha Kite**.
+
+Adopt:
+- compact but readable information hierarchy;
+- flat operational rows rather than cardifying every item;
+- contextual actions close to the object they affect;
+- bottom sheets for lightweight choices/actions;
+- predictable button placement;
+- progressive disclosure;
+- semantic color;
+- restrained motion;
+- repeat-user UX with minimal instructional copy.
+
+Keep:
+- INSUREIT branding, terminology, role/scope behavior and business semantics;
+- existing bottom navigation: Home / Business / Policies / Claims / More.
+
+Do not copy Zerodha branding, trading-specific gestures, or trading color semantics.
+
+### Shared UX foundation delivered
+
+A reusable OTA-safe foundation now exists for:
+- bottom sheets;
+- compact top tabs;
+- bottom action bars;
+- filter sheets;
+- contextual overflow menus;
+- flat operational list rows;
+- dividers;
+- semantic status indicators;
+- compact stat blocks;
+- lightweight entrance/press motion using React Native Animated only.
+
+### Home refinement status
+
+Home has been reworked into a compact working console with:
+- greeting/identity;
+- My Business summary;
+- full Indian formatting for normal monetary values;
+- lighter Gross Premium typography with smaller fractional digits where present;
+- redesigned My Work selector and cleaner work rows;
+- stronger differentiated Quick Action icons;
+- lightweight staggered entrance and press feedback;
+- Your Stories placed before Your Impact;
+- Your Impact summary showing protected motor IDV, vehicles, customers and claims assisted;
+- **Home-only exception:** Active Motor IDV Protected uses compact notation such as `₹32.6K`, `₹20L`, `₹2.4Cr` because the full value is visually too wide;
+- other Partner monetary values remain full Indian-formatted amounts such as `₹32,600`, `₹8,42,000`, `₹1,25,00,000`.
+
+Home section labels use a smaller all-caps, lighter-weight, tracked typography treatment.
+
+### Immediate next refinement slice
+
+Proceed with **R3 list refinement** for:
+- Customers;
+- Policies;
+- Claims;
+- Renewals;
+- Policy Intake history.
+
+R3 should reuse the shared flat-list/top-tab/filter interaction language, reduce unnecessary card chrome, preserve current data/auth/cache/offline behavior, and remain OTA-safe.
+
