@@ -21,14 +21,19 @@ assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&r
 assert(vehiclePage.includes('"manage_customers"'));
 
 const customerForm=read("app/customers/customer-onboarding-form.tsx");
+assert(customerForm.includes("CUSTOMER CREATED"));
 assert(customerForm.includes(">OK</button>"));
 assert(customerForm.includes(">ADD VEHICLE</button>"));
+assert(customerForm.includes('label="Save Customer"'));
 assert(!customerForm.includes("Save Customer &amp; Continue with Vehicle"));
 assert(customerForm.includes('name="return_to"'));
+assert(customerForm.includes('router.push(`/vehicles/new?customer_id='));
+assert(customerForm.includes('router.push(`/customers?success='));
 
 const customerActions=read("app/customers/actions.ts");
 assert(customerActions.includes('returnTo === "vehicle"'));
-assert(customerActions.includes("/vehicles/new?customer_id="));
+assert(customerActions.includes("customerId: customer.id"));
+assert(!customerActions.includes('returnTo === "vehicle") redirect'));
 
 const vehicleActions=read("app/vehicles/vehicle-master-actions.ts");
 assert(vehicleActions.includes('nextAction === "post_save"'));

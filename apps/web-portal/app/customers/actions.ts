@@ -9,7 +9,7 @@ import { canManageMasterData } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { approvePortalOnboardingApplication, beginPortalOnboardingApplication, markPortalOnboardingForCorrection } from "./onboarding-applications";
 
-export type CustomerOnboardingState = { error: string | null; field: string | null };
+export type CustomerOnboardingState = { error: string | null; field: string | null; customerId?: string | null; outcome?: "created" | "updated" | null };
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"]);
@@ -166,6 +166,8 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   try { await approvePortalOnboardingApplication(admin, application.id, customer.id, profile.id); }
   catch (error) { return failure(`Customer was created, but the onboarding application could not be completed: ${error instanceof Error ? error.message : "Unknown error"}`); }
 
-  if (returnTo === "vehicle") redirect(`/vehicles/new?customer_id=${encodeURIComponent(customer.id)}`);
+  if (returnTo === "vehicle") {
+    return { error: null, field: null, customerId: customer.id, outcome: createdCustomer ? "created" : "updated" };
+  }
   redirect(`/customers?success=${createdCustomer ? "customer_created" : "customer_updated"}`);
 }

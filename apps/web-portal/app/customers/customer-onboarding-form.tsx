@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Paperclip } from "lucide-react";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -20,7 +21,8 @@ const partnerLabels: Record<string, string> = { individual_proprietor: "Individu
 const PAN_PATTERN = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 
 export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = false }: Props) {
-  const [formState, formAction] = useActionState(action, { error: null, field: null });
+  const router = useRouter();
+  const [formState, formAction] = useActionState(action, { error: null, field: null, customerId: null, outcome: null });
   const [gstRegistered, setGstRegistered] = useState(false);
   const [cityQuery, setCityQuery] = useState("");
   const [locations, setLocations] = useState<LocationOption[]>([]);
@@ -32,8 +34,6 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
   const [isDirty, setIsDirty] = useState(false);
   const [continuationOpen, setContinuationOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  const returnToInputRef = useRef<HTMLInputElement>(null);
-  const continuationConfirmedRef = useRef(false);
   const snapshotRef = useRef<FormSnapshot>({});
 
   const closeErrorPopup = useCallback(() => {
@@ -75,6 +75,12 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
       }
     });
   }, [formState.error, formState.field]);
+
+  useEffect(() => {
+    if (!returnToVehicle || !formState.customerId || formState.error) return;
+    setIsDirty(false);
+    setContinuationOpen(true);
+  }, [formState.customerId, formState.error, returnToVehicle]);
 
   useEffect(() => {
     if (cityQuery.trim().length < 2 || selectedLocation?.city_name === cityQuery) { setLocations([]); return; }
@@ -145,31 +151,28 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
       setErrorPopup({ message: `${label} is required before the customer can be created.`, field: firstMissing });
       return;
     }
-    if (returnToVehicle) {
-      if (!continuationConfirmedRef.current) {
-        event.preventDefault();
-        setContinuationOpen(true);
-        return;
-      }
-      continuationConfirmedRef.current = false;
-    }
   }
 
   function chooseContinuation(destination: "customers" | "vehicle") {
-    if (!formRef.current || !returnToInputRef.current) return;
-    returnToInputRef.current.value = destination;
-    continuationConfirmedRef.current = true;
+    if (!formState.customerId) return;
     setContinuationOpen(false);
-    requestAnimationFrame(() => formRef.current?.requestSubmit());
+    if (destination === "vehicle") {
+      router.push(`/vehicles/new?customer_id=${encodeURIComponent(formState.customerId)}`);
+      return;
+    }
+    router.push(`/customers?success=${formState.outcome === "updated" ? "customer_updated" : "customer_created"}`);
   }
 
   return (
     <>
       <AlertModal open={Boolean(errorPopup)} message={errorPopup?.message ?? ""} onClose={closeErrorPopup} autoCloseMs={5000} />
-      {continuationOpen ? <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/30 p-4" role="dialog" aria-modal="true" aria-label="Customer saved actions">
-        <div className="flex w-full max-w-[300px] items-center gap-2 rounded-xl border border-[#D8E2EF] bg-white p-3 shadow-xl">
-          <button type="button" onClick={() => chooseContinuation("customers")} className="flex-1 rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">OK</button>
-          <button type="button" onClick={() => chooseContinuation("vehicle")} className="flex-1 rounded-lg bg-[#17365D] px-3 py-2 text-[10.5px] font-semibold text-white hover:bg-[#102A49]">ADD VEHICLE</button>
+      {continuationOpen ? <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/30 p-4" role="dialog" aria-modal="true" aria-label="Customer created actions">
+        <div className="w-full max-w-[320px] rounded-xl border border-[#D8E2EF] bg-white p-3.5 shadow-xl">
+          <div className="mb-3 text-center text-[11px] font-bold tracking-[0.04em] text-[#17203A]">CUSTOMER CREATED</div>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => chooseContinuation("customers")} className="flex-1 rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">OK</button>
+            <button type="button" onClick={() => chooseContinuation("vehicle")} className="flex-1 rounded-lg bg-[#17365D] px-3 py-2 text-[10.5px] font-semibold text-white hover:bg-[#102A49]">ADD VEHICLE</button>
+          </div>
         </div>
       </div> : null}
 
@@ -178,12 +181,12 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
         {!supported ? <section className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center"><p className="text-[14px] font-semibold text-amber-900">{partnerLabels[partnerType]} onboarding is coming soon.</p><Link href="/customers?choose_partner=1" className="mt-4 inline-flex rounded-md bg-[#4F46E5] px-4 py-2 text-[11px] font-semibold text-white">Choose another partner type</Link></section> : (
           <form ref={formRef} action={submitWithFiles} onSubmit={handleSubmit} onChange={() => setIsDirty(true)} className="overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
             <input type="hidden" name="partner_type" value={partnerType} />
-            <input ref={returnToInputRef} type="hidden" name="return_to" defaultValue="" />
+            <input type="hidden" name="return_to" value={returnToVehicle ? "vehicle" : ""} />
             <FormSection title="Personal Information" columns="three"><Field label="Customer / Proprietor Name" name="contact_name" required error={formState.field === "contact_name"} placeholder="Enter customer name" /><Field label="Mobile Number" name="phone" required error={formState.field === "phone"} placeholder="10-digit mobile number" inputMode="tel" /><Field label="Email ID" name="email" type="email" placeholder="Optional email" /></FormSection>
             <FormSection title="Address Details" columns="five"><Field label="Street" name="address_street" required placeholder="House, building or street" /><Field label="Locality" name="address_locality" placeholder="Area or locality" /><div className="relative"><label className={labelClass} htmlFor="city_search">City *</label><input id="city_search" name="city_search" value={cityQuery} required autoComplete="off" className={fieldClass(formState.field === "city_search")} placeholder="City" onChange={(event) => { setCityQuery(event.target.value); setSelectedLocation(null); }} />{locations.length ? <div className="absolute z-30 mt-1 max-h-52 w-72 overflow-auto rounded-lg border border-[#D8DEE8] bg-white p-1 shadow-xl">{locations.map((location) => <button key={location.id} type="button" className="block w-full rounded-md px-2.5 py-2 text-left hover:bg-[#F8FAFC]" onClick={() => { setSelectedLocation(location); setCityQuery(location.city_name); setStateValue(location.state_name); setPostalCode(location.pincode); setLocations([]); }}><span className="block text-[11px] font-semibold">{location.city_name}</span><span className="text-[10px] text-[#64748B]">{location.district ? `${location.district}, ` : ""}{location.state_name} · {location.pincode}</span></button>)}</div> : null}</div><Field label="State" name="state" required value={stateValue} onChange={(event) => setStateValue(event.target.value)} placeholder="State" /><Field label="PIN Code" name="postal_code" required value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="PIN" inputMode="numeric" maxLength={6} /><input type="hidden" name="india_location_id" value={selectedLocation?.id ?? ""} /><input type="hidden" name="city" value={selectedLocation?.city_name ?? cityQuery} /></FormSection>
             <FormSection title="KYC and GST Details" columns="four" action={<label className="inline-flex cursor-pointer items-center gap-2 text-[11px] font-semibold text-[#334155]"><input type="checkbox" name="is_gst_registered" value="true" checked={gstRegistered} onChange={(event) => setGstRegistered(event.target.checked)} className="h-3.5 w-3.5" /> GST Registered</label>}><Field label="PAN Number" name="pan_number" required error={formState.field === "pan_number"} placeholder="ABCDE1234F" maxLength={10} onInput={(event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); }} /><Field label="Aadhaar Number" name="aadhaar_number" required error={formState.field === "aadhaar_number"} placeholder="12-digit Aadhaar number" inputMode="numeric" maxLength={12} /><Field label="Legal Trade Name" name="legal_trade_name" required={gstRegistered} error={formState.field === "legal_trade_name"} placeholder={gstRegistered ? "As per GST certificate" : "Optional"} />{gstRegistered ? <Field label="GST Number" name="gst_number" required error={formState.field === "gst_number"} placeholder="22AAAAA0000A1Z5" maxLength={15} /> : <div />}</FormSection>
             <DocumentsSection><DocumentUpload label="PAN Copy" name="pan_copy" file={documentFiles.pan_copy} required onChange={(file) => updateDocument("pan_copy", file)} /><DocumentUpload label="Aadhaar Front" name="aadhaar_front" file={documentFiles.aadhaar_front} required onChange={(file) => updateDocument("aadhaar_front", file)} /><DocumentUpload label="Aadhaar Back" name="aadhaar_back" file={documentFiles.aadhaar_back} required onChange={(file) => updateDocument("aadhaar_back", file)} />{gstRegistered ? <DocumentUpload label="GST Copy" name="gst_copy" file={documentFiles.gst_copy} required onChange={(file) => updateDocument("gst_copy", file)} /> : <div />}</DocumentsSection>
-            <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur"><Link href={returnToVehicle ? "/vehicles/new" : "/customers"} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155]">Cancel</Link><FormSubmitButton label="Create Customer" /></div>
+            <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-[#E2E8F0] bg-white/95 px-5 py-3 backdrop-blur"><Link href={returnToVehicle ? "/vehicles/new" : "/customers"} className="rounded-md border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155]">Cancel</Link><FormSubmitButton label="Save Customer" /></div>
           </form>
         )}
       </div>
