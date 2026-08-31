@@ -14,6 +14,14 @@
 
 The complete evidence, staged plan, safety gates, and deferred work are in `docs/PERFORMANCE_REMEDIATION_PLAN_2026_08_24.md`. Follow that file before region, cache, pagination, RLS/index, upload, export, root-layout, or workflow-navigation work.
 
+## 2026-08-31 operations dashboard database pass
+
+**IMPLEMENTED, NOT APPLIED:** branch `perf/operations-dashboard-single-pass` rewrites `public.get_operations_dashboard()` so dashboard counts are computed with one aggregate scan per source table instead of many repeated scalar count subqueries. The function's JSON contract, RLS execution mode, status definitions, date windows, recent-application list, and latest-claims list are preserved.
+
+**VERIFIED read-only production evidence before migration:** the existing function returned the same JSON as the candidate single-pass SQL. On the same healthy Seoul Supabase project, `EXPLAIN (ANALYZE, BUFFERS)` measured the current function call at **61.449 ms / 3,422 shared-hit blocks** and the equivalent candidate query at **7.685 ms / 133 shared-hit blocks**. Treat those as focused database execution evidence, not end-user p75/p95.
+
+No index, RLS, permission, region, storage, accounting, or workflow-state change is included in this pass. Apply the migration only after the feature PR is green and explicitly approved for merge/deployment.
+
 ## 1. Why this file exists
 
 The portal was repeatedly slowed by architectural patterns that looked harmless in isolation:
