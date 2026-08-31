@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -22,6 +23,7 @@ export default function PartnerHomeScreen() {
   const [businessFilterOpen, setBusinessFilterOpen] = useState(false);
   const [businessFromInput, setBusinessFromInput] = useState('');
   const [businessToInput, setBusinessToInput] = useState('');
+  const [activeBusinessDatePicker, setActiveBusinessDatePicker] = useState<'from' | 'to' | null>(null);
 
   const businessFromDate = parseDateInput(businessFromInput);
   const businessToDate = parseDateInput(businessToInput);
@@ -36,6 +38,39 @@ export default function PartnerHomeScreen() {
     && businessToDate
     && !businessRangeValidation
   );
+
+  const selectBusinessDate = useCallback((field: 'from' | 'to', selectedDate: Date) => {
+    const value = formatDateInput(selectedDate);
+    if (field === 'from') setBusinessFromInput(value);
+    else setBusinessToInput(value);
+  }, []);
+
+  const openBusinessDatePicker = useCallback((field: 'from' | 'to') => {
+    const input = field === 'from' ? businessFromInput : businessToInput;
+    const value = dateInputToLocalDate(input);
+    const minimumDate = field === 'from'
+      ? (businessToDate ? addDays(isoToLocalDate(businessToDate), -365) : undefined)
+      : (businessFromDate ? isoToLocalDate(businessFromDate) : undefined);
+    const maximumDate = field === 'from'
+      ? (businessToDate ? isoToLocalDate(businessToDate) : undefined)
+      : (businessFromDate ? addDays(isoToLocalDate(businessFromDate), 365) : undefined);
+
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value,
+        mode: 'date',
+        display: 'default',
+        minimumDate,
+        maximumDate,
+        onChange: (event, selectedDate) => {
+          if (event.type === 'set' && selectedDate) selectBusinessDate(field, selectedDate);
+        },
+      });
+      return;
+    }
+
+    setActiveBusinessDatePicker(field);
+  }, [businessFromDate, businessFromInput, businessToDate, businessToInput, selectBusinessDate]);
 
   const fetchBusinessRange = useCallback(async () => {
     if (!businessFromDate || !businessToDate) {
@@ -234,32 +269,34 @@ export default function PartnerHomeScreen() {
           {businessFilterOpen ? (
             <View style={styles.businessDatePanel}>
               <View style={styles.businessDateRow}>
-                <View style={styles.businessDateField}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={businessFromInput ? `From Date, ${businessFromInput}. Open calendar` : 'From Date. Open calendar'}
+                  onPress={() => openBusinessDatePicker('from')}
+                  style={({ pressed }) => [styles.businessDateField, pressed && styles.businessDateFieldPressed]}
+                >
                   <Ionicons name="calendar-outline" size={16} color="#7D8796" />
-                  <TextInput
-                    accessibilityLabel="From Date"
-                    value={businessFromInput}
-                    onChangeText={(value) => setBusinessFromInput(formatDateTyping(value))}
-                    placeholder="From date"
-                    placeholderTextColor="#8A94A6"
-                    keyboardType="number-pad"
-                    maxLength={10}
-                    style={styles.businessDateInput}
-                  />
-                </View>
-                <View style={styles.businessDateField}>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.businessDateValue, !businessFromInput && styles.businessDatePlaceholder]}
+                  >
+                    {businessFromInput || 'From date'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={businessToInput ? `To Date, ${businessToInput}. Open calendar` : 'To Date. Open calendar'}
+                  onPress={() => openBusinessDatePicker('to')}
+                  style={({ pressed }) => [styles.businessDateField, pressed && styles.businessDateFieldPressed]}
+                >
                   <Ionicons name="calendar-outline" size={16} color="#7D8796" />
-                  <TextInput
-                    accessibilityLabel="To Date"
-                    value={businessToInput}
-                    onChangeText={(value) => setBusinessToInput(formatDateTyping(value))}
-                    placeholder="To date"
-                    placeholderTextColor="#8A94A6"
-                    keyboardType="number-pad"
-                    maxLength={10}
-                    style={styles.businessDateInput}
-                  />
-                </View>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.businessDateValue, !businessToInput && styles.businessDatePlaceholder]}
+                  >
+                    {businessToInput || 'To date'}
+                  </Text>
+                </Pressable>
               </View>
               {businessRangeValidation ? (
                 <Text style={styles.businessDateError}>{businessRangeValidation}</Text>
@@ -267,6 +304,47 @@ export default function PartnerHomeScreen() {
                 <Text style={styles.businessDateError}>{businessRange.error}</Text>
               ) : null}
             </View>
+          ) : null}
+
+          {Platform.OS === 'ios' && activeBusinessDatePicker ? (
+            <Modal
+              animationType="fade"
+              transparent
+              visible
+              onRequestClose={() => setActiveBusinessDatePicker(null)}
+            >
+              <Pressable style={styles.businessDateModalBackdrop} onPress={() => setActiveBusinessDatePicker(null)}>
+                <Pressable style={styles.businessDateModalCard} onPress={() => undefined}>
+                  <Text style={styles.businessDateModalTitle}>
+                    {activeBusinessDatePicker === 'from' ? 'From date' : 'To date'}
+                  </Text>
+                  <DateTimePicker
+                    value={dateInputToLocalDate(
+                      activeBusinessDatePicker === 'from' ? businessFromInput : businessToInput,
+                    )}
+                    mode="date"
+                    display="spinner"
+                    minimumDate={activeBusinessDatePicker === 'from'
+                      ? (businessToDate ? addDays(isoToLocalDate(businessToDate), -365) : undefined)
+                      : (businessFromDate ? isoToLocalDate(businessFromDate) : undefined)}
+                    maximumDate={activeBusinessDatePicker === 'from'
+                      ? (businessToDate ? isoToLocalDate(businessToDate) : undefined)
+                      : (businessFromDate ? addDays(isoToLocalDate(businessFromDate), 365) : undefined)}
+                    onChange={(_, selectedDate) => {
+                      if (selectedDate) selectBusinessDate(activeBusinessDatePicker, selectedDate);
+                    }}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Done selecting date"
+                    onPress={() => setActiveBusinessDatePicker(null)}
+                    style={({ pressed }) => [styles.businessDateDoneButton, pressed && styles.pressed]}
+                  >
+                    <Text style={styles.businessDateDoneText}>Done</Text>
+                  </Pressable>
+                </Pressable>
+              </Pressable>
+            </Modal>
           ) : null}
 
           <View style={styles.businessCard}>
@@ -519,11 +597,27 @@ function formatMoney(value: number | string) {
   return `₹${new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(amount)}`;
 }
 
-function formatDateTyping(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 8);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+function formatDateInput(value: Date) {
+  const day = value.getDate().toString().padStart(2, '0');
+  const month = (value.getMonth() + 1).toString().padStart(2, '0');
+  const year = value.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function dateInputToLocalDate(value: string) {
+  const iso = parseDateInput(value);
+  return iso ? isoToLocalDate(iso) : new Date();
+}
+
+function isoToLocalDate(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function addDays(value: Date, days: number) {
+  const result = new Date(value);
+  result.setDate(result.getDate() + days);
+  return result;
 }
 
 function parseDateInput(value: string) {
@@ -721,11 +815,45 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
   },
-  businessDateInput: {
+  businessDateFieldPressed: {
+    backgroundColor: '#F7F6FF',
+    borderColor: '#C9C5FF',
+  },
+  businessDateValue: {
     flex: 1,
-    paddingVertical: 0,
     color: partnerTheme.colors.ink,
     ...partnerTheme.typography.caption,
+  },
+  businessDatePlaceholder: {
+    color: '#8A94A6',
+  },
+  businessDateModalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 16,
+    backgroundColor: 'rgba(15, 23, 42, 0.35)',
+  },
+  businessDateModalCard: {
+    borderRadius: 18,
+    padding: 16,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  businessDateModalTitle: {
+    marginBottom: 8,
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.bodyStrong,
+  },
+  businessDateDoneButton: {
+    minHeight: 44,
+    marginTop: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    backgroundColor: partnerTheme.colors.brand,
+  },
+  businessDateDoneText: {
+    color: '#FFFFFF',
+    ...partnerTheme.typography.bodyStrong,
   },
   businessDateError: {
     marginTop: 6,
