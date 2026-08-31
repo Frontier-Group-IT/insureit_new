@@ -166,19 +166,10 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
   return (
     <>
       <AlertModal open={Boolean(errorPopup)} message={errorPopup?.message ?? ""} onClose={closeErrorPopup} autoCloseMs={5000} />
-      {continuationOpen ? <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/35 p-4" role="dialog" aria-modal="true" aria-labelledby="customer-save-choice-title">
-        <div className="w-full max-w-[430px] rounded-2xl border border-[#D8E2EF] bg-white p-5 shadow-2xl">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 id="customer-save-choice-title" className="text-[14px] font-semibold text-[#17203A]">Save customer</h2>
-              <p className="mt-1 text-[10.5px] leading-5 text-[#667085]">Choose what you want to do after this customer is created.</p>
-            </div>
-            <button type="button" aria-label="Close" onClick={() => setContinuationOpen(false)} className="grid h-7 w-7 place-items-center rounded-lg border border-[#D8E2EF] text-[14px] text-[#667085] hover:bg-[#F8FAFC]">×</button>
-          </div>
-          <div className="mt-5 grid gap-2">
-            <button type="button" onClick={() => chooseContinuation("customers")} className="rounded-xl border border-[#CBD5E1] bg-white px-4 py-3 text-[11px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">Save Customer</button>
-            <button type="button" onClick={() => chooseContinuation("vehicle")} className="rounded-xl bg-[#17365D] px-4 py-3 text-[11px] font-semibold text-white hover:bg-[#102A49]">Save Customer &amp; Continue with Vehicle</button>
-          </div>
+      {continuationOpen ? <div className="fixed inset-0 z-[90] grid place-items-center bg-slate-950/30 p-4" role="dialog" aria-modal="true" aria-label="Customer saved actions">
+        <div className="flex w-full max-w-[300px] items-center gap-2 rounded-xl border border-[#D8E2EF] bg-white p-3 shadow-xl">
+          <button type="button" onClick={() => chooseContinuation("customers")} className="flex-1 rounded-lg border border-[#CBD5E1] bg-white px-3 py-2 text-[10.5px] font-semibold text-[#334155] hover:bg-[#F8FAFC]">OK</button>
+          <button type="button" onClick={() => chooseContinuation("vehicle")} className="flex-1 rounded-lg bg-[#17365D] px-3 py-2 text-[10.5px] font-semibold text-white hover:bg-[#102A49]">ADD VEHICLE</button>
         </div>
       </div> : null}
 

@@ -26,8 +26,9 @@ assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&r
 assert(vehiclePage.includes('"manage_customers"'));
 
 const customerForm=read("app/customers/customer-onboarding-form.tsx");
-assert(customerForm.includes("Save Customer"));
-assert(customerForm.includes("Save Customer &amp; Continue with Vehicle"));
+assert(customerForm.includes(">OK</button>"));
+assert(customerForm.includes(">ADD VEHICLE</button>"));
+assert(!customerForm.includes("Save Customer &amp; Continue with Vehicle"));
 assert(customerForm.includes('name="return_to"'));
 
 const customerActions=read("app/customers/actions.ts");
