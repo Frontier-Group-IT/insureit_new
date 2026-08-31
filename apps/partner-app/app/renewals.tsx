@@ -7,10 +7,12 @@ import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
+import { PartnerTopTabs } from '@/components/ui/partner-top-tabs';
 import {
   getPartnerRenewalSummary,
   listPartnerPolicies,
@@ -94,25 +96,26 @@ export default function RenewalsScreen() {
       {summary.loading && !summary.data ? (
         <PartnerStateView state="loading" title="Loading renewal summary" />
       ) : (
-        <View style={styles.hero}>
-          <View style={styles.heroTop}>
-            <View style={styles.heroMain}>
-              <Text style={styles.heroEyebrow}>NEXT 30 DAYS</Text>
-              <Text style={styles.heroPremium}>{formatIndianCurrency(summary.data?.due_30_premium ?? 0)}</Text>
-              <Text style={styles.heroLabel}>gross premium in renewal window</Text>
+        <View style={styles.summaryPanel}>
+          <View style={styles.summaryLead}>
+            <View>
+              <Text style={styles.summaryEyebrow}>NEXT 30 DAYS</Text>
+              <Text style={styles.summaryPremium}>{formatIndianCurrency(summary.data?.due_30_premium ?? 0)}</Text>
+              <Text style={styles.summaryLabel}>gross premium</Text>
             </View>
-            <View style={styles.heroCount}>
-              <Text style={styles.heroCountValue}>{summary.data?.due_30_count ?? 0}</Text>
-              <Text style={styles.heroCountLabel}>policies</Text>
+            <View style={styles.summaryCount}>
+              <Text style={styles.summaryCountValue}>{summary.data?.due_30_count ?? 0}</Text>
+              <Text style={styles.summaryCountLabel}>policies</Text>
             </View>
           </View>
-
-          <View style={styles.heroBins}>
-            <HeroBin label="0–7d" count={summary.data?.due_0_7_count ?? 0} />
-            <HeroBin label="8–15d" count={summary.data?.due_8_15_count ?? 0} />
-            <HeroBin label="16–30d" count={summary.data?.due_16_30_count ?? 0} />
-            <HeroBin label="Overdue" count={summary.data?.overdue_count ?? 0} danger />
-          </View>
+          <PartnerListSummaryStrip
+            items={[
+              { key: '0_7', label: '0–7d', value: summary.data?.due_0_7_count ?? 0, tone: 'warning' },
+              { key: '8_15', label: '8–15d', value: summary.data?.due_8_15_count ?? 0 },
+              { key: '16_30', label: '16–30d', value: summary.data?.due_16_30_count ?? 0 },
+              { key: 'overdue', label: 'Overdue', value: summary.data?.overdue_count ?? 0, tone: 'danger' },
+            ]}
+          />
         </View>
       )}
 
@@ -127,8 +130,17 @@ export default function RenewalsScreen() {
       ) : null}
 
       <View style={styles.modeTabs}>
-        <PartnerFilterChip label="Upcoming" active={mode === 'expiring'} onPress={() => { setMode('expiring'); setWindow('all'); }} />
-        <PartnerFilterChip label="Overdue" active={mode === 'expired'} onPress={() => { setMode('expired'); setWindow('all'); }} />
+        <PartnerTopTabs
+          activeKey={mode}
+          onChange={(key) => {
+            setMode(key as RenewalMode);
+            setWindow('all');
+          }}
+          tabs={[
+            { key: 'expiring', label: 'Upcoming', badge: summary.data?.due_30_count ?? 0 },
+            { key: 'expired', label: 'Overdue', badge: summary.data?.overdue_count ?? 0 },
+          ]}
+        />
       </View>
 
       {mode === 'expiring' ? (
@@ -232,69 +244,46 @@ function RenewalCard({
   onOpenCustomer?: () => void;
 }) {
   return (
-    <View style={styles.card}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
-        onPress={onOpenPolicy}
-        style={({ pressed }) => [pressed && styles.pressed]}
-      >
-        <View style={styles.cardTop}>
-          <View style={styles.cardIdentity}>
-            <Text style={styles.customer}>{row.customer_name}</Text>
-            <Text style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'}</Text>
-          </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
+      onPress={onOpenPolicy}
+      style={({ pressed }) => [styles.renewalRow, pressed && styles.pressed]}
+    >
+      <View style={styles.renewalMarker}>
+        <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={18} color={partnerTheme.colors.brand} />
+      </View>
+
+      <View style={styles.renewalIdentity}>
+        <View style={styles.renewalTitleLine}>
+          <Text numberOfLines={1} style={styles.customer}>{row.customer_name}</Text>
           <PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />
         </View>
-
-        <View style={styles.vehicleLine}>
-          <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={16} color={partnerTheme.colors.brand} />
-          <Text style={styles.vehicleText}>{row.vehicle_no || row.policy_product || 'Non-motor / vehicle not linked'}</Text>
-        </View>
-
-        <View style={styles.metaRow}>
-          <Meta label="Insurer" value={row.insurer_name || 'Not recorded'} />
-          <Meta label="Current premium" value={formatIndianCurrency(row.premium_amount)} />
-        </View>
-      </Pressable>
-
-      <View style={styles.footer}>
-        <View>
-          <Text style={styles.footerLabel}>EXPIRY</Text>
-          <Text style={styles.date}>{formatDate(row.end_date)}</Text>
-        </View>
-        <View style={styles.actions}>
-          {onOpenCustomer ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`Open customer ${row.customer_name}`} onPress={onOpenCustomer} style={({ pressed }) => [styles.smallAction, pressed && styles.pressed]}>
-              <Ionicons name="person-outline" size={16} color={partnerTheme.colors.brand} />
-              <Text style={styles.smallActionText}>Customer</Text>
-            </Pressable>
-          ) : null}
-          <Pressable accessibilityRole="button" accessibilityLabel="Open policy" onPress={onOpenPolicy} style={({ pressed }) => [styles.smallAction, pressed && styles.pressed]}>
-            <Text style={styles.smallActionText}>Policy</Text>
-            <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
-          </Pressable>
+        <Text numberOfLines={1} style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'} · {row.insurer_name || 'Insurer not recorded'}</Text>
+        <Text numberOfLines={1} style={styles.renewalRisk}>{row.vehicle_no || row.policy_product || 'Non-motor / risk not linked'}</Text>
+        <View style={styles.renewalBottom}>
+          <Text style={styles.renewalPremium}>{formatIndianCurrency(row.premium_amount)}</Text>
+          <Text style={styles.date}>Ends {formatDate(row.end_date)}</Text>
         </View>
       </View>
-    </View>
-  );
-}
 
-function HeroBin({ label, count, danger = false }: { label: string; count: number; danger?: boolean }) {
-  return (
-    <View style={styles.heroBin}>
-      <Text style={[styles.heroBinValue, danger && styles.heroBinDanger]}>{count}</Text>
-      <Text style={styles.heroBinLabel}>{label}</Text>
-    </View>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.meta}>
-      <Text style={styles.metaLabel}>{label}</Text>
-      <Text numberOfLines={1} style={styles.metaValue}>{value}</Text>
-    </View>
+      <View style={styles.renewalActions}>
+        {onOpenCustomer ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open customer ${row.customer_name}`}
+            onPress={(event) => {
+              event.stopPropagation();
+              onOpenCustomer();
+            }}
+            style={({ pressed }) => [styles.customerAction, pressed && styles.pressed]}
+          >
+            <Ionicons name="person-outline" size={17} color={partnerTheme.colors.brand} />
+          </Pressable>
+        ) : null}
+        <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
+      </View>
+    </Pressable>
   );
 }
 
@@ -331,43 +320,63 @@ function formatUpdatedAt(value: number | null) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
-  heroTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  heroMain: { flex: 1 },
-  heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  heroPremium: { marginTop: 4, color: '#FFFFFF', fontSize: 27, lineHeight: 33, fontWeight: '900' },
-  heroLabel: { marginTop: 2, color: '#AEB7C5', ...partnerTheme.typography.meta },
-  heroCount: { minWidth: 58, alignItems: 'center', borderRadius: 14, paddingVertical: 8, paddingHorizontal: 8, backgroundColor: '#263246' },
-  heroCountValue: { color: '#FFFFFF', fontSize: 18, lineHeight: 23, fontWeight: '900' },
-  heroCountLabel: { marginTop: 2, color: '#99A5B7', ...partnerTheme.typography.meta },
-  heroBins: { marginTop: 11, paddingTop: 10, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
-  heroBin: { flex: 1, alignItems: 'center' },
-  heroBinValue: { color: '#FFFFFF', fontSize: 14, lineHeight: 19, fontWeight: '800' },
-  heroBinDanger: { color: '#F2B6AF' },
-  heroBinLabel: { marginTop: 3, color: '#97A3B5', ...partnerTheme.typography.meta },
-  banner: { marginTop: 10 },
-  inlineBanner: { marginBottom: 10 },
-  modeTabs: { marginTop: 9, flexDirection: 'row', gap: 8 },
+  summaryPanel: {
+    padding: 12,
+    borderRadius: 16,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  summaryLead: {
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  summaryEyebrow: { color: partnerTheme.colors.inkMuted, letterSpacing: 1, ...partnerTheme.typography.meta },
+  summaryPremium: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 20, lineHeight: 26, fontWeight: '600' },
+  summaryLabel: { marginTop: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  summaryCount: { alignItems: 'flex-end' },
+  summaryCountValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 22, fontWeight: '600' },
+  summaryCountLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  banner: { marginTop: 9 },
+  inlineBanner: { marginBottom: 8 },
+  modeTabs: { marginTop: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   windowRow: { marginTop: 7, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   search: { marginTop: 9 },
-  separator: { height: 9 },
-  card: { borderRadius: 17, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-  cardIdentity: { flex: 1 },
-  customer: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
+  renewalRow: {
+    minHeight: 98,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  renewalMarker: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  renewalIdentity: { flex: 1, minWidth: 0 },
+  renewalTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  customer: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   policyNo: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  vehicleLine: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  vehicleText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  metaRow: { marginTop: 8, flexDirection: 'row' },
-  meta: { width: '50%', paddingRight: 8 },
-  metaLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
-  metaValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  footer: { marginTop: 9, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  footerLabel: { color: '#9AA3B2', letterSpacing: 0.5, ...partnerTheme.typography.meta },
-  date: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  actions: { flexDirection: 'row', gap: 6 },
-  smallAction: { minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 12, paddingHorizontal: 10, backgroundColor: partnerTheme.colors.brandSoft },
-  smallActionText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta },
+  renewalRisk: { marginTop: 3, color: '#8A94A6', ...partnerTheme.typography.meta },
+  renewalBottom: { marginTop: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  renewalPremium: { color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  date: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  renewalActions: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  customerAction: {
+    width: partnerTheme.control.minTouchTarget,
+    height: partnerTheme.control.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 13,
+  },
   pressed: { opacity: 0.78 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
