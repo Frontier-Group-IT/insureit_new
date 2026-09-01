@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
@@ -44,7 +43,8 @@ export default function PolicyDetailScreen() {
     <PartnerScreen
       eyebrow="POLICY"
       title={data?.policy.policy_no || data?.policy.policy_code || 'Policy'}
-      action={<PartnerIconButton icon="close" label="Close policy detail" onPress={() => router.back()} />}
+      subtitle={data?.insurer.name || undefined}
+      onBack={() => router.back()}
     >
       {loading ? (
         <PartnerStateView state="loading" title="Loading policy" />
@@ -61,7 +61,7 @@ export default function PolicyDetailScreen() {
           <View style={styles.hero}>
             <View style={styles.heroTop}>
               <View style={styles.heroIcon}>
-                <Ionicons name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'} size={22} color="#FFFFFF" />
+                <Ionicons name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'} size={20} color={partnerTheme.colors.brandStrong} />
               </View>
               <View style={styles.heroBody}>
                 <Text style={styles.heroNo}>{data.policy.policy_no || data.policy.policy_code || 'Policy'}</Text>
@@ -237,33 +237,33 @@ function nullableMoney(value: number | string | null) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  hero: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  heroIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
+  heroIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   heroBody: { flex: 1 },
-  heroNo: { color: '#FFFFFF', ...partnerTheme.typography.sectionTitle },
-  heroInsurer: { marginTop: 3, color: '#B9C2D0', ...partnerTheme.typography.caption },
+  heroNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  heroInsurer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   heroBadges: { alignItems: 'flex-end', gap: 5 },
-  heroPremiumRow: { marginTop: 12, paddingTop: 10, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3A4558' },
-  heroPremium: { color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '700' },
-  heroPremiumLabel: { marginTop: 2, color: '#8F9BAD', ...partnerTheme.typography.meta },
+  heroPremiumRow: { marginTop: 10, paddingTop: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  heroPremium: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '650' },
+  heroPremiumLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   heroDateBlock: { flex: 1, alignItems: 'flex-end' },
-  heroDate: { color: '#D4DAE4', textAlign: 'right', ...partnerTheme.typography.caption },
-  heroDateLabel: { marginTop: 3, color: '#8F9BAD', textAlign: 'right', ...partnerTheme.typography.meta },
-  disclosure: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  heroDate: { color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
+  heroDateLabel: { marginTop: 3, color: partnerTheme.colors.inkMuted, textAlign: 'right', ...partnerTheme.typography.meta },
+  disclosure: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   disclosureBody: { flex: 1 },
   disclosureTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   disclosureSummary: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   disclosureContent: { marginTop: 7 },
-  infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, borderRadius: 17, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, paddingVertical: 8, backgroundColor: partnerTheme.colors.surface },
   info: { width: '50%', paddingRight: 8 },
   infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
   infoValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  entityStack: { gap: 8 },
-  entity: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, paddingHorizontal: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  entityStack: { gap: 0 },
+  entity: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   entityIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
   entityBody: { flex: 1 },
   entityTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   entityMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  pressed: { opacity: 0.78 },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
 });
