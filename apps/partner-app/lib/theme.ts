@@ -47,7 +47,7 @@ export const partnerTheme = {
   typography: {
     display: { fontSize: 28, lineHeight: 34, fontWeight: '800' as const, letterSpacing: -0.45 },
     pageTitle: { fontSize: 22, lineHeight: 28, fontWeight: '800' as const, letterSpacing: -0.25 },
-    sectionTitle: { fontSize: 16, lineHeight: 22, fontWeight: '750' as const },
+    sectionTitle: { fontSize: 16, lineHeight: 22, fontWeight: '700' as const },
     cardTitle: { fontSize: 13, lineHeight: 18, fontWeight: '700' as const },
     body: { fontSize: 12.5, lineHeight: 18, fontWeight: '500' as const },
     bodyStrong: { fontSize: 12.5, lineHeight: 18, fontWeight: '700' as const },
