@@ -61,8 +61,8 @@ export function PartnerTopTabs({
 
 const styles = StyleSheet.create({
   content: {
-    gap: 20,
-    paddingHorizontal: 2,
+    gap: 22,
+    paddingHorizontal: 1,
   },
   tab: {
     minHeight: partnerTheme.control.minTouchTarget,
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   tabActive: {
-    borderBottomColor: partnerTheme.colors.brandStrong,
+    borderBottomColor: partnerTheme.colors.brand,
   },
   labelRow: {
     flexDirection: 'row',
@@ -80,12 +80,13 @@ const styles = StyleSheet.create({
   },
   label: {
     color: partnerTheme.colors.inkMuted,
-    fontSize: 13,
+    fontSize: 12.5,
     lineHeight: 18,
     fontWeight: '600',
   },
   labelActive: {
     color: partnerTheme.colors.ink,
+    fontWeight: '700',
   },
   badge: {
     minWidth: 19,
@@ -106,6 +107,6 @@ const styles = StyleSheet.create({
   badgeTextActive: {
     color: partnerTheme.colors.brandStrong,
   },
-  pressed: { opacity: 0.72 },
+  pressed: { opacity: 0.68 },
   disabled: { opacity: 0.4 },
 });
