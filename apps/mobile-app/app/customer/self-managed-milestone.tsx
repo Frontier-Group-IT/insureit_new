@@ -87,9 +87,18 @@ export default function SelfManagedMilestoneScreen() {
       const current = nextMilestones.find((item) => item.milestone_key === key);
       setValues(toFormValues(current?.details));
       const identity = (claimResult.data ?? {}) as ClaimIdentity;
+      const nextInsurerClaimNo = identity.insurer_claim_no?.trim() ?? '';
       setClaimNo(identity.claim_no ?? '');
-      setInsurerClaimNo(identity.insurer_claim_no ?? '');
-      setClaimNumberDraft(identity.insurer_claim_no ?? '');
+      setInsurerClaimNo(nextInsurerClaimNo);
+      setClaimNumberDraft(nextInsurerClaimNo);
+      if (
+        key === 'claim_intimation'
+        && (current?.milestone_status === 'completed' || current?.milestone_status === 'not_applicable')
+        && !nextInsurerClaimNo
+      ) {
+        setClaimNumberError('');
+        setClaimNumberPromptVisible(true);
+      }
       setCustomerId(identity.customer_id ?? '');
       if (identity.vehicle_id) {
         const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
@@ -186,9 +195,6 @@ export default function SelfManagedMilestoneScreen() {
 
     const details = normalizeDetails(key, values);
     const current = milestones.find((item) => item.milestone_key === key);
-    const isFirstClaimIntimationCompletion = key === 'claim_intimation'
-      && current?.milestone_status !== 'completed'
-      && current?.milestone_status !== 'not_applicable';
     setSaving(true);
 
     if (key === 'vehicle_delivery') {
@@ -218,8 +224,8 @@ export default function SelfManagedMilestoneScreen() {
     });
     setSaving(false);
     if (error) return setMessage(error.message || 'We could not save this milestone.');
-    if (isFirstClaimIntimationCompletion) {
-      setClaimNumberDraft(insurerClaimNo);
+    if (key === 'claim_intimation' && !insurerClaimNo.trim()) {
+      setClaimNumberDraft('');
       setClaimNumberError('');
       setClaimNumberPromptVisible(true);
       return;
