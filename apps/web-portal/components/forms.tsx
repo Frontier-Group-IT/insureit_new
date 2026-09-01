@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { FormSubmitButton } from "./form-submit-button";
+import { CustomerSearchField } from "./customer-search-field";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
 import { VehicleSaveActionChooser } from "./vehicle-save-action-chooser";
@@ -35,14 +36,12 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       <VehicleOnboardingHeader />
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="six" reserveHeaderAction>
-        <SelectField
-          variant="onboarding"
+        <CustomerSearchField
           label="Customer"
           name="customer_id"
           options={customers}
           required
           defaultValue={values?.customer_id ?? ""}
-          emptyLabel="Select customer"
           labelAction={createCustomerHref ? (
             <Link
               href={createCustomerHref}
