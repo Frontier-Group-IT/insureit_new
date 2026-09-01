@@ -21,6 +21,7 @@ export default function ClaimDetailScreen() {
   const [data, setData] = useState<PartnerClaimDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showAllJourney, setShowAllJourney] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -48,6 +49,7 @@ export default function ClaimDetailScreen() {
   }, [data]);
 
   const latestStage = data?.stages.length ? data.stages[data.stages.length - 1]?.stage : null;
+  const visibleTimeline = showAllJourney ? timeline : timeline.slice(-5);
 
   return (
     <PartnerScreen
@@ -85,36 +87,29 @@ export default function ClaimDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.actions}>
-            <Pressable accessibilityRole="button" onPress={() => router.push(`/customer/${data.customer.id}` as never)} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-              <Ionicons name="person-outline" size={18} color={partnerTheme.colors.brand} />
-              <Text style={styles.actionText}>Customer</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/(tabs)/claims')} style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
-              <Ionicons name="shield-outline" size={18} color={partnerTheme.colors.brand} />
-              <Text style={styles.actionText}>Claim book</Text>
-            </Pressable>
-          </View>
+          {needsPartnerAttention(data) ? (
+            <View style={styles.attention}>
+              <PartnerBanner
+                tone="warning"
+                title="Partner attention"
+                message={partnerActionText(data)}
+              />
+            </View>
+          ) : null}
 
-          <PartnerSectionHeader title="What is happening" />
-          <View style={styles.guidanceCard}>
-            <GuidanceRow
-              icon="pulse-outline"
-              title="Current position"
-              text={humanize(data.claim.current_status || latestStage || 'Status not recorded')}
-            />
-            <GuidanceRow
-              icon="person-circle-outline"
-              title="What needs you"
-              text={partnerActionText(data)}
-            />
-            <GuidanceRow
-              icon="arrow-forward-circle-outline"
-              title="What happens next"
-              text="New claim updates will appear below."
-              last
-            />
-          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Open customer ${data.customer.name}`}
+            onPress={() => router.push(`/customer/${data.customer.id}` as never)}
+            style={({ pressed }) => [styles.customerLink, pressed && styles.pressed]}
+          >
+            <View style={styles.customerIcon}><Ionicons name="person-outline" size={18} color={partnerTheme.colors.brand} /></View>
+            <View style={styles.customerBody}>
+              <Text style={styles.customerName}>{data.customer.name}</Text>
+              <Text style={styles.customerMeta}>{data.vehicle.vehicle_no || data.policy.policy_no || 'Customer record'}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#9AA3B2" />
+          </Pressable>
 
           <PartnerSectionHeader title="Claim overview" />
           <View style={styles.infoCard}>
@@ -136,13 +131,13 @@ export default function ClaimDetailScreen() {
           <PartnerSectionHeader title="Journey" meta={`${timeline.length} recorded events`} />
           {timeline.length ? (
             <View style={styles.timeline}>
-              {timeline.map((item, index) => (
+              {visibleTimeline.map((item, index) => (
                 <View key={item.key} style={styles.timelineRow}>
                   <View style={styles.rail}>
-                    <View style={[styles.dot, index === timeline.length - 1 && styles.dotLatest]}>
+                    <View style={[styles.dot, index === visibleTimeline.length - 1 && styles.dotLatest]}>
                       {item.kind === 'stage' ? <View style={styles.innerDot} /> : null}
                     </View>
-                    {index < timeline.length - 1 ? <View style={styles.line} /> : null}
+                    {index < visibleTimeline.length - 1 ? <View style={styles.line} /> : null}
                   </View>
                   <View style={styles.timelineBody}>
                     <Text style={styles.timelineDate}>{formatDateTime(item.date)}</Text>
@@ -155,22 +150,22 @@ export default function ClaimDetailScreen() {
           ) : (
             <PartnerStateView state="empty" title="No journey events yet" message="Recorded claim stages and status updates will appear here." />
           )}
+          {timeline.length > 5 ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showAllJourney }}
+              accessibilityLabel={showAllJourney ? 'Show recent claim journey' : `Show full claim journey with ${timeline.length} events`}
+              onPress={() => setShowAllJourney((value) => !value)}
+              style={({ pressed }) => [styles.journeyToggle, pressed && styles.pressed]}
+            >
+              <Text style={styles.journeyToggleText}>{showAllJourney ? 'Show recent' : `Show full journey · ${timeline.length}`}</Text>
+              <Ionicons name={showAllJourney ? 'chevron-up' : 'chevron-down'} size={15} color={partnerTheme.colors.brand} />
+            </Pressable>
+          ) : null}
 
         </>
       )}
     </PartnerScreen>
-  );
-}
-
-function GuidanceRow({ icon, title, text, last = false }: { icon: 'pulse-outline' | 'person-circle-outline' | 'arrow-forward-circle-outline'; title: string; text: string; last?: boolean }) {
-  return (
-    <View style={[styles.guidanceRow, !last && styles.guidanceDivider]}>
-      <View style={styles.guidanceIcon}><Ionicons name={icon} size={19} color={partnerTheme.colors.brand} /></View>
-      <View style={styles.guidanceBody}>
-        <Text style={styles.guidanceTitle}>{title}</Text>
-        <Text style={styles.guidanceText}>{text}</Text>
-      </View>
-    </View>
   );
 }
 
@@ -182,12 +177,13 @@ function Amount({ label, value }: { label: string; value: number | string | null
   return <View style={styles.amount}><Text style={styles.amountValue}>{value == null ? '—' : formatIndianCurrency(value)}</Text><Text style={styles.amountLabel}>{label}</Text></View>;
 }
 
-function partnerActionText(data: PartnerClaimDetail) {
+function needsPartnerAttention(data: PartnerClaimDetail) {
   const assistance = (data.claim.assistance_status || '').toLowerCase();
-  if (assistance.includes('request') || assistance.includes('pending') || assistance.includes('open')) {
-    return `Assistance is recorded as ${humanize(data.claim.assistance_status || 'open')}. Check the latest journey update or contact Support if clarification is needed.`;
-  }
-  return 'No specific Partner action is recorded in the available claim data right now.';
+  return assistance.includes('request') || assistance.includes('pending') || assistance.includes('open');
+}
+
+function partnerActionText(data: PartnerClaimDetail) {
+  return `Assistance is ${humanize(data.claim.assistance_status || 'open')}. Check the latest journey update or contact Support if clarification is needed.`;
 }
 
 function claimTone(value: string | null): 'success' | 'warning' | 'info' {
@@ -216,16 +212,14 @@ const styles = StyleSheet.create({
   heroMeta: { marginTop: 5, color: '#C4CCD8', ...partnerTheme.typography.caption },
   heroFooter: { marginTop: 10, paddingTop: 9, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
   heroFooterText: { flex: 1, color: '#8F9BAD', ...partnerTheme.typography.meta },
-  actions: { marginTop: 8, flexDirection: 'row', gap: 8 },
-  action: { flex: 1, minHeight: partnerTheme.control.minTouchTarget, alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  actionText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  guidanceCard: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  guidanceRow: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 11, padding: 11 },
-  guidanceDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  guidanceIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  guidanceBody: { flex: 1 },
-  guidanceTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  guidanceText: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  attention: { marginTop: 8 },
+  customerLink: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  customerIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  customerBody: { flex: 1 },
+  customerName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  customerMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  journeyToggle: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  journeyToggleText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
   infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, borderRadius: 17, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   info: { width: '50%', paddingRight: 8 },
   infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },

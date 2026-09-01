@@ -18,6 +18,8 @@ export default function PolicyDetailScreen() {
   const [data, setData] = useState<PartnerPolicyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showPremiumDetails, setShowPremiumDetails] = useState(false);
+  const [showCommercialDetails, setShowCommercialDetails] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -83,14 +85,6 @@ export default function PolicyDetailScreen() {
             </View>
           </View>
 
-          <View style={styles.quickRow}>
-            {data.customer.id ? (
-              <QuickAction icon="person-outline" label="Customer" onPress={() => router.push(`/customer/${data.customer.id}` as never)} />
-            ) : null}
-            <QuickAction icon="refresh-outline" label="Renewals" onPress={() => router.push('/renewals')} />
-            <QuickAction icon="cloud-upload-outline" label="Intakes" onPress={() => router.push('/policy-intakes')} />
-          </View>
-
           <PartnerSectionHeader title="Policy overview" />
           <InfoCard>
             <Info label="Category" value={category} />
@@ -101,15 +95,21 @@ export default function PolicyDetailScreen() {
             <Info label="IDV" value={data.policy.insured_declared_value != null ? formatIndianCurrency(data.policy.insured_declared_value) : 'Not recorded'} />
           </InfoCard>
 
-          <PartnerSectionHeader title="Premium breakup" />
-          <InfoCard>
-            <Info label="Gross premium" value={formatIndianCurrency(data.premium.gross_premium)} />
-            <Info label="Net premium" value={nullableMoney(data.premium.net_premium)} />
-            <Info label="OD premium" value={nullableMoney(data.premium.od_premium)} />
-            <Info label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
-            <Info label="GST" value={nullableMoney(data.premium.gst_amount)} />
-            <Info label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
-          </InfoCard>
+          <PartnerSectionHeader title="Premium" />
+          <Disclosure
+            title="Premium breakup"
+            summary={formatIndianCurrency(data.premium.gross_premium)}
+            expanded={showPremiumDetails}
+            onPress={() => setShowPremiumDetails((value) => !value)}
+          >
+            <InfoCard>
+              <Info label="Net premium" value={nullableMoney(data.premium.net_premium)} />
+              <Info label="OD premium" value={nullableMoney(data.premium.od_premium)} />
+              <Info label="TP premium" value={nullableMoney(data.premium.tp_premium)} />
+              <Info label="GST" value={nullableMoney(data.premium.gst_amount)} />
+              <Info label="CPA" value={data.premium.cpa_opted ? nullableMoney(data.premium.cpa_amount) : 'Not opted / not recorded'} />
+            </InfoCard>
+          </Disclosure>
 
           <PartnerSectionHeader title={data.vehicle ? 'Customer & vehicle' : 'Customer & insured risk'} />
           <View style={styles.entityStack}>
@@ -147,24 +147,55 @@ export default function PolicyDetailScreen() {
           </View>
 
           <PartnerSectionHeader title="Commercial attribution" />
-          <InfoCard>
-            <Info label="Intermediary" value={[humanize(data.commercial.intermediary_type || ''), data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'Not recorded'} />
-            <Info label="RM" value={data.commercial.rm_name || 'Not recorded'} />
-            <Info label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
-            <Info label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
-          </InfoCard>
+          <Disclosure
+            title="Sales ownership"
+            summary={[data.commercial.rm_name, data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'View details'}
+            expanded={showCommercialDetails}
+            onPress={() => setShowCommercialDetails((value) => !value)}
+          >
+            <InfoCard>
+              <Info label="Intermediary" value={[humanize(data.commercial.intermediary_type || ''), data.commercial.intermediary_code].filter(Boolean).join(' · ') || 'Not recorded'} />
+              <Info label="RM" value={data.commercial.rm_name || 'Not recorded'} />
+              <Info label="Group" value={[data.commercial.group_name, data.commercial.group_code].filter(Boolean).join(' · ') || 'No policy snapshot'} />
+              <Info label="Policy lifecycle" value={humanize(data.policy.lifecycle_status)} />
+            </InfoCard>
+          </Disclosure>
         </>
       )}
     </PartnerScreen>
   );
 }
 
-function QuickAction({ icon, label, onPress }: { icon: 'person-outline' | 'refresh-outline' | 'cloud-upload-outline'; label: string; onPress: () => void }) {
+function Disclosure({
+  title,
+  summary,
+  expanded,
+  onPress,
+  children,
+}: {
+  title: string;
+  summary: string;
+  expanded: boolean;
+  onPress: () => void;
+  children: ReactNode;
+}) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.quick, pressed && styles.pressed]}>
-      <Ionicons name={icon} size={18} color={partnerTheme.colors.brand} />
-      <Text style={styles.quickText}>{label}</Text>
-    </Pressable>
+    <View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`${expanded ? 'Hide' : 'Show'} ${title}`}
+        onPress={onPress}
+        style={({ pressed }) => [styles.disclosure, pressed && styles.pressed]}
+      >
+        <View style={styles.disclosureBody}>
+          <Text style={styles.disclosureTitle}>{title}</Text>
+          <Text numberOfLines={1} style={styles.disclosureSummary}>{summary}</Text>
+        </View>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color={partnerTheme.colors.brand} />
+      </Pressable>
+      {expanded ? <View style={styles.disclosureContent}>{children}</View> : null}
+    </View>
   );
 }
 
@@ -214,14 +245,16 @@ const styles = StyleSheet.create({
   heroInsurer: { marginTop: 3, color: '#B9C2D0', ...partnerTheme.typography.caption },
   heroBadges: { alignItems: 'flex-end', gap: 5 },
   heroPremiumRow: { marginTop: 12, paddingTop: 10, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3A4558' },
-  heroPremium: { color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '900' },
+  heroPremium: { color: '#FFFFFF', fontSize: 24, lineHeight: 30, fontWeight: '700' },
   heroPremiumLabel: { marginTop: 2, color: '#8F9BAD', ...partnerTheme.typography.meta },
   heroDateBlock: { flex: 1, alignItems: 'flex-end' },
   heroDate: { color: '#D4DAE4', textAlign: 'right', ...partnerTheme.typography.caption },
   heroDateLabel: { marginTop: 3, color: '#8F9BAD', textAlign: 'right', ...partnerTheme.typography.meta },
-  quickRow: { marginTop: 8, flexDirection: 'row', gap: 8 },
-  quick: { flex: 1, minHeight: partnerTheme.control.minTouchTarget, alignItems: 'center', justifyContent: 'center', gap: 4, borderRadius: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  quickText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.meta },
+  disclosure: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  disclosureBody: { flex: 1 },
+  disclosureTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  disclosureSummary: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  disclosureContent: { marginTop: 7 },
   infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, borderRadius: 17, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   info: { width: '50%', paddingRight: 8 },
   infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
