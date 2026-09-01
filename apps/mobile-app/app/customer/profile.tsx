@@ -284,9 +284,9 @@ export default function ProfileScreen() {
         </Pressable>
 
         <View style={styles.kycVaultSummary}>
-          <View style={styles.kycMiniStat}><Text style={styles.kycMiniStatValue}>{documents.length}</Text><Text style={styles.kycMiniStatLabel}>Uploaded</Text></View>
-          <View style={styles.kycMiniStat}><MaterialCommunityIcons name="lock-check-outline" size={17} color="#12805C" /><Text style={styles.kycMiniStatLabel}>Private vault</Text></View>
-          <View style={styles.kycMiniStat}><MaterialCommunityIcons name="trash-can-outline" size={17} color="#B7791F" /><Text style={styles.kycMiniStatLabel}>Manage documents</Text></View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Open uploaded documents" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(true)} style={styles.kycMiniStat}><Text style={styles.kycMiniStatValue}>{documents.length}</Text><Text style={styles.kycMiniStatLabel}>Uploaded</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Open private document vault" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(true)} style={styles.kycMiniStat}><MaterialCommunityIcons name="lock-check-outline" size={17} color="#12805C" /><Text style={styles.kycMiniStatLabel}>Private vault</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Manage documents" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(true)} style={styles.kycMiniStat}><MaterialCommunityIcons name="trash-can-outline" size={17} color="#B7791F" /><Text style={styles.kycMiniStatLabel}>Manage documents</Text></Pressable>
         </View>
 
         {documentsOpen ? <>
