@@ -152,14 +152,16 @@ export default function AddPolicyScreen() {
     setSaving(true);
     const result = await (supabase.rpc as any)('create_customer_external_policy', payload);
     if (result.error) {
+      console.warn('Customer policy save failed', result.error.message);
       setSaving(false);
-      return setMessage(result.error.message || 'We could not save this policy. Please try again.');
+      return setMessage('We could not save this policy right now. Please try again.');
     }
     if (policyCopy) {
       const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
       if (uploadError) {
+        console.warn('Customer policy copy upload failed', uploadError);
         setSaving(false);
-        return setMessage(`Policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+        return setMessage('Policy saved, but the policy copy could not be uploaded. You can add the copy again later.');
       }
     }
     setSaving(false);
