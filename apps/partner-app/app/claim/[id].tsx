@@ -5,7 +5,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
@@ -55,7 +54,8 @@ export default function ClaimDetailScreen() {
     <PartnerScreen
       eyebrow="CLAIM"
       title={data?.claim.claim_no || 'Claim'}
-      action={<PartnerIconButton icon="close" label="Close claim detail" onPress={() => router.back()} />}
+      subtitle={data?.customer.name || undefined}
+      onBack={() => router.back()}
     >
       {loading ? (
         <PartnerStateView state="loading" title="Loading claim journey" />
@@ -204,27 +204,27 @@ function formatDateTime(value: string | null) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  hero: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   heroTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   heroStatusBlock: { flex: 1 },
-  heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  heroStatus: { marginTop: 4, color: '#FFFFFF', fontSize: 22, lineHeight: 28, fontWeight: '900' },
-  heroMeta: { marginTop: 5, color: '#C4CCD8', ...partnerTheme.typography.caption },
-  heroFooter: { marginTop: 10, paddingTop: 9, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658' },
-  heroFooterText: { flex: 1, color: '#8F9BAD', ...partnerTheme.typography.meta },
+  heroEyebrow: { color: partnerTheme.colors.brand, letterSpacing: 1.1, ...partnerTheme.typography.meta },
+  heroStatus: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 20, lineHeight: 26, fontWeight: '700' },
+  heroMeta: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  heroFooter: { marginTop: 8, paddingTop: 7, flexDirection: 'row', justifyContent: 'space-between', gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  heroFooterText: { flex: 1, color: partnerTheme.colors.inkSubtle, ...partnerTheme.typography.meta },
   attention: { marginTop: 8 },
-  customerLink: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  customerLink: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 9, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   customerIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   customerBody: { flex: 1 },
   customerName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   customerMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   journeyToggle: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   journeyToggleText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
-  infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, borderRadius: 17, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  infoCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, paddingVertical: 8, backgroundColor: partnerTheme.colors.surface },
   info: { width: '50%', paddingRight: 8 },
   infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
   infoValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  amountRow: { flexDirection: 'row', borderRadius: 17, paddingVertical: 11, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  amountRow: { flexDirection: 'row', paddingVertical: 10, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   amount: { flex: 1, alignItems: 'center', paddingHorizontal: 4 },
   amountValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   amountLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
@@ -239,5 +239,5 @@ const styles = StyleSheet.create({
   timelineDate: { color: partnerTheme.colors.brand, ...partnerTheme.typography.meta },
   timelineTitle: { marginTop: 4, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   timelineKind: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  pressed: { opacity: 0.78 },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
 });
