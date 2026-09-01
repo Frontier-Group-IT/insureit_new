@@ -8,6 +8,7 @@ assert(!forms.includes("Save Vehicle Only"));
 assert(forms.includes('aria-label="Add new customer"'));
 assert(!forms.includes("+ Create new customer"));
 assert(forms.includes("CustomerSearchField"));
+assert(forms.includes('reserveHeaderAction ? "overflow-visible" : "overflow-hidden"'));
 assert(!forms.includes('<SelectField\n          variant="onboarding"\n          label="Customer"'));
 
 const customerSearchField=read("components/customer-search-field.tsx");
