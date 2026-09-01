@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=995
-source_commit=43edc7d0a61d66a01ee6b2cee9d4dbeb92301323
-purpose=publish mobile auth session restoration preview OTA
+source_pr=1000
+source_commit=238220d378be3b4b176840550f2f3a426af02cd5
+purpose=publish customer claim card two-column alignment preview OTA
