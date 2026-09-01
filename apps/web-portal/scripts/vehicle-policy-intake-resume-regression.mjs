@@ -59,12 +59,12 @@ assert(vehicleActions.includes("/vehicles/new?vehicle_saved=1&customer_id="));
 assert(vehicleActions.includes("&saved_vehicle_id="));
 
 const vehicleEditPage=read("app/vehicles/[id]/edit/page.tsx");
-assert(vehicleEditPage.includes('from("policies").select("id,policy_no,start_date,end_date").eq("vehicle_id", id)'));
+assert(vehicleEditPage.includes('from("policies").select("id,policy_no,start_date,end_date,policy_documents(id,document_type)").eq("vehicle_id", id)'));
 assert(vehicleEditPage.includes("VehiclePolicyFooterSummary"));
 assert(vehicleEditPage.includes("footerContent={<VehiclePolicyFooterSummary"));
 
 const vehicleViewPage=read("app/vehicles/[id]/page.tsx");
-assert(vehicleViewPage.includes('from("policies").select("id,policy_no,start_date,end_date").eq("vehicle_id", id)'));
+assert(vehicleViewPage.includes('from("policies").select("id,policy_no,start_date,end_date,policy_documents(id,document_type)").eq("vehicle_id", id)'));
 assert(vehicleViewPage.includes("VehiclePolicyFooterSummary"));
 
 const vehiclePolicyFooter=read("components/vehicle-policy-footer-summary.tsx");
