@@ -37,7 +37,7 @@ export default function SupportScreen() {
   return (
     <PartnerScreen
       eyebrow="SUPPORT"
-      title="Your INSUREIT team"
+      title="Support"
       action={<PartnerIconButton icon="close" label="Close support" onPress={() => router.back()} />}
     >
       {loading ? (
@@ -93,8 +93,8 @@ export default function SupportScreen() {
 
           <PartnerSectionHeader title="Operations desk" />
           <View style={styles.opsCard}>
-            <OpsStat value={data.operations.intakes_in_progress} label="Policy Intakes in progress" onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.intakes_need_attention} label="Need your attention" onPress={() => router.push('/policy-intakes')} tone={data.operations.intakes_need_attention ? 'warning' : 'neutral'} />
+            <OpsStat value={data.operations.intakes_in_progress} label="Policy Intakes in progress" onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.active_claims} label="Active claims" onPress={() => router.push('/(tabs)/claims')} last />
           </View>
 
@@ -172,8 +172,8 @@ function formatUpdatedAt(value: string) {
 const styles = StyleSheet.create({
   freshness: { minHeight: 22, marginTop: -8, marginBottom: 8, alignItems: 'flex-end', justifyContent: 'center' },
   updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
-  personCard: { minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
-  teamCard: { minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  personCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  teamCard: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   avatar: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
   avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
   teamIcon: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
