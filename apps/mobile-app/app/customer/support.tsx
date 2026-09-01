@@ -74,7 +74,7 @@ export default function SupportScreen() {
       </View>
 
       <Pressable accessibilityRole="button" accessibilityLabel="Ask for policy help" onPress={() => router.push({ pathname: '/customer/raise-support-ticket', params: { category: 'policy' } })} style={styles.quoteCard}>
-        <View style={styles.quoteIcon}><MaterialCommunityIcons name="shield-search-outline" size={25} color="#0B63CE" /></View>
+        <View style={styles.quoteIcon}><MaterialCommunityIcons name="shield-check-outline" size={25} color="#0B63CE" /></View>
         <View style={styles.quoteCopy}><Text style={styles.quoteEyebrow}>Commercial vehicle insurance</Text><Text style={styles.quoteTitle}>Need help with a policy?</Text><Text style={styles.quoteBody}>Ask our team about policy options, renewals, changes, or endorsements.</Text></View>
         <MaterialCommunityIcons name="chevron-right" size={23} color={palette.navy} />
       </Pressable>
