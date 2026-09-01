@@ -29,8 +29,29 @@ export default function RaiseSupportTicketScreen() {
     setMessage(''); if (!subject.trim() || subject.trim().length < 3) return setMessage('Add a short subject for your request.'); if (description.trim().length < 10) return setMessage('Please add a little more detail so the claim manager can help.'); if ((category === 'claim' || category === 'documents') && !selectedClaim) return setMessage('Select the related claim first.'); setSubmitting(true);
     const { data: ticket, error } = await supabase.from('support_tickets').insert({ customer_id: customerId, claim_id: selectedClaim?.id ?? null, assigned_to: selectedClaim?.assigned_to ?? null, category, priority, subject: subject.trim(), description: description.trim(), created_by: userId }).select('*').single();
     if (error || !ticket) { setSubmitting(false); return setMessage('Your ticket could not be created right now. Please try again shortly.'); }
-    if (file) { const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin'; const path = `${customerId}/${ticket.id}/${Date.now()}.${extension}`; try { const body = await (await fetch(file.uri)).arrayBuffer(); const upload = await supabase.storage.from('support-ticket-files').upload(path, body, { contentType: file.mimeType ?? 'application/octet-stream' }); if (!upload.error) await supabase.from('support_ticket_attachments').insert({ ticket_id: ticket.id, file_name: file.name, storage_path: path, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId }); } catch { /* ticket remains available even if the optional file did not upload */ } }
-    router.replace({ pathname: '/customer/support-ticket-detail', params: { id: ticket.id } });
+    let attachmentWarning = false;
+    if (file) {
+      const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
+      const path = `${customerId}/${ticket.id}/${Date.now()}.${extension}`;
+      try {
+        const body = await (await fetch(file.uri)).arrayBuffer();
+        const upload = await supabase.storage.from('support-ticket-files').upload(path, body, { contentType: file.mimeType ?? 'application/octet-stream' });
+        if (upload.error) {
+          console.warn('Support ticket attachment upload failed', upload.error.message);
+          attachmentWarning = true;
+        } else {
+          const attachmentResult = await supabase.from('support_ticket_attachments').insert({ ticket_id: ticket.id, file_name: file.name, storage_path: path, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+          if (attachmentResult.error) {
+            console.warn('Support ticket attachment record failed', attachmentResult.error.message);
+            attachmentWarning = true;
+          }
+        }
+      } catch (error) {
+        console.warn('Support ticket attachment failed', error);
+        attachmentWarning = true;
+      }
+    }
+    router.replace({ pathname: '/customer/support-ticket-detail', params: { id: ticket.id, attachmentWarning: attachmentWarning ? '1' : undefined } });
   }
   if (loading) return <Screen title="Raise Ticket"><LoadingState label="Preparing your ticket" /></Screen>;
   return <Screen title="Raise Ticket" showTitleHeader={false}><View style={styles.heading}><Text style={styles.title}>Raise a Support Ticket</Text><Text style={styles.sub}>Tell us what you need and we’ll route it to your claim manager.</Text></View>{message ? <Message type="error">{message}</Message> : null}
