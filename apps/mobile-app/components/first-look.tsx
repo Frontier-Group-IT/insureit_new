@@ -20,13 +20,7 @@ export function BrandLogo({ width = 208, style, inverse = false }: { width?: num
   const taglineSize = Math.max(5, Math.round(width * 0.04));
   return (
     <View style={[styles.brandLogo, { width, minHeight: markSize }, style]}>
-      {inverse ? (
-        <View style={[styles.brandLogoInverseMark, { width: markSize, height: markSize, borderRadius: Math.round(markSize * 0.22) }]}>
-          <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize - 4, height: markSize - 4 }} />
-        </View>
-      ) : (
-        <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
-      )}
+      <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
       <View style={[styles.brandLogoCopy, { marginLeft: gap }]}>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, inverse && styles.brandLogoNameInverse, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, inverse && styles.brandLogoTaglineInverse, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
@@ -219,7 +213,6 @@ const styles = StyleSheet.create({
   nativeMarkDot: { position: 'absolute', right: 8, top: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: '#C98918' },
   brandLogo: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center' },
   brandLogoCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  brandLogoInverseMark: { backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   brandLogoName: { color: '#071D49', fontWeight: '900', letterSpacing: 0, includeFontPadding: false },
   brandLogoNameInverse: { color: '#FFFFFF' },
   brandLogoTagline: { color: '#071D49', fontWeight: '900', letterSpacing: 0, includeFontPadding: false, marginTop: 1 },

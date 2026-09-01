@@ -182,7 +182,7 @@ export default function CustomerMockupHomeScreen() {
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
-      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell color={palette.navy} /></Pressable>
+      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></Pressable>
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
     <ScrollView
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   retry: { color: palette.blue, fontWeight: '900', paddingVertical: 6 },
   header: { height: 58, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: palette.navy, borderBottomWidth: 1, borderBottomColor: '#12305F' },
   brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' },
-  iconCircle: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  iconCircle: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderWidth: 2, borderColor: 'rgba(255,255,255,0.96)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 },

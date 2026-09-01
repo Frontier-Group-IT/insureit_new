@@ -110,7 +110,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           </Pressable>
           {customerHeader ? (
             <View style={styles.customerBellShell}>
-              <NotificationBell color={palette.navy} />
+              <NotificationBell color="#FFFFFF" />
             </View>
           ) : (
             <NotificationBell />
@@ -562,7 +562,7 @@ export const styles = StyleSheet.create({
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
-  customerBellShell: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  customerBellShell: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   customerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderColor: 'rgba(255,255,255,0.96)' },
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
   header: { minHeight: 98, borderRadius: 22, padding: 16, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: 'rgba(191,216,255,0.72)', shadowColor: '#0C4A88', shadowOpacity: 0.1, shadowRadius: 16, elevation: 3, overflow: 'hidden' },
