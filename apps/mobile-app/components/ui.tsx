@@ -28,6 +28,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null | undefined>(pathname.startsWith('/customer') ? undefined : null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
+  const customerHeader = pathname.startsWith('/customer');
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
   const showBackButton = showBackNavigation && showProfile && !isRootDashboard(pathname);
@@ -98,17 +99,23 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
       <View pointerEvents="none" style={styles.backdropTop} />
       <View pointerEvents="none" style={styles.backdropBand} />
       {showProfile ? (
-        <View style={[styles.fixedBrandRow, { top: insets.top }]}>
+        <View style={[styles.fixedBrandRow, customerHeader && styles.customerFixedBrandRow, { top: insets.top }]}>
           {showBackButton ? (
-            <Pressable accessibilityRole="button" onPress={openBack} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
+            <Pressable accessibilityRole="button" onPress={openBack} style={[styles.backButton, customerHeader && styles.customerBackButton]}>
+              <MaterialCommunityIcons name="chevron-left" size={25} color={customerHeader ? '#FFFFFF' : palette.ink} />
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
-            <BrandLogo width={158} />
+            <BrandLogo width={customerHeader ? 132 : 158} inverse={customerHeader} />
           </Pressable>
-          <NotificationBell />
-          <Pressable accessibilityRole="button" onPress={openProfile} style={styles.avatar}>
+          {customerHeader ? (
+            <View style={styles.customerBellShell}>
+              <NotificationBell color={palette.navy} />
+            </View>
+          ) : (
+            <NotificationBell />
+          )}
+          <Pressable accessibilityRole="button" onPress={openProfile} style={[styles.avatar, customerHeader && styles.customerAvatar]}>
             <Text style={styles.avatarText}>{profileInitial}</Text>
           </Pressable>
         </View>
@@ -547,12 +554,16 @@ export const styles = StyleSheet.create({
   screenContentCompactTop: { paddingTop: 86 },
   screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
   fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
+  customerFixedBrandRow: { height: 58, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: palette.navy, borderBottomColor: '#12305F' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
+  customerBackButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.28)' },
   brandPressable: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
+  customerBellShell: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  customerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderColor: 'rgba(255,255,255,0.96)' },
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
   header: { minHeight: 98, borderRadius: 22, padding: 16, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: 'rgba(191,216,255,0.72)', shadowColor: '#0C4A88', shadowOpacity: 0.1, shadowRadius: 16, elevation: 3, overflow: 'hidden' },
   headerTop: { alignSelf: 'flex-start', minHeight: 27, borderRadius: 999, backgroundColor: '#F7FBFF', borderWidth: 1, borderColor: '#D6E7FA', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
