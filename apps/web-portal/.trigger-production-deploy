@@ -1,7 +1,7 @@
 {
-  "purpose": "Force Vercel to deploy the searchable-customer-dropdown revert to production.",
-  "requested_at": "2026-08-31T17:47:00+05:30",
-  "requested_by": "explicit user revert request",
-  "includes": "PR #921 revert of PR #916, restoring the previous native Customer select on Add Vehicle",
-  "source_commit": "8562e925ff4ef08a428e84773d188629ecfb0add"
+  "purpose": "Force Vercel to deploy the current verified web portal main snapshot to production.",
+  "requested_at": "2026-09-01T10:10:00+05:30",
+  "requested_by": "explicit user deploy request",
+  "includes": "Customer Profile ADD VEHICLE footer action and all current main web portal fixes",
+  "source_commit": "93735ad5bfc654413811d7dd12a05653508e0a23"
 }
