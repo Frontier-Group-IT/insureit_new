@@ -79,7 +79,8 @@ export default function MoreScreen() {
 
       <MenuSection title="Account">
         <MenuRow icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
-        <MenuRow icon="headset-outline" title="Support" onPress={() => router.push('/support')} last />
+        <MenuRow icon="headset-outline" title="Support" onPress={() => router.push('/support')} />
+        <MenuRow icon="settings-outline" title="Settings & app info" onPress={() => router.push('/settings')} last />
       </MenuSection>
 
       <View style={styles.logout}>
