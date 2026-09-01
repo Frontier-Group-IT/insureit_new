@@ -185,8 +185,9 @@ export default function AddVehicleScreen() {
       error = fallback.error;
     }
     if (error) {
+      console.warn('Customer vehicle save failed', error.message);
       setSaving(false);
-      return setMessage(error.message || 'We could not save this vehicle. Please try again.');
+      return setMessage('We could not save this vehicle right now. Please try again.');
     }
 
     const createdVehicle = Array.isArray(vehicleData) ? vehicleData[0] : vehicleData;
@@ -209,14 +210,16 @@ export default function AddVehicleScreen() {
       };
       const policyResult = await (supabase.rpc as any)('create_customer_external_policy', policyPayload);
       if (policyResult.error) {
+        console.warn('Customer vehicle policy save failed', policyResult.error.message);
         setSaving(false);
-        return setMessage(`Vehicle saved, but policy details could not be saved: ${policyResult.error.message || 'Please try again.'}`);
+        return setMessage('Vehicle saved, but the policy details could not be saved. Please add the policy again from the vehicle screen.');
       }
       if (policyCopy) {
         const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
         if (uploadError) {
+          console.warn('Customer vehicle policy copy upload failed', uploadError);
           setSaving(false);
-          return setMessage(`Vehicle and policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+          return setMessage('Vehicle and policy saved, but the policy copy could not be uploaded. You can add the copy again later.');
         }
       }
     }
