@@ -39,19 +39,20 @@ export function PartnerListSummaryStrip({ items }: { items: PartnerListSummaryIt
 
 const styles = StyleSheet.create({
   wrap: {
-    minHeight: 68,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderRadius: 15,
-    backgroundColor: partnerTheme.colors.surface,
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: partnerTheme.colors.line,
   },
   item: {
     flex: 1,
     minWidth: 0,
     justifyContent: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 7,
   },
   itemBorder: {
     borderRightWidth: StyleSheet.hairlineWidth,
@@ -59,15 +60,15 @@ const styles = StyleSheet.create({
   },
   value: {
     color: partnerTheme.colors.ink,
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 19,
     fontWeight: '600',
   },
   label: {
-    marginTop: 3,
+    marginTop: 2,
     color: partnerTheme.colors.inkMuted,
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 9.5,
+    lineHeight: 12,
     fontWeight: '500',
   },
   warning: { color: partnerTheme.colors.warning },
