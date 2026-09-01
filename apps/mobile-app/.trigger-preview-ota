@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1004
-source_commit=222b8ef49bab9cfbc2137562cef5876c82284a6a
-purpose=publish clickable customer profile documents and KYC summary cards preview OTA
+source_pr=1007
+source_commit=222fcbb52d5ff6b86c4fdbcf9ed3da05b9a96e89
+purpose=publish customer claim card column symmetry preview OTA
