@@ -6,7 +6,6 @@ import { useRouter } from 'expo-router';
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
@@ -211,7 +210,7 @@ export default function RenewalsScreen() {
     <PartnerListScreen
       eyebrow="RENEWALS"
       title="Renewal work queue"
-      action={<PartnerIconButton icon="close" label="Close renewals" onPress={() => router.back()} />}
+      onBack={() => router.back()}
       data={visibleRows}
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item }) => (
