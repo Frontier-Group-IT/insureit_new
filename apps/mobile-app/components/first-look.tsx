@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import Svg, { Defs, Image as SvgImage, Mask, Rect } from 'react-native-svg';
 
 const primaryLogo = require('../assets/brand/logo (2).png');
 const inverseMarkLogo = require('../assets/brand/insureit-primary-logo-clean.png');
@@ -21,7 +22,18 @@ export function BrandLogo({ width = 208, style, inverse = false }: { width?: num
   const taglineSize = Math.max(5, Math.round(width * 0.04));
   return (
     <View style={[styles.brandLogo, { width, minHeight: markSize }, style]}>
-      <Image source={inverse ? inverseMarkLogo : primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize, tintColor: inverse ? '#FFFFFF' : undefined }} />
+      {inverse ? (
+        <Svg width={markSize} height={markSize} viewBox="0 0 404 486">
+          <Defs>
+            <Mask id="insureit-header-mark-mask" maskType="alpha">
+              <SvgImage href={inverseMarkLogo} x="0" y="0" width="404" height="486" preserveAspectRatio="xMidYMid meet" />
+            </Mask>
+          </Defs>
+          <Rect x="0" y="0" width="404" height="486" fill="#FFFFFF" mask="url(#insureit-header-mark-mask)" />
+        </Svg>
+      ) : (
+        <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
+      )}
       <View style={[styles.brandLogoCopy, { marginLeft: gap }]}>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, inverse && styles.brandLogoNameInverse, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, inverse && styles.brandLogoTaglineInverse, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
