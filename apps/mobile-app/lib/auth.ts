@@ -89,6 +89,45 @@ export async function getCurrentSession(): Promise<Session | null> {
   return data.session;
 }
 
+export async function getRestoredSession(waitMs = 2500): Promise<Session | null> {
+  const current = await getCurrentSession();
+  if (current?.user) return current;
+
+  return new Promise<Session | null>((resolve, reject) => {
+    let settled = false;
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    const finish = (session: Session | null, error?: unknown) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      subscription?.unsubscribe();
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(session);
+    };
+
+    const timer = setTimeout(() => finish(null), waitMs);
+
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+        finish(session);
+      }
+    });
+    subscription = data.subscription;
+
+    void supabase.auth.getSession().then(({ data: latest, error }) => {
+      if (error) {
+        finish(null, error);
+        return;
+      }
+      if (latest.session?.user) finish(latest.session);
+    }).catch((error) => finish(null, error));
+  });
+}
+
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
   if (error) throw error;
