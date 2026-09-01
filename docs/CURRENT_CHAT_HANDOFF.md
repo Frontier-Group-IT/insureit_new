@@ -1170,3 +1170,84 @@ R5 OTA publication:
 ### Next refinement slice
 
 Proceed with **R6 Business / Payout / Network** using the same compact, progressive, role-authorized Partner UX language. Preserve all server-side commercial authorization boundaries and do not expose internal accounting/reconciliation data.
+
+
+## Partner UX refinement R4–R8 closeout — 2026-09-01
+
+This section supersedes the earlier R4/R5 OTA entries that were marked TRIGGERED / UNVERIFIED. Direct GitHub Actions push-run evidence is now available and confirms the actual deployment state.
+
+### R4 — Detail screens — VERIFIED / DEPLOYED
+
+- PR #940 merged as `57c9764874e489a5e3304b93480538ec27e0725f`.
+- Final feature head: `b072feb627694f0c7bfae58c0567cd8d475c5d9a`.
+- Partner Verify #103 / run `33469840016`: SUCCESS.
+- Web Verify #2488 / run `33469840019`: SUCCESS.
+- OTA marker commit: `8f2f0c949a35769c3f610c3713da008c9ebd8b41`.
+- Publish Partner preview OTA #24 / run `33470126679`: SUCCESS.
+- No APK/AAB or native dependency/config change.
+
+### R5 — Policy Intake transactional journey — VERIFIED / DEPLOYED
+
+- PR #943 merged as `b6f35d5d048f06625e6ede8152c8f83f89834e7d`.
+- Final feature head: `35d0e09dbba3f94a4052321a3f0462fb3b54e17c`.
+- Partner Verify #105 / run `33470314551`: SUCCESS.
+- Web Verify #2491 / run `33470314526`: SUCCESS.
+- OTA marker commit: `35fad7d32a8b9aabce209f750467050f6e5987d6`.
+- Publish Partner preview OTA #25 / run `33470533523`: SUCCESS.
+- No APK/AAB or native dependency/config change.
+
+### R6 — Business / Payout / Network — VERIFIED / DEPLOYED
+
+- PR #946 merged as `83b0fb441695d6a5aa7fe41109902e723204d776`.
+- Final feature head: `dc279ff3787660e31f9bc8c5584cd9facec5055e`.
+- Partner Verify #106 / run `33470725076`: SUCCESS.
+- Web Verify #2494 / run `33470725068`: SUCCESS.
+- Delivered:
+  - compact Payout summary using shared list-summary language;
+  - recent payout records moved behind progressive disclosure;
+  - server-driven restricted payout visibility preserved exactly;
+  - Network moved to shared Partner loading/error/summary patterns;
+  - tiny legacy Network text replaced by shared readable typography;
+  - hierarchy, Partner metrics, owner data and POSP/MISP children preserved.
+- OTA marker commit: `f77545cad058ee65448114f98527f0e3db18228a`.
+- Publish Partner preview OTA #26 / run `33470938811`: SUCCESS.
+- No payout calculation/RPC, hierarchy, backend/schema/RLS/auth, APK/AAB or native dependency/config change.
+
+### R7 — Account / Profile / Settings / Support — VERIFIED / DEPLOYED
+
+- PR #947 merged as `df54fec4d8fe9b9bdef71a562192195a29cb6610`.
+- Final feature head: `352e66b2b8ce47b292f11ff7f9ea9c919d872bbc`.
+- Partner Verify #107 / run `33471069531`: SUCCESS.
+- Web Verify #2495 / run `33471069539`: SUCCESS.
+- Delivered:
+  - Profile moved to shared readable typography and section hierarchy;
+  - new OTA-safe `Settings & app info` route with Profile/Support shortcuts;
+  - Settings shows app version/runtime/update behavior only and does not create backend preferences or scope-changing controls;
+  - Support prioritizes Need your attention above in-progress Policy Intakes.
+- OTA marker commit: `d869008a2514e036d2b4f85673cdd2ed5e606969`.
+- Publish Partner preview OTA #27 / run `33471283749`: SUCCESS.
+- No backend/schema/RLS/auth, APK/AAB or native dependency/config change.
+
+### R8 — Universal search / cross-navigation / preserved context — VERIFIED / DEPLOYED
+
+- PR #949 merged as `cf800ffce3fa4bcb1cf4dfc7faf7c26b571d18e7`.
+- Final feature head: `cf880102e880ebc5dce6ed4a63b072c6c3ecd35c`.
+- Partner Verify #108 / run `33471596329`: SUCCESS.
+- Web Verify #2498 / run `33471596333`: SUCCESS.
+- Delivered:
+  - dedicated universal Search route under More > Work;
+  - Customer, Policy and Claim search composed only from existing Partner-scoped RPC search functions;
+  - no new backend search endpoint or expanded data surface;
+  - six compact results per section with direct detail navigation;
+  - debounced search, stale-response protection and partial-failure tolerance;
+  - universal query preserved when navigating to a detail and back;
+  - existing Customers/Policies/Claims saved list search/filter state remains untouched.
+- OTA marker commit: `3a11b4754de7c919b17fbf2cdcd4139efae6d2bf`.
+- Publish Partner preview OTA #28 / run `33471796783`: SUCCESS.
+- No backend/schema/RLS/auth, APK/AAB or native dependency/config change.
+
+### Refinement sequence status
+
+R3 through R8 are now complete. There is no planned R9 in this OTA-safe refinement sequence.
+
+**NEXT SAFE STEP:** installed-device UAT and release-readiness review across the refined Partner app, followed by any OTA-safe defects discovered during UAT. Keep all work that genuinely requires a new APK/AAB/native dependency or native configuration for the explicitly approved final native-build stage.
