@@ -63,24 +63,24 @@ export function PartnerOperationalRow({
       </View>
 
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
-      <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.inkSubtle} />
+      <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.inkSubtle} />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 82,
+    minHeight: 76,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 9,
+    gap: 8,
+    paddingVertical: 7,
     paddingHorizontal: 2,
     backgroundColor: partnerTheme.colors.surface,
   },
   rowDense: {
-    minHeight: 70,
-    paddingVertical: 7,
+    minHeight: 64,
+    paddingVertical: 5,
   },
   divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -89,10 +89,10 @@ const styles = StyleSheet.create({
   leading: { flexShrink: 0 },
   body: { flex: 1, minWidth: 0 },
   titleLine: {
-    minHeight: 19,
+    minHeight: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 6,
   },
   title: {
     flex: 1,
@@ -101,28 +101,28 @@ const styles = StyleSheet.create({
   },
   status: { flexShrink: 0 },
   subtitle: {
-    marginTop: 2,
+    marginTop: 1,
     color: partnerTheme.colors.inkMuted,
     ...partnerTheme.typography.caption,
   },
   detail: {
-    marginTop: 2,
+    marginTop: 1,
     color: partnerTheme.colors.inkSubtle,
     ...partnerTheme.typography.meta,
   },
   bottomLine: {
-    marginTop: 4,
+    marginTop: 3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 10,
+    gap: 8,
   },
   value: {
     flex: 1,
     minWidth: 0,
     color: partnerTheme.colors.ink,
-    fontSize: 11.5,
-    lineHeight: 16,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: '600',
   },
   meta: {
@@ -133,7 +133,5 @@ const styles = StyleSheet.create({
     ...partnerTheme.typography.meta,
   },
   trailing: { flexShrink: 0 },
-  pressed: {
-    backgroundColor: partnerTheme.colors.pressed,
-  },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
 });

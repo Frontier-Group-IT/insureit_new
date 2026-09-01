@@ -14,6 +14,7 @@ import { partnerTheme } from '@/lib/theme';
 export function PartnerListScreen<T>({
   title,
   eyebrow,
+  onBack,
   action,
   data,
   renderItem,
@@ -28,6 +29,7 @@ export function PartnerListScreen<T>({
 }: {
   title: string;
   eyebrow?: string;
+  onBack?: () => void;
   action?: ReactNode;
   data: readonly T[];
   renderItem: ListRenderItem<T>;
@@ -51,7 +53,7 @@ export function PartnerListScreen<T>({
         contentContainerStyle={[styles.content, !data.length && styles.contentEmpty]}
         ListHeaderComponent={
           <View>
-            <PartnerTopBar title={title} eyebrow={eyebrow} action={action} />
+            <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} action={action} />
             {header}
           </View>
         }

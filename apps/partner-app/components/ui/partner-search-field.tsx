@@ -25,7 +25,7 @@ export function PartnerSearchField({
     <View style={[styles.wrap, focused && styles.focused]}>
       <Ionicons
         name="search-outline"
-        size={18}
+        size={17}
         color={focused ? partnerTheme.colors.brand : partnerTheme.colors.inkSubtle}
       />
       <TextInput
@@ -52,7 +52,7 @@ export function PartnerSearchField({
           onPress={onClear}
           style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
         >
-          <Ionicons name="close" size={17} color={partnerTheme.colors.inkMuted} />
+          <Ionicons name="close" size={16} color={partnerTheme.colors.inkMuted} />
         </Pressable>
       ) : null}
     </View>
@@ -61,13 +61,13 @@ export function PartnerSearchField({
 
 const styles = StyleSheet.create({
   wrap: {
-    minHeight: partnerTheme.control.fieldHeight,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
-    borderRadius: partnerTheme.radius.md,
-    paddingLeft: 13,
-    paddingRight: 5,
+    gap: 8,
+    borderRadius: partnerTheme.radius.sm,
+    paddingLeft: 11,
+    paddingRight: 4,
     backgroundColor: partnerTheme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: 'transparent',
@@ -78,14 +78,14 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 40,
     color: partnerTheme.colors.ink,
     paddingVertical: 0,
     ...partnerTheme.typography.body,
   },
   clear: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: partnerTheme.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
