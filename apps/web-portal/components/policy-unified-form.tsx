@@ -392,7 +392,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
     },
     protectedKeys:appliedRc?[...SECTION_02_OCR_FIELDS]:[],
   };
-  if(selectedExistingVehicleId&&!ocrImportContext.protectedKeys.length)ocrImportContext.protectedKeys=[...SECTION_02_OCR_FIELDS];
+  if(selectedExistingVehicleId&&!(ocrImportContext.protectedKeys?.length))ocrImportContext.protectedKeys=[...SECTION_02_OCR_FIELDS];
 
   const sourceSection=<Section number="01" title="Policy source & ownership">
     <div><DateField label="Policy issuance date" value={form.issuanceDate} onChange={value=>update("issuanceDate",value)} required/><CompactSourceMeta label="Month" value={form.issuanceDate?new Date(`${form.issuanceDate}T00:00:00`).toLocaleDateString("en-US",{month:"short",year:"2-digit"}):"—"}/></div>
