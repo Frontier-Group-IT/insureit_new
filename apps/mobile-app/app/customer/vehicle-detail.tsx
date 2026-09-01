@@ -73,7 +73,7 @@ export default function VehicleDetailScreen() {
   const latestPolicy = useMemo(() => selectVehiclePolicy(policies), [policies]);
   const latestPolicyCompany = latestPolicy ? companyById.get(latestPolicy.insurance_company_id) : null;
   const policyState = latestPolicy ? policyStatus(latestPolicy.end_date) : { label: 'No policy', tone: 'red' as const, helper: 'Add a policy to complete protection' };
-  const policyAction = policyState.tone === 'red' ? { label: 'Add policy', icon: 'shield-plus-outline' as const } : policyState.tone === 'orange' ? { label: 'Get quote', icon: 'file-document-outline' as const } : null;
+  const policyAction = policyState.tone === 'red' ? { label: 'Add policy', icon: 'shield-plus-outline' as const } : policyState.tone === 'orange' ? { label: 'Add renewed policy', icon: 'refresh' as const } : null;
   const statusTone = policyTone(policyState.tone);
   const complianceItems = useMemo(() => vehicleComplianceItems(vehicle, latestPolicy), [latestPolicy, vehicle]);
   const alertItems = complianceItems.filter((item) => item.status !== 'ok');
