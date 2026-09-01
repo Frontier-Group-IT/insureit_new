@@ -46,9 +46,8 @@ export default function CustomerDetailScreen() {
 
   return (
     <PartnerScreen
-      eyebrow="CUSTOMER"
-      title={data?.customer.customer_name || 'Customer'}
-      subtitle={data?.customer.customer_code || undefined}
+      eyebrow="BUSINESS"
+      title="Customer"
       onBack={() => router.back()}
     >
       {loading ? (
@@ -151,7 +150,7 @@ export default function CustomerDetailScreen() {
                   <View style={styles.itemIcon}><Ionicons name="car-outline" size={18} color={partnerTheme.colors.accent} /></View>
                   <View style={styles.itemBody}>
                     <Text style={styles.itemTitle}>{vehicle.vehicle_no || 'Vehicle'}</Text>
-                    <Text style={styles.itemText}>{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' · ') || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
+                    <Text style={styles.itemText}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
                     <View style={styles.expiryRow}>
                       <Expiry label="PUC" date={vehicle.puc_expiry_date} />
                       <Expiry label="Fitness" date={vehicle.fitness_expiry_date} />
@@ -279,6 +278,13 @@ function policyCategory(policy: PartnerCustomerDetail['policies'][number]) {
   if (value.includes('health')) return 'Health';
   if (value.includes('life')) return 'Life';
   return 'Non-Motor';
+}
+
+function displayParts(...values: Array<string | number | null | undefined>) {
+  return values
+    .map((value) => value == null ? '' : String(value).trim())
+    .filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined')
+    .join(' · ');
 }
 
 function initials(value: string) {
