@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1018
-source_commit=9156d60f0d3a3af700ff457f42a580dd0952d20f
-purpose=publish Stage 3 claim-number prompt when missing preview OTA
+source_pr=1019
+source_commit=05fb3563e56c70260084b1d64797c52f47863d24
+purpose=publish completed claim missing claim number action preview OTA
