@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { getCurrentSession, routeSignedInUser } from '@/lib/auth';
+import { getRestoredSession, routeSignedInUser } from '@/lib/auth';
 import { Screen, Button, Message } from '@/components/ui';
 
 export default function IndexScreen() {
@@ -12,7 +12,7 @@ export default function IndexScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const session = await withTimeout(getCurrentSession(), 12000);
+        const session = await withTimeout(getRestoredSession(), 6000);
         if (session?.user) {
           await withTimeout(routeSignedInUser(session.user, router), 12000);
         } else {
