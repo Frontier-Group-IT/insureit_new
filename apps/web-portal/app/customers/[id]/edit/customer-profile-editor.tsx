@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck, CalendarDays, CarFront, CircleAlert, CircleCheck, Phone, UserCheck, UserRound, type LucideIcon } from "lucide-react";
+import { BadgeCheck, CalendarDays, CarFront, CircleAlert, CircleCheck, CirclePlus, Phone, UserCheck, UserRound, type LucideIcon } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 
@@ -184,7 +184,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
 
         <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-white shadow-[var(--shadow-panel)]">
           <div className="flex items-center justify-between gap-2 px-4 py-3">
-            <Link href={`/vehicles/new?customer_id=${encodeURIComponent(customer.id)}`} className="inline-flex h-9 items-center justify-center rounded-md border border-[#315FEA] bg-white px-4 text-[10.5px] font-semibold text-[#315FEA] transition hover:bg-[#F5F7FF]">Add Vehicle</Link>
+            <Link href={`/vehicles/new?customer_id=${encodeURIComponent(customer.id)}`} className="group inline-flex h-9 items-center gap-2 px-1 text-[11px] font-semibold text-[#2563EB] transition hover:text-[#1D4ED8]" aria-label="Add Vehicle"><span className="relative inline-flex h-5 w-6 items-center justify-center"><CarFront className="h-5 w-5" strokeWidth={2.1} /><CirclePlus className="absolute -right-1 -top-1 h-3 w-3 fill-white text-[#2563EB] transition group-hover:text-[#1D4ED8]" strokeWidth={2.4} /></span><span>Add Vehicle</span></Link>
             <div className="flex items-center justify-end gap-2">
               <Link href="/customers" className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]">Back</Link>
               {vehicles.length > 0 ? <Link href={`/customers/${customer.id}/fleet`} className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]">View Fleet</Link> : null}
