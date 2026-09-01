@@ -167,4 +167,4 @@ assert(nonMotorPolicyForm.includes('<CustomerSearchField label="Customer / organ
 assert(nonMotorPolicyForm.includes('onSelectionChange={changeCustomer}'));
 assert(!nonMotorPolicyForm.includes('<Select label="Customer / organisation"'));
 
-assert(nonMotorPolicyForm.includes('required containedResults onSelectionChange={changeCustomer}'));
+assert(nonMotorPolicyForm.includes('required onSelectionChange={changeCustomer}'));
