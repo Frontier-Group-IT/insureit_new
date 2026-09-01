@@ -11,6 +11,8 @@ export function CustomerSearchField({
   defaultValue,
   required = false,
   labelAction,
+  onSelectionChange,
+  disabled = false,
 }: {
   label: string;
   name: string;
@@ -18,6 +20,8 @@ export function CustomerSearchField({
   defaultValue?: string | null;
   required?: boolean;
   labelAction?: ReactNode;
+  onSelectionChange?: (value: string) => void;
+  disabled?: boolean;
 }) {
   const initialOption = options.find((option) => option.value === (defaultValue ?? "")) ?? null;
   const [query, setQuery] = useState(initialOption?.label ?? "");
@@ -38,11 +42,13 @@ export function CustomerSearchField({
     setOpen(false);
     setActiveIndex(0);
     inputRef.current?.setCustomValidity("");
+    onSelectionChange?.(option.value);
   }
 
   function handleQueryChange(value: string) {
     setQuery(value);
     setSelectedValue("");
+    onSelectionChange?.("");
     setOpen(true);
     setActiveIndex(0);
     if (required && value.trim()) inputRef.current?.setCustomValidity("Select a customer from the matching results.");
@@ -99,7 +105,8 @@ export function CustomerSearchField({
         required={required}
         value={query}
         placeholder="Search customer"
-        className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]"
+        disabled={disabled}
+        className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:cursor-not-allowed disabled:border-[#E3E8EF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
         onFocus={() => setOpen(true)}
         onChange={(event) => handleQueryChange(event.target.value)}
         onKeyDown={handleKeyDown}
