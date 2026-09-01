@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8' },
   externalBadgeText: { color: '#315C99', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
-  miniLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
+  miniLabel: { color: '#174EA6', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
   miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },
