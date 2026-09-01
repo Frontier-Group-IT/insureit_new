@@ -216,15 +216,22 @@ export async function getDashboardBusinessData(
   const premiumByPolicy = new Map<string, { net: number; gross: number }>();
 
   if (commercialAccess && policyIds.length) {
-    const premiumResult = await admin
-      .from("policy_premium_details")
-      .select("policy_id,net_premium,gross_premium")
-      .in("policy_id", policyIds)
-      .returns<PremiumRow[]>();
-    if (premiumResult.error) warnings.push("Premium figures could not be refreshed.");
+    const premiumResults = await Promise.all(
+      chunkValues(policyIds, 120).map((batch) =>
+        admin
+          .from("policy_premium_details")
+          .select("policy_id,net_premium,gross_premium")
+          .in("policy_id", batch)
+          .returns<PremiumRow[]>()
+      )
+    );
+    const premiumError = premiumResults.find((result) => result.error)?.error;
+    if (premiumError) warnings.push("Premium figures could not be refreshed.");
     else {
-      for (const row of premiumResult.data ?? []) {
-        premiumByPolicy.set(row.policy_id, { net: numberValue(row.net_premium), gross: numberValue(row.gross_premium) });
+      for (const result of premiumResults) {
+        for (const row of result.data ?? []) {
+          premiumByPolicy.set(row.policy_id, { net: numberValue(row.net_premium), gross: numberValue(row.gross_premium) });
+        }
       }
     }
   }
@@ -283,23 +290,34 @@ export async function getDashboardBusinessData(
 
   let commercial: DashboardBusinessData["commercial"] = null;
   if (commercialAccess && accountsAccess && policyIds.length) {
-    const [payinResult, payoutResult] = await Promise.all([
-      admin
-        .from("policy_payin_details")
-        .select("policy_id,total_projected_payin,tds_amount,payin_after_tds,commercial_status")
-        .in("policy_id", policyIds)
-        .returns<PayinRow[]>(),
-      admin
-        .from("policy_intermediary_payouts")
-        .select("policy_id,gross_payout,partner_payout_amount,retention_amount,commercial_status")
-        .in("policy_id", policyIds)
-        .returns<PayoutRow[]>(),
+    const policyIdBatches = chunkValues(policyIds, 120);
+    const [payinResults, payoutResults] = await Promise.all([
+      Promise.all(
+        policyIdBatches.map((batch) =>
+          admin
+            .from("policy_payin_details")
+            .select("policy_id,total_projected_payin,tds_amount,payin_after_tds,commercial_status")
+            .in("policy_id", batch)
+            .returns<PayinRow[]>()
+        )
+      ),
+      Promise.all(
+        policyIdBatches.map((batch) =>
+          admin
+            .from("policy_intermediary_payouts")
+            .select("policy_id,gross_payout,partner_payout_amount,retention_amount,commercial_status")
+            .in("policy_id", batch)
+            .returns<PayoutRow[]>()
+        )
+      ),
     ]);
 
-    if (payinResult.error || payoutResult.error) warnings.push("Commercial operations could not be refreshed.");
+    const commercialError =
+      payinResults.some((result) => result.error) || payoutResults.some((result) => result.error);
+    if (commercialError) warnings.push("Commercial operations could not be refreshed.");
     else {
-      const payins = payinResult.data ?? [];
-      const payouts = payoutResult.data ?? [];
+      const payins = payinResults.flatMap((result) => result.data ?? []);
+      const payouts = payoutResults.flatMap((result) => result.data ?? []);
       const projectedPayin = payins.reduce((sum, row) => sum + numberValue(row.total_projected_payin), 0);
       const tdsAmount = payins.reduce((sum, row) => sum + numberValue(row.tds_amount), 0);
       const payinAfterTds = payins.reduce((sum, row) => sum + numberValue(row.payin_after_tds), 0);
