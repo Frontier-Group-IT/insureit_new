@@ -8,7 +8,6 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerField } from '@/components/ui/partner-field';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
@@ -151,7 +150,9 @@ export default function NewPolicyIntakeScreen() {
     <PartnerScreen
       eyebrow="NEW POLICY INTAKE"
       title="Send policy to Operations"
-      action={<PartnerIconButton icon="close" label="Close Policy Intake" disabled={submitting} onPress={requestClose} />}
+      subtitle="Review details, attach the policy copy, then submit"
+      onBack={requestClose}
+      backDisabled={submitting}
     >
       <PartnerConfirmDialog
         visible={closeConfirmVisible}
@@ -346,25 +347,25 @@ const styles = StyleSheet.create({
   draftBanner: { marginTop: 2 },
   section: { marginTop: partnerTheme.spacing.lg },
   label: { marginBottom: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.label },
-  fixedSource: { marginTop: partnerTheme.spacing.lg, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  fixedSource: { marginTop: partnerTheme.spacing.lg, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   fixedSourceName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   fixedSourceMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  sourceList: { gap: 8 },
-  source: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.md, paddingHorizontal: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  sourceActive: { borderColor: partnerTheme.colors.brand, backgroundColor: partnerTheme.colors.brandSoft },
+  sourceList: { gap: 0 },
+  source: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
+  sourceActive: { backgroundColor: partnerTheme.colors.brandSoft },
   sourceBody: { flex: 1 },
   sourceName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   sourceNameActive: { color: partnerTheme.colors.brandStrong },
   sourceMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sourceMetaActive: { color: '#68629A' },
-  upload: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 13, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderStyle: 'dashed', borderColor: '#C7D0DE' },
-  uploadSelected: { borderStyle: 'solid', borderColor: '#B7DBC8', backgroundColor: '#F7FCF9' },
-  uploadIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
+  upload: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: partnerTheme.colors.line },
+  uploadSelected: { backgroundColor: partnerTheme.colors.successSoft, borderColor: '#CBE7D7' },
+  uploadIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
   uploadBody: { flex: 1 },
   uploadTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   uploadMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   disabled: { opacity: 0.55 },
-  progressCard: { marginTop: partnerTheme.spacing.md, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.brandSoft, borderWidth: 1, borderColor: '#D9D5FF' },
+  progressCard: { marginTop: partnerTheme.spacing.md, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#D9D5FF', backgroundColor: partnerTheme.colors.brandSoft },
   progressTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   progressTitle: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.bodyStrong },
   progressText: { marginTop: 3, color: '#68629A', ...partnerTheme.typography.caption },
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
   progressTrack: { height: 7, marginTop: 11, overflow: 'hidden', borderRadius: 999, backgroundColor: '#D8D5F5' },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.brandStrong },
   feedback: { marginTop: partnerTheme.spacing.md },
-  reviewCard: { marginTop: partnerTheme.spacing.md, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  reviewCard: { marginTop: partnerTheme.spacing.md, backgroundColor: partnerTheme.colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: partnerTheme.colors.line },
   reviewTop: { minHeight: 42, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   reviewTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   reviewRow: { minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
@@ -380,6 +381,6 @@ const styles = StyleSheet.create({
   reviewLabel: { width: 88, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   reviewValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
   retryHint: { marginTop: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  submit: { marginTop: partnerTheme.spacing.lg },
-  pressed: { opacity: 0.82 },
+  submit: { marginTop: partnerTheme.spacing.lg, paddingTop: partnerTheme.spacing.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
 });
