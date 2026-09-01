@@ -10,6 +10,7 @@ export function PartnerScreen({
   eyebrow,
   subtitle,
   onBack,
+  backDisabled,
   action,
   children,
   scrollProps,
@@ -18,6 +19,7 @@ export function PartnerScreen({
   eyebrow?: string;
   subtitle?: string;
   onBack?: () => void;
+  backDisabled?: boolean;
   action?: ReactNode;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
 }>) {
@@ -34,6 +36,7 @@ export function PartnerScreen({
           eyebrow={eyebrow}
           subtitle={subtitle}
           onBack={onBack}
+          backDisabled={backDisabled}
           action={action}
         />
         {children}
