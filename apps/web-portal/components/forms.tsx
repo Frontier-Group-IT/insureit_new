@@ -24,7 +24,7 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
   </EnterpriseForm>;
 }
 
-export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions, createCustomerHref, allowPolicyContinuation = false }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode; createCustomerHref?: string; allowPolicyContinuation?: boolean }) {
+export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions, footerContent, createCustomerHref, allowPolicyContinuation = false }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode; footerContent?: ReactNode; createCustomerHref?: string; allowPolicyContinuation?: boolean }) {
   const defaultYear = values?.year?.toString() ?? "";
   const years = defaultYear && !vehicleYearOptions.includes(defaultYear) ? [defaultYear, ...vehicleYearOptions] : vehicleYearOptions;
   const yearOptions = years.map((year) => ({ value: year, label: year }));
@@ -81,9 +81,12 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
 
       {beforeActions}
 
-      <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
-        <Link href="/vehicles" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
-        {allowPolicyContinuation ? <VehicleSaveActionChooser /> : <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />}
+      <div className={`sticky bottom-0 z-20 flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur ${footerContent ? "justify-between" : "justify-end"}`}>
+        {footerContent ? <div className="min-w-0 flex-1">{footerContent}</div> : null}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <Link href="/vehicles" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">Cancel</Link>
+          {allowPolicyContinuation ? <VehicleSaveActionChooser /> : <FormSubmitButton label={submitLabel} className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]" />}
+        </div>
       </div>
     </form>
   </div>;

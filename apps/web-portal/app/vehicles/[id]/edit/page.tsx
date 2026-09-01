@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { saveVehicleMaster } from "@/app/vehicles/vehicle-master-actions";
 import { VehicleActivityStatus } from "@/components/vehicle-activity-status";
+import { VehiclePolicyFooterSummary, type VehicleLinkedPolicy } from "@/components/vehicle-policy-footer-summary";
 import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
@@ -53,17 +54,19 @@ export default async function EditVehiclePage({ params, searchParams }: { params
   const embedded = query.embedded === "1";
   const admin = createSupabaseAdminClient();
 
-  const [vehicleResult, customersResult, manufacturersResult, brandsResult] = await Promise.all([
+  const [vehicleResult, customersResult, manufacturersResult, brandsResult, policiesResult] = await Promise.all([
     admin.from("vehicles").select("id, customer_id, vehicle_no, registration_status, vehicle_type, make, model, chassis_no, engine_no, permit_no, year, engine_capacity_cc, seating_capacity, gvw_kg, fuel_type, registration_date, fitness_expiry_date, puc_expiry_date, road_tax_expiry_date, national_permit_expiry_date, local_permit_expiry_date, created_at, updated_at").eq("id", id).maybeSingle<VehicleRow>(),
     admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
+    admin.from("policies").select("id,policy_no,start_date,end_date").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
   ]);
 
   if (vehicleResult.error) throw new Error(`Unable to load vehicle details: ${vehicleResult.error.message}`);
   if (!vehicleResult.data) notFound();
   if (customersResult.error) throw new Error(`Unable to load customers: ${customersResult.error.message}`);
   if (manufacturersResult.error || brandsResult.error) throw new Error(`Unable to load vehicle makes: ${manufacturersResult.error?.message ?? brandsResult.error?.message}`);
+  if (policiesResult.error) throw new Error(`Unable to load linked policies: ${policiesResult.error.message}`);
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
   const activeManufacturerIds = new Set((manufacturersResult.data ?? []).map((manufacturer) => manufacturer.id));
@@ -84,6 +87,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
         values={formVehicle}
         submitLabel="Save changes"
         beforeActions={<VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />}
+        footerContent={<VehiclePolicyFooterSummary policies={policiesResult.data ?? []} customerId={vehicle.customer_id} vehicleId={vehicle.id} />}
       />
     </>
   );
