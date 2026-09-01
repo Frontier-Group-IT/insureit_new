@@ -86,6 +86,8 @@ assert(vehiclePolicyFooter.includes("No policy linked"));
 assert(vehiclePolicyFooter.includes("<FilePlus2"));
 assert(vehiclePolicyFooter.includes(">\n          <FilePlus2"));
 assert(vehiclePolicyFooter.includes("/policies/${encodeURIComponent(policy.id)}/edit"));
+assert(vehiclePolicyFooter.includes('border-[#D6E1EE] bg-[#F4F7FB]'));
+assert(vehiclePolicyFooter.includes('hover:bg-[#EDF3F9]'));
 assert(vehiclePolicyFooter.includes("/policies/documents/${encodeURIComponent(policyCopyId(policy)!)}\/open"));
 assert(vehiclePolicyFooter.includes('document.document_type === "policy_copy"'));
 assert(!vehiclePolicyFooter.includes("Policy copy unavailable"));
