@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
@@ -152,7 +150,7 @@ export default function CustomersScreen() {
     <PartnerListScreen
       eyebrow="BUSINESS"
       title="Customers"
-      action={<PartnerIconButton icon="close" label="Close customers" onPress={() => router.back()} />}
+      onBack={() => router.back()}
       data={collection.rows}
       keyExtractor={(row) => row.customer_id}
       renderItem={({ item }) => (
@@ -218,12 +216,12 @@ function formatUpdatedAt(value: number | null) {
 const styles = StyleSheet.create({
   banner: { marginTop: 9 },
   inlineBanner: { marginBottom: 8 },
-  search: { marginTop: 10 },
+  search: { marginTop: 8 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: partnerTheme.colors.brandSoft,
