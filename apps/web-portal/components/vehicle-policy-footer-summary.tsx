@@ -6,6 +6,7 @@ export type VehicleLinkedPolicy = {
   policy_no: string;
   start_date: string;
   end_date: string;
+  policy_documents?: { id: string; document_type: string }[] | null;
 };
 
 type PolicyState = "ACTIVE" | "DUE" | "EXPIRED";
@@ -60,17 +61,32 @@ export function VehiclePolicyFooterSummary({
       <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${iconClass}`}>
         <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
       </span>
-      <span className="max-w-[190px] truncate font-bold text-[#17203A]" title={policy.policy_no}>{policy.policy_no}</span>
+      <Link
+        prefetch={false}
+        href={`/policies/${encodeURIComponent(policy.id)}/edit`}
+        className="max-w-[190px] truncate font-bold text-[#17203A] transition hover:text-[#17365D] hover:underline"
+        title={`Edit policy ${policy.policy_no}`}
+      >
+        {policy.policy_no}
+      </Link>
       <span className="hidden h-5 w-px bg-[#D8E1EC] sm:block" aria-hidden="true" />
       <span className={`rounded-md border px-2 py-1 text-[8px] font-extrabold tracking-[0.03em] ${stateClass}`}>{state}</span>
       <span className="text-[9.5px] font-medium text-[#667085]">{meta}</span>
-      <Link
-        prefetch={false}
-        href={`/policies/${encodeURIComponent(policy.id)}`}
-        className="inline-flex items-center gap-1 font-bold text-[#2563C7] transition hover:text-[#17365D] hover:underline"
-      >
-        View policy <ExternalLink className="h-3 w-3" aria-hidden="true" />
-      </Link>
+      {policyCopyId(policy) ? (
+        <Link
+          prefetch={false}
+          href={`/policies/documents/${encodeURIComponent(policyCopyId(policy)!)}/open`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-bold text-[#2563C7] transition hover:text-[#17365D] hover:underline"
+        >
+          View policy <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        </Link>
+      ) : (
+        <span className="inline-flex items-center gap-1 font-semibold text-[#98A2B3]" title="Policy copy is not available">
+          Policy copy unavailable
+        </span>
+      )}
     </div>
   );
 }
@@ -116,4 +132,8 @@ function formatDate(value: string) {
   return Number.isNaN(date.getTime())
     ? value
     : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function policyCopyId(policy: VehicleLinkedPolicy) {
+  return policy.policy_documents?.find((document) => document.document_type === "policy_copy")?.id ?? null;
 }

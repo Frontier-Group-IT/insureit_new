@@ -59,7 +59,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
     admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
-    admin.from("policies").select("id,policy_no,start_date,end_date").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
+    admin.from("policies").select("id,policy_no,start_date,end_date,policy_documents(id,document_type)").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
   ]);
 
   if (vehicleResult.error) throw new Error(`Unable to load vehicle details: ${vehicleResult.error.message}`);
