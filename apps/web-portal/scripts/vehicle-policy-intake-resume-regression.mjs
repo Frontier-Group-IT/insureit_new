@@ -69,6 +69,15 @@ assert(vehicleViewPage.includes("VehiclePolicyFooterSummary"));
 
 const vehiclePolicyFooter=read("components/vehicle-policy-footer-summary.tsx");
 assert(vehiclePolicyFooter.includes('type PolicyState = "ACTIVE" | "DUE" | "EXPIRED"'));
+assert(vehiclePolicyFooter.includes("PolicyStateIcon"));
+assert(vehiclePolicyFooter.includes("CircleCheck"));
+assert(vehiclePolicyFooter.includes("CircleAlert"));
+assert(vehiclePolicyFooter.includes("TriangleAlert"));
+assert(vehiclePolicyFooter.includes('aria-label="Active"'));
+assert(vehiclePolicyFooter.includes('aria-label="Expired"'));
+assert(vehiclePolicyFooter.includes('aria-label="Due"'));
+assert(vehiclePolicyFooter.includes('bg-[#FFF0EA] text-[#D16A4B]'));
+assert(!vehiclePolicyFooter.includes('>{state}</span>'));
 assert(vehiclePolicyFooter.includes('days <= 30 ? "DUE" : "ACTIVE"'));
 assert(vehiclePolicyFooter.includes("/policies/new?customer_id="));
 assert(vehiclePolicyFooter.includes("&vehicle_id="));
