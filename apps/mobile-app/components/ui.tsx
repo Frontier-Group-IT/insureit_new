@@ -464,10 +464,10 @@ function topPaddingFor(spacing: ScreenTopSpacing) {
 
 function isTabActive(tabHref: string, pathname: string, customerContext?: CustomerAccountContext | null) {
   const portfolio = isPortfolioCustomerContext(customerContext);
-  if (tabHref === '/customer/home') return pathname === '/customer/home' || pathname === '/customer/report-accident' || pathname === '/customer/start-claim' || pathname === '/customer/insurance-quote' || pathname === '/customer/e-challan';
+  if (tabHref === '/customer/home') return pathname === '/customer/home' || pathname === '/customer/insurance-quote' || pathname === '/customer/e-challan';
   if (tabHref === '/customer/policies') return ['/customer/policies', '/customer/policy-detail', '/customer/add-policy', '/customer/renewals'].some((route) => pathname.startsWith(route));
   if (tabHref === '/customer/vehicles') return ['/customer/vehicles', '/customer/vehicle-detail', '/customer/add-vehicle'].some((route) => pathname.startsWith(route));
-  if (tabHref === '/customer/claims') return ['/customer/claims', '/customer/claim-detail', '/customer/self-managed-claim', '/customer/self-managed-claim-detail', '/customer/upload-documents'].some((route) => pathname.startsWith(route));
+  if (tabHref === '/customer/claims') return ['/customer/claims', '/customer/start-claim', '/customer/report-accident', '/customer/claim-detail', '/customer/self-managed-claim', '/customer/self-managed-claim-detail', '/customer/upload-documents'].some((route) => pathname.startsWith(route));
   if (tabHref === '/customer/profile') return pathname.startsWith('/customer/profile') || pathname.startsWith('/customer/kyc') || pathname.startsWith('/customer/legal');
   if (portfolio && tabHref === '/customer/group/accounts') return pathname.startsWith('/customer/group/accounts') || pathname.startsWith('/customer/group/account-detail') || pathname.startsWith('/customer/group/add-account');
   if (portfolio && tabHref === '/customer/group/fleet') return pathname.startsWith('/customer/group/fleet') || pathname.startsWith('/customer/vehicle-detail') || pathname.startsWith('/customer/add-vehicle');
