@@ -264,6 +264,7 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
     const claim = await loadClaim(claimId);
     const supabase = await createServerSupabaseClient();
     const uploadedPaths: string[] = [];
+    const rows: Array<{ claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: "pending" }> = [];
 
     try {
       for (const [index, file] of files.entries()) {
@@ -272,8 +273,7 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
         const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
         if (uploadError) throw new Error(uploadError.message);
         uploadedPaths.push(storagePath);
-
-        const { error: insertError } = await supabase.from("claim_documents").insert({
+        rows.push({
           claim_id: claimId,
           customer_id: claim.customer_id,
           document_type: "Spot Photo",
@@ -282,8 +282,10 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
           storage_path: storagePath,
           verification_status: "pending"
         });
-        if (insertError) throw new Error(insertError.message);
       }
+
+      const { error: insertError } = await supabase.from("claim_documents").insert(rows);
+      if (insertError) throw new Error(insertError.message);
     } catch (error) {
       if (uploadedPaths.length) await supabase.storage.from(bucketName).remove(uploadedPaths);
       throw error;
