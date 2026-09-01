@@ -1,10 +1,11 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
@@ -239,6 +240,8 @@ export default function BusinessScreen() {
 }
 
 function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
+  const [showRecent, setShowRecent] = useState(false);
+
   if (!payout) {
     return <PartnerBanner tone="info" message="Payout information is not available right now." />;
   }
@@ -257,10 +260,14 @@ function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
 
   return (
     <View>
-      <View style={styles.payoutGrid}>
-        <PayoutMetric label="Eligible / pending" value={payout.eligible_amount} meta={`${payout.pending_count} pending records`} tone="warning" />
-        <PayoutMetric label="Paid" value={payout.paid_amount} meta={`${payout.paid_count} paid records`} tone="success" />
-      </View>
+      <PartnerListSummaryStrip
+        items={[
+          { key: 'eligible', label: 'Eligible', value: formatIndianCurrency(payout.eligible_amount) },
+          { key: 'paid', label: 'Paid', value: formatIndianCurrency(payout.paid_amount), tone: 'success' },
+          { key: 'review', label: 'Need review', value: payout.needs_review_count, tone: payout.needs_review_count ? 'warning' : 'default' },
+        ]}
+      />
+      <Text style={styles.payoutMeta}>{payout.pending_count} pending · {payout.paid_count} paid records</Text>
 
       {payout.needs_review_count > 0 ? (
         <View style={styles.payoutWarning}>
@@ -272,41 +279,43 @@ function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
       ) : null}
 
       {payout.recent.length ? (
-        <View style={styles.payoutRecent}>
-          {payout.recent.slice(0, 5).map((row) => (
-            <View key={row.id} style={styles.payoutRow}>
-              <View style={styles.payoutBody}>
-                <Text style={styles.payoutPolicy}>{row.policy_no}</Text>
-                <Text style={styles.payoutCustomer}>{row.customer_name}</Text>
-              </View>
-              <View style={styles.payoutRight}>
-                <Text style={styles.payoutAmount}>{formatIndianCurrency(row.amount)}</Text>
-                <PartnerStatusBadge
-                  label={humanize(row.status || row.commercial_status || 'Recorded')}
-                  tone={String(row.status).toLowerCase() === 'paid' ? 'success' : String(row.commercial_status).toLowerCase() === 'needs_review' ? 'warning' : 'info'}
-                />
-              </View>
+        <>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showRecent }}
+            accessibilityLabel={`${showRecent ? 'Hide' : 'Show'} recent payout records`}
+            onPress={() => setShowRecent((value) => !value)}
+            style={({ pressed }) => [styles.payoutDisclosure, pressed && styles.pressed]}
+          >
+            <View style={styles.payoutDisclosureBody}>
+              <Text style={styles.payoutDisclosureTitle}>Recent payout records</Text>
+              <Text style={styles.payoutDisclosureMeta}>{payout.recent.length} recorded</Text>
             </View>
-          ))}
-        </View>
+            <Ionicons name={showRecent ? 'chevron-up' : 'chevron-down'} size={17} color={partnerTheme.colors.brand} />
+          </Pressable>
+          {showRecent ? (
+            <View style={styles.payoutRecent}>
+              {payout.recent.map((row) => (
+                <View key={row.id} style={styles.payoutRow}>
+                  <View style={styles.payoutBody}>
+                    <Text style={styles.payoutPolicy}>{row.policy_no}</Text>
+                    <Text style={styles.payoutCustomer}>{row.customer_name}</Text>
+                  </View>
+                  <View style={styles.payoutRight}>
+                    <Text style={styles.payoutAmount}>{formatIndianCurrency(row.amount)}</Text>
+                    <PartnerStatusBadge
+                      label={humanize(row.status || row.commercial_status || 'Recorded')}
+                      tone={String(row.status).toLowerCase() === 'paid' ? 'success' : String(row.commercial_status).toLowerCase() === 'needs_review' ? 'warning' : 'info'}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </>
       ) : (
-        <PartnerBanner tone="info" message="No payout records are currently recorded for this intermediary." />
+        <View style={styles.payoutEmpty}><Text style={styles.payoutEmptyText}>No payout records are currently recorded.</Text></View>
       )}
-    </View>
-  );
-}
-
-function PayoutMetric({ label, value, meta, tone }: {
-  label: string;
-  value: number | string;
-  meta: string;
-  tone: 'warning' | 'success';
-}) {
-  return (
-    <View style={[styles.payoutMetric, tone === 'success' ? styles.payoutMetricSuccess : styles.payoutMetricWarning]}>
-      <Text style={styles.payoutMetricLabel}>{label}</Text>
-      <Text style={styles.payoutMetricValue}>{formatIndianCurrency(value)}</Text>
-      <Text style={styles.payoutMetricMeta}>{meta}</Text>
     </View>
   );
 }
@@ -415,7 +424,7 @@ const styles = StyleSheet.create({
   hero: { borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: partnerTheme.colors.nav },
   heroHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
   heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 28, lineHeight: 34, fontWeight: '800' },
+  heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 28, lineHeight: 34, fontWeight: '700' },
   heroLabel: { marginTop: 2, color: '#AEB7C5', ...partnerTheme.typography.meta },
   trendBadge: { minHeight: 31, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 9 },
   trendBadgeGood: { backgroundColor: '#18382D' },
@@ -449,14 +458,14 @@ const styles = StyleSheet.create({
   mixTrack: { height: 6, marginTop: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: '#ECEFF4' },
   mixFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.accent },
   noData: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
-  payoutGrid: { flexDirection: 'row', gap: 9 },
-  payoutMetric: { flex: 1, minHeight: 84, borderRadius: partnerTheme.radius.lg, padding: 12, borderWidth: 1 },
-  payoutMetricWarning: { backgroundColor: partnerTheme.colors.warningSoft, borderColor: '#F0D8B5' },
-  payoutMetricSuccess: { backgroundColor: partnerTheme.colors.successSoft, borderColor: '#CDE8D8' },
-  payoutMetricLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  payoutMetricValue: { marginTop: 6, color: partnerTheme.colors.ink, fontSize: 20, lineHeight: 25, fontWeight: '800' },
-  payoutMetricMeta: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  payoutWarning: { marginTop: 9 },
+  payoutMeta: { marginTop: 6, color: partnerTheme.colors.inkMuted, textAlign: 'right', ...partnerTheme.typography.meta },
+  payoutWarning: { marginTop: 8 },
+  payoutDisclosure: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  payoutDisclosureBody: { flex: 1 },
+  payoutDisclosureTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  payoutDisclosureMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  payoutEmpty: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 8, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
+  payoutEmptyText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   payoutRecent: { marginTop: 9, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   payoutRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   payoutBody: { flex: 1 },
