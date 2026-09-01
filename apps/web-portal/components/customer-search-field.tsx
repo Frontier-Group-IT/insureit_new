@@ -13,6 +13,7 @@ export function CustomerSearchField({
   labelAction,
   onSelectionChange,
   disabled = false,
+  containedResults = false,
 }: {
   label: string;
   name: string;
@@ -22,6 +23,7 @@ export function CustomerSearchField({
   labelAction?: ReactNode;
   onSelectionChange?: (value: string) => void;
   disabled?: boolean;
+  containedResults?: boolean;
 }) {
   const initialOption = options.find((option) => option.value === (defaultValue ?? "")) ?? null;
   const [query, setQuery] = useState(initialOption?.label ?? "");
@@ -116,7 +118,7 @@ export function CustomerSearchField({
         <div
           id={listboxId}
           role="listbox"
-          className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#D7E1EE] bg-white p-1.5 shadow-[0_14px_35px_rgba(15,23,42,0.16)]"
+          className={`${containedResults ? "relative z-20" : "absolute z-50"} mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#D7E1EE] bg-white p-1.5 shadow-[0_14px_35px_rgba(15,23,42,0.16)]`}
         >
           {matches.length ? (
             matches.map((option, index) => (
