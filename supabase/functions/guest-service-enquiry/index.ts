@@ -170,11 +170,14 @@ async function submitEnquiry(admin: any, secret: string, payload: Record<string,
   const subject = cleanText(payload.subject, 160);
   const description = cleanText(payload.description, 3000);
   const details = isRecord(payload.details) ? payload.details : {};
+  const newVehicle = details.newVehicle === true;
 
   if (guestName.length < 2) return jsonResponse({ error: "Enter your full name." }, 400);
   if (payload.guestEmail && !guestEmail) return jsonResponse({ error: "Enter a valid email address or leave it blank." }, 400);
   if (subject.length < 3 || description.length < 3) return jsonResponse({ error: "Please complete the enquiry details." }, 400);
-  if (!vehicleNo) return jsonResponse({ error: "Enter a valid vehicle number." }, 400);
+  if (!vehicleNo && !(serviceType === "insurance_quote" && newVehicle)) {
+    return jsonResponse({ error: "Enter a valid vehicle number." }, 400);
+  }
 
   const { data: enquiry, error: insertError } = await admin
     .from("service_enquiries")
