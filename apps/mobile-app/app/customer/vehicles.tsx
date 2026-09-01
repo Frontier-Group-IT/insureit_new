@@ -294,22 +294,6 @@ export default function VehiclesScreen() {
                         <Text style={styles.policyEmptyTitle} numberOfLines={1}>Protection needed</Text>
                       </View>
                     </View>
-                    <View style={styles.policyEmptySignal}>
-                      <MaterialCommunityIcons name="star" size={10} color="#F06423" />
-                      <Text style={styles.policyEmptySignalText} numberOfLines={1}>Compare options</Text>
-                    </View>
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={`Get quote for ${vehicle.vehicle_no}`}
-                      onPress={(event) => {
-                        event.stopPropagation();
-                        router.push({ pathname: '/customer/insurance-quote', params: { vehicleId: vehicle.id, vehicleNo: vehicle.vehicle_no } });
-                      }}
-                      style={({ pressed }) => [styles.policyQuoteButton, pressed && styles.policyActionPressed]}
-                    >
-                      <MaterialCommunityIcons name="file-document-outline" size={14} color="#FFFFFF" />
-                      <Text style={styles.policyQuoteButtonText} numberOfLines={1}>Get quote</Text>
-                    </Pressable>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`${vehiclePolicyActionLabel} for ${vehicle.vehicle_no}`}
