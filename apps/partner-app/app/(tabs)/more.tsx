@@ -59,6 +59,7 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="Work">
+        <MenuRow icon="search-outline" title="Search all business" onPress={() => router.push('/search')} />
         <MenuRow icon="document-text-outline" title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
         <MenuRow icon="refresh-outline" title="Renewals" onPress={() => router.push('/renewals')} />
         <MenuRow icon="people-outline" title="Customers" onPress={() => router.push('/customers')} last />
