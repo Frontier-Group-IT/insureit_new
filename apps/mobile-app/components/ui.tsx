@@ -262,6 +262,7 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   const router = useRouter();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const tabs = tabsForRole(role, customerContext);
+  const customerNavyTabs = role === 'customer';
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -275,8 +276,8 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   if (keyboardVisible) return null;
 
   return (
-    <View style={[styles.bottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
-      <View style={styles.bottomTabs}>
+    <View style={[styles.bottomTabsWrap, customerNavyTabs && styles.customerBottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
+      <View style={[styles.bottomTabs, customerNavyTabs && styles.customerBottomTabs]}>
         {tabs.map((tab) => {
           const active = isTabActive(tab.href, pathname, customerContext);
           const isCustomerRootTab = role === 'customer'
@@ -293,10 +294,29 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
               }}
               style={styles.bottomTab}
             >
-              <View style={[styles.bottomIconShell, { backgroundColor: tabTone(tab.label, tab).soft }, active && [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]]}>
-                <MaterialCommunityIcons name={tab.icon} size={19} color={active ? tabTone(tab.label, tab).accent : palette.slate} />
+              <View style={[
+                styles.bottomIconShell,
+                customerNavyTabs ? styles.customerBottomIconShell : { backgroundColor: tabTone(tab.label, tab).soft },
+                active && (customerNavyTabs
+                  ? styles.customerBottomIconShellActive
+                  : [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]),
+              ]}>
+                <MaterialCommunityIcons
+                  name={tab.icon}
+                  size={19}
+                  color={customerNavyTabs ? (active ? palette.navy : '#D6E0EF') : (active ? tabTone(tab.label, tab).accent : palette.slate)}
+                />
               </View>
-              <Text style={[styles.bottomTabText, active && { color: tabTone(tab.label, tab).accent }]} numberOfLines={1}>{tab.label}</Text>
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  customerNavyTabs && styles.customerBottomTabText,
+                  active && (customerNavyTabs ? styles.customerBottomTabTextActive : { color: tabTone(tab.label, tab).accent }),
+                ]}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -577,11 +597,17 @@ export const styles = StyleSheet.create({
   navIcon: { width: 40, height: 40, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
   navLinkText: { color: colors.navy, fontSize: 15, fontWeight: '700', flex: 1 },
   bottomTabsWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 10, paddingTop: 8, backgroundColor: 'rgba(238,247,255,0.78)' },
+  customerBottomTabsWrap: { backgroundColor: palette.navy },
   bottomTabs: { minHeight: 66, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(198,211,225,0.9)', shadowColor: '#17202F', shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  customerBottomTabs: { backgroundColor: palette.navy, borderColor: '#12305F', shadowColor: '#020A1A', shadowOpacity: 0.22 },
   bottomTab: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0 },
   bottomIconShell: { width: 35, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
+  customerBottomIconShell: { backgroundColor: 'rgba(255,255,255,0.08)' },
   bottomIconShellActive: { backgroundColor: palette.surface, shadowColor: palette.ink, shadowOpacity: 0.08, shadowRadius: 6, elevation: 1 },
+  customerBottomIconShellActive: { backgroundColor: palette.surface, borderColor: 'rgba(255,255,255,0.95)', shadowColor: '#020A1A', shadowOpacity: 0.22, shadowRadius: 7, elevation: 2 },
   bottomTabText: { color: colors.grey, fontSize: 9.5, fontWeight: '900' },
+  customerBottomTabText: { color: '#B9C7DA' },
+  customerBottomTabTextActive: { color: '#FFFFFF' },
   bottomTabTextActive: { color: colors.navy },
 });
 

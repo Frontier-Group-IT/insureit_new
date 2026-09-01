@@ -181,7 +181,7 @@ export default function CustomerMockupHomeScreen() {
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
-      <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} /></Pressable>
+      <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} inverse /></Pressable>
       <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell /></Pressable>
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
@@ -572,10 +572,10 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF7FF', gap: 14, paddingHorizontal: 24 },
   error: { color: palette.navy, fontWeight: '900', textAlign: 'center' },
   retry: { color: palette.blue, fontWeight: '900', paddingVertical: 6 },
-  header: { height: 60, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' },
+  header: { height: 60, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: palette.navy, borderBottomWidth: 1, borderBottomColor: '#12305F' },
   brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' },
-  iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  iconCircle: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.96)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.72)', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#12305F', borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 },
   body: { flexGrow: 1, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 92, gap: 9 },
