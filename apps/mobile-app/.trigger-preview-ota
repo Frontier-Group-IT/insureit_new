@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=990
-source_commit=fa989d672c5a9b0a07722459dba8d8d4bdc5c458
-purpose=publish customer shared-header background dimming preview OTA
+source_pr=995
+source_commit=43edc7d0a61d66a01ee6b2cee9d4dbeb92301323
+purpose=publish mobile auth session restoration preview OTA
