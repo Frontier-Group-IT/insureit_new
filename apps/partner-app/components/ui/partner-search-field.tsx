@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -9,35 +10,49 @@ export function PartnerSearchField({
   onSubmit,
   onClear,
   placeholder = 'Search',
+  autoFocus = false,
 }: {
   value: string;
   onChangeText: (value: string) => void;
   onSubmit?: () => void;
   onClear?: () => void;
   placeholder?: string;
+  autoFocus?: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
+
   return (
-    <View style={styles.wrap}>
-      <Ionicons name="search-outline" size={18} color="#8A94A6" />
+    <View style={[styles.wrap, focused && styles.focused]}>
+      <Ionicons
+        name="search-outline"
+        size={18}
+        color={focused ? partnerTheme.colors.brand : partnerTheme.colors.inkSubtle}
+      />
       <TextInput
         accessibilityLabel={placeholder}
+        autoFocus={autoFocus}
+        autoCapitalize="none"
+        autoCorrect={false}
         value={value}
+        onBlur={() => setFocused(false)}
         onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
         onSubmitEditing={onSubmit}
         placeholder={placeholder}
-        placeholderTextColor="#9AA3B2"
+        placeholderTextColor={partnerTheme.colors.inkSubtle}
         returnKeyType="search"
+        selectionColor={partnerTheme.colors.brand}
         style={styles.input}
       />
       {value ? (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Clear search"
-          hitSlop={10}
+          hitSlop={6}
           onPress={onClear}
-          style={styles.clear}
+          style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
         >
-          <Ionicons name="close-circle" size={20} color="#9AA3B2" />
+          <Ionicons name="close" size={17} color={partnerTheme.colors.inkMuted} />
         </Pressable>
       ) : null}
     </View>
@@ -51,16 +66,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     borderRadius: partnerTheme.radius.md,
-    paddingHorizontal: 13,
-    backgroundColor: partnerTheme.colors.surface,
+    paddingLeft: 13,
+    paddingRight: 5,
+    backgroundColor: partnerTheme.colors.surfaceMuted,
     borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
+    borderColor: 'transparent',
   },
-  input: { flex: 1, minHeight: 44, color: partnerTheme.colors.ink, ...partnerTheme.typography.body },
+  focused: {
+    backgroundColor: partnerTheme.colors.surface,
+    borderColor: partnerTheme.colors.brand,
+  },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    color: partnerTheme.colors.ink,
+    paddingVertical: 0,
+    ...partnerTheme.typography.body,
+  },
   clear: {
     width: 40,
     height: 40,
+    borderRadius: partnerTheme.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  clearPressed: { backgroundColor: partnerTheme.colors.pressed },
 });
