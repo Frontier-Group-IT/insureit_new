@@ -46,7 +46,7 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
       .select("id,customer_id,vehicle_no,vehicle_type,make,model,year,chassis_no,engine_no,fuel_type,registration_status,registration_date,fitness_expiry_date,puc_expiry_date,road_tax_expiry_date,national_permit_expiry_date,local_permit_expiry_date,engine_capacity_cc,seating_capacity,gvw_kg,permit_no,customers(customer_code,contact_name,phone)")
       .eq("id", id)
       .maybeSingle<VehicleDetail>(),
-    admin.from("policies").select("id,policy_no,start_date,end_date").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
+    admin.from("policies").select("id,policy_no,start_date,end_date,policy_documents(id,document_type)").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
   ]);
   const { data, error } = vehicleResult;
   if (error || !data) notFound();
