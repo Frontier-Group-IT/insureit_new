@@ -8,6 +8,7 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export function PartnerTopBar({
   title,
+  eyebrow,
   subtitle,
   onBack,
   action,
@@ -16,6 +17,7 @@ export function PartnerTopBar({
   onAction,
 }: {
   title: string;
+  eyebrow?: string;
   subtitle?: string;
   onBack?: () => void;
   action?: ReactNode;
@@ -38,6 +40,7 @@ export function PartnerTopBar({
       ) : null}
 
       <View style={styles.copy}>
+        {eyebrow ? <Text numberOfLines={1} style={styles.eyebrow}>{eyebrow}</Text> : null}
         <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{title}</Text>
         {subtitle ? <Text numberOfLines={1} style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
@@ -60,12 +63,18 @@ export function PartnerTopBar({
 
 const styles = StyleSheet.create({
   root: {
-    minHeight: 56,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     gap: partnerTheme.spacing.sm,
   },
   copy: { flex: 1, minWidth: 0 },
+  eyebrow: {
+    marginBottom: 1,
+    color: partnerTheme.colors.brand,
+    letterSpacing: 1.15,
+    ...partnerTheme.typography.eyebrow,
+  },
   title: {
     color: partnerTheme.colors.ink,
     fontSize: 18,
