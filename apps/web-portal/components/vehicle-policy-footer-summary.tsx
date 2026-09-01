@@ -59,7 +59,7 @@ export function VehiclePolicyFooterSummary({
       <Link
         prefetch={false}
         href={`/policies/${encodeURIComponent(policy.id)}/edit`}
-        className="max-w-[190px] truncate rounded-md border border-transparent px-1.5 py-1 font-bold text-[#17203A] transition hover:border-[#D6E1EE] hover:bg-[#F4F7FB] hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9CCE3]"
+        className="max-w-[190px] truncate rounded-md border border-[#D6E1EE] bg-[#F4F7FB] px-2 py-1 font-bold text-[#17365D] transition hover:border-[#B8C9DE] hover:bg-[#EDF3F9] hover:text-[#102A49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9CCE3]"
         title={`Edit policy ${policy.policy_no}`}
       >
         {policy.policy_no}
