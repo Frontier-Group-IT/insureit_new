@@ -88,14 +88,16 @@ export default function AccountDeletionScreen() {
         .single();
 
       if (error || !data) {
-        setMessage('Your deletion request could not be submitted. Please try again.');
+        console.warn('Account deletion support request failed', error?.message);
+        setMessage('Your in-app deletion request could not be submitted. You can still use our public deletion page below.');
         return;
       }
 
       setExistingRequest(data);
       setConfirmed(false);
-    } catch {
-      setMessage('Your deletion request could not be submitted. Please try again.');
+    } catch (error) {
+      console.warn('Account deletion request failed', error);
+      setMessage('Your in-app deletion request could not be submitted. You can still use our public deletion page below.');
     } finally {
       setSubmitting(false);
     }
@@ -120,6 +122,12 @@ export default function AccountDeletionScreen() {
       </View>
 
       {message ? <Message type="error">{message}</Message> : null}
+      {message && customerId ? (
+        <Pressable accessibilityRole="link" onPress={() => void Linking.openURL('https://portal.insureit.in/account-deletion')} style={styles.fallbackLink}>
+          <MaterialCommunityIcons name="open-in-new" size={16} color="#0B63CE" />
+          <Text style={styles.fallbackLinkText}>Open public account deletion page</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.infoCard}>
         <View style={styles.iconWrap}>
@@ -238,6 +246,8 @@ const styles = StyleSheet.create({
   deleteButton: { minHeight: 47, borderRadius: 14, backgroundColor: '#C43838', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 10 },
   deleteButtonText: { color: '#FFFFFF', fontSize: 12.5, fontWeight: '900' },
   disabled: { opacity: 0.45 },
+  fallbackLink: { minHeight: 43, borderRadius: 13, borderWidth: 1, borderColor: '#CFE0FF', backgroundColor: '#F8FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12, marginBottom: 10 },
+  fallbackLinkText: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
   policyLink: { minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: '#CFE0FF', backgroundColor: '#F8FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 },
   policyLinkText: { color: '#0B63CE', fontSize: 11.5, fontWeight: '900' },
 });
