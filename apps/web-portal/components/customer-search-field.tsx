@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 export type CustomerSearchOption = { label: string; value: string };
 
@@ -49,7 +49,7 @@ export function CustomerSearchField({
     else inputRef.current?.setCustomValidity("");
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       if (!open) setOpen(true);
