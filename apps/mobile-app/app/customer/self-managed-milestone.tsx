@@ -186,6 +186,9 @@ export default function SelfManagedMilestoneScreen() {
 
     const details = normalizeDetails(key, values);
     const current = milestones.find((item) => item.milestone_key === key);
+    const isFirstClaimIntimationCompletion = key === 'claim_intimation'
+      && current?.milestone_status !== 'completed'
+      && current?.milestone_status !== 'not_applicable';
     setSaving(true);
 
     if (key === 'vehicle_delivery') {
@@ -215,7 +218,7 @@ export default function SelfManagedMilestoneScreen() {
     });
     setSaving(false);
     if (error) return setMessage(error.message || 'We could not save this milestone.');
-    if (key === 'claim_intimation') {
+    if (isFirstClaimIntimationCompletion) {
       setClaimNumberDraft(insurerClaimNo);
       setClaimNumberError('');
       setClaimNumberPromptVisible(true);
@@ -286,9 +289,7 @@ export default function SelfManagedMilestoneScreen() {
             <View style={styles.claimNumberIcon}>
               <MaterialCommunityIcons name="shield-check-outline" size={23} color="#0A43A3" />
             </View>
-            <Text style={styles.claimNumberEyebrow}>CLAIM INTIMATION COMPLETE</Text>
             <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
-            <Text style={styles.claimNumberBody}>If the insurer has issued the claim number, add it now. You can also continue and enter it later.</Text>
 
             <View style={[styles.claimNumberInputShell, Boolean(claimNumberError) && styles.claimNumberInputShellError]}>
               <TextInput
@@ -310,12 +311,12 @@ export default function SelfManagedMilestoneScreen() {
             {claimNumberError ? <Text style={styles.claimNumberError}>{claimNumberError}</Text> : null}
 
             <View style={styles.claimNumberActions}>
-              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => void saveInsurerClaimNumber()} style={[styles.claimNumberPrimary, claimNumberSaving && styles.claimNumberDisabled]}>
-                <MaterialCommunityIcons name="check" size={17} color="#FFFFFF" />
-                <Text style={styles.claimNumberPrimaryText}>{claimNumberSaving ? 'Saving...' : 'Enter claim number'}</Text>
-              </Pressable>
               <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={skipClaimNumberForNow} style={styles.claimNumberSecondary}>
                 <Text style={styles.claimNumberSecondaryText}>Not now</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => void saveInsurerClaimNumber()} style={[styles.claimNumberPrimary, claimNumberSaving && styles.claimNumberDisabled]}>
+                <Text style={styles.claimNumberPrimaryText}>{claimNumberSaving ? 'Saving...' : 'Continue'}</Text>
+                <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
               </Pressable>
             </View>
           </View>
@@ -1125,17 +1126,15 @@ const styles = StyleSheet.create({
   claimNumberBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 20, 48, 0.50)', paddingHorizontal: 24 },
   claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 22, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 15, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
   claimNumberIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  claimNumberEyebrow: { color: '#0A43A3', fontSize: 8.8, fontWeight: '900', letterSpacing: 0.7, textAlign: 'center' },
-  claimNumberTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center', marginTop: 4 },
-  claimNumberBody: { color: '#667085', fontSize: 11.2, lineHeight: 16, fontWeight: '600', textAlign: 'center', marginTop: 6, paddingHorizontal: 5 },
+  claimNumberTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
   claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 13, borderWidth: 1.2, borderColor: '#CFD9E6', backgroundColor: '#F9FBFD', justifyContent: 'center', marginTop: 14 },
   claimNumberInputShellError: { borderColor: '#D92D20', backgroundColor: '#FFF9F8' },
   claimNumberInput: { minHeight: 46, paddingHorizontal: 13, color: palette.navy, fontSize: 13, fontWeight: '800' },
   claimNumberError: { alignSelf: 'stretch', color: '#B42318', fontSize: 9.5, lineHeight: 13, fontWeight: '700', marginTop: 5 },
-  claimNumberActions: { width: '100%', marginTop: 13, gap: 8 },
-  claimNumberPrimary: { minHeight: 44, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
+  claimNumberActions: { width: '100%', flexDirection: 'row', marginTop: 13, gap: 8 },
+  claimNumberPrimary: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
   claimNumberPrimaryText: { color: '#FFFFFF', fontSize: 10.8, fontWeight: '900' },
-  claimNumberSecondary: { minHeight: 40, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EB', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  claimNumberSecondary: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EB', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   claimNumberSecondaryText: { color: '#475467', fontSize: 10.5, fontWeight: '900' },
   claimNumberDisabled: { opacity: 0.55 },
   approvalModalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
