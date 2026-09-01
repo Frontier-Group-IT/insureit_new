@@ -67,7 +67,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
-            Updated {data.generatedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            Updated {formatHeaderTime(data.generatedAt)}
           </span>
           {canCreatePolicy ? (
             <Link prefetch={false}
@@ -788,7 +788,20 @@ function intakeStatus(status: string) {
 }
 
 function formatHeaderDate(value: Date) {
-  return value.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" });
+  return value.toLocaleDateString("en-IN", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+function formatHeaderTime(value: Date) {
+  return value.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Kolkata",
+  });
 }
 
 function formatAge(value: string) {

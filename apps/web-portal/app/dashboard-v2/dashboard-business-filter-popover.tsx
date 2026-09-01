@@ -46,7 +46,7 @@ export function BusinessFilterPopover({ business }: { business: DashboardBusines
             <FilterSelect
               name="period"
               label="Period"
-              value={filters.period}
+              value={selectedPeriod}
               options={[
                 { value: "mtd", label: "Month to date" },
                 { value: "today", label: "Today" },
@@ -158,7 +158,7 @@ function FilterSelect({
   return (
     <label className="block min-w-0">
       <span className="mb-1 block text-[7px] font-black uppercase tracking-[.08em] text-[#8995A7]">{label}</span>
-      <select name={name} defaultValue={value} onChange={(event) => onChange?.(event.target.value)} className="min-h-[38px] w-full border border-[#CBD5E1] bg-white px-2.5 py-2 text-[8.5px] font-semibold leading-relaxed text-[#2D3D58] outline-none focus:border-[#607DA9]">
+      <select name={name} value={value} onChange={(event) => onChange?.(event.target.value)} className="min-h-[38px] w-full border border-[#CBD5E1] bg-white px-2.5 py-2 text-[8.5px] font-semibold leading-relaxed text-[#2D3D58] outline-none focus:border-[#607DA9]">
         {allLabel ? <option value="">{allLabel}</option> : null}
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
@@ -174,5 +174,3 @@ function DateField({ name, label, value }: { name: string; label: string; value:
     </label>
   );
 }
-
-
