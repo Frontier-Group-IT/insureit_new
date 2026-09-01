@@ -1,9 +1,9 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { ScopeCard } from '@/components/scope-card';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -31,6 +31,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      <PartnerSectionHeader title="Registration" />
       <View style={styles.details}>
         {identity.actor_kind === 'employee' ? (
           <>
@@ -49,7 +50,7 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      <View style={styles.scopeHeading}><Text style={styles.scopeTitle}>Commercial access</Text></View>
+      <PartnerSectionHeader title="Commercial access" />
       <ScopeCard scope={scope} />
 
     </PartnerScreen>
@@ -74,17 +75,14 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
   avatar: { width: 44, height: 44, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
-  avatarText: { color: partnerTheme.colors.white, fontSize: 14, fontWeight: '800' },
+  avatarText: { color: partnerTheme.colors.white, ...partnerTheme.typography.bodyStrong },
   heroBody: { flex: 1 },
-  name: { color: partnerTheme.colors.white, fontSize: 16, fontWeight: '800' },
-  role: { marginTop: 4, color: '#C5CCDA', fontSize: 9.5 },
-  details: { marginTop: 9, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  detailRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 15, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  detailLabel: { color: partnerTheme.colors.inkMuted, fontSize: 9.5 },
-  detailValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, fontSize: 10, fontWeight: '700' },
-  scopeHeading: { marginTop: 14, marginBottom: 7 },
-  scopeTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '700' },
+  name: { color: partnerTheme.colors.white, ...partnerTheme.typography.sectionTitle },
+  role: { marginTop: 4, color: '#C5CCDA', ...partnerTheme.typography.caption },
+  details: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  detailRow: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 14, paddingHorizontal: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  detailLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  detailValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
 });
