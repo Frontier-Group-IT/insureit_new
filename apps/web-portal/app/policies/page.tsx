@@ -14,6 +14,8 @@ type PolicyRow = {
   policy_type: string;
   policy_product: string | null;
   business_line: string | null;
+  issuance_date: string | null;
+  created_at: string;
   start_date: string;
   end_date: string;
   insured_declared_value: number | null;
@@ -118,7 +120,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     return <AppShell title="Policies"><PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
   }
 
-  let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
+  let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const [sourceResult, policyResult] = await Promise.all([activeSourcesPromise, query.returns<PolicyRow[]>()]);
   const finishedAt = performance.now();
