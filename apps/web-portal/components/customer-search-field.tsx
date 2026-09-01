@@ -13,7 +13,6 @@ export function CustomerSearchField({
   labelAction,
   onSelectionChange,
   disabled = false,
-  placeholder = "Search customer",
 }: {
   label: string;
   name: string;
@@ -23,7 +22,6 @@ export function CustomerSearchField({
   labelAction?: ReactNode;
   onSelectionChange?: (value: string) => void;
   disabled?: boolean;
-  placeholder?: string;
 }) {
   const initialOption = options.find((option) => option.value === (defaultValue ?? "")) ?? null;
   const [query, setQuery] = useState(initialOption?.label ?? "");
@@ -106,7 +104,7 @@ export function CustomerSearchField({
         autoComplete="off"
         required={required}
         value={query}
-        placeholder={placeholder}
+        placeholder="Search customer"
         disabled={disabled}
         className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF] disabled:cursor-not-allowed disabled:border-[#E3E8EF] disabled:bg-[#F8FAFC] disabled:text-[#64748B]"
         onFocus={() => setOpen(true)}
