@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Files, Plus, ShieldCheck } from "lucide-react";
+import { FilePlus2, Files, ShieldCheck } from "lucide-react";
 
 export type VehicleLinkedPolicy = {
   id: string;
@@ -35,7 +35,8 @@ export function VehiclePolicyFooterSummary({
           href={`/policies/new?customer_id=${encodeURIComponent(customerId)}&vehicle_id=${encodeURIComponent(vehicleId)}`}
           className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[#AFC6E7] bg-[#F8FBFF] px-2.5 font-bold text-[#215EAD] transition hover:border-[#7EA6DB] hover:bg-[#EEF5FF]"
         >
-          Add policy <Plus className="h-3 w-3" aria-hidden="true" />
+          <FilePlus2 className="h-3.5 w-3.5" aria-hidden="true" />
+          Add policy
         </Link>
       </div>
     );
