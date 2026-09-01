@@ -1119,3 +1119,54 @@ Deployed Home composition:
 5. INSUREIT Stories.
 
 The My Work section is removed. INSUREIT Stories is the final Home section, has no See all action, and evenly distributes its visible story icons across the available width. Individual story icons remain tappable. No APK/AAB, native dependency/config, backend, schema, RLS or auth change was introduced.
+
+
+## Partner UX refinement R4 / R5 — 2026-09-01
+
+### R4 detail screens — VERIFIED / MERGED
+
+PR #940 merged as `57c9764874e489a5e3304b93480538ec27e0725f`.
+
+Delivered:
+- Customer Detail: duplicate phone/email rows removed from Relationship while contact actions remain; long Policies/Vehicles/Claims sections default to two items with accessible Show all / Show less.
+- Policy Detail: generic shortcut row removed; premium breakup and commercial attribution use progressive disclosure; gross premium remains visible with lighter weight.
+- Claim Detail: always-on explanatory guidance removed; Partner attention appears only when applicable; customer navigation stays contextual; latest five journey events show by default with full-history expansion.
+- Policy Intake Detail: extracted policy and vehicle OCR details are progressively disclosed under one Extracted details section while workflow status, attention response, replacement upload and final-policy navigation remain intact.
+
+Final R4 head:
+- `b072feb627694f0c7bfae58c0567cd8d475c5d9a`
+- Partner Verify #103 / run `33469840016`: SUCCESS
+- Web Verify #2488 / run `33469840019`: SUCCESS
+
+R4 OTA publication evidence:
+- OTA trigger PR #941 merged as `ef32a563d5b85d57d16f4e8da5fcd21b99d88b3c`.
+- A second explicit marker push was committed directly to current main as `8f2f0c949a35769c3f610c3713da008c9ebd8b41`.
+- Marker: `partner-r4-detail-screens-retrigger-2026-09-01`.
+- Push-triggered OTA run status is **UNVERIFIED from the currently available GitHub connector**, because its commit-workflow helper only returns pull-request-triggered runs. Do not label the R4 OTA DEPLOYED until direct push-run / EAS evidence is obtained.
+- No APK/AAB, native dependency/config, backend, schema, RLS or auth change.
+
+### R5 Policy Intake transactional journey — VERIFIED / MERGED
+
+PR #943 merged as `b6f35d5d048f06625e6ede8152c8f83f89834e7d`.
+
+Delivered:
+- synchronous duplicate-submit guard on New Policy Intake;
+- compact Ready to submit review summary for lead source, customer mobile and selected policy copy;
+- existing persisted draft, validation, upload progress, retry and selected-file error recovery preserved;
+- synchronous duplicate-action guard on replacement uploads in Policy Intake Detail;
+- existing Operations review/attention workflow remains authoritative; no direct booking or invented persistent workflow state.
+
+Final R5 head:
+- `35d0e09dbba3f94a4052321a3f0462fb3b54e17c`
+- Partner Verify #105 / run `33470314551`: SUCCESS
+- Web Verify #2491 / run `33470314526`: SUCCESS
+
+R5 OTA publication:
+- current-main marker push commit: `35fad7d32a8b9aabce209f750467050f6e5987d6`
+- marker: `partner-r5-policy-intake-journey-2026-09-01`
+- push-triggered OTA result remains **UNVERIFIED from the current connector** until direct Actions/EAS run evidence is available.
+- Runtime remains `0.1.0`; no APK/AAB or native dependency/config change.
+
+### Next refinement slice
+
+Proceed with **R6 Business / Payout / Network** using the same compact, progressive, role-authorized Partner UX language. Preserve all server-side commercial authorization boundaries and do not expose internal accounting/reconciliation data.
