@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   heroInsurer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   heroBadges: { alignItems: 'flex-end', gap: 5 },
   heroPremiumRow: { marginTop: 10, paddingTop: 9, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  heroPremium: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '650' },
+  heroPremium: { color: partnerTheme.colors.ink, fontSize: 22, lineHeight: 28, fontWeight: '600' },
   heroPremiumLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   heroDateBlock: { flex: 1, alignItems: 'flex-end' },
   heroDate: { color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
