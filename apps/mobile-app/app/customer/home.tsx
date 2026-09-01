@@ -202,8 +202,8 @@ export default function CustomerMockupHomeScreen() {
         renewalDue={renewalAttentionCount}
         claimTasks={claimAttentionCount}
         onRenewals={() => router.push('/customer/renewals' as Href)}
-        onQuote={() => router.push('/customer/insurance-quote')}
-        onChallan={() => router.push('/customer/e-challan' as Href)}
+        onAddVehicle={() => router.push('/customer/add-vehicle')}
+        onSupport={() => router.push('/customer/support')}
         onClaim={() => router.push('/customer/start-claim')}
       />
       <ClaimsSummaryCard
@@ -220,7 +220,6 @@ export default function CustomerMockupHomeScreen() {
         onPendingAction={() => pendingTask ? router.push({ pathname: '/customer/upload-documents', params: { claimId: pendingTask.claim_id } }) : router.push({ pathname: '/customer/claims', params: { filter: 'All' } })}
       />
       <SupportActionCenter onSupport={() => router.push('/customer/support')} />
-      <Text style={styles.appVersion}>Version 1.8.3</Text>
     </ScrollView>
     <UniversalBottomTabs role="customer" pathname="/customer/home" bottomInset={0} customerContext={selectedContext} />
     <KycRequiredModal
@@ -362,7 +361,7 @@ function AttentionPulseIcon() {
   );
 }
 
-function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChallan, onClaim }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onQuote: () => void; onChallan: () => void; onClaim: () => void }) {
+function QuickActionDock({ renewalDue, claimTasks, onRenewals, onAddVehicle, onSupport, onClaim }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onAddVehicle: () => void; onSupport: () => void; onClaim: () => void }) {
   return (
     <View style={styles.quickDock}>
       <View style={styles.sectionHeader}>
@@ -372,8 +371,8 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
       <View style={styles.quickGrid}>
         <QuickAction icon="calendar-month-outline" image={require('../../assets/brand/dashboard/dashboard-renewal.png')} label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
         <QuickAction icon="shield-plus-outline" image={require('../../assets/brand/dashboard/dashboard-start-claim.png')} label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
-        <QuickAction icon="file-document-outline" image={require('../../assets/brand/dashboard/dashboard-get-quote.png')} label="Get quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
-        <QuickAction icon="ticket-confirmation-outline" image={require('../../assets/brand/dashboard/dashboard-echallan.png')} label="E-Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
+        <QuickAction icon="truck-plus-outline" label="Add vehicle" tone="#EAF3FF" color="#174EA6" onPress={onAddVehicle} />
+        <QuickAction icon="headset" label="Support" tone="#E6FAFD" color="#0EAFC8" onPress={onSupport} />
       </View>
     </View>
   );
