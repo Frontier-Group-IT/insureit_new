@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +39,7 @@ export default function NewPolicyIntakeScreen() {
   const [progress, setProgress] = useState<PartnerPolicyIntakeUploadProgress | null>(null);
   const [error, setError] = useState('');
   const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,7 +123,8 @@ export default function NewPolicyIntakeScreen() {
   }
 
   async function submit() {
-    if (!file || !canSubmit) return;
+    if (!file || !canSubmit || submitLockRef.current) return;
+    submitLockRef.current = true;
     setSubmitting(true);
     setProgress({ stage: 'preparing' });
     setError('');
@@ -140,6 +142,7 @@ export default function NewPolicyIntakeScreen() {
       setError(cause instanceof Error ? cause.message : 'Policy Intake could not be submitted.');
       setProgress(null);
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   }
@@ -256,6 +259,18 @@ export default function NewPolicyIntakeScreen() {
             </View>
           ) : null}
 
+          {file && selectedSource && validMobile ? (
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewTop}>
+                <Text style={styles.reviewTitle}>Ready to submit</Text>
+                <Ionicons name="checkmark-circle-outline" size={18} color={partnerTheme.colors.success} />
+              </View>
+              <ReviewRow label="Lead source" value={selectedSource.display_name} />
+              <ReviewRow label="Customer" value={mobile} />
+              <ReviewRow label="Policy copy" value={file.name} last />
+            </View>
+          ) : null}
+
           <View style={styles.submit}>
             <PartnerButton
               label={submitting ? progressLabel(progress) : error && file ? 'Retry submission' : 'Submit to Operations'}
@@ -312,6 +327,15 @@ function progressMessage(progress: PartnerPolicyIntakeUploadProgress) {
   return progress.percent != null ? `${progress.percent}% uploaded` : 'Uploading policy copy.';
 }
 
+function ReviewRow({ label, value, last = false }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.reviewRow, last && styles.reviewRowLast]}>
+      <Text style={styles.reviewLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.reviewValue}>{value}</Text>
+    </View>
+  );
+}
+
 function formatBytes(value: number) {
   if (!value) return 'File selected';
   if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
@@ -348,6 +372,13 @@ const styles = StyleSheet.create({
   progressTrack: { height: 7, marginTop: 11, overflow: 'hidden', borderRadius: 999, backgroundColor: '#D8D5F5' },
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.brandStrong },
   feedback: { marginTop: partnerTheme.spacing.md },
+  reviewCard: { marginTop: partnerTheme.spacing.md, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  reviewTop: { minHeight: 42, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  reviewTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  reviewRow: { minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  reviewRowLast: { borderBottomWidth: 0 },
+  reviewLabel: { width: 88, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  reviewValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
   retryHint: { marginTop: 7, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   submit: { marginTop: partnerTheme.spacing.lg },
   pressed: { opacity: 0.82 },

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +31,7 @@ export default function PolicyIntakeDetailScreen() {
   const [error, setError] = useState('');
   const [showPolicyExtraction, setShowPolicyExtraction] = useState(false);
   const [showVehicleExtraction, setShowVehicleExtraction] = useState(false);
+  const replacementLockRef = useRef(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,7 +53,7 @@ export default function PolicyIntakeDetailScreen() {
   const fields = useMemo(() => new Map((row?.ocr_fields ?? []).map((field) => [field.key, field])), [row?.ocr_fields]);
 
   async function replaceDocument() {
-    if (!row) return;
+    if (!row || replacementLockRef.current) return;
     setError('');
     const result = await DocumentPicker.getDocumentAsync({ type: ALLOWED_TYPES, copyToCacheDirectory: true, multiple: false });
     if (result.canceled || !result.assets[0]) return;
@@ -62,6 +63,7 @@ export default function PolicyIntakeDetailScreen() {
       return;
     }
 
+    replacementLockRef.current = true;
     setReplacing(true);
     setReplacementProgress({ stage: 'preparing' });
     try {
@@ -76,6 +78,7 @@ export default function PolicyIntakeDetailScreen() {
       setReplacementProgress(null);
       setError(cause instanceof Error ? cause.message : 'Replacement document could not be submitted.');
     } finally {
+      replacementLockRef.current = false;
       setReplacing(false);
     }
   }
