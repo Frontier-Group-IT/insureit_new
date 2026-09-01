@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1008
-source_commit=2ac7bd53c40dd8fbb5bb5b46108a073213fb5802
-purpose=publish customer mobile Claim bottom navigation preview OTA
+source_pr=1012
+source_commit=63d2ed7653eedf1ae8370bf18fd144fb47989fba
+purpose=publish insurer claim number prompt after stage three preview OTA
