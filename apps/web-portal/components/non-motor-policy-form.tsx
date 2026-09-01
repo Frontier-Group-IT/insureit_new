@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { ChevronDown, ChevronUp, FileText, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
 import { createNonMotorPolicy, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
+import { CustomerSearchField } from "@/components/customer-search-field";
 import type { PolicyRmOption, PolicySourceOption } from "@/components/policy-unified-form";
 
 export type NonMotorInsurerOption = { value: string; label: string };
@@ -116,6 +117,8 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
     setForm((current) => ({ ...current, sourceId: value, leadSource: source?.label ?? "", intermediaryCode: source?.code ?? "", rmName: source?.rmName ?? "" }));
   }
 
+  const customerSearchOptions = useMemo(() => customers.map((customer) => ({ value: customer.id, label: `${customer.name}${customer.phone ? ` · ${customer.phone}` : ""}` })), [customers]);
+
   function changeCustomer(value: string) {
     const customer = customers.find((item) => item.id === value);
     setForm((current) => ({ ...current, customerId: value, insuredName: customer?.name ?? "", contactName: customer?.contactName ?? "", phone: customer?.phone ?? "", email: customer?.email ?? "" }));
@@ -165,7 +168,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
 
           <Section number="02" title="Customer & policy">
             <Segmented label="Customer record" value={form.customerMode} options={["existing", "new"]} labels={["Existing", "New"]} onChange={(value) => { const mode = value as CustomerMode; setForm((current) => ({ ...current, customerMode: mode, ...(mode === "new" ? { customerId: "", insuredName: "", contactName: "", phone: "", email: "" } : {}) })); }} />
-            {form.customerMode === "existing" ? <div className="sm:col-span-2 xl:col-span-3"><Select label="Customer / organisation" value={form.customerId} onChange={(e) => changeCustomer(e.target.value)} required><option value="">Select customer</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.phone}</option>)}</Select></div> : <>
+            {form.customerMode === "existing" ? <div className="sm:col-span-2 xl:col-span-3"><CustomerSearchField label="Customer / organisation" name="non_motor_customer_id" options={customerSearchOptions} defaultValue={form.customerId} required onSelectionChange={changeCustomer} /></div> : <>
               <Select label="Customer type" value={form.customerType} onChange={(e) => update("customerType", e.target.value as FormState["customerType"])}><option>Organisation</option><option>Individual</option></Select>
               <Field label="Insured / organisation name" value={form.insuredName} onChange={(e) => update("insuredName", e.target.value)} placeholder="Name on policy" required />
               <Field label="Contact person" value={form.contactName} onChange={(e) => update("contactName", e.target.value)} placeholder="Primary contact" />
