@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1019
-source_commit=05fb3563e56c70260084b1d64797c52f47863d24
-purpose=publish completed claim missing claim number action preview OTA
+source_pr=1020
+source_commit=4a513f8bdfa4b60a40f2938468c94ab435625669
+purpose=publish completed claim popup button overlap fix preview OTA
