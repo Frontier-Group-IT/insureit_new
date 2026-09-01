@@ -38,6 +38,27 @@ export type PolicyBusinessConflict =
       source: "managed" | "external";
       existingPath: string;
       suggestedStartDate: string;
+      canReplace: boolean;
+    }
+  | {
+      type: "active_policy_notice";
+      existingPolicyId: string;
+      existingPolicyNo: string;
+      existingPolicyType: string;
+      validFrom: string;
+      validUpto: string;
+      source: "managed" | "external";
+      existingPath: string;
+    }
+  | {
+      type: "expired_policy_history";
+      existingPolicyId: string;
+      existingPolicyNo: string;
+      existingPolicyType: string;
+      validFrom: string;
+      validUpto: string;
+      source: "managed" | "external";
+      existingPath: string;
     }
   | {
       type: "coverage_gap";
@@ -122,6 +143,17 @@ function dayDifference(from: string, to: string) {
   return Math.round((end - start) / 86_400_000);
 }
 
+function indiaToday() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = (type: "year" | "month" | "day") => parts.find((part) => part.type === type)?.value ?? "";
+  return `${value("year")}-${value("month")}-${value("day")}`;
+}
+
 async function findVehicleBy(column: "vehicle_no_normalized" | "chassis_no" | "engine_no", value: string) {
   if (!value) return null;
   const admin = createSupabaseAdminClient();
@@ -179,6 +211,10 @@ function vehicleConflict(existing: VehicleIdentityRow, input: { registration: st
 export async function findPolicyOnboardingBusinessConflict(input: {
   payload: PolicyOnboardingPayload;
   acceptCoverageGap?: boolean;
+  acceptActivePolicyNotice?: boolean;
+  acceptExpiredPolicyHistory?: boolean;
+  canReplacePolicy?: boolean;
+  ignoreManagedPolicyId?: string | null;
 }): Promise<PolicyBusinessConflict | null> {
   const { payload } = input;
   const admin = createSupabaseAdminClient();
@@ -310,6 +346,7 @@ export async function findPolicyOnboardingBusinessConflict(input: {
 
   const existing = [
     ...(managedResult.data ?? [])
+      .filter((row) => row.id !== input.ignoreManagedPolicyId)
       .filter((row) => !["cancelled", "canceled", "rejected", "superseded", "void"].includes(String(row.status ?? "").toLowerCase()))
       .map((row) => ({ ...row, source: "managed" as const, path: managedPath(row.id) })),
     ...(externalResult.data ?? []).map((row) => ({ ...row, source: "external" as const, path: externalPath(row.id) })),
@@ -330,7 +367,27 @@ export async function findPolicyOnboardingBusinessConflict(input: {
       source: overlapping.source,
       existingPath: overlapping.path,
       suggestedStartDate: nextDate(overlapping.end_date),
+      canReplace: overlapping.source === "managed" && input.canReplacePolicy === true,
     };
+  }
+
+  const today = indiaToday();
+  if (!input.acceptActivePolicyNotice) {
+    const active = existing
+      .filter((row) => row.start_date <= today && row.end_date >= today)
+      .sort((a, b) => b.end_date.localeCompare(a.end_date))[0];
+    if (active) {
+      return {
+        type: "active_policy_notice",
+        existingPolicyId: active.id,
+        existingPolicyNo: active.policy_no,
+        existingPolicyType: active.policy_type,
+        validFrom: active.start_date,
+        validUpto: active.end_date,
+        source: active.source,
+        existingPath: active.path,
+      };
+    }
   }
 
   if (!input.acceptCoverageGap) {
@@ -354,6 +411,24 @@ export async function findPolicyOnboardingBusinessConflict(input: {
           gapDays,
         };
       }
+    }
+  }
+
+  if (!input.acceptExpiredPolicyHistory) {
+    const expired = existing
+      .filter((row) => row.end_date < today)
+      .sort((a, b) => b.end_date.localeCompare(a.end_date))[0];
+    if (expired) {
+      return {
+        type: "expired_policy_history",
+        existingPolicyId: expired.id,
+        existingPolicyNo: expired.policy_no,
+        existingPolicyType: expired.policy_type,
+        validFrom: expired.start_date,
+        validUpto: expired.end_date,
+        source: expired.source,
+        existingPath: expired.path,
+      };
     }
   }
 
