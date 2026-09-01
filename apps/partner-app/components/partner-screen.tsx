@@ -8,12 +8,16 @@ import { partnerTheme } from '@/lib/theme';
 export function PartnerScreen({
   title,
   eyebrow,
+  subtitle,
+  onBack,
   action,
   children,
   scrollProps,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
+  subtitle?: string;
+  onBack?: () => void;
   action?: ReactNode;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
 }>) {
@@ -25,7 +29,13 @@ export function PartnerScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
       >
-        <PartnerTopBar title={title} eyebrow={eyebrow} action={action} />
+        <PartnerTopBar
+          title={title}
+          eyebrow={eyebrow}
+          subtitle={subtitle}
+          onBack={onBack}
+          action={action}
+        />
         {children}
       </ScrollView>
     </SafeAreaView>
