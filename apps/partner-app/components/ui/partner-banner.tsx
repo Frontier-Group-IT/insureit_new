@@ -22,7 +22,7 @@ export function PartnerBanner({
 
   return (
     <View accessibilityLiveRegion="polite" style={[styles.base, styles[tone]]}>
-      <Ionicons name={iconName} size={19} color={iconColor} />
+      <Ionicons name={iconName} size={17} color={iconColor} />
       <View style={styles.body}>
         {title ? <Text style={styles.title}>{title}</Text> : null}
         <Text style={styles.message}>{message}</Text>
@@ -32,7 +32,7 @@ export function PartnerBanner({
 }
 
 const styles = StyleSheet.create({
-  base: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, borderRadius: partnerTheme.radius.md, padding: 12, borderWidth: 1 },
+  base: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingVertical: 9, paddingHorizontal: 2, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
   info: { backgroundColor: partnerTheme.colors.infoSoft, borderColor: '#C9D9EE' },
   success: { backgroundColor: partnerTheme.colors.successSoft, borderColor: '#CFE9DB' },
   warning: { backgroundColor: partnerTheme.colors.warningSoft, borderColor: '#F5DFC1' },
