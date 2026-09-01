@@ -11,6 +11,7 @@ export function PartnerTopBar({
   eyebrow,
   subtitle,
   onBack,
+  backDisabled = false,
   action,
   actionIcon,
   actionLabel = 'Action',
@@ -20,6 +21,7 @@ export function PartnerTopBar({
   eyebrow?: string;
   subtitle?: string;
   onBack?: () => void;
+  backDisabled?: boolean;
   action?: ReactNode;
   actionIcon?: IconName;
   actionLabel?: string;
@@ -31,11 +33,13 @@ export function PartnerTopBar({
         <Pressable
           accessibilityLabel="Back"
           accessibilityRole="button"
+          accessibilityState={{ disabled: backDisabled }}
+          disabled={backDisabled}
           hitSlop={4}
           onPress={onBack}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+          style={({ pressed }) => [styles.iconButton, backDisabled && styles.disabled, pressed && !backDisabled && styles.pressed]}
         >
-          <Ionicons name="arrow-back" size={20} color={partnerTheme.colors.ink} />
+          <Ionicons name="arrow-back" size={20} color={backDisabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.ink} />
         </Pressable>
       ) : null}
 
@@ -101,4 +105,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pressed: { backgroundColor: partnerTheme.colors.pressed },
+  disabled: { opacity: 0.45 },
 });
