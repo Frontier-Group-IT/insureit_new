@@ -152,6 +152,7 @@ export default function NewPolicyIntakeScreen() {
       title="Send policy to Operations"
       subtitle="Review details, attach the policy copy, then submit"
       onBack={requestClose}
+      backDisabled={submitting}
     >
       <PartnerConfirmDialog
         visible={closeConfirmVisible}
