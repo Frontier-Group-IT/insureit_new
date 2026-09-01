@@ -159,3 +159,10 @@ assert(migration.includes("status='completed'"));
 assert(migration.includes("delete from public.policy_intake_onboarding_drafts"));
 
 console.log("vehicle + policy intake resume regression: ok");
+
+
+const nonMotorPolicyForm=read("components/non-motor-policy-form.tsx");
+assert(nonMotorPolicyForm.includes('import { CustomerSearchField } from "@/components/customer-search-field";'));
+assert(nonMotorPolicyForm.includes('<CustomerSearchField label="Customer / organisation"'));
+assert(nonMotorPolicyForm.includes('onSelectionChange={changeCustomer}'));
+assert(!nonMotorPolicyForm.includes('<Select label="Customer / organisation"'));
