@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { CompactDocumentActionBar, CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
@@ -25,7 +25,7 @@ type FieldKey =
   | 'documents_submit_date' | 'payment_received_date' | 'payment_received_amount';
 
 type Values = Partial<Record<FieldKey, string>>;
-type ClaimIdentity = { claim_no?: string | null; vehicle_id?: string | null; customer_id?: string | null; external_policy_id?: string | null };
+type ClaimIdentity = { claim_no?: string | null; insurer_claim_no?: string | null; vehicle_id?: string | null; customer_id?: string | null; external_policy_id?: string | null };
 type ApprovalDocumentRecord = { id: string; document_type: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
 type BillDocumentRecord = { id: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
 type DeliveryOrderDocumentRecord = { id: string; document_type: string; file_name: string; storage_bucket?: string | null; storage_path?: string | null };
@@ -57,6 +57,11 @@ export default function SelfManagedMilestoneScreen() {
   const [values, setValues] = useState<Values>({});
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [claimNo, setClaimNo] = useState('');
+  const [insurerClaimNo, setInsurerClaimNo] = useState('');
+  const [claimNumberPromptVisible, setClaimNumberPromptVisible] = useState(false);
+  const [claimNumberDraft, setClaimNumberDraft] = useState('');
+  const [claimNumberSaving, setClaimNumberSaving] = useState(false);
+  const [claimNumberError, setClaimNumberError] = useState('');
   const [vehicleNo, setVehicleNo] = useState('');
   const [customerId, setCustomerId] = useState('');
   const [vehicleMeta, setVehicleMeta] = useState('');
@@ -74,7 +79,7 @@ export default function SelfManagedMilestoneScreen() {
       if (!claimId || !definition) { if (active) setLoading(false); return; }
       const [milestoneResult, claimResult] = await Promise.all([
         (supabase as any).from('claim_milestones').select('*').eq('claim_id', claimId),
-        supabase.from('claims').select('claim_no, vehicle_id, customer_id, external_policy_id').eq('id', claimId).maybeSingle(),
+        supabase.from('claims').select('claim_no, insurer_claim_no, vehicle_id, customer_id, external_policy_id').eq('id', claimId).maybeSingle(),
       ]);
       if (!active) return;
       const nextMilestones = (milestoneResult.data ?? []) as ClaimMilestone[];
@@ -83,6 +88,8 @@ export default function SelfManagedMilestoneScreen() {
       setValues(toFormValues(current?.details));
       const identity = (claimResult.data ?? {}) as ClaimIdentity;
       setClaimNo(identity.claim_no ?? '');
+      setInsurerClaimNo(identity.insurer_claim_no ?? '');
+      setClaimNumberDraft(identity.insurer_claim_no ?? '');
       setCustomerId(identity.customer_id ?? '');
       if (identity.vehicle_id) {
         const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
@@ -108,11 +115,48 @@ export default function SelfManagedMilestoneScreen() {
   }, [claimId, definition, key]);
 
   const step = useMemo(() => Math.max(1, SELF_MANAGED_MILESTONES.findIndex((item) => item.key === key) + 1), [key]);
+  const displayClaimNo = insurerClaimNo || claimNo;
 
   function set(field: FieldKey, value: string) { setValues((current) => ({ ...current, [field]: value })); }
 
   function openAssistance() {
     router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: key } });
+  }
+
+  function openNextStageAfterClaimNumberPrompt() {
+    setClaimNumberPromptVisible(false);
+    setClaimNumberError('');
+    router.replace({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key: 'work_approval' } });
+  }
+
+  function skipClaimNumberForNow() {
+    if (claimNumberSaving) return;
+    openNextStageAfterClaimNumberPrompt();
+  }
+
+  async function saveInsurerClaimNumber() {
+    if (claimNumberSaving) return;
+    const nextClaimNumber = claimNumberDraft.trim();
+    if (!nextClaimNumber) {
+      setClaimNumberError('Enter the claim number issued by the insurer.');
+      return;
+    }
+
+    setClaimNumberError('');
+    setClaimNumberSaving(true);
+    const { error } = await supabase
+      .from('claims')
+      .update({ insurer_claim_no: nextClaimNumber })
+      .eq('id', claimId);
+    setClaimNumberSaving(false);
+
+    if (error) {
+      setClaimNumberError('We could not save the claim number. Please try again.');
+      return;
+    }
+
+    setInsurerClaimNo(nextClaimNumber);
+    openNextStageAfterClaimNumberPrompt();
   }
 
   function continueAfterSave(completed = true) {
@@ -171,6 +215,12 @@ export default function SelfManagedMilestoneScreen() {
     });
     setSaving(false);
     if (error) return setMessage(error.message || 'We could not save this milestone.');
+    if (key === 'claim_intimation') {
+      setClaimNumberDraft(insurerClaimNo);
+      setClaimNumberError('');
+      setClaimNumberPromptVisible(true);
+      return;
+    }
     continueAfterSave(true);
   }
 
@@ -195,18 +245,18 @@ export default function SelfManagedMilestoneScreen() {
         title={definition.label}
         subtitle={subtitleFor(key)}
         vehicleNo={vehicleNo}
-        claimNo={claimNo}
+        claimNo={displayClaimNo}
       /> : <ExternalClaimStageHeader
         step={step}
         title={definition.label}
         subtitle={subtitleFor(key)}
         vehicleNo={vehicleNo}
-        claimNo={claimNo}
+        claimNo={displayClaimNo}
         onBack={() => router.back()}
       />}
 
       <ClaimIdentityCard
-        claimNo={claimNo}
+        claimNo={displayClaimNo}
         insurerName={insurerName}
         vehicleNo={vehicleNo}
         policyNo={policyNo}
@@ -229,6 +279,48 @@ export default function SelfManagedMilestoneScreen() {
         onAssistance={openAssistance}
         onPrimary={() => void save()}
       />}
+
+      <Modal visible={claimNumberPromptVisible} transparent animationType="fade" onRequestClose={skipClaimNumberForNow}>
+        <View style={styles.claimNumberBackdrop}>
+          <View style={styles.claimNumberCard}>
+            <View style={styles.claimNumberIcon}>
+              <MaterialCommunityIcons name="shield-check-outline" size={23} color="#0A43A3" />
+            </View>
+            <Text style={styles.claimNumberEyebrow}>CLAIM INTIMATION COMPLETE</Text>
+            <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
+            <Text style={styles.claimNumberBody}>If the insurer has issued the claim number, add it now. You can also continue and enter it later.</Text>
+
+            <View style={[styles.claimNumberInputShell, Boolean(claimNumberError) && styles.claimNumberInputShellError]}>
+              <TextInput
+                value={claimNumberDraft}
+                onChangeText={(value) => {
+                  setClaimNumberDraft(value);
+                  if (claimNumberError) setClaimNumberError('');
+                }}
+                editable={!claimNumberSaving}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                placeholder="Enter claim number"
+                placeholderTextColor="#98A2B3"
+                style={styles.claimNumberInput}
+                returnKeyType="done"
+                onSubmitEditing={() => void saveInsurerClaimNumber()}
+              />
+            </View>
+            {claimNumberError ? <Text style={styles.claimNumberError}>{claimNumberError}</Text> : null}
+
+            <View style={styles.claimNumberActions}>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => void saveInsurerClaimNumber()} style={[styles.claimNumberPrimary, claimNumberSaving && styles.claimNumberDisabled]}>
+                <MaterialCommunityIcons name="check" size={17} color="#FFFFFF" />
+                <Text style={styles.claimNumberPrimaryText}>{claimNumberSaving ? 'Saving...' : 'Enter claim number'}</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={skipClaimNumberForNow} style={styles.claimNumberSecondary}>
+                <Text style={styles.claimNumberSecondaryText}>Not now</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <ExternalClaimErrorPopup
         visible={Boolean(validationMessage)}
@@ -1030,6 +1122,22 @@ const styles = StyleSheet.create({
   approvalFeedbackSuccessText: { flex: 1, color: '#168161', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   approvalFeedbackError: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   approvalFeedbackErrorText: { flex: 1, color: '#B42318', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
+  claimNumberBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 20, 48, 0.50)', paddingHorizontal: 24 },
+  claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 22, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 15, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
+  claimNumberIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  claimNumberEyebrow: { color: '#0A43A3', fontSize: 8.8, fontWeight: '900', letterSpacing: 0.7, textAlign: 'center' },
+  claimNumberTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center', marginTop: 4 },
+  claimNumberBody: { color: '#667085', fontSize: 11.2, lineHeight: 16, fontWeight: '600', textAlign: 'center', marginTop: 6, paddingHorizontal: 5 },
+  claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 13, borderWidth: 1.2, borderColor: '#CFD9E6', backgroundColor: '#F9FBFD', justifyContent: 'center', marginTop: 14 },
+  claimNumberInputShellError: { borderColor: '#D92D20', backgroundColor: '#FFF9F8' },
+  claimNumberInput: { minHeight: 46, paddingHorizontal: 13, color: palette.navy, fontSize: 13, fontWeight: '800' },
+  claimNumberError: { alignSelf: 'stretch', color: '#B42318', fontSize: 9.5, lineHeight: 13, fontWeight: '700', marginTop: 5 },
+  claimNumberActions: { width: '100%', marginTop: 13, gap: 8 },
+  claimNumberPrimary: { minHeight: 44, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
+  claimNumberPrimaryText: { color: '#FFFFFF', fontSize: 10.8, fontWeight: '900' },
+  claimNumberSecondary: { minHeight: 40, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EB', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  claimNumberSecondaryText: { color: '#475467', fontSize: 10.5, fontWeight: '900' },
+  claimNumberDisabled: { opacity: 0.55 },
   approvalModalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
   approvalModalCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 18, paddingBottom: 16, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
   approvalModalIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center', marginBottom: 9 },
