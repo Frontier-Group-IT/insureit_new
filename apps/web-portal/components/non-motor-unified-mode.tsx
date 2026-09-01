@@ -9,6 +9,7 @@ import { ChevronDown, ChevronUp, HandCoins, IndianRupee, MapPin, ShieldCheck } f
 import { uploadNonMotorPolicyDocument } from "@/app/policies/non-motor-policy-document-actions";
 import { createNonMotorPolicy, updateNonMotorPolicy, type NonMotorCommercialBasis, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
 import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
+import { CustomerSearchField } from "@/components/customer-search-field";
 import {
   NonMotorDocumentPicker,
   type NonMotorStagedDocuments,
@@ -171,6 +172,8 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
   }, [commercialModal]);
 
+  const customerSearchOptions = useMemo(() => customers.map((customer) => ({ value: customer.id, label: `${customer.name}${customer.phone ? ` · ${customer.phone}` : ""}` })), [customers]);
+
   const completionValues = useMemo(() => [
     source.issuanceDate, source.intermediaryType, source.sourceId, source.rmName, source.intermediaryCode,
     form.customerMode === "existing" ? form.customerId : form.insuredName,
@@ -267,7 +270,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
         <Section number="02" title="Customer & policy">
           {form.customerMode === "existing" ? <>
             <div>{customerModeControl}</div>
-            <div className="md:col-span-1 xl:col-span-2"><Select label="Customer / organisation" value={form.customerId} onChange={(e) => changeCustomer(e.target.value)} required disabled={isEdit}><option value="">Select customer</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.phone}</option>)}</Select></div>
+            <div className="md:col-span-1 xl:col-span-2"><CustomerSearchField label="Customer / organisation" name="non_motor_customer_id" options={customerSearchOptions} defaultValue={form.customerId} required disabled={isEdit} placeholder="Search customer" onSelectionChange={changeCustomer} /></div>
             <div>{categoryControl}</div>
             {policyRow}
           </> : <>
