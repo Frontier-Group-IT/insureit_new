@@ -241,6 +241,7 @@ export default function VehiclesScreen() {
 
         return (
           <Pressable key={vehicle.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: vehicle.id } })} style={({ pressed }) => [styles.vehicleCard, pressed && styles.vehicleCardPressed]}>
+            <View style={styles.accentBar} />
             <View style={styles.cardMain}>
               <View style={styles.leftPane}>
                 {accountName ? <Text style={styles.accountName} numberOfLines={1}>{accountName}</Text> : null}
@@ -1119,8 +1120,9 @@ const styles = StyleSheet.create({
   globalSearchInput: { flex: 1, height: 38, color: palette.navy, fontSize: 12, fontWeight: '700' },
   clearSearch: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
 
-  vehicleCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 16, marginBottom: 10, padding: 10, shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
+  vehicleCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 16, marginBottom: 10, padding: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.055, shadowRadius: 10, elevation: 2 },
   vehicleCardPressed: { opacity: 0.88, transform: [{ scale: 0.99 }] },
+  accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
   cardMain: { flexDirection: 'row', gap: 10 },
   leftPane: { width: 164, paddingRight: 4 },
   accountName: { color: '#0A43A3', fontSize: 10.8, lineHeight: 13, fontWeight: '900', marginBottom: 3, textTransform: 'uppercase' },
