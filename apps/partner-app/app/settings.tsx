@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -31,6 +31,16 @@ export default function SettingsScreen() {
         />
       </View>
 
+      <PartnerSectionHeader title="Privacy" />
+      <View style={styles.menu}>
+        <SettingsLink
+          icon="shield-checkmark-outline"
+          title="Privacy Policy"
+          onPress={() => void Linking.openURL('https://portal.insureit.in/privacy-policy')}
+          last
+        />
+      </View>
+
       <PartnerSectionHeader title="App information" />
       <View style={styles.details}>
         <InfoRow label="App" value="INSUREIT Partner" />
@@ -53,7 +63,7 @@ function SettingsLink({
   onPress,
   last = false,
 }: {
-  icon: 'person-outline' | 'headset-outline';
+  icon: 'person-outline' | 'headset-outline' | 'shield-checkmark-outline';
   title: string;
   onPress: () => void;
   last?: boolean;
