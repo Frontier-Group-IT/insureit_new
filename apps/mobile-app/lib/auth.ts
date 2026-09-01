@@ -96,11 +96,12 @@ export async function getRestoredSession(waitMs = 2500): Promise<Session | null>
   return new Promise<Session | null>((resolve, reject) => {
     let settled = false;
     let subscription: { unsubscribe: () => void } | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const finish = (session: Session | null, error?: unknown) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
       subscription?.unsubscribe();
       if (error) {
         reject(error);
@@ -109,7 +110,7 @@ export async function getRestoredSession(waitMs = 2500): Promise<Session | null>
       resolve(session);
     };
 
-    const timer = setTimeout(() => finish(null), waitMs);
+    timer = setTimeout(() => finish(null), waitMs);
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
