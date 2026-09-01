@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { ReactNode, useEffect, useRef } from 'react';
 import { Animated, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -122,10 +122,12 @@ function CopyrightFooter() {
 
 function ServicePlaceholderRow() {
   const router = useRouter();
+  const pathname = usePathname();
+  const source = pathname === '/signup' ? 'guest_signup' : 'guest_login';
 
   return (
     <View style={styles.cardRow}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Pay challan" onPress={() => router.push('/customer/e-challan' as Href)} style={[styles.featureTile, styles.challanFeatureTile]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Pay challan" onPress={() => router.push({ pathname: '/customer/e-challan', params: { source } } as Href)} style={[styles.featureTile, styles.challanFeatureTile]}>
         <Image source={payChallanLogo} resizeMode="contain" style={styles.featureLogo} />
         <View style={styles.featureCopy}>
           <Text style={styles.featureTitle}>Pay Challan</Text>
@@ -133,7 +135,7 @@ function ServicePlaceholderRow() {
         </View>
       </Pressable>
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Get quote" onPress={() => router.push('/customer/insurance-quote' as Href)} style={[styles.featureTile, styles.quoteFeatureTile]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Get quote" onPress={() => router.push({ pathname: '/customer/insurance-quote', params: { source } } as Href)} style={[styles.featureTile, styles.quoteFeatureTile]}>
         <Image source={getQuoteLogo} resizeMode="contain" style={styles.featureLogo} />
         <View style={styles.featureCopy}>
           <Text style={styles.featureTitle}>Get Quote</Text>
