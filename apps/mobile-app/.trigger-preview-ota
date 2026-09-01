@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1020
-source_commit=4a513f8bdfa4b60a40f2938468c94ab435625669
-purpose=publish completed claim popup button overlap fix preview OTA
+source_pr=1022
+source_commit=28287c7b46a683cf7c371da8424bf0e3e8f5646a
+purpose=publish Add Claim Number red badge preview OTA
