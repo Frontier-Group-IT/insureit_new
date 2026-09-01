@@ -10,6 +10,7 @@ export function PartnerButton({
   label,
   onPress,
   variant = 'primary',
+  size = 'regular',
   icon,
   loading = false,
   disabled = false,
@@ -19,6 +20,7 @@ export function PartnerButton({
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  size?: 'compact' | 'regular';
   icon?: IconName;
   loading?: boolean;
   disabled?: boolean;
@@ -41,6 +43,7 @@ export function PartnerButton({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        size === 'compact' ? styles.compact : styles.regular,
         fullWidth && styles.fullWidth,
         styles[variant],
         pressed && !blocked && styles.pressed,
@@ -50,9 +53,9 @@ export function PartnerButton({
       {loading ? (
         <ActivityIndicator size="small" color={foreground} />
       ) : icon ? (
-        <Ionicons name={icon} size={18} color={foreground} />
+        <Ionicons name={icon} size={size === 'compact' ? 16 : 18} color={foreground} />
       ) : null}
-      <Text style={[styles.label, { color: foreground }]}>{label}</Text>
+      <Text style={[styles.label, size === 'compact' && styles.labelCompact, { color: foreground }]}>{label}</Text>
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
     </Pressable>
   );
@@ -60,7 +63,6 @@ export function PartnerButton({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: partnerTheme.control.buttonHeight,
     minWidth: partnerTheme.control.minTouchTarget,
     paddingHorizontal: 16,
     borderRadius: partnerTheme.radius.md,
@@ -70,13 +72,28 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
   },
+  regular: { minHeight: partnerTheme.control.buttonHeight },
+  compact: { minHeight: partnerTheme.control.compactHeight, paddingHorizontal: 13 },
   fullWidth: { alignSelf: 'stretch' },
-  primary: { backgroundColor: partnerTheme.colors.brandStrong, borderColor: partnerTheme.colors.brandStrong },
-  secondary: { backgroundColor: partnerTheme.colors.surface, borderColor: partnerTheme.colors.line },
-  danger: { backgroundColor: '#FFF7F6', borderColor: '#F2C8C5' },
-  ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
+  primary: {
+    backgroundColor: partnerTheme.colors.brandStrong,
+    borderColor: partnerTheme.colors.brandStrong,
+  },
+  secondary: {
+    backgroundColor: partnerTheme.colors.surface,
+    borderColor: partnerTheme.colors.lineStrong,
+  },
+  danger: {
+    backgroundColor: partnerTheme.colors.dangerSoft,
+    borderColor: '#F2C8C5',
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    borderColor: 'transparent',
+  },
   label: { ...partnerTheme.typography.label },
+  labelCompact: { fontSize: 10.5, lineHeight: 15 },
   trailing: { marginLeft: 2 },
-  pressed: { opacity: 0.82, transform: [{ scale: 0.995 }] },
+  pressed: { opacity: 0.86, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.42 },
 });
