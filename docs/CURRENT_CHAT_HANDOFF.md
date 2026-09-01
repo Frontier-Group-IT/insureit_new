@@ -1251,3 +1251,38 @@ This section supersedes the earlier R4/R5 OTA entries that were marked TRIGGERED
 R3 through R8 are now complete. There is no planned R9 in this OTA-safe refinement sequence.
 
 **NEXT SAFE STEP:** installed-device UAT and release-readiness review across the refined Partner app, followed by any OTA-safe defects discovered during UAT. Keep all work that genuinely requires a new APK/AAB/native dependency or native configuration for the explicitly approved final native-build stage.
+
+
+## Partner Google Play release-readiness continuation — 2026-09-01
+
+The OTA-safe R3–R8 refinement track is complete. Continue from:
+`docs/INSUREIT_PARTNER_PLAY_RELEASE_READINESS_2026_09_01.md`.
+
+Current device-UAT baseline:
+- main OTA marker/source commit: `c48e5803aec3f455100cefcdc146cd4cc32d3692`;
+- Partner preview OTA #29 / run `33472570374`: SUCCESS;
+- runtime: `0.1.0`;
+- Expo update group: `f5ab58ca-176c-4c22-82d7-ce24432ae6fd`;
+- Android update: `01a05b62-8253-7f5d-a5c2-18e105f44a19`.
+
+Play privacy readiness:
+- PR #954 merged as `0a09d2d9cc2d7923244009fd4edb9f591f045d23`;
+- Partner Verify #109 / `33472394033`: SUCCESS;
+- Web Verify #2504 / `33472394139`: SUCCESS;
+- Partner Settings now links to the live public privacy policy;
+- `https://portal.insureit.in/privacy-policy` returned HTTP 200 through Vercel verification.
+
+Production UAT identity check:
+- one active intermediary portal account exists;
+- it is a Partner identity;
+- its family is standalone with zero active POSP and zero active MISP children;
+- use it only for authorized internal UAT; do not expose a real production user's credentials to Google Play reviewers;
+- child-family UAT and a dedicated reusable Play reviewer/demo identity remain separate explicit setup items.
+
+Google Play technical readiness:
+- Expo SDK 54 targets Android API 36, satisfying the Google Play target requirement effective 31 August 2026;
+- final Play artifact must be an AAB;
+- EAS uses remote app versioning with autoIncrement, so do not treat `app.json` versionCode 1 as the final Play version code;
+- store-listing assets still need preparation: 512x512 PNG store icon, feature graphic, at least two final-UI phone screenshots, listing copy and Play Console declarations.
+
+**NEXT:** execute installed-device UAT against the current preview OTA and record PASS/FAIL evidence in the release-readiness document. Fix only OTA-safe defects now. No Partner APK/AAB/native build without explicit authorization for that exact build.
