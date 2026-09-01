@@ -52,9 +52,8 @@ export default function ClaimDetailScreen() {
 
   return (
     <PartnerScreen
-      eyebrow="CLAIM"
-      title={data?.claim.claim_no || 'Claim'}
-      subtitle={data?.customer.name || undefined}
+      eyebrow="SERVICE"
+      title="Claim"
       onBack={() => router.back()}
     >
       {loading ? (
@@ -80,7 +79,7 @@ export default function ClaimDetailScreen() {
                 tone={claimTone(data.claim.current_status)}
               />
             </View>
-            <Text style={styles.heroMeta}>{data.customer.name}{data.vehicle.vehicle_no ? ` · ${data.vehicle.vehicle_no}` : ''}</Text>
+            <Text style={styles.heroMeta}>{[data.claim.claim_no, data.customer.name, data.vehicle.vehicle_no].filter(Boolean).join(' · ')}</Text>
             <View style={styles.heroFooter}>
               <Text style={styles.heroFooterText}>{data.insurer.name || 'Insurer not recorded'}</Text>
               <Text style={styles.heroFooterText}>{humanize(data.claim.claim_service_mode || 'service mode not recorded')}</Text>
@@ -178,8 +177,16 @@ function Amount({ label, value }: { label: string; value: number | string | null
 }
 
 function needsPartnerAttention(data: PartnerClaimDetail) {
-  const assistance = (data.claim.assistance_status || '').toLowerCase();
-  return assistance.includes('request') || assistance.includes('pending') || assistance.includes('open');
+  const assistance = (data.claim.assistance_status || '')
+    .toLowerCase()
+    .replaceAll('_', ' ')
+    .trim();
+
+  if (!assistance || assistance === 'not requested' || assistance === 'none' || assistance === 'closed') {
+    return false;
+  }
+
+  return assistance.includes('requested') || assistance.includes('pending') || assistance.includes('open');
 }
 
 function partnerActionText(data: PartnerClaimDetail) {
