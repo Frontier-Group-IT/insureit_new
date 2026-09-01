@@ -1266,3 +1266,36 @@ Deployment:
 - no APK/AAB, native dependency, backend/schema/RLS/auth change.
 
 **NEXT:** R4 detail-screen refinement is the next planned slice, but installed-device visual review of representative R3 lists should be used to catch density/hierarchy issues before propagating the same patterns further.
+
+
+### R4 detail refinement — VERIFIED / MERGED (2026-09-01)
+
+PR #940 merged as `57c9764874e489a5e3304b93480538ec27e0725f`.
+
+- Customer, Policy, Claim and Policy Intake detail screens now use a more compact progressive-disclosure hierarchy.
+- Existing routes, server-authorized scope, cache/data behavior and full record access were preserved.
+- Corrected final head `b072feb627694f0c7bfae58c0567cd8d475c5d9a` passed Partner Verify #103 (`33469840016`) and Web Verify #2488 (`33469840019`).
+- OTA marker was pushed on main, but the push-triggered OTA run is not directly verifiable through the currently available PR-only workflow helper. Evidence state remains TRIGGERED / UNVERIFIED rather than DEPLOYED.
+- No APK/AAB or native dependency/config change.
+
+### R5 transactional journey refinement — VERIFIED / MERGED (2026-09-01)
+
+PR #943 merged as `b6f35d5d048f06625e6ede8152c8f83f89834e7d`.
+
+Policy Intake refinements:
+- synchronous duplicate-submit protection for initial submissions;
+- concise pre-submit review summary;
+- synchronous duplicate-action protection for replacement uploads;
+- existing persisted draft, progress, retry, error recovery, Operations attention and final-policy tracking preserved;
+- no direct policy booking and no invented persistent CRM state.
+
+Final R5 head `35d0e09dbba3f94a4052321a3f0462fb3b54e17c` passed:
+- Partner Verify #105 / `33470314551`;
+- Web Verify #2491 / `33470314526`.
+
+R5 OTA marker push:
+- `35fad7d32a8b9aabce209f750467050f6e5987d6`
+- marker `partner-r5-policy-intake-journey-2026-09-01`
+- push-run result remains UNVERIFIED through the current connector.
+
+**NEXT:** R6 Business / Payout / Network refinement. Continue to enforce role-authorized commercial visibility and do not expose internal insurer/accounting reconciliation data.
