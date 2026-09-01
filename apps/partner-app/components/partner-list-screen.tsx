@@ -2,13 +2,13 @@ import type { ReactElement, ReactNode } from 'react';
 import {
   FlatList,
   StyleSheet,
-  Text,
   View,
   type FlatListProps,
   type ListRenderItem,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PartnerTopBar } from '@/components/ui/partner-top-bar';
 import { partnerTheme } from '@/lib/theme';
 
 export function PartnerListScreen<T>({
@@ -51,13 +51,7 @@ export function PartnerListScreen<T>({
         contentContainerStyle={[styles.content, !data.length && styles.contentEmpty]}
         ListHeaderComponent={
           <View>
-            <View style={styles.header}>
-              <View style={styles.headerText}>
-                {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
-                <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-              </View>
-              {action ? <View style={styles.action}>{action}</View> : null}
-            </View>
+            <PartnerTopBar title={title} eyebrow={eyebrow} action={action} />
             {header}
           </View>
         }
@@ -84,28 +78,4 @@ const styles = StyleSheet.create({
     paddingBottom: 104,
   },
   contentEmpty: { flexGrow: 1 },
-  header: {
-    minHeight: 66,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: partnerTheme.spacing.md,
-  },
-  headerText: { flex: 1 },
-  eyebrow: {
-    color: partnerTheme.colors.brand,
-    letterSpacing: 1.35,
-    ...partnerTheme.typography.eyebrow,
-  },
-  title: {
-    marginTop: 2,
-    color: partnerTheme.colors.ink,
-    ...partnerTheme.typography.pageTitle,
-  },
-  action: {
-    minWidth: partnerTheme.control.minTouchTarget,
-    minHeight: partnerTheme.control.minTouchTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });
