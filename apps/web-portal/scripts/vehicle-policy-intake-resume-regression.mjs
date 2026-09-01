@@ -74,6 +74,12 @@ assert(vehiclePolicyFooter.includes("/policies/new?customer_id="));
 assert(vehiclePolicyFooter.includes("&vehicle_id="));
 assert(vehiclePolicyFooter.includes("/policies/\${encodeURIComponent(policy.id)}"));
 assert(vehiclePolicyFooter.includes("No policy linked"));
+assert(vehiclePolicyFooter.includes("/policies/${encodeURIComponent(policy.id)}/edit"));
+assert(vehiclePolicyFooter.includes("/policies/documents/${encodeURIComponent(policyCopyId(policy)!)}\/open"));
+assert(vehiclePolicyFooter.includes('document.document_type === "policy_copy"'));
+assert(vehiclePolicyFooter.includes("Policy copy unavailable"));
+assert(vehicleEditPage.includes("policy_documents(id,document_type)"));
+assert(vehicleViewPage.includes("policy_documents(id,document_type)"));
 
 const vehicleCreatedPopup=read("components/vehicle-created-action-popup.tsx");
 assert(vehicleCreatedPopup.includes("VEHICLE ADDED"));
