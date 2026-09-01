@@ -25,6 +25,8 @@ type PolicyRow = {
   policy_type: string;
   policy_product: string | null;
   business_line: string | null;
+  issuance_date: string | null;
+  created_at: string;
   start_date: string;
   end_date: string;
   insured_declared_value: number | null;
@@ -154,8 +156,9 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     const matchesCategory = business !== "Non Motor" || category === "all" || policyCategory(row) === category;
     const matchesSource = source === "all" || policySourceKey(row) === source;
     const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
-    const matchesFromDate = !fromDate || row.start_date >= fromDate;
-    const matchesToDate = !toDate || row.start_date <= toDate;
+    const businessDate = policyBusinessDate(row);
+    const matchesFromDate = !fromDate || businessDate >= fromDate;
+    const matchesToDate = !toDate || businessDate <= toDate;
     const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
     return matchesBusiness && matchesCategory && matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesQuery;
   }), [business, category, enriched, fromDate, insurer, query, source, toDate]);
@@ -452,6 +455,10 @@ function validityHint(policy: PolicyRow & { daysLeft?: number }) {
   if (days === 0) return "Expires today";
   return `${days} days left`;
 }
+function policyBusinessDate(row: Pick<PolicyRow, "issuance_date" | "created_at">) {
+  return row.issuance_date || row.created_at.slice(0, 10);
+}
+
 function policyStatus(endDate: string) {
   const days = daysUntil(endDate);
   return days < 0 ? "Expired" : days <= 30 ? "Expiring soon" : "Active";
