@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerNetwork, type PartnerNetworkData, type PartnerNetworkRow } from '@/lib/network';
 import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
@@ -48,36 +51,32 @@ export default function NetworkScreen() {
     <PartnerScreen
       eyebrow="MY NETWORK"
       title="Commercial relationships"
-      action={
-        <Pressable onPress={() => router.back()} style={styles.close}>
-          <Ionicons name="close" size={18} color={partnerTheme.colors.ink} />
-        </Pressable>
-      }
+      action={<PartnerIconButton icon="close" label="Close network" onPress={() => router.back()} />}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading network" />
       ) : error || !data ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error || 'Network is unavailable.'}</Text>
-          <Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable>
-        </View>
+        <PartnerStateView
+          state="error"
+          title="Network unavailable"
+          message={error || 'Your commercial network could not be loaded.'}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
       ) : (
         <>
-          <View style={styles.hero}>
-            <View style={styles.heroNode}>
-              <Ionicons name="git-network-outline" size={22} color="#FFFFFF" />
-            </View>
-            <View style={styles.heroBody}>
-              <Text style={styles.heroEyebrow}>AUTHORIZED NETWORK</Text>
-              <Text style={styles.heroTitle}>{data.total_partners} Partner {data.total_partners === 1 ? 'family' : 'families'}</Text>
-            </View>
+          <View style={styles.freshnessRow}>
+            <Text style={styles.scope}>{humanize(data.scope_mode)} scope</Text>
+            <Text style={styles.updated}>{formatUpdatedAt(data.generated_at)}</Text>
           </View>
 
-          <View style={styles.legend}>
-            <LegendDot style={styles.legendPartner} label="Partner family" />
-            <LegendDot style={styles.legendChild} label="POSP / MISP child" />
-            <LegendDot style={styles.legendGroup} label="Group container" />
-          </View>
+          <PartnerListSummaryStrip
+            items={[
+              { key: 'partners', label: 'Partner families', value: data.total_partners },
+              { key: 'groups', label: 'Groups', value: data.total_groups },
+              { key: 'children', label: 'POSP / MISP', value: data.partners.reduce((sum, row) => sum + row.child_count, 0) },
+            ]}
+          />
 
           {sections.map((section) => (
             <View key={section.key} style={styles.section}>
@@ -99,7 +98,13 @@ export default function NetworkScreen() {
                   const isOpen = expanded === row.partner_id;
                   return (
                     <View key={row.partner_id} style={styles.partnerCard}>
-                      <Pressable onPress={() => setExpanded(isOpen ? null : row.partner_id)} style={styles.partnerTop}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: isOpen }}
+                        accessibilityLabel={`${isOpen ? 'Collapse' : 'Expand'} ${row.partner_name} network`}
+                        onPress={() => setExpanded(isOpen ? null : row.partner_id)}
+                        style={({ pressed }) => [styles.partnerTop, pressed && styles.pressed]}
+                      >
                         <View style={styles.partnerNode}>
                           <Text style={styles.partnerInitial}>{initials(row.partner_name)}</Text>
                         </View>
@@ -172,76 +177,62 @@ function MiniStat({ value, label }: { value: number; label: string }) {
   );
 }
 
-function LegendDot({ style, label }: { style: object; label: string }) {
-  return (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendDot, style]} />
-      <Text style={styles.legendText}>{label}</Text>
-    </View>
-  );
-}
-
 function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0,2).map((part) => part[0]?.toUpperCase()).join('') || 'P';
 }
 
+function humanize(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Network loaded';
+  return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
+}
+
 const styles = StyleSheet.create({
-  close: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 280, alignItems: 'center', justifyContent: 'center' },
-  errorCard: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  errorText: { color: partnerTheme.colors.inkMuted, fontSize: 10 },
-  retry: { marginTop: 10, color: partnerTheme.colors.brand, fontSize: 10, fontWeight: '800' },
+  freshnessRow: { minHeight: 26, marginTop: -8, marginBottom: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  scope: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
 
-  hero: { flexDirection: 'row', gap: 11, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
-  heroNode: { width: 40, height: 40, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#343D52' },
-  heroBody: { flex: 1 },
-  heroEyebrow: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.1 },
-  heroTitle: { marginTop: 4, color: '#FFFFFF', fontSize: 17, fontWeight: '800' },
-
-  legend: { marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: 3 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendDot: { width: 7, height: 7, borderRadius: 4 },
-  legendPartner: { backgroundColor: partnerTheme.colors.brand },
-  legendChild: { backgroundColor: partnerTheme.colors.accent },
-  legendGroup: { backgroundColor: '#CBD0DC' },
-  legendText: { color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
-
-  section: { marginTop: 12 },
-  sectionHeader: { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#EEF1F5' },
+  section: { marginTop: partnerTheme.spacing.lg },
+  sectionHeader: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surfaceMuted },
   sectionHeaderGroup: { backgroundColor: partnerTheme.colors.brandSoft },
-  sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  sectionIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface },
   sectionHeaderBody: { flex: 1 },
-  sectionName: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
-  sectionMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 8 },
+  sectionName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  sectionMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
 
-  partnerList: { marginTop: 6, gap: 7 },
-  partnerCard: { overflow: 'hidden', borderRadius: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  partnerTop: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12 },
-  partnerNode: { width: 34, height: 34, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  partnerInitial: { color: partnerTheme.colors.brandStrong, fontSize: 10, fontWeight: '800' },
+  partnerList: { marginTop: 6 },
+  partnerCard: { backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  partnerTop: { minHeight: 62, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 10 },
+  partnerNode: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  partnerInitial: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.bodyStrong },
   partnerIdentity: { flex: 1 },
-  partnerName: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
-  partnerCode: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
+  partnerName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  partnerCode: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   partnerRight: { alignItems: 'flex-end' },
-  partnerPremium: { color: partnerTheme.colors.ink, fontSize: 10, fontWeight: '800' },
-  partnerPremiumLabel: { marginTop: 1, color: partnerTheme.colors.inkMuted, fontSize: 6.5 },
+  partnerPremium: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  partnerPremiumLabel: { marginTop: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
 
-  partnerMetrics: { flexDirection: 'row', paddingVertical: 7, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line, backgroundColor: '#FBFCFE' },
+  partnerMetrics: { flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line, backgroundColor: '#FBFCFE' },
   miniStat: { flex: 1, alignItems: 'center' },
-  miniValue: { color: partnerTheme.colors.ink, fontSize: 11, fontWeight: '800' },
-  miniLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 6.8 },
+  miniValue: { color: partnerTheme.colors.ink, fontSize: 14, lineHeight: 18, fontWeight: '600' },
+  miniLabel: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
 
-  expanded: { position: 'relative', padding: 10, paddingTop: 9, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  connectionLine: { position: 'absolute', left: 30, top: 37, bottom: 18, width: 1, backgroundColor: '#D9E3E5' },
-  expandedLabel: { marginBottom: 9, color: '#78908F', fontSize: 7, fontWeight: '800', letterSpacing: 0.8 },
-  childRow: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 3 },
-  childNode: { zIndex: 1, width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
+  expanded: { position: 'relative', padding: 11, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  connectionLine: { position: 'absolute', left: 31, top: 39, bottom: 18, width: 1, backgroundColor: '#D9E3E5' },
+  expandedLabel: { marginBottom: 7, color: partnerTheme.colors.inkMuted, letterSpacing: 0.8, ...partnerTheme.typography.meta },
+  childRow: { minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 3 },
+  childNode: { zIndex: 1, width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.accentSoft },
   childBody: { flex: 1 },
-  childName: { color: partnerTheme.colors.ink, fontSize: 9.5, fontWeight: '700' },
-  childMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
-  standalone: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 43, paddingHorizontal: 8, borderRadius: 11, backgroundColor: '#F5FBF7' },
-  standaloneText: { flex: 1, color: '#5F7967', fontSize: 8.2, lineHeight: 12 },
-  ownerRow: { marginTop: 7, paddingTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
-  ownerLabel: { color: partnerTheme.colors.inkMuted, fontSize: 7.5 },
-  ownerValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, fontSize: 8.5, fontWeight: '700' },
+  childName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  childMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  standalone: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: partnerTheme.control.minTouchTarget, paddingHorizontal: 8, borderRadius: partnerTheme.radius.md, backgroundColor: partnerTheme.colors.successSoft },
+  standaloneText: { flex: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  ownerRow: { marginTop: 7, paddingTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: partnerTheme.colors.line },
+  ownerLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
+  ownerValue: { flex: 1, textAlign: 'right', color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
+  pressed: { opacity: 0.78 },
 });
