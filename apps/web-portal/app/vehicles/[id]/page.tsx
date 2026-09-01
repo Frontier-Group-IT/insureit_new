@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { CarFront, Eye } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { VehiclePolicyFooterSummary, type VehicleLinkedPolicy } from "@/components/vehicle-policy-footer-summary";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -39,12 +40,17 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
   if (!profile?.id) redirect("/access-denied");
   const { id } = await params;
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin
-    .from("vehicles")
-    .select("id,customer_id,vehicle_no,vehicle_type,make,model,year,chassis_no,engine_no,fuel_type,registration_status,registration_date,fitness_expiry_date,puc_expiry_date,road_tax_expiry_date,national_permit_expiry_date,local_permit_expiry_date,engine_capacity_cc,seating_capacity,gvw_kg,permit_no,customers(customer_code,contact_name,phone)")
-    .eq("id", id)
-    .maybeSingle<VehicleDetail>();
+  const [vehicleResult, policiesResult] = await Promise.all([
+    admin
+      .from("vehicles")
+      .select("id,customer_id,vehicle_no,vehicle_type,make,model,year,chassis_no,engine_no,fuel_type,registration_status,registration_date,fitness_expiry_date,puc_expiry_date,road_tax_expiry_date,national_permit_expiry_date,local_permit_expiry_date,engine_capacity_cc,seating_capacity,gvw_kg,permit_no,customers(customer_code,contact_name,phone)")
+      .eq("id", id)
+      .maybeSingle<VehicleDetail>(),
+    admin.from("policies").select("id,policy_no,start_date,end_date").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
+  ]);
+  const { data, error } = vehicleResult;
   if (error || !data) notFound();
+  if (policiesResult.error) throw new Error(`Unable to load linked policies: ${policiesResult.error.message}`);
   const accessibleIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_vehicles");
   if (accessibleIds !== null && !accessibleIds.includes(data.customer_id)) redirect("/access-denied");
 
@@ -75,7 +81,10 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
           <Info label="National permit expiry" value={formatDate(data.national_permit_expiry_date)} />
           <Info label="Local permit expiry" value={formatDate(data.local_permit_expiry_date)} />
         </div>
-        <div className="border-t border-[#E5ECF5] bg-[#FBFCFE] px-5 py-4 text-[9.5px] text-[#64748B]">Vehicle identity and ownership fields are visible for operational verification but cannot be edited from this view.<Link href="/vehicles" className="ml-2 font-bold text-[#315B9A] hover:underline">Back to Vehicle Register</Link></div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E5ECF5] bg-[#FBFCFE] px-5 py-3">
+          <VehiclePolicyFooterSummary policies={policiesResult.data ?? []} customerId={data.customer_id} vehicleId={data.id} />
+          <Link href="/vehicles" className="ml-auto shrink-0 text-[9.5px] font-bold text-[#315B9A] hover:underline">Back to Vehicle Register</Link>
+        </div>
       </section>
     </AppShell>
   );
