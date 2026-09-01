@@ -270,7 +270,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
         <Section number="02" title="Customer & policy">
           {form.customerMode === "existing" ? <>
             <div>{customerModeControl}</div>
-            <div className="md:col-span-1 xl:col-span-2"><CustomerSearchField label="Customer / organisation" name="non_motor_customer_id" options={customerSearchOptions} defaultValue={form.customerId} required disabled={isEdit} placeholder="Search customer" onSelectionChange={changeCustomer} /></div>
+            <div className="md:col-span-1 xl:col-span-2"><CustomerSearchField label="Customer / organisation" name="non_motor_customer_id" options={customerSearchOptions} defaultValue={form.customerId} required disabled={isEdit} onSelectionChange={changeCustomer} /></div>
             <div>{categoryControl}</div>
             {policyRow}
           </> : <>
