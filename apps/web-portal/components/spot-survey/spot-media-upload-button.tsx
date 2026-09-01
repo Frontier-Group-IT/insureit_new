@@ -32,6 +32,8 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
             action={(formData) => {
               startTransition(async () => {
                 formData.set("claimId", claimId);
+                formData.delete("files");
+                files.forEach((file) => formData.append("files", file));
                 const response = await uploadSpotSurveyMedia(formData);
                 setResult(response);
                 if (response.ok) {
