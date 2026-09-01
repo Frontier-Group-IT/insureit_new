@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=983
-source_commit=c8368e6a72945c56101e122ec8ed723c0755890c
-purpose=publish customer mobile navy vehicle detail preview OTA
+source_pr=987
+source_commit=8fcad2d6ad063bbceb2165425de4b48b3170e4d2
+purpose=publish customer mobile blue vehicle summary labels preview OTA
