@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
 
 const primaryLogo = require('../assets/brand/logo (2).png');
+const inverseMarkLogo = require('../assets/brand/insureit-primary-logo-clean.png');
 
 export function BrandMark({ size = 52, compact = false }: { size?: number; compact?: boolean }) {
   void compact;
@@ -20,7 +21,7 @@ export function BrandLogo({ width = 208, style, inverse = false }: { width?: num
   const taglineSize = Math.max(5, Math.round(width * 0.04));
   return (
     <View style={[styles.brandLogo, { width, minHeight: markSize }, style]}>
-      <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize, tintColor: inverse ? '#FFFFFF' : undefined }} />
+      <Image source={inverse ? inverseMarkLogo : primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize, tintColor: inverse ? '#FFFFFF' : undefined }} />
       <View style={[styles.brandLogoCopy, { marginLeft: gap }]}>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, inverse && styles.brandLogoNameInverse, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
         <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, inverse && styles.brandLogoTaglineInverse, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
