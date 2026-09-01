@@ -347,7 +347,7 @@ function BusinessFilterPopover({ business }: { business: DashboardBusinessData }
                 { value: "fy", label: "This FY" },
                 { value: "custom", label: "Custom date range" },
               ]}
-              onChange={setSelectedPeriod}
+              onChange={(value) => setSelectedPeriod(value as DashboardBusinessData["filters"]["period"])}
             />
             <FilterSelect
               name="rm"
