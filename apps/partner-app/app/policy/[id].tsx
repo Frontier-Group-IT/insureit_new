@@ -41,9 +41,8 @@ export default function PolicyDetailScreen() {
 
   return (
     <PartnerScreen
-      eyebrow="POLICY"
-      title={data?.policy.policy_no || data?.policy.policy_code || 'Policy'}
-      subtitle={data?.insurer.name || undefined}
+      eyebrow="BUSINESS"
+      title="Policy"
       onBack={() => router.back()}
     >
       {loading ? (
@@ -132,7 +131,7 @@ export default function PolicyDetailScreen() {
                 <View style={styles.entityIcon}><Ionicons name="car-outline" size={19} color={partnerTheme.colors.accent} /></View>
                 <View style={styles.entityBody}>
                   <Text style={styles.entityTitle}>{data.vehicle.vehicle_no || 'Vehicle'}</Text>
-                  <Text style={styles.entityMeta}>{[data.vehicle.make, data.vehicle.model, data.vehicle.year].filter(Boolean).join(' · ') || humanize(data.vehicle.vehicle_type || 'vehicle')}</Text>
+                  <Text style={styles.entityMeta}>{displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')}</Text>
                 </View>
               </View>
             ) : (
@@ -205,6 +204,13 @@ function InfoCard({ children }: { children: ReactNode }) {
 
 function Info({ label, value }: { label: string; value: string }) {
   return <View style={styles.info}><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue}>{value}</Text></View>;
+}
+
+function displayParts(...values: Array<string | number | null | undefined>) {
+  return values
+    .map((value) => value == null ? '' : String(value).trim())
+    .filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined')
+    .join(' · ');
 }
 
 function policyCategory(data: PartnerPolicyDetail) {
