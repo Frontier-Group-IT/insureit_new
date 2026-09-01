@@ -1,10 +1,12 @@
 "use client";
 
 import { useCallback, useRef, useState, type MouseEvent } from "react";
+import { useFormStatus } from "react-dom";
 import { AlertModal } from "@/components/ui-feedback";
 
 export function VehicleSaveActionChooser() {
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const { pending } = useFormStatus();
   const [validationError, setValidationError] = useState<{ message: string; field?: HTMLElement } | null>(null);
 
   const closeValidation = useCallback(() => {
@@ -40,7 +42,6 @@ export function VehicleSaveActionChooser() {
       });
       return;
     }
-
   }
 
   return (
@@ -50,9 +51,11 @@ export function VehicleSaveActionChooser() {
         ref={triggerRef}
         type="submit"
         onClick={validateBeforeSubmit}
-        className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49]"
+        disabled={pending}
+        aria-busy={pending}
+        className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-[#17365D]"
       >
-        Save Vehicle
+        {pending ? "Saving..." : "Save Vehicle"}
       </button>
       <AlertModal
         open={Boolean(validationError)}
