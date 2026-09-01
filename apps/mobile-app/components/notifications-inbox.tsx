@@ -212,10 +212,10 @@ export function NotificationsInbox({ audience }: { audience: 'customer' | 'staff
               <Text style={styles.caughtUpTitle}>{unreadCount ? `${unreadCount} unread update${unreadCount === 1 ? '' : 's'} remaining` : 'You’re all caught up!'}</Text>
               <Text style={styles.caughtUpText}>We’ll notify you when there’s an update.</Text>
             </View>
-            <Pressable accessibilityRole="button" onPress={() => void markAllRead()} style={styles.preferencesButton}>
-              <MaterialCommunityIcons name="cog-outline" size={16} color={roleTheme.customer.accent} />
-              <Text style={styles.preferencesText}>Manage</Text>
-            </Pressable>
+            {unreadCount ? <Pressable accessibilityRole="button" accessibilityLabel="Mark all notifications read" onPress={() => void markAllRead()} style={styles.preferencesButton}>
+              <MaterialCommunityIcons name="email-check-outline" size={16} color={roleTheme.customer.accent} />
+              <Text style={styles.preferencesText}>Mark all read</Text>
+            </Pressable> : null}
           </View>
         </View>
       )}
