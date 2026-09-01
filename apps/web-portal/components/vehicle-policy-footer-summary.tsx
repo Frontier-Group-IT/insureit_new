@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, Plus, ShieldCheck } from "lucide-react";
+import { Files, Plus, ShieldCheck } from "lucide-react";
 
 export type VehicleLinkedPolicy = {
   id: string;
@@ -64,7 +64,7 @@ export function VehiclePolicyFooterSummary({
       <Link
         prefetch={false}
         href={`/policies/${encodeURIComponent(policy.id)}/edit`}
-        className="max-w-[190px] truncate font-bold text-[#17203A] transition hover:text-[#17365D] hover:underline"
+        className="max-w-[190px] truncate rounded-md border border-transparent px-1.5 py-1 font-bold text-[#17203A] transition hover:border-[#D6E1EE] hover:bg-[#F4F7FB] hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9CCE3]"
         title={`Edit policy ${policy.policy_no}`}
       >
         {policy.policy_no}
@@ -78,15 +78,13 @@ export function VehiclePolicyFooterSummary({
           href={`/policies/documents/${encodeURIComponent(policyCopyId(policy)!)}/open`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 font-bold text-[#2563C7] transition hover:text-[#17365D] hover:underline"
+          aria-label={`View policy copy for ${policy.policy_no}`}
+          title="View policy copy"
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[#7C3AED] transition hover:bg-[#E9D5FF] hover:text-[#6D28D9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C4B5FD]"
         >
-          View policy <ExternalLink className="h-3 w-3" aria-hidden="true" />
+          <Files className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
-      ) : (
-        <span className="inline-flex items-center gap-1 font-semibold text-[#98A2B3]" title="Policy copy is not available">
-          Policy copy unavailable
-        </span>
-      )}
+      ) : null}
     </div>
   );
 }
