@@ -26,16 +26,16 @@ export function PartnerFilterChip({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: partnerTheme.control.minTouchTarget,
+    minHeight: 36,
     justifyContent: 'center',
     borderRadius: partnerTheme.radius.pill,
-    paddingHorizontal: 13,
-    backgroundColor: partnerTheme.colors.surface,
+    paddingHorizontal: 11,
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
+    borderColor: partnerTheme.colors.lineStrong,
   },
-  active: { backgroundColor: partnerTheme.colors.brandStrong, borderColor: partnerTheme.colors.brandStrong },
+  active: { backgroundColor: partnerTheme.colors.brandSoft, borderColor: partnerTheme.colors.brandSoft },
   text: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  textActive: { color: partnerTheme.colors.white },
-  pressed: { opacity: 0.8 },
+  textActive: { color: partnerTheme.colors.brandStrong, fontWeight: '700' },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
 });
