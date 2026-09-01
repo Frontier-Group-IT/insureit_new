@@ -295,7 +295,7 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
           const active = isTabActive(tab.href, pathname, customerContext);
           const isCustomerRootTab = role === 'customer'
             && !isPortfolioCustomerContext(customerContext)
-            && ['Home', 'Policies', 'Vehicles', 'Support', 'Profile'].includes(tab.label);
+            && ['Home', 'Policies', 'Vehicles', 'Claim', 'Profile'].includes(tab.label);
           const isAlreadyOnCustomerRootTab = isCustomerRootTab && pathname === tab.href;
           return (
             <Pressable
@@ -362,7 +362,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
     { label: 'Policies', href: '/customer/policies', icon: 'file-certificate-outline', ...customerTone },
     { label: 'Vehicles', href: '/customer/vehicles', icon: 'truck-outline', ...customerTone },
-    { label: 'Support', href: '/customer/support', icon: 'headset', ...customerTone },
+    { label: 'Claim', href: '/customer/claims', icon: 'file-document-check-outline', ...customerTone },
     { label: 'Profile', href: '/customer/profile', icon: 'account-outline', ...customerTone },
   ];
   if (role === 'agent') return [
@@ -467,7 +467,7 @@ function isTabActive(tabHref: string, pathname: string, customerContext?: Custom
   if (tabHref === '/customer/home') return pathname === '/customer/home' || pathname === '/customer/report-accident' || pathname === '/customer/start-claim' || pathname === '/customer/insurance-quote' || pathname === '/customer/e-challan';
   if (tabHref === '/customer/policies') return ['/customer/policies', '/customer/policy-detail', '/customer/add-policy', '/customer/renewals'].some((route) => pathname.startsWith(route));
   if (tabHref === '/customer/vehicles') return ['/customer/vehicles', '/customer/vehicle-detail', '/customer/add-vehicle'].some((route) => pathname.startsWith(route));
-  if (tabHref === '/customer/support') return ['/customer/support', '/customer/help-faqs', '/customer/raise-support-ticket', '/customer/support-ticket-detail'].some((route) => pathname.startsWith(route));
+  if (tabHref === '/customer/claims') return ['/customer/claims', '/customer/claim-detail', '/customer/self-managed-claim', '/customer/self-managed-claim-detail', '/customer/upload-documents'].some((route) => pathname.startsWith(route));
   if (tabHref === '/customer/profile') return pathname.startsWith('/customer/profile') || pathname.startsWith('/customer/kyc') || pathname.startsWith('/customer/legal');
   if (portfolio && tabHref === '/customer/group/accounts') return pathname.startsWith('/customer/group/accounts') || pathname.startsWith('/customer/group/account-detail') || pathname.startsWith('/customer/group/add-account');
   if (portfolio && tabHref === '/customer/group/fleet') return pathname.startsWith('/customer/group/fleet') || pathname.startsWith('/customer/vehicle-detail') || pathname.startsWith('/customer/add-vehicle');
