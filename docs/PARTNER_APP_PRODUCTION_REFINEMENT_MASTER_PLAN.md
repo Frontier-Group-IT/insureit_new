@@ -1299,3 +1299,20 @@ R5 OTA marker push:
 - push-run result remains UNVERIFIED through the current connector.
 
 **NEXT:** R6 Business / Payout / Network refinement. Continue to enforce role-authorized commercial visibility and do not expose internal insurer/accounting reconciliation data.
+
+
+### R4–R8 refinement closeout — VERIFIED / DEPLOYED (2026-09-01)
+
+The earlier R4/R5 OTA notes marked UNVERIFIED are superseded by direct GitHub Actions push-run evidence.
+
+- **R4 Detail screens:** PR #940 → `57c9764874e489a5e3304b93480538ec27e0725f`; Partner Verify #103 `33469840016`; Web Verify #2488 `33469840019`; Partner OTA #24 `33470126679` SUCCESS.
+- **R5 Policy Intake transaction journey:** PR #943 → `b6f35d5d048f06625e6ede8152c8f83f89834e7d`; Partner Verify #105 `33470314551`; Web Verify #2491 `33470314526`; Partner OTA #25 `33470533523` SUCCESS.
+- **R6 Business / Payout / Network:** PR #946 → `83b0fb441695d6a5aa7fe41109902e723204d776`; Partner Verify #106 `33470725076`; Web Verify #2494 `33470725068`; Partner OTA #26 `33470938811` SUCCESS.
+- **R7 Account / Profile / Settings / Support:** PR #947 → `df54fec4d8fe9b9bdef71a562192195a29cb6610`; Partner Verify #107 `33471069531`; Web Verify #2495 `33471069539`; Partner OTA #27 `33471283749` SUCCESS.
+- **R8 Universal search / cross-navigation / preserved context:** PR #949 → `cf800ffce3fa4bcb1cf4dfc7faf7c26b571d18e7`; Partner Verify #108 `33471596329`; Web Verify #2498 `33471596333`; Partner OTA #28 `33471796783` SUCCESS.
+
+R6 preserved the server-driven commercial payout authorization boundary and intermediary hierarchy. R7 introduced only OTA-safe Account UI and local app information, not persistent backend settings. R8 composes only the existing Partner-scoped Customer/Policy/Claim search RPCs, with no new data surface.
+
+**Refinement track status:** R3 through R8 are complete. No R9 is planned in this track.
+
+**Next:** installed-device UAT + release-readiness review. Fix any discovered JS/TS/UI issues by OTA where safe. Keep anything that genuinely requires a native dependency, native configuration change or new APK/AAB for the explicitly approved final native-build stage.
