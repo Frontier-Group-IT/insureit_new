@@ -297,6 +297,7 @@ function NeedsAttention({ items }: { items: AttentionSignal[] }) {
 
 function BusinessFilterPopover({ business }: { business: DashboardBusinessData }) {
   const filters = business.filters;
+  const [selectedPeriod, setSelectedPeriod] = useState(filters.period);
   const activeCount = business.appliedFilterCount + (filters.period !== "mtd" ? 1 : 0);
 
   return (
@@ -345,6 +346,7 @@ function BusinessFilterPopover({ business }: { business: DashboardBusinessData }
                 { value: "fy", label: "This FY" },
                 { value: "custom", label: "Custom date range" },
               ]}
+              onChange={setSelectedPeriod}
             />
             <FilterSelect
               name="rm"
@@ -368,7 +370,7 @@ function BusinessFilterPopover({ business }: { business: DashboardBusinessData }
               allLabel="All partners"
             />
 
-            {filters.period === "custom" ? (
+            {selectedPeriod === "custom" ? (
               <>
                 <DateField name="from" label="From date" value={filters.fromDate} />
                 <DateField name="to" label="To date" value={filters.toDate} />
@@ -434,17 +436,19 @@ function FilterSelect({
   value,
   options,
   allLabel,
+  onChange,
 }: {
   name: string;
   label: string;
   value: string;
   options: DashboardFilterOption[];
   allLabel?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <label className="block min-w-0">
       <span className="mb-1 block text-[7px] font-black uppercase tracking-[.08em] text-[#8995A7]">{label}</span>
-      <select name={name} defaultValue={value} className="min-h-[38px] w-full border border-[#CBD5E1] bg-white px-2.5 py-2 text-[8.5px] font-semibold leading-relaxed text-[#2D3D58] outline-none focus:border-[#607DA9]">
+      <select name={name} defaultValue={value} onChange={(event) => onChange?.(event.target.value)} className="min-h-[38px] w-full border border-[#CBD5E1] bg-white px-2.5 py-2 text-[8.5px] font-semibold leading-relaxed text-[#2D3D58] outline-none focus:border-[#607DA9]">
         {allLabel ? <option value="">{allLabel}</option> : null}
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
       </select>
