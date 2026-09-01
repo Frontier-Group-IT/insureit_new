@@ -14,6 +14,7 @@ export function PartnerListRow({
   accessibilityLabel,
   showChevron = Boolean(onPress),
   divider = true,
+  dense = false,
 }: {
   title: string;
   subtitle?: string;
@@ -24,6 +25,7 @@ export function PartnerListRow({
   accessibilityLabel?: string;
   showChevron?: boolean;
   divider?: boolean;
+  dense?: boolean;
 }) {
   const body = (
     <>
@@ -34,12 +36,14 @@ export function PartnerListRow({
       </View>
       {meta ? <Text numberOfLines={1} style={styles.meta}>{meta}</Text> : null}
       {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
-      {showChevron ? <Ionicons name="chevron-forward" size={17} color="#9CA6B5" /> : null}
+      {showChevron ? <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.inkSubtle} /> : null}
     </>
   );
 
+  const rowStyle = [styles.row, dense && styles.rowDense, divider && styles.divider];
+
   if (!onPress) {
-    return <View style={[styles.row, divider && styles.divider]}>{body}</View>;
+    return <View style={rowStyle}>{body}</View>;
   }
 
   return (
@@ -47,7 +51,7 @@ export function PartnerListRow({
       accessibilityLabel={accessibilityLabel || [title, subtitle, meta].filter(Boolean).join('. ')}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.row, divider && styles.divider, pressed && styles.pressed]}
+      style={({ pressed }) => [...rowStyle, pressed && styles.pressed]}
     >
       {body}
     </Pressable>
@@ -60,26 +64,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingVertical: 7,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    borderRadius: partnerTheme.radius.xs,
+  },
+  rowDense: {
+    minHeight: 54,
+    paddingVertical: 5,
   },
   divider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: partnerTheme.colors.line,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
   },
   leading: { flexShrink: 0 },
   copy: { flex: 1, minWidth: 0 },
-  title: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  title: {
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.bodyStrong,
+  },
   subtitle: {
     marginTop: 2,
     color: partnerTheme.colors.inkMuted,
     ...partnerTheme.typography.caption,
   },
   meta: {
-    maxWidth: '34%',
+    maxWidth: '36%',
     color: partnerTheme.colors.inkMuted,
     textAlign: 'right',
     ...partnerTheme.typography.caption,
   },
   trailing: { flexShrink: 0 },
-  pressed: { opacity: 0.72 },
+  pressed: {
+    backgroundColor: partnerTheme.colors.pressed,
+    opacity: 0.96,
+  },
 });
