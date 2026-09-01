@@ -167,7 +167,10 @@ assert(nonMotorPolicyForm.includes('<CustomerSearchField label="Customer / organ
 assert(nonMotorPolicyForm.includes('onSelectionChange={changeCustomer}'));
 assert(!nonMotorPolicyForm.includes('<Select label="Customer / organisation"'));
 
-assert(nonMotorPolicyForm.includes('required onSelectionChange={changeCustomer}'));
 
 assert(nonMotorPolicyForm.includes('<Section number="02" title="Customer & policy" allowOverflow>'));
 assert(nonMotorPolicyForm.includes('<div className="min-w-0"><CustomerSearchField label="Customer / organisation"'));
+
+assert(nonMotorPolicyForm.includes('required portalResults onSelectionChange={changeCustomer}'));
+assert(customerSearchField.includes('createPortal('));
+assert(customerSearchField.includes('portalResults && mounted'));

@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export type CustomerSearchOption = { label: string; value: string };
 
@@ -14,6 +15,7 @@ export function CustomerSearchField({
   onSelectionChange,
   disabled = false,
   containedResults = false,
+  portalResults = false,
 }: {
   label: string;
   name: string;
@@ -24,6 +26,7 @@ export function CustomerSearchField({
   onSelectionChange?: (value: string) => void;
   disabled?: boolean;
   containedResults?: boolean;
+  portalResults?: boolean;
 }) {
   const initialOption = options.find((option) => option.value === (defaultValue ?? "")) ?? null;
   const [query, setQuery] = useState(initialOption?.label ?? "");
@@ -31,6 +34,32 @@ export function CustomerSearchField({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [portalStyle, setPortalStyle] = useState<CSSProperties>({});
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!portalResults || !open) return;
+    const update = () => {
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setPortalStyle({
+        position: "fixed",
+        left: rect.left,
+        top: rect.bottom + 6,
+        width: rect.width,
+        maxHeight: Math.max(120, Math.min(288, window.innerHeight - rect.bottom - 16)),
+      });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, portalResults]);
 
   const matches = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
@@ -115,34 +144,77 @@ export function CustomerSearchField({
         onBlur={() => window.setTimeout(() => setOpen(false), 120)}
       />
       {open ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          className={`${containedResults ? "relative z-20" : "absolute z-50"} mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#D7E1EE] bg-white p-1.5 shadow-[0_14px_35px_rgba(15,23,42,0.16)]`}
-        >
-          {matches.length ? (
-            matches.map((option, index) => (
-              <button
-                key={option.value}
-                id={`${name}-option-${index}`}
-                type="button"
-                role="option"
-                aria-selected={option.value === selectedValue}
-                className={`block w-full rounded-lg px-3 py-2 text-left text-[11px] transition ${
-                  index === activeIndex ? "bg-[#EEF4FF] text-[#17365D]" : "text-[#334155] hover:bg-[#F8FAFC]"
-                }`}
-                onMouseDown={(event) => event.preventDefault()}
-                onMouseEnter={() => setActiveIndex(index)}
-                onClick={() => selectOption(option)}
-              >
-                {option.label}
-              </button>
-            ))
-          ) : (
-            <div className="px-3 py-2 text-[10.5px] text-[#64748B]">No matching customer</div>
-          )}
-        </div>
+        portalResults && mounted
+          ? createPortal(
+              <CustomerMatches
+                id={listboxId}
+                name={name}
+                matches={matches}
+                selectedValue={selectedValue}
+                activeIndex={activeIndex}
+                onActiveIndexChange={setActiveIndex}
+                onSelect={selectOption}
+                className="z-[300] overflow-y-auto rounded-xl border border-[#D7E1EE] bg-white p-1.5 shadow-[0_14px_35px_rgba(15,23,42,0.16)]"
+                style={portalStyle}
+              />,
+              document.body,
+            )
+          : (
+              <CustomerMatches
+                id={listboxId}
+                name={name}
+                matches={matches}
+                selectedValue={selectedValue}
+                activeIndex={activeIndex}
+                onActiveIndexChange={setActiveIndex}
+                onSelect={selectOption}
+                className={`${containedResults ? "relative z-20" : "absolute z-50"} mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#D7E1EE] bg-white p-1.5 shadow-[0_14px_35px_rgba(15,23,42,0.16)]`}
+              />
+            )
       ) : null}
+    </div>
+  );
+}
+
+
+function CustomerMatches({
+  id,
+  name,
+  matches,
+  selectedValue,
+  activeIndex,
+  onActiveIndexChange,
+  onSelect,
+  className,
+  style,
+}: {
+  id: string;
+  name: string;
+  matches: CustomerSearchOption[];
+  selectedValue: string;
+  activeIndex: number;
+  onActiveIndexChange: (index: number) => void;
+  onSelect: (option: CustomerSearchOption) => void;
+  className: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <div id={id} role="listbox" className={className} style={style}>
+      {matches.length ? matches.map((option, index) => (
+        <button
+          key={option.value}
+          id={`${name}-option-${index}`}
+          type="button"
+          role="option"
+          aria-selected={option.value === selectedValue}
+          className={`block w-full rounded-lg px-3 py-2 text-left text-[11px] transition ${index === activeIndex ? "bg-[#EEF4FF] text-[#17365D]" : "text-[#334155] hover:bg-[#F8FAFC]"}`}
+          onMouseDown={(event) => event.preventDefault()}
+          onMouseEnter={() => onActiveIndexChange(index)}
+          onClick={() => onSelect(option)}
+        >
+          {option.label}
+        </button>
+      )) : <div className="px-3 py-2 text-[10.5px] text-[#64748B]">No matching customer</div>}
     </div>
   );
 }

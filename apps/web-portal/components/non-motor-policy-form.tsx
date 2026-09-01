@@ -168,7 +168,7 @@ export function NonMotorPolicyForm({ insurers, customers, rms, sources }: Props)
 
           <Section number="02" title="Customer & policy" allowOverflow>
             <Segmented label="Customer record" value={form.customerMode} options={["existing", "new"]} labels={["Existing", "New"]} onChange={(value) => { const mode = value as CustomerMode; setForm((current) => ({ ...current, customerMode: mode, ...(mode === "new" ? { customerId: "", insuredName: "", contactName: "", phone: "", email: "" } : {}) })); }} />
-            {form.customerMode === "existing" ? <div className="min-w-0"><CustomerSearchField label="Customer / organisation" name="non_motor_customer_id" options={customerSearchOptions} defaultValue={form.customerId} required onSelectionChange={changeCustomer} /></div> : <>
+            {form.customerMode === "existing" ? <div className="min-w-0"><CustomerSearchField label="Customer / organisation" name="non_motor_customer_id" options={customerSearchOptions} defaultValue={form.customerId} required portalResults onSelectionChange={changeCustomer} /></div> : <>
               <Select label="Customer type" value={form.customerType} onChange={(e) => update("customerType", e.target.value as FormState["customerType"])}><option>Organisation</option><option>Individual</option></Select>
               <Field label="Insured / organisation name" value={form.insuredName} onChange={(e) => update("insuredName", e.target.value)} placeholder="Name on policy" required />
               <Field label="Contact person" value={form.contactName} onChange={(e) => update("contactName", e.target.value)} placeholder="Primary contact" />
