@@ -8,6 +8,8 @@ export const POLICY_ACTIVITY_ACTIONS = {
   POLICY_DOC_REMOVED: "policy_doc_removed",
   PAYIN_BILLING_ADDED: "payin_billing_added",
   PAYIN_BILLING_UPDATED: "payin_billing_updated",
+  POLICY_SUPERSEDED: "policy_superseded",
+  POLICY_REPLACEMENT_CREATED: "policy_replacement_created",
 } as const;
 
 export type PolicyActivityAction = (typeof POLICY_ACTIVITY_ACTIONS)[keyof typeof POLICY_ACTIVITY_ACTIONS];
@@ -20,6 +22,8 @@ const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   policy_doc_removed: "Policy Doc. Removed",
   payin_billing_added: "Pay-in Billing Added",
   payin_billing_updated: "Pay-in Billing Updated",
+  policy_superseded: "Policy Superseded",
+  policy_replacement_created: "Replacement Policy Created",
 };
 
 const TRACKED_ACTIONS = Object.values(POLICY_ACTIVITY_ACTIONS);

@@ -11,6 +11,23 @@ import { findPolicyOnboardingBusinessConflict, type PolicyBusinessConflict } fro
 
 export type PolicyCustomerCandidate = { id: string; name: string; phone: string; city: string | null; state: string | null; phoneMatch: boolean; nameMatch: boolean };
 export type PolicyOwnershipConflict = { vehicleId: string; registrationNumber: string; customerId: string; customerName: string; customerPhone: string; canTransfer: boolean };
+export type PolicyExistingVehicleSelection = {
+  vehicleId: string;
+  customerId: string;
+  registrationNo: string;
+  insuredName: string;
+  phoneNo: string;
+  vehicleClass: string;
+  make: string;
+  model: string;
+  fuelType: string;
+  manufacturingYear: string;
+  capacity: string;
+  chassisNo: string;
+  engineNo: string;
+  rtoState: string;
+  rtoName: string;
+};
 export type PolicyOnboardingPayload = {
   customer: { name: string; phone: string; type?: string; email?: string; address?: string; city?: string; district?: string; state?: string; pincode?: string; country?: string; source?: string };
   vehicle: Record<string, string | boolean | null | undefined>;
@@ -20,7 +37,20 @@ export type PolicyOnboardingPayload = {
   billing: Record<string, string | number | null | undefined>;
   payout: Record<string, string | number | boolean | null | undefined>;
   authbridge: Record<string, string | boolean | null | undefined>;
-  resolution?: { selectedCustomerId?: string | null; createNewCustomer?: boolean; ownershipDecision?: "keep_existing" | "transfer" | null; transferReason?: string; acceptCoverageGap?: boolean };
+  resolution?: {
+    selectedCustomerId?: string | null;
+    selectedExistingVehicleId?: string | null;
+    createNewCustomer?: boolean;
+    ownershipDecision?: "keep_existing" | "transfer" | null;
+    transferReason?: string;
+    acceptCoverageGap?: boolean;
+    acceptActivePolicyNotice?: boolean;
+    acceptExpiredPolicyHistory?: boolean;
+    confirmPolicyReplacement?: boolean;
+    replacementPolicyId?: string | null;
+    replacementReason?: string;
+    replacementEffectiveDate?: string;
+  };
   sourceIntakeId?: string;
   draftRevision?: number;
 };
@@ -33,6 +63,64 @@ export type PolicyOnboardingResult =
 
 type CustomerRow = { id: string; contact_name: string; phone: string; city: string | null; state: string | null };
 type VehicleOwnerRow = { id: string; vehicle_no: string; vehicle_no_normalized: string | null; customer_id: string; customers: { contact_name: string; phone: string } | null };
+type ExistingVehicleRow = {
+  id: string;
+  customer_id: string;
+  vehicle_no: string;
+  vehicle_no_normalized: string | null;
+  vehicle_type: string | null;
+  vehicle_class_code: string | null;
+  vehicle_class_description: string | null;
+  vehicle_category: string | null;
+  body_type: string | null;
+  is_commercial: boolean | null;
+  make: string | null;
+  model: string | null;
+  fuel_type: string | null;
+  color: string | null;
+  manufacture_date: string | null;
+  year: number | null;
+  engine_capacity_cc: number | null;
+  seating_capacity: number | null;
+  standing_capacity: number | null;
+  sleeper_capacity: number | null;
+  gvw_kg: number | null;
+  unladen_weight_kg: number | null;
+  wheel_base_mm: number | null;
+  cylinders: number | null;
+  chassis_no: string | null;
+  engine_no: string | null;
+  emission_norm: string | null;
+  registration_date: string | null;
+  registration_status: string | null;
+  registration_status_as_on: string | null;
+  rto_name: string | null;
+  rto_state: string | null;
+  fitness_expiry_date: string | null;
+  road_tax_expiry_date: string | null;
+  puc_no: string | null;
+  puc_expiry_date: string | null;
+  permit_no: string | null;
+  permit_type: string | null;
+  permit_valid_from: string | null;
+  local_permit_expiry_date: string | null;
+  national_permit_no: string | null;
+  national_permit_expiry_date: string | null;
+  financed: boolean | null;
+  financer_name: string | null;
+  blacklist_status: string | null;
+  customers: {
+    contact_name: string;
+    phone: string;
+    address: string | null;
+    city: string | null;
+    district: string | null;
+    state: string | null;
+    pincode: string | null;
+    country: string | null;
+    source: string | null;
+  } | null;
+};
 
 function normalizedPhone(value: string) { return value.replace(/\D/g, "").slice(-10); }
 function normalizedRegistration(value: string) { return normalizeVehicleRegistrationNumber(value); }
@@ -41,6 +129,7 @@ function isTemporaryVehicleNumber(value: string | null | undefined) { return /^(
 function registrationMode(payload: PolicyOnboardingPayload) { return payload.vehicle.registrationMode === "unregistered" ? "unregistered" : "registered"; }
 function cleanName(value: string) { return value.trim().replace(/\s+/g, " "); }
 function canTransferVehicle(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
+function canReplaceActivePolicy(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
 function validDate(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value); }
 
 function numericPayloadValue(value: unknown, integer = false, emptyValue = "") {
@@ -182,8 +271,149 @@ async function findVehicleOwnerByChassis(chassis: string) {
   return data;
 }
 
+const EXISTING_VEHICLE_SELECT = "id,customer_id,vehicle_no,vehicle_no_normalized,vehicle_type,vehicle_class_code,vehicle_class_description,vehicle_category,body_type,is_commercial,make,model,fuel_type,color,manufacture_date,year,engine_capacity_cc,seating_capacity,standing_capacity,sleeper_capacity,gvw_kg,unladen_weight_kg,wheel_base_mm,cylinders,chassis_no,engine_no,emission_norm,registration_date,registration_status,registration_status_as_on,rto_name,rto_state,fitness_expiry_date,road_tax_expiry_date,puc_no,puc_expiry_date,permit_no,permit_type,permit_valid_from,local_permit_expiry_date,national_permit_no,national_permit_expiry_date,financed,financer_name,blacklist_status,customers(contact_name,phone,address,city,district,state,pincode,country,source)";
+
+async function findExistingVehicleById(vehicleId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("vehicles")
+    .select(EXISTING_VEHICLE_SELECT)
+    .eq("id", vehicleId)
+    .maybeSingle<ExistingVehicleRow>();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+function existingVehicleCapacity(vehicle: ExistingVehicleRow) {
+  const vehicleClass = String(vehicle.vehicle_class_code ?? vehicle.vehicle_type ?? "").trim().toUpperCase();
+  if (vehicleClass === "PCP" || vehicleClass === "TWP") return vehicle.engine_capacity_cc == null ? "" : String(vehicle.engine_capacity_cc);
+  if (vehicleClass === "PCV") return vehicle.seating_capacity == null ? "" : String(vehicle.seating_capacity);
+  if (vehicleClass === "GCV" || vehicleClass === "CPM") return vehicle.gvw_kg == null ? "" : String(vehicle.gvw_kg);
+  if (vehicle.engine_capacity_cc != null) return String(vehicle.engine_capacity_cc);
+  if (vehicle.gvw_kg != null) return String(vehicle.gvw_kg);
+  return "";
+}
+
+function existingVehicleSelection(vehicle: ExistingVehicleRow): PolicyExistingVehicleSelection {
+  return {
+    vehicleId: vehicle.id,
+    customerId: vehicle.customer_id,
+    registrationNo: vehicle.vehicle_no,
+    insuredName: vehicle.customers?.contact_name ?? "",
+    phoneNo: vehicle.customers?.phone ?? "",
+    vehicleClass: String(vehicle.vehicle_class_code ?? vehicle.vehicle_type ?? "").trim().toUpperCase(),
+    make: vehicle.make ?? "",
+    model: vehicle.model ?? "",
+    fuelType: vehicle.fuel_type ?? "",
+    manufacturingYear: vehicle.year == null ? "" : String(vehicle.year),
+    capacity: existingVehicleCapacity(vehicle),
+    chassisNo: vehicle.chassis_no ?? "",
+    engineNo: vehicle.engine_no ?? "",
+    rtoState: vehicle.rto_state ?? "",
+    rtoName: vehicle.rto_name ?? "",
+  };
+}
+
+function applyCanonicalExistingVehicle(payload: PolicyOnboardingPayload, vehicle: ExistingVehicleRow): PolicyOnboardingPayload {
+  const selection = existingVehicleSelection(vehicle);
+  return {
+    ...payload,
+    customer: {
+      ...payload.customer,
+      name: selection.insuredName,
+      phone: selection.phoneNo,
+      address: vehicle.customers?.address ?? "",
+      city: vehicle.customers?.city ?? "",
+      district: vehicle.customers?.district ?? "",
+      state: vehicle.customers?.state ?? "",
+      pincode: vehicle.customers?.pincode ?? "",
+      country: vehicle.customers?.country ?? "India",
+      source: vehicle.customers?.source ?? payload.customer.source,
+    },
+    vehicle: {
+      ...payload.vehicle,
+      registrationMode: "registered",
+      registrationNumber: vehicle.vehicle_no,
+      classCode: selection.vehicleClass,
+      classDescription: vehicle.vehicle_class_description ?? "",
+      category: vehicle.vehicle_category ?? "",
+      bodyType: vehicle.body_type ?? "",
+      isCommercial: vehicle.is_commercial,
+      make: selection.make,
+      model: selection.model,
+      fuelType: selection.fuelType,
+      color: vehicle.color ?? "",
+      manufactureDate: vehicle.manufacture_date ?? "",
+      manufacturingYear: selection.manufacturingYear,
+      capacity: selection.capacity,
+      engineCapacity: vehicle.engine_capacity_cc == null ? "" : String(vehicle.engine_capacity_cc),
+      seatingCapacity: vehicle.seating_capacity == null ? "" : String(vehicle.seating_capacity),
+      standingCapacity: vehicle.standing_capacity == null ? "" : String(vehicle.standing_capacity),
+      sleeperCapacity: vehicle.sleeper_capacity == null ? "" : String(vehicle.sleeper_capacity),
+      grossWeight: vehicle.gvw_kg == null ? "" : String(vehicle.gvw_kg),
+      unladenWeight: vehicle.unladen_weight_kg == null ? "" : String(vehicle.unladen_weight_kg),
+      wheelBase: vehicle.wheel_base_mm == null ? "" : String(vehicle.wheel_base_mm),
+      cylinders: vehicle.cylinders == null ? "" : String(vehicle.cylinders),
+      chassisNumber: selection.chassisNo,
+      engineNumber: selection.engineNo,
+      normsType: vehicle.emission_norm ?? "",
+      registrationDate: vehicle.registration_date ?? "",
+      registrationStatus: vehicle.registration_status ?? "",
+      statusAsOn: vehicle.registration_status_as_on ?? "",
+      rtoName: selection.rtoName,
+      rtoState: selection.rtoState,
+      fitnessExpiryDate: vehicle.fitness_expiry_date ?? "",
+      taxUpto: vehicle.road_tax_expiry_date ?? "",
+      pucNumber: vehicle.puc_no ?? "",
+      pucUpto: vehicle.puc_expiry_date ?? "",
+      permitNumber: vehicle.permit_no ?? "",
+      permitType: vehicle.permit_type ?? "",
+      permitValidFrom: vehicle.permit_valid_from ?? "",
+      permitValidUpto: vehicle.local_permit_expiry_date ?? "",
+      nationalPermitNumber: vehicle.national_permit_no ?? "",
+      nationalPermitUpto: vehicle.national_permit_expiry_date ?? "",
+      financed: vehicle.financed,
+      financerName: vehicle.financer_name ?? "",
+      blacklistStatus: vehicle.blacklist_status ?? "",
+    },
+    authbridge: { applied: false },
+    resolution: {
+      ...payload.resolution,
+      selectedCustomerId: vehicle.customer_id,
+      selectedExistingVehicleId: vehicle.id,
+      createNewCustomer: false,
+      ownershipDecision: "keep_existing",
+    },
+  };
+}
+
+export async function loadExistingVehicleForPolicyOnboarding(vehicleId: string): Promise<
+  | { ok: true; selection: PolicyExistingVehicleSelection }
+  | { ok: false; error: string }
+> {
+  await requirePolicyCreator();
+  try {
+    const vehicle = await findExistingVehicleById(vehicleId);
+    if (!vehicle) return { ok: false, error: "The existing vehicle is no longer available. Refresh and try again." };
+    return { ok: true, selection: existingVehicleSelection(vehicle) };
+  } catch {
+    return { ok: false, error: "We couldn't load the existing vehicle. Your form has not been changed." };
+  }
+}
+
 export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<PolicyOnboardingResult> {
   const profile = await requirePolicyCreator();
+  const selectedExistingVehicleId = payload.resolution?.selectedExistingVehicleId?.trim() || null;
+  if (selectedExistingVehicleId) {
+    try {
+      const selectedVehicle = await findExistingVehicleById(selectedExistingVehicleId);
+      if (!selectedVehicle) return { ok: false, kind: "database", error: "The selected existing vehicle is no longer available. Refresh and try again." };
+      payload = applyCanonicalExistingVehicle(payload, selectedVehicle);
+    } catch {
+      return { ok: false, kind: "database", error: "We couldn't verify the selected existing vehicle. Your form has not been submitted." };
+    }
+  }
+
   payload = operationalEntryPayload(payload, profile.role);
   const validationError = validatePayload(payload);
   if (validationError) return { ok: false, kind: "validation", error: validationError };
@@ -241,7 +471,25 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       rpcCustomer = { ...rpcCustomer, name: existingCustomer.contact_name, phone: existingCustomer.phone, email: "", address: "", city: "", district: "", state: "", pincode: "", source: "" };
     }
 
-    const businessConflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: payload.resolution?.acceptCoverageGap === true });
+    const replacementRequested = payload.resolution?.confirmPolicyReplacement === true;
+    const replacementPolicyId = payload.resolution?.replacementPolicyId?.trim() || null;
+    const replacementReason = payload.resolution?.replacementReason?.trim() || "";
+    const replacementEffectiveDate = payload.resolution?.replacementEffectiveDate?.trim() || "";
+    if (replacementRequested) {
+      if (!canReplaceActivePolicy(profile.role)) return { ok: false, kind: "permission", error: "Only a Manager or Administrator can replace an active policy." };
+      if (payload.sourceIntakeId) return { ok: false, kind: "validation", error: "Active-policy replacement must be completed from direct Policy Onboarding, not from a Policy Intake handoff." };
+      if (!replacementPolicyId || !replacementReason || !validDate(replacementEffectiveDate)) return { ok: false, kind: "validation", error: "Select a replacement reason and valid effective date." };
+      if (replacementEffectiveDate !== String(payload.policy.validFrom ?? "")) return { ok: false, kind: "validation", error: "The replacement effective date must match the new policy Valid From date." };
+    }
+
+    const businessConflict = await findPolicyOnboardingBusinessConflict({
+      payload,
+      acceptCoverageGap: payload.resolution?.acceptCoverageGap === true,
+      acceptActivePolicyNotice: payload.resolution?.acceptActivePolicyNotice === true,
+      acceptExpiredPolicyHistory: payload.resolution?.acceptExpiredPolicyHistory === true,
+      canReplacePolicy: canReplaceActivePolicy(profile.role) && !payload.sourceIntakeId,
+      ignoreManagedPolicyId: replacementRequested ? replacementPolicyId : null,
+    });
     if (businessConflict) return { ok: false, kind: "business_conflict", conflict: businessConflict };
 
     const financials = sanitizeFinancialNumbers(payload);
@@ -261,7 +509,14 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
 
     const admin = createSupabaseAdminClient();
     let rpcResult;
-    if (payload.sourceIntakeId) {
+    if (replacementRequested && replacementPolicyId) {
+      rpcResult = await admin.rpc("replace_active_motor_policy_v1", {
+        p_existing_policy_id: replacementPolicyId,
+        p_payload: rpcPayload,
+        p_reason: replacementReason,
+        p_effective_date: replacementEffectiveDate,
+      });
+    } else if (payload.sourceIntakeId) {
       await requirePolicyIntakeFinalizer();
       if (!Number.isInteger(payload.draftRevision) || (payload.draftRevision ?? 0) < 1) return { ok:false, kind:"validation", error:"The Policy Intake draft version is missing. Reload the intake and try again." };
       rpcResult = await admin.rpc("finalize_policy_intake_motor_v1", { p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
@@ -286,7 +541,14 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
         return { ok: false, kind: "business_conflict", conflict: { type: "manufacturer_unknown", enteredMake: message.split("Unknown vehicle manufacturer:").slice(1).join(":").trim() || String(payload.vehicle.make ?? "") } };
       }
       if (message.includes("POLICY_COVERAGE_OVERLAP") || lowerMessage.includes("policies_policy_no_key") || lowerMessage.includes("policies_insurer_policy_no_uidx")) {
-        const conflict = await findPolicyOnboardingBusinessConflict({ payload, acceptCoverageGap: true });
+        const conflict = await findPolicyOnboardingBusinessConflict({
+          payload,
+          acceptCoverageGap: true,
+          acceptActivePolicyNotice: true,
+          acceptExpiredPolicyHistory: true,
+          canReplacePolicy: canReplaceActivePolicy(profile.role) && !payload.sourceIntakeId,
+          ignoreManagedPolicyId: replacementRequested ? replacementPolicyId : null,
+        });
         if (conflict) return { ok: false, kind: "business_conflict", conflict };
       }
       if (lowerMessage.includes("invalid input syntax for type numeric") || lowerMessage.includes("invalid input syntax for type integer")) {

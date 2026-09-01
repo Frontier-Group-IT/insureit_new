@@ -1286,3 +1286,17 @@ Google Play technical readiness:
 - store-listing assets still need preparation: 512x512 PNG store icon, feature graphic, at least two final-UI phone screenshots, listing copy and Play Console declarations.
 
 **NEXT:** execute installed-device UAT against the current preview OTA and record PASS/FAIL evidence in the release-readiness document. Fix only OTA-safe defects now. No Partner APK/AAB/native build without explicit authorization for that exact build.
+
+
+## Policy existing-vehicle / replacement flow — 2026-09-01
+
+**IMPLEMENTED, NOT APPLIED/DEPLOYED:** branch `feat/policy-existing-vehicle-replacement-flow` adds:
+- canonical "Use Existing Vehicle" hydration from vehicle ID;
+- server-side re-verification of the selected vehicle/customer;
+- active, expired and overlap policy-history warnings across managed + external policy records;
+- explicit Edit Existing Policy / Change New Policy Details paths;
+- privileged, audited managed-policy replacement that preserves the old record and creates a separate new policy;
+- migration `20260901154500_policy_existing_vehicle_replacement.sql` with atomic `replace_active_motor_policy_v1` and `policy_replacement_audit`;
+- static regression guard `policy-existing-vehicle-replacement-regression.mjs`.
+
+No migration has been applied and no production deployment has been triggered. The active-policy replacement path must remain unavailable until the migration is applied through the normal approved workflow.

@@ -522,3 +522,21 @@ Durable rules:
 **IMPLEMENTED / NOT APPLIED 2026-08-22:** migration `20260822000100_single_operator_policy_ocr_training.sql` removes the separate-reviewer constraint and adds `approve_policy_ocr_database_comparison(...)`. The RPC atomically stores the saved Section 03 reference, records the current operator as the audit actor, creates/upserts the sanitized candidate and marks the label approved. The UI removes the owner panel and uses one inline-state button: **Confirm comparison & approve training**. A committed migration is not proof that this is live.
 
 **IMPLEMENTED LOCALLY / NOT APPLIED OR DEPLOYED 2026-08-22:** the next OCR increment combines visible Section 02 vehicle extraction with the existing Section 03 proposal. One operator-selected Google run compares both grouped sections against the policy snapshot/current vehicle reference, and one confirmation creates nested sanitized candidate schema `policy_ocr_training_candidate_v2`. Migration `20260822093000_policy_ocr_section_02_training.sql` adds protected `section_02_reference` storage and server-side payload validation. Registration/chassis/engine use synthetic candidate values. The onboarding OCR modal can apply only explicitly selected Section 02/03 proposals to the unsaved form; it never proposes insured name/phone and never silently updates saved records.
+
+
+## Policy onboarding — existing vehicle reuse and active-policy replacement
+
+**IMPLEMENTED, NOT APPLIED/DEPLOYED (2026-09-01):** branch `feat/policy-existing-vehicle-replacement-flow` adds a controlled continuation path when Policy Onboarding identifies an existing vehicle whose stored identity differs from the entered chassis/engine details.
+
+Durable rules:
+- "Use Existing Vehicle" must resolve the exact stored vehicle by internal vehicle ID, hydrate Section 02 from canonical vehicle/customer data, and preserve policy/source/premium work.
+- The server re-resolves the selected vehicle before booking; the browser selection is not trusted as final identity.
+- Policy history checks include managed and external policies and remain coverage-aware (for example, complementary TP + SAOD is not treated as the same coverage).
+- Expired policy history is a soft warning; active non-conflicting policy history requires acknowledgement; overlapping same-coverage periods remain blocking.
+- Existing active policies are never silently overwritten or deleted.
+- A managed active policy may be explicitly replaced only by Manager/Admin/Super Admin/IT Super User, from direct Policy Onboarding, with a reason and effective date. The old policy is marked `superseded`, remains linked to its documents/claims/history, and the new policy is created as a separate record.
+- Replacement is atomic through `replace_active_motor_policy_v1`; the old policy is restored automatically by transaction rollback if creation of the replacement fails.
+- External policies are never auto-superseded by this flow.
+- Database coverage-overlap protection remains in place as the final race-condition guard.
+
+Migration `20260901154500_policy_existing_vehicle_replacement.sql` adds policy supersession linkage/metadata and `policy_replacement_audit`. It must be reviewed/applied through the normal migration gate before the replacement action can work in production.
