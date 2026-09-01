@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1022
-source_commit=28287c7b46a683cf7c371da8424bf0e3e8f5646a
-purpose=publish Add Claim Number red badge preview OTA
+source_pr=1016
+source_commit=cfff25d3c9a77cd240ae4c3fe0cdabb0a9bb3b1b
+purpose=publish Start Claim Android touch routing fix preview OTA
