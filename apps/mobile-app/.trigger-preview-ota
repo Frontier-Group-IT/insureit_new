@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1000
-source_commit=cdc1d2ed79c98ce27858d0a6e7cb724f70b3e692
-purpose=publish customer claim card two-column alignment preview OTA
+source_pr=1004
+source_commit=222b8ef49bab9cfbc2137562cef5876c82284a6a
+purpose=publish clickable customer profile documents and KYC summary cards preview OTA
