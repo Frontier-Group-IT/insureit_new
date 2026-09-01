@@ -98,6 +98,12 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <View pointerEvents="none" style={styles.backdropTop} />
       <View pointerEvents="none" style={styles.backdropBand} />
+      {customerHeader ? (
+        <View
+          pointerEvents="none"
+          style={[styles.customerHeaderContentDimmer, { height: insets.top + 58 }]}
+        />
+      ) : null}
       {showProfile ? (
         <View style={[styles.fixedBrandRow, customerHeader && styles.customerFixedBrandRow, { top: insets.top }]}>
           {showBackButton ? (
@@ -554,6 +560,7 @@ export const styles = StyleSheet.create({
   screenContentCompactTop: { paddingTop: 86 },
   screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
   fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
+  customerHeaderContentDimmer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 19, backgroundColor: 'rgba(238,247,255,0.50)' },
   customerFixedBrandRow: { height: 58, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: palette.navy, borderBottomColor: '#12305F' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
