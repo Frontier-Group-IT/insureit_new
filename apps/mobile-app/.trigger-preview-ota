@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1017
-source_commit=bbea266fee7ffdec3da092fcf422ed839d38e5ed
-purpose=publish first-save-only claim number prompt redesign preview OTA
+source_pr=1018
+source_commit=9156d60f0d3a3af700ff457f42a580dd0952d20f
+purpose=publish Stage 3 claim-number prompt when missing preview OTA
