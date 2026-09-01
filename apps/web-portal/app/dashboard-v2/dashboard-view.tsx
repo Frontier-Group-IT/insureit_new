@@ -463,8 +463,11 @@ function DateField({ name, label, value }: { name: string; label: string; value:
 
 function BusinessPerformance({ business }: { business: DashboardBusinessData }) {
   const commercial = business.netPremium !== null;
+  const motorPolicies = business.businessLineMix.find((row) => row.label === "Motor")?.policies ?? 0;
+  const nonMotorPolicies = business.businessLineMix.find((row) => row.label === "Non Motor")?.policies ?? 0;
+  const policyMixLabel = `${motorPolicies.toLocaleString("en-IN")} Motor · ${nonMotorPolicies.toLocaleString("en-IN")} Non-Motor`;
   const headline = [
-    { label: `Policies · ${business.periodShortLabel}`, value: business.policyCount.toLocaleString("en-IN") },
+    { label: `Policies · ${business.periodShortLabel} · ${policyMixLabel}`, value: business.policyCount.toLocaleString("en-IN") },
     ...(commercial ? [
       { label: `Net premium · ${business.periodShortLabel}`, value: formatMoney(business.netPremium ?? 0) },
       { label: "Avg. net / policy", value: formatMoney(business.averageNetPremium ?? 0) },
