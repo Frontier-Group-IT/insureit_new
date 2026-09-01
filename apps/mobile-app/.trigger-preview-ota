@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1007
-source_commit=222fcbb52d5ff6b86c4fdbcf9ed3da05b9a96e89
-purpose=publish customer claim card column symmetry preview OTA
+source_pr=1008
+source_commit=2ac7bd53c40dd8fbb5bb5b46108a073213fb5802
+purpose=publish customer mobile Claim bottom navigation preview OTA
