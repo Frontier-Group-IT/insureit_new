@@ -166,3 +166,5 @@ assert(nonMotorPolicyForm.includes('import { CustomerSearchField } from "@/compo
 assert(nonMotorPolicyForm.includes('<CustomerSearchField label="Customer / organisation"'));
 assert(nonMotorPolicyForm.includes('onSelectionChange={changeCustomer}'));
 assert(!nonMotorPolicyForm.includes('<Select label="Customer / organisation"'));
+
+assert(nonMotorPolicyForm.includes('required containedResults onSelectionChange={changeCustomer}'));
