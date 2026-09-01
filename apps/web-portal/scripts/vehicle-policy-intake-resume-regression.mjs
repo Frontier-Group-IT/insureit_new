@@ -7,6 +7,22 @@ assert(forms.includes("VehicleSaveActionChooser"));
 assert(!forms.includes("Save Vehicle Only"));
 assert(forms.includes('aria-label="Add new customer"'));
 assert(!forms.includes("+ Create new customer"));
+assert(forms.includes("CustomerSearchField"));
+assert(!forms.includes('<SelectField\n          variant="onboarding"\n          label="Customer"'));
+
+const customerSearchField=read("components/customer-search-field.tsx");
+assert(customerSearchField.includes('role="combobox"'));
+assert(customerSearchField.includes('aria-autocomplete="list"'));
+assert(customerSearchField.includes('role="listbox"'));
+assert(customerSearchField.includes('type="hidden" name={name} value={selectedValue}'));
+assert(customerSearchField.includes("option.label.toLocaleLowerCase().includes(normalized)"));
+assert(customerSearchField.includes('placeholder="Search customer"'));
+assert(customerSearchField.includes('event.key === "ArrowDown"'));
+assert(customerSearchField.includes('event.key === "ArrowUp"'));
+assert(customerSearchField.includes('event.key === "Enter"'));
+assert(customerSearchField.includes('event.key === "Escape"'));
+assert(customerSearchField.includes("Select a customer from the matching results."));
+assert(customerSearchField.includes("No matching customer"));
 
 const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
 assert(vehicleSaveChooser.includes("Save Vehicle"));
