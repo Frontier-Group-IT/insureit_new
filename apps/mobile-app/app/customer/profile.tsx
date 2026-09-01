@@ -286,7 +286,7 @@ export default function ProfileScreen() {
         <View style={styles.kycVaultSummary}>
           <View style={styles.kycMiniStat}><Text style={styles.kycMiniStatValue}>{documents.length}</Text><Text style={styles.kycMiniStatLabel}>Uploaded</Text></View>
           <View style={styles.kycMiniStat}><MaterialCommunityIcons name="lock-check-outline" size={17} color="#12805C" /><Text style={styles.kycMiniStatLabel}>Private vault</Text></View>
-          <View style={styles.kycMiniStat}><MaterialCommunityIcons name="trash-can-outline" size={17} color="#B7791F" /><Text style={styles.kycMiniStatLabel}>Delete anytime</Text></View>
+          <View style={styles.kycMiniStat}><MaterialCommunityIcons name="trash-can-outline" size={17} color="#B7791F" /><Text style={styles.kycMiniStatLabel}>Manage documents</Text></View>
         </View>
 
         {documentsOpen ? <>

@@ -496,7 +496,7 @@ function KycRequiredModal({ visible, application, reviewNotes, onStart, onDismis
 
 function formatClaimAmount(value: number) {
   const amount = Math.max(Math.round(value || 0), 0);
-  return `₹ : ${amount.toLocaleString('en-IN')}`;
+  return `₹${amount.toLocaleString('en-IN')}`;
 }
 
 function externalToPolicy(policy: ExternalPolicyRow): Policy {

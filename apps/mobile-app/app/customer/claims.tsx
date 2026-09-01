@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
+import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimStatus, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -24,6 +25,7 @@ export default function ClaimsScreen() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
+  const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ClaimFilter>(requestedFilter);
   const [loading, setLoading] = useState(true);
@@ -44,15 +46,28 @@ export default function ClaimsScreen() {
           supabase.from('policies').select('*').eq('customer_id', customer.id),
           supabase.from('insurance_companies').select('*'),
         ]);
-        setClaims((claimResult.data ?? []) as CustomerClaim[]);
+        const nextClaims = (claimResult.data ?? []) as CustomerClaim[];
+        const claimIds = nextClaims.map((claim) => claim.id);
+        const milestoneResult = claimIds.length
+          ? await (supabase as any).from('claim_milestones').select('*').in('claim_id', claimIds)
+          : { data: [], error: null };
+        if (milestoneResult.error) console.warn('Customer claim milestones load failed', milestoneResult.error.message);
+        setClaims(nextClaims);
         setVehicles(vehicleResult.data ?? []);
         setPolicies(policyResult.data ?? []);
         setInsurers(insurerResult.data ?? []);
+        setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
       }
       setLoading(false);
     }
     void load();
   }, [router]);
+
+  const milestonesByClaimId = useMemo(() => {
+    const grouped = new Map<string, ClaimMilestone[]>();
+    for (const milestone of milestones) grouped.set(milestone.claim_id, [...(grouped.get(milestone.claim_id) ?? []), milestone]);
+    return grouped;
+  }, [milestones]);
 
   const filteredClaims = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -125,7 +140,7 @@ export default function ClaimsScreen() {
             <View style={styles.currentRow}>
               <View style={styles.currentCopy}>
                 <Text style={styles.currentLabel}>{selfTracked ? 'CURRENT MILESTONE' : 'CURRENT STATUS'}</Text>
-                <Text style={styles.currentValue}>{claim.current_status}</Text>
+                <Text style={styles.currentValue}>{selfTracked ? selfManagedCurrentMilestone(milestonesByClaimId.get(claim.id) ?? []) : claim.current_status}</Text>
               </View>
               <View style={styles.incidentCopy}>
                 <Text style={styles.currentLabel}>INCIDENT</Text>
@@ -144,6 +159,12 @@ export default function ClaimsScreen() {
       {claims.length > 0 && filteredClaims.length === 0 ? <EmptyState title="No matching claim" body="Try another search or filter." /> : null}
     </Screen>
   );
+}
+
+function selfManagedCurrentMilestone(milestones: ClaimMilestone[]) {
+  const completed = new Set(milestones.filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable').map((item) => item.milestone_key));
+  if (completed.size >= SELF_MANAGED_MILESTONES.length) return SELF_MANAGED_MILESTONES[SELF_MANAGED_MILESTONES.length - 1]?.label ?? 'Claim complete';
+  return SELF_MANAGED_MILESTONES.find((stage) => !completed.has(stage.key))?.label ?? 'Spot Intimation';
 }
 
 function validClaimFilter(value?: string): ClaimFilter {
