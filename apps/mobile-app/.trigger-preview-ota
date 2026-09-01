@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1012
-source_commit=63d2ed7653eedf1ae8370bf18fd144fb47989fba
-purpose=publish insurer claim number prompt after stage three preview OTA
+source_pr=1017
+source_commit=bbea266fee7ffdec3da092fcf422ed839d38e5ed
+purpose=publish first-save-only claim number prompt redesign preview OTA
