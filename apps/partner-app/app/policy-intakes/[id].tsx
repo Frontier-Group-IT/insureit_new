@@ -402,4 +402,5 @@ const styles = StyleSheet.create({
   detailRowLast: { borderBottomWidth: 0 },
   detailLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   detailValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.caption },
+  pressed: { opacity: 0.8 },
 });
