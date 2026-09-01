@@ -114,9 +114,9 @@ export default function PolicyDetailScreen() {
             <HeroMetric label="End date" value={formatDate(policy.end_date)} />
           </View>
           {renewalState.action ? <View style={styles.heroActionRow}>
-            <Pressable accessibilityRole="button" onPress={() => router.push('/customer/insurance-quote')} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
-              <MaterialCommunityIcons name={renewalState.tone === 'danger' ? 'refresh' : 'file-document-outline'} size={15} color="#FFFFFF" />
-              <Text style={styles.heroActionText}>{renewalState.tone === 'danger' ? 'Renew policy' : 'Get quote'}</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
+              <MaterialCommunityIcons name="refresh" size={15} color="#FFFFFF" />
+              <Text style={styles.heroActionText}>Add renewed policy</Text>
             </Pressable>
           </View> : null}
         </View>
