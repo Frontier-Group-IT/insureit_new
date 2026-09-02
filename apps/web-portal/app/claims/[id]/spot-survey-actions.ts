@@ -362,6 +362,11 @@ export async function classifySpotSurveyAttachment(formData: FormData): Promise<
   }
 }
 
+export async function classifySpotSurveyAttachmentForm(formData: FormData): Promise<void> {
+  const result = await classifySpotSurveyAttachment(formData);
+  if (!result.ok) throw new Error(result.message);
+}
+
 export async function replaceSpotSurveyDocument(formData: FormData): Promise<ActionResult> {
   try {
     const claimId = String(formData.get("claimId") ?? "").trim();
