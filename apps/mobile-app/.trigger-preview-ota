@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1056
-source_commit=5484d652fdff4f9b5d84795aefa4a7f5a49b45c2
-purpose=publish compact customer policy details page preview OTA
+source_pr=1060
+source_commit=7b4ad0018b85e2450ffdd88997d85d4fac47d4ba
+purpose=publish blue Add Claim Number badge preview OTA
