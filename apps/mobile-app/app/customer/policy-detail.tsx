@@ -90,12 +90,13 @@ export default function PolicyDetailScreen() {
   if (!policy) return <Screen title="Policy Detail"><EmptyState title="Policy not found" body="Please choose another policy from your list." /></Screen>;
 
   return (
-    <Screen title="Policy Detail" subtitle={vehicle?.vehicle_no ?? policy.policy_no} showLogout showTitleHeader={false}>
+    <Screen title="Policy details" subtitle={vehicle?.vehicle_no ?? policy.policy_no} showLogout showTitleHeader={false}>
+      <Text style={styles.pageTitle}>Policy details</Text>
       <View style={styles.contentStack}>
         <View style={styles.heroLayout}>
           <View style={styles.heroAccent} />
           <View style={styles.heroTop}>
-            <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft }]}>
+            <View style={styles.heroIcon}>
               <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color={renewalTone(renewalState.tone).accent} />
             </View>
             <View style={styles.heroCopy}>
@@ -147,12 +148,12 @@ export default function PolicyDetailScreen() {
 
 function StatusBadge({ state, label }: { state: 'success' | 'warning' | 'danger' | 'neutral'; label: string }) {
   const config = {
-    success: { bg: '#D9FBEA', text: '#067647' },
-    warning: { bg: '#FFF0D2', text: '#B7791F' },
-    danger: { bg: '#FFE1E1', text: '#C43838' },
-    neutral: { bg: '#EEF2F6', text: '#64748B' },
+    success: { border: '#8FD7B7', text: '#067647' },
+    warning: { border: '#E7C46E', text: '#B7791F' },
+    danger: { border: '#E7A0A0', text: '#C43838' },
+    neutral: { border: '#CBD5E1', text: '#64748B' },
   }[state];
-  return <View style={[styles.statusBadge, { backgroundColor: config.bg }]}><Text style={[styles.statusText, { color: config.text }]}>{label}</Text></View>;
+  return <View style={[styles.statusBadge, { borderColor: config.border }]}><Text style={[styles.statusText, { color: config.text }]}>{label}</Text></View>;
 }
 
 function HeroMetric({ label, value }: { label: string; value: string }) {
@@ -195,42 +196,43 @@ function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
 }
 
 const styles = StyleSheet.create({
+  pageTitle: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900', marginBottom: 10 },
   contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
-  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, maxHeight: 336, marginBottom: 12, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 15, overflow: 'hidden' },
-  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: '#C43838' },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  heroIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, maxHeight: 300, marginBottom: 9, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 13, overflow: 'hidden' },
+  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#C43838' },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  heroIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EBF3', alignItems: 'center', justifyContent: 'center' },
   heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#6A4BAA', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  policyNo: { color: palette.navy, fontSize: 22, lineHeight: 27, fontWeight: '900', marginTop: 2 },
-  policyType: { color: '#334155', fontSize: 12.5, lineHeight: 16, fontWeight: '800', marginTop: 2 },
-  heroMetaRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  heroMetric: { flex: 1, minHeight: 55, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.72)', borderWidth: 1, borderColor: 'rgba(106,75,170,.16)', paddingHorizontal: 9, justifyContent: 'center' },
-  heroMetricLabel: { color: '#6A4BAA', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
-  heroMetricValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
-  heroActionRow: { marginTop: 10 },
-  heroAction: { alignSelf: 'stretch', minHeight: 34, borderRadius: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  eyebrow: { color: '#64748B', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  policyNo: { color: palette.navy, fontSize: 20, lineHeight: 24, fontWeight: '900', marginTop: 1 },
+  policyType: { color: '#475569', fontSize: 12, lineHeight: 15, fontWeight: '800', marginTop: 1 },
+  heroMetaRow: { flexDirection: 'row', gap: 7, marginTop: 8 },
+  heroMetric: { flex: 1, minHeight: 50, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, justifyContent: 'center' },
+  heroMetricLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
+  heroMetricValue: { color: palette.navy, fontSize: 11, fontWeight: '900', marginTop: 3 },
+  heroActionRow: { marginTop: 8 },
+  heroAction: { alignSelf: 'stretch', minHeight: 32, borderRadius: 10, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
-  heroActionText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
-  statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 5 },
-  statusText: { fontSize: 9.5, fontWeight: '900' },
-  financialCard: { backgroundColor: '#EFFAF5', borderColor: '#B9E6D0' },
-  vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4' },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 8 },
-  sectionIcon: { width: 36, height: 36, borderRadius: radii.sm, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
+  heroActionText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: '#FFFFFF', borderWidth: 1 },
+  statusText: { fontSize: 9, fontWeight: '900' },
+  financialCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 13, marginBottom: 9 },
+  vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 13 },
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
+  sectionIcon: { width: 34, height: 34, borderRadius: radii.sm, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   sectionCopy: { flex: 1, minWidth: 0 },
-  sectionTitle: { color: palette.navy, fontSize: 14.5, lineHeight: 18, fontWeight: '900' },
-  sectionHint: { color: palette.slate, fontSize: 11, lineHeight: 14, fontWeight: '700', marginTop: 1 },
-  financialGrid: { flexDirection: 'row', gap: 9 },
-  financialValue: { flex: 1, minHeight: 66, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D3EBDD', padding: 11, justifyContent: 'center' },
-  financialValuePrimary: { borderColor: '#9ED8BA', backgroundColor: '#F8FFFB' },
-  financialLabel: { color: '#587267', fontSize: 9.5, fontWeight: '900', textTransform: 'uppercase' },
-  financialAmount: { color: palette.navy, fontSize: 16, fontWeight: '900', marginTop: 5 },
-  vehicleFacts: { borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E3ECF6', overflow: 'hidden' },
-  factRow: { minHeight: 43, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#E7EEF7' },
-  factLabel: { width: 104, color: palette.slate, fontSize: 11, fontWeight: '800' },
-  factValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '900', textAlign: 'right' },
-  vehicleLink: { minHeight: 38, marginTop: 10, borderRadius: 11, backgroundColor: '#EEF5FF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sectionTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' },
+  sectionHint: { color: palette.slate, fontSize: 10.5, lineHeight: 13, fontWeight: '700', marginTop: 1 },
+  financialGrid: { flexDirection: 'row', gap: 8 },
+  financialValue: { flex: 1, minHeight: 58, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 10, justifyContent: 'center' },
+  financialValuePrimary: { borderColor: '#D6E2EF', backgroundColor: '#FFFFFF' },
+  financialLabel: { color: '#64748B', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
+  financialAmount: { color: palette.navy, fontSize: 15, fontWeight: '900', marginTop: 4 },
+  vehicleFacts: { borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E3ECF6', overflow: 'hidden' },
+  factRow: { minHeight: 39, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#E7EEF7' },
+  factLabel: { width: 100, color: palette.slate, fontSize: 10.5, fontWeight: '800' },
+  factValue: { flex: 1, color: palette.navy, fontSize: 12, fontWeight: '900', textAlign: 'right' },
+  vehicleLink: { minHeight: 35, marginTop: 8, borderRadius: 10, backgroundColor: '#EEF5FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   vehicleLinkPressed: { opacity: 0.8 },
-  vehicleLinkText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  vehicleLinkText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
 });
