@@ -9,7 +9,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
   vehicle_id: string;
-  policy_id: string;
+  policy_id: string | null;
+  external_policy_id: string | null;
   current_status: ClaimStatus;
   accident_at: string | null;
   accident_description: string | null;
@@ -44,7 +45,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   const admin = createSupabaseAdminClient();
   const { data: claim, error } = await admin
     .from("claims")
-    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
+    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
     .eq("id", id)
     .maybeSingle<ClaimDetail>();
 
@@ -58,22 +59,48 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
     .eq("customer_id", claim.customer_id)
     .order("end_date", { ascending: false });
 
+  const { data: externalPolicy } = claim.external_policy_id
+    ? await admin
+      .from("external_policies")
+      .select("id, policy_no, policy_type, start_date, end_date, premium_amount, insured_declared_value, document_storage_path")
+      .eq("id", claim.external_policy_id)
+      .eq("customer_id", claim.customer_id)
+      .eq("vehicle_id", claim.vehicle_id)
+      .maybeSingle<{
+        id: string;
+        policy_no: string | null;
+        policy_type: string | null;
+        start_date: string | null;
+        end_date: string | null;
+        premium_amount: number | null;
+        insured_declared_value: number | null;
+        document_storage_path: string | null;
+      }>()
+    : { data: null };
+
   const incidentDate = claim.accident_at?.slice(0, 10) ?? null;
   const exactClaimPolicy = (vehiclePolicies ?? []).find((policy) => policy.id === claim.policy_id) ?? null;
   const policyCoveringIncident = incidentDate
     ? (vehiclePolicies ?? []).find((policy) => policy.start_date <= incidentDate && policy.end_date >= incidentDate) ?? null
     : null;
   const vehicleRegisterPolicy = exactClaimPolicy ?? policyCoveringIncident ?? vehiclePolicies?.[0] ?? null;
+  const linkedPolicy = externalPolicy
+    ? {
+        policy_no: externalPolicy.policy_no,
+        policy_type: externalPolicy.policy_type,
+        start_date: externalPolicy.start_date,
+        end_date: externalPolicy.end_date,
+        premium_amount: externalPolicy.premium_amount,
+        insured_declared_value: externalPolicy.insured_declared_value,
+      }
+    : vehicleRegisterPolicy
+      ? { ...vehicleRegisterPolicy, premium_amount: null, insured_declared_value: null }
+      : claim.policies
+        ? { ...claim.policies, premium_amount: null, insured_declared_value: null }
+        : null;
   const claimForVerification: ClaimDetail = {
     ...claim,
-    policies: vehicleRegisterPolicy
-      ? {
-          policy_no: vehicleRegisterPolicy.policy_no,
-          policy_type: vehicleRegisterPolicy.policy_type,
-          start_date: vehicleRegisterPolicy.start_date,
-          end_date: vehicleRegisterPolicy.end_date
-        }
-      : claim.policies
+    policies: linkedPolicy
   };
 
   const [{ data: documents }, { data: verificationRows }, { data: stageRows }] = await Promise.all([
@@ -103,6 +130,21 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
     file_name: cleanText(document.file_name) || "Unnamed claim document",
     signedUrl: `/claim-documents/${document.id}/open`
   }));
+  const policyDocument = claim.policy_id
+    ? (await admin.from("policy_documents").select("id,file_name").eq("policy_id", claim.policy_id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string }>()).data
+    : externalPolicy
+      ? (await admin.from("customer_documents").select("id,file_name").eq("customer_id", claim.customer_id).eq("external_policy_id", externalPolicy.id).eq("document_type", "policy_copy").order("created_at", { ascending: false }).limit(1).maybeSingle<{ id: string; file_name: string }>()).data
+        ?? (externalPolicy.document_storage_path
+          ? (await admin.from("customer_documents").select("id,file_name").eq("customer_id", claim.customer_id).eq("storage_path", externalPolicy.document_storage_path).eq("document_type", "policy_copy").maybeSingle<{ id: string; file_name: string }>()).data
+          : null)
+      : null;
+  const policyCopy = policyDocument
+    ? {
+        fileName: policyDocument.file_name,
+        signedUrl: claim.policy_id ? `/policies/documents/${policyDocument.id}/open` : `/customers/documents/${policyDocument.id}/open`,
+        documentId: policyDocument.id
+      }
+    : null;
 
   const stageVerifications = (stageRows ?? [])
     .filter((row) => row.details?.verification_type === "spot_survey_document")
@@ -132,7 +174,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotSurveyWorkspace claim={claimForVerification} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
+      <SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
     </ClaimManagerShell>
   );
 }
