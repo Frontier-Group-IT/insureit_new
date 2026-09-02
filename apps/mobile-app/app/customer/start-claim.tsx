@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
@@ -203,9 +203,13 @@ export default function StartClaimScreen() {
                   <Text style={styles.policyInsurer}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
                   <Text style={styles.policyDates}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
-                <View style={[styles.policyCheck, selectedPolicyCondition === 'expired' && styles.policyCheckExpired, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
-                  {selectedPolicyCondition === 'expired' ? <Text style={styles.policyStatusExclamation}>!</Text> : <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />}
-                </View>
+                {selectedPolicyCondition === 'expired' ? (
+                  <ExpiredPolicyPulse />
+                ) : (
+                  <View style={[styles.policyCheck, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
+                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -265,6 +269,28 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
     if (completedKeys.size < SELF_MANAGED_MILESTONE_COUNT) return claim;
   }
   return null;
+}
+
+function ExpiredPolicyPulse() {
+  const pulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 760, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+
+  return (
+    <Animated.View style={[styles.policyCheck, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
+      <Text style={styles.policyStatusExclamation}>!</Text>
+    </Animated.View>
+  );
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
