@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1062
-source_commit=b899e30204a51288d77ef02625690d8c28c2fb4c
-purpose=publish navy policy detail accent line preview OTA
+source_pr=1064
+source_commit=508a0fa84597f0fc0e59388e3be44756bc342288
+purpose=publish compact reference-style customer policy details preview OTA
