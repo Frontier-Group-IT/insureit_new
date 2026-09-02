@@ -325,8 +325,6 @@ export default function ProfileScreen() {
         </> : null}
       </View> : null}
 
-      <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" onPress={() => router.push('/customer/notifications')} /></Section>
-
       <Section title="Account & Privacy" icon="shield-account-outline">
         <ActionRow icon="file-document-outline" label="Privacy & Legal Center" onPress={() => router.push('/customer/legal')} />
         <ActionRow icon="account-remove-outline" label="Request account deletion" onPress={() => router.push('/customer/account-deletion')} />
