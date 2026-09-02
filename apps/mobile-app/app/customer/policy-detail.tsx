@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   pageTitle: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900', marginBottom: 10 },
   contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
   heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, maxHeight: 300, marginBottom: 9, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 13, overflow: 'hidden' },
-  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: '#C43838' },
+  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EBF3', alignItems: 'center', justifyContent: 'center' },
   heroCopy: { flex: 1, minWidth: 0 },
