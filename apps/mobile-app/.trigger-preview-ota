@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1032
-source_commit=e5f8d600137b7d8472b709296eaaa7d5077dc87c
-purpose=publish customer Profile Preferences section removal preview OTA
+source_pr=1033
+source_commit=14afa15e9c84877721339af3fb1031cb128b1f7c
+purpose=publish smoother customer notification bell panel preview OTA
