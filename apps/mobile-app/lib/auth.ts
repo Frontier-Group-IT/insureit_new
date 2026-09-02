@@ -89,7 +89,7 @@ export async function getCurrentSession(): Promise<Session | null> {
   return data.session;
 }
 
-export async function getRestoredSession(waitMs = 2500): Promise<Session | null> {
+export async function getRestoredSession(waitMs = 8000): Promise<Session | null> {
   const current = await getCurrentSession();
   if (current?.user) return current;
 
@@ -110,10 +110,14 @@ export async function getRestoredSession(waitMs = 2500): Promise<Session | null>
       resolve(session);
     };
 
-    timer = setTimeout(() => finish(null), waitMs);
+    timer = setTimeout(() => finish(null, new Error('Session restoration timed out')), waitMs);
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user && ['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
+      if (event === 'INITIAL_SESSION') {
+        finish(session ?? null);
+        return;
+      }
+      if (session?.user && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(event)) {
         finish(session);
       }
     });
