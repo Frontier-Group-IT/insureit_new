@@ -1,0 +1,60 @@
+name: Apply external policy document link
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply external policy document link
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply external policy document link
+        run: supabase db query --linked --file supabase/migrations/202609030001_external_policy_document_link.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 202609030001
+
+      - name: Verify external policy document link
+        run: |
+          result=$(supabase db query --linked --output-format json "
+            select
+              exists (
+                select 1
+                from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'customer_documents'
+                  and column_name = 'external_policy_id'
+              ) as column_ready,
+              to_regclass('public.customer_documents_external_policy_id_idx') is not null as index_ready
+          ")
+          echo "$result" | grep -Eq '"column_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"index_ready"[[:space:]]*:[[:space:]]*true'
