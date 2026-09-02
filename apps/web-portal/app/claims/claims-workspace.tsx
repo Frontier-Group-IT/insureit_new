@@ -6,7 +6,7 @@ import Link from "next/link";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
 import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
 
-type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string };
+type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string; mode?: string };
 const allowedPageSizes = [5, 10, 20, 50, 100];
 const customerJourneyStages = [
   { key: "loss-report", label: "Loss Report", statuses: ["Accident Reported"] as ClaimStatus[] },
@@ -29,7 +29,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   const [query, setQuery] = useState(initialParams.q ?? "");
   const [selectedStatus, setSelectedStatus] = useState(initialParams.status && initialParams.status !== "all" ? initialParams.status : "");
   const [page, setPage] = useState(Math.max(1, Number(initialParams.page ?? "1") || 1));
-  const [externalPage, setExternalPage] = useState(1);
+  const [activeMode, setActiveMode] = useState<"internal" | "external">(initialParams.mode === "external" ? "external" : "internal");
   const requestedPageSize = Number(initialParams.pageSize ?? "10") || 10;
   const [pageSize, setPageSize] = useState(allowedPageSizes.includes(requestedPageSize) ? requestedPageSize : 10);
   const selectedJourney = customerJourneyForKey(initialParams.journey);
@@ -39,21 +39,23 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, process, claim.customers?.company_name, claim.customers?.contact_name, claim.customers?.phone, claim.vehicles?.vehicle_no, claim.vehicles?.make, claim.vehicles?.model, claim.policies?.policy_no, claim.insurance_companies?.name, claim.assignee?.full_name].filter(Boolean).join(" ").toLowerCase();
     return matchesQueue(claim.current_status, initialParams.queue) && (!selectedJourney || selectedJourney.statuses.includes(claim.current_status)) && (!selectedStatus || claim.current_status === selectedStatus) && (!normalized || haystack.includes(normalized));
   }), [initialParams.queue, normalized, rows, selectedJourney, selectedStatus]);
-  useEffect(() => { setPage(1); setExternalPage(1); }, [query, selectedStatus, pageSize]);
+  useEffect(() => { setPage(1); }, [query, selectedStatus, pageSize, activeMode]);
   useEffect(() => {
     const params = new URLSearchParams();
     if (initialParams.queue) params.set("queue", initialParams.queue);
     if (initialParams.journey) params.set("journey", initialParams.journey);
+    if (activeMode === "external") params.set("mode", activeMode);
     if (query.trim()) params.set("q", query.trim());
     if (selectedStatus) params.set("status", selectedStatus);
     if (page > 1) params.set("page", String(page));
     if (pageSize !== 10) params.set("pageSize", String(pageSize));
     const nextUrl = `/claims${params.size ? `?${params.toString()}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
-  }, [initialParams.journey, initialParams.queue, page, pageSize, query, selectedStatus]);
+  }, [activeMode, initialParams.journey, initialParams.queue, page, pageSize, query, selectedStatus]);
 
   const internalRows = visibleRows.filter((claim) => !isExternalClaim(claim));
   const externalRows = visibleRows.filter(isExternalClaim).sort((left, right) => Number(right.assistance_status === "requested") - Number(left.assistance_status === "requested"));
+  const activeRows = activeMode === "external" ? externalRows : internalRows;
   const assistanceRequested = externalRows.filter((claim) => claim.assistance_status === "requested").length;
   return <>
     <div className="mb-2 grid grid-cols-[145px_1fr] items-center gap-3 max-lg:grid-cols-1">
@@ -63,12 +65,17 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
         <select value={selectedStatus || "all"} onChange={(event) => setSelectedStatus(event.target.value === "all" ? "" : event.target.value)} aria-label="Filter by status" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All statuses</option>{claimStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
       </form>
     </div>
+    <nav aria-label="Claim type" className="mb-3 flex items-center gap-1 rounded-xl border border-[#D8E3F2] bg-[#F5F8FC] p-1">
+      <button type="button" onClick={() => setActiveMode("internal")} aria-current={activeMode === "internal" ? "page" : undefined} className={`flex-1 rounded-lg px-4 py-2 text-left text-[12px] font-semibold transition ${activeMode === "internal" ? "bg-white text-[#003A83] shadow-sm" : "text-[#5C6878] hover:text-[#071D49]"}`}>
+        Internal claims <span className="ml-1 rounded-full bg-[#E7F0FC] px-2 py-0.5 text-[10px]">{internalRows.length}</span>
+      </button>
+      <button type="button" onClick={() => setActiveMode("external")} aria-current={activeMode === "external" ? "page" : undefined} className={`flex-1 rounded-lg px-4 py-2 text-left text-[12px] font-semibold transition ${activeMode === "external" ? "bg-white text-[#003A83] shadow-sm" : "text-[#5C6878] hover:text-[#071D49]"}`}>
+        External claims <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#E7F0FC]"}`}>{externalRows.length}</span>
+      </button>
+    </nav>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
-    <ClaimSection title="Internal claims" description="Claims actively managed by the Operations team." count={internalRows.length} tone="primary">
-      <LocalClaimQueueTable rows={internalRows} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
-    </ClaimSection>
-    <ClaimSection title="External claims" description={assistanceRequested ? `${assistanceRequested} customer assistance request${assistanceRequested === 1 ? "" : "s"} require attention.` : "Customer-managed claims remain here until assistance is requested."} count={externalRows.length} tone="secondary" assistanceRequested={assistanceRequested}>
-      <LocalClaimQueueTable rows={externalRows} page={externalPage} pageSize={pageSize} onPageChange={setExternalPage} onPageSizeChange={setPageSize} />
+    <ClaimSection title={activeMode === "external" ? "External claims" : "Internal claims"} description={activeMode === "external" ? (assistanceRequested ? `${assistanceRequested} customer assistance request${assistanceRequested === 1 ? "" : "s"} require attention.` : "Customer-managed claims remain here until assistance is requested.") : "Claims actively managed by the Operations team."} count={activeRows.length} tone={activeMode === "external" ? "secondary" : "primary"} assistanceRequested={activeMode === "external" ? assistanceRequested : 0}>
+      <LocalClaimQueueTable rows={activeRows} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
     </ClaimSection>
   </>;
 }
