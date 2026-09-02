@@ -211,8 +211,8 @@ export default function StartClaimScreen() {
                 {selectedPolicyCondition === 'expired' ? (
                   <ExpiredPolicyPulse />
                 ) : (
-                  <View style={[styles.policyCheck, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
-                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />
+                  <View style={[styles.policyCheck, selectedPolicy.source === 'external' && styles.policyCheckCompact, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
+                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicy.source === 'external' ? (selectedPolicyCondition === 'due' ? 16 : 15) : (selectedPolicyCondition === 'due' ? 21 : 20)} color="#FFFFFF" />
                   </View>
                 )}
               </View>
@@ -292,7 +292,7 @@ function ExpiredPolicyPulse() {
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
 
   return (
-    <Animated.View style={[styles.policyCheck, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
+    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
       <Text style={styles.policyStatusExclamation}>!</Text>
     </Animated.View>
   );
@@ -362,27 +362,28 @@ const styles = StyleSheet.create({
   policyCardShadow: { borderRadius: 20, shadowColor: '#07327B', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3, backgroundColor: '#07327B' },
   policyCardPressed: { opacity: 0.94, transform: [{ scale: 0.995 }] },
   policyCard: { position: 'relative', minHeight: 145, borderRadius: 20, backgroundColor: '#07327B', overflow: 'hidden' },
-  policyCardCompact: { minHeight: 118 },
+  policyCardCompact: { minHeight: 106 },
   policyDecoration: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
   policyArcOne: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(68,137,255,0.20)', right: -100, top: -118 },
   policyArcTwo: { position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 1, borderColor: 'rgba(68,137,255,0.18)', right: -50, top: -88 },
   policyContent: { position: 'relative', zIndex: 2, minHeight: 145, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
-  policyContentCompact: { minHeight: 118, paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
+  policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
-  policyIconCompact: { width: 52, height: 52, borderRadius: 15 },
+  policyIconCompact: { width: 46, height: 46, borderRadius: 13 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
   policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 },
-  policyModeCompact: { fontSize: 9, letterSpacing: 0.45 },
+  policyModeCompact: { fontSize: 8.8, letterSpacing: 0.42 },
   policyNo: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginTop: 4 },
-  policyNoCompact: { fontSize: 17, marginTop: 2 },
+  policyNoCompact: { fontSize: 16.5, marginTop: 1 },
   policyInsurer: { color: '#E0E9F7', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 4 },
-  policyInsurerCompact: { fontSize: 10, lineHeight: 13.5, marginTop: 2 },
+  policyInsurerCompact: { fontSize: 9.8, lineHeight: 12.8, marginTop: 1 },
   policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: '700', marginTop: 5 },
-  policyDatesCompact: { fontSize: 10, marginTop: 3 },
+  policyDatesCompact: { fontSize: 9.8, marginTop: 2 },
   policyCheck: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
+  policyCheckCompact: { width: 28, height: 28, borderRadius: 14 },
   policyCheckExpired: { backgroundColor: '#E85D63' },
   policyCheckDue: { backgroundColor: '#F59E0B' },
-  policyStatusExclamation: { color: '#FFFFFF', fontSize: 23, lineHeight: 25, fontWeight: '900', textAlign: 'center' },
+  policyStatusExclamation: { color: '#FFFFFF', fontSize: 18, lineHeight: 20, fontWeight: '900', textAlign: 'center' },
   noPolicy: { borderRadius: 15, borderWidth: 1, borderColor: '#F0D9AC', backgroundColor: '#FFFBF3', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   noPolicyCopy: { flex: 1 },
   noPolicyTitle: { color: '#77520B', fontSize: 12, fontWeight: '900' },
