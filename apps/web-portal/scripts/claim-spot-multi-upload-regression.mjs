@@ -20,7 +20,7 @@ assert.match(uploader, /formData\.append\("files", file\)/, "Selected files must
 
 assert.match(actions, /formData\.getAll\("files"\)/, "Server action must process all selected spot media files.");
 assert.match(actions, /20 \* 1024 \* 1024/, "Server action must enforce the per-file size limit.");
-assert.match(actions, /document_type: "Spot Photo"/, "Uploaded spot media must remain compatible with the existing Spot Photo workflow.");
+assert.match(actions, /document_type: file\.type\.startsWith\("video\/"\) \? "Accident Video" : "Accident Photo"/, "Uploaded spot media must preserve photo/video categories.");
 assert.match(actions, /\.insert\(rows\)/, "Spot media metadata must be inserted as one batch.");
 assert.match(actions, /storage\.from\(bucketName\)\.remove\(uploadedPaths\)/, "Failed multi-upload must clean up uploaded storage objects.");
 

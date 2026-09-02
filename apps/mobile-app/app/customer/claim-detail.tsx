@@ -23,6 +23,7 @@ type ClaimWithOwnership = Claim & {
 };
 
 type PolicyDisplay = Pick<Policy, 'id' | 'customer_id' | 'vehicle_id' | 'insurance_company_id' | 'policy_no' | 'policy_type' | 'start_date' | 'end_date'> & { source: 'sibl' | 'external' };
+type ReuploadNotice = { id: string; title: string; message: string | null; metadata: Record<string, unknown> | null; created_at: string };
 
 export default function ClaimDetailScreen() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function ClaimDetailScreen() {
   const [policy, setPolicy] = useState<PolicyDisplay | null>(null);
   const [insurer, setInsurer] = useState<InsuranceCompany | null>(null);
   const [documents, setDocuments] = useState<ClaimDocument[]>([]);
+  const [reuploadNotices, setReuploadNotices] = useState<ReuploadNotice[]>([]);
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -48,15 +50,17 @@ export default function ClaimDetailScreen() {
     let active = true;
     void (async () => {
       if (!id) return;
-      const [claimResult, documentsResult, milestoneResult] = await Promise.all([
+      const [claimResult, documentsResult, milestoneResult, activityResult] = await Promise.all([
         supabase.from('claims').select('*').eq('id', id).maybeSingle(),
         supabase.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
         (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
+        supabase.from('customer_activity_events').select('id,title,message,metadata,created_at').eq('claim_id', id).eq('event_type', 'claim_document_reuploaded').order('created_at', { ascending: false }).limit(5),
       ]);
       if (!active) return;
       const nextClaim = claimResult.data as ClaimWithOwnership | null;
       setClaim(nextClaim);
       setDocuments(documentsResult.data ?? []);
+      setReuploadNotices((activityResult.data ?? []) as ReuploadNotice[]);
       setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
       if (!nextClaim) { setLoading(false); return; }
 
@@ -206,6 +210,20 @@ export default function ClaimDetailScreen() {
         </View> : null}
       </View>
       {message ? <Message type="error">{message}</Message> : null}
+      {reuploadNotices.length ? <View style={styles.reuploadNotice}>
+        <View style={styles.reuploadNoticeIcon}><MaterialCommunityIcons name="file-alert-outline" size={19} color="#A15C00" /></View>
+        <View style={styles.reuploadNoticeCopy}>
+          <Text style={styles.reuploadNoticeTitle}>Action needed: replace a claim document</Text>
+          {reuploadNotices.map((notice) => <View key={notice.id} style={styles.reuploadNoticeItem}>
+            <Text style={styles.reuploadNoticeDocument}>{typeof notice.metadata?.document_type === 'string' ? notice.metadata.document_type : notice.title}</Text>
+            <Text style={styles.reuploadNoticeText}>{notice.message || 'Operations could not verify this file. Please upload a clearer replacement.'}</Text>
+          </View>)}
+          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} style={styles.reuploadNoticeAction}>
+            <Text style={styles.reuploadNoticeActionText}>Upload replacement</Text>
+            <MaterialCommunityIcons name="arrow-right" size={16} color="#8A4B00" />
+          </Pressable>
+        </View>
+      </View> : null}
 
       <View style={[styles.heroCard, compactClaimIntimation && styles.heroCardCompact, { borderColor: tone.border }]}>
         <View style={[styles.heroOrbLarge, compactClaimIntimation && styles.heroOrbLargeCompact]} />
@@ -426,5 +444,6 @@ const styles = StyleSheet.create({
   journeyHeader:{minHeight:40,borderRadius:12,paddingVertical:5,paddingHorizontal:7,marginTop:6,gap:6},journeyHeaderArtwork:{width:30,height:30},journeyHeaderTitle:{fontSize:12,lineHeight:14},journeyHeaderSub:{fontSize:9.2,lineHeight:11,marginTop:1},journeyBody:{paddingVertical:5,paddingHorizontal:5,gap:4},
   stageRow:{minHeight:54,paddingHorizontal:5,paddingVertical:4,flexDirection:'row',alignItems:'stretch',gap:6,borderBottomWidth:1,borderBottomColor:'#EEF2F6'},stageRowCurrent:{backgroundColor:'#EDF5FF',borderRadius:8,borderWidth:1,borderColor:'#C8DCF3',marginVertical:2,paddingHorizontal:6},stageRail:{width:19,alignItems:'center',paddingTop:8},stageNode:{width:18,height:18,borderRadius:9,backgroundColor:'#EEF2F6',borderWidth:1,borderColor:'#E0E6ED',alignItems:'center',justifyContent:'center'},stageDone:{backgroundColor:'#168161',borderColor:'#168161'},stageCurrent:{backgroundColor:'#0A43A3',borderColor:'#0A43A3'},stageLine:{width:1,flex:1,minHeight:6,marginTop:3,backgroundColor:'#E4EAF1'},stageLineDone:{backgroundColor:'#A9D8C7'},stageCopy:{flex:1,minWidth:0,justifyContent:'center'},stageTitle:{color:palette.navy,fontSize:10.8,lineHeight:12.8,fontWeight:'900'},stageMeta:{color:'#7A8799',fontSize:9,lineHeight:10.5,fontWeight:'700',marginTop:1},stageMetaCurrent:{color:'#0A43A3',fontWeight:'900'},stageRight:{width:88,alignItems:'flex-end',justifyContent:'center',gap:2},stageDate:{color:'#344054',fontSize:8.7,lineHeight:10.4,fontWeight:'800',textAlign:'right'},stageDateMuted:{color:'#98A2B3'},stageAmount:{color:'#10365F',fontSize:9,lineHeight:10.5,fontWeight:'900',backgroundColor:'#EEF4FB',paddingHorizontal:5,paddingVertical:1,borderRadius:999},
   assistanceNotice:{marginTop:10,borderRadius:14,borderWidth:1,borderColor:'#B9E3D0',backgroundColor:'#F2FBF6',paddingVertical:11,paddingHorizontal:12,flexDirection:'row',alignItems:'flex-start',gap:9,shadowColor:'#0B5D45',shadowOpacity:.07,shadowRadius:6,shadowOffset:{width:0,height:2},elevation:1},assistanceNoticeIcon:{width:32,height:32,borderRadius:10,backgroundColor:'#DFF4E9',alignItems:'center',justifyContent:'center',flexShrink:0},assistanceNoticeCopy:{flex:1,minWidth:0},assistanceNoticeTitle:{color:'#12664C',fontSize:11,fontWeight:'900'},assistanceNoticeText:{color:'#23483C',fontSize:10.5,lineHeight:15,fontWeight:'700',marginTop:2},
+  reuploadNotice:{marginTop:10,borderRadius:14,borderWidth:1,borderColor:'#F2C48A',backgroundColor:'#FFF8ED',paddingVertical:11,paddingHorizontal:12,flexDirection:'row',alignItems:'flex-start',gap:9},reuploadNoticeIcon:{width:32,height:32,borderRadius:10,backgroundColor:'#FFE8C2',alignItems:'center',justifyContent:'center',flexShrink:0},reuploadNoticeCopy:{flex:1,minWidth:0},reuploadNoticeTitle:{color:'#8A4B00',fontSize:11,fontWeight:'900'},reuploadNoticeItem:{marginTop:5},reuploadNoticeDocument:{color:'#7A4100',fontSize:10,fontWeight:'900'},reuploadNoticeText:{color:'#6B4A25',fontSize:10,lineHeight:14,fontWeight:'600',marginTop:1},reuploadNoticeAction:{alignSelf:'flex-start',marginTop:8,flexDirection:'row',alignItems:'center',gap:4},reuploadNoticeActionText:{color:'#8A4B00',fontSize:10,fontWeight:'900'},
   documentRow:{minHeight:52,borderRadius:13,backgroundColor:'#F7FAFF',borderWidth:1,borderColor:'#E1E9F2',padding:10,flexDirection:'row',alignItems:'center',gap:9},documentTitle:{color:palette.navy,fontSize:10.5,fontWeight:'900'},documentMeta:{color:'#7A8799',fontSize:9,fontWeight:'600',marginTop:2},emptyText:{color:'#7A8799',fontSize:10,fontWeight:'600',lineHeight:14},
 });
