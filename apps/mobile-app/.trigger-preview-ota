@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1039
-source_commit=ae352e6a6b37f53f97c97d42eae80968519b475c
-purpose=publish navy status bar across all customer screens preview OTA
+source_pr=1040
+source_commit=d6e4b1e12b45a451fdcf7b950916ba95bee9cdbe
+purpose=publish customer profile address dedup preview OTA
