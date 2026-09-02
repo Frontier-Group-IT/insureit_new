@@ -99,7 +99,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
-      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></Pressable>
+      <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
       <Pressable onPress={() => router.push(underReview ? '/customer/profile' : '/customer/group/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(profile.full_name || groupName)}</Text></Pressable>
     </View>
 

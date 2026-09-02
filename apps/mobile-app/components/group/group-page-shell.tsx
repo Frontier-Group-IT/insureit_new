@@ -52,7 +52,7 @@ export function GroupPageShell({ title, subtitle, icon = 'account-group-outline'
         <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
       </Pressable>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} /></Pressable>
-      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.headerButton}><NotificationBell /></Pressable>
+      <View style={styles.headerButton}><NotificationBell /></View>
       <Pressable onPress={() => router.push('/customer/group/profile')} style={styles.avatar}><MaterialCommunityIcons name="account-outline" size={21} color="#FFFFFF" /></Pressable>
     </View>
 

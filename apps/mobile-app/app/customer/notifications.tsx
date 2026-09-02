@@ -1,5 +1,5 @@
-import { NotificationsInbox } from '@/components/notifications-inbox';
+import { Redirect } from 'expo-router';
 
 export default function CustomerNotificationsScreen() {
-  return <NotificationsInbox audience="customer" />;
+  return <Redirect href="/customer/home" />;
 }
