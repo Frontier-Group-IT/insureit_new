@@ -156,8 +156,13 @@ export default function AddPolicyScreen() {
       setSaving(false);
       return setMessage('We could not save this policy right now. Please try again.');
     }
-    if (policyCopy) {
-      const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
+    const createdPolicy = Array.isArray(result.data)
+      ? result.data[0] as { id?: string } | undefined
+      : result.data && typeof result.data === 'object' && 'id' in result.data
+        ? result.data as { id?: string }
+        : null;
+    if (policyCopy && createdPolicy?.id) {
+      const uploadError = await uploadPolicyCopy(target.customer_id, createdPolicy.id, policyCopy, session.user.id);
       if (uploadError) {
         console.warn('Customer policy copy upload failed', uploadError);
         setSaving(false);
@@ -408,14 +413,14 @@ function sameDate(a: Date, b: Date) { return a.getFullYear() === b.getFullYear()
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
 function formatDisplayDate(value: string) { const parsed = parseDate(value); return parsed ? parsed.toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : value; }
 
-async function uploadPolicyCopy(customerId: string, file: PickedPolicyCopy, userId: string) {
+async function uploadPolicyCopy(customerId: string, externalPolicyId: string, file: PickedPolicyCopy, userId: string) {
   const extension = file.name.includes('.') ? file.name.split('.').pop() : 'bin';
   const storagePath = `${customerId}/policy-copy/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   try {
     const body = await (await fetch(file.uri)).arrayBuffer();
     const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, { contentType: file.mimeType ?? 'application/octet-stream', upsert: false });
     if (uploadResult.error) return uploadResult.error.message;
-    const recordResult = await supabase.from('customer_documents').insert({ customer_id: customerId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
+    const recordResult = await supabase.from('customer_documents').insert({ customer_id: customerId, external_policy_id: externalPolicyId, document_type: 'policy_copy', file_name: file.name, storage_bucket: 'customer-documents', storage_path: storagePath, mime_type: file.mimeType, file_size: file.size, uploaded_by: userId });
     if (recordResult.error) {
       await supabase.storage.from('customer-documents').remove([storagePath]);
       return recordResult.error.message;

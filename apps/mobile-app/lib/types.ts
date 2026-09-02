@@ -163,8 +163,8 @@ type Tables = {
     Update: Partial<Tables['insurance_companies']['Insert']>;
   };
   claims: {
-    Row: RowBase & { claim_no: string; insurer_claim_no: string | null; customer_id: string; vehicle_id: string; policy_id: string; insurance_company_id: string | null; garage_id: string | null; surveyor_id: string | null; current_status: ClaimStatus; accident_at: string | null; accident_location: string | null; accident_description: string | null; estimated_loss: number | null; approved_amount: number | null; settlement_amount: number | null; assigned_to: string | null; created_by: string | null };
-    Insert: { claim_no: string; insurer_claim_no?: string | null; customer_id: string; vehicle_id: string; policy_id: string; insurance_company_id?: string | null; current_status?: ClaimStatus; accident_at?: string | null; accident_location?: string | null; accident_description?: string | null; estimated_loss?: number | null; created_by?: string | null; assigned_to?: string | null };
+    Row: RowBase & { claim_no: string; insurer_claim_no: string | null; customer_id: string; vehicle_id: string; policy_id: string | null; external_policy_id: string | null; insurance_company_id: string | null; garage_id: string | null; surveyor_id: string | null; current_status: ClaimStatus; accident_at: string | null; accident_location: string | null; accident_description: string | null; estimated_loss: number | null; approved_amount: number | null; settlement_amount: number | null; assigned_to: string | null; created_by: string | null };
+    Insert: { claim_no: string; insurer_claim_no?: string | null; customer_id: string; vehicle_id: string; policy_id?: string | null; external_policy_id?: string | null; insurance_company_id?: string | null; current_status?: ClaimStatus; accident_at?: string | null; accident_location?: string | null; accident_description?: string | null; estimated_loss?: number | null; created_by?: string | null; assigned_to?: string | null };
     Update: Partial<Tables['claims']['Insert']> & { approved_amount?: number | null; settlement_amount?: number | null; insurer_claim_no?: string | null };
   };
   claim_documents: {
@@ -173,8 +173,8 @@ type Tables = {
     Update: Partial<Tables['claim_documents']['Insert']> & { verification_status?: 'pending' | 'verified' | 'rejected'; verified_by?: string | null; verified_at?: string | null; rejection_reason?: string | null };
   };
   customer_documents: {
-    Row: RowBase & { customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; mime_type: string | null; file_size: number | null; uploaded_by: string | null };
-    Insert: { customer_id: string; document_type?: string; file_name: string; storage_bucket?: string; storage_path: string; mime_type?: string | null; file_size?: number | null; uploaded_by?: string | null };
+    Row: RowBase & { customer_id: string; external_policy_id: string | null; document_type: string; file_name: string; storage_bucket: string; storage_path: string; mime_type: string | null; file_size: number | null; uploaded_by: string | null };
+    Insert: { customer_id: string; external_policy_id?: string | null; document_type?: string; file_name: string; storage_bucket?: string; storage_path: string; mime_type?: string | null; file_size?: number | null; uploaded_by?: string | null };
     Update: Partial<Tables['customer_documents']['Insert']>;
   };
   claim_stage_details: {
@@ -282,7 +282,6 @@ export type SupportTicketAttachment = Tables['support_ticket_attachments']['Row'
 export type Notification = Tables['notifications']['Row'];
 export type InsuranceCompany = Tables['insurance_companies']['Row'];
 export type IndiaLocation = Tables['india_locations']['Row'];
-
 
 
 
