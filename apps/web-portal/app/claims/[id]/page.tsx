@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
-import { operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
+import { type ClaimStatus } from "@/lib/claim-workflow";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -168,8 +168,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
-  const queue = operationsQueueForStatus(cleanText(claimForVerification.current_status));
-  const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
+  const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
   return (
