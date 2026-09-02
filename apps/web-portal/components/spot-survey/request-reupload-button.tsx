@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { requestSpotSurveyDocumentReupload } from "@/app/claims/[id]/spot-survey-actions";
 
 type Result = { ok: boolean; message?: string };
@@ -9,7 +9,7 @@ type Result = { ok: boolean; message?: string };
 export function RequestReuploadButton({ claimId, documentId, documentTitle }: { claimId: string; documentId: string; documentTitle: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
 
   return (
@@ -21,13 +21,18 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4">
           <form
             action={(formData) => {
-              startTransition(async () => {
+              setPending(true);
+              void (async () => {
                 formData.set("claimId", claimId);
                 formData.set("documentId", documentId);
-                const response = await requestSpotSurveyDocumentReupload(formData);
-                setResult(response);
-                if (response.ok) router.refresh();
-              });
+                try {
+                  const response = await requestSpotSurveyDocumentReupload(formData);
+                  setResult(response);
+                  if (response.ok) router.refresh();
+                } finally {
+                  setPending(false);
+                }
+              })();
             }}
             className="w-full max-w-[520px] rounded-2xl bg-white shadow-xl"
           >

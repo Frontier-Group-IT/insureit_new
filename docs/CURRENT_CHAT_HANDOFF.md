@@ -14,6 +14,8 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 This is intentionally a narrow step. No claim ownership, status-transition, RLS, migration, customer post-Spot permissions, or deployment behavior was changed.
 
+**IMPLEMENTED, NOT DEPLOYED:** The follow-up visibility/recovery slice is present in the working tree. Operations now renders every matched Accident Photo/Video/document row with its own preview and actions, recognizes legacy bulk attachment labels for classification, and removes the reupload action's stuck `Sending...` state by resetting explicit submission state on success or failure. Reupload writes now surface stage/history/activity persistence errors instead of returning success-shaped responses. The mobile claim detail reads reupload activity and shows the affected document, reason, and an Upload replacement action. Web and mobile typechecks, web lint (0 errors; existing warnings), the claim multi-upload regression, and `git diff --check` passed. The slice remains uncommitted and requires the canonical PR gate before merge/deployment; no Expo OTA or APK build was run.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.

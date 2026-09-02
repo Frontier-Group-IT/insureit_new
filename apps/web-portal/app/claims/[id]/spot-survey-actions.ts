@@ -153,7 +153,8 @@ function formatFieldName(key: string) {
 
 async function saveVerificationHistory(params: { claimId: string; documentId: string | null; documentType: string; verificationType: VerificationType; incidentDate: string | null; isValid: boolean; invalidReason: string | null; details: Record<string, unknown>; verifiedBy: string | null }) {
   const supabase = await createServerSupabaseClient();
-  await supabase.from("claim_document_verifications").insert({ claim_id: params.claimId, document_id: params.documentId, document_type: params.documentType, verification_type: params.verificationType, incident_date: params.incidentDate, is_valid: params.isValid, invalid_reason: params.invalidReason, details: params.details, verified_by: params.verifiedBy });
+  const { error } = await supabase.from("claim_document_verifications").insert({ claim_id: params.claimId, document_id: params.documentId, document_type: params.documentType, verification_type: params.verificationType, incident_date: params.incidentDate, is_valid: params.isValid, invalid_reason: params.invalidReason, details: params.details, verified_by: params.verifiedBy });
+  if (error) throw new Error(error.message);
 }
 
 export async function verifySpotSurveyDocument(formData: FormData): Promise<ActionResult> {
@@ -206,10 +207,13 @@ export async function requestSpotSurveyDocumentReupload(formData: FormData): Pro
     const { error: updateError } = await supabase.from("claim_documents").update({ verification_status: "rejected", rejection_reason: reason, verified_by: profile?.id ?? null, verified_at: new Date().toISOString() }).eq("id", documentId).eq("claim_id", claimId);
     if (updateError) throw new Error(updateError.message);
     const detailsPayload = { verification_type: "reupload_requested", document_type: document.document_type, document_id: document.id, file_name: document.file_name, reason, requested_at: new Date().toISOString(), requested_by: profile?.id ?? null };
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile?.id ?? null });
+    const { error: stageDetailsError } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile?.id ?? null });
+    if (stageDetailsError) throw new Error(stageDetailsError.message);
     await saveVerificationHistory({ claimId, documentId: document.id, documentType: document.document_type, verificationType: verificationTypeForDocument(document.document_type), incidentDate: incidentDateOnly(claim.accident_at), isValid: false, invalidReason: reason, details: detailsPayload, verifiedBy: profile?.id ?? null });
-    await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `Reupload requested for ${document.document_type}. ${reason}`, changed_by: profile?.id ?? null });
-    await supabase.from("customer_activity_events").insert({ customer_id: claim.customer_id, claim_id: claimId, source_table: "claim_documents", source_id: document.id, event_type: "claim_document_reuploaded", title: `${document.document_type} reupload requested`, message: reason, priority: "high", status: "new", metadata: { document_type: document.document_type, document_id: document.id, file_name: document.file_name, requested_by: profile?.id ?? null } });
+    const { error: historyError } = await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `Reupload requested for ${document.document_type}. ${reason}`, changed_by: profile?.id ?? null });
+    if (historyError) throw new Error(historyError.message);
+    const { error: activityError } = await supabase.from("customer_activity_events").insert({ customer_id: claim.customer_id, claim_id: claimId, source_table: "claim_documents", source_id: document.id, event_type: "claim_document_reuploaded", title: `${document.document_type} reupload requested`, message: reason, priority: "high", status: "new", metadata: { document_type: document.document_type, document_id: document.id, file_name: document.file_name, requested_by: profile?.id ?? null } });
+    if (activityError) throw new Error(activityError.message);
     revalidatePath(`/claims/${claimId}`); revalidatePath("/claims"); revalidatePath("/dashboard");
     return { ok: true, message: "Reupload request sent to customer." };
   } catch (error) {
@@ -278,7 +282,7 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
         rows.push({
           claim_id: claimId,
           customer_id: claim.customer_id,
-          document_type: "Spot Photo",
+          document_type: file.type.startsWith("video/") ? "Accident Video" : "Accident Photo",
           file_name: safeName,
           storage_bucket: bucketName,
           storage_path: storagePath,
@@ -308,6 +312,53 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
   } catch (error) {
     console.error("uploadSpotSurveyMedia failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Spot media upload failed." };
+  }
+}
+
+export async function classifySpotSurveyAttachment(formData: FormData): Promise<ActionResult> {
+  try {
+    const claimId = String(formData.get("claimId") ?? "").trim();
+    const documentId = String(formData.get("documentId") ?? "").trim();
+    const documentType = String(formData.get("documentType") ?? "").trim();
+    const allowedTypes = new Set(["Accident Photo", "Accident Video", "RC Copy", "Insurance Copy", "Driver Licence", "GR / Load Bill"]);
+    if (!claimId || !documentId || !allowedTypes.has(documentType)) throw new Error("Choose a valid document category.");
+
+    const profile = await currentProfile();
+    const claim = await loadClaim(claimId);
+    const supabase = await createServerSupabaseClient();
+    const { data: document, error: documentError } = await supabase
+      .from("claim_documents")
+      .select("id, document_type, file_name")
+      .eq("id", documentId)
+      .eq("claim_id", claimId)
+      .maybeSingle<{ id: string; document_type: string; file_name: string }>();
+    if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
+    if (document.document_type !== "Spot Intimation Attachment") throw new Error("This attachment has already been classified.");
+
+    const { error: updateError } = await supabase
+      .from("claim_documents")
+      .update({ document_type: documentType })
+      .eq("id", documentId)
+      .eq("claim_id", claimId)
+      .eq("document_type", "Spot Intimation Attachment");
+    if (updateError) throw new Error(updateError.message);
+
+    const { error: historyError } = await supabase.from("claim_status_history").insert({
+      claim_id: claimId,
+      from_status: claim.current_status,
+      to_status: claim.current_status,
+      notes: `${document.file_name} classified as ${documentType} during spot verification.`,
+      changed_by: profile?.id ?? null
+    });
+    if (historyError) throw new Error(historyError.message);
+
+    revalidatePath(`/claims/${claimId}`);
+    revalidatePath("/claims");
+    revalidatePath("/dashboard");
+    return { ok: true, message: "Attachment classified successfully." };
+  } catch (error) {
+    console.error("classifySpotSurveyAttachment failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Attachment classification failed." };
   }
 }
 
