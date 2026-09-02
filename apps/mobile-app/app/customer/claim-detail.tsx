@@ -308,18 +308,47 @@ export default function ClaimDetailScreen() {
       <SectionHeader title="Documents" subtitle={`${documents.length} document${documents.length === 1 ? '' : 's'}`} expanded={documentsExpanded} onPress={() => setDocumentsExpanded((value) => !value)} />
       {documentsExpanded ? <View style={styles.sectionBody}>{documents.length ? documents.map((document) => <Pressable key={document.id} onPress={() => void openDocument(document)} style={styles.documentRow}><MaterialCommunityIcons name="file-document-outline" size={20} color={roleTheme.customer.accent} /><View style={{ flex: 1 }}><Text style={styles.documentTitle}>{document.document_type}</Text><Text style={styles.documentMeta}>{document.verification_status ?? 'uploaded'}</Text></View><MaterialCommunityIcons name="open-in-new" size={18} color={palette.slate} /></Pressable>) : <Text style={styles.emptyText}>No claim documents uploaded yet.</Text>}</View> : null}
 
-      <Modal visible={claimNumberModalVisible} transparent animationType="fade" onRequestClose={closeClaimNumberModal}>
+      <Modal visible={claimNumberModalVisible} transparent animationType="fade" statusBarTranslucent onRequestClose={closeClaimNumberModal}>
         <View style={styles.claimNumberBackdrop}>
           <View style={styles.claimNumberCard}>
-            <View style={styles.claimNumberIcon}><MaterialCommunityIcons name="shield-check-outline" size={23} color="#0A43A3" /></View>
+            <View style={styles.claimNumberIcon}>
+              <MaterialCommunityIcons name="shield-check-outline" size={28} color="#0A43A3" />
+            </View>
             <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
             <View style={[styles.claimNumberInputShell, Boolean(claimNumberError) && styles.claimNumberInputShellError]}>
-              <TextInput value={claimNumberDraft} onChangeText={(value) => { setClaimNumberDraft(value); if (claimNumberError) setClaimNumberError(''); }} editable={!claimNumberSaving} autoCapitalize="characters" autoCorrect={false} placeholder="Enter claim number" placeholderTextColor="#98A2B3" returnKeyType="done" style={styles.claimNumberInput} onSubmitEditing={() => void saveCompletedClaimNumber()} />
+              <MaterialCommunityIcons name="text-box-outline" size={21} color="#0A43A3" />
+              <TextInput
+                value={claimNumberDraft}
+                onChangeText={(value) => { setClaimNumberDraft(value); if (claimNumberError) setClaimNumberError(''); }}
+                editable={!claimNumberSaving}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                placeholder="Enter claim number"
+                placeholderTextColor="#667085"
+                returnKeyType="done"
+                style={styles.claimNumberInput}
+                onSubmitEditing={() => void saveCompletedClaimNumber()}
+              />
             </View>
             {claimNumberError ? <Text style={styles.claimNumberError}>{claimNumberError}</Text> : null}
             <View style={styles.claimNumberActions}>
-              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={closeClaimNumberModal} style={styles.claimNumberSecondary}><Text style={styles.claimNumberSecondaryText}>Not now</Text></Pressable>
-              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => void saveCompletedClaimNumber()} style={[styles.claimNumberPrimary, claimNumberSaving && styles.claimNumberDisabled]}><Text style={styles.claimNumberPrimaryText}>{claimNumberSaving ? 'Saving...' : 'Continue'}</Text><MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" /></Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={claimNumberSaving}
+                onPress={closeClaimNumberModal}
+                style={({ pressed }) => [styles.claimNumberSecondary, pressed && styles.claimNumberButtonPressed]}
+              >
+                <Text style={styles.claimNumberSecondaryText}>Not now</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                disabled={claimNumberSaving}
+                onPress={() => void saveCompletedClaimNumber()}
+                style={({ pressed }) => [styles.claimNumberPrimary, claimNumberSaving && styles.claimNumberDisabled, pressed && !claimNumberSaving && styles.claimNumberButtonPressed]}
+              >
+                <Text style={styles.claimNumberPrimaryText}>{claimNumberSaving ? 'Saving...' : 'Continue'}</Text>
+                <MaterialCommunityIcons name="arrow-right" size={22} color="#FFFFFF" />
+              </Pressable>
             </View>
           </View>
         </View>
@@ -425,19 +454,20 @@ const styles = StyleSheet.create({
   addClaimNumberActionPressed:{backgroundColor:'#EDF5FF',transform:[{scale:.995}]},
   addClaimNumberIcon:{width:26,height:26,borderRadius:9,backgroundColor:'#EEF5FF',borderWidth:1,borderColor:'#D2E2FA',alignItems:'center',justifyContent:'center'},
   addClaimNumberText:{flex:1,color:'#0A43A3',fontSize:10,fontWeight:'900'},
-  claimNumberBackdrop:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(5,20,48,.50)',paddingHorizontal:24},
-  claimNumberCard:{width:'100%',maxWidth:342,borderRadius:22,backgroundColor:'#FFFFFF',paddingHorizontal:18,paddingTop:18,paddingBottom:22,alignItems:'center',shadowColor:'#071D49',shadowOpacity:.2,shadowRadius:20,shadowOffset:{width:0,height:10},elevation:12},
-  claimNumberIcon:{width:44,height:44,borderRadius:15,backgroundColor:'#EEF5FF',borderWidth:1,borderColor:'#D2E2FA',alignItems:'center',justifyContent:'center',marginBottom:10},
-  claimNumberTitle:{color:palette.navy,fontSize:17,lineHeight:22,fontWeight:'900',textAlign:'center'},
-  claimNumberInputShell:{width:'100%',minHeight:48,borderRadius:13,borderWidth:1.2,borderColor:'#CFD9E6',backgroundColor:'#F9FBFD',justifyContent:'center',marginTop:14},
+  claimNumberBackdrop:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(5,20,48,.58)',paddingHorizontal:24},
+  claimNumberCard:{width:'100%',maxWidth:362,borderRadius:26,backgroundColor:'#FFFFFF',paddingHorizontal:20,paddingTop:20,paddingBottom:20,alignItems:'center',shadowColor:'#071D49',shadowOpacity:.24,shadowRadius:24,shadowOffset:{width:0,height:12},elevation:18},
+  claimNumberIcon:{width:54,height:54,borderRadius:17,backgroundColor:'#EEF5FF',borderWidth:1,borderColor:'#D2E2FA',alignItems:'center',justifyContent:'center',marginBottom:16},
+  claimNumberTitle:{color:palette.navy,fontSize:20,lineHeight:26,fontWeight:'900',textAlign:'center'},
+  claimNumberInputShell:{width:'100%',minHeight:58,borderRadius:14,borderWidth:1.5,borderColor:'#0A43A3',backgroundColor:'#FFFFFF',marginTop:18,paddingHorizontal:14,flexDirection:'row',alignItems:'center',gap:10},
   claimNumberInputShellError:{borderColor:'#D92D20',backgroundColor:'#FFF9F8'},
-  claimNumberInput:{minHeight:46,paddingHorizontal:13,color:palette.navy,fontSize:13,fontWeight:'800'},
-  claimNumberError:{alignSelf:'stretch',color:'#B42318',fontSize:9.5,lineHeight:13,fontWeight:'700',marginTop:5},
-  claimNumberActions:{width:'100%',flexDirection:'row',alignItems:'stretch',marginTop:14,gap:10},
-  claimNumberPrimary:{flex:1,flexBasis:0,minWidth:0,minHeight:44,borderRadius:12,backgroundColor:'#0A43A3',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingHorizontal:10},
-  claimNumberPrimaryText:{color:'#FFFFFF',fontSize:10.8,fontWeight:'900'},
-  claimNumberSecondary:{flex:1,flexBasis:0,minWidth:0,minHeight:44,borderRadius:12,borderWidth:1,borderColor:'#D7E0EB',backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
-  claimNumberSecondaryText:{color:'#475467',fontSize:10.5,fontWeight:'900'},
+  claimNumberInput:{flex:1,minHeight:54,paddingVertical:0,color:palette.navy,fontSize:13.5,fontWeight:'800'},
+  claimNumberError:{alignSelf:'stretch',color:'#B42318',fontSize:10,lineHeight:14,fontWeight:'700',marginTop:6},
+  claimNumberActions:{width:'100%',flexDirection:'row',alignItems:'stretch',marginTop:18,gap:12},
+  claimNumberPrimary:{flex:1,flexBasis:0,minWidth:0,minHeight:52,borderRadius:13,backgroundColor:'#0A43A3',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:8,paddingHorizontal:12},
+  claimNumberPrimaryText:{color:'#FFFFFF',fontSize:13,fontWeight:'900'},
+  claimNumberSecondary:{flex:1,flexBasis:0,minWidth:0,minHeight:52,borderRadius:13,borderWidth:1.4,borderColor:'#0A43A3',backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
+  claimNumberSecondaryText:{color:'#0A43A3',fontSize:12.5,fontWeight:'900'},
+  claimNumberButtonPressed:{opacity:.82,transform:[{scale:.99}]},
   claimNumberDisabled:{opacity:.55},
   currentCard:{position:'relative',borderWidth:1,borderRadius:16,paddingVertical:9,paddingHorizontal:10,paddingLeft:14,flexDirection:'row',alignItems:'center',gap:9,marginBottom:7,overflow:'hidden'},currentCardPressed:{opacity:.84,transform:[{scale:.995}]},currentAccent:{position:'absolute',left:0,top:0,bottom:0,width:4},currentIconArtwork:{width:36,height:36,flexShrink:0},currentCopy:{flex:1,minWidth:0},currentEyebrow:{fontSize:8,fontWeight:'900',letterSpacing:.5},currentTitle:{color:palette.navy,fontSize:13.5,fontWeight:'900',marginTop:1},currentBody:{color:'#5F7086',fontSize:10,lineHeight:13.5,fontWeight:'700',marginTop:2},currentContinue:{flexDirection:'row',alignItems:'center',gap:1,marginLeft:3},currentContinueText:{color:'#0A43A3',fontSize:9.5,fontWeight:'900'},
   sectionHeader:{minHeight:62,borderRadius:17,borderWidth:1,borderColor:'#D6E2EE',backgroundColor:'#F7FAFF',padding:11,marginTop:10,flexDirection:'row',alignItems:'center',gap:10},sectionHeaderArtwork:{width:40,height:40,flexShrink:0},sectionHeaderCopy:{flex:1,minWidth:0},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#718198',fontSize:10,fontWeight:'700',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#D6E2EE',backgroundColor:'#FFFFFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},
