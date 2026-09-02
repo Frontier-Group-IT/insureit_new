@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1029
-source_commit=4e330d5bb5a199d043038ed41c29a4b6013e8902
-purpose=publish simplified expanded Profile Documents and KYC panel preview OTA
+source_pr=1025
+source_commit=34dec59de4f3c2048a98b288817e4d91eabd2556
+purpose=publish mobile session restore refresh fix preview OTA
