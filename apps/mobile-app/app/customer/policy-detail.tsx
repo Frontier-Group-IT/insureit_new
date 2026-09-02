@@ -94,25 +94,25 @@ export default function PolicyDetailScreen() {
       <Text style={styles.pageTitle}>Policy details</Text>
       <View style={styles.contentStack}>
         <View style={styles.heroLayout}>
-          <View style={styles.heroAccent} />
+          <View style={[styles.heroAccent, { backgroundColor: renewalTone(renewalState.tone).accent }]} />
           <View style={styles.heroTop}>
-            <View style={styles.heroIcon}>
+            <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft, borderColor: renewalTone(renewalState.tone).border }]}>
               <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color={renewalTone(renewalState.tone).accent} />
             </View>
             <View style={styles.heroCopy}>
               <Text style={[styles.eyebrow, { color: renewalTone(renewalState.tone).accent }]}>POLICY DETAIL</Text>
               <Text style={styles.policyNo} numberOfLines={2}>{policy.policy_no}</Text>
-              <Text style={styles.policyType} numberOfLines={1}>{policy.policy_type || 'Policy'}</Text>
+              <Text style={styles.policyType} numberOfLines={1}>{formatPolicyType(policy.policy_type)}</Text>
             </View>
             <StatusBadge state={renewalState.tone} label={renewalState.label} />
           </View>
           <View style={styles.heroMetaRow}>
-            <HeroMetric label="Insurer" value={company?.name ?? 'Insurer pending'} />
-            <HeroMetric label="Cover left" value={renewalState.helper || '-'} />
+            <HeroMetric icon="shield-outline" label="Insurer" value={company?.name ?? 'Insurer pending'} />
+            <HeroMetric icon="calendar-blank-outline" label="Cover left" value={renewalState.helper || '-'} />
           </View>
           <View style={styles.heroMetaRow}>
-            <HeroMetric label="Start date" value={formatDate(policy.start_date)} />
-            <HeroMetric label="End date" value={formatDate(policy.end_date)} />
+            <HeroMetric icon="calendar-blank-outline" label="Start date" value={formatDate(policy.start_date)} />
+            <HeroMetric icon="calendar-blank-outline" label="End date" value={formatDate(policy.end_date)} />
           </View>
           {renewalState.action ? <View style={styles.heroActionRow}>
             <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
@@ -123,15 +123,15 @@ export default function PolicyDetailScreen() {
         </View>
 
         <Card style={styles.financialCard}>
-          <SectionTitle icon="cash-multiple" title="Financial summary" />
+          <SectionTitle icon="wallet-outline" title="Financial summary" hint="Policy financial information" strongIcon />
           <View style={styles.financialGrid}>
-            <FinancialValue label="Premium" value={formatCurrency(policy.premium_amount)} primary />
-            <FinancialValue label="IDV" value={formatCurrency(policy.insured_declared_value)} />
+            <FinancialValue icon="currency-inr" label="Premium" value={formatCurrency(policy.premium_amount)} primary />
+            <FinancialValue icon="shield-outline" label="IDV" value={formatCurrency(policy.insured_declared_value)} />
           </View>
         </Card>
 
         <Card style={styles.vehicleCard}>
-          <SectionTitle icon="truck-outline" title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} />
+          <SectionTitle icon="truck-outline" title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} strongIcon />
           <View style={styles.vehicleFacts}>
             <CompactFact label="Vehicle number" value={vehicle?.vehicle_no} />
             <CompactFact label="Vehicle type" value={vehicle?.vehicle_type} />
@@ -148,26 +148,49 @@ export default function PolicyDetailScreen() {
 
 function StatusBadge({ state, label }: { state: 'success' | 'warning' | 'danger' | 'neutral'; label: string }) {
   const config = {
-    success: { border: '#8FD7B7', text: '#067647' },
-    warning: { border: '#E7C46E', text: '#B7791F' },
-    danger: { border: '#E7A0A0', text: '#C43838' },
-    neutral: { border: '#CBD5E1', text: '#64748B' },
+    success: { border: '#8FD7B7', text: '#067647', soft: '#F2FBF7' },
+    warning: { border: '#E7C46E', text: '#B7791F', soft: '#FFFBF3' },
+    danger: { border: '#E7A0A0', text: '#C43838', soft: '#FFF7F7' },
+    neutral: { border: '#CBD5E1', text: '#64748B', soft: '#F8FAFC' },
   }[state];
-  return <View style={[styles.statusBadge, { borderColor: config.border }]}><Text style={[styles.statusText, { color: config.text }]}>{label}</Text></View>;
+  return (
+    <View style={[styles.statusBadge, { borderColor: config.border, backgroundColor: config.soft }]}>
+      <View style={[styles.statusDot, { backgroundColor: config.text }]} />
+      <Text style={[styles.statusText, { color: config.text }]}>{label}</Text>
+    </View>
+  );
 }
 
-function HeroMetric({ label, value }: { label: string; value: string }) {
-  return <View style={styles.heroMetric}><Text style={styles.heroMetricLabel}>{label}</Text><Text style={styles.heroMetricValue} numberOfLines={1}>{value}</Text></View>;
+function HeroMetric({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string }) {
+  return (
+    <View style={styles.heroMetric}>
+      <MaterialCommunityIcons name={icon} size={18} color="#52637A" />
+      <View style={styles.heroMetricCopy}>
+        <Text style={styles.heroMetricLabel}>{label}</Text>
+        <Text style={styles.heroMetricValue} numberOfLines={1}>{value}</Text>
+      </View>
+    </View>
+  );
 }
 
-function FinancialValue({ label, value, primary = false }: { label: string; value: string; primary?: boolean }) {
-  return <View style={[styles.financialValue, primary && styles.financialValuePrimary]}><Text style={styles.financialLabel}>{label}</Text><Text style={styles.financialAmount} numberOfLines={1}>{value}</Text></View>;
+function FinancialValue({ icon, label, value, primary = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string; primary?: boolean }) {
+  return (
+    <View style={[styles.financialValue, primary && styles.financialValuePrimary]}>
+      <View style={styles.financialIcon}><MaterialCommunityIcons name={icon} size={17} color="#0A9A6A" /></View>
+      <View style={styles.financialCopy}>
+        <Text style={styles.financialLabel}>{label}</Text>
+        <Text style={styles.financialAmount} numberOfLines={1}>{value}</Text>
+      </View>
+    </View>
+  );
 }
 
-function SectionTitle({ icon, title, hint }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; hint?: string }) {
+function SectionTitle({ icon, title, hint, strongIcon = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; hint?: string; strongIcon?: boolean }) {
   return (
     <View style={styles.sectionTitleRow}>
-      <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={18} color={palette.navy} /></View>
+      <View style={[styles.sectionIcon, strongIcon && styles.sectionIconStrong]}>
+        <MaterialCommunityIcons name={icon} size={18} color={strongIcon ? '#FFFFFF' : palette.navy} />
+      </View>
       <View style={styles.sectionCopy}>
         <Text style={styles.sectionTitle}>{title}</Text>
         {hint ? <Text style={styles.sectionHint} numberOfLines={1}>{hint}</Text> : null}
@@ -178,6 +201,14 @@ function SectionTitle({ icon, title, hint }: { icon: keyof typeof MaterialCommun
 
 function CompactFact({ label, value }: { label: string; value?: string | null }) {
   return <View style={styles.factRow}><Text style={styles.factLabel}>{label}</Text><Text style={styles.factValue} numberOfLines={1}>{value || '-'}</Text></View>;
+}
+
+function formatPolicyType(value?: string | null) {
+  const normalized = value?.trim();
+  if (!normalized) return 'Policy';
+  if (/motor/i.test(normalized)) return 'Motor Insurance';
+  if (/package/i.test(normalized)) return 'Package Insurance';
+  return normalized;
 }
 
 function formatDate(value?: string | null) {
@@ -196,43 +227,56 @@ function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
 }
 
 const styles = StyleSheet.create({
-  pageTitle: { color: palette.navy, fontSize: 22, lineHeight: 28, fontWeight: '900', marginBottom: 10 },
+  pageTitle: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900', marginBottom: 8 },
   contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
-  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, maxHeight: 300, marginBottom: 9, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 13, overflow: 'hidden' },
-  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
+
+  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, marginBottom: 8, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, overflow: 'hidden' },
+  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  heroIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5EBF3', alignItems: 'center', justifyContent: 'center' },
+  heroIcon: { width: 44, height: 44, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: '#64748B', fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
-  policyNo: { color: palette.navy, fontSize: 20, lineHeight: 24, fontWeight: '900', marginTop: 1 },
-  policyType: { color: '#475569', fontSize: 12, lineHeight: 15, fontWeight: '800', marginTop: 1 },
-  heroMetaRow: { flexDirection: 'row', gap: 7, marginTop: 8 },
-  heroMetric: { flex: 1, minHeight: 50, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, justifyContent: 'center' },
+  eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
+  policyNo: { color: palette.navy, fontSize: 20, lineHeight: 23, fontWeight: '900', marginTop: 1 },
+  policyType: { color: '#64748B', fontSize: 11.5, lineHeight: 14, fontWeight: '700', marginTop: 1 },
+
+  heroMetaRow: { flexDirection: 'row', gap: 7, marginTop: 7 },
+  heroMetric: { flex: 1, minHeight: 48, borderRadius: 11, backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroMetricCopy: { flex: 1, minWidth: 0 },
   heroMetricLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
-  heroMetricValue: { color: palette.navy, fontSize: 11, fontWeight: '900', marginTop: 3 },
-  heroActionRow: { marginTop: 8 },
-  heroAction: { alignSelf: 'stretch', minHeight: 32, borderRadius: 10, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  heroMetricValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
+
+  heroActionRow: { marginTop: 7 },
+  heroAction: { alignSelf: 'stretch', minHeight: 31, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
   heroActionText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
-  statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: '#FFFFFF', borderWidth: 1 },
+
+  statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statusDot: { width: 6, height: 6, borderRadius: 999 },
   statusText: { fontSize: 9, fontWeight: '900' },
-  financialCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 13, marginBottom: 9 },
-  vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 13 },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
+
+  financialCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 12, marginBottom: 8 },
+  vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 12 },
+
+  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 7 },
   sectionIcon: { width: 34, height: 34, borderRadius: radii.sm, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
+  sectionIconStrong: { width: 38, height: 38, borderRadius: 19, backgroundColor: palette.navy },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' },
-  sectionHint: { color: palette.slate, fontSize: 10.5, lineHeight: 13, fontWeight: '700', marginTop: 1 },
+  sectionHint: { color: palette.slate, fontSize: 10.5, lineHeight: 13, fontWeight: '600', marginTop: 1 },
+
   financialGrid: { flexDirection: 'row', gap: 8 },
-  financialValue: { flex: 1, minHeight: 58, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', padding: 10, justifyContent: 'center' },
+  financialValue: { flex: 1, minHeight: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
   financialValuePrimary: { borderColor: '#D6E2EF', backgroundColor: '#FFFFFF' },
-  financialLabel: { color: '#64748B', fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
-  financialAmount: { color: palette.navy, fontSize: 15, fontWeight: '900', marginTop: 4 },
-  vehicleFacts: { borderRadius: 13, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E3ECF6', overflow: 'hidden' },
-  factRow: { minHeight: 39, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#E7EEF7' },
+  financialIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EAF8F2', alignItems: 'center', justifyContent: 'center' },
+  financialCopy: { flex: 1, minWidth: 0 },
+  financialLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
+  financialAmount: { color: palette.navy, fontSize: 14, fontWeight: '900', marginTop: 2 },
+
+  vehicleFacts: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF6', overflow: 'hidden' },
+  factRow: { minHeight: 37, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#E7EEF7' },
   factLabel: { width: 100, color: palette.slate, fontSize: 10.5, fontWeight: '800' },
   factValue: { flex: 1, color: palette.navy, fontSize: 12, fontWeight: '900', textAlign: 'right' },
-  vehicleLink: { minHeight: 35, marginTop: 8, borderRadius: 10, backgroundColor: '#EEF5FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  vehicleLink: { minHeight: 34, marginTop: 7, borderRadius: 9, backgroundColor: '#EEF5FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   vehicleLinkPressed: { opacity: 0.8 },
   vehicleLinkText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' },
 });
