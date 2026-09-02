@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1030
-source_commit=1add44367e9b51c6ed192d77e2d3afa655d7d494
-purpose=publish customer notification bell panel preview OTA
+source_pr=1031
+source_commit=98404b1746e7d49f54d1674f01ea7da1c60177cc
+purpose=publish fully clickable Profile upload document card preview OTA
