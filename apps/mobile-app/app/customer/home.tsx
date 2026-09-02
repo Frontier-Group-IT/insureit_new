@@ -446,25 +446,30 @@ function SupportActionCenter({ onSupport }: { onSupport: () => void }) {
     <View style={styles.supportCard}>
       <View style={styles.supportTop}>
         <Text style={styles.supportHeaderLine} numberOfLines={1}>
-          <Text style={styles.supportTitle}>Insureit Support</Text>
-          <Text style={styles.supportDivider}> | </Text>
-          <Text style={styles.supportTagline}>we are here when it matters</Text>
+          <Text style={styles.supportTitle}>INSUREIT SUPPORT</Text>
+          <Text style={styles.supportDivider}>  |  </Text>
+          <Text style={styles.supportTagline}>We are here when it matters</Text>
         </Text>
       </View>
       <View style={styles.supportActions}>
-        <SupportButton icon="phone-in-talk" label="Call" color="#10A66F" onPress={() => void callClaimsDesk()} />
-        <SupportButton icon="whatsapp" label="WhatsApp" color="#128C7E" onPress={() => void openClaimsDeskWhatsApp()} />
-        <SupportButton icon="ticket-confirmation" label="Ticket" color="#174EA6" onPress={onSupport} />
+        <SupportButton icon="phone-in-talk" label="Call" subtitle="Speak to our expert" color="#19B968" onPress={() => void callClaimsDesk()} />
+        <SupportButton icon="whatsapp" label="WhatsApp" subtitle="Chat with us" color="#19B968" onPress={() => void openClaimsDeskWhatsApp()} />
+        <SupportButton icon="ticket-confirmation" label="Ticket" subtitle="Raise a request" color="#1767C5" onPress={onSupport} />
       </View>
     </View>
   );
 }
 
-function SupportButton({ icon, label, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; color: string; onPress: () => void }) {
+function SupportButton({ icon, label, subtitle, color, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; subtitle: string; color: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.supportButton, pressed && styles.cardPressed]}>
-      <View style={[styles.supportButtonIcon, { backgroundColor: color }]}><MaterialCommunityIcons name={icon} size={21} color="#FFFFFF" /></View>
-      <Text style={styles.supportButtonText}>{label}</Text>
+      <View style={[styles.supportButtonIcon, { backgroundColor: color }]}>
+        <MaterialCommunityIcons name={icon} size={25} color="#FFFFFF" />
+      </View>
+      <View style={styles.supportButtonCopy}>
+        <Text style={styles.supportButtonText} numberOfLines={1}>{label}</Text>
+        <Text style={styles.supportButtonSubtext} numberOfLines={1}>{subtitle}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -684,18 +689,20 @@ const styles = StyleSheet.create({
   progressLabelActive: { color: '#FFFFFF' },
   claimFooter: { minHeight: 42, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   claimFooterText: { flex: 1, color: '#E8F1FF', fontSize: 11.5, lineHeight: 16, fontWeight: '700' },
-  supportCard: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#C6D6E7', marginTop: 2, paddingHorizontal: 2, paddingTop: 14, paddingBottom: 0 },
-  supportTop: { marginBottom: 19, paddingHorizontal: 2 },
+  supportCard: { marginTop: 2, paddingHorizontal: 2, paddingTop: 8, paddingBottom: 2 },
+  supportTop: { marginBottom: 10, paddingHorizontal: 2 },
   supportHeaderLine: { flexShrink: 1 },
   supportIcon: { width: 44, height: 44, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   supportCopy: { flex: 1 },
-  supportTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
-  supportDivider: { color: '#B6C4D8', fontSize: 14, fontWeight: '900' },
-  supportTagline: { color: '#607089', fontSize: 11.5, fontWeight: '800' },
-  supportActions: { flexDirection: 'row', gap: 12 },
-  supportButton: { flex: 1, minHeight: 56, alignItems: 'center', justifyContent: 'center', gap: 5 },
-  supportButtonIcon: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.1, shadowRadius: 5, elevation: 2 },
-  supportButtonText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
+  supportTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
+  supportDivider: { color: '#B6C4D8', fontSize: 13, fontWeight: '800' },
+  supportTagline: { color: '#66758B', fontSize: 11.5, fontWeight: '700' },
+  supportActions: { flexDirection: 'row', gap: 8 },
+  supportButton: { flex: 1, minHeight: 72, borderRadius: 14, borderWidth: 1, borderColor: '#D8E4F0', backgroundColor: '#FFFFFF', paddingHorizontal: 9, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0D2A50', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
+  supportButtonIcon: { width: 42, height: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center', shadowColor: '#122544', shadowOpacity: 0.12, shadowRadius: 5, elevation: 2 },
+  supportButtonCopy: { flex: 1, minWidth: 0 },
+  supportButtonText: { color: palette.navy, fontSize: 12.5, lineHeight: 16, fontWeight: '900' },
+  supportButtonSubtext: { marginTop: 3, color: '#66758B', fontSize: 9.5, lineHeight: 12, fontWeight: '700' },
   appVersion: { color: '#A6B3C6', fontSize: 9.5, fontWeight: '700', textAlign: 'center', marginTop: 'auto', paddingTop: 14, paddingBottom: 1 },
   cardPressed: { transform: [{ scale: 0.985 }], opacity: 0.94 },
   kycBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, backgroundColor: 'rgba(10,18,31,0.66)' },
