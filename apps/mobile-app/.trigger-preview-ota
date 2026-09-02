@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1042
-source_commit=6bb98db90bb714d02ad2be7ce74d1d22ca03a0c2
-purpose=publish normalized customer profile address preview OTA
+source_pr=1051
+source_commit=5c6e69717abc2ed41786968de2d2f625bb9cfcc0
+purpose=publish white policy detail card with red accent preview OTA
