@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1054
-source_commit=059ff8b25cad80a1a307b2aff783efd563bb00f3
-purpose=publish Start Claim expired policy badge pulse preview OTA
+source_pr=1056
+source_commit=5484d652fdff4f9b5d84795aefa4a7f5a49b45c2
+purpose=publish compact customer policy details page preview OTA
