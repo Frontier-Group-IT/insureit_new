@@ -51,12 +51,22 @@ export type RequiredDocument = {
 };
 
 export const initialClaimDocuments: RequiredDocument[] = [
-  { type: "Spot Photo", title: "Spot Photo", body: "Damage, vehicle position and number plate", icon: "camera-burst" },
-  { type: "Registration certificate", title: "Registration certificate", body: "RC copy", icon: "card-account-details-outline" },
-  { type: "Driving licence", title: "Driving licence", body: "Front and back", icon: "badge-account-horizontal-outline" },
-  { type: "Policy copy", title: "Policy copy", body: "Policy PDF or photo", icon: "shield-file-outline" },
-  { type: "GR Copy / Load Challan", title: "GR Copy / Load Challan", body: "Goods receipt or load challan", icon: "file-document-multiple-outline" }
+  { type: "Accident Photo", title: "Accident Photo", body: "Damage, vehicle position and number plate", icon: "camera-burst" },
+  { type: "RC Copy", title: "RC Copy", body: "Registration certificate copy", icon: "card-account-details-outline" },
+  { type: "Insurance Copy", title: "Insurance Copy", body: "Insurance policy copy", icon: "shield-file-outline" },
+  { type: "Driver Licence", title: "Driver Licence", body: "Front and back", icon: "badge-account-horizontal-outline" },
+  { type: "GR / Load Bill", title: "GR / Load Bill", body: "Goods receipt or load challan", icon: "file-document-multiple-outline" },
+  { type: "Accident Video", title: "Accident Video", body: "Accident video, when available", icon: "video-outline" }
 ];
+
+export const initialDocumentTypeAliases: Record<string, string[]> = {
+  "Accident Photo": ["accident photo", "spot photo", "spot image", "loss photo", "vehicle photo"],
+  "RC Copy": ["rc copy", "registration certificate"],
+  "Insurance Copy": ["insurance copy", "policy copy"],
+  "Driver Licence": ["driver licence", "driving licence", "driving licence copy", "dl copy"],
+  "GR / Load Bill": ["gr / load bill", "gr copy / load challan", "gr copy / road challan", "gr / load challan", "road challan", "load challan"],
+  "Accident Video": ["accident video", "loss video", "vehicle video"]
+};
 
 export const finalClaimDocuments: RequiredDocument[] = [
   { type: "Repair estimate", title: "Repair estimate", body: "Workshop repair estimate", icon: "receipt-text-outline" },
@@ -200,6 +210,12 @@ export function requiredDocumentsForStatus(status?: string | null, requestedFina
 
 export function requiredDocumentTypesForStatus(status: string, requestedFinalDocumentTypes: string[] = []) {
   return requiredDocumentsForStatus(status, requestedFinalDocumentTypes).map((document) => document.type);
+}
+
+export function matchesRequiredDocument(documentType: string, requiredType: string) {
+  const normalized = documentType.trim().toLowerCase();
+  return (initialDocumentTypeAliases[requiredType] ?? [requiredType.toLowerCase()])
+    .some((alias) => normalized.includes(alias));
 }
 
 export function replacementStatusFor(status: ClaimStatus) {

@@ -4,7 +4,7 @@ import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effecti
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
+import { matchesRequiredDocument, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
 import { canVerifyClaimDocuments } from "@/lib/roles";
 
 type ClaimForVerification = {
@@ -83,7 +83,7 @@ async function loadDocuments(claimId: string) {
 
 function allRequiredDocumentsVerified(claim: ClaimForVerification, documents: ClaimDocumentForVerification[]) {
   const required = requiredDocumentTypesForStatus(claim.current_status);
-  return required.every((type) => documents.some((document) => document.document_type === type && document.verification_status === "verified"));
+  return required.every((type) => documents.some((document) => matchesRequiredDocument(document.document_type, type) && document.verification_status === "verified"));
 }
 
 export async function saveClaimDocumentVerification(claimId: string, documentId: string, verificationType: "rc" | "insurance", formData: FormData) {

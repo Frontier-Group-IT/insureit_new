@@ -8,6 +8,12 @@
 
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production. After explicit `deploy now` or `finish and deploy` approval, dispatch the protected production workflow with the already-successful feature-PR verification run ID and verified commit; do not create a deployment-trigger commit/PR or repeat the full gate.
 
+## Claim process redesign — first slice implemented
+
+**IMPLEMENTED, NOT DEPLOYED:** Sankalp-managed customers remain limited to Spot Intimation input; post-Spot operational handling remains unchanged. The web Spot Documents Verification checklist now aligns to the mobile Spot Intimation document contract: Accident Photo, RC Copy, Insurance Copy, Driver Licence, GR / Load Bill, and Accident Video. Legacy document labels remain recognized. Missing documents can be uploaded by operations through an **Upload** action; replacement remains available for existing files. Portal upload limits are 5 MB for documents and 50 MB for video.
+
+This is intentionally a narrow step. No claim ownership, status-transition, RLS, migration, customer post-Spot permissions, or deployment behavior was changed.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.

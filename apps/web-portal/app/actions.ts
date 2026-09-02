@@ -4,7 +4,7 @@ import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effecti
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { claimStatuses, finalDocumentTypes, isClaimStatus, managerTransitions, replacementStatusFor, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
+import { claimStatuses, finalDocumentTypes, isClaimStatus, managerTransitions, matchesRequiredDocument, replacementStatusFor, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
 import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";
 import { canManageUsers, canUpdateClaimStage, canVerifyClaimDocuments, isAppRole } from "@/lib/roles";
 
@@ -481,7 +481,7 @@ async function loadDocumentsForClaim(claimId: string) {
 
 function allRequiredDocumentsVerified(claim: ClaimForWorkflow, documents: ClaimDocumentForWorkflow[]) {
   const required = requiredDocumentTypesForStatus(claim.current_status);
-  return required.every((type) => documents.some((document) => document.document_type === type && document.verification_status === "verified"));
+  return required.every((type) => documents.some((document) => matchesRequiredDocument(document.document_type, type) && document.verification_status === "verified"));
 }
 
 export async function reviewClaimDocument(claimId: string, documentId: string, verificationStatus: "verified" | "rejected", formData: FormData) {

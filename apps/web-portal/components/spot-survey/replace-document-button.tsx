@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { replaceSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 
-export function ReplaceDocumentButton({ claimId, customerId, documentType, label }: { claimId: string; customerId: string; documentType: string; label: string }) {
+export function ReplaceDocumentButton({ claimId, customerId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -12,7 +12,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]">Replace</button>
+      <button type="button" onClick={() => setOpen(true)} className="h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]">{actionLabel}</button>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
           <form
@@ -46,7 +46,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                 <input
                   name="file"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  accept={documentType.toLowerCase().includes("video") ? "video/mp4,video/quicktime,video/webm" : "image/jpeg,image/png,image/webp,application/pdf"}
                   className="hidden"
                   required
                   onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
@@ -56,7 +56,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                   <span className="mt-2 block text-[13px] font-semibold text-[#071D49]">Drag &amp; drop file here</span>
                   <span className="block text-[12px] text-[#68758A]">or</span>
                   <span className="mt-1 inline-flex h-8 items-center rounded-md bg-[#071D49] px-5 text-[12px] font-semibold text-white">Select File</span>
-                  <span className="mt-2 block text-[10px] text-[#68758A]">Supported formats: JPG, PNG, PDF (Max size 5MB)</span>
+                  <span className="mt-2 block text-[10px] text-[#68758A]">{documentType.toLowerCase().includes("video") ? "Supported formats: MP4, MOV, WEBM (Max size 50MB)" : "Supported formats: JPG, PNG, PDF (Max size 5MB)"}</span>
                 </span>
               </label>
 
