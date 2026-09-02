@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1040
-source_commit=d6e4b1e12b45a451fdcf7b950916ba95bee9cdbe
-purpose=publish customer profile address dedup preview OTA
+source_pr=1042
+source_commit=6bb98db90bb714d02ad2be7ce74d1d22ca03a0c2
+purpose=publish normalized customer profile address preview OTA
