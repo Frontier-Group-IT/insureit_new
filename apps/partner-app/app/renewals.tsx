@@ -6,8 +6,8 @@ import { useRouter } from 'expo-router';
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerFilterChip } from '@/components/ui/partner-filter-chip';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
+import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -210,7 +210,7 @@ export default function RenewalsScreen() {
     <PartnerListScreen
       eyebrow="RENEWALS"
       title="Renewal work queue"
-      action={<PartnerIconButton icon="close" label="Close renewals" onPress={() => router.back()} />}
+      onBack={() => router.back()}
       data={visibleRows}
       keyExtractor={(row) => row.policy_id}
       renderItem={({ item }) => (
@@ -244,46 +244,35 @@ function RenewalCard({
   onOpenCustomer?: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
+    <PartnerOperationalRow
+      title={row.customer_name}
+      subtitle={`${row.policy_no || row.policy_code || 'Policy'} · ${row.insurer_name || 'Insurer not recorded'}`}
+      detail={row.vehicle_no || row.policy_product || 'Non-motor / risk not linked'}
+      value={formatIndianCurrency(row.premium_amount)}
+      meta={`Ends ${formatDate(row.end_date)}`}
+      status={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />}
+      leading={
+        <View style={styles.renewalMarker}>
+          <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={17} color={partnerTheme.colors.brandStrong} />
+        </View>
+      }
+      trailing={onOpenCustomer ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Open customer ${row.customer_name}`}
+          onPress={(event) => {
+            event.stopPropagation();
+            onOpenCustomer();
+          }}
+          style={({ pressed }) => [styles.customerAction, pressed && styles.actionPressed]}
+        >
+          <Ionicons name="person-outline" size={16} color={partnerTheme.colors.brand} />
+        </Pressable>
+      ) : undefined}
       onPress={onOpenPolicy}
-      style={({ pressed }) => [styles.renewalRow, pressed && styles.pressed]}
-    >
-      <View style={styles.renewalMarker}>
-        <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={18} color={partnerTheme.colors.brand} />
-      </View>
-
-      <View style={styles.renewalIdentity}>
-        <View style={styles.renewalTitleLine}>
-          <Text numberOfLines={1} style={styles.customer}>{row.customer_name}</Text>
-          <PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />
-        </View>
-        <Text numberOfLines={1} style={styles.policyNo}>{row.policy_no || row.policy_code || 'Policy'} · {row.insurer_name || 'Insurer not recorded'}</Text>
-        <Text numberOfLines={1} style={styles.renewalRisk}>{row.vehicle_no || row.policy_product || 'Non-motor / risk not linked'}</Text>
-        <View style={styles.renewalBottom}>
-          <Text style={styles.renewalPremium}>{formatIndianCurrency(row.premium_amount)}</Text>
-          <Text style={styles.date}>Ends {formatDate(row.end_date)}</Text>
-        </View>
-      </View>
-
-      <View style={styles.renewalActions}>
-        {onOpenCustomer ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Open customer ${row.customer_name}`}
-            onPress={(event) => {
-              event.stopPropagation();
-              onOpenCustomer();
-            }}
-            style={({ pressed }) => [styles.customerAction, pressed && styles.pressed]}
-          >
-            <Ionicons name="person-outline" size={17} color={partnerTheme.colors.brand} />
-          </Pressable>
-        ) : null}
-        <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
-      </View>
-    </Pressable>
+      accessibilityLabel={`Open renewal policy ${row.policy_no || row.policy_code || ''} for ${row.customer_name}`}
+      divider={false}
+    />
   );
 }
 
@@ -344,40 +333,22 @@ const styles = StyleSheet.create({
   windowRow: { marginTop: 7, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   search: { marginTop: 9 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
-  renewalRow: {
-    minHeight: 98,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 2,
-    backgroundColor: partnerTheme.colors.surface,
-  },
   renewalMarker: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: partnerTheme.colors.brandSoft,
   },
-  renewalIdentity: { flex: 1, minWidth: 0 },
-  renewalTitleLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  customer: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  policyNo: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  renewalRisk: { marginTop: 3, color: '#8A94A6', ...partnerTheme.typography.meta },
-  renewalBottom: { marginTop: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  renewalPremium: { color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 16, fontWeight: '600' },
-  date: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  renewalActions: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   customerAction: {
     width: partnerTheme.control.minTouchTarget,
     height: partnerTheme.control.minTouchTarget,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 13,
+    borderRadius: partnerTheme.radius.pill,
   },
-  pressed: { opacity: 0.78 },
+  actionPressed: { backgroundColor: partnerTheme.colors.pressed },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },

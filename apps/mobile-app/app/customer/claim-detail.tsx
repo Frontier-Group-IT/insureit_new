@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { ClaimFinancialSummary, ClaimPrimaryAction } from '@/components/external-claim-ui';
@@ -39,6 +39,10 @@ export default function ClaimDetailScreen() {
   const [documentsExpanded, setDocumentsExpanded] = useState(false);
   const [journeyExpanded, setJourneyExpanded] = useState(true);
   const [showAssistanceTooltip, setShowAssistanceTooltip] = useState(false);
+  const [claimNumberModalVisible, setClaimNumberModalVisible] = useState(false);
+  const [claimNumberDraft, setClaimNumberDraft] = useState('');
+  const [claimNumberSaving, setClaimNumberSaving] = useState(false);
+  const [claimNumberError, setClaimNumberError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -137,6 +141,41 @@ export default function ClaimDetailScreen() {
     if (error || !data?.signedUrl) return setMessage('We could not open this document. Please try again.');
     await Linking.openURL(data.signedUrl);
   }
+  function openClaimNumberModal() {
+    if (!claim || claim.insurer_claim_no || claimNumberSaving) return;
+    setClaimNumberDraft('');
+    setClaimNumberError('');
+    setClaimNumberModalVisible(true);
+  }
+
+  function closeClaimNumberModal() {
+    if (claimNumberSaving) return;
+    setClaimNumberModalVisible(false);
+    setClaimNumberError('');
+  }
+
+  async function saveCompletedClaimNumber() {
+    if (!claim || claimNumberSaving) return;
+    const nextClaimNumber = claimNumberDraft.trim();
+    if (!nextClaimNumber) {
+      setClaimNumberError('Enter the claim number issued by the insurer.');
+      return;
+    }
+
+    setClaimNumberSaving(true);
+    setClaimNumberError('');
+    const { error } = await supabase.from('claims').update({ insurer_claim_no: nextClaimNumber }).eq('id', claim.id);
+    setClaimNumberSaving(false);
+
+    if (error) {
+      setClaimNumberError('We could not save the claim number. Please try again.');
+      return;
+    }
+
+    setClaim((current) => current ? { ...current, insurer_claim_no: nextClaimNumber } : current);
+    setClaimNumberModalVisible(false);
+  }
+
 
   return (
     <Screen title="Claim Detail" showLogout showTitleHeader={false}>
@@ -176,7 +215,7 @@ export default function ClaimDetailScreen() {
           <View style={styles.heroCopy}>
             <Text style={[styles.stageLabel, compactClaimIntimation && styles.stageLabelCompact]}>{settled ? 'CLAIM COMPLETE' : currentStage?.label ?? claim.current_status}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} style={[styles.vehicleNo, compactClaimIntimation && styles.vehicleNoCompact]}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
-            <Text numberOfLines={1} style={[styles.heroIdentity, compactClaimIntimation && styles.heroIdentityCompact]}>{claim.claim_no}{claim.insurer_claim_no ? ` · ${claim.insurer_claim_no}` : ''}</Text>
+            <Text numberOfLines={1} style={[styles.heroIdentity, compactClaimIntimation && styles.heroIdentityCompact]}>{selfManaged ? (claim.insurer_claim_no || claim.claim_no) : claim.claim_no}{!selfManaged && claim.insurer_claim_no ? ` · ${claim.insurer_claim_no}` : ''}</Text>
           </View>
           <ProgressRing progress={progress} compact={compactClaimIntimation} />
         </View>
@@ -184,6 +223,13 @@ export default function ClaimDetailScreen() {
           <View><Text style={[styles.metaLabel, compactClaimIntimation && styles.metaLabelCompact]}>INCIDENT</Text><Text style={[styles.incidentValue, compactClaimIntimation && styles.incidentValueCompact]}>{selfManaged ? formatDateTime(claim.accident_at) : formatDate(claim.accident_at)}</Text></View>
           <Pressable accessibilityRole="button" accessibilityState={{ expanded: detailsExpanded }} onPress={() => setDetailsExpanded((value) => !value)} style={[styles.detailsToggle, compactClaimIntimation && styles.detailsToggleCompact]}><Text style={[styles.detailsToggleText, compactClaimIntimation && styles.detailsToggleTextCompact]}>Claim details</Text><MaterialCommunityIcons name={detailsExpanded ? 'chevron-up' : 'chevron-down'} size={compactClaimIntimation ? 15 : 18} color="#FFFFFF" /></Pressable>
         </View>
+        {selfManaged && settled && !claim.insurer_claim_no ? (
+          <Pressable accessibilityRole="button" accessibilityLabel="Add insurer claim number" onPress={openClaimNumberModal} style={({ pressed }) => [styles.addClaimNumberAction, pressed && styles.addClaimNumberActionPressed]}>
+            <View style={styles.addClaimNumberIcon}><MaterialCommunityIcons name="pencil-plus-outline" size={15} color="#D92D20" /></View>
+            <Text style={styles.addClaimNumberText}>Add Claim Number</Text>
+            <MaterialCommunityIcons name="chevron-right" size={16} color="#0A43A3" />
+          </Pressable>
+        ) : null}
         {detailsExpanded ? <View style={styles.infoBox}>
           <InfoPair leftLabel="Control No." leftValue={claim.claim_no} rightLabel="Claim No." rightValue={claim.insurer_claim_no || 'Awaiting insurer'} />
           <InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} />
@@ -243,6 +289,23 @@ export default function ClaimDetailScreen() {
 
       <SectionHeader title="Documents" subtitle={`${documents.length} document${documents.length === 1 ? '' : 's'}`} expanded={documentsExpanded} onPress={() => setDocumentsExpanded((value) => !value)} />
       {documentsExpanded ? <View style={styles.sectionBody}>{documents.length ? documents.map((document) => <Pressable key={document.id} onPress={() => void openDocument(document)} style={styles.documentRow}><MaterialCommunityIcons name="file-document-outline" size={20} color={roleTheme.customer.accent} /><View style={{ flex: 1 }}><Text style={styles.documentTitle}>{document.document_type}</Text><Text style={styles.documentMeta}>{document.verification_status ?? 'uploaded'}</Text></View><MaterialCommunityIcons name="open-in-new" size={18} color={palette.slate} /></Pressable>) : <Text style={styles.emptyText}>No claim documents uploaded yet.</Text>}</View> : null}
+
+      <Modal visible={claimNumberModalVisible} transparent animationType="fade" onRequestClose={closeClaimNumberModal}>
+        <View style={styles.claimNumberBackdrop}>
+          <View style={styles.claimNumberCard}>
+            <View style={styles.claimNumberIcon}><MaterialCommunityIcons name="shield-check-outline" size={23} color="#0A43A3" /></View>
+            <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
+            <View style={[styles.claimNumberInputShell, Boolean(claimNumberError) && styles.claimNumberInputShellError]}>
+              <TextInput value={claimNumberDraft} onChangeText={(value) => { setClaimNumberDraft(value); if (claimNumberError) setClaimNumberError(''); }} editable={!claimNumberSaving} autoCapitalize="characters" autoCorrect={false} placeholder="Enter claim number" placeholderTextColor="#98A2B3" returnKeyType="done" style={styles.claimNumberInput} onSubmitEditing={() => void saveCompletedClaimNumber()} />
+            </View>
+            {claimNumberError ? <Text style={styles.claimNumberError}>{claimNumberError}</Text> : null}
+            <View style={styles.claimNumberActions}>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={closeClaimNumberModal} style={styles.claimNumberSecondary}><Text style={styles.claimNumberSecondaryText}>Not now</Text></Pressable>
+              <Pressable accessibilityRole="button" disabled={claimNumberSaving} onPress={() => void saveCompletedClaimNumber()} style={[styles.claimNumberPrimary, claimNumberSaving && styles.claimNumberDisabled]}><Text style={styles.claimNumberPrimaryText}>{claimNumberSaving ? 'Saving...' : 'Continue'}</Text><MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" /></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {selfManaged && claim.assistance_status === 'requested' && !settled ? <View style={styles.assistanceNotice}>
         <View style={styles.assistanceNoticeIcon}><MaterialCommunityIcons name="information-outline" size={19} color="#168161" /></View>
@@ -340,6 +403,24 @@ function formatDateTime(value?: string | null) { return value ? new Date(value).
 const styles = StyleSheet.create({
   pageHeading:{marginBottom:8,flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},pageHeadingCopy:{flex:1,minWidth:0},pageEyebrow:{color:'#145ED7',fontSize:10,fontWeight:'900',letterSpacing:1},pageTitle:{color:palette.navy,fontSize:24,fontWeight:'900',marginTop:2},pageSubtitle:{color:'#6A7789',fontSize:10.5,lineHeight:15,fontWeight:'600',marginTop:3},headingActions:{flexDirection:'row',alignItems:'flex-start',gap:7,flexShrink:0},assistanceActionWrap:{position:'relative',alignItems:'center'},assistanceIconButton:{minWidth:68,minHeight:48,borderRadius:13,paddingHorizontal:7,paddingVertical:5,alignItems:'center',justifyContent:'center',gap:1,backgroundColor:'#EAF8F1',borderWidth:1,borderColor:'#B9E3D0',shadowColor:'#168161',shadowOpacity:.16,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:3},assistanceIconButtonPressed:{backgroundColor:'#DDF3E8',transform:[{scale:.97}]},assistanceActionLabel:{color:'#168161',fontSize:7.5,lineHeight:9,fontWeight:'900',textAlign:'center'},assistanceTooltip:{position:'absolute',right:0,top:55,zIndex:20,minWidth:116,borderRadius:10,paddingHorizontal:9,paddingVertical:6,backgroundColor:'#07327B',shadowColor:'#001B44',shadowOpacity:.22,shadowRadius:8,shadowOffset:{width:0,height:4},elevation:6},assistanceTooltipText:{color:'#FFFFFF',fontSize:9,lineHeight:12,fontWeight:'800',textAlign:'center'},assistanceTooltipArrow:{position:'absolute',right:25,top:-5,width:10,height:10,backgroundColor:'#07327B',transform:[{rotate:'45deg'}]},
   heroCard:{position:'relative',borderWidth:1,borderRadius:21,padding:15,backgroundColor:'#07327B',overflow:'hidden',marginTop:13,marginBottom:11,shadowColor:'#07327B',shadowOpacity:.16,shadowRadius:12,shadowOffset:{width:0,height:6},elevation:3},heroCardCompact:{borderRadius:18,paddingVertical:10,paddingHorizontal:11,marginTop:9,marginBottom:8},heroOrbLarge:{position:'absolute',width:190,height:190,borderRadius:95,right:-75,top:-108,borderWidth:1,borderColor:'rgba(75,145,255,.20)'},heroOrbLargeCompact:{width:128,height:128,borderRadius:64,right:-47,top:-74},heroOrbSmall:{position:'absolute',width:130,height:130,borderRadius:65,right:-23,top:-74,borderWidth:1,borderColor:'rgba(75,145,255,.18)'},heroOrbSmallCompact:{width:90,height:90,borderRadius:45,right:-15,top:-48},heroTop:{flexDirection:'row',alignItems:'center',gap:11},heroTopCompact:{gap:8},statusArtwork:{width:48,height:48,flexShrink:0},statusArtworkCompact:{width:40,height:40},heroCopy:{flex:1,minWidth:0},stageLabel:{color:'#A8C8FF',fontSize:9,fontWeight:'900',letterSpacing:.7},stageLabelCompact:{fontSize:8.5,letterSpacing:.55},vehicleNo:{color:'#FFFFFF',fontSize:21,fontWeight:'900',marginTop:2},vehicleNoCompact:{fontSize:18.5,marginTop:1},heroIdentity:{color:'#DCE8F7',fontSize:10.5,fontWeight:'800',marginTop:2},heroIdentityCompact:{fontSize:9.5,marginTop:1},progressRing:{width:70,height:70,flexShrink:0,alignItems:'center',justifyContent:'center',marginLeft:2},progressRingCompact:{width:38,height:38,marginLeft:0},progressRingLabel:{...StyleSheet.absoluteFillObject,alignItems:'center',justifyContent:'center'},progressRingValue:{color:'#FFFFFF',fontSize:15,fontWeight:'900',letterSpacing:-.3},progressRingValueCompact:{fontSize:10.5,letterSpacing:-.15},incidentRow:{marginTop:13,paddingTop:11,borderTopWidth:1,borderTopColor:'rgba(255,255,255,.27)',flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:10},incidentRowCompact:{marginTop:8,paddingTop:7,gap:8},metaLabel:{color:'#A9C0E0',fontSize:8.5,fontWeight:'900',letterSpacing:.6},metaLabelCompact:{fontSize:8,letterSpacing:.5},incidentValue:{color:'#FFFFFF',fontSize:11,fontWeight:'900',marginTop:2},incidentValueCompact:{fontSize:10.2,marginTop:1},detailsToggle:{minHeight:38,borderRadius:11,paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:3,backgroundColor:'rgba(255,255,255,.10)',borderWidth:1,borderColor:'rgba(255,255,255,.22)'},detailsToggleCompact:{minHeight:32,borderRadius:9,paddingHorizontal:8,gap:2},detailsToggleText:{color:'#FFFFFF',fontSize:9.5,fontWeight:'900'},detailsToggleTextCompact:{fontSize:8.8},infoBox:{marginTop:10,borderRadius:14,backgroundColor:'#FFFFFF',borderWidth:1,borderColor:'#D9E4F0',padding:10,gap:8,shadowColor:'#001B44',shadowOpacity:.08,shadowRadius:7,shadowOffset:{width:0,height:3},elevation:2},infoPair:{flexDirection:'row',gap:14},infoLabel:{color:'#6C7D93',fontSize:8.5,fontWeight:'800'},infoValue:{color:palette.navy,fontSize:10.2,fontWeight:'900',marginTop:2},
+  addClaimNumberAction:{marginTop:8,minHeight:38,borderRadius:11,backgroundColor:'#F7FAFF',borderWidth:1,borderColor:'#C8DCF3',paddingHorizontal:10,flexDirection:'row',alignItems:'center',gap:7},
+  addClaimNumberActionPressed:{backgroundColor:'#EDF5FF',transform:[{scale:.995}]},
+  addClaimNumberIcon:{width:26,height:26,borderRadius:9,backgroundColor:'#FEECEC',borderWidth:1,borderColor:'#F7C2BE',alignItems:'center',justifyContent:'center'},
+  addClaimNumberText:{flex:1,color:'#0A43A3',fontSize:10,fontWeight:'900'},
+  claimNumberBackdrop:{flex:1,alignItems:'center',justifyContent:'center',backgroundColor:'rgba(5,20,48,.50)',paddingHorizontal:24},
+  claimNumberCard:{width:'100%',maxWidth:342,borderRadius:22,backgroundColor:'#FFFFFF',paddingHorizontal:18,paddingTop:18,paddingBottom:22,alignItems:'center',shadowColor:'#071D49',shadowOpacity:.2,shadowRadius:20,shadowOffset:{width:0,height:10},elevation:12},
+  claimNumberIcon:{width:44,height:44,borderRadius:15,backgroundColor:'#EEF5FF',borderWidth:1,borderColor:'#D2E2FA',alignItems:'center',justifyContent:'center',marginBottom:10},
+  claimNumberTitle:{color:palette.navy,fontSize:17,lineHeight:22,fontWeight:'900',textAlign:'center'},
+  claimNumberInputShell:{width:'100%',minHeight:48,borderRadius:13,borderWidth:1.2,borderColor:'#CFD9E6',backgroundColor:'#F9FBFD',justifyContent:'center',marginTop:14},
+  claimNumberInputShellError:{borderColor:'#D92D20',backgroundColor:'#FFF9F8'},
+  claimNumberInput:{minHeight:46,paddingHorizontal:13,color:palette.navy,fontSize:13,fontWeight:'800'},
+  claimNumberError:{alignSelf:'stretch',color:'#B42318',fontSize:9.5,lineHeight:13,fontWeight:'700',marginTop:5},
+  claimNumberActions:{width:'100%',flexDirection:'row',alignItems:'stretch',marginTop:14,gap:10},
+  claimNumberPrimary:{flex:1,flexBasis:0,minWidth:0,minHeight:44,borderRadius:12,backgroundColor:'#0A43A3',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,paddingHorizontal:10},
+  claimNumberPrimaryText:{color:'#FFFFFF',fontSize:10.8,fontWeight:'900'},
+  claimNumberSecondary:{flex:1,flexBasis:0,minWidth:0,minHeight:44,borderRadius:12,borderWidth:1,borderColor:'#D7E0EB',backgroundColor:'#FFFFFF',alignItems:'center',justifyContent:'center'},
+  claimNumberSecondaryText:{color:'#475467',fontSize:10.5,fontWeight:'900'},
+  claimNumberDisabled:{opacity:.55},
   currentCard:{position:'relative',borderWidth:1,borderRadius:16,paddingVertical:9,paddingHorizontal:10,paddingLeft:14,flexDirection:'row',alignItems:'center',gap:9,marginBottom:7,overflow:'hidden'},currentCardPressed:{opacity:.84,transform:[{scale:.995}]},currentAccent:{position:'absolute',left:0,top:0,bottom:0,width:4},currentIconArtwork:{width:36,height:36,flexShrink:0},currentCopy:{flex:1,minWidth:0},currentEyebrow:{fontSize:8,fontWeight:'900',letterSpacing:.5},currentTitle:{color:palette.navy,fontSize:13.5,fontWeight:'900',marginTop:1},currentBody:{color:'#5F7086',fontSize:10,lineHeight:13.5,fontWeight:'700',marginTop:2},currentContinue:{flexDirection:'row',alignItems:'center',gap:1,marginLeft:3},currentContinueText:{color:'#0A43A3',fontSize:9.5,fontWeight:'900'},
   sectionHeader:{minHeight:62,borderRadius:17,borderWidth:1,borderColor:'#D6E2EE',backgroundColor:'#F7FAFF',padding:11,marginTop:10,flexDirection:'row',alignItems:'center',gap:10},sectionHeaderArtwork:{width:40,height:40,flexShrink:0},sectionHeaderCopy:{flex:1,minWidth:0},sectionTitle:{color:palette.navy,fontSize:14,fontWeight:'900'},sectionSub:{color:'#718198',fontSize:10,fontWeight:'700',marginTop:2},sectionBody:{borderWidth:1,borderTopWidth:0,borderColor:'#D6E2EE',backgroundColor:'#FFFFFF',borderBottomLeftRadius:17,borderBottomRightRadius:17,padding:10,gap:8},
   journeyHeader:{minHeight:40,borderRadius:12,paddingVertical:5,paddingHorizontal:7,marginTop:6,gap:6},journeyHeaderArtwork:{width:30,height:30},journeyHeaderTitle:{fontSize:12,lineHeight:14},journeyHeaderSub:{fontSize:9.2,lineHeight:11,marginTop:1},journeyBody:{paddingVertical:5,paddingHorizontal:5,gap:4},

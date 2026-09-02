@@ -23,7 +23,7 @@ export default function PartnerTabsLayout() {
         headerShown: false,
         tabBarHideOnKeyboard: true,
         tabBarActiveTintColor: partnerTheme.colors.brandStrong,
-        tabBarInactiveTintColor: '#8993A4',
+        tabBarInactiveTintColor: partnerTheme.colors.inkSubtle,
         tabBarLabelStyle: styles.label,
         tabBarIconStyle: styles.icon,
         tabBarItemStyle: styles.item,
@@ -41,23 +41,49 @@ export default function PartnerTabsLayout() {
 
 function tabIcon(inactive: IconName, active: IconName) {
   return function PartnerTabIcon({ color, focused }: { color: string; size: number; focused: boolean }) {
-    return <Ionicons name={focused ? active : inactive} color={color} size={22} />;
+    return (
+      <View style={styles.iconWrap}>
+        <View style={[styles.activeMark, !focused && styles.activeMarkHidden]} />
+        <Ionicons name={focused ? active : inactive} color={color} size={21} />
+      </View>
+    );
   };
 }
 
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.canvas },
   tabBar: {
-    height: 80,
-    paddingTop: 7,
-    paddingBottom: 10,
+    height: 76,
+    paddingTop: 4,
+    paddingBottom: 9,
     backgroundColor: partnerTheme.colors.surface,
     borderTopColor: partnerTheme.colors.line,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   item: {
     minHeight: partnerTheme.control.minTouchTarget,
-    paddingTop: 2,
+    paddingTop: 1,
   },
-  icon: { marginTop: 1 },
-  label: { marginTop: 1, ...partnerTheme.typography.meta },
+  icon: { marginTop: 0 },
+  iconWrap: {
+    width: 38,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  activeMark: {
+    position: 'absolute',
+    top: 0,
+    width: 16,
+    height: 2,
+    borderRadius: partnerTheme.radius.pill,
+    backgroundColor: partnerTheme.colors.brand,
+  },
+  activeMarkHidden: { opacity: 0 },
+  label: {
+    marginTop: 1,
+    fontSize: 9.5,
+    lineHeight: 13,
+    fontWeight: '600',
+  },
 });

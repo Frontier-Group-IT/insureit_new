@@ -241,6 +241,76 @@ export async function verifySpotSurveyDetail(formData: FormData): Promise<Action
   }
 }
 
+export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionResult> {
+  try {
+    const claimId = String(formData.get("claimId") ?? "").trim();
+    const files = formData.getAll("files").filter((value): value is File => value instanceof File && value.size > 0);
+    if (!claimId || !files.length) throw new Error("Please select at least one spot photo or video.");
+
+    const allowedTypes = new Set([
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/heic",
+      "video/mp4",
+      "video/quicktime",
+      "video/webm"
+    ]);
+    const maxFileSize = 20 * 1024 * 1024;
+    for (const file of files) {
+      if (!allowedTypes.has(file.type)) throw new Error(`${file.name} is not a supported photo/video format.`);
+      if (file.size > maxFileSize) throw new Error(`${file.name} exceeds the 20MB per-file limit.`);
+    }
+
+    const profile = await currentProfile();
+    const claim = await loadClaim(claimId);
+    const supabase = await createServerSupabaseClient();
+    const uploadedPaths: string[] = [];
+    const rows: Array<{ claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: "pending" }> = [];
+
+    try {
+      for (const [index, file] of files.entries()) {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = `${claimId}/spot/${Date.now()}-${index}-${safeName}`;
+        const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
+        if (uploadError) throw new Error(uploadError.message);
+        uploadedPaths.push(storagePath);
+        rows.push({
+          claim_id: claimId,
+          customer_id: claim.customer_id,
+          document_type: "Spot Photo",
+          file_name: safeName,
+          storage_bucket: bucketName,
+          storage_path: storagePath,
+          verification_status: "pending"
+        });
+      }
+
+      const { error: insertError } = await supabase.from("claim_documents").insert(rows);
+      if (insertError) throw new Error(insertError.message);
+    } catch (error) {
+      if (uploadedPaths.length) await supabase.storage.from(bucketName).remove(uploadedPaths);
+      throw error;
+    }
+
+    await supabase.from("claim_status_history").insert({
+      claim_id: claimId,
+      from_status: claim.current_status,
+      to_status: claim.current_status,
+      notes: `${files.length} spot photo/video file${files.length === 1 ? "" : "s"} uploaded by claim manager.`,
+      changed_by: profile?.id ?? null
+    });
+
+    revalidatePath(`/claims/${claimId}`);
+    revalidatePath("/claims");
+    revalidatePath("/dashboard");
+    return { ok: true, message: `${files.length} spot photo/video file${files.length === 1 ? "" : "s"} uploaded successfully.` };
+  } catch (error) {
+    console.error("uploadSpotSurveyMedia failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Spot media upload failed." };
+  }
+}
+
 export async function replaceSpotSurveyDocument(formData: FormData): Promise<ActionResult> {
   try {
     const claimId = String(formData.get("claimId") ?? "").trim();

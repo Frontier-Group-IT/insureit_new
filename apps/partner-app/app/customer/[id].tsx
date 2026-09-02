@@ -6,7 +6,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
@@ -47,9 +46,9 @@ export default function CustomerDetailScreen() {
 
   return (
     <PartnerScreen
-      eyebrow="CUSTOMER"
-      title={data?.customer.customer_name || 'Customer'}
-      action={<PartnerIconButton icon="close" label="Close customer detail" onPress={() => router.back()} />}
+      eyebrow="BUSINESS"
+      title="Customer"
+      onBack={() => router.back()}
     >
       {loading ? (
         <PartnerStateView state="loading" title="Loading customer" />
@@ -151,7 +150,7 @@ export default function CustomerDetailScreen() {
                   <View style={styles.itemIcon}><Ionicons name="car-outline" size={18} color={partnerTheme.colors.accent} /></View>
                   <View style={styles.itemBody}>
                     <Text style={styles.itemTitle}>{vehicle.vehicle_no || 'Vehicle'}</Text>
-                    <Text style={styles.itemText}>{[vehicle.make, vehicle.model, vehicle.year].filter(Boolean).join(' · ') || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
+                    <Text style={styles.itemText}>{displayParts(vehicle.make, vehicle.model, vehicle.year) || humanize(vehicle.vehicle_type || 'vehicle')}</Text>
                     <View style={styles.expiryRow}>
                       <Expiry label="PUC" date={vehicle.puc_expiry_date} />
                       <Expiry label="Fitness" date={vehicle.fitness_expiry_date} />
@@ -281,6 +280,13 @@ function policyCategory(policy: PartnerCustomerDetail['policies'][number]) {
   return 'Non-Motor';
 }
 
+function displayParts(...values: Array<string | number | null | undefined>) {
+  return values
+    .map((value) => value == null ? '' : String(value).trim())
+    .filter((value) => value && value.toLowerCase() !== 'null' && value.toLowerCase() !== 'undefined')
+    .join(' · ');
+}
+
 function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'CU';
 }
@@ -308,27 +314,27 @@ function daysUntil(value: string) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  hero: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  avatar: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#373F53' },
-  avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
+  avatar: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.bodyStrong },
   heroBody: { flex: 1 },
-  heroName: { color: '#FFFFFF', ...partnerTheme.typography.sectionTitle },
-  heroMeta: { marginTop: 4, color: '#C0C8D4', ...partnerTheme.typography.caption },
-  heroSince: { marginTop: 8, paddingTop: 8, color: '#8F9BAD', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3B4658', ...partnerTheme.typography.meta },
+  heroName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
+  heroMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  heroSince: { marginTop: 7, color: partnerTheme.colors.inkSubtle, ...partnerTheme.typography.meta },
   contactActions: { marginTop: 8 },
   attention: { marginTop: 8 },
-  summary: { marginTop: 9, flexDirection: 'row', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  summary: { marginTop: 8, flexDirection: 'row', backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   summaryItem: { flex: 1, minHeight: 62, alignItems: 'center', justifyContent: 'center' },
   summaryValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '800' },
   summaryLabel: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  relationshipCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  relationshipCard: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 9, paddingVertical: 8, backgroundColor: partnerTheme.colors.surface },
   info: { width: '50%', paddingRight: 8 },
   infoLabel: { color: '#8A94A6', textTransform: 'uppercase', letterSpacing: 0.5, ...partnerTheme.typography.meta },
   infoValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  stack: { gap: 8 },
-  itemCard: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  vehicleCard: { minHeight: 64, flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  stack: { gap: 0 },
+  itemCard: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  vehicleCard: { minHeight: 64, flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 10, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   itemIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
   itemBody: { flex: 1 },
   itemHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 7 },
@@ -345,5 +351,5 @@ const styles = StyleSheet.create({
   expandToggleText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
   emptyLine: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
   emptyLineText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  pressed: { opacity: 0.8 },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
 });

@@ -7,6 +7,23 @@ assert(forms.includes("VehicleSaveActionChooser"));
 assert(!forms.includes("Save Vehicle Only"));
 assert(forms.includes('aria-label="Add new customer"'));
 assert(!forms.includes("+ Create new customer"));
+assert(forms.includes("CustomerSearchField"));
+assert(forms.includes('reserveHeaderAction ? "overflow-visible" : "overflow-hidden"'));
+assert(!forms.includes('<SelectField\n          variant="onboarding"\n          label="Customer"'));
+
+const customerSearchField=read("components/customer-search-field.tsx");
+assert(customerSearchField.includes('role="combobox"'));
+assert(customerSearchField.includes('aria-autocomplete="list"'));
+assert(customerSearchField.includes('role="listbox"'));
+assert(customerSearchField.includes('type="hidden" name={name} value={selectedValue}'));
+assert(customerSearchField.includes("option.label.toLocaleLowerCase().includes(normalized)"));
+assert(customerSearchField.includes('placeholder="Search customer"'));
+assert(customerSearchField.includes('event.key === "ArrowDown"'));
+assert(customerSearchField.includes('event.key === "ArrowUp"'));
+assert(customerSearchField.includes('event.key === "Enter"'));
+assert(customerSearchField.includes('event.key === "Escape"'));
+assert(customerSearchField.includes("Select a customer from the matching results."));
+assert(customerSearchField.includes("No matching customer"));
 
 const vehicleSaveChooser=read("components/vehicle-save-action-chooser.tsx");
 assert(vehicleSaveChooser.includes("Save Vehicle"));
@@ -69,6 +86,15 @@ assert(vehicleViewPage.includes("VehiclePolicyFooterSummary"));
 
 const vehiclePolicyFooter=read("components/vehicle-policy-footer-summary.tsx");
 assert(vehiclePolicyFooter.includes('type PolicyState = "ACTIVE" | "DUE" | "EXPIRED"'));
+assert(vehiclePolicyFooter.includes("PolicyStateIcon"));
+assert(vehiclePolicyFooter.includes("CircleCheck"));
+assert(vehiclePolicyFooter.includes("CircleAlert"));
+assert(vehiclePolicyFooter.includes("TriangleAlert"));
+assert(vehiclePolicyFooter.includes('aria-label="Active"'));
+assert(vehiclePolicyFooter.includes('aria-label="Expired"'));
+assert(vehiclePolicyFooter.includes('aria-label="Due"'));
+assert(vehiclePolicyFooter.includes('bg-[#FFF0EA] text-[#D16A4B]'));
+assert(!vehiclePolicyFooter.includes('>{state}</span>'));
 assert(vehiclePolicyFooter.includes('days <= 30 ? "DUE" : "ACTIVE"'));
 assert(vehiclePolicyFooter.includes("/policies/new?customer_id="));
 assert(vehiclePolicyFooter.includes("&vehicle_id="));
@@ -77,13 +103,15 @@ assert(vehiclePolicyFooter.includes("No policy linked"));
 assert(vehiclePolicyFooter.includes("<FilePlus2"));
 assert(vehiclePolicyFooter.includes(">\n          <FilePlus2"));
 assert(vehiclePolicyFooter.includes("/policies/${encodeURIComponent(policy.id)}/edit"));
+assert(vehiclePolicyFooter.includes('border-[#D6E1EE] bg-[#F4F7FB]'));
+assert(vehiclePolicyFooter.includes('hover:bg-[#EDF3F9]'));
 assert(vehiclePolicyFooter.includes("/policies/documents/${encodeURIComponent(policyCopyId(policy)!)}\/open"));
 assert(vehiclePolicyFooter.includes('document.document_type === "policy_copy"'));
 assert(!vehiclePolicyFooter.includes("Policy copy unavailable"));
 assert(vehiclePolicyFooter.includes("View policy copy"));
 assert(vehiclePolicyFooter.includes("<Files"));
 assert(vehiclePolicyFooter.includes('bg-[#F3E8FF] text-[#7C3AED]'));
-assert(vehiclePolicyFooter.includes('hover:bg-[#F4F7FB]'));
+assert(vehiclePolicyFooter.includes('hover:bg-[#EDF3F9]'));
 assert(vehicleEditPage.includes("policy_documents(id,document_type)"));
 assert(vehicleViewPage.includes("policy_documents(id,document_type)"));
 
@@ -131,3 +159,18 @@ assert(migration.includes("status='completed'"));
 assert(migration.includes("delete from public.policy_intake_onboarding_drafts"));
 
 console.log("vehicle + policy intake resume regression: ok");
+
+
+const nonMotorPolicyForm=read("components/non-motor-policy-form.tsx");
+assert(nonMotorPolicyForm.includes('import { CustomerSearchField } from "@/components/customer-search-field";'));
+assert(nonMotorPolicyForm.includes('<CustomerSearchField label="Customer / organisation"'));
+assert(nonMotorPolicyForm.includes('onSelectionChange={changeCustomer}'));
+assert(!nonMotorPolicyForm.includes('<Select label="Customer / organisation"'));
+
+
+assert(nonMotorPolicyForm.includes('<Section number="02" title="Customer & policy" allowOverflow>'));
+assert(nonMotorPolicyForm.includes('<div className="min-w-0"><CustomerSearchField label="Customer / organisation"'));
+
+assert(nonMotorPolicyForm.includes('required portalResults onSelectionChange={changeCustomer}'));
+assert(customerSearchField.includes('createPortal('));
+assert(customerSearchField.includes('portalResults && mounted'));

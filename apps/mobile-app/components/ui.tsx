@@ -28,6 +28,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const [customerContext, setCustomerContext] = useState<CustomerAccountContext | null | undefined>(pathname.startsWith('/customer') ? undefined : null);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const showProfile = ['/customer', '/it', '/staff', '/agent', '/hierarchy', '/admin'].some((prefix) => pathname.startsWith(prefix));
+  const customerHeader = pathname.startsWith('/customer');
   const compactTopSpacing = pathname === '/customer/upload-documents';
   const legalTopSpacing = pathname.startsWith('/customer/legal');
   const showBackButton = showBackNavigation && showProfile && !isRootDashboard(pathname);
@@ -97,18 +98,30 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
     <SafeAreaView style={styles.safeArea} edges={[]}>
       <View pointerEvents="none" style={styles.backdropTop} />
       <View pointerEvents="none" style={styles.backdropBand} />
+      {customerHeader ? (
+        <View
+          pointerEvents="none"
+          style={[styles.customerHeaderContentDimmer, { height: insets.top + 58 }]}
+        />
+      ) : null}
       {showProfile ? (
-        <View style={[styles.fixedBrandRow, { top: insets.top }]}>
+        <View style={[styles.fixedBrandRow, customerHeader && styles.customerFixedBrandRow, { top: insets.top }]}>
           {showBackButton ? (
-            <Pressable accessibilityRole="button" onPress={openBack} style={styles.backButton}>
-              <MaterialCommunityIcons name="chevron-left" size={25} color={palette.ink} />
+            <Pressable accessibilityRole="button" onPress={openBack} style={[styles.backButton, customerHeader && styles.customerBackButton]}>
+              <MaterialCommunityIcons name="chevron-left" size={25} color={customerHeader ? '#FFFFFF' : palette.ink} />
             </Pressable>
           ) : null}
           <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
-            <BrandLogo width={158} />
+            <BrandLogo width={customerHeader ? 132 : 158} inverse={customerHeader} />
           </Pressable>
-          <NotificationBell />
-          <Pressable accessibilityRole="button" onPress={openProfile} style={styles.avatar}>
+          {customerHeader ? (
+            <View style={styles.customerBellShell}>
+              <NotificationBell color="#FFFFFF" />
+            </View>
+          ) : (
+            <NotificationBell />
+          )}
+          <Pressable accessibilityRole="button" onPress={openProfile} style={[styles.avatar, customerHeader && styles.customerAvatar]}>
             <Text style={styles.avatarText}>{profileInitial}</Text>
           </Pressable>
         </View>
@@ -262,6 +275,7 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   const router = useRouter();
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const tabs = tabsForRole(role, customerContext);
+  const customerNavyTabs = role === 'customer';
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
@@ -275,13 +289,13 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
   if (keyboardVisible) return null;
 
   return (
-    <View style={[styles.bottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
-      <View style={styles.bottomTabs}>
+    <View style={[styles.bottomTabsWrap, customerNavyTabs && styles.customerBottomTabsWrap, { paddingBottom: Math.max(bottomInset, 10) }]}>
+      <View style={[styles.bottomTabs, customerNavyTabs && styles.customerBottomTabs]}>
         {tabs.map((tab) => {
           const active = isTabActive(tab.href, pathname, customerContext);
           const isCustomerRootTab = role === 'customer'
             && !isPortfolioCustomerContext(customerContext)
-            && ['Home', 'Policies', 'Vehicles', 'Support', 'Profile'].includes(tab.label);
+            && ['Home', 'Policies', 'Vehicles', 'Claim', 'Profile'].includes(tab.label);
           const isAlreadyOnCustomerRootTab = isCustomerRootTab && pathname === tab.href;
           return (
             <Pressable
@@ -293,10 +307,29 @@ export function UniversalBottomTabs({ role, pathname, bottomInset, customerConte
               }}
               style={styles.bottomTab}
             >
-              <View style={[styles.bottomIconShell, { backgroundColor: tabTone(tab.label, tab).soft }, active && [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]]}>
-                <MaterialCommunityIcons name={tab.icon} size={19} color={active ? tabTone(tab.label, tab).accent : palette.slate} />
+              <View style={[
+                styles.bottomIconShell,
+                customerNavyTabs ? styles.customerBottomIconShell : { backgroundColor: tabTone(tab.label, tab).soft },
+                active && (customerNavyTabs
+                  ? styles.customerBottomIconShellActive
+                  : [styles.bottomIconShellActive, { borderColor: tabTone(tab.label, tab).accent }]),
+              ]}>
+                <MaterialCommunityIcons
+                  name={tab.icon}
+                  size={19}
+                  color={customerNavyTabs ? (active ? palette.navy : '#D6E0EF') : (active ? tabTone(tab.label, tab).accent : palette.slate)}
+                />
               </View>
-              <Text style={[styles.bottomTabText, active && { color: tabTone(tab.label, tab).accent }]} numberOfLines={1}>{tab.label}</Text>
+              <Text
+                style={[
+                  styles.bottomTabText,
+                  customerNavyTabs && styles.customerBottomTabText,
+                  active && (customerNavyTabs ? styles.customerBottomTabTextActive : { color: tabTone(tab.label, tab).accent }),
+                ]}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -329,7 +362,7 @@ function tabsForRole(role: AppRole, customerContext?: CustomerAccountContext | n
     { label: 'Home', href: '/customer/home', icon: 'home-variant', ...customerTone },
     { label: 'Policies', href: '/customer/policies', icon: 'file-certificate-outline', ...customerTone },
     { label: 'Vehicles', href: '/customer/vehicles', icon: 'truck-outline', ...customerTone },
-    { label: 'Support', href: '/customer/support', icon: 'headset', ...customerTone },
+    { label: 'Claim', href: '/customer/claims', icon: 'file-document-check-outline', ...customerTone },
     { label: 'Profile', href: '/customer/profile', icon: 'account-outline', ...customerTone },
   ];
   if (role === 'agent') return [
@@ -431,10 +464,10 @@ function topPaddingFor(spacing: ScreenTopSpacing) {
 
 function isTabActive(tabHref: string, pathname: string, customerContext?: CustomerAccountContext | null) {
   const portfolio = isPortfolioCustomerContext(customerContext);
-  if (tabHref === '/customer/home') return pathname === '/customer/home' || pathname === '/customer/report-accident' || pathname === '/customer/start-claim' || pathname === '/customer/insurance-quote' || pathname === '/customer/e-challan';
+  if (tabHref === '/customer/home') return pathname === '/customer/home' || pathname === '/customer/insurance-quote' || pathname === '/customer/e-challan';
   if (tabHref === '/customer/policies') return ['/customer/policies', '/customer/policy-detail', '/customer/add-policy', '/customer/renewals'].some((route) => pathname.startsWith(route));
   if (tabHref === '/customer/vehicles') return ['/customer/vehicles', '/customer/vehicle-detail', '/customer/add-vehicle'].some((route) => pathname.startsWith(route));
-  if (tabHref === '/customer/support') return ['/customer/support', '/customer/help-faqs', '/customer/raise-support-ticket', '/customer/support-ticket-detail'].some((route) => pathname.startsWith(route));
+  if (tabHref === '/customer/claims') return ['/customer/claims', '/customer/start-claim', '/customer/report-accident', '/customer/claim-detail', '/customer/self-managed-claim', '/customer/self-managed-claim-detail', '/customer/upload-documents'].some((route) => pathname.startsWith(route));
   if (tabHref === '/customer/profile') return pathname.startsWith('/customer/profile') || pathname.startsWith('/customer/kyc') || pathname.startsWith('/customer/legal');
   if (portfolio && tabHref === '/customer/group/accounts') return pathname.startsWith('/customer/group/accounts') || pathname.startsWith('/customer/group/account-detail') || pathname.startsWith('/customer/group/add-account');
   if (portfolio && tabHref === '/customer/group/fleet') return pathname.startsWith('/customer/group/fleet') || pathname.startsWith('/customer/vehicle-detail') || pathname.startsWith('/customer/add-vehicle');
@@ -527,12 +560,17 @@ export const styles = StyleSheet.create({
   screenContentCompactTop: { paddingTop: 86 },
   screenContentLoading: { justifyContent: 'center', paddingBottom: 108 },
   fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
+  customerHeaderContentDimmer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 19, backgroundColor: 'rgba(238,247,255,0.50)' },
+  customerFixedBrandRow: { height: 58, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: palette.navy, borderBottomColor: '#12305F' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
+  customerBackButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.28)' },
   brandPressable: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
   brand: { color: palette.ink, fontSize: 21, fontWeight: '800' },
   brandLogo: { width: 150, height: 34 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.ink, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto', borderWidth: 2, borderColor: 'rgba(255,255,255,0.9)' },
+  customerBellShell: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  customerAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderColor: 'rgba(255,255,255,0.96)' },
   avatarText: { color: colors.white, fontSize: 16, fontWeight: '900' },
   header: { minHeight: 98, borderRadius: 22, padding: 16, marginBottom: 14, backgroundColor: 'rgba(255,255,255,0.88)', borderWidth: 1, borderColor: 'rgba(191,216,255,0.72)', shadowColor: '#0C4A88', shadowOpacity: 0.1, shadowRadius: 16, elevation: 3, overflow: 'hidden' },
   headerTop: { alignSelf: 'flex-start', minHeight: 27, borderRadius: 999, backgroundColor: '#F7FBFF', borderWidth: 1, borderColor: '#D6E7FA', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 8 },
@@ -577,11 +615,17 @@ export const styles = StyleSheet.create({
   navIcon: { width: 40, height: 40, borderRadius: radii.md, backgroundColor: palette.emeraldSoft, alignItems: 'center', justifyContent: 'center' },
   navLinkText: { color: colors.navy, fontSize: 15, fontWeight: '700', flex: 1 },
   bottomTabsWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 10, paddingTop: 8, backgroundColor: 'rgba(238,247,255,0.78)' },
+  customerBottomTabsWrap: { backgroundColor: palette.navy },
   bottomTabs: { minHeight: 66, backgroundColor: 'rgba(255,255,255,0.98)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 4, flexDirection: 'row', justifyContent: 'space-between', borderWidth: 1, borderColor: 'rgba(198,211,225,0.9)', shadowColor: '#17202F', shadowOpacity: 0.1, shadowRadius: 12, elevation: 5 },
+  customerBottomTabs: { backgroundColor: palette.navy, borderColor: '#12305F', shadowColor: '#020A1A', shadowOpacity: 0.22 },
   bottomTab: { flex: 1, minHeight: 50, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0 },
   bottomIconShell: { width: 35, height: 30, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent' },
+  customerBottomIconShell: { backgroundColor: 'rgba(255,255,255,0.08)' },
   bottomIconShellActive: { backgroundColor: palette.surface, shadowColor: palette.ink, shadowOpacity: 0.08, shadowRadius: 6, elevation: 1 },
+  customerBottomIconShellActive: { backgroundColor: palette.surface, borderColor: 'rgba(255,255,255,0.95)', shadowColor: '#020A1A', shadowOpacity: 0.22, shadowRadius: 7, elevation: 2 },
   bottomTabText: { color: colors.grey, fontSize: 9.5, fontWeight: '900' },
+  customerBottomTabText: { color: '#B9C7DA' },
+  customerBottomTabTextActive: { color: '#FFFFFF' },
   bottomTabTextActive: { color: colors.navy },
 });
 

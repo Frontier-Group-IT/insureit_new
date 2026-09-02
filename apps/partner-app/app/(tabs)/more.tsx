@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
+import { PartnerDisclosureRow } from '@/components/ui/partner-disclosure-row';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -34,22 +35,27 @@ export default function MoreScreen() {
     }
   }
 
+  const identityLabel = context.identity.actor_kind === 'employee'
+    ? humanize(context.identity.role)
+    : humanize(context.identity.intermediary_type);
+
   return (
     <PartnerScreen eyebrow="EXPLORE" title="More">
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open profile and registration"
         onPress={() => router.push('/profile')}
-        style={({ pressed }) => [styles.profileCard, pressed && styles.pressed]}
+        style={({ pressed }) => [styles.profileRow, pressed && styles.profilePressed]}
       >
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials(context.identity.display_name)}</Text></View>
         <View style={styles.profileBody}>
           <Text style={styles.profileName}>{context.identity.display_name}</Text>
-          <Text style={styles.profileMeta}>
-            {context.identity.actor_kind === 'employee' ? humanize(context.identity.role) : humanize(context.identity.intermediary_type)}
-          </Text>
+          <Text style={styles.profileMeta}>{identityLabel}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={17} color="#C5CCDA" />
+        <View style={styles.profileAction}>
+          <Text style={styles.profileActionText}>Profile</Text>
+          <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+        </View>
       </Pressable>
 
       {logoutError ? (
@@ -59,7 +65,7 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="Work">
-        <MenuRow icon="search-outline" title="Search all business" onPress={() => router.push('/search')} />
+        <MenuRow icon="search-outline" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
         <MenuRow icon="document-text-outline" title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
         <MenuRow icon="refresh-outline" title="Renewals" onPress={() => router.push('/renewals')} />
         <MenuRow icon="people-outline" title="Customers" onPress={() => router.push('/customers')} last />
@@ -88,7 +94,7 @@ export default function MoreScreen() {
         <PartnerButton
           label="Sign out"
           icon="log-out-outline"
-          variant="danger"
+          variant="ghost"
           onPress={() => setLogoutOpen(true)}
         />
       </View>
@@ -110,8 +116,8 @@ export default function MoreScreen() {
 function MenuSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <>
-      <PartnerSectionHeader title={title} />
-      <View style={styles.menu}>{children}</View>
+      <PartnerSectionHeader title={title} compact />
+      <View>{children}</View>
     </>
   );
 }
@@ -119,27 +125,28 @@ function MenuSection({ title, children }: { title: string; children: ReactNode }
 function MenuRow({
   icon,
   title,
+  helper,
   onPress,
   last = false,
 }: {
   icon: IconName;
   title: string;
+  helper?: string;
   onPress: () => void;
   last?: boolean;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
+    <PartnerDisclosureRow
+      label={title}
+      helper={helper}
       onPress={onPress}
-      style={({ pressed }) => [styles.row, !last && styles.rowDivider, pressed && styles.rowPressed]}
-    >
-      <View style={styles.rowIcon}><Ionicons name={icon} size={19} color={partnerTheme.colors.brand} /></View>
-      <View style={styles.rowBody}>
-        <Text style={styles.rowTitle}>{title}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={17} color="#A0A8B6" />
-    </Pressable>
+      divider={!last}
+      leading={
+        <View style={styles.rowIcon}>
+          <Ionicons name={icon} size={18} color={partnerTheme.colors.brandStrong} />
+        </View>
+      }
+    />
   );
 }
 
@@ -152,40 +159,43 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  profileCard: {
-    minHeight: 68,
+  profileRow: {
+    minHeight: 70,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
-    borderRadius: partnerTheme.radius.lg,
-    paddingHorizontal: 14,
-    backgroundColor: partnerTheme.colors.nav,
+    gap: 12,
+    paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: partnerTheme.colors.line,
   },
-  avatar: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
-  avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
-  profileBody: { flex: 1 },
-  profileName: { color: '#FFFFFF', ...partnerTheme.typography.cardTitle },
-  profileMeta: { marginTop: 3, color: '#C5CCDA', ...partnerTheme.typography.caption },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.bodyStrong },
+  profileBody: { flex: 1, minWidth: 0 },
+  profileName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.cardTitle },
+  profileMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  profileAction: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  profileActionText: { color: partnerTheme.colors.brand, ...partnerTheme.typography.label },
+  profilePressed: { backgroundColor: partnerTheme.colors.pressed },
   feedback: { marginTop: partnerTheme.spacing.md },
-  menu: {
-    overflow: 'hidden',
-    borderRadius: partnerTheme.radius.lg,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  row: {
-    minHeight: 56,
-    flexDirection: 'row',
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 13,
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
   },
-  rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  rowPressed: { backgroundColor: partnerTheme.colors.surfaceMuted },
-  rowIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  rowBody: { flex: 1, paddingVertical: 6 },
-  rowTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  logout: { marginTop: partnerTheme.spacing.lg },
-  pressed: { opacity: 0.8 },
+  logout: {
+    marginTop: partnerTheme.spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: partnerTheme.colors.line,
+    paddingTop: partnerTheme.spacing.sm,
+  },
 });

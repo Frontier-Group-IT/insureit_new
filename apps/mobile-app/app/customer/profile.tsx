@@ -277,17 +277,11 @@ export default function ProfileScreen() {
           <View style={styles.kycVaultIcon}><MaterialCommunityIcons name="shield-account-outline" size={22} color="#0B63CE" /></View>
           <View style={styles.kycVaultCopy}>
             <Text style={styles.kycVaultTitle}>Documents & KYC</Text>
-            <Text style={styles.kycVaultSub}>{documents.length ? `${documents.length} customer document${documents.length === 1 ? '' : 's'} stored safely` : 'Keep PAN, Aadhaar, GST and other KYC files ready'}</Text>
+            <Text style={styles.kycVaultSub}>{documents.length ? `${documents.length} document${documents.length === 1 ? '' : 's'} stored safely` : 'Keep PAN, Aadhaar, GST and other KYC files ready'}</Text>
           </View>
           <View style={styles.kycVaultCount}><Text style={styles.kycVaultCountText}>{documents.length}</Text></View>
           <MaterialCommunityIcons name={documentsOpen ? 'chevron-up' : 'chevron-down'} size={24} color={palette.navy} />
         </Pressable>
-
-        <View style={styles.kycVaultSummary}>
-          <View style={styles.kycMiniStat}><Text style={styles.kycMiniStatValue}>{documents.length}</Text><Text style={styles.kycMiniStatLabel}>Uploaded</Text></View>
-          <View style={styles.kycMiniStat}><MaterialCommunityIcons name="lock-check-outline" size={17} color="#12805C" /><Text style={styles.kycMiniStatLabel}>Private vault</Text></View>
-          <View style={styles.kycMiniStat}><MaterialCommunityIcons name="trash-can-outline" size={17} color="#B7791F" /><Text style={styles.kycMiniStatLabel}>Delete anytime</Text></View>
-        </View>
 
         {documentsOpen ? <>
           <View style={styles.kycUploadPanel}>

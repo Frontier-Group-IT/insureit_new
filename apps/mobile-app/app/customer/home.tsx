@@ -181,8 +181,8 @@ export default function CustomerMockupHomeScreen() {
 
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
-      <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={158} /></Pressable>
-      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell /></Pressable>
+      <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
+      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></Pressable>
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
     <ScrollView
@@ -202,8 +202,8 @@ export default function CustomerMockupHomeScreen() {
         renewalDue={renewalAttentionCount}
         claimTasks={claimAttentionCount}
         onRenewals={() => router.push('/customer/renewals' as Href)}
-        onAddVehicle={() => router.push('/customer/add-vehicle')}
-        onSupport={() => router.push('/customer/support')}
+        onQuote={() => router.push({ pathname: '/customer/insurance-quote', params: { source: 'customer_dashboard' } } as Href)}
+        onChallan={() => router.push({ pathname: '/customer/e-challan', params: { source: 'customer_dashboard' } } as Href)}
         onClaim={() => router.push('/customer/start-claim')}
       />
       <ClaimsSummaryCard
@@ -361,7 +361,7 @@ function AttentionPulseIcon() {
   );
 }
 
-function QuickActionDock({ renewalDue, claimTasks, onRenewals, onAddVehicle, onSupport, onClaim }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onAddVehicle: () => void; onSupport: () => void; onClaim: () => void }) {
+function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChallan, onClaim }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onQuote: () => void; onChallan: () => void; onClaim: () => void }) {
   return (
     <View style={styles.quickDock}>
       <View style={styles.sectionHeader}>
@@ -371,8 +371,8 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onAddVehicle, onS
       <View style={styles.quickGrid}>
         <QuickAction icon="calendar-month-outline" image={require('../../assets/brand/dashboard/dashboard-renewal.png')} label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
         <QuickAction icon="shield-plus-outline" image={require('../../assets/brand/dashboard/dashboard-start-claim.png')} label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
-        <QuickAction icon="truck-plus-outline" label="Add vehicle" tone="#EAF3FF" color="#174EA6" onPress={onAddVehicle} />
-        <QuickAction icon="headset" label="Support" tone="#E6FAFD" color="#0EAFC8" onPress={onSupport} />
+        <QuickAction icon="file-document-edit-outline" image={require('../../assets/brand/dashboard/dashboard-get-quote.png')} label="Get Quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
+        <QuickAction icon="ticket-confirmation-outline" image={require('../../assets/brand/dashboard/dashboard-echallan.png')} label="Pay Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
       </View>
     </View>
   );
@@ -496,7 +496,7 @@ function KycRequiredModal({ visible, application, reviewNotes, onStart, onDismis
 
 function formatClaimAmount(value: number) {
   const amount = Math.max(Math.round(value || 0), 0);
-  return `₹ : ${amount.toLocaleString('en-IN')}`;
+  return `₹${amount.toLocaleString('en-IN')}`;
 }
 
 function externalToPolicy(policy: ExternalPolicyRow): Policy {
@@ -572,10 +572,10 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF7FF', gap: 14, paddingHorizontal: 24 },
   error: { color: palette.navy, fontWeight: '900', textAlign: 'center' },
   retry: { color: palette.blue, fontWeight: '900', paddingVertical: 6 },
-  header: { height: 60, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: '#E1E7F0' },
+  header: { height: 58, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: palette.navy, borderBottomWidth: 1, borderBottomColor: '#12305F' },
   brand: { flex: 1, alignItems: 'flex-start', justifyContent: 'center' },
-  iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: palette.ink, borderWidth: 2, borderColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  iconCircle: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderWidth: 2, borderColor: 'rgba(255,255,255,0.96)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 },
   body: { flexGrow: 1, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 92, gap: 9 },

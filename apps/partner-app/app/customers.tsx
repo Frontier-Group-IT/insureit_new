@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerContactActions } from '@/components/ui/partner-contact-actions';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
+import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -151,7 +150,7 @@ export default function CustomersScreen() {
     <PartnerListScreen
       eyebrow="BUSINESS"
       title="Customers"
-      action={<PartnerIconButton icon="close" label="Close customers" onPress={() => router.back()} />}
+      onBack={() => router.back()}
       data={collection.rows}
       keyExtractor={(row) => row.customer_id}
       renderItem={({ item }) => (
@@ -175,32 +174,22 @@ function CustomerRow({ row, onPress }: { row: PartnerCustomerRow; onPress: () =>
   const location = [row.city, row.state].filter(Boolean).join(', ');
   const secondary = [row.customer_code, location || row.phone].filter(Boolean).join(' · ');
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`Open customer ${row.customer_name}`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.customerRow, pressed && styles.pressed]}
-    >
-      <View style={styles.avatar}><Text style={styles.avatarText}>{initials(row.customer_name)}</Text></View>
-
-      <View style={styles.customerIdentity}>
-        <View style={styles.nameLine}>
-          <Text numberOfLines={1} style={styles.customerName}>{row.customer_name}</Text>
-          {row.customer_status ? (
-            <PartnerStatusBadge label={humanize(row.customer_status)} tone={statusTone(row.customer_status)} />
-          ) : null}
+    <PartnerOperationalRow
+      title={row.customer_name}
+      subtitle={secondary || 'Customer record'}
+      detail={`${row.intermediary_code || 'Direct / unassigned'}${row.phone ? ` · ${row.phone}` : ''}`}
+      status={row.customer_status ? <PartnerStatusBadge label={humanize(row.customer_status)} tone={statusTone(row.customer_status)} /> : undefined}
+      leading={
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials(row.customer_name)}</Text>
         </View>
-        <Text numberOfLines={1} style={styles.customerCode}>{secondary || 'Customer record'}</Text>
-        <Text numberOfLines={1} style={styles.customerMeta}>
-          {row.intermediary_code || 'Direct / unassigned'}{row.phone ? ` · ${row.phone}` : ''}
-        </Text>
-      </View>
-
-      <View style={styles.customerActions}>
-        <PartnerContactActions phone={row.phone} email={row.email} compact />
-        <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
-      </View>
-    </Pressable>
+      }
+      trailing={<PartnerContactActions phone={row.phone} email={row.email} compact />}
+      onPress={onPress}
+      accessibilityLabel={`Open customer ${row.customer_name}`}
+      divider={false}
+      dense
+    />
   );
 }
 
@@ -227,33 +216,17 @@ function formatUpdatedAt(value: number | null) {
 const styles = StyleSheet.create({
   banner: { marginTop: 9 },
   inlineBanner: { marginBottom: 8 },
-  search: { marginTop: 10 },
+  search: { marginTop: 8 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
-  customerRow: {
-    minHeight: 84,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 2,
-    backgroundColor: partnerTheme.colors.surface,
-  },
-  pressed: { opacity: 0.78 },
   avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: partnerTheme.colors.brandSoft,
   },
   avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
-  customerIdentity: { flex: 1, minWidth: 0 },
-  nameLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  customerName: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  customerCode: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  customerMeta: { marginTop: 3, color: '#8A94A6', ...partnerTheme.typography.meta },
-  customerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },

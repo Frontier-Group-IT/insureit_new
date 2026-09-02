@@ -152,14 +152,16 @@ export default function AddPolicyScreen() {
     setSaving(true);
     const result = await (supabase.rpc as any)('create_customer_external_policy', payload);
     if (result.error) {
+      console.warn('Customer policy save failed', result.error.message);
       setSaving(false);
-      return setMessage(result.error.message || 'We could not save this policy. Please try again.');
+      return setMessage('We could not save this policy right now. Please try again.');
     }
     if (policyCopy) {
       const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
       if (uploadError) {
+        console.warn('Customer policy copy upload failed', uploadError);
         setSaving(false);
-        return setMessage(`Policy saved, but the policy copy could not be uploaded: ${uploadError}`);
+        return setMessage('Policy saved, but the policy copy could not be uploaded. You can add the copy again later.');
       }
     }
     setSaving(false);
@@ -331,7 +333,7 @@ function PremiumDateField({ label, value, onPress }: { label: string; value: str
 }
 
 function MoneyField({ label, icon, value, onChangeText }: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; value: string; onChangeText: (value: string) => void }) {
-  return <View style={styles.field}><Text style={styles.fieldLabel}>{label} optional</Text><View style={styles.inputShell}><MaterialCommunityIcons name={icon} size={17} color="#12805C" /><Text style={styles.moneyPrefix}>Rs.</Text><TextInput value={value} onChangeText={(next) => onChangeText(next.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#9AA7B8" style={styles.input} /></View></View>;
+  return <View style={styles.field}><Text style={styles.fieldLabel}>{label} optional</Text><View style={styles.inputShell}><MaterialCommunityIcons name={icon} size={17} color="#12805C" /><Text style={styles.moneyPrefix}>₹</Text><TextInput value={value} onChangeText={(next) => onChangeText(next.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#9AA7B8" style={styles.input} /></View></View>;
 }
 
 function PremiumCalendarModal({ target, onClose, onSelect }: { target: { label: string; value: string; onChange: (value: string) => void; autoEnd?: boolean } | null; onClose: () => void; onSelect: (value: string) => void }) {

@@ -1,8 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Easing, Image, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import Svg, { Defs, Image as SvgImage, Mask, Rect } from 'react-native-svg';
 
 const primaryLogo = require('../assets/brand/logo (2).png');
+const inverseMarkLogo = require('../assets/brand/insureit-primary-logo-clean.png');
 
 export function BrandMark({ size = 52, compact = false }: { size?: number; compact?: boolean }) {
   void compact;
@@ -13,17 +15,28 @@ export function BrandMark({ size = 52, compact = false }: { size?: number; compa
     </View>
   );
 }
-export function BrandLogo({ width = 208, style }: { width?: number; style?: StyleProp<ViewStyle> }) {
+export function BrandLogo({ width = 208, style, inverse = false }: { width?: number; style?: StyleProp<ViewStyle>; inverse?: boolean }) {
   const markSize = Math.round(width * 0.29);
   const gap = Math.max(6, Math.round(width * 0.03));
   const nameSize = Math.round(width * 0.145);
   const taglineSize = Math.max(5, Math.round(width * 0.04));
   return (
     <View style={[styles.brandLogo, { width, minHeight: markSize }, style]}>
-      <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
+      {inverse ? (
+        <Svg width={markSize} height={markSize} viewBox="0 0 404 486">
+          <Defs>
+            <Mask id="insureit-header-mark-mask" maskType="alpha">
+              <SvgImage href={inverseMarkLogo} x="0" y="0" width="404" height="486" preserveAspectRatio="xMidYMid meet" />
+            </Mask>
+          </Defs>
+          <Rect x="0" y="0" width="404" height="486" fill="#FFFFFF" mask="url(#insureit-header-mark-mask)" />
+        </Svg>
+      ) : (
+        <Image source={primaryLogo} resizeMode="contain" style={{ width: markSize, height: markSize }} />
+      )}
       <View style={[styles.brandLogoCopy, { marginLeft: gap }]}>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
-        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={[styles.brandLogoName, inverse && styles.brandLogoNameInverse, { fontSize: nameSize, lineHeight: Math.round(nameSize * 1.1) }]}>insureit</Text>
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.48} style={[styles.brandLogoTagline, inverse && styles.brandLogoTaglineInverse, { fontSize: taglineSize, lineHeight: Math.max(7, Math.round(taglineSize * 1.3)) }]}>YOUR SAFETY, OUR PROMISE</Text>
       </View>
     </View>
   );
@@ -214,7 +227,9 @@ const styles = StyleSheet.create({
   brandLogo: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center' },
   brandLogoCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   brandLogoName: { color: '#071D49', fontWeight: '900', letterSpacing: 0, includeFontPadding: false },
+  brandLogoNameInverse: { color: '#FFFFFF' },
   brandLogoTagline: { color: '#071D49', fontWeight: '900', letterSpacing: 0, includeFontPadding: false, marginTop: 1 },
+  brandLogoTaglineInverse: { color: 'rgba(255,255,255,0.82)' },
   logoShield: { backgroundColor: '#F4F8FC', borderWidth: 1, borderColor: '#C9DCF0', alignItems: 'center', justifyContent: 'center', position: 'relative' },
   logoAmberDot: { position: 'absolute', width: 5, height: 5, borderRadius: 3, right: 4, top: 5, backgroundColor: '#C98918' },
   logoWord: { color: '#071D49', fontFamily: 'serif', fontWeight: '700', includeFontPadding: false },

@@ -62,7 +62,7 @@ function Action({
       accessibilityLabel={label}
       accessibilityState={{ disabled }}
       disabled={disabled}
-      hitSlop={4}
+      hitSlop={compact ? 8 : 4}
       onPress={(event) => {
         event.stopPropagation();
         onPress();
@@ -74,7 +74,11 @@ function Action({
         disabled && styles.disabled,
       ]}
     >
-      <Ionicons name={icon} size={compact ? 16 : 18} color={disabled ? '#AAB2C0' : partnerTheme.colors.brand} />
+      <Ionicons
+        name={icon}
+        size={compact ? 15 : 18}
+        color={disabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.brandStrong}
+      />
       {!compact ? <Text style={styles.label}>{label}</Text> : null}
     </Pressable>
   );
@@ -86,7 +90,7 @@ function lastTen(value: string) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
-  compactRow: { gap: 5 },
+  compactRow: { gap: 2 },
   action: {
     flex: 1,
     minHeight: partnerTheme.control.minTouchTarget,
@@ -101,11 +105,14 @@ const styles = StyleSheet.create({
   },
   compactAction: {
     flex: 0,
-    width: partnerTheme.control.minTouchTarget,
-    height: partnerTheme.control.minTouchTarget,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    minHeight: 34,
+    borderRadius: partnerTheme.radius.pill,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
   },
   label: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  pressed: { opacity: 0.75 },
-  disabled: { opacity: 0.45 },
+  pressed: { backgroundColor: partnerTheme.colors.pressed },
+  disabled: { opacity: 0.38 },
 });

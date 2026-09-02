@@ -84,14 +84,13 @@ export default function VehicleDetailScreen() {
 
   return (
     <Screen title="Vehicle Detail" subtitle={vehicle.vehicle_no} showLogout showTitleHeader={false}>
-      <View style={[styles.heroCard, { backgroundColor: statusTone.background, borderColor: statusTone.border }]}>
-        <View style={[styles.heroAccent, { backgroundColor: statusTone.accent }]} />
+      <View style={styles.heroCard}>
         <View style={styles.heroTop}>
-          <View style={[styles.vehicleImageShell, { backgroundColor: statusTone.soft }]}>
+          <View style={styles.vehicleImageShell}>
             <Image source={vehicleImage} style={styles.vehicleImage} resizeMode="contain" />
           </View>
           <View style={styles.heroCopy}>
-            <Text style={[styles.eyebrow, { color: statusTone.accent }]}>VEHICLE DETAIL</Text>
+            <Text style={styles.eyebrow}>VEHICLE DETAIL</Text>
             <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle.vehicle_no}</Text>
             <Text style={styles.vehicleMeta} numberOfLines={2}>{[vehicle.make, vehicle.model].filter(Boolean).join(' ') || vehicle.vehicle_type || 'Vehicle'}</Text>
           </View>
@@ -102,7 +101,7 @@ export default function VehicleDetailScreen() {
           <MiniStat label="Policy" value={latestPolicy?.policy_no ?? 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
-        <View style={[styles.protectionRow, { borderTopColor: statusTone.border }]}>
+        <View style={styles.protectionRow}>
           <View style={[styles.protectionIcon, { backgroundColor: statusTone.soft }]}>
             <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={20} color={statusTone.accent} />
           </View>
@@ -110,8 +109,8 @@ export default function VehicleDetailScreen() {
             <Text style={[styles.nextLabel, { color: statusTone.accent }]}>PROTECTION STATUS</Text>
             <Text style={styles.nextTitle}>{policyState.label}</Text>
           </View>
-          {policyAction ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.compactPolicyAction, { backgroundColor: statusTone.accent }, pressed && styles.actionPressed]}>
-            <MaterialCommunityIcons name={policyAction.icon} size={14} color="#FFFFFF" />
+          {policyAction ? <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } } as any)} style={({ pressed }) => [styles.compactPolicyAction, pressed && styles.actionPressed]}>
+            <MaterialCommunityIcons name={policyAction.icon} size={14} color={palette.navy} />
             <Text style={styles.compactPolicyActionText}>{policyAction.label}</Text>
           </Pressable> : null}
         </View>
@@ -329,32 +328,31 @@ function formatDate(value?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', borderWidth: 1, borderRadius: 21, marginBottom: 10 },
-  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5 },
+  heroCard: { marginTop: 0, padding: 15, overflow: 'hidden', borderWidth: 1, borderColor: '#173B7A', borderRadius: 21, marginBottom: 10, backgroundColor: '#082F7E' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { color: palette.navy, fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
-  vehicleNo: { color: palette.navy, fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
-  vehicleMeta: { color: '#334155', fontSize: 12, fontWeight: '800', marginTop: 2 },
+  eyebrow: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900', letterSpacing: 1 },
+  vehicleNo: { color: '#FFFFFF', fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 1 },
+  vehicleMeta: { color: '#FFFFFF', fontSize: 12, fontWeight: '800', marginTop: 2 },
   companyName: { color: '#334155', fontSize: 10.5, lineHeight: 13, fontWeight: '800', marginTop: 2 },
-  vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  vehicleImageShell: { width: 50, height: 50, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F7FF' },
   vehicleImage: { width: 44, height: 32 },
-  policySummary: { flexDirection: 'row', gap: 7, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(100,120,150,.16)' },
-  protectionRow: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  policySummary: { flexDirection: 'row', gap: 7, marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)' },
+  protectionRow: { marginTop: 12, paddingTop: 11, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.22)', flexDirection: 'row', alignItems: 'center', gap: 9 },
   protectionIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   protectionCopy: { flex: 1, minWidth: 0 },
   protectionHelperRow: { marginLeft: 45, marginTop: 3 },
   nextLabel: { fontSize: 8.5, fontWeight: '900', letterSpacing: .4 },
-  nextTitle: { color: palette.navy, fontSize: 13, fontWeight: '900', marginTop: 2 },
-  nextBody: { color: '#667085', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  compactPolicyActionText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
+  nextTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', marginTop: 2 },
+  nextBody: { color: '#FFFFFF', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
+  compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF' },
+  compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
-  miniStat: { flex: 1, minHeight: 53, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.68)', borderWidth: 1, borderColor: 'rgba(100,120,150,.16)', padding: 8, justifyContent: 'center' },
+  miniStat: { flex: 1, minHeight: 53, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0', padding: 8, justifyContent: 'center' },
   miniLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   externalBadge: { paddingHorizontal: 5, paddingVertical: 1, borderRadius: 999, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#CFE0F8' },
   externalBadgeText: { color: '#315C99', fontSize: 7.5, lineHeight: 9, fontWeight: '800' },
-  miniLabel: { color: '#64748B', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
+  miniLabel: { color: '#174EA6', fontSize: 9.5, fontWeight: '800', textTransform: 'uppercase' },
   miniValue: { color: palette.navy, fontSize: 11.5, fontWeight: '900', marginTop: 4 },
   alertSection: { padding: 10, backgroundColor: '#FFFBF3', borderColor: '#E8D7B5', borderWidth: 1 },
   detailSection: { backgroundColor: '#F8FBFF', borderColor: '#D7E6FA' },

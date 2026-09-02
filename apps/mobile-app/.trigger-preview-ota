@@ -1,0 +1,4 @@
+triggered_by=chatgpt
+source_pr=1024
+source_commit=41a3e14a19ed806eb57df7bb95c713ad29e45187
+purpose=publish simplified customer Profile Documents and KYC card preview OTA

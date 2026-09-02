@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
 import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
@@ -77,8 +77,9 @@ export default function SearchScreen() {
   return (
     <PartnerScreen
       eyebrow="SEARCH"
-      title="Find across your business"
-      action={<PartnerIconButton icon="close" label="Close search" onPress={() => router.back()} />}
+      title="Search"
+      subtitle="Customers, policies and claims"
+      onBack={() => router.back()}
     >
       <PartnerSearchField
         value={query}
@@ -161,7 +162,7 @@ function SearchSection({ title, count, children }: { title: string; count: numbe
   return (
     <>
       <PartnerSectionHeader title={title} meta={String(count) + ' shown'} />
-      <View style={styles.section}>{children}</View>
+      <View>{children}</View>
     </>
   );
 }
@@ -180,22 +181,19 @@ function ResultRow({
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={'Open ' + title}
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
-    >
-      <View style={styles.icon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
-      <View style={styles.body}>
-        <View style={styles.titleLine}>
-          <Text numberOfLines={1} style={styles.title}>{title}</Text>
-          {badge}
+    <PartnerOperationalRow
+      title={title}
+      subtitle={subtitle || 'Record'}
+      status={badge}
+      leading={
+        <View style={styles.icon}>
+          <Ionicons name={icon} size={16} color={partnerTheme.colors.brandStrong} />
         </View>
-        <Text numberOfLines={1} style={styles.subtitle}>{subtitle || 'Record'}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={17} color="#9CA6B5" />
-    </Pressable>
+      }
+      onPress={onPress}
+      accessibilityLabel={'Open ' + title}
+      dense
+    />
   );
 }
 
@@ -211,28 +209,19 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
-  feedback: { marginTop: 9 },
-  section: {
-    overflow: 'hidden',
-    borderRadius: partnerTheme.radius.lg,
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
-  },
-  row: {
-    minHeight: 62,
-    flexDirection: 'row',
+  feedback: { marginTop: 8 },
+  icon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: partnerTheme.colors.line,
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
   },
-  icon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  body: { flex: 1, minWidth: 0 },
-  titleLine: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  title: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  subtitle: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  refreshing: { marginTop: 10, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
-  pressed: { backgroundColor: partnerTheme.colors.surfaceMuted },
+  refreshing: {
+    marginTop: 8,
+    color: partnerTheme.colors.inkMuted,
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+  },
 });

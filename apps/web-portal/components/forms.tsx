@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { UserPlus } from "lucide-react";
 import { FormSubmitButton } from "./form-submit-button";
+import { CustomerSearchField } from "./customer-search-field";
 import { VehicleSpecificationFields } from "./vehicle-class-capacity-fields";
 import { VehicleRegistrationFields, type VehicleRegistrationMode } from "./vehicle-registration-fields";
 import { VehicleSaveActionChooser } from "./vehicle-save-action-chooser";
@@ -35,14 +36,12 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
       <VehicleOnboardingHeader />
 
       <VehicleSection number="01" title="Vehicle Ownership" columns="six" reserveHeaderAction>
-        <SelectField
-          variant="onboarding"
+        <CustomerSearchField
           label="Customer"
           name="customer_id"
           options={customers}
           required
           defaultValue={values?.customer_id ?? ""}
-          emptyLabel="Select customer"
           labelAction={createCustomerHref ? (
             <Link
               href={createCustomerHref}
@@ -128,7 +127,7 @@ function VehicleOnboardingHeader() {
 function VehicleSection({ number, title, children, columns, reserveHeaderAction = false }: { number: string; title: string; children: ReactNode; columns: "two" | "three" | "four" | "five" | "six"; reserveHeaderAction?: boolean }) {
   const grid = columns === "two" ? "md:grid-cols-2" : columns === "three" ? "md:grid-cols-2 xl:grid-cols-3" : columns === "four" ? "md:grid-cols-2 xl:grid-cols-4" : columns === "six" ? "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5";
   const bodyPadding = reserveHeaderAction ? "px-3.5 pb-3.5 pt-[58px] sm:p-4" : "p-3.5 sm:p-4";
-  return <section className="relative overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+  return <section className={`relative ${reserveHeaderAction ? "overflow-visible" : "overflow-hidden"} rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]`}>
     <div className={`flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5 ${reserveHeaderAction ? "sm:pr-[305px]" : ""}`}>
       <div className="flex items-center gap-2.5">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9.5px] font-bold text-white">{number}</span>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FilePlus2, Files, ShieldCheck } from "lucide-react";
+import { CircleAlert, CircleCheck, FilePlus2, Files, ShieldCheck, TriangleAlert } from "lucide-react";
 
 export type VehicleLinkedPolicy = {
   id: string;
@@ -44,12 +44,6 @@ export function VehiclePolicyFooterSummary({
 
   const state = policyState(policy.end_date);
   const meta = policyMeta(policy.end_date, state);
-  const stateClass =
-    state === "ACTIVE"
-      ? "border-[#B7E4C7] bg-[#ECFDF3] text-[#16803C]"
-      : state === "DUE"
-        ? "border-[#F5D38B] bg-[#FFF8E7] text-[#A56500]"
-        : "border-[#F4B8B8] bg-[#FFF0F0] text-[#C62828]";
   const iconClass =
     state === "ACTIVE"
       ? "bg-[#ECFDF3] text-[#16803C]"
@@ -65,13 +59,13 @@ export function VehiclePolicyFooterSummary({
       <Link
         prefetch={false}
         href={`/policies/${encodeURIComponent(policy.id)}/edit`}
-        className="max-w-[190px] truncate rounded-md border border-transparent px-1.5 py-1 font-bold text-[#17203A] transition hover:border-[#D6E1EE] hover:bg-[#F4F7FB] hover:text-[#17365D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9CCE3]"
+        className="max-w-[190px] truncate rounded-md border border-[#D6E1EE] bg-[#F4F7FB] px-2 py-1 font-bold text-[#17365D] transition hover:border-[#B8C9DE] hover:bg-[#EDF3F9] hover:text-[#102A49] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B9CCE3]"
         title={`Edit policy ${policy.policy_no}`}
       >
         {policy.policy_no}
       </Link>
       <span className="hidden h-5 w-px bg-[#D8E1EC] sm:block" aria-hidden="true" />
-      <span className={`rounded-md border px-2 py-1 text-[8px] font-extrabold tracking-[0.03em] ${stateClass}`}>{state}</span>
+      <PolicyStateIcon state={state} />
       <span className="text-[9.5px] font-medium text-[#667085]">{meta}</span>
       {policyCopyId(policy) ? (
         <Link
@@ -87,6 +81,40 @@ export function VehiclePolicyFooterSummary({
         </Link>
       ) : null}
     </div>
+  );
+}
+
+function PolicyStateIcon({ state }: { state: PolicyState }) {
+  if (state === "ACTIVE") {
+    return (
+      <span
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#EAF8EF] text-[#1C8A4A]"
+        aria-label="Active"
+        title="Active"
+      >
+        <CircleCheck className="h-4 w-4" strokeWidth={2.4} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (state === "DUE") {
+    return (
+      <span
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#FFF0EA] text-[#D16A4B]"
+        aria-label="Due"
+        title="Due"
+      >
+        <TriangleAlert className="h-4 w-4" strokeWidth={2.1} aria-hidden="true" />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#FDEDED] text-[#D14343]"
+      aria-label="Expired"
+      title="Expired"
+    >
+      <CircleAlert className="h-4 w-4" strokeWidth={2.3} aria-hidden="true" />
+    </span>
   );
 }
 
