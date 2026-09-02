@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1034
-source_commit=f52d627e0084d6467ff06eefba0942c3ffdbe568
-purpose=publish customer Home INSUREIT SUPPORT reference layout preview OTA
+source_pr=1037
+source_commit=fc2fa736fef2040c29b6b1c738522e07769deb76
+purpose=publish reverted customer Home support layout preview OTA
