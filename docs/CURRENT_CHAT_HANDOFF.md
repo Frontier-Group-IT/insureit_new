@@ -6,6 +6,10 @@
 
 ## Active track
 
+## External policy claim linking
+
+**IMPLEMENTED, NOT APPLIED/DEPLOYED:** Operations claim details now resolve the claim's direct `external_policy_id` alongside ordinary `policy_id`, showing policy number, coverage dates, premium/IDV when present, and an authorized policy-copy link. New mobile external-policy uploads persist `customer_documents.external_policy_id`; older rows remain supported through `external_policies.document_storage_path`. Migration `202609030001_external_policy_document_link.sql` adds the nullable relationship and index. Web/mobile typechecks and changed-file web lint passed; deployment and migration application remain unverified.
+
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production. After explicit `deploy now` or `finish and deploy` approval, dispatch the protected production workflow with the already-successful feature-PR verification run ID and verified commit; do not create a deployment-trigger commit/PR or repeat the full gate.
 
 ## Claim process redesign — first slice implemented
@@ -14,7 +18,9 @@ Policy Onboarding OCR hardening remains an active workstream. Production portal 
 
 This is intentionally a narrow step. No claim ownership, status-transition, RLS, migration, customer post-Spot permissions, or deployment behavior was changed.
 
-**IMPLEMENTED, NOT DEPLOYED:** The follow-up visibility/recovery slice is present in the working tree. Operations now renders every matched Accident Photo/Video/document row with its own preview and actions, recognizes legacy bulk attachment labels for classification, and removes the reupload action's stuck `Sending...` state by resetting explicit submission state on success or failure. Reupload writes now surface stage/history/activity persistence errors instead of returning success-shaped responses. The mobile claim detail reads reupload activity and shows the affected document, reason, and an Upload replacement action. Web and mobile typechecks, web lint (0 errors; existing warnings), the claim multi-upload regression, and `git diff --check` passed. The slice remains uncommitted and requires the canonical PR gate before merge/deployment; no Expo OTA or APK build was run.
+**DEPLOYED / VERIFIED:** The follow-up visibility/recovery slice is merged and deployed. Operations renders every matched Accident Photo/Video/document row with its own preview and actions, recognizes legacy bulk attachment labels for classification, and removes the reupload action's stuck `Sending...` state by resetting explicit submission state on success or failure. Reupload writes surface stage/history/activity persistence errors instead of returning success-shaped responses. The mobile claim detail reads reupload activity and shows the affected document, reason, and an Upload replacement action. PR #1043 and deployment workflow `33603275421` delivered this slice.
+
+**DEPLOYED / VERIFIED:** Claim-detail server rendering was hardened in PR #1045 and follow-up PR #1050. The remaining production crash was caused by interactive client forms using the React `form action` prop with inline callback functions; these were changed to explicit `onSubmit` handlers while preserving server-action calls. PR #1050 merged as `f51d367e48df35d122b86884fa00d12ee8498412`, canonical verification run `33609915719`, and production deployment workflow `33610213675`. Authenticated browser verification now successfully renders `/claims/8864a09a-d5b0-424f-8cd4-3b7deb877583` with multi-file accident photos and unclassified bulk attachments visible.
 
 ## Active performance remediation
 
