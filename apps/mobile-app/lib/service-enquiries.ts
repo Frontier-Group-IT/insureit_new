@@ -8,6 +8,15 @@ export type GuestVerification = {
   verificationToken: string;
 };
 
+export const SERVICE_ENQUIRY_CONSENT_VERSION = '2026-09-02-v1';
+export const SERVICE_ENQUIRY_TERMS_VERSION = '2026-07-04';
+export const SERVICE_ENQUIRY_PRIVACY_VERSION = '2026-07-04';
+
+export type ServiceEnquiryConsent = {
+  consentAccepted: true;
+  whatsappOptIn: boolean;
+};
+
 export async function requestGuestEnquiryOtp(phone: string) {
   const { data, error } = await supabase.functions.invoke('guest-service-enquiry', {
     body: { action: 'request_otp', phone },
@@ -42,9 +51,18 @@ export async function submitGuestServiceEnquiry(input: {
   subject: string;
   description: string;
   details?: Record<string, unknown>;
+  consent: ServiceEnquiryConsent;
 }) {
   const { data, error } = await supabase.functions.invoke('guest-service-enquiry', {
-    body: { action: 'submit_enquiry', ...input },
+    body: {
+      action: 'submit_enquiry',
+      ...input,
+      consentAccepted: input.consent.consentAccepted,
+      consentVersion: SERVICE_ENQUIRY_CONSENT_VERSION,
+      termsVersion: SERVICE_ENQUIRY_TERMS_VERSION,
+      privacyPolicyVersion: SERVICE_ENQUIRY_PRIVACY_VERSION,
+      whatsappOptIn: input.consent.whatsappOptIn,
+    },
   });
   if (error) throw new Error(await functionErrorMessage(error, 'Could not submit your request. Please try again.'));
   if (data?.error) throw new Error(String(data.error));
@@ -61,6 +79,7 @@ export async function submitCustomerServiceEnquiry(input: {
   subject: string;
   description: string;
   details?: Record<string, unknown>;
+  consent: ServiceEnquiryConsent;
 }) {
   const { data, error } = await (supabase as any)
     .from('service_enquiries')
@@ -78,6 +97,12 @@ export async function submitCustomerServiceEnquiry(input: {
       subject: input.subject,
       description: input.description,
       details: input.details ?? {},
+      consent_accepted: input.consent.consentAccepted,
+      consent_accepted_at: new Date().toISOString(),
+      consent_version: SERVICE_ENQUIRY_CONSENT_VERSION,
+      terms_version: SERVICE_ENQUIRY_TERMS_VERSION,
+      privacy_policy_version: SERVICE_ENQUIRY_PRIVACY_VERSION,
+      whatsapp_opt_in: input.consent.whatsappOptIn,
       status: 'open',
     })
     .select('id,enquiry_no,status')

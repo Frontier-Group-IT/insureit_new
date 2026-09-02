@@ -45,6 +45,9 @@ export default function InsuranceQuoteScreen() {
   const [otp, setOtp] = useState('');
   const [challengeId, setChallengeId] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
+  const [consentAttention, setConsentAttention] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success' | 'info'; text: string } | null>(null);
   const [reference, setReference] = useState('');
@@ -91,7 +94,7 @@ export default function InsuranceQuoteScreen() {
     try {
       const result = await requestGuestEnquiryOtp(mobile);
       setChallengeId(result.challengeId);
-      setMessage({ type: 'info', text: 'OTP sent. Enter the code below.' });
+      setMessage({ type: 'info', text: 'OTP sent. Enter the 6 digit code.' });
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Could not send OTP.' });
     } finally { setBusy(false); }
@@ -117,8 +120,14 @@ export default function InsuranceQuoteScreen() {
 
   async function submit() {
     if (busy || reference) return;
+
+    if (!consentAccepted) {
+      setConsentAttention(true);
+      return setMessage({ type: 'error', text: 'Please accept the terms to continue.' });
+    }
+
     const cleanVehicle = normalizeVehicle(vehicleNo);
-    if (isNewVehicle && newVehicleDetails.trim().length < 3) return setMessage({ type: 'error', text: 'Add a short description of the new vehicle.' });
+    if (isNewVehicle && newVehicleDetails.trim().length < 3) return setMessage({ type: 'error', text: 'Enter the vehicle make or model.' });
     if (!isNewVehicle && cleanVehicle.length < 6) return setMessage({ type: 'error', text: 'Enter a valid vehicle number.' });
     if (!isSignedIn) {
       if (fullName.trim().length < 2) return setMessage({ type: 'error', text: 'Enter your full name.' });
@@ -135,6 +144,7 @@ export default function InsuranceQuoteScreen() {
 
     setBusy(true); setMessage({ type: 'info', text: 'Sending your request…' });
     try {
+      const consent = { consentAccepted: true as const, whatsappOptIn };
       const result = isSignedIn
         ? await submitCustomerServiceEnquiry({
             serviceType: 'insurance_quote',
@@ -145,6 +155,7 @@ export default function InsuranceQuoteScreen() {
             subject: `Insurance quote - ${isNewVehicle ? 'new vehicle' : cleanVehicle}`,
             description,
             details: { quoteNeed: need, newVehicle: isNewVehicle, vehicleDetails: newVehicleDetails.trim() || null, note: note.trim() || null },
+            consent,
           })
         : await submitGuestServiceEnquiry({
             challengeId,
@@ -157,10 +168,11 @@ export default function InsuranceQuoteScreen() {
             subject: `Insurance quote - ${isNewVehicle ? 'new vehicle' : cleanVehicle}`,
             description,
             details: { quoteNeed: need, newVehicle: isNewVehicle, vehicleDetails: newVehicleDetails.trim() || null, note: note.trim() || null },
+            consent,
           });
 
       setReference(result.enquiry_no);
-      setMessage({ type: 'success', text: 'Request sent. Our team will contact you shortly.' });
+      setMessage({ type: 'success', text: 'Quote request received. Our team will contact you shortly.' });
     } catch (error) {
       setMessage({ type: 'error', text: error instanceof Error ? error.message : 'Could not send your request.' });
     } finally { setBusy(false); }
@@ -179,11 +191,19 @@ export default function InsuranceQuoteScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.introCard}>
-          <View style={styles.iconCircle}><MaterialCommunityIcons name="shield-check-outline" size={25} color="#0B63CE" /></View>
-          <View style={styles.introCopy}>
-            <Text style={styles.title}>Get Quote</Text>
-            <Text style={styles.subtitle}>Share a few details. We’ll call you with the right options.</Text>
+        <View style={styles.hero}>
+          <View style={styles.heroGlow} />
+          <View style={styles.heroTop}>
+            <View style={styles.heroIcon}><MaterialCommunityIcons name="shield-check-outline" size={27} color="#0B63CE" /></View>
+            <View style={styles.heroCopy}>
+              <Text style={styles.title}>Get Insurance Quote</Text>
+              <Text style={styles.subtitle}>Share your vehicle details and we’ll help you with suitable options.</Text>
+            </View>
+          </View>
+          <View style={styles.benefits}>
+            <Benefit icon="truck-outline" label="Commercial vehicle cover" />
+            <Benefit icon="calendar-refresh-outline" label="Renewal assistance" />
+            <Benefit icon="headset" label="Expert callback" />
           </View>
         </View>
 
@@ -198,7 +218,9 @@ export default function InsuranceQuoteScreen() {
             {challengeId && !verificationToken ? <View style={styles.row}><TextInput value={otp} onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 6))} keyboardType="number-pad" maxLength={6} placeholder="6 digit OTP" placeholderTextColor="#8A94A6" style={[styles.input, styles.flex]} /><Pressable disabled={busy} onPress={() => void verifyOtp()} style={({ pressed }) => [styles.smallButton, styles.greenButton, pressed && styles.pressed, busy && styles.disabled]}><Text style={styles.smallButtonText}>Verify</Text></Pressable></View> : null}
             <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Email (optional)" placeholderTextColor="#8A94A6" style={styles.input} />
           </View>
-        ) : null}
+        ) : (
+          <View style={styles.customerStrip}><MaterialCommunityIcons name="account-check-outline" size={19} color="#0F9F6E" /><Text style={styles.customerStripText}>We’ll use your registered contact details for this request.</Text></View>
+        )}
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Vehicle</Text>
@@ -211,32 +233,44 @@ export default function InsuranceQuoteScreen() {
             <TextInput value={newVehicleDetails} onChangeText={setNewVehicleDetails} placeholder="Vehicle make / model" placeholderTextColor="#8A94A6" style={styles.input} />
           ) : (
             <>
-              <TextInput value={vehicleNo} onChangeText={(v) => { setVehicleNo(formatVehicleNo(v)); setSelectedVehicleId(''); }} autoCapitalize="characters" placeholder="Vehicle number" placeholderTextColor="#8A94A6" style={styles.input} />
+              <TextInput value={vehicleNo} onChangeText={(v) => { setVehicleNo(formatVehicleNo(v)); setSelectedVehicleId(''); }} autoCapitalize="characters" placeholder="Vehicle registration number" placeholderTextColor="#8A94A6" style={styles.input} />
               {isSignedIn && vehicles.length ? <View style={styles.chips}>{vehicles.slice(0, 5).map((vehicle) => <Pressable key={vehicle.id} onPress={() => chooseVehicle(vehicle)} style={({ pressed }) => [styles.chip, selectedVehicleId === vehicle.id && styles.chipActive, pressed && styles.pressed]}><Text style={styles.chipText}>{vehicle.vehicle_no}</Text></Pressable>)}</View> : null}
             </>
           )}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>What do you need?</Text>
+          <Text style={styles.sectionTitle}>Quote requirement</Text>
           <View style={styles.chips}>{needs.map((item) => <Pressable key={item.key} onPress={() => setNeed(item.key)} style={({ pressed }) => [styles.needChip, need === item.key && styles.needChipActive, pressed && styles.pressed]}><Text style={[styles.needText, need === item.key && styles.needTextActive]}>{item.label}</Text></Pressable>)}</View>
           <TextInput value={note} onChangeText={setNote} multiline textAlignVertical="top" placeholder="Add a note (optional)" placeholderTextColor="#8A94A6" style={[styles.input, styles.note]} />
+        </View>
+
+        <View style={[styles.consentCard, consentAttention && !consentAccepted && styles.consentCardAttention]}>
+          <ConsentRow checked={consentAccepted} onPress={() => { setConsentAccepted((v) => !v); setConsentAttention(false); }} label="I agree to the Terms of Use, Privacy Policy and authorize INSUREIT to contact me about this insurance request." />
+          <View style={styles.linkRow}><Text onPress={() => router.push(isSignedIn ? '/customer/legal/terms-of-use' : '/legal/terms-of-use')} style={styles.link}>Terms of Use</Text><Text style={styles.dot}>•</Text><Text onPress={() => router.push(isSignedIn ? '/customer/legal/privacy-policy' : '/legal/privacy-policy')} style={styles.link}>Privacy Policy</Text></View>
+          <View style={styles.divider} />
+          <ConsentRow checked={whatsappOptIn} onPress={() => setWhatsappOptIn((v) => !v)} label="Send updates about this request on WhatsApp." optional />
+          <Text style={styles.disclaimer}>Final premium, coverage and policy issuance are subject to insurer underwriting, submitted information and applicable policy terms.</Text>
         </View>
 
         {message ? <View style={[styles.message, message.type === 'error' ? styles.error : message.type === 'success' ? styles.success : styles.info]}><Text style={styles.messageText}>{message.text}</Text></View> : null}
 
         {reference ? (
-          <View style={styles.doneCard}><MaterialCommunityIcons name="check-circle" size={26} color="#0F9F6E" /><Text style={styles.doneTitle}>Request received</Text><Text style={styles.reference}>{reference}</Text><Pressable onPress={() => router.replace(isSignedIn ? '/customer/support' : source === 'guest_signup' ? '/signup' : '/login')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>{isSignedIn ? 'View in Support' : 'Done'}</Text></Pressable></View>
+          <View style={styles.doneCard}><MaterialCommunityIcons name="check-circle" size={28} color="#0F9F6E" /><Text style={styles.doneTitle}>Quote request received</Text><Text style={styles.reference}>{reference}</Text><Text style={styles.doneText}>We’ll contact you shortly.</Text><Pressable onPress={() => router.replace(isSignedIn ? '/customer/support' : source === 'guest_signup' ? '/signup' : '/login')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>{isSignedIn ? 'View in Support' : 'Done'}</Text></Pressable></View>
         ) : (
-          <Pressable disabled={busy} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed, busy && styles.disabled]}><Text style={styles.primaryButtonText}>{busy ? 'Please wait…' : 'Request Quote'}</Text></Pressable>
+          <Pressable disabled={busy} onPress={() => void submit()} style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed, busy && styles.disabled]}><Text style={styles.primaryButtonText}>{busy ? 'Sending request…' : 'Get Quote'}</Text></Pressable>
         )}
-
-        {!isSignedIn ? <Text style={styles.legal}>Your verified mobile is used only to respond to this request. <Text onPress={() => router.push('/legal/privacy-policy')} style={styles.link}>Privacy Policy</Text></Text> : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+function Benefit({ icon, label }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string }) {
+  return <View style={styles.benefit}><MaterialCommunityIcons name={icon} size={17} color="#0B63CE" /><Text style={styles.benefitText}>{label}</Text></View>;
+}
+function ConsentRow({ checked, onPress, label, optional }: { checked: boolean; onPress: () => void; label: string; optional?: boolean }) {
+  return <Pressable onPress={onPress} style={({ pressed }) => [styles.consentRow, pressed && styles.pressed]}><MaterialCommunityIcons name={checked ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color={checked ? '#0B63CE' : '#7B8798'} /><Text style={styles.consentText}>{label}{optional ? <Text style={styles.optional}> Optional</Text> : null}</Text></Pressable>;
+}
 function normalizeMobile(value: string) { return value.replace(/\D/g, '').slice(0, 10); }
 function normalizeVehicle(value: string) { return value.replace(/[^A-Za-z0-9]/g, '').toUpperCase(); }
 function formatVehicleNo(value: string) {
@@ -253,11 +287,14 @@ const styles = StyleSheet.create({
   header: { height: 62, paddingHorizontal: 10, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E4EBF3', flexDirection: 'row', alignItems: 'center' },
   back: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFD' },
   brand: { flex: 1, alignItems: 'center' }, headerSpacer: { width: 40 },
-  body: { padding: 14, gap: 10, paddingBottom: 28 },
-  introCard: { borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconCircle: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
-  introCopy: { flex: 1 }, title: { color: palette.navy, fontSize: 22, fontWeight: '900' }, subtitle: { color: '#66758A', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginTop: 3 },
+  body: { padding: 14, gap: 10, paddingBottom: 30 },
+  hero: { borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 15, overflow: 'hidden' },
+  heroGlow: { position: 'absolute', width: 170, height: 170, borderRadius: 85, right: -65, top: -85, backgroundColor: '#E8F2FF' },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heroIcon: { width: 50, height: 50, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' }, heroCopy: { flex: 1 },
+  title: { color: palette.navy, fontSize: 23, fontWeight: '900' }, subtitle: { color: '#66758A', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginTop: 3 },
+  benefits: { flexDirection: 'row', gap: 6, marginTop: 14 }, benefit: { flex: 1, minHeight: 58, borderRadius: 14, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#E3ECF7', padding: 7, alignItems: 'center', justifyContent: 'center', gap: 4 }, benefitText: { color: palette.navy, fontSize: 8.8, lineHeight: 12, textAlign: 'center', fontWeight: '800' },
   card: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 12, gap: 9 },
+  customerStrip: { borderRadius: 15, backgroundColor: '#F2FBF6', borderWidth: 1, borderColor: '#C7EAD7', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 8 }, customerStripText: { flex: 1, color: '#516477', fontSize: 10.5, fontWeight: '700' },
   sectionTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '900' },
   input: { minHeight: 46, borderRadius: 13, borderWidth: 1, borderColor: '#D8E4F0', backgroundColor: '#FAFCFF', paddingHorizontal: 11, color: palette.navy, fontSize: 12.5, fontWeight: '700' },
   row: { flexDirection: 'row', gap: 8 }, flex: { flex: 1 },
@@ -265,12 +302,13 @@ const styles = StyleSheet.create({
   segment: { flexDirection: 'row', padding: 3, borderRadius: 13, backgroundColor: '#F1F5F9' }, segmentItem: { flex: 1, minHeight: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, segmentActive: { backgroundColor: '#FFFFFF' }, segmentText: { color: '#77859A', fontSize: 11, fontWeight: '900' }, segmentTextActive: { color: '#0B63CE' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   chip: { minHeight: 32, borderRadius: 999, borderWidth: 1, borderColor: '#D8E4F0', backgroundColor: '#FFFFFF', paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' }, chipActive: { borderColor: '#91BDF1', backgroundColor: '#EEF5FF' }, chipText: { color: palette.navy, fontSize: 10, fontWeight: '900' },
-  needChip: { minHeight: 35, borderRadius: 11, borderWidth: 1, borderColor: '#D8E4F0', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFCFF' }, needChipActive: { backgroundColor: '#0B63CE', borderColor: '#0B63CE' }, needText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, needTextActive: { color: '#FFFFFF' },
-  note: { minHeight: 78, paddingTop: 10 },
+  needChip: { minHeight: 35, borderRadius: 11, borderWidth: 1, borderColor: '#D8E4F0', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFCFF' }, needChipActive: { backgroundColor: '#0B63CE', borderColor: '#0B63CE' }, needText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, needTextActive: { color: '#FFFFFF' }, note: { minHeight: 72, paddingTop: 10 },
+  consentCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 12, gap: 8 }, consentCardAttention: { borderColor: '#E26A5C', backgroundColor: '#FFF9F8' },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, consentText: { flex: 1, color: '#4F5F73', fontSize: 10.5, lineHeight: 15, fontWeight: '700' }, optional: { color: '#8A94A6', fontWeight: '800' },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginLeft: 31 }, link: { color: '#0B63CE', fontSize: 10, fontWeight: '900', textDecorationLine: 'underline' }, dot: { color: '#98A3B3', fontSize: 10 }, divider: { height: 1, backgroundColor: '#EEF2F6', marginVertical: 2 }, disclaimer: { color: '#7B8798', fontSize: 9.2, lineHeight: 13, fontWeight: '700', marginLeft: 31 },
   message: { borderRadius: 13, padding: 10, borderWidth: 1 }, error: { backgroundColor: '#FFF4F2', borderColor: '#FFD1CB' }, success: { backgroundColor: '#F1FBF6', borderColor: '#BFE8D4' }, info: { backgroundColor: '#F2F7FF', borderColor: '#CFE0FF' }, messageText: { color: '#536477', fontSize: 11, lineHeight: 15, fontWeight: '800' },
-  primaryButton: { minHeight: 52, borderRadius: 16, backgroundColor: '#0B63CE', alignItems: 'center', justifyContent: 'center' }, primaryPressed: { transform: [{ scale: 0.985 }], opacity: 0.9 }, primaryButtonText: { color: '#FFFFFF', fontSize: 14.5, fontWeight: '900' },
-  doneCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CDE7D9', padding: 16, alignItems: 'center', gap: 5 }, doneTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' }, reference: { color: '#0F7A54', fontSize: 13, fontWeight: '900' },
+  primaryButton: { minHeight: 54, borderRadius: 16, backgroundColor: '#0B63CE', alignItems: 'center', justifyContent: 'center' }, primaryPressed: { transform: [{ scale: 0.985 }], opacity: 0.9 }, primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
+  doneCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CDE7D9', padding: 16, alignItems: 'center', gap: 5 }, doneTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' }, reference: { color: '#0F7A54', fontSize: 13, fontWeight: '900' }, doneText: { color: '#66758A', fontSize: 10.5, fontWeight: '700' },
   secondaryButton: { marginTop: 7, minHeight: 40, borderRadius: 12, paddingHorizontal: 18, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, secondaryButtonText: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
-  legal: { color: '#7B8798', fontSize: 9.5, lineHeight: 14, textAlign: 'center', paddingHorizontal: 12 }, link: { color: '#0B63CE', fontWeight: '900' },
   pressed: { opacity: 0.72 }, disabled: { opacity: 0.55 },
 });
