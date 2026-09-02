@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { EmptyState, LoadingState, Screen } from '@/components/ui';
+import { LoadingState, Screen } from '@/components/ui';
 import { buildComplianceRenewals, RENEWAL_DUE_WINDOW_DAYS, type ComplianceDocumentKey } from '@/lib/compliance-renewals';
 import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts } from '@/lib/customer-context';
@@ -118,7 +118,6 @@ export default function ComplianceRenewalsScreen() {
 
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Expired documents</Text>
-        <Text style={styles.sectionHint}>{expiredItems.length} expired item{expiredItems.length === 1 ? '' : 's'}</Text>
       </View>
 
       {expiredItems.length ? expiredItems.map((item) => (
@@ -135,7 +134,14 @@ export default function ComplianceRenewalsScreen() {
             <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
           </View>
         </Pressable>
-      )) : <EmptyState title="No expired documents" body="Tracked vehicle compliance documents are not expired." />}
+      )) : (
+        <View style={styles.expiredEmptyCard}>
+          <View style={styles.expiredEmptyIcon}>
+            <MaterialCommunityIcons name="file-search-outline" size={22} color="#168F6A" />
+          </View>
+          <Text style={styles.expiredEmptyTitle}>No expired documents</Text>
+        </View>
+      )}
     </Screen>
   );
 }
@@ -188,6 +194,9 @@ const styles = StyleSheet.create({
   metricNavy: { color: palette.navy },
   notTracked: { color: '#7A8799', fontSize: 9.5, lineHeight: 13, fontWeight: '700', marginTop: 8 },
   sectionHeader: { marginTop: 13, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  expiredEmptyCard: { minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
+  expiredEmptyIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#EAF8F3', alignItems: 'center', justifyContent: 'center' },
+  expiredEmptyTitle: { flex: 1, color: palette.navy, fontSize: 15, lineHeight: 19, fontWeight: '900' },
   sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
   sectionHint: { color: '#667085', fontSize: 10, fontWeight: '700' },
   itemRow: { borderRadius: 14, borderWidth: 1, borderColor: '#E2EAF4', backgroundColor: '#FFFFFF', padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
