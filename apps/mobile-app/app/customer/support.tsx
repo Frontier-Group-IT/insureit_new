@@ -9,6 +9,16 @@ import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
 import type { Claim, SupportTicket } from '@/lib/types';
 
+type ServiceEnquiry = {
+  id: string;
+  enquiry_no: string;
+  service_type: 'insurance_quote' | 'challan_assistance';
+  subject: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  created_at: string;
+  updated_at: string;
+};
+
 const fallbackPhone = '+916264911014';
 
 const quickHelp = [
@@ -21,6 +31,7 @@ const quickHelp = [
 export default function SupportScreen() {
   const router = useRouter();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [enquiries, setEnquiries] = useState<ServiceEnquiry[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
@@ -32,12 +43,14 @@ export default function SupportScreen() {
     if (!session?.user) return router.replace('/login');
     const customer = await getCustomerForUser(session.user.id);
     if (!customer) return router.replace('/customer/home');
-    const [ticketResult, claimsResult] = await Promise.all([
-      supabase.from('support_tickets').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(6),
+    const [ticketResult, enquiryResult, claimsResult] = await Promise.all([
+      supabase.from('support_tickets').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(10),
+      (supabase as any).from('service_enquiries').select('id,enquiry_no,service_type,subject,status,created_at,updated_at').eq('customer_id', customer.id).order('updated_at', { ascending: false }).limit(10),
       supabase.from('claims').select('*').eq('customer_id', customer.id).order('updated_at', { ascending: false }),
     ]);
-    if (ticketResult.error) setMessage('Support tickets could not be loaded right now. Please try again shortly.');
+    if (ticketResult.error || enquiryResult.error) setMessage('Your support activity could not be loaded right now. Please try again shortly.');
     setTickets(ticketResult.data ?? []);
+    setEnquiries((enquiryResult.data ?? []) as ServiceEnquiry[]);
     setClaims(claimsResult.data ?? []);
     setLoading(false);
   }, [router]);
@@ -52,6 +65,12 @@ export default function SupportScreen() {
     if (!query) return tickets;
     return tickets.filter((ticket) => `${ticket.ticket_no} ${ticket.subject} ${ticket.category}`.toLowerCase().includes(query));
   }, [search, tickets]);
+
+  const filteredEnquiries = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return enquiries;
+    return enquiries.filter((item) => `${item.enquiry_no} ${item.subject} ${item.service_type}`.toLowerCase().includes(query));
+  }, [enquiries, search]);
 
   if (loading) return <Screen title="Support"><LoadingState label="Loading support" /></Screen>;
 
@@ -99,17 +118,27 @@ export default function SupportScreen() {
       </View>
 
       <View style={styles.sectionTop}>
-        <View><Text style={styles.sectionEyebrow}>Your activity</Text><Text style={styles.sectionTitle}>Recent support tickets</Text></View>
+        <View><Text style={styles.sectionEyebrow}>Your activity</Text><Text style={styles.sectionTitle}>Requests & tickets</Text></View>
         <Pressable accessibilityRole="button" onPress={() => router.push('/customer/raise-support-ticket')} style={styles.raiseSmall}><MaterialCommunityIcons name="plus" size={16} color="#FFFFFF" /><Text style={styles.raiseSmallText}>Raise ticket</Text></Pressable>
       </View>
 
-      {filteredTickets.length ? filteredTickets.map((ticket) => (
-        <Pressable key={ticket.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/support-ticket-detail', params: { id: ticket.id } })} style={styles.ticketCard}>
+      {filteredEnquiries.map((item) => (
+        <Pressable key={item.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/service-enquiry-detail', params: { id: item.id } })} style={({ pressed }) => [styles.ticketCard, pressed && styles.cardPressed]}>
+          <View style={[styles.ticketIcon, { backgroundColor: item.service_type === 'insurance_quote' ? '#EEF5FF' : '#EAF9F7' }]}><MaterialCommunityIcons name={item.service_type === 'insurance_quote' ? 'file-document-edit-outline' : 'ticket-confirmation-outline'} size={20} color={item.service_type === 'insurance_quote' ? '#0B63CE' : '#0F9F9A'} /></View>
+          <View style={styles.ticketCopy}><View style={styles.ticketTitleRow}><Text style={styles.ticketNo}>{item.enquiry_no}</Text><View style={[styles.ticketStatus, { backgroundColor: ticketTone(item.status).soft }]}><Text style={[styles.ticketStatusText, { color: ticketTone(item.status).accent }]}>{statusLabel(item.status)}</Text></View></View><Text style={styles.ticketSubject} numberOfLines={1}>{item.service_type === 'insurance_quote' ? 'Insurance Quote' : 'Challan Assistance'}</Text><Text style={styles.ticketMeta}>{formatDate(item.updated_at ?? item.created_at)}</Text></View>
+          <MaterialCommunityIcons name="chevron-right" size={21} color={palette.slate} />
+        </Pressable>
+      ))}
+
+      {filteredTickets.map((ticket) => (
+        <Pressable key={ticket.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/support-ticket-detail', params: { id: ticket.id } })} style={({ pressed }) => [styles.ticketCard, pressed && styles.cardPressed]}>
           <View style={[styles.ticketIcon, { backgroundColor: ticketTone(ticket.status).soft }]}><MaterialCommunityIcons name={categoryIcon(ticket.category)} size={20} color={ticketTone(ticket.status).accent} /></View>
           <View style={styles.ticketCopy}><View style={styles.ticketTitleRow}><Text style={styles.ticketNo}>{ticket.ticket_no}</Text><View style={[styles.ticketStatus, { backgroundColor: ticketTone(ticket.status).soft }]}><Text style={[styles.ticketStatusText, { color: ticketTone(ticket.status).accent }]}>{statusLabel(ticket.status)}</Text></View></View><Text style={styles.ticketSubject} numberOfLines={1}>{ticket.subject}</Text><Text style={styles.ticketMeta}>{formatDate(ticket.updated_at ?? ticket.created_at)}</Text></View>
           <MaterialCommunityIcons name="chevron-right" size={21} color={palette.slate} />
         </Pressable>
-      )) : <EmptyState title={search ? 'No matching tickets' : 'No support tickets yet'} body={search ? 'Try a different ticket number or topic.' : 'Raise a ticket whenever you need help with a claim or policy.'} />}
+      ))}
+
+      {!filteredEnquiries.length && !filteredTickets.length ? <EmptyState title={search ? 'No matching activity' : 'No support activity yet'} body={search ? 'Try a different request number or topic.' : 'Your quote, challan and support requests will appear here.'} /> : null}
 
       <View style={styles.contactCard}>
         <View style={styles.contactIcon}><MaterialCommunityIcons name="phone-in-talk-outline" size={21} color={roleTheme.customer.accent} /></View>
@@ -134,6 +163,6 @@ const styles = StyleSheet.create({
   searchBox: { height: 50, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 10 }, searchInput: { flex: 1, color: palette.ink, fontSize: 12.5, fontWeight: '700' }, searchFaqButton: { width: 31, height: 31, borderRadius: 10, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' },
   quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginBottom: 14 }, quickTile: { width: '48.7%', minHeight: 123, borderRadius: 17, padding: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4' }, quickIcon: { width: 37, height: 37, borderRadius: 12, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }, quickTitle: { color: palette.ink, fontSize: 12, fontWeight: '900', marginTop: 7 }, quickBody: { color: palette.slate, fontSize: 9.8, lineHeight: 13, fontWeight: '700', marginTop: 2, paddingRight: 10 }, quickChevron: { position: 'absolute', right: 8, bottom: 8 },
   sectionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }, sectionEyebrow: { color: palette.slate, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: .4 }, sectionTitle: { color: palette.navy, fontSize: 15.5, fontWeight: '900', marginTop: 2 }, raiseSmall: { minHeight: 33, borderRadius: 10, backgroundColor: roleTheme.customer.accent, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 3 }, raiseSmallText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
-  ticketCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 11, marginBottom: 8 }, ticketIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, ticketCopy: { flex: 1, minWidth: 0 }, ticketTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }, ticketNo: { color: palette.navy, fontSize: 11.5, fontWeight: '900' }, ticketStatus: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }, ticketStatusText: { fontSize: 8.5, fontWeight: '900' }, ticketSubject: { color: palette.ink, fontSize: 11.5, fontWeight: '800', marginTop: 3 }, ticketMeta: { color: palette.slate, fontSize: 9.8, fontWeight: '700', marginTop: 2 },
+  ticketCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 11, marginBottom: 8 }, ticketIcon: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, ticketCopy: { flex: 1, minWidth: 0 }, ticketTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }, ticketNo: { color: palette.navy, fontSize: 11.5, fontWeight: '900' }, ticketStatus: { borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 }, ticketStatusText: { fontSize: 8.5, fontWeight: '900' }, ticketSubject: { color: palette.ink, fontSize: 11.5, fontWeight: '800', marginTop: 3 }, ticketMeta: { color: palette.slate, fontSize: 9.8, fontWeight: '700', marginTop: 2 }, cardPressed: { opacity: 0.72 },
   contactCard: { flexDirection: 'row', alignItems: 'center', gap: 9, backgroundColor: '#F8FCFF', borderWidth: 1, borderColor: '#CFE0FF', borderRadius: 17, padding: 12, marginTop: 5 }, contactIcon: { width: 39, height: 39, borderRadius: 13, backgroundColor: '#E8F8F0', alignItems: 'center', justifyContent: 'center' }, contactCopy: { flex: 1 }, contactTitle: { color: palette.ink, fontSize: 12.5, fontWeight: '900' }, contactBody: { color: palette.slate, fontSize: 10, lineHeight: 14, fontWeight: '700', marginTop: 2 }, callButton: { minHeight: 33, borderRadius: 10, backgroundColor: roleTheme.customer.accent, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }, callButtonText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' }, claimHint: { color: palette.slate, fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 8, textAlign: 'center' },
 });
