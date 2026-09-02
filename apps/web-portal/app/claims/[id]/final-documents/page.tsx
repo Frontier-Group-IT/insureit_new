@@ -4,7 +4,7 @@ import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shel
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
 import { createServerSupabaseClient } from "@/lib/auth-server";
-import { operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
+import { type ClaimStatus } from "@/lib/claim-workflow";
 
 type ClaimDetail = {
   id: string;
@@ -57,8 +57,7 @@ export default async function FinalDocumentsPage({ params }: { params: Promise<{
 
   if (error || !claim) notFound();
 
-  const queue = operationsQueueForStatus(claim.current_status);
-  const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
+  const backHref = "/claims";
   const title = `Final Documents - ${claim.claim_no}${claim.insurer_claim_no ? ` / ${claim.insurer_claim_no}` : ""}`;
   const rows: FinalDocumentRowV2[] = finalDocumentDefinitions.map((document, index) => {
     const uploaded = latestActiveDocument(documents ?? [], document.type);

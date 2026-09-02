@@ -4,46 +4,42 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
-import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
+import { isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
 
 type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string; mode?: string };
 const allowedPageSizes = [5, 10, 20, 50, 100];
-const customerJourneyStages = [
-  { key: "loss-report", label: "Loss Report", statuses: ["Accident Reported"] as ClaimStatus[] },
-  { key: "spot-intimation", label: "Spot Intimation", statuses: ["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Initial Documents Verified", "Documents Submitted", "Documents Pending"] as ClaimStatus[] },
-  { key: "spot-surveyor-assigned", label: "Spot Surveyor Assigned", statuses: ["Surveyor Appointed"] as ClaimStatus[] },
-  { key: "spot-survey-completed", label: "Spot Survey Completed", statuses: ["Vehicle Inspected"] as ClaimStatus[] },
-  { key: "final-documents", label: "Final Documents", statuses: ["Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified"] as ClaimStatus[] },
-  { key: "claim-intimation", label: "Claim Intimation", statuses: ["Claim Intimated", "Claim Intimation"] as ClaimStatus[] },
-  { key: "final-surveyor", label: "Final Surveyor", statuses: ["Final Surveyor Details", "Survey Status", "Survey Done"] as ClaimStatus[] },
-  { key: "work-approval", label: "Work Approval", statuses: ["Work Approval Status", "Work Approval Received", "Estimate Submitted", "Approval Pending"] as ClaimStatus[] },
-  { key: "under-repair", label: "Under Repair", statuses: ["Under Repair", "Repair Done", "Repair Started", "Repair Completed"] as ClaimStatus[] },
-  { key: "ri-stage", label: "RI Stage", statuses: ["RA Intimation", "RA Intimation Done"] as ClaimStatus[] },
-  { key: "do-stage", label: "DO Stage", statuses: ["DO Status", "DO Submitted"] as ClaimStatus[] },
-  { key: "vehicle-release", label: "Vehicle Release", statuses: ["Final Bill Submitted"] as ClaimStatus[] },
-  { key: "payment-advice-received", label: "Payment Advice Received", statuses: ["Payment Stage", "Claim Completion In Progress", "Settlement Under Process"] as ClaimStatus[] },
-  { key: "journey-complete", label: "Journey Complete", statuses: ["Claim Complete", "Settled", "Closed"] as ClaimStatus[] },
+const workflowStages = [
+  { key: "spot-intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"] as ClaimStatus[] },
+  { key: "spot-status", label: "Spot Status", statuses: ["Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected"] as ClaimStatus[] },
+  { key: "claim-intimation", label: "Claim Intimation", statuses: ["Spot Survey Completed", "Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation"] as ClaimStatus[] },
+  { key: "work-approval", label: "Work Approval", statuses: ["Estimate Submitted", "Approval Pending", "Work Approval Status", "Work Approval Received"] as ClaimStatus[] },
+  { key: "repair-ri", label: "Repair & RI", statuses: ["Final Surveyor Details", "Survey Status", "Survey Done", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation", "RA Intimation Done"] as ClaimStatus[] },
+  { key: "billing", label: "Billing", statuses: ["Final Bill Submitted"] as ClaimStatus[] },
+  { key: "delivery-order", label: "Delivery Order", statuses: ["DO Status", "DO Submitted"] as ClaimStatus[] },
+  { key: "vehicle-delivery", label: "Vehicle Delivery", statuses: ["Claim Complete"] as ClaimStatus[] },
+  { key: "payment-encashment", label: "Payment Encashment", statuses: ["Payment Stage", "Claim Completion In Progress", "Settlement Under Process", "Settled", "Closed"] as ClaimStatus[] },
 ] as const;
 
 export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: QueueClaimRow[]; initialParams: SearchParams; loadError: string | null }) {
   const [query, setQuery] = useState(initialParams.q ?? "");
   const [selectedStatus, setSelectedStatus] = useState(initialParams.status && initialParams.status !== "all" ? initialParams.status : "");
+  const [selectedStage, setSelectedStage] = useState(initialParams.journey ?? "");
   const [page, setPage] = useState(Math.max(1, Number(initialParams.page ?? "1") || 1));
   const [activeMode, setActiveMode] = useState<"internal" | "external">(initialParams.mode === "external" ? "external" : "internal");
   const requestedPageSize = Number(initialParams.pageSize ?? "10") || 10;
   const [pageSize, setPageSize] = useState(allowedPageSizes.includes(requestedPageSize) ? requestedPageSize : 10);
-  const selectedJourney = customerJourneyForKey(initialParams.journey);
+  const selectedJourney = workflowStages.find((stage) => stage.key === selectedStage);
   const normalized = query.trim().toLowerCase();
   const visibleRows = useMemo(() => rows.filter((claim) => {
     const process = operationsQueueForStatus(claim.current_status)?.label;
     const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, process, claim.customers?.company_name, claim.customers?.contact_name, claim.customers?.phone, claim.vehicles?.vehicle_no, claim.vehicles?.make, claim.vehicles?.model, claim.policies?.policy_no, claim.insurance_companies?.name, claim.assignee?.full_name].filter(Boolean).join(" ").toLowerCase();
     return matchesQueue(claim.current_status, initialParams.queue) && (!selectedJourney || selectedJourney.statuses.includes(claim.current_status)) && (!selectedStatus || claim.current_status === selectedStatus) && (!normalized || haystack.includes(normalized));
   }), [initialParams.queue, normalized, rows, selectedJourney, selectedStatus]);
-  useEffect(() => { setPage(1); }, [query, selectedStatus, pageSize, activeMode]);
+  useEffect(() => { setPage(1); }, [query, selectedStage, selectedStatus, pageSize, activeMode]);
   useEffect(() => {
     const params = new URLSearchParams();
     if (initialParams.queue) params.set("queue", initialParams.queue);
-    if (initialParams.journey) params.set("journey", initialParams.journey);
+    if (selectedStage) params.set("journey", selectedStage);
     if (activeMode === "external") params.set("mode", activeMode);
     if (query.trim()) params.set("q", query.trim());
     if (selectedStatus) params.set("status", selectedStatus);
@@ -51,7 +47,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     if (pageSize !== 10) params.set("pageSize", String(pageSize));
     const nextUrl = `/claims${params.size ? `?${params.toString()}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
-  }, [activeMode, initialParams.journey, initialParams.queue, page, pageSize, query, selectedStatus]);
+  }, [activeMode, initialParams.journey, initialParams.queue, page, pageSize, query, selectedStage, selectedStatus]);
 
   const internalRows = visibleRows.filter((claim) => !isExternalClaim(claim));
   const externalRows = visibleRows.filter(isExternalClaim).sort((left, right) => Number(right.assistance_status === "requested") - Number(left.assistance_status === "requested"));
@@ -59,10 +55,10 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   const assistanceRequested = externalRows.filter((claim) => claim.assistance_status === "requested").length;
   return <>
     <div className="mb-2 grid grid-cols-[145px_1fr] items-center gap-3 max-lg:grid-cols-1">
-      <div><p className="whitespace-nowrap text-[12px] font-medium leading-none text-[#071D49]">Total Claims <span className="text-[11px] font-normal text-[#5C6878]">(All Stages)</span></p><p className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#003A83]">{visibleRows.length}</p></div>
+      <div><p className="whitespace-nowrap text-[12px] font-medium leading-none text-[#071D49]">Total {activeMode === "external" ? "External" : "Internal"} Claims <span className="text-[11px] font-normal text-[#5C6878]">(All claim stages)</span></p><p className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#003A83]">{activeRows.length}</p></div>
       <form onSubmit={(event) => event.preventDefault()} className="flex items-center gap-2 max-md:flex-col max-md:items-stretch">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer, vehicle no., claim no., policy no., control no." aria-label="Search claims" className="h-10 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100" />
-        <select value={selectedStatus || "all"} onChange={(event) => setSelectedStatus(event.target.value === "all" ? "" : event.target.value)} aria-label="Filter by status" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All statuses</option>{claimStatuses.map((status) => <option key={status} value={status}>{status}</option>)}</select>
+        <select value={selectedStage || "all"} onChange={(event) => { setSelectedStage(event.target.value === "all" ? "" : event.target.value); setSelectedStatus(""); }} aria-label="Filter by claim stage" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All claim stages</option>{workflowStages.map((stage) => <option key={stage.key} value={stage.key}>{stage.label}</option>)}</select>
       </form>
     </div>
     <nav aria-label="Claim type" className="mb-3 flex items-center gap-1 rounded-xl border border-[#D8E3F2] bg-[#F5F8FC] p-1">
@@ -111,7 +107,6 @@ function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeCh
   </>;
 }
 
-function customerJourneyForKey(key?: string) { return customerJourneyStages.find((stage) => stage.key === key); }
 function matchesQueue(status: ClaimStatus, queue?: string) {
   if (!queue) return true;
   const operationalQueue = operationsQueueForKey(queue);
