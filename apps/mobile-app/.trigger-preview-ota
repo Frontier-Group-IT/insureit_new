@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1037
-source_commit=fc2fa736fef2040c29b6b1c738522e07769deb76
-purpose=publish reverted customer Home support layout preview OTA
+source_pr=1036
+source_commit=47fde062ba98a7c3d0fa13cb81720f5989b76560
+purpose=publish customer navy status bar header preview OTA
