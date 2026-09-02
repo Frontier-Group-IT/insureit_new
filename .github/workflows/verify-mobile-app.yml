@@ -83,6 +83,9 @@ jobs:
       - name: Mobile lint
         run: npm run lint:mobile
 
+      - name: Customer notification bell panel regression
+        run: node apps/mobile-app/scripts/customer-notification-panel-regression.mjs
+
       - name: Build Expo web review export
         run: npm run build:mobile:web
 
