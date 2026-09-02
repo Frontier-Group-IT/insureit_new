@@ -7,7 +7,7 @@ import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { AuthExperience, SignupPromptCard } from '@/components/auth-experience';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
-import { routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
+import { getRestoredSession, routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
 
 const countryCode = '+91';
 const termsHref = '/legal/terms-of-use' as Href;
@@ -21,8 +21,28 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [restoringSession, setRestoringSession] = useState(true);
   const opacity = useRef(new Animated.Value(1)).current;
   const inputPulse = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let active = true;
+    async function restoreExistingSession() {
+      try {
+        const session = await getRestoredSession();
+        if (!active || !session?.user) return;
+        await routeSignedInUser(session.user, router);
+      } catch {
+        // Keep the login screen available when restoration is uncertain.
+      } finally {
+        if (active) setRestoringSession(false);
+      }
+    }
+    void restoreExistingSession();
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -34,6 +54,8 @@ export default function LoginScreen() {
     loop.start();
     return () => loop.stop();
   }, [inputPulse]);
+
+  if (restoringSession) return null;
 
   const normalizedMobile = normalizeMobile(mobile);
   const fullPhone = `${countryCode}${normalizedMobile}`;

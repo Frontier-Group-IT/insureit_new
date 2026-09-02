@@ -12,7 +12,7 @@ export default function IndexScreen() {
   useEffect(() => {
     async function load() {
       try {
-        const session = await withTimeout(getRestoredSession(), 6000);
+        const session = await withTimeout(getRestoredSession(), 10000);
         if (session?.user) {
           await withTimeout(routeSignedInUser(session.user, router), 12000);
         } else {
