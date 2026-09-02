@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
 import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
@@ -28,6 +29,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   const [query, setQuery] = useState(initialParams.q ?? "");
   const [selectedStatus, setSelectedStatus] = useState(initialParams.status && initialParams.status !== "all" ? initialParams.status : "");
   const [page, setPage] = useState(Math.max(1, Number(initialParams.page ?? "1") || 1));
+  const [externalPage, setExternalPage] = useState(1);
   const requestedPageSize = Number(initialParams.pageSize ?? "10") || 10;
   const [pageSize, setPageSize] = useState(allowedPageSizes.includes(requestedPageSize) ? requestedPageSize : 10);
   const selectedJourney = customerJourneyForKey(initialParams.journey);
@@ -37,7 +39,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, process, claim.customers?.company_name, claim.customers?.contact_name, claim.customers?.phone, claim.vehicles?.vehicle_no, claim.vehicles?.make, claim.vehicles?.model, claim.policies?.policy_no, claim.insurance_companies?.name, claim.assignee?.full_name].filter(Boolean).join(" ").toLowerCase();
     return matchesQueue(claim.current_status, initialParams.queue) && (!selectedJourney || selectedJourney.statuses.includes(claim.current_status)) && (!selectedStatus || claim.current_status === selectedStatus) && (!normalized || haystack.includes(normalized));
   }), [initialParams.queue, normalized, rows, selectedJourney, selectedStatus]);
-  useEffect(() => { setPage(1); }, [query, selectedStatus, pageSize]);
+  useEffect(() => { setPage(1); setExternalPage(1); }, [query, selectedStatus, pageSize]);
   useEffect(() => {
     const params = new URLSearchParams();
     if (initialParams.queue) params.set("queue", initialParams.queue);
@@ -50,6 +52,9 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
   }, [initialParams.journey, initialParams.queue, page, pageSize, query, selectedStatus]);
 
+  const internalRows = visibleRows.filter((claim) => !isExternalClaim(claim));
+  const externalRows = visibleRows.filter(isExternalClaim).sort((left, right) => Number(right.assistance_status === "requested") - Number(left.assistance_status === "requested"));
+  const assistanceRequested = externalRows.filter((claim) => claim.assistance_status === "requested").length;
   return <>
     <div className="mb-2 grid grid-cols-[145px_1fr] items-center gap-3 max-lg:grid-cols-1">
       <div><p className="whitespace-nowrap text-[12px] font-medium leading-none text-[#071D49]">Total Claims <span className="text-[11px] font-normal text-[#5C6878]">(All Stages)</span></p><p className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#003A83]">{visibleRows.length}</p></div>
@@ -59,8 +64,18 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
       </form>
     </div>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
-    <LocalClaimQueueTable rows={visibleRows} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+    <ClaimSection title="Internal claims" description="Claims actively managed by the Operations team." count={internalRows.length} tone="primary">
+      <LocalClaimQueueTable rows={internalRows} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+    </ClaimSection>
+    <ClaimSection title="External claims" description={assistanceRequested ? `${assistanceRequested} customer assistance request${assistanceRequested === 1 ? "" : "s"} require attention.` : "Customer-managed claims remain here until assistance is requested."} count={externalRows.length} tone="secondary" assistanceRequested={assistanceRequested}>
+      <LocalClaimQueueTable rows={externalRows} page={externalPage} pageSize={pageSize} onPageChange={setExternalPage} onPageSizeChange={setPageSize} />
+    </ClaimSection>
   </>;
+}
+
+function ClaimSection({ title, description, count, tone, assistanceRequested = 0, children }: { title: string; description: string; count: number; tone: "primary" | "secondary"; assistanceRequested?: number; children: ReactNode }) {
+  const sectionClass = tone === "primary" ? "border-[#D8E3F2] bg-white" : assistanceRequested ? "border-amber-200 bg-amber-50/35" : "border-[#E1E7F0] bg-[#FBFCFE]";
+  return <section className={`mt-4 overflow-hidden rounded-xl border ${sectionClass}`}><div className="flex flex-wrap items-center justify-between gap-2 border-b border-inherit px-3 py-2.5"><div><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><p className="mt-0.5 text-[11px] text-[#5C6878]">{description}</p></div><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
 }
 
 function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeChange }: { rows: QueueClaimRow[]; page: number; pageSize: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
@@ -101,6 +116,7 @@ function matchesQueue(status: ClaimStatus, queue?: string) {
   if (queue === "closed") return terminalClaimStatuses.includes(status);
   return true;
 }
+function isExternalClaim(claim: QueueClaimRow) { return claim.claim_service_mode === "self_managed"; }
 function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });

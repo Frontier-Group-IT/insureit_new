@@ -45,7 +45,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   if (accessibleCustomerIds === null || accessibleCustomerIds.length) {
     let request = admin
       .from("claims")
-      .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
+      .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, claim_service_mode, assistance_status, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
       .order("updated_at", { ascending: false });
     if (accessibleCustomerIds !== null) request = request.in("customer_id", accessibleCustomerIds);
     const result = await request.returns<QueueClaimRow[]>();
