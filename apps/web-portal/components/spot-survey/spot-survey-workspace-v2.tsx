@@ -7,7 +7,7 @@ import { RequestReuploadButton } from "./request-reupload-button";
 import { SurveyDoneButton } from "./survey-done-button";
 import { SurveyorDeputationForm } from "./surveyor-deputation-form";
 import { VerificationActionButton } from "./verification-action-button";
-import { classifySpotSurveyAttachment } from "@/app/claims/[id]/spot-survey-actions";
+import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
 
 export type SpotSurveyClaim = {
   id: string;
@@ -154,7 +154,7 @@ function UnclassifiedAttachments({ claimId, documents }: { claimId: string; docu
       </div>
       <div className="mt-3 space-y-2">
         {documents.map((document) => (
-          <form key={document.id} action={async (formData) => { await classifySpotSurveyAttachment(formData); }} className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2">
+          <form key={document.id} action={classifySpotSurveyAttachmentForm} className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2">
             <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#071D49]">{document.file_name}</span>
             {document.signedUrl ? <Link href={document.signedUrl} target="_blank" className="text-[11px] font-semibold text-[#174EA6]">Preview</Link> : null}
             <input type="hidden" name="claimId" value={claimId} />

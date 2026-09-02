@@ -99,8 +99,8 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   const signedDocs: SpotSurveyDocument[] = (documents ?? []).filter(Boolean).map((document) => ({
     ...document,
-    document_type: document.document_type?.trim() || "Unclassified Spot Attachment",
-    file_name: document.file_name?.trim() || "Unnamed claim document",
+    document_type: cleanText(document.document_type) || "Unclassified Spot Attachment",
+    file_name: cleanText(document.file_name) || "Unnamed claim document",
     signedUrl: `/claim-documents/${document.id}/open`
   }));
 
@@ -126,7 +126,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
-  const queue = operationsQueueForStatus(claimForVerification.current_status);
+  const queue = operationsQueueForStatus(cleanText(claimForVerification.current_status));
   const backHref = queue ? `/claims?queue=${queue.key}` : "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
@@ -153,4 +153,8 @@ function verificationTypeFromDocument(documentType: string): "rc" | "insurance" 
   if (normalized.includes("registration") || normalized.includes("rc")) return "rc";
   if (normalized.includes("policy") || normalized.includes("insurance")) return "insurance";
   return "document";
+}
+
+function cleanText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
 }
