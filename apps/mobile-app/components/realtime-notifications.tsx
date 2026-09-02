@@ -182,6 +182,7 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   const panelTranslateY = useRef(new Animated.Value(-8)).current;
   const [panelMessage, setPanelMessage] = useState('');
   const [panelNotifications, setPanelNotifications] = useState<Notification[]>([]);
+  const [panelFilter, setPanelFilter] = useState<'all' | 'claims' | 'policy' | 'vehicle'>('all');
   const customerMode = pathname.startsWith('/customer');
 
   async function loadCustomerNotifications() {
@@ -282,6 +283,9 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   }
 
   const panelUnreadCount = panelNotifications.filter((item) => item.status === 'unread').length;
+  const filteredPanelNotifications = panelFilter === 'all'
+    ? panelNotifications
+    : panelNotifications.filter((item) => notificationCategory(item) === panelFilter);
 
   return (
     <>
@@ -314,6 +318,27 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                 <Text style={styles.notificationPanelTitle}>Notifications</Text>
                 {panelUnreadCount > 0 ? <Text style={styles.notificationPanelCount}>{panelUnreadCount} unread</Text> : null}
               </View>
+              <View style={styles.notificationFilterBar}>
+                {([
+                  ['all', 'All'],
+                  ['claims', 'Claims'],
+                  ['policy', 'Policy'],
+                  ['vehicle', 'Vehicle'],
+                ] as const).map(([value, label]) => {
+                  const active = panelFilter === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setPanelFilter(value)}
+                      style={[styles.notificationFilterChip, active && styles.notificationFilterChipActive]}
+                    >
+                      <Text style={[styles.notificationFilterText, active && styles.notificationFilterTextActive]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
 
               {panelLoading ? (
                 <View style={styles.notificationSkeletonWrap}>
@@ -331,9 +356,9 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                 <View style={styles.notificationPanelState}>
                   <Text style={styles.notificationPanelStateText}>{panelMessage}</Text>
                 </View>
-              ) : !panelNotifications.length ? (
+              ) : !filteredPanelNotifications.length ? (
                 <View style={styles.notificationPanelState}>
-                  <Text style={styles.notificationPanelStateText}>No notifications yet.</Text>
+                  <Text style={styles.notificationPanelStateText}>{panelFilter === "all" ? "No notifications yet." : `No ${panelFilter} notifications yet.`}</Text>
                 </View>
               ) : (
                 <ScrollView
@@ -341,7 +366,7 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                 >
-                  {panelNotifications.map((notification, index) => {
+                  {filteredPanelNotifications.map((notification, index) => {
                     const unread = notification.status === 'unread';
                     return (
                       <Pressable
@@ -352,7 +377,7 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                           styles.notificationPanelRow,
                           unread && styles.notificationPanelRowUnread,
                           pressed && styles.notificationPanelRowPressed,
-                          index === panelNotifications.length - 1 && styles.notificationPanelRowLast,
+                          index === filteredPanelNotifications.length - 1 && styles.notificationPanelRowLast,
                         ]}
                       >
                         <View style={styles.notificationPanelCopy}>
@@ -379,6 +404,14 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
       ) : null}
     </>
   );
+}
+
+function notificationCategory(notification: Notification): 'claims' | 'policy' | 'vehicle' | 'other' {
+  if (notification.claim_id) return 'claims';
+  const text = `${notification.title ?? ''} ${notification.message ?? ''}`.toLowerCase();
+  if (/\b(policy|premium|renewal|insurance|endorsement|insurer)\b/.test(text)) return 'policy';
+  if (/\b(vehicle|registration|rc\b|puc\b|fitness|permit|challan)\b/.test(text)) return 'vehicle';
+  return 'other';
 }
 
 function formatPanelNotificationTime(value?: string) {
@@ -443,6 +476,11 @@ const styles = StyleSheet.create({
   notificationPanelHeader: { minHeight: 44, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D9E5F2' },
   notificationPanelTitle: { color: palette.ink, fontSize: 14, fontWeight: '900' },
   notificationPanelCount: { color: roleTheme.customer.accent, fontSize: 11, fontWeight: '900' },
+  notificationFilterBar: { minHeight: 38, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4ECF5', backgroundColor: '#FBFDFF' },
+  notificationFilterChip: { minHeight: 26, paddingHorizontal: 11, borderRadius: 999, borderWidth: 1, borderColor: '#D9E5F2', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  notificationFilterChipActive: { borderColor: roleTheme.customer.accent, backgroundColor: '#EEF5FF' },
+  notificationFilterText: { color: palette.slate, fontSize: 10, fontWeight: '800' },
+  notificationFilterTextActive: { color: roleTheme.customer.accent, fontWeight: '900' },
   notificationPanelList: { maxHeight: 378 },
   notificationPanelRow: { minHeight: 72, paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4ECF5' },
   notificationPanelRowUnread: { backgroundColor: '#F2F7FF' },
