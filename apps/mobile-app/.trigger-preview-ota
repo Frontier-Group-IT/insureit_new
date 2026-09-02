@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1070
-source_commit=72e46622cfcbc383ecbc124be4bfc169f1fbf43f
-purpose=publish Stage 1 Control No success popup preview OTA
+source_pr=1072
+source_commit=de8ef6bf7a6d8783256df3744480e53a2bbbb69f
+purpose=publish tighter self-tracked card and smaller status icons preview OTA
