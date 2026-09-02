@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1031
-source_commit=98404b1746e7d49f54d1674f01ea7da1c60177cc
-purpose=publish fully clickable Profile upload document card preview OTA
+source_pr=1032
+source_commit=e5f8d600137b7d8472b709296eaaa7d5077dc87c
+purpose=publish customer Profile Preferences section removal preview OTA
