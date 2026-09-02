@@ -16,8 +16,8 @@ const styles = StyleSheet.create({
   base: {
     overflow: 'hidden',
     borderRadius: partnerTheme.radius.pill,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     ...partnerTheme.typography.meta,
   },
   neutral: { color: partnerTheme.colors.inkMuted, backgroundColor: partnerTheme.colors.surfaceMuted },

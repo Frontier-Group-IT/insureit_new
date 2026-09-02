@@ -36,7 +36,7 @@ export function PartnerIconButton({
       style={({ pressed }) => [styles.touchTarget, pressed && !disabled && styles.pressed, disabled && styles.disabled]}
     >
       <View style={[styles.iconSurface, tone === 'brand' && styles.brandSurface, tone === 'danger' && styles.dangerSurface]}>
-        <Ionicons name={icon} size={19} color={disabled ? '#AAB2C0' : iconColor} />
+        <Ionicons name={icon} size={18} color={disabled ? '#AAB2C0' : iconColor} />
       </View>
     </Pressable>
   );
@@ -50,17 +50,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconSurface: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.surface,
-    borderWidth: 1,
-    borderColor: partnerTheme.colors.line,
+    backgroundColor: 'transparent',
   },
-  brandSurface: { backgroundColor: partnerTheme.colors.brandSoft, borderColor: '#D9D5FF' },
-  dangerSurface: { backgroundColor: partnerTheme.colors.dangerSoft, borderColor: '#F2C8C5' },
-  pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
+  brandSurface: { backgroundColor: partnerTheme.colors.brandSoft },
+  dangerSurface: { backgroundColor: partnerTheme.colors.dangerSoft },
+  pressed: { backgroundColor: partnerTheme.colors.pressed, transform: [{ scale: 0.98 }] },
   disabled: { opacity: 0.48 },
 });
