@@ -63,6 +63,7 @@
     "@mui/material-nextjs": "^7.0.0",
     "@mui/x-data-grid": "^8.0.0",
     "@supabase/supabase-js": "^2.49.8",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "2.0.0",
     "fflate": "^0.8.3",
     "lucide-react": "^1.26.0",

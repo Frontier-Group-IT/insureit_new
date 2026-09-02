@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense, type ReactNode } from "react";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
+import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <PolicyRouteEnhancements />
             <RouteProgressBar />
           </Suspense>
+          <Analytics />
           <SpeedInsights />
         </AppRouterCacheProvider>
       </body>

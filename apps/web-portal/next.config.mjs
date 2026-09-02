@@ -18,11 +18,11 @@ const contentSecurityPolicy = [
   "frame-ancestors 'none'",
   "frame-src 'self' https://www.icallinsurance.com",
   "object-src 'none'",
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"} https://va.vercel-scripts.com`,
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob: https:",
-  `connect-src 'self' ${supabaseOrigin}${process.env.NODE_ENV === "production" ? "" : " ws: wss:"}`.trim(),
+  `connect-src 'self' ${supabaseOrigin} https://va.vercel-scripts.com https://*.vercel-insights.com${process.env.NODE_ENV === "production" ? "" : " ws: wss:"}`.trim(),
   "media-src 'self' blob: https:",
   "worker-src 'self' blob:",
   ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : [])
