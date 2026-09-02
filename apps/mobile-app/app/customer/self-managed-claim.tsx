@@ -711,7 +711,7 @@ export default function SelfManagedClaimScreen() {
             <View style={styles.controlSuccessIcon}>
               <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
             </View>
-            <Text style={styles.controlSuccessTitle}>Control No. created</Text>
+            <Text style={styles.controlSuccessTitle}>Control No. Created</Text>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open claim using generated control number"
