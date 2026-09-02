@@ -712,22 +712,24 @@ export default function SelfManagedClaimScreen() {
               <MaterialCommunityIcons name="check" size={18} color="#FFFFFF" />
             </View>
             <Text style={styles.controlSuccessTitle}>Control No. created</Text>
-            <View style={styles.controlSuccessNumber}>
-              <Text style={styles.controlSuccessNumberLabel}>CONTROL NO.</Text>
-              <Text style={styles.controlSuccessNumberValue}>{createdClaimSuccess?.controlNo ?? ''}</Text>
-            </View>
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel="Open claim using generated control number"
               onPress={() => {
                 const target = createdClaimSuccess;
                 if (!target) return;
                 setCreatedClaimSuccess(null);
                 router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: target.id } });
               }}
-              style={styles.controlSuccessButton}
+              style={({ pressed }) => [styles.controlSuccessNumber, pressed && styles.controlSuccessNumberPressed]}
             >
-              <Text style={styles.controlSuccessButtonText}>Continue</Text>
-              <MaterialCommunityIcons name="arrow-right" size={17} color="#FFFFFF" />
+              <View style={styles.controlSuccessNumberCopy}>
+                <Text style={styles.controlSuccessNumberLabel}>CONTROL NO.</Text>
+                <Text style={styles.controlSuccessNumberValue}>{createdClaimSuccess?.controlNo ?? ''}</Text>
+              </View>
+              <View style={styles.controlSuccessOk}>
+                <Text style={styles.controlSuccessOkText}>OK</Text>
+              </View>
             </Pressable>
           </View>
         </View>
@@ -888,14 +890,16 @@ const styles = StyleSheet.create({
   voiceComingSoonText: { color: '#60738B', fontSize: 9.5, lineHeight: 13, fontWeight: '700' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
   controlSuccessBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 20, 48, 0.48)', paddingHorizontal: 28 },
-  controlSuccessCard: { width: '100%', maxWidth: 300, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 15, paddingBottom: 14, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
+  controlSuccessCard: { width: '100%', maxWidth: 300, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 12, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 10 },
   controlSuccessIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#168161', alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
   controlSuccessTitle: { color: palette.navy, fontSize: 15, lineHeight: 19, fontWeight: '900', textAlign: 'center' },
-  controlSuccessNumber: { width: '100%', marginTop: 10, borderRadius: 11, borderWidth: 1, borderColor: '#D8E3F0', backgroundColor: '#F8FBFF', paddingHorizontal: 12, paddingVertical: 9, alignItems: 'center' },
+  controlSuccessNumber: { width: '100%', minHeight: 58, marginTop: 10, borderRadius: 11, borderWidth: 1, borderColor: '#D8E3F0', backgroundColor: '#F8FBFF', paddingHorizontal: 10, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  controlSuccessNumberPressed: { backgroundColor: '#EEF5FF', borderColor: '#BFD4EE', transform: [{ scale: 0.995 }] },
+  controlSuccessNumberCopy: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
   controlSuccessNumberLabel: { color: '#6B7B90', fontSize: 8.5, lineHeight: 11, fontWeight: '900', letterSpacing: 0.7 },
   controlSuccessNumberValue: { color: palette.navy, fontSize: 17, lineHeight: 21, fontWeight: '900', marginTop: 2 },
-  controlSuccessButton: { width: '100%', minHeight: 40, borderRadius: 11, backgroundColor: '#0A43A3', marginTop: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  controlSuccessButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
+  controlSuccessOk: { minWidth: 54, height: 34, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  controlSuccessOkText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900', letterSpacing: 0.2 },
   deleteSuccessToastOverlay: { flex: 1, justifyContent: 'flex-start', paddingTop: 54, paddingHorizontal: 14 },
   deleteSuccessToast: { minHeight: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#B7E4CC', paddingHorizontal: 12, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 9, shadowColor: '#0E5C3D', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 14 },
   deleteSuccessToastIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#168161', alignItems: 'center', justifyContent: 'center' },
