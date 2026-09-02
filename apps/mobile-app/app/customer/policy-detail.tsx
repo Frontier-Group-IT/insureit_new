@@ -196,8 +196,8 @@ function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
 
 const styles = StyleSheet.create({
   contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
-  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, maxHeight: 336, marginBottom: 12, borderRadius: 22, backgroundColor: '#F4F0FF', borderWidth: 1, borderColor: '#D9CCF8', padding: 15, overflow: 'hidden' },
-  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: '#7C5CC4' },
+  heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, maxHeight: 336, marginBottom: 12, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 15, overflow: 'hidden' },
+  heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: '#C43838' },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   heroCopy: { flex: 1, minWidth: 0 },
