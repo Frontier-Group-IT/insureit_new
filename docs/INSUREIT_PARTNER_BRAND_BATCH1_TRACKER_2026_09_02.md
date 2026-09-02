@@ -395,3 +395,126 @@ Generate **separate transparent assets**, not more sprite sheets, in this order:
 9. Profile/Settings/Support supplemental visuals.
 
 After each family is generated, normalize names to the canonical `partner-...` scheme before integration.
+
+
+## Core icon family audit after individual-generation pass — 2026-09-02 14:29 IST
+
+The latest two generation passes materially improved **individual-file coverage** of the 32-icon core family. These are no longer only sprite-sheet concepts.
+
+### Individual core icons now successfully represented
+
+The following roles now have separate generated assets in the approved graphite + blue realistic 3D family:
+
+1. Home — generated as the home/security shield concept.
+2. Business — generated as the briefcase/shield concept.
+3. Policies — generated as the insurance-policy/shield concept.
+4. Claims — generated as the umbrella/protection concept.
+5. Customers — generated as the verified-team/customer concept.
+6. Renewals — generated as the renewal-policy concept.
+7. Policy Intake — currently represented by the secure document-upload concept.
+8. Search — generated as the document-search/magnifier concept.
+9. Notifications — generated as the graphite notification-bell concept.
+10. Profile — generated as the graphite business-avatar concept.
+11. Documents — generated as the metallic document-stack concept.
+12. Support — generated as the secure support-headset concept.
+13. Insights — generated as the secure analytics/shield concept.
+14. Payout / Earnings — generated as the rupee-wallet-growth concept.
+15. Opportunities — generated as the target/bullseye concept.
+16. Motor — generated as the automotive-protection/shield concept.
+17. Health — generated as the medical-shield concept.
+18. Life — generated as the family-protection concept.
+19. Commercial — generated as the office/commercial-protection concept.
+20. More — generated as the 2x2 grid/menu concept.
+
+### Important distinction
+
+The current Policy Intake asset and the generic Upload action are effectively the same document-upload visual. For a truly complete custom icon family, keep **Policy Intake** and **Upload** as two separate final icons rather than reusing one master everywhere.
+
+Therefore:
+- **20 of 32 core roles have distinct individual concepts now.**
+- **12 distinct core icons still need generation** to complete the family.
+
+### Remaining core icons to generate individually
+
+1. Fleet
+2. External Policy
+3. Upload — distinct utility upload icon, separate from Policy Intake
+4. Timeline / Journey
+5. Settings
+6. Help / Ticket
+7. Success / Completed
+8. Needs Attention
+9. Pending Review
+10. Rejected / Failed
+11. Call
+12. WhatsApp
+
+### Production naming normalization still required
+
+Current working filenames include legacy words such as `neon`, `futuristic`, `glossy`, and `cyber`. Before app integration, rename approved finals into the canonical production scheme, for example:
+
+- `partner-icon-home.png`
+- `partner-icon-business.png`
+- `partner-icon-policies.png`
+- `partner-icon-claims.png`
+- `partner-icon-customers.png`
+- `partner-icon-renewals.png`
+- `partner-icon-policy-intake.png`
+- `partner-icon-search.png`
+- `partner-icon-notifications.png`
+- `partner-icon-profile.png`
+- `partner-icon-documents.png`
+- `partner-icon-support.png`
+- `partner-icon-insights.png`
+- `partner-icon-payout.png`
+- `partner-icon-opportunities.png`
+- `partner-icon-motor.png`
+- `partner-icon-health.png`
+- `partner-icon-life.png`
+- `partner-icon-commercial.png`
+- `partner-icon-more.png`
+
+### Quality assessment of latest generation
+
+**Successful / keep direction**
+- Material language is consistent enough: graphite/faded black body, brushed metal trim, blue accent.
+- Individual transparency is visually appropriate for placement over app surfaces.
+- Insurance semantics are clear.
+- Icons have sufficient premium depth for dashboard/quick-action use.
+- Product family icons are visually differentiated while staying in one family.
+
+**Needs normalization before shipping**
+- Some blue glow is still stronger than the locked “restrained accent” target.
+- Optical size varies between icons (for example avatar/family/building compositions occupy different visual mass).
+- Some icons are composition-heavy for 16–24 px usage; they should be reserved for larger quick-action/product tiles, while a simplified companion icon may be needed for tiny navigation/list use.
+- Exact alpha transparency, edge cleanup, canvas size and compression still need a production pass.
+- PNG raster masters are not a substitute for vector line icons where the app needs very small-size navigation rendering.
+
+### Remaining non-core families after core completion
+
+After the 12 missing core icons are generated, continue in this order:
+
+1. 8 Quick Action visuals — individual transparent files
+2. 5 Product Family visuals — individual transparent files
+3. 10 Ticker micro-icons
+4. 8 Notification category icons
+5. 12 Empty State illustrations
+6. 7 Policy Intake lifecycle illustrations
+7. 8 production banner artworks
+8. Profile/Settings/Support supplemental visuals
+
+### Current state
+
+- Core icon family: **20/32 distinct roles individually generated**
+- Core icon family completion: **62.5%**
+- Remaining distinct core icons: **12**
+- Quick Action family: concepts exist, individual final family not yet complete
+- Product Family family: 4/5 strong individual concepts now exist (Motor, Health, Life, Commercial); Other/General still required
+- Ticker family: not yet individually completed
+- Notification family: not yet individually completed
+- Empty states: not yet individually completed
+- Policy Intake lifecycle: not yet individually completed
+- Banners: not yet individually completed
+- App integration: NOT STARTED
+- OTA: NOT PUBLISHED
+- APK/AAB/native build: NOT CREATED
