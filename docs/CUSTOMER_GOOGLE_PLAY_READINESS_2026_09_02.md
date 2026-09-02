@@ -146,6 +146,10 @@ Likely collected / processed categories:
 - claim workflow updates
 - notification state
 
+### Audio
+- customer-created voice/audio recordings when the planned audio-record feature is activated in the final native release
+- declare only if recordings are actually collected, stored or transmitted by the final AAB
+
 ### Authentication / security
 - login/session identifiers
 - account status
@@ -255,17 +259,28 @@ Use a sanitized release-demo account.
 
 These must be resolved only in the final native build pass.
 
-### 1. Remove unnecessary microphone permission
+### 1. Activate the planned audio-recording feature
 Current app.json explicitly requests:
 android.permission.RECORD_AUDIO
 
-No reviewed customer workflow needs audio recording.
+This permission is intentional and must be retained because the final native release will activate the currently inactive customer audio-record feature.
 
 Final action:
-- remove RECORD_AUDIO
-- generate release build
-- inspect final manifest and Play permissions
-- confirm microphone permission is absent
+- keep RECORD_AUDIO
+- identify and activate the intended audio-record control in the final native feature pass
+- request microphone access only when the customer taps Record / Microphone, not at app launch
+- show clear denied / permanently-denied handling
+- provide stop, playback, delete/re-record and submit controls
+- upload audio only after explicit customer action
+- verify recordings are associated only with the intended claim/support workflow
+- inspect the generated Android manifest and Play permissions after the final AAB
+
+Privacy / Play implications:
+- add audio recordings to the Privacy Policy if the feature stores or transmits them
+- include Audio files / Voice or sound recordings in Data Safety when applicable
+- disclose the purpose as app functionality / customer support / claims handling as actually implemented
+- do not describe microphone access as background recording
+- confirm the app does not record without an obvious foreground user action
 
 ### 2. Final launcher display name
 Current Expo name:
@@ -292,7 +307,8 @@ Confirm:
 - expected package = com.insureit.mobile
 - no unexpected dangerous permissions
 - only required camera/media/location capabilities are present
-- no unnecessary microphone permission
+- microphone permission is present only for the intentional customer audio-recording feature
+- microphone runtime request occurs only at the point of use
 
 ### 5. Signing / Play App Signing
 Before upload:
@@ -348,6 +364,8 @@ From Play-delivered build:
 - Support
 - notifications
 - policy/document upload
+- audio record -> stop -> playback -> re-record/delete -> submit
+- microphone denial and recovery behavior
 - privacy links
 - account deletion path
 - logout
