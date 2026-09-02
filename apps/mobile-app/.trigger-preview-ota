@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1025
-source_commit=34dec59de4f3c2048a98b288817e4d91eabd2556
-purpose=publish mobile session restore refresh fix preview OTA
+source_pr=1030
+source_commit=1add44367e9b51c6ed192d77e2d3afa655d7d494
+purpose=publish customer notification bell panel preview OTA
