@@ -105,6 +105,110 @@ Reviewer route checklist:
 - Get Quote
 - Pay Challan
 
+## Play Console answer sheet
+
+Use this as the working answer set for the current customer app. Recheck against the final AAB before submission.
+
+### Ads
+Current answer: **No**
+
+Repo review found no AdMob / Google Mobile Ads / common ad SDK integration in the customer app dependency or source surface reviewed for this readiness pass.
+
+Change this answer only if an advertising SDK or ad surface is intentionally added before release.
+
+### Financial features
+Current answer: **Insurance**
+
+Do not select unrelated categories such as loans, money transfer, wallet, crypto or investment services unless those functions are actually added.
+
+### Health apps
+Current answer: **No health features**
+
+The current customer app is an insurance / claims / vehicle-service application and does not expose Health Connect / HealthKit or health-functionality surfaces in the reviewed release scope.
+
+### Target audience
+Recommended: **Adults only**
+
+Do not select child age groups. The app is intended for commercial-vehicle insurance customers and business users.
+
+### App access
+Current answer: **Some or all functionality is restricted**
+
+Reason:
+- core customer data requires authentication
+- Play review needs a dedicated non-production reviewer account or equivalent approved review access
+
+Reviewer instructions must include:
+- exact login identifier
+- password or OTP/bypass process
+- whether the account is already verified
+- steps to reach Home, Vehicles, Policies, Claims, Support, Notifications, Quote, Challan, Privacy Policy and Account Deletion
+
+Do not use real customer credentials.
+
+### Account deletion
+Current answer: **Yes, account deletion is available**
+
+In-app path:
+Profile -> Account & Privacy -> Request account deletion
+
+Public deletion resource:
+https://portal.insureit.in/account-deletion
+
+### Privacy policy
+Public URL:
+https://portal.insureit.in/privacy-policy
+
+The final privacy wording must match the final shipped microphone/audio-recording behavior before submission.
+
+### Data Safety — current working answers
+
+These are working answers, not final checkbox selections. Final responses depend on the exact Google Play questionnaire wording and final AAB behavior.
+
+Collected/processed by the app:
+- personal information: name, email, phone and customer identifiers
+- insurance/policy information
+- claim and settlement information
+- precise/current location when the user actively chooses incident-location capture
+- photos, videos and documents selected/uploaded for claims, policy, KYC or support
+- support messages and service enquiries
+- authentication/session/account information
+- guest OTP verification information
+- Quote / Challan consent timestamp/version and optional WhatsApp preference
+- audio/voice recordings only after the planned final audio-record feature is actually enabled and recordings are stored or transmitted
+
+Purposes:
+- app functionality
+- account management
+- insurance servicing
+- claim handling
+- customer support
+- security/fraud prevention where applicable
+- legal/regulatory compliance
+
+Before final submission, classify each backend/provider recipient under Google Play's actual "shared" definition and applicable service-provider/legal exceptions.
+
+### Content rating
+Complete the IARC questionnaire from the actual app behavior.
+
+Working product characterization:
+- financial/insurance utility
+- no public social feed
+- no public user-to-user messaging
+- no gambling
+- no health functionality
+- no intentional mature-content surface
+
+User-uploaded accident/claim evidence is private operational content and should not be described as a public UGC/social feature.
+
+### News / magazine
+Current answer: **Not applicable**
+
+### Government affiliation
+Current answer: **No**
+
+The Challan feature must continue to state that INSUREIT is not the traffic/government authority and provides assistance/coordination only.
+
 ## Data Safety working map
 
 Reconfirm this against the final AAB and production SDK list before submitting the form.
