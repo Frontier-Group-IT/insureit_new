@@ -365,16 +365,29 @@ function TextField({ label, ...props }: { label: string } & React.ComponentProps
 function documentIcon(document: CustomerDocument): keyof typeof MaterialCommunityIcons.glyphMap { if (document.mime_type?.startsWith('image/')) return 'image-outline'; if (document.mime_type === 'application/pdf' || /\.pdf$/i.test(document.file_name)) return 'file-pdf-box'; return 'file-document-outline'; }
 function formatAddress(customer: Customer | null) {
   if (!customer) return '';
-  const address = customer.address?.trim() ?? '';
+
   const extras = [customer.city, customer.state, customer.postal_code]
     .map((value) => value?.trim())
     .filter((value): value is string => Boolean(value));
 
+  let address = customer.address?.trim() ?? '';
   if (!address) return extras.join(', ');
 
-  const normalizedAddress = address.toLocaleLowerCase();
-  const missingExtras = extras.filter((value) => !normalizedAddress.includes(value.toLocaleLowerCase()));
-  return [address, ...missingExtras].join(', ');
+  for (const value of extras) {
+    const escaped = value.replace(/[.*+?^$()|[\]\\]/g, '\\$&');
+    address = address.replace(new RegExp(`\\b${escaped}\\b`, 'gi'), ' ');
+  }
+
+  const parts = address
+    .split(',')
+    .map((part) => part.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  const uniqueParts = parts.filter(
+    (part, index) => parts.findIndex((item) => item.toLocaleLowerCase() === part.toLocaleLowerCase()) === index,
+  );
+
+  return [...uniqueParts, ...extras].filter(Boolean).join(', ');
 }
 async function call(phone?: string | null) { if (phone) await Linking.openURL(`tel:${phone.replace(/\s+/g, '')}`); }
 async function email(address?: string | null) { if (address) await Linking.openURL(`mailto:${address}`); }
