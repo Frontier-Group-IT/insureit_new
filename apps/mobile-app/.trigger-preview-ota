@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1072
-source_commit=de8ef6bf7a6d8783256df3744480e53a2bbbb69f
-purpose=publish tighter self-tracked card and smaller status icons preview OTA
+source_pr=1073
+source_commit=dae60af1dac6059c6d0df1b08d6c9f46a83d7c93
+purpose=publish compact clickable Control No row preview OTA
