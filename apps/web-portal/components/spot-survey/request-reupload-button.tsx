@@ -20,9 +20,11 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4">
           <form
-            action={(formData) => {
+            onSubmit={(event) => {
+              event.preventDefault();
               setPending(true);
               void (async () => {
+                const formData = new FormData(event.currentTarget);
                 formData.set("claimId", claimId);
                 formData.set("documentId", documentId);
                 try {

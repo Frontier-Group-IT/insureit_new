@@ -17,7 +17,9 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
           <form
             ref={formRef}
-            action={(formData) => {
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
               startTransition(async () => {
                 await replaceSpotSurveyDocument(formData);
                 setSelectedFile(null);
