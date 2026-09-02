@@ -176,8 +176,10 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { unreadCount, refreshUnreadCount } = useRealtimeNotifications();
-  const [panelOpen, setPanelOpen] = useState(false);
+  const [panelMounted, setPanelMounted] = useState(false);
   const [panelLoading, setPanelLoading] = useState(false);
+  const panelOpacity = useRef(new Animated.Value(0)).current;
+  const panelTranslateY = useRef(new Animated.Value(-8)).current;
   const [panelMessage, setPanelMessage] = useState('');
   const [panelNotifications, setPanelNotifications] = useState<Notification[]>([]);
   const customerMode = pathname.startsWith('/customer');
@@ -220,17 +222,38 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
     }
   }
 
+  function openCustomerPanel() {
+    setPanelMounted(true);
+    panelOpacity.setValue(0);
+    panelTranslateY.setValue(-8);
+    requestAnimationFrame(() => {
+      Animated.parallel([
+        Animated.timing(panelOpacity, { toValue: 1, duration: 190, useNativeDriver: true }),
+        Animated.timing(panelTranslateY, { toValue: 0, duration: 190, useNativeDriver: true }),
+      ]).start();
+    });
+    void loadCustomerNotifications();
+  }
+
+  function closeCustomerPanel() {
+    Animated.parallel([
+      Animated.timing(panelOpacity, { toValue: 0, duration: 160, useNativeDriver: true }),
+      Animated.timing(panelTranslateY, { toValue: -8, duration: 160, useNativeDriver: true }),
+    ]).start(({ finished }) => {
+      if (finished) setPanelMounted(false);
+    });
+  }
+
   function togglePanel() {
     if (!customerMode) {
       router.push('/staff/notifications');
       return;
     }
-    if (panelOpen) {
-      setPanelOpen(false);
+    if (panelMounted) {
+      closeCustomerPanel();
       return;
     }
-    setPanelOpen(true);
-    void loadCustomerNotifications();
+    openCustomerPanel();
   }
 
   async function openPanelNotification(notification: Notification) {
@@ -254,7 +277,7 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
       ? ({ pathname: '/customer/self-managed-claim-detail', params: { id: notification.claim_id } } as Href)
       : ({ pathname: '/customer/claim-detail', params: { id: notification.claim_id } } as Href);
 
-    setPanelOpen(false);
+    closeCustomerPanel();
     router.push(route);
   }
 
@@ -273,16 +296,19 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
 
       {customerMode ? (
         <Modal
-          visible={panelOpen}
+          visible={panelMounted}
           transparent
-          animationType="fade"
+          animationType="none"
           statusBarTranslucent
-          onRequestClose={() => setPanelOpen(false)}
+          onRequestClose={closeCustomerPanel}
         >
-          <Pressable style={styles.notificationPanelBackdrop} onPress={() => setPanelOpen(false)}>
-            <Pressable
-              onPress={(event) => event.stopPropagation()}
-              style={[styles.notificationPanel, { top: insets.top + 62 }]}
+          <Animated.View style={[styles.notificationPanelBackdrop, { opacity: panelOpacity }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeCustomerPanel} />
+            <Animated.View
+              style={[
+                styles.notificationPanel,
+                { top: insets.top + 62, opacity: panelOpacity, transform: [{ translateY: panelTranslateY }] },
+              ]}
             >
               <View style={styles.notificationPanelHeader}>
                 <Text style={styles.notificationPanelTitle}>Notifications</Text>
@@ -290,8 +316,16 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
               </View>
 
               {panelLoading ? (
-                <View style={styles.notificationPanelState}>
-                  <Text style={styles.notificationPanelStateText}>Loading notifications...</Text>
+                <View style={styles.notificationSkeletonWrap}>
+                  {[0, 1, 2].map((item) => (
+                    <View key={item} style={styles.notificationSkeletonRow}>
+                      <View style={styles.notificationSkeletonDot} />
+                      <View style={styles.notificationSkeletonCopy}>
+                        <View style={styles.notificationSkeletonTitle} />
+                        <View style={styles.notificationSkeletonMessage} />
+                      </View>
+                    </View>
+                  ))}
                 </View>
               ) : panelMessage ? (
                 <View style={styles.notificationPanelState}>
@@ -314,9 +348,10 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                         key={notification.id}
                         accessibilityRole="button"
                         onPress={() => void openPanelNotification(notification)}
-                        style={[
+                        style={({ pressed }) => [
                           styles.notificationPanelRow,
                           unread && styles.notificationPanelRowUnread,
+                          pressed && styles.notificationPanelRowPressed,
                           index === panelNotifications.length - 1 && styles.notificationPanelRowLast,
                         ]}
                       >
@@ -338,8 +373,8 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                   })}
                 </ScrollView>
               )}
-            </Pressable>
-          </Pressable>
+            </Animated.View>
+          </Animated.View>
         </Modal>
       ) : null}
     </>
@@ -411,6 +446,7 @@ const styles = StyleSheet.create({
   notificationPanelList: { maxHeight: 378 },
   notificationPanelRow: { minHeight: 72, paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4ECF5' },
   notificationPanelRowUnread: { backgroundColor: '#F2F7FF' },
+  notificationPanelRowPressed: { opacity: 0.72, transform: [{ scale: 0.995 }] },
   notificationPanelRowLast: { borderBottomWidth: 0 },
   notificationPanelCopy: { flex: 1, minWidth: 0 },
   notificationPanelTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
@@ -421,6 +457,12 @@ const styles = StyleSheet.create({
   notificationPanelUnreadDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#276EF1' },
   notificationPanelState: { minHeight: 86, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
   notificationPanelStateText: { color: palette.slate, fontSize: 12.5, fontWeight: '700', textAlign: 'center' },
+  notificationSkeletonWrap: { paddingVertical: 4 },
+  notificationSkeletonRow: { minHeight: 72, paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E9EFF6' },
+  notificationSkeletonDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#D5E0EC' },
+  notificationSkeletonCopy: { flex: 1, gap: 8 },
+  notificationSkeletonTitle: { height: 11, width: '62%', borderRadius: 6, backgroundColor: '#E8EEF5' },
+  notificationSkeletonMessage: { height: 9, width: '88%', borderRadius: 5, backgroundColor: '#F0F4F8' },
   badge: { position: 'absolute', top: 7, right: 6, minWidth: 17, height: 17, borderRadius: 9, paddingHorizontal: 4, backgroundColor: colors.danger, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: palette.surface },
   badgeText: { color: palette.surface, fontSize: 9, fontWeight: '900' },
   bannerWrap: { position: 'absolute', top: 58, left: 14, right: 14, zIndex: 100 },

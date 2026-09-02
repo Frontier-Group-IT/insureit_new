@@ -8,11 +8,16 @@ const groupHome = await readFile(new URL('../components/group/group-home-screen.
 const groupShell = await readFile(new URL('../components/group/group-page-shell.tsx', import.meta.url), 'utf8');
 
 assert.match(realtime, /const customerMode = pathname\.startsWith\('\/customer'\)/, 'Customer bell behavior must stay scoped to customer routes.');
-assert.match(realtime, /visible=\{panelOpen\}/, 'Customer notifications must expand in-place from the bell.');
+assert.match(realtime, /visible=\{panelMounted\}/, 'Customer notifications must remain mounted long enough for smooth open and close motion.');
 assert.match(realtime, /notificationPanelRowUnread/, 'Unread notifications must have a highlighted row style.');
 assert.match(realtime, /notification\.status === 'unread'/, 'Unread state must be driven by persisted notification status.');
 assert.match(realtime, /backgroundColor: '#F2F7FF'/, 'Unread rows must use the approved subtle highlight.');
 assert.match(realtime, /backgroundColor: '#FFFFFF'/, 'Read rows must remain visually normal.');
+assert.match(realtime, /Animated\.timing\(panelOpacity, \{ toValue: 1, duration: 190/, 'Notification panel must fade in with restrained motion.');
+assert.match(realtime, /Animated\.timing\(panelTranslateY, \{ toValue: 0, duration: 190/, 'Notification panel must slide smoothly into place.');
+assert.match(realtime, /Animated\.timing\(panelOpacity, \{ toValue: 0, duration: 160/, 'Notification panel must animate out before unmounting.');
+assert.match(realtime, /notificationSkeletonRow/, 'Loading state must use stable skeleton rows instead of abrupt loading text.');
+assert.match(realtime, /notificationPanelRowPressed/, 'Notification rows must have a subtle pressed state.');
 assert.doesNotMatch(realtime, /router\.push\('\/customer\/notifications'\)/, 'Customer bell must not navigate to a dedicated notifications page.');
 
 assert.match(customerRoute, /<Redirect href="\/customer\/home" \/>/, 'Legacy customer notification route must safely redirect home.');
