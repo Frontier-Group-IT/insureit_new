@@ -195,18 +195,18 @@ export default function StartClaimScreen() {
             onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: selectedPolicy.id, source: selectedPolicy.source } } as any)}
             style={({ pressed }) => [styles.policyCardShadow, pressed && styles.policyCardPressed]}
           >
-            <View style={styles.policyCard}>
+            <View style={[styles.policyCard, selectedPolicy.source === 'external' && styles.policyCardCompact]}>
               <View pointerEvents="none" style={styles.policyDecoration}>
                 <View style={styles.policyArcOne} />
                 <View style={styles.policyArcTwo} />
               </View>
-              <View style={styles.policyContent}>
-                <View style={styles.policyIcon}><MaterialCommunityIcons name={selectedPolicy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={28} color="#0A43A3" /></View>
+              <View style={[styles.policyContent, selectedPolicy.source === 'external' && styles.policyContentCompact]}>
+                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}><MaterialCommunityIcons name={selectedPolicy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={selectedPolicy.source === 'external' ? 25 : 28} color="#0A43A3" /></View>
                 <View style={styles.policyCopy}>
-                  <Text style={styles.policyMode}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
-                  <Text style={styles.policyNo}>{selectedPolicy.policy_no}</Text>
-                  <Text style={styles.policyInsurer}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
-                  <Text style={styles.policyDates}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
+                  <Text style={[styles.policyMode, selectedPolicy.source === 'external' && styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
+                  <Text style={[styles.policyNo, selectedPolicy.source === 'external' && styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
+                  <Text style={[styles.policyInsurer, selectedPolicy.source === 'external' && styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
+                  <Text style={[styles.policyDates, selectedPolicy.source === 'external' && styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
                 {selectedPolicyCondition === 'expired' ? (
                   <ExpiredPolicyPulse />
@@ -362,16 +362,23 @@ const styles = StyleSheet.create({
   policyCardShadow: { borderRadius: 20, shadowColor: '#07327B', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3, backgroundColor: '#07327B' },
   policyCardPressed: { opacity: 0.94, transform: [{ scale: 0.995 }] },
   policyCard: { position: 'relative', minHeight: 145, borderRadius: 20, backgroundColor: '#07327B', overflow: 'hidden' },
+  policyCardCompact: { minHeight: 118 },
   policyDecoration: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
   policyArcOne: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(68,137,255,0.20)', right: -100, top: -118 },
   policyArcTwo: { position: 'absolute', width: 160, height: 160, borderRadius: 80, borderWidth: 1, borderColor: 'rgba(68,137,255,0.18)', right: -50, top: -88 },
   policyContent: { position: 'relative', zIndex: 2, minHeight: 145, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  policyContentCompact: { minHeight: 118, paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  policyIconCompact: { width: 52, height: 52, borderRadius: 15 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
   policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 },
+  policyModeCompact: { fontSize: 9, letterSpacing: 0.45 },
   policyNo: { color: '#FFFFFF', fontSize: 18, fontWeight: '900', marginTop: 4 },
+  policyNoCompact: { fontSize: 17, marginTop: 2 },
   policyInsurer: { color: '#E0E9F7', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 4 },
+  policyInsurerCompact: { fontSize: 10, lineHeight: 13.5, marginTop: 2 },
   policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: '700', marginTop: 5 },
+  policyDatesCompact: { fontSize: 10, marginTop: 3 },
   policyCheck: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
   policyCheckExpired: { backgroundColor: '#E85D63' },
   policyCheckDue: { backgroundColor: '#F59E0B' },
