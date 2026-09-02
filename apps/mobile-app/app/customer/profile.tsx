@@ -12,8 +12,6 @@ import { palette, roleTheme } from '@/lib/theme';
 import type { Customer, CustomerDocument, CustomerOnboardingApplication, Profile } from '@/lib/types';
 
 const avatarIllustration = require('../../assets/profile/customer-avatar-illustration.png');
-const kycDocumentTypes = ['PAN Card', 'Aadhaar Card', 'GST Certificate', 'RC Copy', 'Address Proof', 'Other'];
-
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -26,7 +24,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [draft, setDraft] = useState({ name: '', phone: '', email: '', address: '' });
-  const [selectedDocType, setSelectedDocType] = useState('PAN Card');
+  const selectedDocType = 'Other';
   const [documentUploading, setDocumentUploading] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const float = useRef(new Animated.Value(0)).current;
@@ -287,20 +285,12 @@ export default function ProfileScreen() {
           <View style={styles.kycUploadPanel}>
             <View style={styles.kycUploadTop}>
               <View>
-                <Text style={styles.kycUploadLabel}>Choose document type</Text>
-                <Text style={styles.kycUploadHint}>Upload only clear customer KYC or supporting files.</Text>
+                <Text style={styles.kycUploadLabel}>Upload document</Text>
               </View>
               <Pressable accessibilityRole="button" disabled={documentUploading} onPress={() => void uploadCustomerDocument()} style={[styles.kycUploadButton, documentUploading && styles.kycUploadButtonDisabled]}>
                 <MaterialCommunityIcons name="cloud-upload-outline" size={17} color="#FFFFFF" />
                 <Text style={styles.kycUploadButtonText}>{documentUploading ? 'Uploading' : 'Upload'}</Text>
               </Pressable>
-            </View>
-            <View style={styles.kycTypeRow}>
-              {kycDocumentTypes.map((type) => (
-                <Pressable key={type} accessibilityRole="button" onPress={() => setSelectedDocType(type)} style={[styles.kycTypeChip, selectedDocType === type && styles.kycTypeChipActive]}>
-                  <Text style={[styles.kycTypeText, selectedDocType === type && styles.kycTypeTextActive]}>{type}</Text>
-                </Pressable>
-              ))}
             </View>
           </View>
 
@@ -323,7 +313,7 @@ export default function ProfileScreen() {
               <View style={styles.emptyDocsPanel}>
                 <MaterialCommunityIcons name="cloud-upload-outline" size={24} color={roleTheme.customer.accent} />
                 <Text style={styles.emptyDocsTitle}>No KYC documents uploaded yet</Text>
-                <Text style={styles.emptyDocsText}>Choose a document type and tap Upload to add PAN, Aadhaar, GST or other customer documents.</Text>
+                <Text style={styles.emptyDocsText}>Tap Upload to add a customer document.</Text>
               </View>
             )}
           </View>
