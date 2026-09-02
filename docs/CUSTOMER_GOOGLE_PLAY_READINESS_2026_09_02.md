@@ -65,6 +65,7 @@ The app also contains an in-app Privacy & Legal Center.
 Before submission:
 - verify the public page loads without authentication
 - verify it accurately covers customer profile data, insurance/policy data, claim data, uploaded documents/media, location used for incident capture, support communications, Quote / Challan enquiries, guest contact data, OTP verification, and consent records
+- once the final audio-recording feature is enabled, add explicit microphone / customer audio-recording disclosure before Play submission; the current web and in-app Privacy Policy source does not yet mention audio, voice recordings or microphone access
 - keep the URL stable after release
 
 ### Account deletion
@@ -260,6 +261,8 @@ Use a sanitized release-demo account.
 These must be resolved only in the final native build pass.
 
 ### 1. Activate the planned audio-recording feature
+
+Status: permission retained intentionally; feature implementation and privacy disclosure are still required before the final Play AAB.
 Current app.json explicitly requests:
 android.permission.RECORD_AUDIO
 
