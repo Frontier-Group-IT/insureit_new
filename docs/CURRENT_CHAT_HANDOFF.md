@@ -1308,3 +1308,111 @@ Google Play technical readiness:
 - static regression guard `policy-existing-vehicle-replacement-regression.mjs`.
 
 No migration has been applied and no production deployment has been triggered. The active-policy replacement path must remain unavailable until the migration is applied through the normal approved workflow.
+
+
+## INSUREIT Partner Brand Experience direction locked — 2026-09-02
+
+The user has completed reference review across **Zerodha Kite, RenewBuy and Naukri** and locked the next Partner visual direction.
+
+### Locked benchmark mix
+
+- **Kite:** information discipline, compact operational rows, predictable navigation, restrained chrome, progressive disclosure.
+- **RenewBuy:** branded business personality, running ticker/announcement rail, product-family modules, custom iconography, promotional/informative banners, more varied dashboard rhythm.
+- **Naukri:** premium consumer-app polish, stronger screen hierarchy, contextual banners, illustrated empty states, grouped settings/navigation, lifecycle/status presentation, richer profile/notification treatment.
+
+Final product principle:
+
+> **INSUREIT Partner = Kite-level clarity + RenewBuy-style business personality + Naukri-level consumer polish and lifecycle UX.**
+
+Do not copy these products' artwork or exact layouts. INSUREIT must retain its own brand identity and keep operational screens cleaner than the references.
+
+### New phase name
+
+**INSUREIT Partner Brand Experience Phase**
+
+Planned workstreams:
+1. dashboard information architecture;
+2. custom INSUREIT icon system;
+3. live ticker / insight rail;
+4. branded banner framework;
+5. empty-state illustration system;
+6. Profile / More / Settings redesign;
+7. notification redesign;
+8. product-family visual language;
+9. smart insight cards;
+10. final motion / interaction polish.
+
+### Dashboard target composition
+
+Current target structure:
+1. Header / Partner identity
+2. Live ticker / insight rail
+3. Business Snapshot
+4. Branded Quick Actions
+5. Priority / Opportunity layer
+6. Business by Product
+7. Smart Insights
+8. One branded INSUREIT update/banner
+9. Your Impact
+10. Stories / Learning / Campaign
+
+Operational Policies/Claims/Customers/Renewals lists should remain primarily Kite-like and restrained; brand expression should be strongest in Home, More/Profile, Settings, Notifications, Empty States, Support and lifecycle surfaces.
+
+### Asset-production brief
+
+The detailed production brief is now canonical at:
+
+`docs/INSUREIT_PARTNER_BRAND_EXPERIENCE_ASSET_BRIEF_2026_09_02.md`
+
+It defines:
+- 32-icon custom INSUREIT Partner icon family;
+- 8 dashboard quick-action assets;
+- 5+ product-family tiles;
+- ticker micro-icon pack;
+- reusable branded banner system;
+- 8–12 initial branded banners;
+- 12 empty-state illustrations;
+- notification/alert visual pack;
+- profile/settings/support assets;
+- Policy Intake transactional illustrations;
+- analytics micro-graphics;
+- campaign artwork;
+- optional later motion/Lottie assets;
+- naming/export rules and generation order.
+
+Documentation commit that introduced the asset brief:
+- `92d5ea6bdc7ef3b91d805fc07ec51096819f1341`
+
+### Continuity requirement from user
+
+The user explicitly requested that the process be continuously written into repo documentation so a new chat/agent can resume with full context.
+
+For every material Partner Brand Experience step, record:
+- date;
+- branch / PR;
+- exact feature head;
+- merge commit;
+- files/components/assets changed;
+- CI evidence;
+- Partner OTA trigger and exact run;
+- real-device validation state;
+- whether any native APK/AAB/build occurred;
+- next planned step;
+- any pending asset-generation/approval requirement.
+
+Do not claim generated/integrated/deployed/device-validated status without direct evidence.
+
+### Native-build rule remains unchanged
+
+The Brand Experience phase is **OTA-first**. No Partner APK/AAB/native dependency/native configuration change is authorized unless the user explicitly approves that exact native build. The previously approved Partner logo/icon remains the target for the next native build; do not replace its basic logo design without a new explicit decision.
+
+### Immediate next step
+
+Begin **Asset Batch 1** before large dashboard restructuring:
+1. custom 32-icon INSUREIT Partner master pack;
+2. 8 Quick Action visuals;
+3. 5 Product Family visuals;
+4. ticker micro-icon pack;
+5. banner visual template system.
+
+After Batch 1 is approved, integrate it into a controlled OTA-safe dashboard Brand Experience slice and validate on the installed Partner app before expanding to empty states/profile/notifications.

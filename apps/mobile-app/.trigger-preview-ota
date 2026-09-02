@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1024
-source_commit=41a3e14a19ed806eb57df7bb95c713ad29e45187
-purpose=publish simplified customer Profile Documents and KYC card preview OTA
+source_pr=1040
+source_commit=d6e4b1e12b45a451fdcf7b950916ba95bee9cdbe
+purpose=publish customer profile address dedup preview OTA

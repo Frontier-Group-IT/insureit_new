@@ -12,8 +12,6 @@ import { palette, roleTheme } from '@/lib/theme';
 import type { Customer, CustomerDocument, CustomerOnboardingApplication, Profile } from '@/lib/types';
 
 const avatarIllustration = require('../../assets/profile/customer-avatar-illustration.png');
-const kycDocumentTypes = ['PAN Card', 'Aadhaar Card', 'GST Certificate', 'RC Copy', 'Address Proof', 'Other'];
-
 export default function ProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -26,7 +24,7 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [draft, setDraft] = useState({ name: '', phone: '', email: '', address: '' });
-  const [selectedDocType, setSelectedDocType] = useState('PAN Card');
+  const selectedDocType = 'Other';
   const [documentUploading, setDocumentUploading] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(false);
   const float = useRef(new Animated.Value(0)).current;
@@ -82,7 +80,7 @@ export default function ProfileScreen() {
           : { data: [] };
         if (!active) return;
         setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding); setDocuments(documentResult.data ?? []);
-        setDraft({ name: nextCustomer?.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer?.phone ?? nextProfile?.phone ?? '', email: nextCustomer?.email ?? nextProfile?.email ?? '', address: formatAddress(nextCustomer) });
+        setDraft({ name: nextCustomer?.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer?.phone ?? nextProfile?.phone ?? '', email: nextCustomer?.email ?? nextProfile?.email ?? '', address: nextCustomer?.address ?? '' });
       } catch {
         if (active) setMessage({ text: 'We could not load your profile. Please try again.', type: 'error' });
       } finally {
@@ -284,25 +282,22 @@ export default function ProfileScreen() {
         </Pressable>
 
         {documentsOpen ? <>
-          <View style={styles.kycUploadPanel}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Upload document"
+            disabled={documentUploading}
+            onPress={() => void uploadCustomerDocument()}
+            style={[styles.kycUploadPanel, documentUploading && styles.kycUploadButtonDisabled]}
+          >
             <View style={styles.kycUploadTop}>
               <View>
-                <Text style={styles.kycUploadLabel}>Choose document type</Text>
-                <Text style={styles.kycUploadHint}>Upload only clear customer KYC or supporting files.</Text>
+                <Text style={styles.kycUploadLabel}>Upload document</Text>
               </View>
-              <Pressable accessibilityRole="button" disabled={documentUploading} onPress={() => void uploadCustomerDocument()} style={[styles.kycUploadButton, documentUploading && styles.kycUploadButtonDisabled]}>
-                <MaterialCommunityIcons name="cloud-upload-outline" size={17} color="#FFFFFF" />
-                <Text style={styles.kycUploadButtonText}>{documentUploading ? 'Uploading' : 'Upload'}</Text>
-              </Pressable>
+              <View style={styles.kycUploadButton}>
+                <MaterialCommunityIcons name="cloud-upload-outline" size={19} color="#FFFFFF" />
+              </View>
             </View>
-            <View style={styles.kycTypeRow}>
-              {kycDocumentTypes.map((type) => (
-                <Pressable key={type} accessibilityRole="button" onPress={() => setSelectedDocType(type)} style={[styles.kycTypeChip, selectedDocType === type && styles.kycTypeChipActive]}>
-                  <Text style={[styles.kycTypeText, selectedDocType === type && styles.kycTypeTextActive]}>{type}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+          </Pressable>
 
           <View style={styles.customerDocList}>
             {documents.length ? documents.map((document) => (
@@ -323,14 +318,12 @@ export default function ProfileScreen() {
               <View style={styles.emptyDocsPanel}>
                 <MaterialCommunityIcons name="cloud-upload-outline" size={24} color={roleTheme.customer.accent} />
                 <Text style={styles.emptyDocsTitle}>No KYC documents uploaded yet</Text>
-                <Text style={styles.emptyDocsText}>Choose a document type and tap Upload to add PAN, Aadhaar, GST or other customer documents.</Text>
+                <Text style={styles.emptyDocsText}>Tap Upload to add a customer document.</Text>
               </View>
             )}
           </View>
         </> : null}
       </View> : null}
-
-      <Section title="Preferences" icon="cog-outline"><ActionRow icon="bell-outline" label="Notifications" onPress={() => router.push('/customer/notifications')} /></Section>
 
       <Section title="Account & Privacy" icon="shield-account-outline">
         <ActionRow icon="file-document-outline" label="Privacy & Legal Center" onPress={() => router.push('/customer/legal')} />
@@ -370,7 +363,19 @@ function Section({ title, icon, action, onAction, children }: { title: string; i
 function ActionRow({ icon, label, value, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string; onPress: () => void }) { return <Pressable accessibilityRole="button" onPress={onPress} style={styles.actionRow}><View style={styles.rowIcon}><MaterialCommunityIcons name={icon} size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel} numberOfLines={value ? 1 : 2}>{label}</Text>{value ? <Text style={styles.rowValue} numberOfLines={1}>{value}</Text> : null}<MaterialCommunityIcons name="chevron-right" size={19} color="#9BACBE" /></Pressable>; }
 function TextField({ label, ...props }: { label: string } & React.ComponentProps<typeof TextInput>) { return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><TextInput style={styles.fieldInput} placeholderTextColor="#8090A6" {...props} /></View>; }
 function documentIcon(document: CustomerDocument): keyof typeof MaterialCommunityIcons.glyphMap { if (document.mime_type?.startsWith('image/')) return 'image-outline'; if (document.mime_type === 'application/pdf' || /\.pdf$/i.test(document.file_name)) return 'file-pdf-box'; return 'file-document-outline'; }
-function formatAddress(customer: Customer | null) { return [customer?.address, customer?.city, customer?.state, customer?.postal_code].filter(Boolean).join(', '); }
+function formatAddress(customer: Customer | null) {
+  if (!customer) return '';
+  const address = customer.address?.trim() ?? '';
+  const extras = [customer.city, customer.state, customer.postal_code]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+
+  if (!address) return extras.join(', ');
+
+  const normalizedAddress = address.toLocaleLowerCase();
+  const missingExtras = extras.filter((value) => !normalizedAddress.includes(value.toLocaleLowerCase()));
+  return [address, ...missingExtras].join(', ');
+}
 async function call(phone?: string | null) { if (phone) await Linking.openURL(`tel:${phone.replace(/\s+/g, '')}`); }
 async function email(address?: string | null) { if (address) await Linking.openURL(`mailto:${address}`); }
 async function openMap(address?: string) { if (address) await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`); }
