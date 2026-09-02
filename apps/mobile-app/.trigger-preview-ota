@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1016
-source_commit=cfff25d3c9a77cd240ae4c3fe0cdabb0a9bb3b1b
-purpose=publish Start Claim Android touch routing fix preview OTA
+source_pr=1024
+source_commit=41a3e14a19ed806eb57df7bb95c713ad29e45187
+purpose=publish simplified customer Profile Documents and KYC card preview OTA
