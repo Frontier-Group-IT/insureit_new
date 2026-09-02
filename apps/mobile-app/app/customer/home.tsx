@@ -182,7 +182,7 @@ export default function CustomerMockupHomeScreen() {
   return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
-      <Pressable onPress={() => router.push('/customer/notifications')} style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></Pressable>
+      <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
       <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
     </View>
     <ScrollView
