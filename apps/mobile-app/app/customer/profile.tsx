@@ -282,17 +282,22 @@ export default function ProfileScreen() {
         </Pressable>
 
         {documentsOpen ? <>
-          <View style={styles.kycUploadPanel}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Upload document"
+            disabled={documentUploading}
+            onPress={() => void uploadCustomerDocument()}
+            style={[styles.kycUploadPanel, documentUploading && styles.kycUploadButtonDisabled]}
+          >
             <View style={styles.kycUploadTop}>
               <View>
                 <Text style={styles.kycUploadLabel}>Upload document</Text>
               </View>
-              <Pressable accessibilityRole="button" disabled={documentUploading} onPress={() => void uploadCustomerDocument()} style={[styles.kycUploadButton, documentUploading && styles.kycUploadButtonDisabled]}>
-                <MaterialCommunityIcons name="cloud-upload-outline" size={17} color="#FFFFFF" />
-                <Text style={styles.kycUploadButtonText}>{documentUploading ? 'Uploading' : 'Upload'}</Text>
-              </Pressable>
+              <View style={styles.kycUploadButton}>
+                <MaterialCommunityIcons name="cloud-upload-outline" size={19} color="#FFFFFF" />
+              </View>
             </View>
-          </View>
+          </Pressable>
 
           <View style={styles.customerDocList}>
             {documents.length ? documents.map((document) => (
