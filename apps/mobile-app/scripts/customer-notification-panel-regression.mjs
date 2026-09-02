@@ -29,3 +29,10 @@ assert.doesNotMatch(realtime, /Unread Summary/, 'Expanded bell panel must not re
 assert.doesNotMatch(realtime, /View all/, 'Expanded bell panel must not reintroduce category summary controls.');
 
 console.log('Customer notification bell panel regression passed.');
+
+assert(source.includes("const [panelFilter, setPanelFilter] = useState<'all' | 'claims' | 'policy' | 'vehicle'>('all')"));
+assert(source.includes("['all', 'All']"));
+assert(source.includes("['claims', 'Claims']"));
+assert(source.includes("['policy', 'Policy']"));
+assert(source.includes("['vehicle', 'Vehicle']"));
+assert(source.includes("notificationCategory(item) === panelFilter"));
