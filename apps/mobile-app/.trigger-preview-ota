@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1051
-source_commit=5c6e69717abc2ed41786968de2d2f625bb9cfcc0
-purpose=publish white policy detail card with red accent preview OTA
+source_pr=1054
+source_commit=059ff8b25cad80a1a307b2aff783efd563bb00f3
+purpose=publish Start Claim expired policy badge pulse preview OTA
