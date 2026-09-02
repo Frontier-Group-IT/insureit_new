@@ -97,8 +97,10 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
       .returns<StageDetailRow[]>()
   ]);
 
-  const signedDocs: SpotSurveyDocument[] = (documents ?? []).map((document) => ({
+  const signedDocs: SpotSurveyDocument[] = (documents ?? []).filter(Boolean).map((document) => ({
     ...document,
+    document_type: document.document_type?.trim() || "Unclassified Spot Attachment",
+    file_name: document.file_name?.trim() || "Unnamed claim document",
     signedUrl: `/claim-documents/${document.id}/open`
   }));
 
