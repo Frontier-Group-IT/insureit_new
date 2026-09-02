@@ -171,7 +171,15 @@ async function submitEnquiry(admin: any, secret: string, payload: Record<string,
   const description = cleanText(payload.description, 3000);
   const details = isRecord(payload.details) ? payload.details : {};
   const newVehicle = details.newVehicle === true;
+  const consentAccepted = payload.consentAccepted === true;
+  const consentVersion = cleanText(payload.consentVersion, 80);
+  const termsVersion = cleanText(payload.termsVersion, 80);
+  const privacyPolicyVersion = cleanText(payload.privacyPolicyVersion, 80);
+  const whatsappOptIn = payload.whatsappOptIn === true;
 
+  if (!consentAccepted || !consentVersion || !termsVersion || !privacyPolicyVersion) {
+    return jsonResponse({ error: "Accept the terms and privacy acknowledgement before submitting." }, 400);
+  }
   if (guestName.length < 2) return jsonResponse({ error: "Enter your full name." }, 400);
   if (payload.guestEmail && !guestEmail) return jsonResponse({ error: "Enter a valid email address or leave it blank." }, 400);
   if (subject.length < 3 || description.length < 3) return jsonResponse({ error: "Please complete the enquiry details." }, 400);
@@ -195,6 +203,12 @@ async function submitEnquiry(admin: any, secret: string, payload: Record<string,
       subject,
       description,
       details,
+      consent_accepted: true,
+      consent_accepted_at: new Date().toISOString(),
+      consent_version: consentVersion,
+      terms_version: termsVersion,
+      privacy_policy_version: privacyPolicyVersion,
+      whatsapp_opt_in: whatsappOptIn,
       status: "open",
     })
     .select("id,enquiry_no,status")
