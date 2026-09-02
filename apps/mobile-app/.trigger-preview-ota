@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1069
-source_commit=fff5253ccb5b6b1115c23e74e50155af8ca0cf25
-purpose=publish claim number popup reference layout preview OTA
+source_pr=1070
+source_commit=72e46622cfcbc383ecbc124be4bfc169f1fbf43f
+purpose=publish Stage 1 Control No success popup preview OTA
