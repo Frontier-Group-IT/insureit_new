@@ -331,6 +331,95 @@ https://portal.insureit.in/privacy-policy
 Account deletion:
 https://portal.insureit.in/account-deletion
 
+## Store asset audit — 2026-09-02
+
+Current repo asset findings:
+
+- app.json currently points launcher/store icon source to:
+  - apps/mobile-app/assets/brand/insureit-app-icon-ice.png
+  - current image dimensions: 265 x 251
+  - this is not an ideal Play Store master because it is not square and is below the 512 x 512 Play icon requirement
+- suitable square brand candidates already exist in the repo:
+  - apps/mobile-app/assets/brand/insureit-app-icon.png — 1024 x 1024
+  - apps/mobile-app/assets/brand/insureit-mark-icon.png — 1024 x 1024
+- Android adaptive foreground:
+  - apps/mobile-app/assets/brand/insureit-adaptive-foreground.png — 1024 x 1024
+- no dedicated Play feature-graphic asset was identified in the customer app asset tree
+- no dedicated sanitized Play screenshot set was identified in the customer app asset tree
+
+Final native/store-asset action:
+- visually choose the final 1024 x 1024 INSUREIT icon candidate
+- point app.json launcher icon to the approved square master during the final native pass
+- export the Play listing icon as 512 x 512 PNG
+- create a dedicated 1024 x 500 feature graphic
+- create sanitized portrait Play screenshots from the final release-candidate build
+- do not repurpose the current 265 x 251 ice icon as the final Play listing master
+
+## Reviewer-access pack
+
+Prepare one dedicated reviewer account that contains safe demo data covering the important app routes.
+
+Recommended demo account state:
+- at least 2 commercial vehicles
+- at least 1 active policy
+- at least 1 policy nearing renewal/expiry
+- at least 1 self-managed claim with multiple milestones completed
+- at least 1 support ticket
+- at least 1 Insurance Quote enquiry
+- at least 1 Challan Assistance enquiry
+- at least 1 notification in each useful category where possible
+- no real customer PII
+
+Recommended reviewer instructions:
+
+1. Open INSUREIT.
+2. Sign in with the dedicated Play reviewer credentials supplied only in Play Console.
+3. Home shows the customer fleet summary and Quick Actions.
+4. Open Vehicles to view vehicle protection status.
+5. Open Policies to review policy details and expiry/renewal state.
+6. Open Claims, then open the prepared claim to view Claim Tracker milestones.
+7. From Home, open Get Quote to review the quote-request flow.
+8. From Home, open Pay Challan to review the assisted challan flow.
+9. Open Support -> Requests & Tickets to view support and service enquiries.
+10. Open Notifications to view customer updates.
+11. Open Profile -> Account & Privacy for Privacy Policy and Request account deletion.
+
+If OTP is required for the reviewer account, Play Console instructions must explain exactly how Google reviewers can complete login without relying on a staff member being available.
+
+## Sanitized screenshot capture plan
+
+Capture from a release-demo account only.
+
+Recommended portrait sequence:
+1. Home
+   - clean fleet summary
+   - Quick Actions visible: Renewal, Start Claim, Get Quote, Pay Challan
+2. Vehicles
+   - one protected vehicle and one attention-needed state
+3. Policies
+   - active policy plus renewal/expiry visibility
+4. Claim Tracker
+   - several milestones completed
+   - no real claim number
+5. Get Quote
+   - polished hero, vehicle selection and consent area
+6. Pay Challan
+   - premium navy hero, vehicle registration form and consent area
+7. Support
+   - Requests & Tickets showing support + ENQ items
+8. Profile / Privacy
+   - Account & Privacy controls
+
+Screenshot sanitization requirements:
+- fictitious customer name
+- fictitious phone/email
+- fictitious vehicle registrations
+- fictitious policy and claim numbers
+- no uploaded ID/KYC document visible
+- no accident media containing people, number plates or private locations
+- no notification/status-bar PII
+- final launcher/display name and final icon should be in place before capture if they are visible
+
 ## Store graphics plan
 
 Google Play current requirements:
