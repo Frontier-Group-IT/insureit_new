@@ -277,17 +277,11 @@ export default function ProfileScreen() {
           <View style={styles.kycVaultIcon}><MaterialCommunityIcons name="shield-account-outline" size={22} color="#0B63CE" /></View>
           <View style={styles.kycVaultCopy}>
             <Text style={styles.kycVaultTitle}>Documents & KYC</Text>
-            <Text style={styles.kycVaultSub}>{documents.length ? `${documents.length} customer document${documents.length === 1 ? '' : 's'} stored safely` : 'Keep PAN, Aadhaar, GST and other KYC files ready'}</Text>
+            <Text style={styles.kycVaultSub}>{documents.length ? `${documents.length} document${documents.length === 1 ? '' : 's'} stored safely` : 'Keep PAN, Aadhaar, GST and other KYC files ready'}</Text>
           </View>
           <View style={styles.kycVaultCount}><Text style={styles.kycVaultCountText}>{documents.length}</Text></View>
           <MaterialCommunityIcons name={documentsOpen ? 'chevron-up' : 'chevron-down'} size={24} color={palette.navy} />
         </Pressable>
-
-        <View style={styles.kycVaultSummary}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open uploaded documents" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(true)} style={styles.kycMiniStat}><Text style={styles.kycMiniStatValue}>{documents.length}</Text><Text style={styles.kycMiniStatLabel}>Uploaded</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open private document vault" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(true)} style={styles.kycMiniStat}><MaterialCommunityIcons name="lock-check-outline" size={17} color="#12805C" /><Text style={styles.kycMiniStatLabel}>Private vault</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Manage documents" accessibilityState={{ expanded: documentsOpen }} onPress={() => setDocumentsOpen(true)} style={styles.kycMiniStat}><MaterialCommunityIcons name="trash-can-outline" size={17} color="#B7791F" /><Text style={styles.kycMiniStatLabel}>Manage documents</Text></Pressable>
-        </View>
 
         {documentsOpen ? <>
           <View style={styles.kycUploadPanel}>
