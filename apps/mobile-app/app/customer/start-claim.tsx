@@ -189,7 +189,12 @@ export default function StartClaimScreen() {
         </View>
 
         {selectedPolicy ? (
-          <View style={styles.policyCardShadow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`View policy details for ${selectedPolicy.policy_no}`}
+            onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: selectedPolicy.id, source: selectedPolicy.source } } as any)}
+            style={({ pressed }) => [styles.policyCardShadow, pressed && styles.policyCardPressed]}
+          >
             <View style={styles.policyCard}>
               <View pointerEvents="none" style={styles.policyDecoration}>
                 <View style={styles.policyArcOne} />
@@ -212,7 +217,7 @@ export default function StartClaimScreen() {
                 )}
               </View>
             </View>
-          </View>
+          </Pressable>
         ) : (
           <View style={styles.noPolicy}><MaterialCommunityIcons name="shield-alert-outline" size={26} color="#B7791F" /><View style={styles.noPolicyCopy}><Text style={styles.noPolicyTitle}>No policy recorded for this vehicle</Text><Text style={styles.noPolicyText}>Add the policy details before starting a claim.</Text></View></View>
         )}
@@ -355,6 +360,7 @@ const styles = StyleSheet.create({
   addPolicyButton: { minHeight: 36, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, borderWidth: 1, borderColor: '#C9DAF2', backgroundColor: '#F7FAFF', paddingHorizontal: 9 },
   addPolicyText: { color: '#0A43A3', fontSize: 10, fontWeight: '900' },
   policyCardShadow: { borderRadius: 20, shadowColor: '#07327B', shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3, backgroundColor: '#07327B' },
+  policyCardPressed: { opacity: 0.94, transform: [{ scale: 0.995 }] },
   policyCard: { position: 'relative', minHeight: 145, borderRadius: 20, backgroundColor: '#07327B', overflow: 'hidden' },
   policyDecoration: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
   policyArcOne: { position: 'absolute', width: 210, height: 210, borderRadius: 105, borderWidth: 1, borderColor: 'rgba(68,137,255,0.20)', right: -100, top: -118 },
