@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1066
-source_commit=ccc32590f8e76499e2783f862a50ef203a927983
-purpose=publish Start Claim policy-card navigation preview OTA
+source_pr=1068
+source_commit=fb784a251f009cfaefae7d3fda7499884bba51b2
+purpose=publish compact self-tracked policy card preview OTA
