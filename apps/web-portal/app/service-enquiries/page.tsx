@@ -18,6 +18,10 @@ type ServiceEnquiryRow = {
   description: string;
   details: Record<string, unknown> | null;
   status: "open" | "in_progress" | "resolved" | "closed";
+  consent_accepted: boolean;
+  consent_accepted_at: string | null;
+  consent_version: string | null;
+  whatsapp_opt_in: boolean;
   created_at: string;
   customers: { contact_name: string | null; phone: string | null; email: string | null; customer_code: string | null } | null;
   vehicles: { vehicle_no: string | null } | null;
@@ -38,7 +42,7 @@ export default async function ServiceEnquiriesPage() {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("service_enquiries")
-    .select("id,enquiry_no,service_type,source,customer_id,guest_name,guest_phone,guest_email,vehicle_no,subject,description,details,status,created_at,customers(contact_name,phone,email,customer_code),vehicles(vehicle_no)")
+    .select("id,enquiry_no,service_type,source,customer_id,guest_name,guest_phone,guest_email,vehicle_no,subject,description,details,status,consent_accepted,consent_accepted_at,consent_version,whatsapp_opt_in,created_at,customers(contact_name,phone,email,customer_code),vehicles(vehicle_no)")
     .order("created_at", { ascending: false })
     .limit(200)
     .returns<ServiceEnquiryRow[]>();
@@ -78,6 +82,7 @@ export default async function ServiceEnquiriesPage() {
                 <th className="px-4 py-3">Vehicle</th>
                 <th className="px-4 py-3">Details</th>
                 <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Consent</th>
                 <th className="px-4 py-3">Status</th>
               </tr>
             </thead>
@@ -113,6 +118,15 @@ export default async function ServiceEnquiriesPage() {
                       </div>
                     </td>
                     <td className="px-4 py-4">
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black ${row.consent_accepted ? "bg-[#EAF8F0] text-[#147A55]" : "bg-[#F3F5F9] text-[#7B8498]"}`}>
+                          {row.consent_accepted ? "Consent captured" : "Legacy request"}
+                        </span>
+                        {row.whatsapp_opt_in ? <span className="inline-flex rounded-full bg-[#EAF7F2] px-2 py-1 text-[9px] font-black text-[#15765B]">WhatsApp allowed</span> : null}
+                        {row.consent_accepted_at ? <span className="text-[9px] text-[#8A93A6]">{formatDateTime(row.consent_accepted_at)}</span> : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
                       {canEdit ? (
                         <form action={updateServiceEnquiryStatus} className="flex items-center gap-2">
                           <input type="hidden" name="id" value={row.id} />
@@ -132,7 +146,7 @@ export default async function ServiceEnquiriesPage() {
                 );
               })}
               {!rows.length ? (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">No quote or challan enquiries yet.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm font-semibold text-[#7B8498]">No quote or challan enquiries yet.</td></tr>
               ) : null}
             </tbody>
           </table>
