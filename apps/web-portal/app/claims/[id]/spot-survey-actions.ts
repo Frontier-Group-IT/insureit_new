@@ -8,6 +8,8 @@ import type { ClaimStatus } from "@/lib/claim-workflow";
 import { canVerifyClaimDocuments } from "@/lib/roles";
 
 const bucketName = "claim-documents";
+const maxDocumentSizeBytes = 5 * 1024 * 1024;
+const maxVideoSizeBytes = 50 * 1024 * 1024;
 const spotRequiredFields = ["spot_axle_status", "spot_overturned"] as const;
 const rcDateFields = ["fitness_valid_upto", "tax_valid_upto", "insurance_valid_upto", "pucc_valid_upto", "local_permit_valid_upto", "national_permit_valid_upto"] as const;
 const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "ncb_verified", "policy_type_check", "gvw_kg"] as const;
@@ -246,6 +248,11 @@ export async function replaceSpotSurveyDocument(formData: FormData): Promise<Act
     const customerId = String(formData.get("customerId") ?? "").trim();
     const file = formData.get("file");
     if (!claimId || !documentType || !customerId || !(file instanceof File) || !file.size) throw new Error("Missing replacement document details.");
+    const isVideo = documentType.toLowerCase().includes("video");
+    const maxSize = isVideo ? maxVideoSizeBytes : maxDocumentSizeBytes;
+    if (file.size > maxSize) throw new Error(`The selected file exceeds the ${isVideo ? "50 MB" : "5 MB"} limit.`);
+    const allowedTypes = isVideo ? ["video/mp4", "video/quicktime", "video/webm"] : ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (file.type && !allowedTypes.includes(file.type)) throw new Error("Unsupported document format.");
     const profile = await currentProfile(); await loadClaim(claimId); const supabase = await createServerSupabaseClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_"); const storagePath = `${claimId}/${Date.now()}-${safeName}`;
     const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
