@@ -287,8 +287,8 @@ function ExpiredPolicyPulse() {
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
 
   return (
-    <Animated.View style={[styles.policyCheck, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
-      <Text style={styles.policyStatusExclamation}>!</Text>
+    <Animated.View style={[styles.expiredPolicyPulseIcon, { opacity, transform: [{ scale }] }]}>
+      <MaterialCommunityIcons name="alert-circle" size={15} color="#FFFFFF" />
     </Animated.View>
   );
 }
@@ -367,7 +367,7 @@ const styles = StyleSheet.create({
   policyInsurer: { color: '#E0E9F7', fontSize: 10.5, lineHeight: 15, fontWeight: '700', marginTop: 4 },
   policyDates: { color: '#D2DEEF', fontSize: 10.5, fontWeight: '700', marginTop: 5 },
   policyCheck: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#11A35D', alignItems: 'center', justifyContent: 'center' },
-  policyCheckExpired: { backgroundColor: '#E85D63' },
+  expiredPolicyPulseIcon: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center' },
   policyCheckDue: { backgroundColor: '#F59E0B' },
   policyStatusExclamation: { color: '#FFFFFF', fontSize: 23, lineHeight: 25, fontWeight: '900', textAlign: 'center' },
   noPolicy: { borderRadius: 15, borderWidth: 1, borderColor: '#F0D9AC', backgroundColor: '#FFFBF3', padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
