@@ -33,9 +33,11 @@ function validIsoDate(value?: string) {
 
 export default async function PartnerBusinessPage({ searchParams }: { searchParams: Promise<BusinessSearchParams> }) {
   const query = await searchParams;
-  const performance = await getPartnerWebBusinessPerformance();
   const hasRange = validIsoDate(query.from) && validIsoDate(query.to) && String(query.from) <= String(query.to);
-  const range = hasRange ? await getPartnerWebBusinessRange(String(query.from), String(query.to)) : null;
+  const [performance, range] = await Promise.all([
+    getPartnerWebBusinessPerformance(),
+    hasRange ? getPartnerWebBusinessRange(String(query.from), String(query.to)) : Promise.resolve(null),
+  ]);
 
   const premiumNow = Number(performance.premium_this_month || 0);
   const premiumLast = Number(performance.premium_last_month || 0);
