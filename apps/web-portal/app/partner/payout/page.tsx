@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BadgeIndianRupee, CircleDollarSign, LockKeyhole, ReceiptIndianRupee } from "lucide-react";
+import { ArrowRight, LockKeyhole, ReceiptIndianRupee } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebPayoutSummary } from "@/lib/partner-web";
