@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1144
-source_commit=88ca5a5ad3e355e63bb87a8e9faa07df39e10053
-purpose=publish customer notification submenu filters preview OTA
+source_pr=1152
+source_commit=817f9877076edb2f0f01eb6043d91f95c16efbd2
+purpose=publish profile edit address normalization preview OTA

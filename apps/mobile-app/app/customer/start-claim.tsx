@@ -180,8 +180,27 @@ export default function StartClaimScreen() {
       ) : null}
 
       <View style={[styles.section, styles.vehicleSection]}>
-        <Text style={styles.sectionLabel}>Vehicle number *</Text>
-        {accountVehicles.length ? <VehicleDropdown vehicles={filteredVehicles} query={vehicleQuery} selectedVehicle={selectedVehicle} open={vehicleOpen} onToggle={() => setVehicleOpen((value) => !value)} onQueryChange={setVehicleQuery} onSelect={(vehicle) => { setSelectedVehicleId(vehicle.id); setVehicleQuery(''); setVehicleOpen(false); setSelectedCustomerId(vehicle.customer_id); }} /> : <EmptyState title="No vehicle found" body="Add a vehicle before starting a claim." />}
+        {accountVehicles.length ? (
+          <VehicleDropdown
+            vehicles={filteredVehicles}
+            query={vehicleQuery}
+            selectedVehicle={selectedVehicle}
+            open={vehicleOpen}
+            onToggle={() => setVehicleOpen((value) => !value)}
+            onQueryChange={setVehicleQuery}
+            onSelect={(vehicle) => {
+              setSelectedVehicleId(vehicle.id);
+              setVehicleQuery('');
+              setVehicleOpen(false);
+              setSelectedCustomerId(vehicle.customer_id);
+            }}
+          />
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>Vehicle number *</Text>
+            <EmptyState title="No vehicle found" body="Add a vehicle before starting a claim." />
+          </>
+        )}
         <Text style={styles.helper}>Start typing to find a vehicle.</Text>
       </View>
 
@@ -337,7 +356,14 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
   const anchorRef = useRef<View>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  function focusSearchInput() {
+    requestAnimationFrame(() => {
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+    });
+  }
 
   function closeSelector() {
     Keyboard.dismiss();
@@ -345,8 +371,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   }
 
   function toggleSelector() {
-    Keyboard.dismiss();
     if (open) {
+      Keyboard.dismiss();
       onToggle();
       return;
     }
@@ -357,22 +383,20 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   }
 
   return <View style={styles.vehicleField}>
-    <View ref={anchorRef} collapsable={false}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        onPressIn={(event) => event.stopPropagation()}
-        onPress={(event) => {
-          event.stopPropagation();
-          toggleSelector();
-        }}
-        style={[styles.selectButton, open && styles.selectButtonOpen]}
-      >
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={selectedVehicle ? `Vehicle number ${selectedVehicle.vehicle_no}. Open vehicle selector.` : 'Open vehicle selector'}
+      accessibilityState={{ expanded: open }}
+      onPress={toggleSelector}
+      style={({ pressed }) => [styles.vehicleSelectorPressTarget, pressed && !open && styles.vehicleSelectorPressed]}
+    >
+      <Text pointerEvents="none" style={styles.sectionLabel}>Vehicle number *</Text>
+      <View ref={anchorRef} collapsable={false} pointerEvents="none" style={[styles.selectButton, open && styles.selectButtonHidden]}>
         <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
         <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
         <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
 
     <Modal
       visible={open}
@@ -380,6 +404,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
       animationType="none"
       statusBarTranslucent
       onRequestClose={closeSelector}
+      onShow={focusSearchInput}
     >
       <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleDropdownOverlay}>
         <Pressable
@@ -396,6 +421,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
           <View style={styles.makeSearch}>
             <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
             <TextInput
+              ref={searchInputRef}
               value={query}
               onChangeText={onQueryChange}
               autoCapitalize="characters"
@@ -459,8 +485,11 @@ const styles = StyleSheet.create({
   chipText: { color: '#56657A', fontSize: 10.5, fontWeight: '800' },
   chipTextActive: { color: '#FFFFFF' },
   vehicleField: { gap: 6 },
+  vehicleSelectorPressTarget: { width: '100%' },
+  vehicleSelectorPressed: { opacity: 0.96 },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  selectButtonHidden: { opacity: 0 },
   selectVehicleArtwork: { width: 36, height: 36 },
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
