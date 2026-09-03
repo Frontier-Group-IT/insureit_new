@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileUp, Loader2, ShieldCheck } from "lucide-react";
-import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import {
   getPartnerPolicyIntakeSourcesWeb,
   POLICY_INTAKE_ACCEPT,
@@ -132,7 +132,7 @@ export function PartnerPolicyIntakeNewClient() {
                     })}
                   </div>
                 ) : (
-                  <div className="mt-2 rounded-2xl border border-[#DCE3EC] bg-[#F8FAFD] px-4 py-3">
+                  <div className="mt-2 border-y border-[#DCE4ED] py-3">
                     <p className="text-[11px] font-extrabold text-[#1B2F4E]">{selectedSource?.display_name || "No active lead source available"}</p>
                     {selectedSource ? <p className="mt-0.5 text-[9.5px] text-[#74839A]">{selectedSource.intermediary_type.toUpperCase()}{selectedSource.intermediary_code ? " · " + selectedSource.intermediary_code : ""}</p> : null}
                   </div>
