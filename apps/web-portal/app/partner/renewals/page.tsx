@@ -125,13 +125,13 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><RefreshCw className="h-4 w-4" /></span>
                     <div className="min-w-0">
-                      <p className="truncate text-[11.5px] font-extrabold text-[#1B2F4E]">{row.customer_name}</p>
-                      <p className="mt-0.5 truncate text-[10px] font-medium text-[#74839A]">{row.policy_no || row.policy_code || "Policy"}</p>
+                      <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.customer_name}</p>
+                      <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.policy_no || row.policy_code || "Policy"}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="truncate text-[10px] font-semibold text-[#536680]">{row.insurer_name || "Insurer not recorded"}</p>
-                    <p className="mt-0.5 truncate text-[9.5px] text-[#7F8EA4]">{row.vehicle_no || row.policy_product || "Risk not linked"}</p>
+                    <p className="break-words text-[10px] font-semibold leading-4 text-[#536680]">{row.insurer_name || "Insurer not recorded"}</p>
+                    <p className="mt-0.5 break-words text-[9.5px] leading-4 text-[#7F8EA4]">{row.vehicle_no || row.policy_product || "Risk not linked"}</p>
                   </div>
                   <div>
                     <p className="text-[10.5px] font-extrabold text-[#203653]">{currency(row.premium_amount)}</p>
