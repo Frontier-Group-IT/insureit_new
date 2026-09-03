@@ -340,11 +340,11 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   const searchInputRef = useRef<TextInput>(null);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
 
-  useEffect(() => {
-    if (!open) return;
-    const timer = setTimeout(() => searchInputRef.current?.focus(), 80);
-    return () => clearTimeout(timer);
-  }, [open]);
+  function focusSearchInput() {
+    requestAnimationFrame(() => {
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+    });
+  }
 
   function closeSelector() {
     Keyboard.dismiss();
@@ -352,8 +352,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   }
 
   function toggleSelector() {
-    Keyboard.dismiss();
     if (open) {
+      Keyboard.dismiss();
       onToggle();
       return;
     }
@@ -387,6 +387,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
       animationType="none"
       statusBarTranslucent
       onRequestClose={closeSelector}
+      onShow={focusSearchInput}
     >
       <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleDropdownOverlay}>
         <Pressable
@@ -404,7 +405,6 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
             <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
             <TextInput
               ref={searchInputRef}
-              autoFocus
               value={query}
               onChangeText={onQueryChange}
               autoCapitalize="characters"
