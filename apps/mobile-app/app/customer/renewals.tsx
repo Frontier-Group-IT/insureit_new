@@ -80,7 +80,6 @@ export default function ComplianceRenewalsScreen() {
   }), [data]);
 
   const expiredCount = renewals.summaries.reduce((total, item) => total + item.expired, 0);
-  const expiredItems = renewals.items.filter((item) => item.status === 'expired');
 
   if (loading) return <Screen title="Renewals" showTitleHeader={false}><LoadingState /></Screen>;
 
@@ -109,13 +108,20 @@ export default function ComplianceRenewalsScreen() {
         {renewals.summaries.map((summary) => {
           const expanded = expandedKey === summary.key;
           const summaryItems = renewals.items.filter((item) => item.key === summary.key);
+          const dueItems = summaryItems.filter((item) => item.status === 'due');
+          const expiredForSummary = summaryItems.filter((item) => item.status === 'expired');
+
+          const toggleExpanded = () => {
+            if (!summary.tracked) return;
+            setExpandedKey((current) => current === summary.key ? null : summary.key);
+          };
+
           return (
             <View key={summary.key} style={styles.summaryGroup}>
               <Pressable
-                disabled={!summary.tracked}
                 accessibilityRole={summary.tracked ? 'button' : undefined}
                 accessibilityState={summary.tracked ? { expanded } : undefined}
-                onPress={() => setExpandedKey((current) => current === summary.key ? null : summary.key)}
+                onPress={toggleExpanded}
                 style={({ pressed }) => [
                   styles.summaryCard,
                   !summary.tracked && styles.summaryCardDisabled,
@@ -138,31 +144,31 @@ export default function ComplianceRenewalsScreen() {
                       <InlineMetric value={summary.due} tone="amber" />
                       <InlineMetric value={summary.expired} tone="red" />
                     </View>
-                    <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color="#718198" />
+                    <View style={styles.expandIconButton}>
+                      <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color="#526278" />
+                    </View>
                   </View>
                 ) : null}
               </Pressable>
 
               {expanded && summary.tracked ? (
                 <View style={styles.expandedPanel}>
-                  {summaryItems.length ? summaryItems.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: item.vehicleId } } as any)}
-                      style={({ pressed }) => [styles.expandedItem, pressed && styles.itemPressed]}
-                    >
-                      <View style={[styles.expandedItemIcon, item.status === 'expired' && styles.itemIconExpired]}>
-                        <MaterialCommunityIcons name={iconFor[item.key]} size={17} color={item.status === 'expired' ? '#C43D2D' : '#B7791F'} />
-                      </View>
-                      <View style={styles.itemCopy}>
-                        <Text style={styles.expandedItemTitle} numberOfLines={1}>{item.vehicleNo} - {item.customerName}</Text>
-                        <Text style={styles.expandedItemDate} numberOfLines={1}>{item.status === 'expired' ? 'Expired' : 'Due'} {formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
-                      </View>
-                      <View style={[styles.statusPill, item.status === 'expired' && styles.statusPillExpired]}>
-                        <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
-                      </View>
-                    </Pressable>
-                  )) : (
+                  {summaryItems.length ? (
+                    <>
+                      <RenewalItemSection
+                        title="Due"
+                        items={dueItems}
+                        tone="amber"
+                        router={router}
+                      />
+                      <RenewalItemSection
+                        title="Expired"
+                        items={expiredForSummary}
+                        tone="red"
+                        router={router}
+                      />
+                    </>
+                  ) : (
                     <View style={styles.expandedEmpty}>
                       <MaterialCommunityIcons name="check-circle-outline" size={17} color="#168F6A" />
                       <Text style={styles.expandedEmptyText}>No due or expired items</Text>
@@ -175,33 +181,49 @@ export default function ComplianceRenewalsScreen() {
         })}
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Expired documents</Text>
-      </View>
+    </Screen>
+  );
+}
 
-      {expiredItems.length ? expiredItems.map((item) => (
-        <Pressable key={item.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: item.vehicleId } } as any)} style={({ pressed }) => [styles.itemRow, pressed && styles.itemPressed]}>
-          <View style={[styles.itemIcon, styles.itemIconExpired]}>
-            <MaterialCommunityIcons name={iconFor[item.key]} size={19} color="#C43D2D" />
+function RenewalItemSection({
+  title,
+  items,
+  tone,
+  router,
+}: {
+  title: 'Due' | 'Expired';
+  items: ReturnType<typeof buildComplianceRenewals>['items'];
+  tone: 'amber' | 'red';
+  router: ReturnType<typeof useRouter>;
+}) {
+  if (!items.length) return null;
+
+  return (
+    <View style={styles.expandedSection}>
+      <View style={styles.expandedSectionHeader}>
+        <View style={[styles.expandedSectionDot, tone === 'red' ? styles.expandedSectionDotRed : styles.expandedSectionDotAmber]} />
+        <Text style={[styles.expandedSectionTitle, tone === 'red' ? styles.metricRed : styles.metricAmber]}>{title}</Text>
+        <Text style={styles.expandedSectionCount}>{items.length}</Text>
+      </View>
+      {items.map((item) => (
+        <Pressable
+          key={item.id}
+          onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: item.vehicleId } } as any)}
+          style={({ pressed }) => [styles.expandedItem, pressed && styles.itemPressed]}
+        >
+          <View style={[styles.expandedItemIcon, item.status === 'expired' && styles.itemIconExpired]}>
+            <MaterialCommunityIcons name={iconFor[item.key]} size={17} color={item.status === 'expired' ? '#C43D2D' : '#B7791F'} />
           </View>
           <View style={styles.itemCopy}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-            <Text style={styles.itemMeta} numberOfLines={1}>{item.vehicleNo} - {item.customerName}</Text>
-            <Text style={styles.itemDate}>Expires {formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
+            <Text style={styles.expandedItemTitle} numberOfLines={1}>{item.vehicleNo} - {item.customerName}</Text>
+            <Text style={styles.expandedItemDate} numberOfLines={1}>{formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
           </View>
           <View style={[styles.statusPill, item.status === 'expired' && styles.statusPillExpired]}>
             <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
           </View>
         </Pressable>
-      )) : (
-        <View style={styles.expiredEmptyCard}>
-          <View style={styles.expiredEmptyIcon}>
-            <MaterialCommunityIcons name="file-search-outline" size={22} color="#168F6A" />
-          </View>
-          <Text style={styles.expiredEmptyTitle}>No expired documents</Text>
-        </View>
-      )}
-    </Screen>
+      ))}
+    </View>
   );
 }
 
@@ -256,32 +278,29 @@ const styles = StyleSheet.create({
   summaryIconHot: { backgroundColor: '#FFF0EE' },
   summaryTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   summaryRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
+  expandIconButton: { width: 28, height: 28, borderRadius: 9, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center' },
   inlineMetrics: { minWidth: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, paddingRight: 2 },
   inlineMetricValue: { minWidth: 24, textAlign: 'center', fontSize: 15, lineHeight: 18, fontWeight: '900' },
   metricAmber: { color: '#B7791F' },
   metricRed: { color: '#C43D2D' },
   notTracked: { color: '#7A8799', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 2 },
   expandedPanel: { borderWidth: 1, borderTopWidth: 0, borderColor: '#DCE8F4', backgroundColor: '#FBFDFF', borderBottomLeftRadius: 14, borderBottomRightRadius: 14, paddingHorizontal: 8, paddingVertical: 6, gap: 5 },
+  expandedSection: { gap: 5 },
+  expandedSectionHeader: { minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
+  expandedSectionDot: { width: 7, height: 7, borderRadius: 4 },
+  expandedSectionDotAmber: { backgroundColor: '#B7791F' },
+  expandedSectionDotRed: { backgroundColor: '#C43D2D' },
+  expandedSectionTitle: { fontSize: 10.5, fontWeight: '900' },
+  expandedSectionCount: { minWidth: 20, borderRadius: 999, backgroundColor: '#EEF2F6', color: '#526278', textAlign: 'center', fontSize: 9, fontWeight: '900', paddingHorizontal: 6, paddingVertical: 2 },
   expandedItem: { minHeight: 50, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8EEF5', paddingHorizontal: 8, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 8 },
   expandedItemIcon: { width: 30, height: 30, borderRadius: 9, backgroundColor: '#FFF7EA', alignItems: 'center', justifyContent: 'center' },
   expandedItemTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
   expandedItemDate: { color: '#718198', fontSize: 9.2, fontWeight: '700', marginTop: 2 },
   expandedEmpty: { minHeight: 44, borderRadius: 10, backgroundColor: '#F5FBF8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 10 },
   expandedEmptyText: { color: '#357A64', fontSize: 10, fontWeight: '800' },
-  sectionHeader: { marginTop: 13, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  expiredEmptyCard: { minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
-  expiredEmptyIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#EAF8F3', alignItems: 'center', justifyContent: 'center' },
-  expiredEmptyTitle: { flex: 1, color: palette.navy, fontSize: 15, lineHeight: 19, fontWeight: '900' },
-  sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  sectionHint: { color: '#667085', fontSize: 10, fontWeight: '700' },
-  itemRow: { borderRadius: 14, borderWidth: 1, borderColor: '#E2EAF4', backgroundColor: '#FFFFFF', padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
   itemPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
-  itemIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF7EA', alignItems: 'center', justifyContent: 'center' },
   itemIconExpired: { backgroundColor: '#FFF0EE' },
   itemCopy: { flex: 1, minWidth: 0 },
-  itemTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  itemMeta: { color: '#526278', fontSize: 10.5, fontWeight: '800', marginTop: 2 },
-  itemDate: { color: '#7A8799', fontSize: 9.5, fontWeight: '700', marginTop: 2 },
   statusPill: { minWidth: 46, borderRadius: 999, backgroundColor: '#FFF7EA', paddingHorizontal: 8, paddingVertical: 5, alignItems: 'center' },
   statusPillExpired: { backgroundColor: '#FFF0EE' },
   statusText: { color: '#B7791F', fontSize: 10, fontWeight: '900' },
