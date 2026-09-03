@@ -54,15 +54,15 @@ export default async function PartnerActivityPage() {
         />
 
         {data.attention.length ? (
-          <section className="rounded-[18px] border border-[#E8D8BC] bg-[#FFF9EF] p-5">
-            <div className="flex items-center gap-2">
+          <section>
+            <div className="flex items-center gap-2 px-1">
               <BellRing className="h-4 w-4 text-[#A86809]" />
               <h3 className="text-[15px] font-extrabold text-[#6F4B12]">Needs attention</h3>
             </div>
-            <div className="mt-4 grid border-y border-[#E8D8BC] lg:grid-cols-3">
+            <div className="mt-3 grid border-y border-[#E8D8BC] lg:grid-cols-3">
               {data.attention.slice(0, 3).map((item, index) => (
-                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[78px] items-center gap-3 border-b border-[#F0D7AE] px-1 py-3 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#FFF1D9] text-[#A86809]"><BellRing className="h-4 w-4" /></span>
+                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[74px] items-center gap-3 border-b border-[#F0D7AE] px-1 py-3 transition hover:bg-[#FFF9EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#A86809]/20 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF1D9] text-[#A86809]"><BellRing className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10.5px] font-extrabold text-[#6F4B12]">{item.title}</p>
                     <p className="mt-1 line-clamp-2 text-[9px] font-medium leading-4 text-[#806B52]">{item.subtitle}</p>
@@ -94,15 +94,15 @@ export default async function PartnerActivityPage() {
                         <p className="text-[8px] font-black uppercase tracking-[0.1em] text-[#3156B8]">{labelFor(item.kind)}</p>
                         <p className="text-[8.5px] font-medium text-[#8A98AB]">{dateLabel(item.event_at)}</p>
                       </div>
-                      <p className="mt-1.5 text-[11px] font-extrabold text-[#1B2F4E]">{item.title}</p>
-                      <p className="mt-1 text-[9.5px] font-medium text-[#74839A]">{item.subtitle}</p>
+                      <p className="mt-1.5 break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{item.title}</p>
+                      <p className="mt-1 break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{item.subtitle}</p>
                       {item.meta ? <p className="mt-1 text-[8.5px] text-[#8997AA]">{item.meta}</p> : null}
                     </div>
                     {href ? <ArrowRight className="mt-2 h-4 w-4 text-[#A0ADBE] transition group-hover:translate-x-0.5" /> : <span />}
                   </>
                 );
                 return href ? (
-                  <Link key={item.kind + "-" + item.entity_id + "-" + item.event_at} href={href} className="group grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3">
+                  <Link key={item.kind + "-" + item.entity_id + "-" + item.event_at} href={href} className="group grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3 rounded-lg transition hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
                     {row}
                   </Link>
                 ) : (
