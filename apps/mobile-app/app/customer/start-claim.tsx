@@ -208,7 +208,11 @@ export default function StartClaimScreen() {
                   <Image
                     accessible={false}
                     source={selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon}
-                    style={[styles.policyIconArtwork, selectedPolicy.source === 'external' && styles.policyIconArtworkCompact]}
+                    style={[
+                      styles.policyIconArtwork,
+                      selectedPolicy.source === 'external' && styles.policyIconArtworkCompact,
+                      selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
+                    ]}
                     resizeMode="contain"
                   />
                 </View>
@@ -411,6 +415,7 @@ const styles = StyleSheet.create({
   policyIconCompact: { width: 46, height: 46, borderRadius: 13, backgroundColor: 'transparent' },
   policyIconArtwork: { width: 43, height: 43 },
   policyIconArtworkCompact: { width: 34, height: 34 },
+  selfTrackedPolicyIconArtwork: { tintColor: '#FFFFFF', opacity: 0.96 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
   policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 },
   policyModeCompact: { fontSize: 8.8, letterSpacing: 0.42 },
