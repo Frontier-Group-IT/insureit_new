@@ -15,7 +15,7 @@ function activityHref(item: PartnerActivityData["items"][number]) {
   if (item.kind === "policy") return "/partner/policies/" + encodeURIComponent(item.entity_id);
   if (item.kind === "claim") return "/partner/claims/" + encodeURIComponent(item.entity_id);
   if (item.kind === "intake") return "/partner/policy-intakes/" + encodeURIComponent(item.entity_id);
-  return "/partner/learn";
+  return null;
 }
 
 function attentionHref(route: string, kind: string) {
@@ -83,8 +83,9 @@ export default async function PartnerActivityPage() {
             <div className="px-5 py-5 sm:px-6">
               {data.items.map((item, index) => {
                 const Icon = iconFor(item.kind);
-                return (
-                  <Link key={item.kind + "-" + item.entity_id + "-" + item.event_at} href={activityHref(item)} className="group grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3">
+                const href = activityHref(item);
+                const row = (
+                  <>
                     <div className="flex flex-col items-center">
                       <span className="grid h-7 w-7 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-3.5 w-3.5" /></span>
                       {index < data.items.length - 1 ? <span className="min-h-10 w-px flex-1 bg-[#DDE4ED]" /> : null}
@@ -98,8 +99,17 @@ export default async function PartnerActivityPage() {
                       <p className="mt-1 text-[9.5px] font-medium text-[#74839A]">{item.subtitle}</p>
                       {item.meta ? <p className="mt-1 text-[8.5px] text-[#8997AA]">{item.meta}</p> : null}
                     </div>
-                    <ArrowRight className="mt-2 h-4 w-4 text-[#A0ADBE] transition group-hover:translate-x-0.5" />
+                    {href ? <ArrowRight className="mt-2 h-4 w-4 text-[#A0ADBE] transition group-hover:translate-x-0.5" /> : <span />}
+                  </>
+                );
+                return href ? (
+                  <Link key={item.kind + "-" + item.entity_id + "-" + item.event_at} href={href} className="group grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3">
+                    {row}
                   </Link>
+                ) : (
+                  <div key={item.kind + "-" + item.entity_id + "-" + item.event_at} className="grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3">
+                    {row}
+                  </div>
                 );
               })}
             </div>
