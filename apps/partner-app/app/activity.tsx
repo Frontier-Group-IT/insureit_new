@@ -67,7 +67,14 @@ export default function ActivityScreen() {
             </View>
             <Ionicons name="chevron-forward" size={14} color="#B2B8C2" />
           </Pressable>)}
-        </View> : <View style={styles.empty}><Text style={styles.emptyText}>No recent activity in this scope.</Text></View>}
+        </View> : (
+          <PartnerStateView
+            state="empty"
+            title="No recent activity"
+            message="New policy, claim, intake and learning events will appear here when they are recorded."
+            icon="time-outline"
+          />
+        )}
       </>}
     </PartnerScreen>
   );
@@ -83,5 +90,5 @@ const styles=StyleSheet.create({
   sectionHeader:{marginTop:14,marginBottom:7,flexDirection:'row',alignItems:'center',justifyContent:'space-between'},sectionTitle:{color:partnerTheme.colors.ink,fontSize:14,fontWeight:'800'},
   attentionList:{gap:8},attentionCard:{minHeight:60,flexDirection:'row',alignItems:'center',gap:10,borderRadius:16,paddingHorizontal:13,backgroundColor:'#FFF9EE',borderWidth:1,borderColor:'#F5DFC1'},attentionIcon:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:'#FFF0D5'},attentionBody:{flex:1},attentionTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},attentionText:{marginTop:3,color:'#806B52',fontSize:8.5,lineHeight:13},
   timeline:{marginTop:2},item:{minHeight:76,flexDirection:'row',gap:8},rail:{width:24,alignItems:'center'},dot:{width:10,height:10,borderRadius:5,marginTop:6},dotBusiness:{backgroundColor:partnerTheme.colors.brand},dotService:{backgroundColor:partnerTheme.colors.accent},dotAttention:{backgroundColor:partnerTheme.colors.warning},dotLearn:{backgroundColor:'#C17B18'},dotOps:{backgroundColor:'#667085'},line:{width:1,flex:1,marginTop:4,backgroundColor:partnerTheme.colors.line},
-  itemBody:{flex:1,paddingBottom:11},itemTop:{flexDirection:'row',justifyContent:'space-between',gap:8},kind:{fontSize:7.2,fontWeight:'800',letterSpacing:.8},textBusiness:{color:partnerTheme.colors.brand},textService:{color:partnerTheme.colors.accent},textAttention:{color:partnerTheme.colors.warning},textLearn:{color:'#A3630D'},textOps:{color:'#667085'},date:{color:partnerTheme.colors.inkMuted,fontSize:7.5},title:{marginTop:5,color:partnerTheme.colors.ink,fontSize:11,fontWeight:'800'},subtitle:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8.5},meta:{marginTop:4,color:'#8A94A6',fontSize:8},empty:{minHeight:160,alignItems:'center',justifyContent:'center'},emptyText:{color:partnerTheme.colors.inkMuted,fontSize:9}
+  itemBody:{flex:1,paddingBottom:11},itemTop:{flexDirection:'row',justifyContent:'space-between',gap:8},kind:{fontSize:7.2,fontWeight:'800',letterSpacing:.8},textBusiness:{color:partnerTheme.colors.brand},textService:{color:partnerTheme.colors.accent},textAttention:{color:partnerTheme.colors.warning},textLearn:{color:'#A3630D'},textOps:{color:'#667085'},date:{color:partnerTheme.colors.inkMuted,fontSize:7.5},title:{marginTop:5,color:partnerTheme.colors.ink,fontSize:11,fontWeight:'800'},subtitle:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8.5},meta:{marginTop:4,color:'#8A94A6',fontSize:8}
 });
