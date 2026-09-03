@@ -99,7 +99,7 @@ export default async function PartnerRegistrationPage() {
   return (
     <PartnerPortalShell title="Registration & Training">
       <div className="space-y-7">
-        <Link href="/partner/account" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]">
+        <Link href="/partner/account" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
           <ArrowLeft className="h-3.5 w-3.5" /> Account
         </Link>
 
@@ -137,7 +137,7 @@ export default async function PartnerRegistrationPage() {
         </section>
 
         <div className="grid gap-8 xl:grid-cols-[1.25fr_.75fr]">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+          <section className="border-y border-[#DCE4ED] py-4 sm:py-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#687A96]">Training & Examination</p>
@@ -150,7 +150,7 @@ export default async function PartnerRegistrationPage() {
                       : "Training becomes available after a POSP or MISP qualification account is linked."}
                 </p>
               </div>
-              <span className="rounded-xl bg-[#EEF3F8] px-3 py-1.5 text-[9px] font-bold text-[#425672]">{humanize(trainingStatus)}</span>
+              <span className="rounded-lg bg-[#EEF3F8] px-3 py-1.5 text-[9px] font-bold text-[#425672]">{humanize(trainingStatus)}</span>
             </div>
 
             <div className="mt-5 grid border-y border-[#DCE4ED] sm:grid-cols-3">
@@ -166,14 +166,14 @@ export default async function PartnerRegistrationPage() {
                   accountLabel={accountLabel}
                 />
               ) : (
-                <button type="button" disabled className="inline-flex h-10 items-center rounded-xl bg-[#111A35] px-4 text-[10.5px] font-bold text-white opacity-40">
+                <button type="button" disabled className="inline-flex h-10 items-center rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white opacity-40">
                   Training unavailable
                 </button>
               )}
             </div>
           </section>
 
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+          <section className="border-y border-[#DCE4ED] py-4 sm:py-5">
             <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#687A96]">Qualification Status</p>
             <div className="mt-4 divide-y divide-[#E8EDF4]">
               <StatusRow label="Training" value={humanize(trainingStatus)} complete={trainingComplete} />
@@ -208,7 +208,7 @@ function TimelineStep({ number, label, icon: Icon, tone, status }: { number: num
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
-  return <div className="border-r border-[#E0E7EF] px-3 py-4 last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7A899F]">{label}</p><p className="mt-1 text-[10.5px] font-extrabold text-[#203653]">{value}</p></div>;
+  return <div className="border-r border-[#E0E7EF] px-3 py-4 last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7A899F]">{label}</p><p className="mt-1 break-words text-[10.5px] font-extrabold leading-4 text-[#203653]">{value}</p></div>;
 }
 
 function StatusRow({ label, value, complete }: { label: string; value: string; complete: boolean }) {
@@ -218,7 +218,7 @@ function StatusRow({ label, value, complete }: { label: string; value: string; c
         <ShieldCheck className="h-3.5 w-3.5" />
       </span>
       <span className="flex-1 text-[10px] font-bold text-[#203653]">{label}</span>
-      <span className="text-[9px] font-semibold text-[#74839A]">{value}</span>
+      <span className="max-w-[55%] break-words text-right text-[9px] font-semibold leading-4 text-[#74839A]">{value}</span>
     </div>
   );
 }
