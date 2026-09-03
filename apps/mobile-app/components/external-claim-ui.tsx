@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { PropsWithChildren, ReactNode, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
@@ -151,11 +152,11 @@ export function ClaimContextStrip({ previousLabel, previousValue, amount }: { pr
   );
 }
 
-export function ClaimFormSection({ title, subtitle, optional, icon, children }: PropsWithChildren<{ title: string; subtitle?: string; optional?: boolean; icon?: keyof typeof MaterialCommunityIcons.glyphMap }>) {
+export function ClaimFormSection({ title, subtitle, optional, icon, iconImage, children }: PropsWithChildren<{ title: string; subtitle?: string; optional?: boolean; icon?: keyof typeof MaterialCommunityIcons.glyphMap; iconImage?: ImageSourcePropType }>) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        {icon ? <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={23} color="#FFFFFF" /></View> : null}
+        {iconImage ? <View style={styles.sectionIcon}><Image source={iconImage} style={styles.sectionIconImage} resizeMode="contain" /></View> : icon ? <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={23} color="#FFFFFF" /></View> : null}
         <View style={styles.sectionCopy}>
           <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>{title}</Text>{optional ? <Text style={styles.optional}>Optional</Text> : null}</View>
           {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
@@ -396,6 +397,7 @@ const styles = StyleSheet.create({
   section: { borderRadius: 18, borderWidth: 1, borderColor: '#DDE4EC', backgroundColor: '#FFFFFF', marginBottom: 12, overflow: 'hidden', shadowColor: '#183658', shadowOpacity: 0.055, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingTop: 12, paddingBottom: 10 },
   sectionIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#073C97', alignItems: 'center', justifyContent: 'center', shadowColor: '#073C97', shadowOpacity: 0.16, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  sectionIconImage: { width: 32, height: 32 },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
