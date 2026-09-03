@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Search, ShieldCheck } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebPolicySummary, listPartnerWebPolicies, type PartnerPolicyLifecycle } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -68,36 +69,35 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
 
   return (
     <PartnerPortalShell title="Policies">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Policy Book</p>
-              <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Your policies</h2>
-              <p className="mt-1 text-[11px] font-medium text-[#74839A]">Same scoped policy portfolio and lifecycle definitions as INSUREIT Partner.</p>
-            </div>
-            <Link href="/partner/policy-intakes" className="inline-flex h-10 items-center rounded-xl bg-[#111A35] px-4 text-[11px] font-bold text-white">Policy Intake</Link>
-          </div>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Policy Book"
+          title="Your policies"
+          description="Same scoped policy portfolio and lifecycle definitions as INSUREIT Partner."
+          action={<Link href="/partner/policy-intakes" className="inline-flex h-9 items-center rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white">Policy Intake</Link>}
+        />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <Summary label="Premium Booked" value={currency(summary.total_premium)} />
-            <Summary label="Policies" value={summary.total_policies} />
-            <Summary label="In Force" value={summary.in_force_policies} />
-            <Summary label="Expiring 30d" value={summary.expiring_30_days} />
-            <Summary label="Expired" value={summary.expired_policies} />
-          </div>
-        </section>
+        <PartnerMetricStrip
+          columns={5}
+          items={[
+            { label: "Premium Booked", value: currency(summary.total_premium) },
+            { label: "Policies", value: summary.total_policies },
+            { label: "In Force", value: summary.in_force_policies },
+            { label: "Expiring 30d", value: summary.expiring_30_days },
+            { label: "Expired", value: summary.expired_policies },
+          ]}
+        />
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-          <div className="border-b border-[#E6ECF3] px-5 py-4 sm:px-6">
+        <section>
+          <div className="border-y border-[#DCE4ED] py-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <form action="/partner/policies" className="flex w-full max-w-[500px] gap-2">
                 {lifecycle !== "all" ? <input type="hidden" name="lifecycle" value={lifecycle} /> : null}
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                  <input name="q" defaultValue={q} placeholder="Search policy, customer, vehicle or insurer" className="h-11 w-full rounded-xl border border-[#D2DCE9] bg-white pl-10 pr-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                  <input name="q" defaultValue={q} placeholder="Search policy, customer, vehicle or insurer" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
                 </div>
-                <button className="h-11 rounded-xl bg-[#111A35] px-4 text-[11px] font-bold text-white" type="submit">Search</button>
+                <button className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white" type="submit">Search</button>
               </form>
 
               <div className="flex flex-wrap gap-2">
@@ -109,10 +109,8 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
             </div>
           </div>
 
-          <div className="flex items-center justify-between px-5 py-3 sm:px-6">
-            <p className="text-[11px] font-extrabold text-[#1B2F4E]">Policy Register</p>
-            <p className="text-[9.5px] font-semibold text-[#7A899F]">{total} records</p>
-          </div>
+          <div className="mt-5"><PartnerSectionHeading title="Policy Register" description={total + " records"} /></div>
+          <div className="mt-3 border-y border-[#DCE4ED]">
 
           {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
@@ -139,7 +137,7 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
               ))}
             </div>
           ) : (
-            <div className="px-5 py-14 text-center">
+            <div className="py-14 text-center">
               <ShieldCheck className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No policies found</p>
               <p className="mt-1 text-[10.5px] text-[#7A899F]">Try another search term or lifecycle filter.</p>
@@ -147,7 +145,7 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
           )}
 
           {(hasPrevious || hasNext) ? (
-            <div className="flex items-center justify-between border-t border-[#E6ECF3] px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between border-t border-[#E6ECF3] py-4">
               <Link href={hasPrevious ? hrefFor({ page: page - 1 }) : "#"} aria-disabled={!hasPrevious} className={"inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-[10px] font-bold " + (hasPrevious ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Previous
               </Link>
@@ -157,17 +155,10 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
               </Link>
             </div>
           ) : null}
+          </div>
         </section>
       </div>
     </PartnerPortalShell>
   );
 }
 
-function Summary({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
-      <p className="text-[9px] font-black uppercase tracking-[0.11em] text-[#75849A]">{label}</p>
-      <p className="mt-2 truncate text-[21px] font-extrabold text-[#162746]">{value}</p>
-    </div>
-  );
-}
