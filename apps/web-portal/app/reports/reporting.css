@@ -132,8 +132,7 @@
   color: #6f7d91 !important;
 }
 
-.report-page-shell > section.grid > article.portal-card > p:nth-child(2),
-.report-page-shell > section.grid > article.portal-card > p:last-child:not(:first-child) {
+.report-page-shell > section.grid > article.portal-card > p:nth-child(2) {
   margin-top: 0.55rem !important;
   font-size: clamp(1.18rem, 1.03rem + 0.35vw, 1.42rem) !important;
   font-weight: 650 !important;
