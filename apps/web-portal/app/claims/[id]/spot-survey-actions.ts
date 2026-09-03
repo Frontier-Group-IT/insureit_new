@@ -57,37 +57,15 @@ async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification,
   );
   if (!allVerified) return;
 
-  const { data: updatedClaim, error: updateError } = await supabase
-    .from("claims")
-    .update({ current_status: nextStatus })
-    .eq("id", claim.id)
-    .eq("current_status", claim.current_status)
-    .select("id, current_status")
-    .maybeSingle();
+  const { data: updatedClaim, error: updateError } = await supabase.rpc("advance_initial_documents_verified", {
+    p_claim_id: claim.id,
+    p_actor_id: profileId
+  });
   if (updateError) throw new Error(updateError.message);
-  if (!updatedClaim || updatedClaim.current_status !== nextStatus) {
+  if (!updatedClaim?.ok || updatedClaim.next_status !== nextStatus) {
     throw new Error("All required documents are verified, but the claim status could not be advanced.");
   }
 
-  await saveVerificationHistory({
-    claimId: claim.id,
-    documentId: null,
-    documentType: "Initial Documents",
-    verificationType: "document",
-    incidentDate: incidentDateOnly(claim.accident_at),
-    isValid: true,
-    invalidReason: null,
-    details: { transition: "initial_documents_verified", verified_at: new Date().toISOString() },
-    verifiedBy: profileId
-  });
-  const { error: historyError } = await supabase.from("claim_status_history").insert({
-    claim_id: claim.id,
-    from_status: claim.current_status,
-    to_status: nextStatus,
-    notes: "All required initial documents verified by claim desk.",
-    changed_by: profileId
-  });
-  if (historyError) throw new Error(historyError.message);
 }
 
 function collectVerificationDetails(formData: FormData) {
