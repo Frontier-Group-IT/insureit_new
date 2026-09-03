@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerJourney, type PartnerJourneyData } from '@/lib/journey';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function JourneyScreen() {
@@ -101,7 +102,7 @@ export default function JourneyScreen() {
               state="empty"
               title="Your journey is just beginning"
               message="Business and service milestones will appear as real events are recorded."
-              icon="trail-sign-outline"
+              asset={PartnerAssets.status.journey}
             />
           )}
 

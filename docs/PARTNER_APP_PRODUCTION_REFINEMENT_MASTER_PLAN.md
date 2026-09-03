@@ -1316,3 +1316,23 @@ R6 preserved the server-driven commercial payout authorization boundary and inte
 **Refinement track status:** R3 through R8 are complete. No R9 is planned in this track.
 
 **Next:** installed-device UAT + release-readiness review. Fix any discovered JS/TS/UI issues by OTA where safe. Keep anything that genuinely requires a native dependency, native configuration change or new APK/AAB for the explicitly approved final native-build stage.
+
+
+## Phase 1 completion checkpoint — 2026-09-03
+
+**STATUS: IMPLEMENTATION COMPLETE / PENDING INSTALLED-DEVICE OTA VISUAL REVIEW**
+
+Phase 1 Navigation, Home and global interaction-state work is complete in source and ready for installed-device verification.
+
+Delivered Phase 1 outcomes:
+- Home is action-first with identity, attention items, Quick Actions, current business, impact and Stories in the approved hierarchy;
+- bottom navigation remains Home / Business / Policies / Claims / More with compact production touch targets;
+- More is grouped into Work, Insights, Grow & Learn and Account;
+- Activity is represented as Activity rather than a fake notification inbox;
+- ordinary pushed screens use shared Back semantics while genuine immersive/modal flows may retain Close;
+- shared loading, error, retry and empty-state treatment is used across the Phase 1 secondary insight/engagement screens refined in this phase;
+- Home supports pull-to-refresh and visible stale/offline feedback through the shared Partner query layer;
+- custom Partner artwork is used for feature-identity surfaces where a matching approved asset exists, while utility glyphs such as back, close, chevron, filter and calendar remain lightweight vectors;
+- no backend/schema/RLS/auth scope change and no native dependency/build change is part of Phase 1.
+
+The final acceptance action for Phase 1 is installed-device visual review through a Partner preview OTA built from the exact verified current `main`. No APK/AAB is required for this phase.
