@@ -80,7 +80,6 @@ export default function ComplianceRenewalsScreen() {
   }), [data]);
 
   const expiredCount = renewals.summaries.reduce((total, item) => total + item.expired, 0);
-  const expiredItems = renewals.items.filter((item) => item.status === 'expired');
 
   if (loading) return <Screen title="Renewals" showTitleHeader={false}><LoadingState /></Screen>;
 
@@ -182,32 +181,6 @@ export default function ComplianceRenewalsScreen() {
         })}
       </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Expired documents</Text>
-      </View>
-
-      {expiredItems.length ? expiredItems.map((item) => (
-        <Pressable key={item.id} onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: item.vehicleId } } as any)} style={({ pressed }) => [styles.itemRow, pressed && styles.itemPressed]}>
-          <View style={[styles.itemIcon, styles.itemIconExpired]}>
-            <MaterialCommunityIcons name={iconFor[item.key]} size={19} color="#C43D2D" />
-          </View>
-          <View style={styles.itemCopy}>
-            <Text style={styles.itemTitle}>{item.title}</Text>
-            <Text style={styles.itemMeta} numberOfLines={1}>{item.vehicleNo} - {item.customerName}</Text>
-            <Text style={styles.itemDate}>Expires {formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
-          </View>
-          <View style={[styles.statusPill, item.status === 'expired' && styles.statusPillExpired]}>
-            <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
-          </View>
-        </Pressable>
-      )) : (
-        <View style={styles.expiredEmptyCard}>
-          <View style={styles.expiredEmptyIcon}>
-            <MaterialCommunityIcons name="file-search-outline" size={22} color="#168F6A" />
-          </View>
-          <Text style={styles.expiredEmptyTitle}>No expired documents</Text>
-        </View>
-      )}
     </Screen>
   );
 }
@@ -325,20 +298,9 @@ const styles = StyleSheet.create({
   expandedItemDate: { color: '#718198', fontSize: 9.2, fontWeight: '700', marginTop: 2 },
   expandedEmpty: { minHeight: 44, borderRadius: 10, backgroundColor: '#F5FBF8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 10 },
   expandedEmptyText: { color: '#357A64', fontSize: 10, fontWeight: '800' },
-  sectionHeader: { marginTop: 13, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  expiredEmptyCard: { minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
-  expiredEmptyIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#EAF8F3', alignItems: 'center', justifyContent: 'center' },
-  expiredEmptyTitle: { flex: 1, color: palette.navy, fontSize: 15, lineHeight: 19, fontWeight: '900' },
-  sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' },
-  sectionHint: { color: '#667085', fontSize: 10, fontWeight: '700' },
-  itemRow: { borderRadius: 14, borderWidth: 1, borderColor: '#E2EAF4', backgroundColor: '#FFFFFF', padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
   itemPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
-  itemIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: '#FFF7EA', alignItems: 'center', justifyContent: 'center' },
   itemIconExpired: { backgroundColor: '#FFF0EE' },
   itemCopy: { flex: 1, minWidth: 0 },
-  itemTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  itemMeta: { color: '#526278', fontSize: 10.5, fontWeight: '800', marginTop: 2 },
-  itemDate: { color: '#7A8799', fontSize: 9.5, fontWeight: '700', marginTop: 2 },
   statusPill: { minWidth: 46, borderRadius: 999, backgroundColor: '#FFF7EA', paddingHorizontal: 8, paddingVertical: 5, alignItems: 'center' },
   statusPillExpired: { backgroundColor: '#FFF0EE' },
   statusText: { color: '#B7791F', fontSize: 10, fontWeight: '900' },
