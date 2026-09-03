@@ -376,6 +376,8 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                 >
                   {filteredPanelNotifications.map((notification, index) => {
                     const unread = notification.status === 'unread';
+                    const category = customerNotificationCategory(notification);
+                    const icon = customerNotificationIcon(category);
                     return (
                       <Pressable
                         key={notification.id}
@@ -388,6 +390,9 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                           index === filteredPanelNotifications.length - 1 && styles.notificationPanelRowLast,
                         ]}
                       >
+                        <View style={[styles.notificationTypeIcon, category === 'claim' && styles.notificationTypeIconClaim, category === 'policies' && styles.notificationTypeIconPolicy, category === 'vehicle' && styles.notificationTypeIconVehicle]}>
+                          <MaterialCommunityIcons name={icon} size={14} color={category === 'claim' ? '#0A43A3' : category === 'policies' ? '#7A4D00' : category === 'vehicle' ? '#167C69' : '#667085'} />
+                        </View>
                         <View style={styles.notificationPanelCopy}>
                           <View style={styles.notificationPanelTitleRow}>
                             <Text
@@ -412,6 +417,13 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
       ) : null}
     </>
   );
+}
+
+function customerNotificationIcon(category: Exclude<CustomerNotificationFilter, 'all'> | null) {
+  if (category === 'claim') return 'shield-check-outline' as const;
+  if (category === 'policies') return 'file-document-outline' as const;
+  if (category === 'vehicle') return 'car-outline' as const;
+  return 'bell-outline' as const;
 }
 
 function customerNotificationCategory(notification: Notification): Exclude<CustomerNotificationFilter, 'all'> | null {
@@ -495,6 +507,10 @@ const styles = StyleSheet.create({
   notificationPanelRowUnread: { backgroundColor: '#F2F7FF' },
   notificationPanelRowPressed: { opacity: 0.72, transform: [{ scale: 0.995 }] },
   notificationPanelRowLast: { borderBottomWidth: 0 },
+  notificationTypeIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginTop: 1, flexShrink: 0 },
+  notificationTypeIconClaim: { backgroundColor: '#EEF4FF' },
+  notificationTypeIconPolicy: { backgroundColor: '#FFF7E8' },
+  notificationTypeIconVehicle: { backgroundColor: '#ECF9F5' },
   notificationPanelCopy: { flex: 1, minWidth: 0 },
   notificationPanelTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   notificationPanelRowTitle: { flex: 1, minWidth: 0, color: palette.ink, fontSize: 13, lineHeight: 17, fontWeight: '700' },
