@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, Search, ShieldAlert, ShieldCheck, UsersRound } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowRight, Search, ShieldAlert, ShieldCheck, UsersRound, type LucideIcon } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebClaims, listPartnerWebCustomers, listPartnerWebPolicies } from "@/lib/partner-web";
 
@@ -86,7 +87,7 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
   );
 }
 
-function ResultSection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+function ResultSection({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   return (
     <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
       <div className="flex items-center justify-between border-b border-[#E6ECF3] px-5 py-4 sm:px-6"><p className="text-[12px] font-extrabold text-[#172846]">{title}</p><p className="text-[9.5px] font-semibold text-[#7A899F]">{count} shown</p></div>
@@ -95,7 +96,7 @@ function ResultSection({ title, count, children }: { title: string; count: numbe
   );
 }
 
-function Result({ href, icon: Icon, title, subtitle, status }: { href: string; icon: typeof Search; title: string; subtitle: string; status?: string }) {
+function Result({ href, icon: Icon, title, subtitle, status }: { href: string; icon: LucideIcon; title: string; subtitle: string; status?: string }) {
   return (
     <Link href={href} className="group flex items-center gap-3 px-5 py-4 transition hover:bg-[#F8FAFD] sm:px-6">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
@@ -106,6 +107,6 @@ function Result({ href, icon: Icon, title, subtitle, status }: { href: string; i
   );
 }
 
-function Empty({ icon: Icon, title, text }: { icon: typeof Search; title: string; text: string }) {
+function Empty({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
   return <section className="rounded-[26px] border border-[#D7E0EC] bg-white px-5 py-14 text-center shadow-[0_16px_45px_rgba(34,56,89,.07)]"><Icon className="mx-auto h-7 w-7 text-[#9AABC0]" /><p className="mt-3 text-[12px] font-bold text-[#23395D]">{title}</p><p className="mt-1 text-[10.5px] text-[#7A899F]">{text}</p></section>;
 }
