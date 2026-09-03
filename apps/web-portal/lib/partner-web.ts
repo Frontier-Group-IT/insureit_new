@@ -672,3 +672,29 @@ export async function getPartnerWebActivity(limit = 40): Promise<PartnerActivity
   if (error || !data) throw new Error(error?.message ?? "Recent activity is unavailable.");
   return data as PartnerActivityData;
 }
+
+
+export type PartnerSupportData = {
+  generated_at: string;
+  relationship_contact: {
+    employee_id: string;
+    name: string;
+    employee_code: string | null;
+    designation: string | null;
+    phone: string | null;
+    email: string | null;
+  } | null;
+  operations: {
+    intakes_in_progress: number;
+    intakes_need_attention: number;
+    active_claims: number;
+  };
+};
+
+export async function getPartnerWebSupport(): Promise<PartnerSupportData> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_support");
+  if (error || !data) throw new Error(error?.message ?? "Support information is unavailable.");
+  return data as PartnerSupportData;
+}
