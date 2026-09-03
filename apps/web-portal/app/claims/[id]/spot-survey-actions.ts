@@ -250,6 +250,22 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
   }
 }
 
+export async function finalizeInitialDocumentVerification(claimId: string): Promise<ActionResult> {
+  try {
+    if (!claimId.trim()) throw new Error("Missing claim id.");
+    const profile = await currentProfile();
+    const claim = await loadClaim(claimId);
+    await advanceAfterInitialDocumentsVerified(claim, "", profile?.id ?? null);
+    revalidatePath(`/claims/${claimId}`);
+    revalidatePath("/claims");
+    revalidatePath("/dashboard");
+    return { ok: true, message: "Initial document verification finalized." };
+  } catch (error) {
+    console.error("finalizeInitialDocumentVerification failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Could not finalize document verification." };
+  }
+}
+
 export async function requestSpotSurveyDocumentReupload(formData: FormData): Promise<ActionResult> {
   try {
     const documentId = String(formData.get("documentId") ?? "").trim();
