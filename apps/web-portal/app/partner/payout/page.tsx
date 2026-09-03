@@ -45,7 +45,7 @@ export default async function PartnerPayoutPage() {
           />
 
           {payout.needs_review_count > 0 ? (
-            <section className="rounded-[22px] border border-[#F0D7AE] bg-[#FFF8EC] px-5 py-4">
+            <section className="rounded-[16px] border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3.5 sm:px-5">
               <p className="text-[10px] font-black uppercase tracking-[0.1em] text-[#99600E]">Commercial Review</p>
               <p className="mt-1 text-[10.5px] font-semibold leading-4 text-[#80511A]">{payout.needs_review_count} payout record{payout.needs_review_count === 1 ? "" : "s"} require commercial review before they should be treated as final.</p>
             </section>
@@ -57,10 +57,10 @@ export default async function PartnerPayoutPage() {
             {payout.recent.length ? (
               <div className="divide-y divide-[#E8EDF4]">
                 {payout.recent.map((row) => (
-                  <Link key={row.id} href={"/partner/policies/" + encodeURIComponent(row.policy_id)} className="group grid gap-3 px-5 py-4 transition hover:bg-[#F8FAFD] sm:px-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(130px,.6fr)_minmax(120px,.55fr)_auto] lg:items-center">
+                  <Link key={row.id} href={"/partner/policies/" + encodeURIComponent(row.policy_id)} className="group grid gap-3 px-1 py-3.5 transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(130px,.6fr)_minmax(120px,.55fr)_auto] lg:items-center">
                     <div>
-                      <p className="text-[11.5px] font-extrabold text-[#1B2F4E]">{row.policy_no}</p>
-                      <p className="mt-0.5 text-[10px] font-medium text-[#74839A]">{row.customer_name}</p>
+                      <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.policy_no}</p>
+                      <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_name}</p>
                     </div>
                     <div>
                       <p className="text-[11px] font-extrabold text-[#203653]">{currency(row.amount)}</p>
@@ -81,8 +81,8 @@ export default async function PartnerPayoutPage() {
           </section>
         </div>
       ) : (
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white px-5 py-12 text-center shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:px-8">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><LockKeyhole className="h-6 w-6" /></span>
+        <section className="border-y border-[#DCE4ED] px-1 py-12 text-center sm:px-4">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><LockKeyhole className="h-6 w-6" /></span>
           <p className="mt-5 text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Commercial Visibility</p>
           <h2 className="mt-1 text-[22px] font-extrabold tracking-[-0.02em] text-[#152746]">Payout details are restricted</h2>
           <p className="mx-auto mt-2 max-w-lg text-[11px] font-medium leading-5 text-[#74839A]">{payout.reason}</p>
