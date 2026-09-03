@@ -543,3 +543,102 @@ export async function getPartnerWebClaimDetail(claimId: string): Promise<Partner
   if (error || !data) throw new Error(error?.message ?? "Claim detail is unavailable.");
   return data as PartnerClaimDetail;
 }
+
+
+export type PartnerPayoutRecent = {
+  id: string;
+  policy_id: string;
+  policy_no: string;
+  customer_name: string;
+  amount: number | string;
+  status: string;
+  commercial_status: string;
+  payout_date: string | null;
+  voucher_number: string | null;
+  updated_at: string;
+};
+
+export type PartnerPayoutSummary =
+  | {
+      available: false;
+      visibility: "restricted";
+      generated_at: string;
+      reason: string;
+    }
+  | {
+      available: true;
+      visibility: "self";
+      generated_at: string;
+      intermediary_code: string;
+      recorded_amount: number | string;
+      pending_amount: number | string;
+      eligible_amount: number | string;
+      needs_review_amount: number | string;
+      paid_amount: number | string;
+      total_rows: number;
+      pending_count: number;
+      paid_count: number;
+      needs_review_count: number;
+      recent: PartnerPayoutRecent[];
+    };
+
+export type PartnerNetworkChild = {
+  intermediary_id: string;
+  type: "posp" | "misp";
+  code: string | null;
+  name: string;
+};
+
+export type PartnerNetworkRow = {
+  partner_id: string;
+  partner_code: string;
+  partner_name: string;
+  partner_kind: string;
+  owner: {
+    employee_id: string | null;
+    employee_code: string | null;
+    name: string | null;
+    designation: string | null;
+  };
+  group: {
+    group_id: string;
+    group_code: string;
+    group_name: string;
+  } | null;
+  children: PartnerNetworkChild[];
+  child_count: number;
+  posp_count: number;
+  misp_count: number;
+  metrics: {
+    premium_this_month: number | string;
+    policies_this_month: number;
+    total_policies: number;
+    total_customers: number;
+    renewals_30_days: number;
+    active_claims: number;
+  };
+};
+
+export type PartnerNetworkData = {
+  generated_at: string;
+  scope_mode: "organization" | "hierarchy" | "self" | "partner_family" | "none";
+  total_partners: number;
+  total_groups: number;
+  partners: PartnerNetworkRow[];
+};
+
+export async function getPartnerWebPayoutSummary(): Promise<PartnerPayoutSummary> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_payout_summary");
+  if (error || !data) throw new Error(error?.message ?? "Partner payout information is unavailable.");
+  return data as PartnerPayoutSummary;
+}
+
+export async function getPartnerWebNetwork(): Promise<PartnerNetworkData> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_network");
+  if (error || !data) throw new Error(error?.message ?? "Commercial network is unavailable.");
+  return data as PartnerNetworkData;
+}
