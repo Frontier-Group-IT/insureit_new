@@ -448,7 +448,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
             : <Field label="TP premium" type="number" min="0" value={form.tp} onChange={e=>update("tp",e.target.value)} placeholder="₹ 0.00" required/>}
           {isCpmClass
             ? <Field label="CPA amount" type="number" value="0" disabled readOnly aria-disabled="true" tabIndex={-1} placeholder="Not applicable for CPM"/>
-            : <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>
+            : <Field label="CPA amount" type="number" min={form.vehicleClass==="GCV"?"0.01":"0"} step="0.01" value={form.cpa} onChange={e=>{const value=e.target.value;setForm(current=>({...current,cpa:value,cpaOpted:Number(value||0)>0?"Yes":"No"}));}} placeholder="₹ 0.00" required={form.vehicleClass==="GCV"}/>}
           <PolicyValidityField validFrom={form.validFrom} validUpto={form.validUpto} onFromChange={value=>setForm(current=>({...current,validFrom:value,validUpto:policyExpiryFrom(value)}))} onUptoChange={value=>update("validUpto",value)}/>
         </Section>
       </div><LiveSummary completion={completion} net={calculations.net} gst={calculations.gst} gross={calculations.gross} access={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} totalPayin={calculations.totalPayin} totalPayout={calculations.grossPayout} payinOd={form.projectedOdPercent} payinTp={form.projectedTpPercent} payoutOd={form.payoutOdPercent} payoutTp={form.payoutTpPercent} onOpen={setCommercialModal}/></div>
