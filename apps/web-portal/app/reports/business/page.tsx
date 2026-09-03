@@ -30,24 +30,25 @@ export default async function ReportsPage({ searchParams }: Props) {
       activeValue={filters.period}
       options={PERIODS}
       showActiveFilterCount={false}
-      trailing={<ReportCompactFilters
-        path="/reports/business"
-        businessLine={filters.businessLine}
-        category={filters.category}
-        categories={report.filters.categories}
-        period={filters.period}
-        fromDate={filters.fromDate}
-        toDate={filters.toDate}
-        compactDrawer
-        clearAppliedFilters
-        fields={[
-          { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
-          { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
-          { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name !== x.code ? `${x.name} · ${x.code}` : x.name})) },
-          { name:"from", label:"From", value:filters.fromDate ?? "", type:"date" },
-          { name:"to", label:"To", value:filters.toDate ?? "", type:"date" },
-        ]}
-      />}
+      trailing={<>
+        {filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}
+        <ReportCompactFilters
+          path="/reports/business"
+          businessLine={filters.businessLine}
+          category={filters.category}
+          categories={report.filters.categories}
+          period={filters.period}
+          fromDate={filters.fromDate}
+          toDate={filters.toDate}
+          compactDrawer
+          clearAppliedFilters
+          fields={[
+            { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
+            { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
+            { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name !== x.code ? `${x.name} · ${x.code}` : x.name})) },
+          ]}
+        />
+      </>}
     />
   }>
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Policies" value={integer(report.summary.policy_count)} detail={`${integer(report.summary.motor_policy_count)} Motor · ${integer(report.summary.non_motor_policy_count)} Non-Motor`} /><Metric label="Gross premium" value={currency(report.summary.gross_premium)} detail={`${currency(report.summary.motor_gross_premium)} Motor · ${currency(report.summary.non_motor_gross_premium)} Non-Motor`} /><Metric label="Net premium" value={currency(report.summary.net_premium)} /><Metric label="Average premium" value={currency(report.summary.average_premium)} /><Metric label="Intermediaries" value={integer(report.summary.intermediary_count)} /></section>
@@ -55,6 +56,25 @@ export default async function ReportsPage({ searchParams }: Props) {
     <section className="grid gap-4 xl:grid-cols-2"><article className="portal-card overflow-hidden"><Header title="Insurance company contribution" /><InsurerTable rows={report.insurers} /></article><article className="portal-card overflow-hidden"><Header title="RM production" /><RmTable rows={report.rms} /></article></section>
     <section className="portal-card overflow-hidden"><div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">Policy business register</h2></div><Register rows={report.register.rows} /><Pagination page={report.register.page} pages={pages} total={report.register.total_count} prev={href("/reports/business", filters, Math.max(1, report.register.page - 1))} next={href("/reports/business", filters, report.register.page + 1)} /></section>
   </ReportPageShell></AppShell>;
+}
+function CustomDateRange({filters}:{filters:PolicyBusinessFilters}) {
+  return <form action="/reports/business" method="get" className="flex flex-wrap items-end gap-2 rounded-xl border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-2">
+    <input type="hidden" name="period" value="custom" />
+    {filters.insurerId ? <input type="hidden" name="insurer" value={filters.insurerId} /> : null}
+    {filters.rmEmployeeId ? <input type="hidden" name="rm" value={filters.rmEmployeeId} /> : null}
+    {filters.intermediaryCode ? <input type="hidden" name="intermediary" value={filters.intermediaryCode} /> : null}
+    {filters.businessLine ? <input type="hidden" name="business" value={filters.businessLine} /> : null}
+    {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
+    <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
+      From
+      <input name="from" type="date" required defaultValue={filters.fromDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
+    </label>
+    <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
+      To
+      <input name="to" type="date" required defaultValue={filters.toDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
+    </label>
+    <button type="submit" className="h-8 rounded-lg bg-[#223a78] px-3 text-[9.5px] font-bold text-white transition hover:bg-[#1c3167]">Apply</button>
+  </form>;
 }
 function Metric({label,value,detail}:{label:string;value:string;detail?:string}){return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[.1em] text-[#7c899b]">{label}</p><p className="mt-2 text-[23px] font-semibold tracking-[-.03em] text-[#14213c]">{value}</p>{detail?<p className="mt-1.5 text-[8.5px] font-semibold text-[#7c899b]">{detail}</p>:null}</article>}
 function HeaderTitle({title}:{title:string}){return <h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2>}
