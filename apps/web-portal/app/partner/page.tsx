@@ -34,7 +34,7 @@ export default async function PartnerHomePage() {
           title={"Welcome, " + name}
           description="Your current business, renewals and service activity in one workspace."
           action={
-            <Link href="/partner/business" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-xl bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50]">
+            <Link href="/partner/business" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
               View My Business <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           }
@@ -54,13 +54,13 @@ export default async function PartnerHomePage() {
             <PartnerSectionHeading eyebrow="Needs Your Attention" title="Priority work" />
             <div className="mt-3 divide-y divide-[#E0E7EF] border-y border-[#DCE4ED]">
               {home.today.length ? home.today.slice(0, 6).map((item, index) => (
-                <Link key={item.kind + "-" + index} href={todayHref(item.kind)} prefetch={false} className="group flex items-center gap-3 py-3.5">
+                <Link key={item.kind + "-" + index} href={todayHref(item.kind)} prefetch={false} className="group flex items-center gap-3 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EEF3F8] text-[#3156B8]">
                     {item.kind === "intake_attention" ? <FileInput className="h-4 w-4" /> : item.kind === "renewal" ? <RefreshCw className="h-4 w-4" /> : <ClipboardList className="h-4 w-4" />}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[11px] font-bold text-[#182947]">{item.title}</span>
-                    <span className="mt-0.5 block truncate text-[9.5px] font-medium text-[#7A899F]">{item.subtitle}</span>
+                    <span className="block break-words text-[11px] font-bold leading-4 text-[#182947]">{item.title}</span>
+                    <span className="mt-0.5 block break-words text-[9.5px] font-medium leading-4 text-[#7A899F]">{item.subtitle}</span>
                   </span>
                   <span className="text-[11px] font-extrabold text-[#23395D]">{item.count}</span>
                   <ArrowRight className="h-4 w-4 text-[#8794A7] transition group-hover:translate-x-0.5" />
@@ -105,7 +105,7 @@ export default async function PartnerHomePage() {
 
 function Snapshot({ label, value, href, top = false, right = false }: { label: string; value: number; href: string; top?: boolean; right?: boolean }) {
   return (
-    <Link href={href} prefetch={false} className={"min-h-[82px] px-1 py-4 transition hover:bg-white/70 sm:px-4 " + (top ? "border-t border-[#E0E7EF] " : "") + (right ? "border-l border-[#E0E7EF]" : "")}>
+    <Link href={href} prefetch={false} className={"min-h-[76px] px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 " + (top ? "border-t border-[#E0E7EF] " : "") + (right ? "border-l border-[#E0E7EF]" : "")}>
       <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#7A899F]">{label}</p>
       <p className="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em] text-[#162746]">{value}</p>
     </Link>
@@ -114,11 +114,11 @@ function Snapshot({ label, value, href, top = false, right = false }: { label: s
 
 function QuickAction({ href, title, subtitle, icon: Icon }: { href: string; title: string; subtitle: string; icon: typeof ShieldCheck }) {
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[78px] items-center gap-3 px-1 py-4 transition hover:bg-white/70 sm:px-4">
+    <Link href={href} prefetch={false} className="group flex min-h-[72px] items-center gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#111A35] text-white"><Icon className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1">
-        <span className="block text-[11px] font-extrabold text-[#172846]">{title}</span>
-        <span className="mt-0.5 block text-[9.5px] font-medium text-[#7A899F]">{subtitle}</span>
+        <span className="block break-words text-[11px] font-extrabold leading-4 text-[#172846]">{title}</span>
+        <span className="mt-0.5 block break-words text-[9.5px] font-medium leading-4 text-[#7A899F]">{subtitle}</span>
       </span>
       <ArrowRight className="h-4 w-4 text-[#8794A7] transition group-hover:translate-x-0.5" />
     </Link>
