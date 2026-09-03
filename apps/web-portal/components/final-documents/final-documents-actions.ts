@@ -1,5 +1,6 @@
 "use server";
 
+import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
 
 import { revalidatePath } from "next/cache";
@@ -82,10 +83,42 @@ export async function uploadFinalDocument(formData: FormData): Promise<ActionRes
     const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
     if (uploadError) throw new Error(uploadError.message);
 
-    await supabase.from("claim_documents").update({ verification_status: "rejected", rejection_reason: "Replaced by newer upload", verified_by: profile?.id ?? null, verified_at: new Date().toISOString() }).eq("claim_id", claimId).eq("document_type", documentType).neq("verification_status", "rejected");
+    const { data: insertedDocument, error: insertError } = await supabase
+      .from("claim_documents")
+      .insert({ claim_id: claimId, customer_id: claim.customer_id, document_type: documentType, file_name: safeName, storage_bucket: bucketName, storage_path: storagePath, verification_status: "pending" })
+      .select("id")
+      .single<{ id: string }>();
+    if (insertError || !insertedDocument) {
+      await supabase.storage.from(bucketName).remove([storagePath]);
+      throw new Error(insertError?.message ?? "The document record could not be created.");
+    }
 
-    const { error: insertError } = await supabase.from("claim_documents").insert({ claim_id: claimId, customer_id: claim.customer_id, document_type: documentType, file_name: safeName, storage_bucket: bucketName, storage_path: storagePath, verification_status: "pending" });
-    if (insertError) throw new Error(insertError.message);
+    const { data: existingDocuments, error: existingError } = await supabase
+      .from("claim_documents")
+      .select("id, document_type")
+      .eq("claim_id", claimId)
+      .neq("id", insertedDocument.id)
+      .neq("verification_status", "rejected")
+      .returns<{ id: string; document_type: string }[]>();
+    if (existingError) {
+      await supabase.from("claim_documents").delete().eq("id", insertedDocument.id);
+      await supabase.storage.from(bucketName).remove([storagePath]);
+      throw new Error(existingError.message);
+    }
+    const replacedIds = (existingDocuments ?? [])
+      .filter((document) => matchesClaimIntimationDocument(document.document_type, documentType))
+      .map((document) => document.id);
+    if (replacedIds.length) {
+      const { error: replacementError } = await supabase
+        .from("claim_documents")
+        .update({ verification_status: "rejected", rejection_reason: "Replaced by newer upload", verified_by: profile?.id ?? null, verified_at: new Date().toISOString() })
+        .in("id", replacedIds);
+      if (replacementError) {
+        await supabase.from("claim_documents").delete().eq("id", insertedDocument.id);
+        await supabase.storage.from(bucketName).remove([storagePath]);
+        throw new Error(replacementError.message);
+      }
+    }
 
     await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_document_uploaded", document_type: documentType, file_name: safeName, uploaded_at: new Date().toISOString(), uploaded_by: profile?.id ?? null }, created_by: profile?.id ?? null });
     revalidatePath(`/claims/${claimId}/final-documents`);

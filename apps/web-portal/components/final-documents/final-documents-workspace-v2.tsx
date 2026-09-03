@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { finalDocumentTabs } from "./final-document-groups";
 import { saveFinalDealershipDetails, submitFinalDocumentsDraft, uploadFinalDocument, verifyFinalDocument } from "./final-documents-actions";
 
 export type FinalDocumentRowV2 = {
@@ -23,8 +24,6 @@ export type DealershipDetailsV2 = {
 };
 
 type ActionResult = { ok: boolean; message?: string };
-
-const tabs = ["Forms", "Permit / Tax", "Spots Papers", "Driver Docs", "KYC Dealership"];
 
 export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null }) {
   const router = useRouter();
@@ -74,10 +73,10 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
 
       <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
         <div className="mb-3 flex items-center justify-between gap-3"><div><h2 className="text-[17px] font-semibold text-[#071D49]">Check List For - GCCV Motor Claim</h2><p className="mt-1 text-[12px] font-medium text-[#526178]">Upload and verify final documents before claim intimation.</p></div><span className="rounded-full border border-[#D9E6F7] bg-[#F7FAFF] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">Final Documents</span></div>
-        <div className="grid overflow-hidden rounded-xl border border-[#D9E3F0] md:grid-cols-5">{tabs.map((tab, index) => <button key={tab} type="button" onClick={() => setActiveTab(index)} className={`flex items-center gap-2 px-4 py-3 text-left text-[12px] font-semibold ${activeTab === index ? "bg-[#071D49] text-white" : "bg-[#FBFCFE] text-[#071D49] border-l border-[#D9E3F0]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ${activeTab === index ? "bg-white text-[#071D49]" : "bg-[#EEF4FF] text-[#071D49]"}`}>{index + 1}</span>{tab}</button>)}</div>
+        <div className="grid overflow-hidden rounded-xl border border-[#D9E3F0] md:grid-cols-5">{finalDocumentTabs.map((tab, index) => <button key={tab} type="button" onClick={() => setActiveTab(index)} className={`flex items-center gap-2 px-4 py-3 text-left text-[12px] font-semibold ${activeTab === index ? "bg-[#071D49] text-white" : "bg-[#FBFCFE] text-[#071D49] border-l border-[#D9E3F0]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ${activeTab === index ? "bg-white text-[#071D49]" : "bg-[#EEF4FF] text-[#071D49]"}`}>{index + 1}</span>{tab}</button>)}</div>
         <div className="mt-3 overflow-hidden rounded-xl border border-[#D9E3F0]"><table className="w-full min-w-[900px] border-collapse text-left text-[12px]"><thead className="bg-[#071D49] text-white"><tr><th className="px-3 py-2">Sr. No.</th><th className="px-3 py-2">Document Name</th><th className="px-3 py-2 text-center">Upload Document</th><th className="px-3 py-2 text-center">Status</th><th className="px-3 py-2 text-center">Actions</th></tr></thead><tbody className="divide-y divide-[#E6EEF7] bg-white">{visibleRows.map((row) => <DocumentRow key={row.type} claimId={claimId} row={row} isPending={isPending} pendingAction={pendingAction} run={run} refresh={() => router.refresh()} />)}</tbody></table></div>
         {result ? <p className={`mt-3 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message}</p> : null}
-        <div className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={activeTab === 0} onClick={() => setActiveTab((value) => Math.max(0, value - 1))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] disabled:bg-[#F4F7FC] disabled:text-[#9AA7BA]">Previous</button><div className="flex gap-3"><button type="button" onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49]">Save as Draft</button><button type="button" className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white">Submit Claim Intimation</button><button type="button" disabled={activeTab === tabs.length - 1} onClick={() => setActiveTab((value) => Math.min(tabs.length - 1, value + 1))} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">Next</button></div></div>
+        <div className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={activeTab === 0} onClick={() => setActiveTab((value) => Math.max(0, value - 1))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] disabled:bg-[#F4F7FC] disabled:text-[#9AA7BA]">Previous</button><div className="flex gap-3"><button type="button" onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49]">Save as Draft</button><button type="button" className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white">Submit Claim Intimation</button><button type="button" disabled={activeTab === finalDocumentTabs.length - 1} onClick={() => setActiveTab((value) => Math.min(finalDocumentTabs.length - 1, value + 1))} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">Next</button></div></div>
       </section>
     </div>
   );

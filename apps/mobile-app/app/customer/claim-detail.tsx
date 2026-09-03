@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
-import { ClaimFinancialSummary, ClaimPrimaryAction } from '@/components/external-claim-ui';
+import { ClaimFinancialSummary } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
@@ -138,9 +138,14 @@ export default function ClaimDetailScreen() {
     return router.push({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key } });
   }
 
-  function openCurrentSelfStage() {
-    if (!selfManaged || settled || !currentStage) return;
-    openSelfStage(currentStage.key);
+  function openInternalStage(key: ClaimMilestoneKey) {
+    router.push({ pathname: '/customer/internal-claim-stage', params: { id: claimId, key } });
+  }
+
+  function openCurrentStage() {
+    if (settled || !currentStage) return;
+    if (selfManaged) openSelfStage(currentStage.key);
+    else openInternalStage(currentStage.key);
   }
 
   function openAssistance() {
@@ -227,8 +232,8 @@ export default function ClaimDetailScreen() {
             <Text style={styles.reuploadNoticeDocument}>{typeof notice.metadata?.document_type === 'string' ? notice.metadata.document_type : notice.title}</Text>
             <Text style={styles.reuploadNoticeText}>{notice.message || 'Operations could not verify this file. Please upload a clearer replacement.'}</Text>
           </View>)}
-          <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} style={styles.reuploadNoticeAction}>
-            <Text style={styles.reuploadNoticeActionText}>Upload replacement</Text>
+          <Pressable accessibilityRole="button" onPress={() => selfManaged ? (currentStage ? openSelfStage(currentStage.key) : undefined) : openInternalStage(internalProjection.stageKey)} style={styles.reuploadNoticeAction}>
+            <Text style={styles.reuploadNoticeActionText}>Open stage</Text>
             <MaterialCommunityIcons name="arrow-right" size={16} color="#8A4B00" />
           </Pressable>
         </View>
@@ -266,11 +271,10 @@ export default function ClaimDetailScreen() {
       </View>
 
       {!settled ? <Pressable
-        accessibilityRole={selfManaged ? 'button' : undefined}
-        accessibilityLabel={selfManaged ? `Continue to ${currentStage?.label ?? 'current milestone'}` : undefined}
-        disabled={!selfManaged}
-        onPress={openCurrentSelfStage}
-        style={({ pressed }) => [styles.currentCard, { borderColor: tone.border, backgroundColor: tone.background }, selfManaged && pressed && styles.currentCardPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${currentStage?.label ?? 'current milestone'}`}
+        onPress={openCurrentStage}
+        style={({ pressed }) => [styles.currentCard, { borderColor: tone.border, backgroundColor: tone.background }, pressed && styles.currentCardPressed]}
       >
         <View style={[styles.currentAccent, { backgroundColor: tone.accent }]} />
         <Image source={currentMilestoneArtwork(currentStage?.key)} style={styles.currentIconArtwork} resizeMode="contain" />
@@ -279,12 +283,10 @@ export default function ClaimDetailScreen() {
           <Text style={styles.currentTitle}>{currentStage?.label ?? claim.current_status}</Text>
           <Text numberOfLines={2} style={styles.currentBody}>{selfManaged ? currentStageHint(currentStage?.key) : internalProjection.customerMessage}</Text>
         </View>
-        {selfManaged ? <View style={styles.currentContinue}>
+        <View style={styles.currentContinue}>
           <MaterialCommunityIcons name="chevron-right" size={20} color={tone.accent} />
-        </View> : null}
+        </View>
       </Pressable> : null}
-
-      {!selfManaged && internalProjection.customerActionRequired ? <ClaimPrimaryAction label={internalProjection.substage === 'Replacement document required' ? 'Upload Replacement' : 'Upload Documents'} icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} /> : null}
 
       <SectionHeader title="Claim Journey" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
       {journeyExpanded ? <View style={[styles.sectionBody, styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
@@ -292,12 +294,13 @@ export default function ClaimDetailScreen() {
         const current = !settled && index === currentStageIndex;
         const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
         const editable = selfManaged && (done || current);
+        const navigable = selfManaged ? editable : true;
         const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
         const dateText = selfManaged ? formatJourneyDate(milestone) : null;
         const statusText = done ? stageCompletedCopy(stage.key) : current ? (selfManaged ? milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current milestone' : internalProjection.substage) : 'Upcoming';
-        return <Pressable key={stage.key} accessibilityRole={editable ? 'button' : undefined} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && styles.stageRowCurrent]}>
+        return <Pressable key={stage.key} accessibilityRole={navigable ? 'button' : undefined} disabled={!navigable} onPress={() => selfManaged ? openSelfStage(stage.key) : openInternalStage(stage.key)} style={[styles.stageRow, current && styles.stageRowCurrent]}>
           <View style={styles.stageRail}>
-            <View style={[styles.stageNode, done && styles.stageDone, current && styles.stageCurrent]}><MaterialCommunityIcons name={done ? 'check' : current ? 'circle-slice-8' : 'lock-outline'} size={9} color={done || current ? '#FFFFFF' : '#98A2B3'} /></View>
+            <View style={[styles.stageNode, done && styles.stageDone, current && styles.stageCurrent]}><MaterialCommunityIcons name={done ? 'check' : current ? 'circle-slice-8' : selfManaged ? 'lock-outline' : 'eye-outline'} size={9} color={done || current ? '#FFFFFF' : '#98A2B3'} /></View>
             {index < SELF_MANAGED_MILESTONES.length - 1 ? <View style={[styles.stageLine, done && styles.stageLineDone]} /> : null}
           </View>
           <View style={styles.stageCopy}>
@@ -308,7 +311,7 @@ export default function ClaimDetailScreen() {
             <Text numberOfLines={2} style={[styles.stageDate, !milestone && styles.stageDateMuted]}>{done || current ? dateText : 'Pending'}</Text>
             {amount ? <Text style={styles.stageAmount}>{amount}</Text> : null}
             {editable ? <MaterialCommunityIcons name="chevron-right" size={12} color="#6782A2" /> : null}
-          </View> : null}
+          </View> : <MaterialCommunityIcons name="chevron-right" size={16} color="#6782A2" />}
         </Pressable>;
       })}</View> : null}
 
