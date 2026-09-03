@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, BellRing, BriefcaseBusiness, ClipboardList, FileInput, GraduationCap, ShieldCheck } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebActivity, type PartnerActivityData } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -45,22 +46,22 @@ export default async function PartnerActivityPage() {
 
   return (
     <PartnerPortalShell title="Activity">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Activity</p>
-          <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">What changed</h2>
-          <p className="mt-1 text-[11px] font-medium text-[#74839A]">Recent Partner-scoped policy, claim and Operations activity in one timeline.</p>
-        </section>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Activity"
+          title="What changed"
+          description="Recent Partner-scoped policy, claim and Operations activity in one timeline."
+        />
 
         {data.attention.length ? (
-          <section className="rounded-[26px] border border-[#E8D8BC] bg-[#FFF9EF] p-5 shadow-[0_16px_45px_rgba(34,56,89,.05)] sm:p-6">
+          <section className="rounded-[18px] border border-[#E8D8BC] bg-[#FFF9EF] p-5">
             <div className="flex items-center gap-2">
               <BellRing className="h-4 w-4 text-[#A86809]" />
               <h3 className="text-[15px] font-extrabold text-[#6F4B12]">Needs attention</h3>
             </div>
-            <div className="mt-4 grid gap-2 lg:grid-cols-3">
+            <div className="mt-4 grid border-y border-[#E8D8BC] lg:grid-cols-3">
               {data.attention.slice(0, 3).map((item, index) => (
-                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[84px] items-center gap-3 rounded-2xl border border-[#F0D7AE] bg-white px-4 py-3">
+                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[78px] items-center gap-3 border-b border-[#F0D7AE] px-1 py-3 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#FFF1D9] text-[#A86809]"><BellRing className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[10.5px] font-extrabold text-[#6F4B12]">{item.title}</p>
@@ -74,13 +75,11 @@ export default async function PartnerActivityPage() {
           </section>
         ) : null}
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-          <div className="flex items-center justify-between border-b border-[#E6ECF3] px-5 py-4 sm:px-6">
-            <div><p className="text-[12px] font-extrabold text-[#172846]">Recent timeline</p><p className="mt-0.5 text-[9.5px] font-medium text-[#7A899F]">{data.items.length} recorded events</p></div>
-          </div>
+        <section>
+          <PartnerSectionHeading title="Recent timeline" description={data.items.length + " recorded events"} />
 
           {data.items.length ? (
-            <div className="px-5 py-5 sm:px-6">
+            <div className="mt-3 border-y border-[#DCE4ED] py-5">
               {data.items.map((item, index) => {
                 const Icon = iconFor(item.kind);
                 const href = activityHref(item);
@@ -114,7 +113,7 @@ export default async function PartnerActivityPage() {
               })}
             </div>
           ) : (
-            <div className="px-5 py-14 text-center">
+            <div className="border-y border-[#DCE4ED] py-14 text-center">
               <BriefcaseBusiness className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No recent activity</p>
               <p className="mt-1 text-[10.5px] text-[#7A899F]">New scoped policy, claim and Operations activity will appear here.</p>
