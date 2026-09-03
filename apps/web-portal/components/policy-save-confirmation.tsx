@@ -172,7 +172,6 @@ export function PolicySaveConfirmation() {
 
     let cancelled = false;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("success") !== "policy_created") return;
     const policyId = params.get("policy_id")?.trim();
     if (!policyId) return;
 
