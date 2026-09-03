@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1158
-source_commit=368da0b2f4048b3bc4ee8b3b50804cb56112ec5e
-purpose=publish professional policy card icons preview OTA
+source_pr=1162
+source_commit=15c511a373ef1d45a43c351f42bd520b1f825453
+purpose=publish icon-only Start Claim vehicle selector trigger preview OTA
