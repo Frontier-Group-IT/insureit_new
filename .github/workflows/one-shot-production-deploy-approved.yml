@@ -16,7 +16,7 @@ jobs:
       - name: Verify current main snapshot
         env:
           GH_TOKEN: ${{ github.token }}
-          EXPECTED_MAIN: ddb62b9f2fd66a650d9e1a7025865498a0649fd3
+          EXPECTED_MAIN: cce652069f70dafcb3af6d2ad3855c33d157b403
         run: |
           set -euo pipefail
           current_main=$(gh api repos/${GITHUB_REPOSITORY}/git/ref/heads/main --jq '.object.sha')
