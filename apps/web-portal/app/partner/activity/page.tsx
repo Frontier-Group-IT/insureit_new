@@ -50,7 +50,7 @@ export default async function PartnerActivityPage() {
         <PartnerPageHeader
           eyebrow="Activity"
           title="What changed"
-          description="Recent Partner-scoped policy, claim and Operations activity in one timeline."
+          description="Recent policy, claim and service activity."
         />
 
         {data.attention.length ? (
