@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1080
-source_commit=97ef34e8a0ebc80469054ccb7b9ef2600b92eb3a
-purpose=publish Policy renewal card beside Driver Licence preview OTA
+source_pr=1082
+source_commit=5f90d71434818fd65ac280f4aa85831d0ddcadb8
+purpose=publish compact single-row customer renewals preview OTA
