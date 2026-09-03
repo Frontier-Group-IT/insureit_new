@@ -379,14 +379,14 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     {claimId && customerId ? <WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /> : null}
   </>;
 
-  if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" icon="tools">
+  if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" iconImage={require('../../assets/claims/claim-assessment.png')}>
     <DateField label="Repair Complete Date *" value={values.repair_complete_date ?? ''} onChange={(v) => set('repair_complete_date', v)} />
     <View style={styles.subsectionHeader}><Text style={styles.subsectionTitle}>Re-inspection</Text><Text style={styles.subsectionMeta}>Always available</Text></View>
     <DateField label="RI Requested Date (Optional)" value={values.ri_requested_date ?? ''} onChange={(v) => set('ri_requested_date', v)} />
     <Gap /><DateField label="RI Done Date *" value={values.ri_done_date ?? ''} onChange={(v) => set('ri_done_date', v)} />
   </ClaimFormSection>;
 
-  if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" icon="receipt-text-outline">
+  if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
     {claimId ? <><Gap /><FinalBillUpload claimId={claimId} /></> : null}
@@ -397,7 +397,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     const currentDo = numberValue(values.do_amount);
     const contribution = bill !== null && currentDo !== null ? Math.max(0, bill - currentDo) : null;
     return <>
-      <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" icon="clipboard-plus-outline">
+      <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" iconImage={require('../../assets/claims/claim-documents.png')}>
         <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />
         <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />
         <Gap /><MoneyField label="DO Amount *" value={values.do_amount ?? ''} onChange={(v) => set('do_amount', v)} />
@@ -415,7 +415,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     </>;
   }
 
-  if (key === 'vehicle_delivery') return <ClaimFormSection title="Stage Details" subtitle="Confirm whether the repaired vehicle has been received" icon="truck-check-outline">
+  if (key === 'vehicle_delivery') return <ClaimFormSection title="Stage Details" subtitle="Confirm whether the repaired vehicle has been received" iconImage={require('../../assets/claims/fleet-vehicle.png')}>
     <ClaimChoice label="Vehicle Received? *" value={values.vehicle_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'Not Yet' }]} onChange={(v) => set('vehicle_received', v)} />
     {values.vehicle_received === 'yes' ? <><Gap /><DateField label="Vehicle Received Date *" value={values.vehicle_received_date ?? ''} onChange={(v) => set('vehicle_received_date', v)} /></> : <ClaimInlineNote tone="warning">This stage stays in progress until the vehicle is received.</ClaimInlineNote>}
   </ClaimFormSection>;
@@ -424,7 +424,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     const doAmount = milestoneAmount(milestones, 'delivery_order', 'do_amount');
     const received = numberValue(values.payment_received_amount);
     const deduction = doAmount !== null && received !== null ? Math.max(0, doAmount - received) : null;
-    return <ClaimFormSection title="Stage Details" subtitle="Record final documents and settlement payment" icon="cash-check">
+    return <ClaimFormSection title="Stage Details" subtitle="Record final documents and settlement payment" iconImage={require('../../assets/claims/claim-settlement.png')}>
       <ClaimChoice label="Depreciation Slip Submitted? *" value={values.depreciation_submitted} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('depreciation_submitted', v)} />
       <Gap /><ClaimChoice label="Satisfaction Voucher Submitted? *" value={values.satisfaction_submitted} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('satisfaction_submitted', v)} />
       <Gap /><DateField label="Documents Submit Date" value={values.documents_submit_date ?? ''} onChange={(v) => set('documents_submit_date', v)} />
