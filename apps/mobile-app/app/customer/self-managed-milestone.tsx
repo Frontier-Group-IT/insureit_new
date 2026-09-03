@@ -414,7 +414,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     const doAmount = milestoneAmount(milestones, 'delivery_order', 'do_amount');
     const received = numberValue(values.payment_received_amount);
     const deduction = doAmount !== null && received !== null ? Math.max(0, doAmount - received) : null;
-    return <ClaimFormSection title="Stage Details" subtitle="Record final documents and settlement payment" iconImage={require('../../assets/claims/claim-settlement.png')}>
+    return <ClaimFormSection title="Stage Details" subtitle="Record final documents and settlement payment" iconImage={require('../../assets/claims/accounts-finance.png')}>
       <ClaimChoice label="Depreciation Slip Submitted? *" value={values.depreciation_submitted} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('depreciation_submitted', v)} />
       <Gap /><ClaimChoice label="Satisfaction Voucher Submitted? *" value={values.satisfaction_submitted} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('satisfaction_submitted', v)} />
       <Gap /><DateField label="Documents Submit Date" value={values.documents_submit_date ?? ''} onChange={(v) => set('documents_submit_date', v)} />
