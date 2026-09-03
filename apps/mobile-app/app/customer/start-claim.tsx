@@ -336,53 +336,68 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 }
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
+  const anchorRef = useRef<View>(null);
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
   function closeSelector() {
     Keyboard.dismiss();
     if (open) onToggle();
   }
 
+  function toggleSelector() {
+    Keyboard.dismiss();
+    if (open) {
+      onToggle();
+      return;
+    }
+    anchorRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ x, y, width, height });
+      onToggle();
+    });
+  }
+
   return <View style={styles.vehicleField}>
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ expanded: open }}
-      onPressIn={(event) => event.stopPropagation()}
-      onPress={(event) => {
-        event.stopPropagation();
-        Keyboard.dismiss();
-        onToggle();
-      }}
-      style={[styles.selectButton, open && styles.selectButtonOpen]}
-    >
-      <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
-      <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
-      <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
-    </Pressable>
+    <View ref={anchorRef} collapsable={false}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        onPressIn={(event) => event.stopPropagation()}
+        onPress={(event) => {
+          event.stopPropagation();
+          toggleSelector();
+        }}
+        style={[styles.selectButton, open && styles.selectButtonOpen]}
+      >
+        <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
+        <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
+      </Pressable>
+    </View>
 
     <Modal
       visible={open}
       transparent
-      animationType="fade"
+      animationType="none"
       statusBarTranslucent
       onRequestClose={closeSelector}
     >
-      <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleModalBackdrop}>
-        <Pressable onPress={(event) => event.stopPropagation()} style={styles.vehicleModalSheet}>
-          <View style={styles.vehicleModalHeader}>
-            <View>
-              <Text style={styles.vehicleModalEyebrow}>SELECT VEHICLE</Text>
-              <Text style={styles.vehicleModalTitle}>Vehicle number</Text>
-            </View>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleModalClose}>
-              <MaterialCommunityIcons name="close" size={20} color={palette.navy} />
-            </Pressable>
-          </View>
-
+      <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleDropdownOverlay}>
+        <Pressable
+          onPress={(event) => event.stopPropagation()}
+          style={[
+            styles.vehicleAnchoredMenu,
+            {
+              left: anchor.x,
+              top: anchor.y + anchor.height + 4,
+              width: anchor.width,
+            },
+          ]}
+        >
           <View style={styles.makeSearch}>
             <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
             <TextInput
               value={query}
               onChangeText={onQueryChange}
-              autoFocus
               autoCapitalize="characters"
               returnKeyType="search"
               placeholder="Search vehicle number, make or model"
@@ -452,13 +467,9 @@ const styles = StyleSheet.create({
   selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
   placeholder: { color: '#7A8798', fontWeight: '700' },
   makeMenu: { borderRadius: 15, borderWidth: 1, borderColor: '#C8D9EF', backgroundColor: '#FFFFFF', overflow: 'hidden', marginTop: 4 },
-  vehicleModalBackdrop: { flex: 1, backgroundColor: 'rgba(7,29,73,0.46)', justifyContent: 'flex-end', paddingHorizontal: 12, paddingBottom: 18 },
-  vehicleModalSheet: { maxHeight: '72%', borderRadius: 22, backgroundColor: '#FFFFFF', padding: 12, shadowColor: '#071D49', shadowOpacity: 0.22, shadowRadius: 18, shadowOffset: { width: 0, height: -4 }, elevation: 12 },
-  vehicleModalHeader: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 3, paddingBottom: 5 },
-  vehicleModalEyebrow: { color: '#145ED7', fontSize: 9, fontWeight: '900', letterSpacing: 0.65 },
-  vehicleModalTitle: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 },
-  vehicleModalClose: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5FA' },
-  vehicleModalOptions: { maxHeight: 360, marginTop: 2 },
+  vehicleDropdownOverlay: { flex: 1, backgroundColor: 'transparent' },
+  vehicleAnchoredMenu: { position: 'absolute', maxHeight: 330, borderRadius: 15, borderWidth: 1, borderColor: '#C8D9EF', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  vehicleModalOptions: { maxHeight: 270 },
   makeSearch: { minHeight: 50, margin: 7, borderRadius: 12, borderWidth: 2, borderColor: '#6FA1EA', backgroundColor: '#F0F6FF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   makeSearchInput: { flex: 1, minHeight: 46, color: palette.navy, fontSize: 13, fontWeight: '700' },
   makeOption: { minHeight: 54, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#EEF2F6' },
