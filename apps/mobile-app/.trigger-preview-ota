@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1083
-source_commit=b961755f6c2076c2a7b1edf801e62e5211649d7e
-purpose=publish renewal policy count sync preview OTA
+source_pr=1084
+source_commit=67c139511543cd1c7ced7635efb9e468b20d9603
+purpose=publish single renewal legend with numbers-only card counts preview OTA
