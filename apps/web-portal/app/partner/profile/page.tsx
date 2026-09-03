@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Building2, Network, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { ArrowLeft, ShieldCheck, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebSession } from "@/lib/partner-web";
@@ -9,9 +9,6 @@ export const revalidate = 0;
 
 function humanize(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-function initials(value: string) {
-  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "IP";
 }
 
 export default async function PartnerProfilePage() {
