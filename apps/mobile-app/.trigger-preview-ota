@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1150
-source_commit=dffe4f5766249e4d054a430ef1cf05470938494f
-purpose=publish customer claim card navy accent preview OTA
+source_pr=1151
+source_commit=c7ddfd0c01958034f237c753b3f3deb185cdec95
+purpose=publish whole Start Claim vehicle selector clickable fix preview OTA
