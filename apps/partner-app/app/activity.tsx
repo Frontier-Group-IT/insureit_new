@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
 import { partnerTheme } from '@/lib/theme';
 
@@ -22,7 +21,7 @@ export default function ActivityScreen() {
   }, []);
 
   return (
-    <PartnerScreen eyebrow="ACTIVITY" title="What changed" action={<PartnerIconButton icon="close" label="Close activity" onPress={() => router.back()} />}>
+    <PartnerScreen eyebrow="ACTIVITY" title="What changed" onBack={() => router.back()}>
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View> : <>
         {data.attention.length ? <>

@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
 import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
@@ -19,7 +18,7 @@ export default function WeeklyStoryScreen() {
   }, []);
 
   return (
-    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" action={<PartnerIconButton icon="close" label="Close weekly story" onPress={() => router.back()} />}>
+    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" onBack={() => router.back()}>
       {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View> : (
         <>
           <View style={styles.hero}>
