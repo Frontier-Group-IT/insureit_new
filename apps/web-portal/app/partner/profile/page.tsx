@@ -59,7 +59,7 @@ export default async function PartnerProfilePage() {
             <div>
               <h3 className="text-[13px] font-extrabold text-[#172846]">Registration and qualification</h3>
               <p className="mt-1 text-[10px] font-medium leading-4 text-[#74839A]">Training, examination, agreement and IIB registration remain available through the secure Registration & Training workspace.</p>
-              <Link href="/intermediary-portal" className="mt-3 inline-flex h-9 items-center rounded-xl bg-[#111A35] px-4 text-[10px] font-bold text-white">Open Registration & Training</Link>
+              <Link href="/partner/account/registration" className="mt-3 inline-flex h-9 items-center rounded-xl bg-[#111A35] px-4 text-[10px] font-bold text-white">Open Registration & Training</Link>
             </div>
           </div>
         </section>

@@ -698,3 +698,51 @@ export async function getPartnerWebSupport(): Promise<PartnerSupportData> {
   if (error || !data) throw new Error(error?.message ?? "Support information is unavailable.");
   return data as PartnerSupportData;
 }
+
+
+export type PartnerRegistrationOverview = {
+  generated_at: string;
+  intermediary: {
+    id: string;
+    display_name: string;
+    intermediary_type: "partner" | "posp" | "misp";
+    intermediary_code: string | null;
+    mobile: string | null;
+    email: string | null;
+    account_status: string;
+    portal_access_status: string;
+  };
+  primary_application: {
+    id: string;
+    registration_status: string;
+    status: string;
+    final_type: string | null;
+  };
+  document_count: number;
+  qualification_application: {
+    id: string;
+    registration_status: string;
+    status: string;
+    final_type: "posp" | "misp";
+  } | null;
+  assignment: {
+    training_title: string | null;
+    training_deadline: string | null;
+    training_status: string;
+    exam_title: string | null;
+    exam_status: string;
+    exam_score: number | string | null;
+    exam_attempts_used: number;
+    maximum_attempts: number | null;
+    agreement_status: string;
+    iib_registration_status: string;
+  } | null;
+};
+
+export async function getPartnerWebRegistrationOverview(): Promise<PartnerRegistrationOverview> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_registration_overview");
+  if (error || !data) throw new Error(error?.message ?? "Registration information is unavailable.");
+  return data as PartnerRegistrationOverview;
+}
