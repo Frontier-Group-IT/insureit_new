@@ -156,7 +156,7 @@ export function ClaimFormSection({ title, subtitle, optional, icon, iconImage, c
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
-        {iconImage ? <View style={styles.sectionIcon}><Image source={iconImage} style={styles.sectionIconImage} resizeMode="contain" /></View> : icon ? <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={23} color="#FFFFFF" /></View> : null}
+        {iconImage ? <View style={[styles.sectionIcon, styles.sectionIconImageContainer]}><Image source={iconImage} style={styles.sectionIconImage} resizeMode="contain" /></View> : icon ? <View style={styles.sectionIcon}><MaterialCommunityIcons name={icon} size={23} color="#FFFFFF" /></View> : null}
         <View style={styles.sectionCopy}>
           <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>{title}</Text>{optional ? <Text style={styles.optional}>Optional</Text> : null}</View>
           {subtitle ? <Text style={styles.sectionSubtitle}>{subtitle}</Text> : null}
@@ -397,6 +397,7 @@ const styles = StyleSheet.create({
   section: { borderRadius: 18, borderWidth: 1, borderColor: '#DDE4EC', backgroundColor: '#FFFFFF', marginBottom: 12, overflow: 'hidden', shadowColor: '#183658', shadowOpacity: 0.055, shadowRadius: 9, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 13, paddingTop: 12, paddingBottom: 10 },
   sectionIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#073C97', alignItems: 'center', justifyContent: 'center', shadowColor: '#073C97', shadowOpacity: 0.16, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  sectionIconImageContainer: { backgroundColor: 'transparent', shadowOpacity: 0, elevation: 0 },
   sectionIconImage: { width: 32, height: 32 },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
