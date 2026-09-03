@@ -26,12 +26,14 @@ export function ExternalClaimStageHeader({
   subtitle,
   vehicleNo,
   claimNo,
+  serviceLabel = 'Self Tracked',
 }: {
   step: number;
   title: string;
   subtitle?: string;
   vehicleNo?: string | null;
   claimNo?: string | null;
+  serviceLabel?: string;
   onBack: () => void;
 }) {
   const icon = stageIcons[Math.max(0, Math.min(stageIcons.length - 1, step - 1))];
@@ -48,7 +50,7 @@ export function ExternalClaimStageHeader({
           {vehicleNo || claimNo ? <Text style={styles.identity}>{[vehicleNo, claimNo].filter(Boolean).join('  •  ')}</Text> : null}
           {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         </View>
-        <View style={styles.selfTrackedBadge}><Text style={styles.selfTrackedText}>Self Tracked</Text></View>
+        <View style={styles.selfTrackedBadge}><Text style={styles.selfTrackedText}>{serviceLabel}</Text></View>
       </View>
     </View>
   );

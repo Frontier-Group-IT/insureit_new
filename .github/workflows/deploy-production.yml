@@ -121,6 +121,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260903150000_partner_web_renewal_window_pagination.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-renewal-pagination.yml"
             echo "Partner renewal pagination migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260903170000_protect_verified_managed_claim_documents.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-managed-claim-document-protection.yml"
+            echo "Managed claim document protection migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"

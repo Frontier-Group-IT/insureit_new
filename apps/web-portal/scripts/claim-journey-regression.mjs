@@ -4,8 +4,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import {
+  CLAIM_INTIMATION_DOCUMENT_GROUPS,
+  CLAIM_INTIMATION_DOCUMENT_TYPES,
   INTERNAL_CLAIM_STATUSES,
   INTERNAL_JOURNEY_STAGES,
+  matchesClaimIntimationDocument,
   projectInternalClaim,
 } from "../../../packages/claim-journey/src/index.ts";
 
@@ -31,12 +34,42 @@ assert.equal(projectInternalClaim("Closed").progress, 100);
 assert.equal(projectInternalClaim("Unrecognized legacy state").knownStatus, false);
 assert.equal(projectInternalClaim("Unrecognized legacy state").customerActionRequired, false);
 
+assert.equal(CLAIM_INTIMATION_DOCUMENT_GROUPS.length, 5);
+assert.equal(CLAIM_INTIMATION_DOCUMENT_TYPES.length, 26);
+assert.deepEqual(
+  CLAIM_INTIMATION_DOCUMENT_GROUPS.map((group) => group.label),
+  ["Vehicle Docs", "Driver Docs", "Permit / Tax", "KYC / Other", "Forms"],
+);
+assert.equal(matchesClaimIntimationDocument("Insurance copy", "Insurance Copy"), true);
+assert.equal(matchesClaimIntimationDocument("Driver Aadharcard Back", "Driver Aadhaar back"), true);
+assert.equal(matchesClaimIntimationDocument("Pancard", "PAN"), true);
+assert.equal(matchesClaimIntimationDocument("Repair estimate", "Repair Estimate"), true);
+
 const customerUpload = await readFile(path.join(repoRoot, "apps/mobile-app/app/customer/upload-documents.tsx"), "utf8");
 assert.doesNotMatch(customerUpload, /\.from\(['"]claims['"]\)\.update\(\{\s*current_status/);
 assert.doesNotMatch(customerUpload, /advanceAfterUpload/);
 
 const selfManagedMilestone = await readFile(path.join(repoRoot, "apps/mobile-app/app/customer/self-managed-milestone.tsx"), "utf8");
 assert.match(selfManagedMilestone, /save_self_managed_milestone/);
+assert.doesNotMatch(selfManagedMilestone, /mode="broker-managed"/);
+
+const internalStage = await readFile(path.join(repoRoot, "apps/mobile-app/app/customer/internal-claim-stage.tsx"), "utf8");
+assert.match(internalStage, /mode="broker-managed"/);
+assert.match(internalStage, /CLAIM_INTIMATION_UPLOAD_STATUSES/);
+assert.doesNotMatch(internalStage, /save_self_managed_milestone/);
+assert.doesNotMatch(internalStage, /\.from\(['"]claims['"]\)\.update/);
+
+const claimDetail = await readFile(path.join(repoRoot, "apps/mobile-app/app/customer/claim-detail.tsx"), "utf8");
+assert.match(claimDetail, /\/customer\/internal-claim-stage/);
+assert.doesNotMatch(claimDetail, /<ClaimPrimaryAction[^>]+Upload Documents/);
+
+const webFinalDocumentGroups = await readFile(path.join(repoRoot, "apps/web-portal/components/final-documents/final-document-groups.ts"), "utf8");
+assert.match(webFinalDocumentGroups, /CLAIM_INTIMATION_DOCUMENT_GROUPS/);
+
+const managedDocumentProtection = await readFile(path.join(repoRoot, "supabase/migrations/20260903170000_protect_verified_managed_claim_documents.sql"), "utf8");
+assert.match(managedDocumentProtection, /claim\.claim_service_mode = 'self_managed'/);
+assert.match(managedDocumentProtection, /document\.verification_status = 'verified'/);
+assert.match(managedDocumentProtection, /claim\.claim_service_mode = 'broker_managed'/);
 
 const serviceMode = await readFile(path.join(repoRoot, "apps/mobile-app/lib/claim-service-mode.ts"), "utf8");
 assert.match(serviceMode, /claim_service_mode/);

@@ -56,6 +56,108 @@ export const INTERNAL_JOURNEY_STAGES = [
 ] as const;
 
 export type InternalJourneyStageKey = (typeof INTERNAL_JOURNEY_STAGES)[number]["key"];
+
+export const CLAIM_INTIMATION_DOCUMENT_GROUPS = [
+  {
+    key: "vehicle-docs",
+    label: "Vehicle Docs",
+    documents: [
+      { type: "RC Copy", title: "RC Copy", body: "Registration certificate copy", icon: "card-account-details-outline" },
+      { type: "Insurance Copy", title: "Insurance Copy", body: "Insurance policy copy", icon: "shield-file-outline" },
+      { type: "Fitness Copy", title: "Fitness Copy", body: "Vehicle fitness copy", icon: "file-certificate-outline" },
+      { type: "GR/Load Bill", title: "GR/Load Bill", body: "GR or load bill copy", icon: "file-document-multiple-outline" },
+      { type: "Fasttag report last 15 days", title: "Fasttag report last 15 days", body: "Fastag report for last 15 days", icon: "file-document-outline" },
+      { type: "Spot Report", title: "Spot Report", body: "Spot survey or inspection report", icon: "clipboard-text-outline" },
+      { type: "Estimate Copy", title: "Estimate Copy", body: "Workshop estimate copy", icon: "receipt-text-outline" },
+    ],
+  },
+  {
+    key: "driver-docs",
+    label: "Driver Docs",
+    documents: [
+      { type: "Driver Licence", title: "Driver Licence", body: "Driver licence copy", icon: "badge-account-horizontal-outline" },
+      { type: "Driver Aadhaar front", title: "Driver Aadhaar front", body: "Driver Aadhaar front side", icon: "card-account-details-outline" },
+      { type: "Driver Aadhaar back", title: "Driver Aadhaar back", body: "Driver Aadhaar back side", icon: "card-account-details-outline" },
+      { type: "Driver Statement", title: "Driver Statement", body: "Driver statement document", icon: "file-document-edit-outline" },
+    ],
+  },
+  {
+    key: "permit-tax",
+    label: "Permit / Tax",
+    documents: [
+      { type: "Road Tax", title: "Road Tax", body: "Road tax receipt", icon: "receipt-text-outline" },
+      { type: "Local Permit A", title: "Local Permit A", body: "Local permit A copy", icon: "file-certificate-outline" },
+      { type: "Local Permit B", title: "Local Permit B", body: "Local permit B copy", icon: "file-certificate-outline" },
+      { type: "National Permit", title: "National Permit", body: "National permit copy", icon: "file-certificate-outline" },
+      { type: "Authorization Letter", title: "Authorization Letter", body: "Authorization letter copy", icon: "file-document-outline" },
+    ],
+  },
+  {
+    key: "kyc-other",
+    label: "KYC / Other",
+    documents: [
+      { type: "Aadhaar", title: "Aadhaar", body: "Aadhaar card copy", icon: "card-account-details-outline" },
+      { type: "PAN", title: "PAN", body: "PAN card copy", icon: "card-account-details-outline" },
+      { type: "GST", title: "GST", body: "GST certificate", icon: "file-certificate-outline" },
+      { type: "Cancelled Cheque", title: "Cancelled Cheque", body: "Cancelled cheque copy", icon: "checkbook" },
+      { type: "KYC Form", title: "KYC Form", body: "KYC form copy", icon: "file-sign" },
+    ],
+  },
+  {
+    key: "forms",
+    label: "Forms",
+    documents: [
+      { type: "Claim Form", title: "Claim Form", body: "Signed claim form", icon: "file-sign" },
+      { type: "TP Affidavit", title: "TP Affidavit", body: "Third-party affidavit", icon: "file-document-edit-outline" },
+      { type: "Towing Bill", title: "Towing Bill", body: "Towing bill copy", icon: "tow-truck" },
+      { type: "Repair Estimate", title: "Repair Estimate", body: "Workshop repair estimate", icon: "receipt-text-outline" },
+      { type: "NCB Verification", title: "NCB Verification", body: "NCB verification document", icon: "shield-check-outline" },
+    ],
+  },
+] as const;
+
+export type ClaimIntimationDocumentType =
+  (typeof CLAIM_INTIMATION_DOCUMENT_GROUPS)[number]["documents"][number]["type"];
+
+export const CLAIM_INTIMATION_DOCUMENT_TYPES: ClaimIntimationDocumentType[] =
+  CLAIM_INTIMATION_DOCUMENT_GROUPS.flatMap((group) => group.documents.map((document) => document.type));
+
+const CLAIM_INTIMATION_DOCUMENT_ALIASES: Partial<Record<ClaimIntimationDocumentType, readonly string[]>> = {
+  "Driver Aadhaar front": ["Driver Aadharcard front", "Driver Aadhar front"],
+  "Driver Aadhaar back": ["Driver Aadharcard Back", "Driver Aadhar back"],
+  Aadhaar: ["Aadharcard", "Aadhaar Card", "Aadhar Card"],
+  PAN: ["Pancard", "PAN Card"],
+  "Cancelled Cheque": ["Cancel Cheque", "Cancelled Check"],
+  "KYC Form": ["KYC FORM"],
+  "Local Permit A": ["Local permit A", "Permit Copy A"],
+  "Local Permit B": ["LOCAL PERMIT B", "Permit Copy B"],
+  "Authorization Letter": ["Authorization letter"],
+  "Repair Estimate": ["Repair estimate"],
+  "NCB Verification": ["NCB VERIFICATION"],
+  "Fitness Copy": ["Fitness copy", "Vehicle Fitness Certificate"],
+  "GR/Load Bill": ["GR/Load bill", "GR / Load Bill"],
+  "Fasttag report last 15 days": ["Fastag report last 15 days", "FASTag Summary Report"],
+  "Road Tax": ["Tax Paid Receipt"],
+};
+
+export function normalizeClaimDocumentType(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+export function matchesClaimIntimationDocument(documentType: string, expectedType: ClaimIntimationDocumentType | string) {
+  const expected = normalizeClaimDocumentType(expectedType);
+  if (normalizeClaimDocumentType(documentType) === expected) return true;
+
+  const canonical = CLAIM_INTIMATION_DOCUMENT_TYPES.find(
+    (type) => normalizeClaimDocumentType(type) === expected,
+  );
+  if (!canonical) return false;
+
+  return (CLAIM_INTIMATION_DOCUMENT_ALIASES[canonical] ?? []).some(
+    (alias) => normalizeClaimDocumentType(alias) === normalizeClaimDocumentType(documentType),
+  );
+}
+
 export type InternalNextActionOwner = "customer" | "operations" | "none";
 export type InternalJourneyState = "action_required" | "waiting_operations" | "in_progress" | "completed" | "rejected";
 

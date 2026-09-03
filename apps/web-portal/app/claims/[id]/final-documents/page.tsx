@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
@@ -87,7 +88,11 @@ export default async function FinalDocumentsPage({ params }: { params: Promise<{
 }
 
 function latestActiveDocument(documents: ClaimDocument[], documentType: string) {
-  return documents.find((document) => document.document_type?.toLowerCase() === documentType.toLowerCase() && document.verification_status !== "rejected") ?? null;
+  return documents.find(
+    (document) =>
+      matchesClaimIntimationDocument(document.document_type, documentType) &&
+      document.verification_status !== "rejected",
+  ) ?? null;
 }
 
 function extractDealershipDetails(rows: StageDetailRow[]): DealershipDetailsV2 | null {
