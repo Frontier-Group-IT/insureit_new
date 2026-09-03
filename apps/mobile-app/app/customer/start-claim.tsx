@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
@@ -333,14 +333,24 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
   return <View style={styles.vehicleField}>
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={(event) => { event.stopPropagation(); onToggle(); }} style={[styles.selectButton, open && styles.selectButtonOpen]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      onPressIn={(event) => event.stopPropagation()}
+      onPress={(event) => {
+        event.stopPropagation();
+        Keyboard.dismiss();
+        onToggle();
+      }}
+      style={[styles.selectButton, open && styles.selectButtonOpen]}
+    >
       <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
       <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
       <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
     </Pressable>
     {open ? <View style={styles.makeMenu}>
-      <View style={styles.makeSearch} onTouchStart={(event) => event.stopPropagation()}><MaterialCommunityIcons name="magnify" size={19} color="#145ED7" /><TextInput value={query} onChangeText={onQueryChange} autoFocus autoCapitalize="characters" returnKeyType="search" placeholder="Search vehicle number, make or model" placeholderTextColor="#6E7F96" style={styles.makeSearchInput} /></View>
-      {vehicles.length ? vehicles.map((vehicle) => <Pressable key={vehicle.id} accessibilityRole="button" onPress={(event) => { event.stopPropagation(); onSelect(vehicle); }} style={[styles.makeOption, selectedVehicle?.id === vehicle.id && styles.selectOptionActive]}><View style={styles.vehicleOptionCopy}><Text style={[styles.selectOptionText, selectedVehicle?.id === vehicle.id && styles.selectOptionTextActive]} numberOfLines={1}>{vehicle.vehicle_no}</Text><Text style={styles.optionMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}</Text></View>{selectedVehicle?.id === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={17} color="#0A43A3" /> : null}</Pressable>) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
+      <View style={styles.makeSearch} onTouchStart={(event) => event.stopPropagation()}><MaterialCommunityIcons name="magnify" size={19} color="#145ED7" /><TextInput value={query} onChangeText={onQueryChange} autoCapitalize="characters" returnKeyType="search" placeholder="Search vehicle number, make or model" placeholderTextColor="#6E7F96" style={styles.makeSearchInput} /></View>
+      {vehicles.length ? vehicles.map((vehicle) => <Pressable key={vehicle.id} accessibilityRole="button" onPressIn={(event) => event.stopPropagation()} onPress={(event) => { event.stopPropagation(); Keyboard.dismiss(); onSelect(vehicle); }} style={[styles.makeOption, selectedVehicle?.id === vehicle.id && styles.selectOptionActive]}><View style={styles.vehicleOptionCopy}><Text style={[styles.selectOptionText, selectedVehicle?.id === vehicle.id && styles.selectOptionTextActive]} numberOfLines={1}>{vehicle.vehicle_no}</Text><Text style={styles.optionMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}</Text></View>{selectedVehicle?.id === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={17} color="#0A43A3" /> : null}</Pressable>) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
     </View> : null}
   </View>;
 }
