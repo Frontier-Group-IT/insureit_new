@@ -149,7 +149,7 @@
   line-height: 1.25 !important;
   letter-spacing: -0.005em !important;
   color: #7d899a !important;
-  white-space: nowrap;
+  white-space: pre-line;
 }
 
 /* KPI tier 2 / pipeline / exception summary cards. */
