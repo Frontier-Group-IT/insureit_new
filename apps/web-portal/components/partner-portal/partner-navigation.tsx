@@ -61,7 +61,7 @@ function NavLink({ item }: { item: PartnerNavItem }) {
     <Link
       href={item.href}
       prefetch={false}
-      className={`group flex min-h-11 items-center gap-3 rounded-2xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out hover:translate-x-0.5 hover:shadow-[0_8px_20px_rgba(4,10,28,.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
+      className={`group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
         active ? "bg-white text-[#141d3b]" : "text-white/88 hover:bg-white/10 hover:text-white"
       }`}
     >
