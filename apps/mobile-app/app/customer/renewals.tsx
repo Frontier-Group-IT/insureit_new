@@ -227,7 +227,7 @@ function RenewalItemSection({
             <Text style={styles.expandedItemDate} numberOfLines={1}>{formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
           </View>
           <View style={[styles.statusPill, item.status === 'expired' && styles.statusPillExpired]}>
-            <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
+            <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d left`}</Text>
           </View>
         </Pressable>
       ))}
