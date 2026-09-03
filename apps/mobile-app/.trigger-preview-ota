@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1138
-source_commit=e77dad9f236b5087324cc1515ede273dd0f8aca4
-purpose=publish self-tracked claim icon contrast fix preview OTA
+source_pr=1144
+source_commit=88ca5a5ad3e355e63bb87a8e9faa07df39e10053
+purpose=publish customer notification submenu filters preview OTA
