@@ -34,17 +34,17 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
   return (
     <PartnerPortalShell title="Customer Detail">
       <div className="space-y-7">
-        <Link href="/partner/customers" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]">
+        <Link href="/partner/customers" className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
           <ArrowLeft className="h-3.5 w-3.5" /> Customer Register
         </Link>
 
         <section className="overflow-hidden border-y border-[#DCE4ED] bg-white/45">
-          <div className="flex flex-col gap-4 border-b border-[#E6ECF3] px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-4 border-b border-[#E6ECF3] px-1 py-4 sm:px-4 sm:py-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-5 w-5" /></span>
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-5 w-5" /></span>
               <div className="min-w-0">
                 <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#6F8098]">{customer.customer_code || "Customer"}</p>
-                <h2 className="mt-1 truncate text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">{customer.customer_name}</h2>
+                <h2 className="mt-1 break-words text-[21px] sm:text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">{customer.customer_name}</h2>
                 <p className="mt-1 text-[10.5px] font-medium text-[#74839A]">{customer.company_name || customer.contact_name || customer.customer_type || "Customer record"}</p>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
                 {data.vehicles.map((vehicle) => (
                   <div key={vehicle.vehicle_id} className="py-4">
                     <div className="flex items-start gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#F3F6FA] text-[#3156B8]"><Car className="h-4 w-4" /></span>
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#F3F6FA] text-[#3156B8]"><Car className="h-4 w-4" /></span>
                       <div>
                         <p className="text-[11px] font-extrabold text-[#1B2F4E]">{vehicle.vehicle_no || "Vehicle"}</p>
                         <p className="mt-0.5 text-[10px] font-medium text-[#74839A]">{display(vehicle.make, vehicle.model, vehicle.year, vehicle.vehicle_type) || "Vehicle details"}</p>
@@ -121,7 +121,7 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
               <div className="mt-3 divide-y divide-[#E8EDF4]">
                 {data.claims.map((claim) => (
                   <Link key={claim.claim_id} href={"/partner/claims/" + encodeURIComponent(claim.claim_id)} prefetch={false} className="group flex items-center gap-3 py-4">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#FFF6E7] text-[#B56A00]"><ClipboardList className="h-4 w-4" /></span>
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF6E7] text-[#B56A00]"><ClipboardList className="h-4 w-4" /></span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[11px] font-extrabold text-[#1B2F4E]">{claim.claim_no || "Claim"}</p>
                       <p className="mt-0.5 truncate text-[10px] font-medium text-[#74839A]">{display(claim.vehicle_no, claim.insurer_name) || "Claim details"}</p>
@@ -145,7 +145,7 @@ function Contact({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#F3F6FA] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
       <div className="min-w-0">
         <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">{label}</p>
-        <p className="mt-1 truncate text-[10.5px] font-bold text-[#203653]">{value}</p>
+        <p className="mt-1 break-words text-[10.5px] font-bold leading-4 text-[#203653]">{value}</p>
       </div>
     </div>
   );
@@ -154,9 +154,9 @@ function Contact({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
 function Summary({ icon: Icon, label, value }: { icon: typeof ShieldCheck; label: string; value: number }) {
   return (
     <div className="flex items-center gap-3 border-b border-[#E0E7EF] px-1 py-4 sm:border-r sm:px-4 xl:border-b-0 xl:last:border-r-0">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
       <div>
-        <p className="text-[20px] font-extrabold text-[#162746]">{value}</p>
+        <p className="text-[18px] font-extrabold text-[#162746] sm:text-[20px]">{value}</p>
         <p className="text-[9px] font-bold uppercase tracking-[0.09em] text-[#75849A]">{label}</p>
       </div>
     </div>
