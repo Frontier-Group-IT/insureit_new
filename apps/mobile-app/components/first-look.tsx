@@ -72,10 +72,10 @@ export function SplashIntro() {
       <Animated.View style={[styles.splashHalo, { opacity: markGlowOpacity, transform: [{ scale: pulseScale }] }]} />
       <Animated.View style={[styles.splashContent, { opacity, transform: [{ scale }] }]}>
         <Animated.View style={[styles.splashMarkAura, { opacity: markGlowOpacity, transform: [{ scale: pulseScale }] }]} />
-        <Image source={primaryLogo} resizeMode="contain" style={styles.splashMark} />
+        <Image source={inverseMarkLogo} resizeMode="contain" style={styles.splashMark} />
         <Animated.View style={[styles.splashCopy, { opacity: copyOpacity }]}>
           <Text style={styles.splashName}>insureit</Text>
-          <Text style={styles.splashPromise}>YOUR SAFETY, OUR PROMISE</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.splashPromise}>YOUR SAFETY, OUR PROMISE</Text>
         </Animated.View>
       </Animated.View>
     </View>
@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
   splashContent: { alignItems: 'center', justifyContent: 'center', width: '100%', paddingHorizontal: 32 },
   splashMarkAura: { position: 'absolute', top: -26, width: 176, height: 176, borderRadius: 88, backgroundColor: '#CFE7FF', shadowColor: '#1F6FEB', shadowOpacity: 0.18, shadowRadius: 28, elevation: 4 },
   splashMark: { width: 150, height: 180 },
-  splashCopy: { alignItems: 'center', marginTop: 18 },
+  splashCopy: { alignItems: 'center', marginTop: 14, width: '100%' },
   splashName: { color: '#071D49', fontSize: 30, lineHeight: 34, fontWeight: '900', letterSpacing: 0, includeFontPadding: false },
-  splashPromise: { color: '#071D49', fontSize: 8.5, lineHeight: 11, fontWeight: '900', letterSpacing: 0.8, marginTop: 5, includeFontPadding: false },
+  splashPromise: { width: 210, color: '#071D49', fontSize: 8.5, lineHeight: 11, fontWeight: '900', letterSpacing: 0.8, marginTop: 5, includeFontPadding: false, textAlign: 'center' },
   scene: { height: 312, marginHorizontal: -16, marginTop: -2, backgroundColor: '#EAF5FF', overflow: 'hidden' },
   sceneLogo: { position: 'absolute', top: 52, alignSelf: 'center', zIndex: 5 },
   scenePromo: { position: 'absolute', left: 18, right: 18, top: 22, zIndex: 8, alignItems: 'center' },
