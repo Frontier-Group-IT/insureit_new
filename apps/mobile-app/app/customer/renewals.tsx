@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { LoadingState, Screen } from '@/components/ui';
 import { buildComplianceRenewals, RENEWAL_DUE_WINDOW_DAYS, type ComplianceDocumentKey } from '@/lib/compliance-renewals';
@@ -27,6 +27,16 @@ const iconFor: Record<ComplianceDocumentKey, keyof typeof MaterialCommunityIcons
   puc: 'smoke-detector-outline',
   fitness: 'clipboard-pulse-outline',
   dl: 'card-account-details-outline',
+};
+
+const renewalIconFor: Record<ComplianceDocumentKey, ImageSourcePropType> = {
+  insurance_policy: require('../../assets/custom-icons/renewals/policy.png'),
+  national_permit: require('../../assets/custom-icons/renewals/national-permit.png'),
+  local_permit: require('../../assets/custom-icons/renewals/local-permit.png'),
+  road_tax: require('../../assets/custom-icons/renewals/road-tax.png'),
+  puc: require('../../assets/custom-icons/renewals/puc.png'),
+  fitness: require('../../assets/custom-icons/renewals/fitness.png'),
+  dl: require('../../assets/custom-icons/renewals/drivers-licence.png'),
 };
 
 export default function ComplianceRenewalsScreen() {
@@ -131,7 +141,7 @@ export default function ComplianceRenewalsScreen() {
               >
                 <View style={styles.summaryMain}>
                   <View style={[styles.summaryIcon, summary.totalPending > 0 && styles.summaryIconHot]}>
-                    <MaterialCommunityIcons name={iconFor[summary.key]} size={18} color={summary.totalPending > 0 ? '#C43D2D' : '#0A43A3'} />
+                    <Image source={renewalIconFor[summary.key]} resizeMode="contain" style={styles.summaryIconImage} />
                   </View>
                   <View style={styles.summaryCopy}>
                     <Text style={styles.summaryTitle} numberOfLines={1}>{summary.title}</Text>
@@ -271,8 +281,9 @@ const styles = StyleSheet.create({
   summaryCardDisabled: { backgroundColor: '#F8FAFC' },
   summaryMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
   summaryCopy: { flex: 1, minWidth: 0 },
-  summaryIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
-  summaryIconHot: { backgroundColor: '#FFF0EE' },
+  summaryIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' },
+  summaryIconHot: { backgroundColor: '#FFF6F3' },
+  summaryIconImage: { width: 27, height: 27 },
   summaryTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   summaryRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
   inlineMetrics: { minWidth: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, paddingRight: 2 },
