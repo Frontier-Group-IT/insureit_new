@@ -39,7 +39,7 @@ export default async function PartnerAccountPage() {
             text="View Partner identity, registration codes and commercial access."
           />
           <AccountAction
-            href="/intermediary-portal"
+            href="/partner/account/registration"
             icon={GraduationCap}
             title="Registration & Training"
             text="Open onboarding, training, examination, agreement and IIB registration."
