@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1162
-source_commit=15c511a373ef1d45a43c351f42bd520b1f825453
-purpose=publish icon-only Start Claim vehicle selector trigger preview OTA
+source_pr=1166
+source_commit=5deaf09468abef4eef7c92d4af01eb55bdf0ea17
+purpose=publish refined Start Claim vehicle selector trigger icon preview OTA
