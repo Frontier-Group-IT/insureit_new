@@ -218,11 +218,13 @@ export default function StartClaimScreen() {
                   <Text style={[styles.policyInsurer, selectedPolicy.source === 'external' && styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
                   <Text style={[styles.policyDates, selectedPolicy.source === 'external' && styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
-                {selectedPolicyCondition === 'expired' ? (
+                {selectedPolicy.source === 'external' ? (
+                  <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
+                ) : selectedPolicyCondition === 'expired' ? (
                   <ExpiredPolicyPulse />
                 ) : (
-                  <View style={[styles.policyCheck, selectedPolicy.source === 'external' && styles.policyCheckCompact, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
-                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicy.source === 'external' ? (selectedPolicyCondition === 'due' ? 16 : 15) : (selectedPolicyCondition === 'due' ? 21 : 20)} color="#FFFFFF" />
+                  <View style={[styles.policyCheck, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
+                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />
                   </View>
                 )}
               </View>
@@ -286,7 +288,7 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
   return null;
 }
 
-function ExpiredPolicyPulse() {
+function PolicyStatusPulse({ condition }: { condition: PolicyCondition }) {
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -300,12 +302,29 @@ function ExpiredPolicyPulse() {
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+  const conditionStyle = condition === 'expired'
+    ? styles.policyCheckExpired
+    : condition === 'due'
+      ? styles.policyCheckDue
+      : null;
 
   return (
-    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
-      <Text style={styles.policyStatusExclamation}>!</Text>
+    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, conditionStyle, { opacity, transform: [{ scale }] }]}>
+      {condition === 'expired' ? (
+        <Text style={styles.policyStatusExclamation}>!</Text>
+      ) : (
+        <MaterialCommunityIcons
+          name={condition === 'due' ? 'alert-outline' : 'check'}
+          size={condition === 'due' ? 16 : 15}
+          color="#FFFFFF"
+        />
+      )}
     </Animated.View>
   );
+}
+
+function ExpiredPolicyPulse() {
+  return <PolicyStatusPulse condition="expired" />;
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
