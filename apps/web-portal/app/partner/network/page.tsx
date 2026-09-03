@@ -50,7 +50,7 @@ export default async function PartnerNetworkPage() {
           <section key={section.key} className="overflow-hidden border-y border-[#DCE4ED]">
             <div className="flex flex-col gap-2 border-b border-[#E6ECF3] py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#3156B8]"><Building2 className="h-4 w-4" /></span>
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#3156B8]"><Building2 className="h-4 w-4" /></span>
                 <div>
                   <p className="text-[12px] font-extrabold text-[#172846]">{section.label}</p>
                   <p className="mt-0.5 text-[9.5px] font-medium text-[#7A899F]">{section.rows.length} Partner {section.rows.length === 1 ? "family" : "families"}{section.owner ? " · " + section.owner : ""}</p>
@@ -63,9 +63,9 @@ export default async function PartnerNetworkPage() {
                 <div key={row.partner_id} className="py-5">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
                       <div className="min-w-0">
-                        <p className="truncate text-[12px] font-extrabold text-[#1B2F4E]">{row.partner_name}</p>
+                        <p className="break-words text-[12px] font-extrabold leading-4 text-[#1B2F4E]">{row.partner_name}</p>
                         <p className="mt-0.5 text-[9.5px] font-medium text-[#74839A]">{row.partner_code} · {humanize(row.partner_kind)}</p>
                         {row.owner.name ? <p className="mt-1 text-[9px] text-[#8190A5]">Sales owner: {row.owner.name}{row.owner.employee_code ? " · " + row.owner.employee_code : ""}</p> : null}
                       </div>
@@ -99,7 +99,7 @@ export default async function PartnerNetworkPage() {
                           <div key={child.intermediary_id} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3 last:border-b-0">
                             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]">{child.type === "posp" ? <UserRound className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}</span>
                             <div className="min-w-0">
-                              <p className="truncate text-[10.5px] font-extrabold text-[#1B2F4E]">{child.name}</p>
+                              <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{child.name}</p>
                               <p className="mt-0.5 text-[9px] font-medium text-[#74839A]">{child.type.toUpperCase()}{child.code ? " · " + child.code : ""}</p>
                             </div>
                           </div>
@@ -114,7 +114,7 @@ export default async function PartnerNetworkPage() {
             </div>
           </section>
         )) : (
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white px-5 py-14 text-center shadow-[0_16px_45px_rgba(34,56,89,.07)]">
+          <section className="border-y border-[#DCE4ED] px-1 py-14 text-center sm:px-4">
             <Network className="mx-auto h-7 w-7 text-[#9AABC0]" />
             <p className="mt-3 text-[12px] font-bold text-[#23395D]">No commercial network available</p>
             <p className="mt-1 text-[10.5px] text-[#7A899F]">No Partner families are currently visible in this authorized scope.</p>
