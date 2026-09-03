@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CalendarRange, TrendingDown, TrendingUp } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerDivider, PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebBusinessPerformance, getPartnerWebBusinessRange } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -46,139 +47,137 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
   return (
     <PartnerPortalShell title="My Business">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">{humanize(performance.scope_mode)} Scope</p>
-              <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Business performance</h2>
-              <p className="mt-1 text-[11px] font-medium text-[#72809A]">Partner-authorized performance from the same business contracts used by INSUREIT Partner.</p>
-            </div>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow={humanize(performance.scope_mode) + " Scope"}
+          title="Business performance"
+          description="Partner-authorized performance from the same business contracts used by INSUREIT Partner."
+          action={
             <form className="flex flex-wrap items-end gap-2" action="/partner/business">
               <label className="grid gap-1">
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[#72809A]">From</span>
-                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-10 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                <span className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#74839A]">From</span>
+                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
               </label>
               <label className="grid gap-1">
-                <span className="text-[9px] font-black uppercase tracking-[0.1em] text-[#72809A]">To</span>
-                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-10 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                <span className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#74839A]">To</span>
+                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
               </label>
-              <button type="submit" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#111A35] px-4 text-[11px] font-bold text-white">
-                <CalendarRange className="h-4 w-4" /> Apply
+              <button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white">
+                <CalendarRange className="h-3.5 w-3.5" /> Apply
               </button>
             </form>
-          </div>
+          }
+        />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Metric label="Gross Premium" value={currency(premiumNow)} meta={monthLabel(performance.current_month)} />
-            <Metric label="Policies" value={performance.policies_this_month} meta={String(performance.total_policies) + " lifetime"} />
-            <Metric label="Customers" value={performance.total_customers} meta="Scoped customer book" />
-            <Metric label="Lifetime Premium" value={currency(performance.lifetime_gross_premium)} meta="Recorded business" />
-          </div>
+        <PartnerMetricStrip
+          items={[
+            { label: "Gross Premium", value: currency(premiumNow), meta: monthLabel(performance.current_month) },
+            { label: "Policies", value: performance.policies_this_month, meta: performance.total_policies + " lifetime" },
+            { label: "Customers", value: performance.total_customers, meta: "Scoped customer book" },
+            { label: "Lifetime Premium", value: currency(performance.lifetime_gross_premium), meta: "Recorded business" },
+          ]}
+        />
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] px-4 py-3">
-            <span className={"grid h-9 w-9 place-items-center rounded-xl " + (change >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
-              {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-            </span>
-            <div>
-              <p className="text-[11px] font-extrabold text-[#1A2D4B]">
-                {premiumLast > 0 ? Math.abs(change).toFixed(1) + "% " + (change >= 0 ? "higher" : "lower") + " than last month" : "New business baseline"}
-              </p>
-              <p className="mt-0.5 text-[10px] font-medium text-[#74839A]">Previous month premium: {currency(premiumLast)}</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <span className={"grid h-8 w-8 place-items-center rounded-xl " + (change >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+            {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+          </span>
+          <div>
+            <p className="text-[10.5px] font-extrabold text-[#1A2D4B]">
+              {premiumLast > 0 ? Math.abs(change).toFixed(1) + "% " + (change >= 0 ? "higher" : "lower") + " than last month" : "New business baseline"}
+            </p>
+            <p className="mt-0.5 text-[9.5px] font-medium text-[#8190A5]">Previous month premium: {currency(premiumLast)}</p>
           </div>
-        </section>
+        </div>
 
         {range ? (
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Selected Range</p>
-                <h2 className="mt-1 text-[18px] font-extrabold text-[#152746]">{range.from_date} to {range.to_date}</h2>
-              </div>
-              <Link href="/partner/business" className="text-[10.5px] font-bold text-[#3156B8]">Clear range</Link>
-            </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              <Metric label="Premium" value={currency(range.premium)} meta={Number(range.premium_change_percent || 0).toFixed(1) + "% vs previous"} />
-              <Metric label="Policies" value={range.policies} meta="Issued in range" />
-              <Metric label="Customers" value={range.customers} meta="Customers in range" />
-              <Metric label="Renewals" value={range.renewals} meta="Renewal activity" />
-              <Metric label="Claims" value={range.claims} meta="Claim activity" />
+          <section>
+            <PartnerSectionHeading
+              eyebrow="Selected Range"
+              title={range.from_date + " to " + range.to_date}
+              action={<Link href="/partner/business" className="text-[10px] font-bold text-[#3156B8]">Clear range</Link>}
+            />
+            <div className="mt-3">
+              <PartnerMetricStrip
+                columns={5}
+                items={[
+                  { label: "Premium", value: currency(range.premium), meta: Number(range.premium_change_percent || 0).toFixed(1) + "% vs previous" },
+                  { label: "Policies", value: range.policies, meta: "Issued in range" },
+                  { label: "Customers", value: range.customers, meta: "Customers in range" },
+                  { label: "Renewals", value: range.renewals, meta: "Renewal activity" },
+                  { label: "Claims", value: range.claims, meta: "Claim activity" },
+                ]}
+              />
             </div>
           </section>
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Business Trend</p>
-            <h2 className="mt-1 text-[18px] font-extrabold text-[#152746]">Last six months</h2>
-            <div className="mt-5 flex min-h-[220px] items-end gap-3 overflow-x-auto pb-2">
+        <PartnerDivider />
+
+        <div className="grid gap-8 xl:grid-cols-[1.15fr_.85fr]">
+          <section>
+            <PartnerSectionHeading eyebrow="Business Trend" title="Last six months" />
+            <div className="mt-4 flex min-h-[220px] items-end gap-3 overflow-x-auto border-b border-[#DCE4ED] pb-4">
               {performance.trend.map((item) => {
                 const premium = Number(item.premium || 0);
                 const height = Math.max(18, Math.round((premium / maxTrend) * 150));
                 return (
-                  <div key={item.month} className="flex min-w-[78px] flex-1 flex-col items-center">
-                    <p className="mb-2 text-center text-[9px] font-bold text-[#667892]">{currency(premium)}</p>
-                    <div className="flex h-[154px] w-full items-end justify-center rounded-xl bg-[#F3F6FA] px-2 pb-2">
-                      <div className="w-full max-w-[42px] rounded-lg bg-[#3156B8]" style={{ height }} />
+                  <div key={item.month} className="flex min-w-[74px] flex-1 flex-col items-center">
+                    <p className="mb-2 text-center text-[8.5px] font-bold text-[#667892]">{currency(premium)}</p>
+                    <div className="flex h-[154px] w-full items-end justify-center px-2">
+                      <div className="w-full max-w-[34px] rounded-t-md bg-[#3156B8]" style={{ height }} />
                     </div>
-                    <p className="mt-2 text-[10px] font-bold text-[#223755]">{shortMonth(item.month)}</p>
-                    <p className="text-[9px] text-[#8190A5]">{item.policies} policies</p>
+                    <p className="mt-2 text-[9.5px] font-bold text-[#223755]">{shortMonth(item.month)}</p>
+                    <p className="text-[8.5px] text-[#8190A5]">{item.policies} policies</p>
                   </div>
                 );
               })}
             </div>
           </section>
 
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Business Mix</p>
-            <h2 className="mt-1 text-[18px] font-extrabold text-[#152746]">Current month</h2>
-            <div className="mt-4 space-y-4">
+          <section>
+            <PartnerSectionHeading eyebrow="Business Mix" title="Current month" />
+            <div className="mt-4 divide-y divide-[#E0E7EF] border-y border-[#DCE4ED]">
               {performance.business_mix.length ? performance.business_mix.slice(0, 6).map((item) => {
                 const premium = Number(item.premium || 0);
                 const percent = premiumNow > 0 ? Math.min(100, (premium / premiumNow) * 100) : 0;
                 return (
-                  <div key={item.label}>
+                  <div key={item.label} className="py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="truncate text-[11px] font-bold text-[#203653]">{humanize(item.label)}</p>
-                      <p className="shrink-0 text-[10px] font-semibold text-[#677A94]">{currency(premium)} · {item.policies}</p>
+                      <p className="truncate text-[10.5px] font-bold text-[#203653]">{humanize(item.label)}</p>
+                      <p className="shrink-0 text-[9.5px] font-semibold text-[#677A94]">{currency(premium)} · {item.policies}</p>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#EDF1F6]">
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
                       <div className="h-full rounded-full bg-[#3156B8]" style={{ width: String(percent) + "%" }} />
                     </div>
                   </div>
                 );
-              }) : <p className="py-8 text-center text-[11px] font-medium text-[#74839A]">No business mix recorded for this month.</p>}
+              }) : <p className="py-8 text-center text-[10.5px] font-medium text-[#74839A]">No business mix recorded for this month.</p>}
             </div>
           </section>
         </div>
 
-        <section className="grid gap-3 sm:grid-cols-3">
-          <Action href="/partner/customers" title="Customer Book" subtitle="Open scoped customers" />
-          <Action href="/partner/policies" title="Policy Register" subtitle="Review policy portfolio" />
-          <Action href="/partner/renewals" title="Renewal Pipeline" subtitle="Open due and overdue business" />
+        <PartnerDivider />
+
+        <section>
+          <PartnerSectionHeading eyebrow="Workspaces" title="Continue working" />
+          <div className="mt-3 grid divide-y divide-[#E0E7EF] border-y border-[#DCE4ED] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <Action href="/partner/customers" title="Customer Book" subtitle="Open scoped customers" />
+            <Action href="/partner/policies" title="Policy Register" subtitle="Review policy portfolio" />
+            <Action href="/partner/renewals" title="Renewal Pipeline" subtitle="Open due and overdue business" />
+          </div>
         </section>
       </div>
     </PartnerPortalShell>
   );
 }
 
-function Metric({ label, value, meta }: { label: string; value: string | number; meta: string }) {
-  return (
-    <div className="rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
-      <p className="text-[9px] font-black uppercase tracking-[0.11em] text-[#75849A]">{label}</p>
-      <p className="mt-2 truncate text-[21px] font-extrabold tracking-[-0.025em] text-[#162746]">{value}</p>
-      <p className="mt-1 text-[9.5px] font-medium text-[#8190A5]">{meta}</p>
-    </div>
-  );
-}
-
 function Action({ href, title, subtitle }: { href: string; title: string; subtitle: string }) {
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[84px] items-center justify-between rounded-[22px] border border-[#D7E0EC] bg-white px-4 py-4 shadow-[0_12px_35px_rgba(34,56,89,.06)]">
+    <Link href={href} prefetch={false} className="group flex min-h-[72px] items-center justify-between px-1 py-3.5 transition hover:bg-white/70 sm:px-4">
       <span>
-        <span className="block text-[12px] font-extrabold text-[#172846]">{title}</span>
-        <span className="mt-0.5 block text-[10px] font-medium text-[#74839A]">{subtitle}</span>
+        <span className="block text-[11px] font-extrabold text-[#172846]">{title}</span>
+        <span className="mt-0.5 block text-[9.5px] font-medium text-[#74839A]">{subtitle}</span>
       </span>
       <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
     </Link>
