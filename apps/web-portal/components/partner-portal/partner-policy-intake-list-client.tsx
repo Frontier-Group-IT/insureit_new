@@ -80,18 +80,18 @@ export function PartnerPolicyIntakeListClient() {
       <PartnerPageHeader
         eyebrow="Policy Intake"
         title="My submissions"
-        description="Send policy copies to Operations and track the same onboarding pipeline used by the Partner app."
+        description="Send policy copies and track their progress."
         action={
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => void load(true)}
               disabled={refreshing}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-4 text-[10.5px] font-bold text-[#203653] disabled:opacity-50"
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-4 text-[10.5px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:opacity-50"
             >
               <RefreshCw className={"h-4 w-4 " + (refreshing ? "animate-spin" : "")} /> Refresh
             </button>
-            <Link href="/partner/policy-intakes/new" className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#111A35] px-4 text-[10.5px] font-bold text-white">
+            <Link href="/partner/policy-intakes/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
               <Plus className="h-4 w-4" /> New Intake
             </Link>
           </div>
@@ -120,7 +120,7 @@ export function PartnerPolicyIntakeListClient() {
                 key={value}
                 type="button"
                 onClick={() => { setFilter(value); setPage(1); }}
-                className={"rounded-xl px-3 py-2 text-[10px] font-bold " + (filter === value ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}
+                className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (filter === value ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}
               >
                 {label}
               </button>
@@ -143,7 +143,7 @@ export function PartnerPolicyIntakeListClient() {
         ) : rows.length ? (
           <div className="divide-y divide-[#E8EDF4]">
             {rows.map((row) => (
-              <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group block px-5 py-4 transition hover:bg-[#F8FAFD] sm:px-6">
+              <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group block px-1 py-3.5 transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]">
@@ -154,8 +154,8 @@ export function PartnerPolicyIntakeListClient() {
                         <p className="text-[11.5px] font-extrabold text-[#1B2F4E]">{row.intake_number}</p>
                         <span className="rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row)}</span>
                       </div>
-                      <p className="mt-1 truncate text-[10px] font-medium text-[#74839A]">{row.customer_mobile} · {row.lead_source_name}</p>
-                      <p className="mt-1 truncate text-[9.5px] text-[#8190A5]">{field(row, "policy_number") || "Policy pending"} · {field(row, "vehicle_registration_number") || "Vehicle pending"}</p>
+                      <p className="mt-1 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_mobile} · {row.lead_source_name}</p>
+                      <p className="mt-1 break-words text-[9.5px] leading-4 text-[#8190A5]">{field(row, "policy_number") || "Policy pending"} · {field(row, "vehicle_registration_number") || "Vehicle pending"}</p>
                     </div>
                   </div>
 
@@ -169,7 +169,7 @@ export function PartnerPolicyIntakeListClient() {
                 </div>
 
                 {row.attention_reason ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-xl border border-[#F1D6A7] bg-[#FFF8EC] px-3 py-2.5">
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#F1D6A7] bg-[#FFF8EC] px-3 py-2.5">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#A86708]" />
                     <p className="text-[9.5px] font-semibold leading-4 text-[#80511A]">{row.attention_reason}</p>
                   </div>
@@ -181,7 +181,7 @@ export function PartnerPolicyIntakeListClient() {
           <div className="py-14 text-center">
             <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
             <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions on this page" : "No Policy Intakes yet"}</p>
-            <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Go back a page or choose another pipeline filter." : "Create an intake when you have a policy copy that Operations needs to onboard."}</p>
+            <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Go back a page or choose another filter." : "Create a new intake when you have a policy copy."}</p>
           </div>
         )}
         {(hasPrevious || hasNext) ? (
@@ -190,7 +190,7 @@ export function PartnerPolicyIntakeListClient() {
               type="button"
               onClick={() => setPage((value) => Math.max(1, value - 1))}
               disabled={!hasPrevious || loading}
-              className="inline-flex min-h-9 items-center rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-9 items-center rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Previous
             </button>
@@ -199,7 +199,7 @@ export function PartnerPolicyIntakeListClient() {
               type="button"
               onClick={() => setPage((value) => value + 1)}
               disabled={!hasNext || loading}
-              className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Next <ArrowRight className="h-3.5 w-3.5" />
             </button>
