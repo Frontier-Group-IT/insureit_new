@@ -1,9 +1,0 @@
-a[href='/policies/commercial-review'] span.flex-1 {
-  font-size: 0;
-}
-
-a[href='/policies/commercial-review'] span.flex-1::after {
-  content: 'Pay-In / Payout';
-  font-size: 12px;
-  line-height: 1;
-}

@@ -1,7 +1,0 @@
-{
-  "purpose": "Deploy the verified Operations service-enquiry consent UI after the consent migration was applied and the guest enquiry Edge Function was updated.",
-  "requested_at": "2026-09-02T13:58:00+05:30",
-  "requested_by": "explicit user merge migrate and publish request",
-  "includes": "Service Enquiries consent badges and all current verified main web portal fixes",
-  "source_commit": "7eb0fe11bfb63b0f08505ade6e2376610d5d5395"
-}
