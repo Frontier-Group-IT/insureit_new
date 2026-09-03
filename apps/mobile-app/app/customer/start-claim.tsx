@@ -38,6 +38,9 @@ type SelfManagedMilestoneRow = {
 };
 
 const SELF_MANAGED_MILESTONE_COUNT = 9;
+const selfTrackedPolicyIcon = require('../../assets/claims/policy.png');
+const managedPolicyIcon = require('../../assets/custom-icons/policy-detail/policy-booked.png');
+const vehicleNumberIcon = require('../../assets/custom-icons/policy-detail/linked-vehicle.png');
 const SETTLED_SELF_MANAGED_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
 const COMPLETED_MILESTONE_STATUSES = new Set(['completed', 'not_applicable']);
 
@@ -201,18 +204,27 @@ export default function StartClaimScreen() {
                 <View style={styles.policyArcTwo} />
               </View>
               <View style={[styles.policyContent, selectedPolicy.source === 'external' && styles.policyContentCompact]}>
-                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}><MaterialCommunityIcons name={selectedPolicy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={selectedPolicy.source === 'external' ? 25 : 28} color="#0A43A3" /></View>
+                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}>
+                  <Image
+                    accessible={false}
+                    source={selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon}
+                    style={[styles.policyIconArtwork, selectedPolicy.source === 'external' && styles.policyIconArtworkCompact]}
+                    resizeMode="contain"
+                  />
+                </View>
                 <View style={styles.policyCopy}>
                   <Text style={[styles.policyMode, selectedPolicy.source === 'external' && styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
                   <Text style={[styles.policyNo, selectedPolicy.source === 'external' && styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
                   <Text style={[styles.policyInsurer, selectedPolicy.source === 'external' && styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
                   <Text style={[styles.policyDates, selectedPolicy.source === 'external' && styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
-                {selectedPolicyCondition === 'expired' ? (
+                {selectedPolicy.source === 'external' ? (
+                  <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
+                ) : selectedPolicyCondition === 'expired' ? (
                   <ExpiredPolicyPulse />
                 ) : (
-                  <View style={[styles.policyCheck, selectedPolicy.source === 'external' && styles.policyCheckCompact, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
-                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicy.source === 'external' ? (selectedPolicyCondition === 'due' ? 16 : 15) : (selectedPolicyCondition === 'due' ? 21 : 20)} color="#FFFFFF" />
+                  <View style={[styles.policyCheck, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
+                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />
                   </View>
                 )}
               </View>
@@ -276,7 +288,7 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
   return null;
 }
 
-function ExpiredPolicyPulse() {
+function PolicyStatusPulse({ condition }: { condition: PolicyCondition }) {
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -290,12 +302,29 @@ function ExpiredPolicyPulse() {
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+  const conditionStyle = condition === 'expired'
+    ? styles.policyCheckExpired
+    : condition === 'due'
+      ? styles.policyCheckDue
+      : null;
 
   return (
-    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
-      <Text style={styles.policyStatusExclamation}>!</Text>
+    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, conditionStyle, { opacity, transform: [{ scale }] }]}>
+      {condition === 'expired' ? (
+        <Text style={styles.policyStatusExclamation}>!</Text>
+      ) : (
+        <MaterialCommunityIcons
+          name={condition === 'due' ? 'alert-outline' : 'check'}
+          size={condition === 'due' ? 16 : 15}
+          color="#FFFFFF"
+        />
+      )}
     </Animated.View>
   );
+}
+
+function ExpiredPolicyPulse() {
+  return <PolicyStatusPulse condition="expired" />;
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -305,7 +334,7 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
   return <View style={styles.vehicleField}>
     <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={(event) => { event.stopPropagation(); onToggle(); }} style={[styles.selectButton, open && styles.selectButtonOpen]}>
-      <View style={styles.selectIcon}><MaterialCommunityIcons name="truck-outline" size={20} color="#145ED7" /></View>
+      <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
       <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
       <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
     </Pressable>
@@ -342,7 +371,7 @@ const styles = StyleSheet.create({
   vehicleField: { gap: 6 },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  selectIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  selectVehicleArtwork: { width: 36, height: 36 },
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
   selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
@@ -369,7 +398,9 @@ const styles = StyleSheet.create({
   policyContent: { position: 'relative', zIndex: 2, minHeight: 145, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
   policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
-  policyIconCompact: { width: 46, height: 46, borderRadius: 13 },
+  policyIconCompact: { width: 46, height: 46, borderRadius: 13, backgroundColor: 'transparent' },
+  policyIconArtwork: { width: 43, height: 43 },
+  policyIconArtworkCompact: { width: 34, height: 34 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
   policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 },
   policyModeCompact: { fontSize: 8.8, letterSpacing: 0.42 },

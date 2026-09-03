@@ -160,6 +160,7 @@ export default function ComplianceRenewalsScreen() {
 
               {expanded && summary.tracked ? (
                 <View style={styles.expandedPanel}>
+                  <View pointerEvents="none" style={styles.expandedAccent} />
                   {summaryItems.length ? (
                     <>
                       <RenewalItemSection
@@ -226,7 +227,7 @@ function RenewalItemSection({
             <Text style={styles.expandedItemDate} numberOfLines={1}>{formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
           </View>
           <View style={[styles.statusPill, item.status === 'expired' && styles.statusPillExpired]}>
-            <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
+            <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d left`}</Text>
           </View>
         </Pressable>
       ))}
@@ -291,7 +292,8 @@ const styles = StyleSheet.create({
   metricAmber: { color: '#B7791F' },
   metricRed: { color: '#C43D2D' },
   notTracked: { color: '#7A8799', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 2 },
-  expandedPanel: { borderWidth: 1, borderTopWidth: 0, borderColor: '#DCE8F4', backgroundColor: '#FBFDFF', borderBottomLeftRadius: 14, borderBottomRightRadius: 14, paddingHorizontal: 8, paddingVertical: 6, gap: 5 },
+  expandedPanel: { position: 'relative', overflow: 'hidden', borderWidth: 1, borderTopWidth: 0, borderColor: '#DCE8F4', backgroundColor: '#FBFDFF', borderBottomLeftRadius: 14, borderBottomRightRadius: 14, paddingLeft: 11, paddingRight: 8, paddingVertical: 6, gap: 5 },
+  expandedAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, backgroundColor: palette.navy },
   expandedSection: { gap: 5 },
   expandedSectionHeader: { minHeight: 28, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 4 },
   expandedSectionDot: { width: 7, height: 7, borderRadius: 4 },

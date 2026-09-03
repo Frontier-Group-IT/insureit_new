@@ -12,6 +12,10 @@
 
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production. After explicit `deploy now` or `finish and deploy` approval, dispatch the protected production workflow with the already-successful feature-PR verification run ID and verified commit; do not create a deployment-trigger commit/PR or repeat the full gate.
 
+**IMPLEMENTED / NOT DEPLOYED:** Policy Onboarding OCR now treats Layout Parser network/transport exceptions as a structured-extraction fallback instead of failing the entire primary OCR request. Existing insurer refiners continue withholding table-dependent financial fields when structured evidence is unavailable. The onboarding OCR regression covers this fallback; live production behavior remains unverified until deployment and an authenticated upload.
+
+**IMPLEMENTED, NOT DEPLOYED:** Policy Onboarding post-save policy-copy persistence was hardened in commit `c4d04cf8`. The save confirmation now carries the transactional policy UUID (`policy_id`) to the server upload action instead of resolving by policy code, and refreshes the policy register after upload/retry success so the stored `policy_documents` row is visible when the entry is reopened. Typecheck, lint (existing warnings only), and `git diff --check` passed; production build compiled but could not prerender `/invite` without configured Supabase environment variables.
+
 ## Claim process redesign — first slice implemented
 
 **IMPLEMENTED, NOT DEPLOYED:** Sankalp-managed customers remain limited to Spot Intimation input; post-Spot operational handling remains unchanged. The web Spot Documents Verification checklist now aligns to the mobile Spot Intimation document contract: Accident Photo, RC Copy, Insurance Copy, Driver Licence, GR / Load Bill, and Accident Video. Legacy document labels remain recognized. Missing documents can be uploaded by operations through an **Upload** action; replacement remains available for existing files. Portal upload limits are 5 MB for documents and 50 MB for video.

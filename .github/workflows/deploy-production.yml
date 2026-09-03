@@ -1,9 +1,6 @@
 name: Deploy production to Vercel
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       verified_commit:
@@ -40,7 +37,6 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
           INPUT_VERIFIED_COMMIT: ${{ inputs.verified_commit }}
           INPUT_VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
         run: |
@@ -52,31 +48,8 @@ jobs:
             exit 1
           fi
 
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            VERIFIED_COMMIT="$INPUT_VERIFIED_COMMIT"
-            VERIFICATION_RUN_ID="$INPUT_VERIFICATION_RUN_ID"
-          else
-            merged_pr_json=$(gh api -H "Accept: application/vnd.github+json"               "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls"               --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | first')
-
-            if [[ -z "$merged_pr_json" || "$merged_pr_json" == "null" ]]; then
-              echo "::error::Automatic production deployment requires a merged pull request into main. Direct pushes are not deployed automatically."
-              exit 1
-            fi
-
-            VERIFIED_COMMIT=$(jq -r '.head.sha' <<<"$merged_pr_json")
-            if [[ -z "$VERIFIED_COMMIT" || "$VERIFIED_COMMIT" == "null" ]]; then
-              echo "::error::Could not resolve the merged pull request head commit."
-              exit 1
-            fi
-
-            runs_json=$(gh api               "repos/$GITHUB_REPOSITORY/actions/workflows/verify-web-portal.yml/runs?event=pull_request&status=completed&head_sha=$VERIFIED_COMMIT&per_page=20")
-            VERIFICATION_RUN_ID=$(jq -r '.workflow_runs[] | select(.conclusion == "success") | .id' <<<"$runs_json" | head -n 1)
-
-            if [[ -z "$VERIFICATION_RUN_ID" || "$VERIFICATION_RUN_ID" == "null" ]]; then
-              echo "::error::No successful Verify web portal pull-request run was found for $VERIFIED_COMMIT."
-              exit 1
-            fi
-          fi
+          VERIFIED_COMMIT="$INPUT_VERIFIED_COMMIT"
+          VERIFICATION_RUN_ID="$INPUT_VERIFICATION_RUN_ID"
 
           if [[ ! "$VERIFIED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::verified_commit must be a full 40-character Git SHA."
@@ -86,17 +59,9 @@ jobs:
             echo "::error::verification_run_id must be numeric."
             exit 1
           fi
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
-              echo "::error::The verified commit is not contained in the selected main snapshot."
-              exit 1
-            fi
-          else
-            merge_commit_sha=$(jq -r '.merge_commit_sha' <<<"$merged_pr_json")
-            if [[ "$merge_commit_sha" != "$GITHUB_SHA" ]]; then
-              echo "::error::The selected main snapshot is not the merge result of the verified pull request."
-              exit 1
-            fi
+          if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
+            echo "::error::The verified commit is not contained in the selected main snapshot."
+            exit 1
           fi
 
           run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFICATION_RUN_ID")
@@ -219,5 +184,5 @@ jobs:
             echo "- Verified feature commit: `${VERIFIED_COMMIT}`"
             echo "- Release provenance: successful PR gate, merged into the exact current main snapshot"
             echo
-            echo "Vercel Git auto-deployments are disabled for every branch. This workflow is the only automatic production path and invokes the production deploy hook only after verified merge provenance is established. Check Vercel for the final build and deployment result."
+            echo "This workflow is the explicit production path and invokes the production deploy hook only after verified merge provenance is established. Check Vercel for the final build and deployment result."
           } >> "$GITHUB_STEP_SUMMARY"
