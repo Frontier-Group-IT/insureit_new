@@ -116,7 +116,7 @@ export default async function PartnerActivityPage() {
             <div className="border-y border-[#DCE4ED] py-14 text-center">
               <BriefcaseBusiness className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No recent activity</p>
-              <p className="mt-1 text-[10.5px] text-[#7A899F]">New scoped policy, claim and Operations activity will appear here.</p>
+              <p className="mt-1 text-[10.5px] text-[#7A899F]">New policy, claim and service activity will appear here.</p>
             </div>
           )}
         </section>

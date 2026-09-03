@@ -68,7 +68,7 @@ export default async function PartnerSupportPage() {
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><LifeBuoy className="h-5 w-5" /></span>
               <div>
                 <h3 className="text-[14px] font-extrabold text-[#172846]">INSUREIT Operations Desk</h3>
-                <p className="mt-1 text-[10px] font-medium text-[#74839A]">No dedicated relationship contact is currently available in your Partner scope.</p>
+                <p className="mt-1 text-[10px] font-medium text-[#74839A]">No relationship contact is available right now.</p>
               </div>
             </div>
           )}
@@ -117,7 +117,7 @@ function ContactAction({
 }) {
   const body = (
     <>
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
       <span className="min-w-0 flex-1">
         <span className="block text-[9px] font-black uppercase tracking-[0.09em] text-[#7A899F]">{label}</span>
         <span className="mt-1 block break-words text-[10.5px] font-extrabold leading-4 text-[#203653]">{value}</span>

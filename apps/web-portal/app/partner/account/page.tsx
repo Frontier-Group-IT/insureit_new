@@ -28,7 +28,7 @@ export default async function PartnerAccountPage() {
             { label: "Partner Family", value: intermediary?.partner_name || "—" },
             { label: "Partner Code", value: intermediary?.partner_code || "—" },
             { label: "Portal Status", value: "Active" },
-            { label: "Commercial Scope", value: humanize(scope.scope_mode) },
+            { label: "Access Type", value: humanize(scope.scope_mode) },
           ]}
         />
 
@@ -37,19 +37,19 @@ export default async function PartnerAccountPage() {
             href="/partner/profile"
             icon={UserRound}
             title="Profile & Registration"
-            text="View Partner identity, registration codes and commercial access."
+            text="View your profile and registration details."
           />
           <AccountAction
             href="/partner/account/registration"
             icon={GraduationCap}
             title="Registration & Training"
-            text="Open onboarding, training, examination, agreement and IIB registration."
+            text="Continue registration, training and examination."
           />
           <AccountAction
             href="/partner/support"
             icon={LifeBuoy}
             title="Support"
-            text="Contact your relationship owner and review Operations workload."
+            text="Contact support and view open work."
           />
         </section>
 
@@ -57,8 +57,8 @@ export default async function PartnerAccountPage() {
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><ShieldCheck className="h-4 w-4" /></span>
             <div>
-              <h3 className="text-[14px] font-extrabold text-[#172846]">Authorized Partner access</h3>
-              <p className="mt-1 text-[10.5px] font-medium leading-5 text-[#74839A]">This website follows the same Partner family and commercial scope as INSUREIT Partner. Registration and qualification actions remain on the existing secure portal until their dedicated Partner-scoped account contract is migrated.</p>
+              <h3 className="text-[14px] font-extrabold text-[#172846]">Account access</h3>
+              <p className="mt-1 text-[10.5px] font-medium leading-5 text-[#74839A]">Your access is based on your Partner profile and linked business. Registration and training are available from this account.</p>
             </div>
           </div>
         </section>

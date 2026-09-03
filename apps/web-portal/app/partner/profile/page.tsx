@@ -33,12 +33,12 @@ export default async function PartnerProfilePage() {
             <Detail label="Partner Family" value={intermediary?.partner_name || "Not recorded"} />
             <Detail label="Partner Code" value={intermediary?.partner_code || "Not recorded"} />
             <Detail label="Portal Status" value="Active" />
-            <Detail label="Scope Mode" value={humanize(scope.scope_mode)} />
+            <Detail label="Access Type" value={humanize(scope.scope_mode)} />
           </div>
         </section>
 
         <section>
-          <PartnerSectionHeading title="Commercial Access" description="Your current access details." />
+          <PartnerSectionHeading title="Access" description="Your current access details." />
           <div className="mt-3">
             <PartnerMetricStrip
               items={[
@@ -56,7 +56,7 @@ export default async function PartnerProfilePage() {
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
             <div>
               <h3 className="text-[13px] font-extrabold text-[#172846]">Registration and qualification</h3>
-              <p className="mt-1 text-[10px] font-medium leading-4 text-[#74839A]">Training, examination, agreement and IIB registration remain available through the secure Registration & Training workspace.</p>
+              <p className="mt-1 text-[10px] font-medium leading-4 text-[#74839A]">Continue registration, training, examination and IIB steps from the Registration & Training page.</p>
               <Link href="/partner/account/registration" className="mt-3 inline-flex h-9 items-center rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Open Registration & Training</Link>
             </div>
           </div>

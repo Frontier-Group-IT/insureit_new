@@ -72,7 +72,7 @@ export function PartnerMobileNavigation() {
           <aside className="fixed inset-y-0 left-0 flex h-[100dvh] w-[min(88vw,360px)] flex-col overflow-hidden border-r border-white/10 bg-[#111a35] text-white shadow-[24px_0_70px_rgba(0,0,0,.5)] animate-portal-enter">
             <div className="flex h-[78px] shrink-0 items-center justify-between border-b border-white/10 px-4">
               <BrandLockup compact inverse />
-              <button ref={closeRef} type="button" onClick={() => setOpen(false)} className="grid h-11 w-11 place-items-center rounded-2xl bg-white/10 text-white" aria-label="Close navigation">
+              <button ref={closeRef} type="button" onClick={() => setOpen(false)} className="grid h-11 w-11 place-items-center rounded-xl bg-white/10 text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45" aria-label="Close navigation">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -88,7 +88,7 @@ export function PartnerMobileNavigation() {
                       href={item.href}
                       prefetch={false}
                       onClick={() => setOpen(false)}
-                      className={`flex min-h-11 items-center gap-3 rounded-2xl px-3.5 text-[12px] font-bold ${
+                      className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
                         active ? "bg-white text-[#141d3b]" : "text-white/88 hover:bg-white/10"
                       }`}
                     >
@@ -107,7 +107,7 @@ export function PartnerMobileNavigation() {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="grid h-11 w-11 place-items-center rounded-2xl border border-[#dbe2ec] bg-white text-[#1b2b49] lg:hidden" aria-label="Open Partner navigation">
+      <button type="button" onClick={() => setOpen(true)} className="grid h-11 w-11 place-items-center rounded-xl border border-[#dbe2ec] bg-white text-[#1b2b49] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 lg:hidden" aria-label="Open Partner navigation">
         <Menu className="h-5 w-5" />
       </button>
       {drawer}
