@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1082
-source_commit=5f90d71434818fd65ac280f4aa85831d0ddcadb8
-purpose=publish compact single-row customer renewals preview OTA
+source_pr=1083
+source_commit=b961755f6c2076c2a7b1edf801e62e5211649d7e
+purpose=publish renewal policy count sync preview OTA
