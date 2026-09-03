@@ -7,6 +7,9 @@ import { uploadPolicyCopy } from "@/app/policies/policy-document-actions";
 type SaveChoice = "upload" | "without" | null;
 type UploadNotice = { tone: "uploading" | "success" | "error"; message: string } | null;
 let pendingPostSaveUpload: { file: File; policyId: string | null } | null = null;
+const pendingUploadDatabase = "insureit-policy-upload";
+const pendingUploadStore = "pending";
+const pendingUploadKey = "policy-copy";
 
 const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
 const maxFileBytes = 50 * 1024 * 1024;
@@ -54,6 +57,34 @@ function hasUiValidationFailure() {
   return false;
 }
 
+function withPendingUploadStore<T>(mode: IDBTransactionMode, operation: (store: IDBObjectStore) => IDBRequest<T>) {
+  return new Promise<T>((resolve, reject) => {
+    const request = indexedDB.open(pendingUploadDatabase, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(pendingUploadStore);
+    request.onerror = () => reject(request.error ?? new Error("Could not open upload storage."));
+    request.onsuccess = () => {
+      const transaction = request.result.transaction(pendingUploadStore, mode);
+      transaction.onerror = () => reject(transaction.error ?? new Error("Could not access upload storage."));
+      const operationRequest = operation(transaction.objectStore(pendingUploadStore));
+      operationRequest.onerror = () => reject(operationRequest.error ?? new Error("Could not access upload storage."));
+      operationRequest.onsuccess = () => resolve(operationRequest.result);
+    };
+  });
+}
+
+async function persistPendingUpload(file: File) {
+  await withPendingUploadStore("readwrite", (store) => store.put(file, pendingUploadKey));
+}
+
+async function loadPendingUpload() {
+  const file = await withPendingUploadStore<File | undefined>("readonly", (store) => store.get(pendingUploadKey));
+  return file instanceof File ? file : null;
+}
+
+async function clearPendingUpload() {
+  await withPendingUploadStore("readwrite", (store) => store.delete(pendingUploadKey));
+}
+
 export function PolicySaveConfirmation() {
   const pathname = usePathname();
   const router = useRouter();
@@ -95,6 +126,7 @@ export function PolicySaveConfirmation() {
       pendingUploadFile.current = null;
       pendingPolicyId.current = null;
       pendingPostSaveUpload = null;
+      void clearPendingUpload().catch(() => undefined);
       uploadAttemptKey.current = null;
       setChoice(null);
       setFile(null);
@@ -138,36 +170,47 @@ export function PolicySaveConfirmation() {
   useEffect(() => {
     if (pathname !== "/policies" || typeof window === "undefined") return;
 
+    let cancelled = false;
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") !== "policy_created") return;
     const policyId = params.get("policy_id")?.trim();
     if (!policyId) return;
 
-    const fileToUpload = pendingPostSaveUpload?.file;
-    if (!fileToUpload) return;
-    const attemptKey = `${policyId}:${fileToUpload.name}:${fileToUpload.size}:${fileToUpload.lastModified}`;
-    if (uploadAttemptKey.current === attemptKey) return;
+    void loadPendingUpload().then((storedFile) => {
+      if (cancelled) return;
+      const fileToUpload = pendingPostSaveUpload?.file ?? storedFile;
+      if (!fileToUpload) return;
+      const attemptKey = `${policyId}:${fileToUpload.name}:${fileToUpload.size}:${fileToUpload.lastModified}`;
+      if (uploadAttemptKey.current === attemptKey) return;
 
-    uploadAttemptKey.current = attemptKey;
-    pendingPolicyId.current = policyId;
-    pendingPostSaveUpload = { file: fileToUpload, policyId };
-    setUploadNotice({ tone: "uploading", message: "Policy saved. Uploading policy copy…" });
+      uploadAttemptKey.current = attemptKey;
+      pendingPolicyId.current = policyId;
+      pendingPostSaveUpload = { file: fileToUpload, policyId };
+      setUploadNotice({ tone: "uploading", message: "Policy saved. Uploading policy copy…" });
 
-    const formData = new FormData();
-    formData.set("file", fileToUpload);
-    void uploadPolicyCopy(policyId, formData).then((result) => {
-      if (result.ok) {
-        pendingUploadFile.current = null;
-        pendingPolicyId.current = null;
-        pendingPostSaveUpload = null;
-        router.refresh();
-        setUploadNotice({ tone: "success", message: "Policy saved and policy copy uploaded successfully." });
-        return;
-      }
-      setUploadNotice({ tone: "error", message: result.error });
+      const formData = new FormData();
+      formData.set("file", fileToUpload);
+      void uploadPolicyCopy(policyId, formData).then((result) => {
+        if (result.ok) {
+          pendingUploadFile.current = null;
+          pendingPolicyId.current = null;
+          pendingPostSaveUpload = null;
+          void clearPendingUpload().catch(() => undefined);
+          router.refresh();
+          setUploadNotice({ tone: "success", message: "Policy saved and policy copy uploaded successfully." });
+          return;
+        }
+        setUploadNotice({ tone: "error", message: result.error });
+      }).catch(() => {
+        setUploadNotice({ tone: "error", message: "Policy was saved, but the policy copy upload failed. You can retry without creating another policy." });
+      });
     }).catch(() => {
-      setUploadNotice({ tone: "error", message: "Policy was saved, but the policy copy upload failed. You can retry without creating another policy." });
+      if (!cancelled) setUploadNotice({ tone: "error", message: "Policy was saved, but the selected policy copy could not be prepared for upload. You can retry without creating another policy." });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [pathname, router]);
 
   useEffect(() => {
@@ -186,6 +229,7 @@ export function PolicySaveConfirmation() {
     pendingUploadFile.current = null;
     pendingPolicyId.current = null;
     pendingPostSaveUpload = null;
+    void clearPendingUpload().catch(() => undefined);
     uploadAttemptKey.current = null;
   }
 
@@ -204,7 +248,7 @@ export function PolicySaveConfirmation() {
     setFileError(null);
   }
 
-  function continueSave() {
+  async function continueSave() {
     if (!choice) return;
     if (choice === "upload" && !file) return;
     const button = pendingButton.current;
@@ -214,6 +258,16 @@ export function PolicySaveConfirmation() {
     pendingPolicyId.current = null;
     pendingPostSaveUpload = choice === "upload" && file ? { file, policyId: null } : null;
     uploadAttemptKey.current = null;
+    if (choice === "upload" && file) {
+      try {
+        await persistPendingUpload(file);
+      } catch {
+        setFileError("The selected policy copy could not be prepared. Please choose the file again.");
+        return;
+      }
+    } else {
+      void clearPendingUpload().catch(() => undefined);
+    }
     setOpen(false);
     bypassNextClick.current = true;
     queueMicrotask(() => button.click());
@@ -233,6 +287,7 @@ export function PolicySaveConfirmation() {
         pendingUploadFile.current = null;
         pendingPolicyId.current = null;
         pendingPostSaveUpload = null;
+        void clearPendingUpload().catch(() => undefined);
         router.refresh();
         setUploadNotice({ tone: "success", message: "Policy copy uploaded successfully." });
         return;
