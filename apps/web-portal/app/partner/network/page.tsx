@@ -1,5 +1,6 @@
 import { Building2, GitBranch, Network, UserRound, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -29,25 +30,25 @@ export default async function PartnerNetworkPage() {
 
   return (
     <PartnerPortalShell title="Network">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">My Network</p>
-            <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Commercial relationships</h2>
-            <p className="mt-1 text-[11px] font-medium text-[#74839A]">This hierarchy comes directly from the backend-authorized Partner family scope; the website does not reconstruct commercial ownership locally.</p>
-          </div>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="My Network"
+          title="Commercial relationships"
+          description="This hierarchy comes directly from the backend-authorized Partner family scope; the website does not reconstruct commercial ownership locally."
+        />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Metric label="Partner Families" value={data.total_partners} icon={UsersRound} />
-            <Metric label="Groups" value={data.total_groups} icon={Building2} />
-            <Metric label="POSP / MISP" value={childCount} icon={GitBranch} />
-            <Metric label="Scope" value={humanize(data.scope_mode)} icon={Network} />
-          </div>
-        </section>
+        <PartnerMetricStrip
+          items={[
+            { label: "Partner Families", value: data.total_partners },
+            { label: "Groups", value: data.total_groups },
+            { label: "POSP / MISP", value: childCount },
+            { label: "Scope", value: humanize(data.scope_mode) },
+          ]}
+        />
 
         {sections.length ? sections.map((section) => (
-          <section key={section.key} className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-            <div className="flex flex-col gap-2 border-b border-[#E6ECF3] bg-[#F8FAFD] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <section key={section.key} className="overflow-hidden border-y border-[#DCE4ED]">
+            <div className="flex flex-col gap-2 border-b border-[#E6ECF3] py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#3156B8]"><Building2 className="h-4 w-4" /></span>
                 <div>
@@ -59,7 +60,7 @@ export default async function PartnerNetworkPage() {
 
             <div className="divide-y divide-[#E8EDF4]">
               {section.rows.map((row) => (
-                <div key={row.partner_id} className="px-5 py-5 sm:px-6">
+                <div key={row.partner_id} className="py-5">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
@@ -76,7 +77,7 @@ export default async function PartnerNetworkPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                  <div className="mt-4 grid border-y border-[#DCE4ED] sm:grid-cols-2 xl:grid-cols-5">
                     <MiniStat label="Policies" value={row.metrics.total_policies} />
                     <MiniStat label="Customers" value={row.metrics.total_customers} />
                     <MiniStat label="This Month" value={row.metrics.policies_this_month} />
@@ -84,7 +85,7 @@ export default async function PartnerNetworkPage() {
                     <MiniStat label="Active Claims" value={row.metrics.active_claims} />
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
+                  <div className="mt-5 border-t border-[#DCE4ED] pt-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#6E8099]">Partner Family Structure</p>
                       <div className="flex gap-2 text-[9px] font-semibold text-[#74839A]">
@@ -95,7 +96,7 @@ export default async function PartnerNetworkPage() {
                     {row.children.length ? (
                       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                         {row.children.map((child) => (
-                          <div key={child.intermediary_id} className="flex items-center gap-3 rounded-xl border border-[#E1E7F0] bg-white px-3 py-3">
+                          <div key={child.intermediary_id} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3 last:border-b-0">
                             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]">{child.type === "posp" ? <UserRound className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}</span>
                             <div className="min-w-0">
                               <p className="truncate text-[10.5px] font-extrabold text-[#1B2F4E]">{child.name}</p>
@@ -105,7 +106,7 @@ export default async function PartnerNetworkPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-3 rounded-xl bg-white px-3 py-3 text-[9.5px] font-semibold text-[#667892]">Standalone Partner family — no POSP or MISP child is attached.</p>
+                      <p className="mt-3 border-y border-[#E0E7EF] py-3 text-[9.5px] font-semibold text-[#667892]">Standalone Partner family — no POSP or MISP child is attached.</p>
                     )}
                   </div>
                 </div>
@@ -124,9 +125,6 @@ export default async function PartnerNetworkPage() {
   );
 }
 
-function Metric({ label, value, icon: Icon }: { label: string; value: string | number; icon: typeof Network }) {
-  return <div className="flex items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-[#3156B8]"><Icon className="h-4 w-4" /></span><div><p className="text-[9px] font-black uppercase tracking-[0.09em] text-[#75849A]">{label}</p><p className="mt-1 text-[18px] font-extrabold text-[#162746]">{value}</p></div></div>;
-}
 function MiniStat({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-xl bg-[#F8FAFD] px-3 py-3 text-center"><p className="text-[15px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>;
+  return <div className="border-r border-[#E0E7EF] px-3 py-3 text-center last:border-r-0"><p className="text-[15px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>;
 }
