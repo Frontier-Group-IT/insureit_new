@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowRight, Search, ShieldAlert, ShieldCheck, UsersRound, type LucideIcon } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { listPartnerWebClaims, listPartnerWebCustomers, listPartnerWebPolicies } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -32,23 +33,23 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
 
   return (
     <PartnerPortalShell title="Search">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Universal Search</p>
-            <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Search your business</h2>
-            <p className="mt-1 text-[11px] font-medium text-[#74839A]">Customers, policies and claims are searched only inside your authorized Partner scope.</p>
-          </div>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Universal Search"
+          title="Search your business"
+          description="Customers, policies and claims are searched only inside your authorized Partner scope."
+        />
 
-          <form action="/partner/search" className="mt-5 flex max-w-2xl gap-2">
+        <section>
+          <form action="/partner/search" className="flex max-w-2xl gap-2">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-              <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-12 w-full rounded-xl border border-[#D2DCE9] bg-white pl-10 pr-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+              <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
             </div>
-            <button type="submit" className="h-12 rounded-xl bg-[#111A35] px-5 text-[11px] font-bold text-white">Search</button>
+            <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white">Search</button>
           </form>
 
-          {failed ? <div className="mt-4 rounded-2xl border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3 text-[10px] font-semibold text-[#80511A]">{failed} search section{failed === 1 ? "" : "s"} could not be refreshed. Available results are shown below.</div> : null}
+          {failed ? <div className="mt-4 rounded-xl border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3 text-[10px] font-semibold text-[#80511A]">{failed} search section{failed === 1 ? "" : "s"} could not be refreshed. Available results are shown below.</div> : null}
         </section>
 
         {!ready ? (
@@ -89,16 +90,16 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
 
 function ResultSection({ title, count, children }: { title: string; count: number; children: ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-      <div className="flex items-center justify-between border-b border-[#E6ECF3] px-5 py-4 sm:px-6"><p className="text-[12px] font-extrabold text-[#172846]">{title}</p><p className="text-[9.5px] font-semibold text-[#7A899F]">{count} shown</p></div>
-      <div className="divide-y divide-[#E8EDF4]">{children}</div>
+    <section>
+      <PartnerSectionHeading title={title} description={count + " shown"} />
+      <div className="mt-3 divide-y divide-[#E8EDF4] border-y border-[#DCE4ED]">{children}</div>
     </section>
   );
 }
 
 function Result({ href, icon: Icon, title, subtitle, status }: { href: string; icon: LucideIcon; title: string; subtitle: string; status?: string }) {
   return (
-    <Link href={href} className="group flex items-center gap-3 px-5 py-4 transition hover:bg-[#F8FAFD] sm:px-6">
+    <Link href={href} className="group flex items-center gap-3 px-1 py-4 transition hover:bg-white/70 sm:px-4">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
       <div className="min-w-0 flex-1"><p className="truncate text-[11.5px] font-extrabold text-[#1B2F4E]">{title}</p><p className="mt-0.5 truncate text-[10px] font-medium text-[#74839A]">{subtitle || "Record"}</p></div>
       {status ? <span className="hidden rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672] sm:inline-flex">{status}</span> : null}
@@ -108,5 +109,5 @@ function Result({ href, icon: Icon, title, subtitle, status }: { href: string; i
 }
 
 function Empty({ icon: Icon, title, text }: { icon: LucideIcon; title: string; text: string }) {
-  return <section className="rounded-[26px] border border-[#D7E0EC] bg-white px-5 py-14 text-center shadow-[0_16px_45px_rgba(34,56,89,.07)]"><Icon className="mx-auto h-7 w-7 text-[#9AABC0]" /><p className="mt-3 text-[12px] font-bold text-[#23395D]">{title}</p><p className="mt-1 text-[10.5px] text-[#7A899F]">{text}</p></section>;
+  return <section className="border-y border-[#DCE4ED] py-14 text-center"><Icon className="mx-auto h-7 w-7 text-[#9AABC0]" /><p className="mt-3 text-[12px] font-bold text-[#23395D]">{title}</p><p className="mt-1 text-[10.5px] text-[#7A899F]">{text}</p></section>;
 }
