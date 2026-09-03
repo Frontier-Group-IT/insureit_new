@@ -44,7 +44,7 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
           <form action="/partner/search" className="flex max-w-2xl gap-2">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-              <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+              <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
             </div>
             <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
           </form>
@@ -53,7 +53,7 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
         </section>
 
         {!ready ? (
-          <Empty icon={Search} title="Search your authorized records" text="Enter at least 2 characters to search customers, policies and claims." />
+          <Empty icon={Search} title="Search your records" text="Enter at least 2 characters to search customers, policies and claims." />
         ) : !hasResults ? (
           <Empty icon={Search} title="No matching records" text="Try a customer name, mobile, policy number, vehicle number, claim number or insurer." />
         ) : (
