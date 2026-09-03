@@ -56,6 +56,15 @@ export async function getPartnerPolicyIntakesWeb() {
   return apiRequest<PartnerPolicyIntakeListResponse>("/api/partner/policy-intakes");
 }
 
+export type PartnerPolicyIntakeDetailResponse = {
+  ok: true;
+  intake: PartnerPolicyIntake;
+};
+
+export async function getPartnerPolicyIntakeWeb(id: string) {
+  return apiRequest<PartnerPolicyIntakeDetailResponse>("/api/partner/policy-intakes?id=" + encodeURIComponent(id));
+}
+
 export async function submitPartnerPolicyIntakeWeb(input: {
   leadSourceId?: string;
   customerMobile: string;
