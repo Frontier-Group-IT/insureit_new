@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1151
-source_commit=c7ddfd0c01958034f237c753b3f3deb185cdec95
-purpose=publish whole Start Claim vehicle selector clickable fix preview OTA
+source_pr=1152
+source_commit=817f9877076edb2f0f01eb6043d91f95c16efbd2
+purpose=publish profile edit address normalization preview OTA
