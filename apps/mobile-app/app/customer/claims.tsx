@@ -127,7 +127,7 @@ export default function ClaimsScreen() {
 
         return (
           <Pressable key={claim.id} accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no}`} onPress={() => router.push({ pathname: selfTracked ? '/customer/self-managed-claim-detail' : '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, selfTracked && styles.externalCard, { borderColor: selfTracked ? '#C9DAF2' : tone.border }]}>
-            <View style={[styles.accentBar, { backgroundColor: selfTracked ? selfTrackedStatusColor : tone.accent }]} />
+            <View style={[styles.accentBar, { backgroundColor: palette.navy }]} />
 
             <View style={styles.claimTop}>
               <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#F7FAFF' : tone.soft }]}>
