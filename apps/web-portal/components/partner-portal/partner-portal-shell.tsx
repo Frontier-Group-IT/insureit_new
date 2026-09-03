@@ -43,7 +43,7 @@ export async function PartnerPortalShell({ title, children }: { title: string; c
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6">
+        <main className="min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-5 lg:px-7 lg:py-6">
           <div className="mx-auto w-full max-w-[1480px] animate-portal-enter">{children}</div>
         </main>
       </div>
