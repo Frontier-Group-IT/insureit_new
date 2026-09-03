@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1155
-source_commit=58729f06fdf0771c1d84ed5a8e22869886128fe2
-purpose=publish startup OTA apply gate preview OTA
+source_pr=1156
+source_commit=f2a3747f2d51d78cee38a9a2d43003fed1059a90
+purpose=publish claim number review stage navigation fix preview OTA
