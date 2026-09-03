@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   policyContent: { position: 'relative', zIndex: 2, minHeight: 145, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
   policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
-  policyIconCompact: { width: 46, height: 46, borderRadius: 13 },
+  policyIconCompact: { width: 46, height: 46, borderRadius: 13, backgroundColor: 'transparent' },
   policyIconArtwork: { width: 43, height: 43 },
   policyIconArtworkCompact: { width: 34, height: 34 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
