@@ -28,6 +28,8 @@ This is intentionally a narrow step. No claim ownership, status-transition, RLS,
 
 **APPLIED / VERIFIED 2026-09-03:** The `claim-documents` Supabase Storage bucket now accepts the supported claim video MIME types (`video/mp4`, QuickTime, WebM, Matroska and AVI) while retaining the 50 MB limit. Migration `202609030002_allow_claim_video_uploads.sql` was applied and verified by protected workflow `33718163048`; the workflow was added in PR #1092 and merged as `0e4fc4675102e29d149a5a2f2e1c35483dd916ac`.
 
+**IMPLEMENTED, NOT APPLIED:** Spot surveyor deputation now calls an atomic `depute_spot_surveyor` RPC. It locks and validates eligible claim stages, persists stage details/status/history/activity together, verifies the status transition, and exposes errors instead of returning success after an RLS-filtered or partial write. Migration `20260903120000_atomic_spot_surveyor_deputation.sql` also registers the `spot_surveyor_deputed` activity event. The migration still requires protected application and canonical web verification before merge/deployment.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.
