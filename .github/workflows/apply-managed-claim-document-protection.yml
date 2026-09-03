@@ -50,18 +50,24 @@ jobs:
           set -euo pipefail
           result=$(supabase db query --linked --output-format json "
             select
-              position(
-                'self_managed'
-                in pg_get_expr(policy.qual, policy.polrelid)
-              ) > 0 as row_guard_ready,
-              position(
-                'broker_managed'
-                in pg_get_expr(storage_policy.qual, storage_policy.polrelid)
-              ) > 0 as storage_guard_ready
-            from pg_policy policy
-            cross join pg_policy storage_policy
-            where policy.polname = 'claim documents customer delete own claim'
-              and storage_policy.polname = 'claim document objects customer delete own claim'
+              exists (
+                select 1
+                from pg_policies
+                where schemaname = 'public'
+                  and tablename = 'claim_documents'
+                  and policyname = 'claim documents customer delete own claim'
+                  and qual like '%self_managed%'
+                  and qual like '%verification_status%'
+              ) as row_guard_ready,
+              exists (
+                select 1
+                from pg_policies
+                where schemaname = 'storage'
+                  and tablename = 'objects'
+                  and policyname = 'claim document objects customer delete own claim'
+                  and qual like '%broker_managed%'
+                  and qual like '%verification_status%'
+              ) as storage_guard_ready
           ")
           echo "$result"
           echo "$result" | grep -Eq '"row_guard_ready"[[:space:]]*:[[:space:]]*true'
