@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, RefreshCw, Search } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebRenewalSummary, listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -69,23 +70,24 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
 
   return (
     <PartnerPortalShell title="Renewals">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Renewal Pipeline</p>
-            <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Upcoming and overdue renewals</h2>
-            <p className="mt-1 text-[11px] font-medium text-[#74839A]">Canonical Partner renewal buckets and premiums from the same backend summary contract.</p>
-          </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Summary label="Overdue" value={summary.overdue_count} meta={currency(summary.overdue_premium)} />
-            <Summary label="Due 0–7 Days" value={summary.due_0_7_count} meta={currency(summary.due_0_7_premium)} />
-            <Summary label="Due 8–15 Days" value={summary.due_8_15_count} meta={currency(summary.due_8_15_premium)} />
-            <Summary label="Due 16–30 Days" value={summary.due_16_30_count} meta={currency(summary.due_16_30_premium)} />
-          </div>
-        </section>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Renewal Pipeline"
+          title="Upcoming and overdue renewals"
+          description="Canonical Partner renewal buckets and premiums from the same backend summary contract."
+        />
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-          <div className="border-b border-[#E6ECF3] px-5 py-4 sm:px-6">
+        <PartnerMetricStrip
+          items={[
+            { label: "Overdue", value: summary.overdue_count, meta: currency(summary.overdue_premium) },
+            { label: "Due 0–7 Days", value: summary.due_0_7_count, meta: currency(summary.due_0_7_premium) },
+            { label: "Due 8–15 Days", value: summary.due_8_15_count, meta: currency(summary.due_8_15_premium) },
+            { label: "Due 16–30 Days", value: summary.due_16_30_count, meta: currency(summary.due_16_30_premium) },
+          ]}
+        />
+
+        <section>
+          <div className="border-y border-[#DCE4ED] py-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex gap-2">
                 <Link href={hrefFor({ mode: "due", window: "all", page: 1 })} className={"rounded-xl px-3 py-2 text-[10px] font-bold " + (mode === "due" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Due</Link>
@@ -96,9 +98,9 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
                 {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                  <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-11 w-full rounded-xl border border-[#D2DCE9] bg-white pl-10 pr-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                  <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
                 </div>
-                <button className="h-11 rounded-xl bg-[#111A35] px-4 text-[11px] font-bold text-white" type="submit">Search</button>
+                <button className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white" type="submit">Search</button>
               </form>
             </div>
 
@@ -113,10 +115,8 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
             ) : null}
           </div>
 
-          <div className="flex items-center justify-between px-5 py-3 sm:px-6">
-            <p className="text-[11px] font-extrabold text-[#1B2F4E]">{mode === "expired" ? "Expired Policies" : "Renewal Worklist"}</p>
-            <p className="text-[9.5px] font-semibold text-[#7A899F]">{rows.length} shown · {total} matched</p>
-          </div>
+          <div className="mt-5"><PartnerSectionHeading title={mode === "expired" ? "Expired Policies" : "Renewal Worklist"} description={rows.length + " shown · " + total + " matched"} /></div>
+          <div className="mt-3 border-y border-[#DCE4ED]">
 
           {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
@@ -143,7 +143,7 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
               ))}
             </div>
           ) : (
-            <div className="px-5 py-14 text-center">
+            <div className="py-14 text-center">
               <RefreshCw className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No renewals found</p>
               <p className="mt-1 text-[10.5px] text-[#7A899F]">Try another search or renewal window.</p>
@@ -151,7 +151,7 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
           )}
 
           {(hasPrevious || hasNext) ? (
-            <div className="flex items-center justify-between border-t border-[#E6ECF3] px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between border-t border-[#E6ECF3] py-4">
               <Link href={hasPrevious ? hrefFor({ page: page - 1 }) : "#"} aria-disabled={!hasPrevious} className={"inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-[10px] font-bold " + (hasPrevious ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
                 Previous
               </Link>
@@ -161,12 +161,10 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
               </Link>
             </div>
           ) : null}
+          </div>
         </section>
       </div>
     </PartnerPortalShell>
   );
 }
 
-function Summary({ label, value, meta }: { label: string; value: number; meta: string }) {
-  return <div className="rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4"><p className="text-[9px] font-black uppercase tracking-[0.11em] text-[#75849A]">{label}</p><p className="mt-2 text-[22px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[9.5px] font-medium text-[#8190A5]">{meta}</p></div>;
-}
