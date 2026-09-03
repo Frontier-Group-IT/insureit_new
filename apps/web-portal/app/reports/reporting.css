@@ -149,8 +149,14 @@
   line-height: 1.25 !important;
   letter-spacing: -0.005em !important;
   color: #7d899a !important;
-  white-space: nowrap;
-}
+.report-page-shell > section.grid > article.portal-card > .report-metric-detail {
+  margin-top: 0.35rem !important;
+  font-size: 0.64rem !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.005em !important;
+  color: #7d899a !important;
+
 
 /* KPI tier 2 / pipeline / exception summary cards. */
 .report-page-shell > section.grid > article.rounded-xl:not(.portal-card),
