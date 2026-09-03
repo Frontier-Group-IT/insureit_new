@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
 import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
@@ -12,14 +13,38 @@ export default function WeeklyStoryScreen() {
   const router = useRouter();
   const [data, setData] = useState<PartnerWeeklyStory | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setData(await getPartnerWeeklyStory());
+    } catch {
+      setData(null);
+      setError('Your weekly summary could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    getPartnerWeeklyStory().then(setData).finally(() => setLoading(false));
-  }, []);
+    void load();
+  }, [load]);
 
   return (
     <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" onBack={() => router.back()}>
-      {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View> : (
+      {loading ? (
+        <PartnerStateView state="loading" title="Loading your week" />
+      ) : error || !data ? (
+        <PartnerStateView
+          state="error"
+          title="Your week is temporarily unavailable"
+          message={error || 'Your weekly summary could not be loaded.'}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
+      ) : (
         <>
           <View style={styles.hero}>
             <Text style={styles.dates}>{formatDate(data.week_start)} — {formatDate(data.week_end)}</Text>
@@ -73,8 +98,6 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  close:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  loading:{minHeight:280,alignItems:'center',justifyContent:'center'},
   hero:{borderRadius:partnerTheme.radius.xl,padding:15,backgroundColor:partnerTheme.colors.nav},
   dates:{color:'#AAA5FF',fontSize:8,fontWeight:'800',letterSpacing:1},
   heroValue:{marginTop:5,color:'#FFFFFF',fontSize:30,fontWeight:'800'},
