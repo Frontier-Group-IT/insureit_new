@@ -74,7 +74,7 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
         <PartnerPageHeader
           eyebrow="Renewal Pipeline"
           title="Upcoming and overdue renewals"
-          description="Canonical Partner renewal buckets and premiums from the same backend summary contract."
+          description="Track upcoming and overdue renewals."
         />
 
         <PartnerMetricStrip
