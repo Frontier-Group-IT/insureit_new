@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase";
 type UserMenuProps = {
   profile: Profile | null;
   user: Pick<User, "email" | "id"> | null;
+  homeHref?: string;
 };
 
 function initialsFor(name?: string | null, email?: string | null) {
