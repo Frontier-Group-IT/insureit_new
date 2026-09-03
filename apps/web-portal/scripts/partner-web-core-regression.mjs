@@ -89,6 +89,16 @@ assert(!renewalsPage.includes("visibleRows"), "renewal window filtering must not
 const partnerWeb = read("lib/partner-web.ts");
 assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
 
+const intakeDetailClient = read("components/partner-portal/partner-policy-intake-detail-client.tsx");
+assert(intakeDetailClient.includes("getPartnerPolicyIntakeWeb"), "Policy Intake detail must fetch only the requested intake");
+assert(!intakeDetailClient.includes("getPartnerPolicyIntakesWeb"), "Policy Intake detail must not load the full intake list");
+assert(!intakeDetailClient.includes(".find((item) => item.id === intakeId)"), "Policy Intake detail must not find its record client-side from the full list");
+
+const intakeApi = read("app/api/partner/policy-intakes/route.ts");
+assert(intakeApi.includes('searchParams.get("id")'), "Policy Intake API must accept a scoped detail id");
+assert(intakeApi.includes('.eq("submitted_by_portal_account_id", auth.identity.portal_account_id)'), "Policy Intake detail must retain Partner ownership filtering");
+assert(intakeApi.includes('.eq("submitted_by_profile_id", auth.identity.profile_id)'), "Policy Intake detail must retain employee submitter filtering");
+
 const registrationPage = read("app/partner/account/registration/page.tsx");
 assert(registrationPage.includes("getPartnerWebRegistrationOverview"), "registration page must use scoped Partner registration adapter");
 assert(registrationPage.includes("PartnerIcallLauncher"), "registration page must use the Partner iCall launcher");
