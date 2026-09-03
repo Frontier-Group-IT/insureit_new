@@ -142,12 +142,12 @@ export default async function PartnerRegistrationPage() {
               <div>
                 <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#687A96]">Training & Examination</p>
                 <h3 className="mt-1 text-[16px] font-extrabold text-[#152746]">{assignment?.training_title || (qualification ? "Training has not been assigned" : "No linked qualification account")}</h3>
-                <p className="mt-1 max-w-xl text-[10px] font-medium leading-4 text-[#74839A]">
+                <p className="mt-1 max-w-xl break-words text-[10px] font-medium leading-4 text-[#74839A]">
                   {trainingComplete
-                    ? "Training is complete. Use the secure iCall session to continue to examination when allotted."
+                    ? "Training is complete. Continue to examination when it becomes available."
                     : qualification
-                      ? "Learning and examination continue through the secure iCall portal using your authorized qualification account."
-                      : "Training becomes available after a POSP or MISP qualification account is linked."}
+                      ? "Continue your training and examination in iCall."
+                      : "Training becomes available after your qualification account is linked."}
                 </p>
               </div>
               <span className="rounded-lg bg-[#EEF3F8] px-3 py-1.5 text-[9px] font-bold text-[#425672]">{humanize(trainingStatus)}</span>
@@ -196,8 +196,8 @@ function TimelineStep({ number, label, icon: Icon, tone, status }: { number: num
   }[tone];
 
   return (
-    <div className={"relative border-b border-[#E0E7EF] p-4 text-center sm:border-r xl:border-b-0 xl:last:border-r-0 " + toneStyles}>
-      <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm">
+    <div className={"relative border-b border-[#E0E7EF] p-3.5 text-center sm:border-r xl:border-b-0 xl:last:border-r-0 " + toneStyles}>
+      <span className="mx-auto grid h-8 w-8 place-items-center rounded-full bg-white">
         {tone === "complete" ? <Check className="h-4 w-4" /> : <span className="text-[10px] font-black">{number}</span>}
       </span>
       <Icon className="mx-auto mt-3 h-5 w-5" />
