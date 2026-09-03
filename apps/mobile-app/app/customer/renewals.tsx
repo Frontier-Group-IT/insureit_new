@@ -11,6 +11,8 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Policy, Vehicle } from '@/lib/types';
 
+type ExternalPolicyRow = Pick<Policy, 'id' | 'customer_id' | 'vehicle_id' | 'insurance_company_id' | 'policy_no' | 'policy_type' | 'start_date' | 'end_date'>;
+
 type DataState = {
   vehicles: Vehicle[];
   policies: Policy[];
@@ -46,12 +48,19 @@ export default function ComplianceRenewalsScreen() {
           if (active) setData({ vehicles: [], policies: [], accountNames });
           return;
         }
-        const [vehicleResult, policyResult] = await Promise.all([
+        const [vehicleResult, policyResult, externalPolicyResult] = await Promise.all([
           supabase.from('vehicles').select('*').in('customer_id', ids),
           supabase.from('policies').select('*').in('customer_id', ids),
+          (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids),
         ]);
-        if (vehicleResult.error || policyResult.error) throw vehicleResult.error ?? policyResult.error;
-        if (active) setData({ vehicles: vehicleResult.data ?? [], policies: policyResult.data ?? [], accountNames });
+        if (vehicleResult.error || policyResult.error || externalPolicyResult.error) {
+          throw vehicleResult.error ?? policyResult.error ?? externalPolicyResult.error;
+        }
+        const mergedPolicies = [
+          ...(policyResult.data ?? []),
+          ...((externalPolicyResult.data ?? []) as ExternalPolicyRow[]).map(externalToPolicy),
+        ];
+        if (active) setData({ vehicles: vehicleResult.data ?? [], policies: mergedPolicies, accountNames });
       } catch (error) {
         console.warn('Compliance renewals load failed', error);
         if (active) setMessage('We could not load renewal details. Please try again.');
@@ -170,6 +179,12 @@ function InlineMetric({ label, value, tone }: { label: string; value: number; to
       <Text style={[styles.inlineMetricValue, textStyle]}>{value}</Text>
     </View>
   );
+}
+
+function externalToPolicy(policy: ExternalPolicyRow): Policy {
+  return {
+    ...(policy as Policy),
+  };
 }
 
 function formatDate(value: string) {
