@@ -1,5 +1,5 @@
 import { useState, type ComponentProps, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -9,6 +9,7 @@ import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerDisclosureRow } from '@/components/ui/partner-disclosure-row';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -65,28 +66,28 @@ export default function MoreScreen() {
       ) : null}
 
       <MenuSection title="Work">
-        <MenuRow icon="search-outline" title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
-        <MenuRow icon="document-text-outline" title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
-        <MenuRow icon="refresh-outline" title="Renewals" onPress={() => router.push('/renewals')} />
-        <MenuRow icon="people-outline" title="Customers" onPress={() => router.push('/customers')} last />
+        <MenuRow asset={PartnerAssets.navigation.search} title="Search all business" helper="Customers, policies and claims" onPress={() => router.push('/search')} />
+        <MenuRow asset={PartnerAssets.navigation.policyIntake} title="Policy Intake" onPress={() => router.push('/policy-intakes')} />
+        <MenuRow asset={PartnerAssets.navigation.renewals} title="Renewals" onPress={() => router.push('/renewals')} />
+        <MenuRow asset={PartnerAssets.navigation.customers} title="Customers" onPress={() => router.push('/customers')} last />
       </MenuSection>
 
       <MenuSection title="Insights">
-        <MenuRow icon="calendar-outline" title="Your Week" onPress={() => router.push('/weekly-story')} />
-        <MenuRow icon="heart-outline" title="My Impact" onPress={() => router.push('/impact')} />
-        <MenuRow icon="trail-sign-outline" title="My Journey" onPress={() => router.push('/journey')} />
-        <MenuRow icon="time-outline" title="Activity" onPress={() => router.push('/activity')} last />
+        <MenuRow asset={PartnerAssets.actions.businessPerformance} title="Your Week" onPress={() => router.push('/weekly-story')} />
+        <MenuRow asset={PartnerAssets.actions.businessInsights} title="My Impact" onPress={() => router.push('/impact')} />
+        <MenuRow asset={PartnerAssets.status.journey} title="My Journey" onPress={() => router.push('/journey')} />
+        <MenuRow asset={PartnerAssets.status.announcement} title="Activity" onPress={() => router.push('/activity')} last />
       </MenuSection>
 
       <MenuSection title="Grow & Learn">
         <MenuRow icon="bulb-outline" title="60-Second Learn" onPress={() => router.push('/learn')} />
-        <MenuRow icon="sparkles-outline" title="Recognition" onPress={() => router.push('/recognition')} />
+        <MenuRow asset={PartnerAssets.status.achievement} title="Recognition" onPress={() => router.push('/recognition')} />
         <MenuRow icon="play-circle-outline" title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
       </MenuSection>
 
       <MenuSection title="Account">
-        <MenuRow icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
-        <MenuRow icon="headset-outline" title="Support" onPress={() => router.push('/support')} />
+        <MenuRow asset={PartnerAssets.navigation.profile} title="Profile & registration" onPress={() => router.push('/profile')} />
+        <MenuRow asset={PartnerAssets.actions.support} title="Support" onPress={() => router.push('/support')} />
         <MenuRow icon="settings-outline" title="Settings & app info" onPress={() => router.push('/settings')} last />
       </MenuSection>
 
@@ -124,12 +125,14 @@ function MenuSection({ title, children }: { title: string; children: ReactNode }
 
 function MenuRow({
   icon,
+  asset,
   title,
   helper,
   onPress,
   last = false,
 }: {
-  icon: IconName;
+  icon?: IconName;
+  asset?: number;
   title: string;
   helper?: string;
   onPress: () => void;
@@ -142,8 +145,12 @@ function MenuRow({
       onPress={onPress}
       divider={!last}
       leading={
-        <View style={styles.rowIcon}>
-          <Ionicons name={icon} size={18} color={partnerTheme.colors.brandStrong} />
+        <View style={[styles.rowIcon, asset && styles.rowAssetIcon]}>
+          {asset ? (
+            <Image source={asset} style={styles.rowAssetImage} resizeMode="contain" />
+          ) : icon ? (
+            <Ionicons name={icon} size={18} color={partnerTheme.colors.brandStrong} />
+          ) : null}
         </View>
       }
     />
@@ -192,6 +199,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: partnerTheme.colors.brandSoft,
   },
+  rowAssetIcon: { backgroundColor: 'transparent' },
+  rowAssetImage: { width: 32, height: 32 },
   logout: {
     marginTop: partnerTheme.spacing.xl,
     borderTopWidth: StyleSheet.hairlineWidth,
