@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, GraduationCap, LifeBuoy, ShieldCheck, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerMetricStrip, PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebSession } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
