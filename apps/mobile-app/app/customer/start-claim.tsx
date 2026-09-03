@@ -337,7 +337,14 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
   const anchorRef = useRef<View>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => searchInputRef.current?.focus(), 80);
+    return () => clearTimeout(timer);
+  }, [open]);
 
   function closeSelector() {
     Keyboard.dismiss();
@@ -366,7 +373,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
           event.stopPropagation();
           toggleSelector();
         }}
-        style={[styles.selectButton, open && styles.selectButtonOpen]}
+        style={[styles.selectButton, open && styles.selectButtonHidden]}
       >
         <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
         <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
@@ -396,6 +403,8 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
           <View style={styles.makeSearch}>
             <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
             <TextInput
+              ref={searchInputRef}
+              autoFocus
               value={query}
               onChangeText={onQueryChange}
               autoCapitalize="characters"
@@ -461,6 +470,7 @@ const styles = StyleSheet.create({
   vehicleField: { gap: 6 },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  selectButtonHidden: { opacity: 0 },
   selectVehicleArtwork: { width: 36, height: 36 },
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
