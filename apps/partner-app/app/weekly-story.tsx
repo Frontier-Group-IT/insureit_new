@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -7,6 +7,7 @@ import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function WeeklyStoryScreen() {
@@ -65,7 +66,7 @@ export default function WeeklyStoryScreen() {
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Coming next</Text></View>
           <View style={styles.nextCard}>
-            <View style={styles.nextIcon}><Ionicons name="refresh-outline" size={21} color={partnerTheme.colors.brand} /></View>
+            <View style={styles.nextIcon}><Image source={PartnerAssets.actions.renewals} style={styles.nextArtwork} resizeMode="contain" /></View>
             <View style={styles.nextBody}>
               <Text style={styles.nextTitle}>{data.renewals_next_week} renewal{data.renewals_next_week === 1 ? '' : 's'} next week</Text>
               <Text style={styles.nextText}>{formatIndianCurrency(data.renewal_premium_next_week)} gross premium is approaching renewal.</Text>
@@ -109,6 +110,6 @@ const styles = StyleSheet.create({
   compareValue:{color:partnerTheme.colors.ink,fontSize:17,fontWeight:'800'},compareLabel:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8},
   trend:{flexDirection:'row',alignItems:'center',gap:5,borderRadius:999,paddingHorizontal:10,paddingVertical:7},trendText:{fontSize:9,fontWeight:'800'},
   nextCard:{minHeight:66,flexDirection:'row',alignItems:'center',gap:11,borderRadius:18,padding:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  nextIcon:{width:36,height:36,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.brandSoft},nextBody:{flex:1},nextTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},nextText:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},
+  nextIcon:{width:36,height:36,alignItems:'center',justifyContent:'center'},nextArtwork:{width:34,height:34},nextBody:{flex:1},nextTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},nextText:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},
   endCard:{marginTop:11,borderRadius:partnerTheme.radius.lg,padding:13,backgroundColor:partnerTheme.colors.accentSoft},endEyebrow:{color:'#3C7B78',fontSize:7.5,fontWeight:'800',letterSpacing:1},endTitle:{marginTop:5,color:partnerTheme.colors.ink,fontSize:12,fontWeight:'800'},
 });
