@@ -33,6 +33,17 @@ export type PartnerPolicyIntake = {
 export type PartnerPolicyIntakeListResponse = {
   ok: true;
   intakes: PartnerPolicyIntake[];
+  total: number;
+  counts: {
+    active: number;
+    attention: number;
+    progress: number;
+    completed: number;
+  };
+};
+
+export type PartnerPolicyIntakeSourcesResponse = {
+  ok: true;
   sources: PartnerPolicyIntakeSource[];
 };
 
@@ -52,8 +63,25 @@ export type IntakeProgress = {
 export const MAX_POLICY_INTAKE_FILE_SIZE = 15 * 1024 * 1024;
 export const POLICY_INTAKE_ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
 
-export async function getPartnerPolicyIntakesWeb() {
-  return apiRequest<PartnerPolicyIntakeListResponse>("/api/partner/policy-intakes");
+export async function getPartnerPolicyIntakesWeb({
+  limit = 25,
+  offset = 0,
+  filter = "all",
+}: {
+  limit?: number;
+  offset?: number;
+  filter?: "all" | "attention" | "in_progress" | "completed";
+} = {}) {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+    filter,
+  });
+  return apiRequest<PartnerPolicyIntakeListResponse>("/api/partner/policy-intakes?" + params.toString());
+}
+
+export async function getPartnerPolicyIntakeSourcesWeb() {
+  return apiRequest<PartnerPolicyIntakeSourcesResponse>("/api/partner/policy-intakes?view=sources");
 }
 
 export type PartnerPolicyIntakeDetailResponse = {

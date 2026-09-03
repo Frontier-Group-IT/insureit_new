@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileUp, Loader2, ShieldCheck } from "lucide-react";
 import {
-  getPartnerPolicyIntakesWeb,
+  getPartnerPolicyIntakeSourcesWeb,
   POLICY_INTAKE_ACCEPT,
   submitPartnerPolicyIntakeWeb,
   validatePolicyIntakeFile,
@@ -28,7 +28,7 @@ export function PartnerPolicyIntakeNewClient() {
     let active = true;
     async function load() {
       try {
-        const result = await getPartnerPolicyIntakesWeb();
+        const result = await getPartnerPolicyIntakeSourcesWeb();
         if (!active) return;
         setSources(result.sources);
         if (result.sources.length === 1) setSourceId(result.sources[0].id);
