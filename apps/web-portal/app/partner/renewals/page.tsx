@@ -1,13 +1,10 @@
 import Link from "next/link";
 import { ArrowRight, RefreshCw, Search } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebRenewalSummary, listPartnerWebPolicies } from "@/lib/partner-web";
+import { getPartnerWebRenewalSummary, listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-type RenewalMode = "expiring" | "expired";
-type RenewalWindow = "all" | "0_7" | "8_15" | "16_30";
 
 const PAGE_SIZE = 25;
 
@@ -34,8 +31,8 @@ function renewalLabel(value: string | null) {
   if (days === 0) return "Due today";
   return String(days) + "d left";
 }
-function validMode(value?: string): RenewalMode { return value === "expired" ? "expired" : "expiring"; }
-function validWindow(value?: string): RenewalWindow { return value === "0_7" || value === "8_15" || value === "16_30" ? value : "all"; }
+function validMode(value?: string): PartnerRenewalMode { return value === "expired" ? "expired" : "due"; }
+function validWindow(value?: string): PartnerRenewalWindow { return value === "0_7" || value === "8_15" || value === "16_30" ? value : "all"; }
 function pageNumber(value?: string) {
   const parsed = Number(value ?? "1");
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
@@ -51,25 +48,20 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
 
   const [summary, rows] = await Promise.all([
     getPartnerWebRenewalSummary(),
-    listPartnerWebPolicies({ limit: PAGE_SIZE, offset, search: q, lifecycle: mode }),
+    listPartnerWebRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window }),
   ]);
 
-  const visibleRows = mode === "expired" || window === "all" ? rows : rows.filter((row) => {
-    const days = daysUntil(row.end_date);
-    if (window === "0_7") return days >= 0 && days <= 7;
-    if (window === "8_15") return days >= 8 && days <= 15;
-    return days >= 16 && days <= 30;
-  });
-
   const total = rows[0]?.total_count ?? 0;
-  const hrefFor = (next: { mode?: RenewalMode; window?: RenewalWindow; page?: number }) => {
+  const hasPrevious = page > 1;
+  const hasNext = offset + rows.length < total;
+  const hrefFor = (next: { mode?: PartnerRenewalMode; window?: PartnerRenewalWindow; page?: number }) => {
     const params = new URLSearchParams();
     const nextMode = next.mode ?? mode;
     const nextWindow = next.window ?? window;
     const nextPage = next.page ?? 1;
     if (q) params.set("q", q);
-    if (nextMode !== "expiring") params.set("mode", nextMode);
-    if (nextWindow !== "all" && nextMode === "expiring") params.set("window", nextWindow);
+    if (nextMode !== "due") params.set("mode", nextMode);
+    if (nextWindow !== "all" && nextMode === "due") params.set("window", nextWindow);
     if (nextPage > 1) params.set("page", String(nextPage));
     const search = params.toString();
     return search ? "/partner/renewals?" + search : "/partner/renewals";
@@ -96,12 +88,12 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
           <div className="border-b border-[#E6ECF3] px-5 py-4 sm:px-6">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex gap-2">
-                <Link href={hrefFor({ mode: "expiring", window: "all", page: 1 })} className={"rounded-xl px-3 py-2 text-[10px] font-bold " + (mode === "expiring" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Due</Link>
+                <Link href={hrefFor({ mode: "due", window: "all", page: 1 })} className={"rounded-xl px-3 py-2 text-[10px] font-bold " + (mode === "due" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Due</Link>
                 <Link href={hrefFor({ mode: "expired", window: "all", page: 1 })} className={"rounded-xl px-3 py-2 text-[10px] font-bold " + (mode === "expired" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Expired</Link>
               </div>
               <form action="/partner/renewals" className="flex w-full max-w-[450px] gap-2">
-                {mode !== "expiring" ? <input type="hidden" name="mode" value={mode} /> : null}
-                {window !== "all" && mode === "expiring" ? <input type="hidden" name="window" value={window} /> : null}
+                {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
+                {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
                   <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-11 w-full rounded-xl border border-[#D2DCE9] bg-white pl-10 pr-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
@@ -110,9 +102,9 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
               </form>
             </div>
 
-            {mode === "expiring" ? (
+            {mode === "due" ? (
               <div className="mt-3 flex flex-wrap gap-2">
-                {(["all","0_7","8_15","16_30"] as RenewalWindow[]).map((value) => (
+                {(["all","0_7","8_15","16_30"] as PartnerRenewalWindow[]).map((value) => (
                   <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-lg px-2.5 py-1.5 text-[9px] font-bold " + (window === value ? "bg-[#E9F0FF] text-[#3156B8]" : "bg-[#F4F6F9] text-[#657792]")}>
                     {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
                   </Link>
@@ -123,12 +115,12 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
 
           <div className="flex items-center justify-between px-5 py-3 sm:px-6">
             <p className="text-[11px] font-extrabold text-[#1B2F4E]">{mode === "expired" ? "Expired Policies" : "Renewal Worklist"}</p>
-            <p className="text-[9.5px] font-semibold text-[#7A899F]">{visibleRows.length} shown · {total} matched</p>
+            <p className="text-[9.5px] font-semibold text-[#7A899F]">{rows.length} shown · {total} matched</p>
           </div>
 
-          {visibleRows.length ? (
+          {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
-              {visibleRows.map((row) => (
+              {rows.map((row) => (
                 <Link key={row.policy_id} href={"/partner/policies/" + encodeURIComponent(row.policy_id)} prefetch={false} className="group grid gap-3 px-5 py-4 transition hover:bg-[#F8FAFD] sm:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(140px,.65fr)_minmax(110px,.55fr)_auto] xl:items-center">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><RefreshCw className="h-4 w-4" /></span>
@@ -157,6 +149,18 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
               <p className="mt-1 text-[10.5px] text-[#7A899F]">Try another search or renewal window.</p>
             </div>
           )}
+
+          {(hasPrevious || hasNext) ? (
+            <div className="flex items-center justify-between border-t border-[#E6ECF3] px-5 py-4 sm:px-6">
+              <Link href={hasPrevious ? hrefFor({ page: page - 1 }) : "#"} aria-disabled={!hasPrevious} className={"inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-[10px] font-bold " + (hasPrevious ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
+                Previous
+              </Link>
+              <p className="text-[10px] font-semibold text-[#74839A]">Page {page}</p>
+              <Link href={hasNext ? hrefFor({ page: page + 1 }) : "#"} aria-disabled={!hasNext} className={"inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-[10px] font-bold " + (hasNext ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
+                Next <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          ) : null}
         </section>
       </div>
     </PartnerPortalShell>
