@@ -4,7 +4,7 @@ import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effecti
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import type { ClaimStatus } from "@/lib/claim-workflow";
+import { matchesRequiredDocument, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
 import { canVerifyClaimDocuments } from "@/lib/roles";
 
 const bucketName = "claim-documents";
@@ -18,6 +18,7 @@ const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss
 const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
 
 type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null };
+type ClaimDocumentStatus = { id: string; document_type: string; verification_status: string };
 type ActionResult = { ok: boolean; message?: string };
 type VerificationType = "rc" | "insurance" | "document" | "detail";
 
@@ -33,6 +34,60 @@ async function loadClaim(claimId: string) {
   const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, accident_at").eq("id", claimId).maybeSingle<ClaimForVerification>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
   return data;
+}
+
+async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification, documentId: string, profileId: string | null) {
+  const nextStatus = verifiedStatusFor(claim.current_status);
+  if (!nextStatus || nextStatus === claim.current_status) return;
+
+  const supabase = await createServerSupabaseClient();
+  const { data: documents, error: documentsError } = await supabase
+    .from("claim_documents")
+    .select("id, document_type, verification_status")
+    .eq("claim_id", claim.id)
+    .returns<ClaimDocumentStatus[]>();
+  if (documentsError) throw new Error(documentsError.message);
+
+  const requiredTypes = requiredDocumentTypesForStatus(claim.current_status);
+  const allVerified = requiredTypes.length > 0 && requiredTypes.every((type) =>
+    documents.some((document) =>
+      matchesRequiredDocument(document.document_type, type) &&
+      (document.id === documentId || document.verification_status === "verified")
+    )
+  );
+  if (!allVerified) return;
+
+  const { data: updatedClaim, error: updateError } = await supabase
+    .from("claims")
+    .update({ current_status: nextStatus })
+    .eq("id", claim.id)
+    .eq("current_status", claim.current_status)
+    .select("id, current_status")
+    .maybeSingle();
+  if (updateError) throw new Error(updateError.message);
+  if (!updatedClaim || updatedClaim.current_status !== nextStatus) {
+    throw new Error("All required documents are verified, but the claim status could not be advanced.");
+  }
+
+  await saveVerificationHistory({
+    claimId: claim.id,
+    documentId: null,
+    documentType: "Initial Documents",
+    verificationType: "document",
+    incidentDate: incidentDateOnly(claim.accident_at),
+    isValid: true,
+    invalidReason: null,
+    details: { transition: "initial_documents_verified", verified_at: new Date().toISOString() },
+    verifiedBy: profileId
+  });
+  const { error: historyError } = await supabase.from("claim_status_history").insert({
+    claim_id: claim.id,
+    from_status: claim.current_status,
+    to_status: nextStatus,
+    notes: "All required initial documents verified by claim desk.",
+    changed_by: profileId
+  });
+  if (historyError) throw new Error(historyError.message);
 }
 
 function collectVerificationDetails(formData: FormData) {
@@ -185,6 +240,7 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     if (reviewError) throw new Error(reviewError.message);
     await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile?.id ?? null });
     await saveVerificationHistory({ claimId, documentId: document.id, documentType: document.document_type, verificationType: verificationTypeForDocument(document.document_type), incidentDate, isValid: true, invalidReason: null, details: detailsPayload, verifiedBy: profile?.id ?? null });
+    await advanceAfterInitialDocumentsVerified(claim, document.id, profile?.id ?? null);
     await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${document.document_type} verified during spot survey.`, changed_by: profile?.id ?? null });
     revalidatePath(`/claims/${claimId}`); revalidatePath("/claims"); revalidatePath("/dashboard");
     return { ok: true, message: "Document verified successfully." };
