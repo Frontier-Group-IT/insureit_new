@@ -1,0 +1,1111 @@
+{
+  "version": 1,
+  "generated": "2026-09-03",
+  "assetCount": 100,
+  "registeredCount": 71,
+  "optimizedBytes": 2108885,
+  "sourceRawBytes": 96924989,
+  "reductionPercent": 97.8,
+  "assets": [
+    {
+      "path": "actions/add-customer.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10512,
+      "sha256": "d7b848b07b85695730361164d4f9e868dc8d828f27e88c7c7547dc2f52973ea9"
+    },
+    {
+      "path": "actions/add-document.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8882,
+      "sha256": "327dc3ba0c964d90181f0e93f14b8df38d587dc82606a08b9fd1e32c9861d481"
+    },
+    {
+      "path": "actions/add-vehicle.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9582,
+      "sha256": "e478f78cca20de05d9037dd39d43a41203a0a50da32b71ae20e337e07f86bb1b"
+    },
+    {
+      "path": "actions/business-insights.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9182,
+      "sha256": "0607673ffd14663a371442a96b57768f8daa5063664a9bd6f7060f3064e23204"
+    },
+    {
+      "path": "actions/business-performance.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 11036,
+      "sha256": "5b6e0ef81508cbc26644b7545ccb21bf51e97e8e5b83a592fc0dc24c08ad09df"
+    },
+    {
+      "path": "actions/call.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 7471,
+      "sha256": "fd0d354baf2926df1c39b726222329eaa2e2f33346547a60d4e53541a8264faa"
+    },
+    {
+      "path": "actions/commercial-policy.png",
+      "category": "actions",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 11635,
+      "sha256": "b1396e4519086a50f1d85136535ee8869d85f91ed187b47447f168fb0e26960f"
+    },
+    {
+      "path": "actions/commercial-vehicles.png",
+      "category": "actions",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 12164,
+      "sha256": "6eaa1310e3fd7f236968d0693c76c14ea22a492f6038f8792ff8661714dbad80"
+    },
+    {
+      "path": "actions/customer-register.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9557,
+      "sha256": "b78c2f938efb1617215aa36bb00638369426e662bf85ed72e1490ac40db8b681"
+    },
+    {
+      "path": "actions/document-search.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 11708,
+      "sha256": "0c5ba987a48884a298d2aaf12eb2142278bb06a31bfd638e771f9ed4089bb880"
+    },
+    {
+      "path": "actions/family-cover.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 11052,
+      "sha256": "587fb5f635f7417ed3c3bc79e7fa45bdca170440d00e73c489afb3a745a9bba7"
+    },
+    {
+      "path": "actions/health-cover.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10499,
+      "sha256": "4afe8d77716cd8b42d8c8a5e72df47f36977f0904a1f39c847a879cbddd74a8b"
+    },
+    {
+      "path": "actions/payout-growth.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8509,
+      "sha256": "6e402bac4ec04ed0fdc50702baa6cde8a283635b25c3c049279fcd3f83c3e526"
+    },
+    {
+      "path": "actions/policies.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 7686,
+      "sha256": "9b15f6df1cbf9fa29cef70df91f8acb128af0ea687610f44fa48a658adf36c88"
+    },
+    {
+      "path": "actions/policy-checklist.png",
+      "category": "actions",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 11276,
+      "sha256": "fa95747194616d3bd81cc7ac7d265585f323d502ca360629247ea2c12fe845bc"
+    },
+    {
+      "path": "actions/policy-register.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10107,
+      "sha256": "38eb40a939627381c11bad4b0e8a8862ec05cd7a1cf51a245e3023fccb6f4071"
+    },
+    {
+      "path": "actions/renewals.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 7961,
+      "sha256": "9b3cd890ad811fd0dd77bd21765542c3a75e8fa1bacdc22b1ea96db8f83c0051"
+    },
+    {
+      "path": "actions/support-verified.png",
+      "category": "actions",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9234,
+      "sha256": "3e40ef1774c1a749c684bff9b51640ebf5320e88b105f91903e4335503594245"
+    },
+    {
+      "path": "actions/support.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9573,
+      "sha256": "04cf389374cef6d28ed1cf398701aa90c89abecf787c10382368da7e176505cc"
+    },
+    {
+      "path": "actions/whatsapp.png",
+      "category": "actions",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9198,
+      "sha256": "8777b3599288ddcc780771f6d525f129c24e3722d7d7bf72f93122da40a38f94"
+    },
+    {
+      "path": "banners/business-growth-01.png",
+      "category": "banners",
+      "registered": true,
+      "dimensions": [
+        1200,
+        444
+      ],
+      "bytes": 72107,
+      "sha256": "3ef7c588fec6524e2ee98a84e6435b8bd59332976accfe16fd6fb01f88315ef5"
+    },
+    {
+      "path": "banners/business-growth-02.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1040,
+        520
+      ],
+      "bytes": 65630,
+      "sha256": "4dd223ff8828f1fee792898a0ed9a46a664dcebf43fcf8a4880ac08a4fc65e14"
+    },
+    {
+      "path": "banners/business-growth-03.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1200,
+        450
+      ],
+      "bytes": 57674,
+      "sha256": "81f3964fe4a41037594f856bd8252b5df892f6e666c085e7e813e67d250a2f9d"
+    },
+    {
+      "path": "banners/business-growth-04.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1200,
+        400
+      ],
+      "bytes": 60225,
+      "sha256": "445c25b632381bb466f27eb7a1d33b27cdbf88a996d35a04900d4f1cc3b1b490"
+    },
+    {
+      "path": "banners/business-growth-05.png",
+      "category": "banners",
+      "registered": true,
+      "dimensions": [
+        1200,
+        484
+      ],
+      "bytes": 74577,
+      "sha256": "3da4995777102924ab5364396786b2951ee9c4d00da1b23deb3779c615c3a473"
+    },
+    {
+      "path": "banners/business-growth-06.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1200,
+        400
+      ],
+      "bytes": 56815,
+      "sha256": "cfea28420858091f5365f594447feb51da1ce687a59b91723cca6142262d6d20"
+    },
+    {
+      "path": "banners/business-growth-07.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1200,
+        505
+      ],
+      "bytes": 83463,
+      "sha256": "2d4af69b3284a6cab8904a7dddbf87d863ce920d3ccd0a02c8d6de181bc385af"
+    },
+    {
+      "path": "banners/business-growth-08.png",
+      "category": "banners",
+      "registered": true,
+      "dimensions": [
+        1200,
+        449
+      ],
+      "bytes": 69711,
+      "sha256": "72d79bab376f83f41bb0faaae6422a03d2e0d5f843efb51f97225791ea805213"
+    },
+    {
+      "path": "banners/business-growth-09.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1200,
+        465
+      ],
+      "bytes": 71905,
+      "sha256": "8f09a9d142cc9532ffed03aa3edcd624ba59f9d4bdb4b5b3c47c7d70e3a94a7d"
+    },
+    {
+      "path": "banners/business-growth-10.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1200,
+        471
+      ],
+      "bytes": 60975,
+      "sha256": "2629b9263b5d93b9442ad68e47968f1363a035f46f16d0d1bb0a0fb28b219aed"
+    },
+    {
+      "path": "banners/business-growth-11.png",
+      "category": "banners",
+      "registered": true,
+      "dimensions": [
+        1170,
+        520
+      ],
+      "bytes": 94961,
+      "sha256": "0371c118847c4773a9143c9f0d1b2d2874126e25937a89404bac34156d68a1a6"
+    },
+    {
+      "path": "banners/business-growth-12.png",
+      "category": "banners",
+      "registered": false,
+      "dimensions": [
+        1198,
+        520
+      ],
+      "bytes": 93474,
+      "sha256": "f37c5d52a3aab0526356d9ccd8a8c961fa1b8a0fe77598487d25857fa1a7f3ee"
+    },
+    {
+      "path": "empty-states/application-complete.png",
+      "category": "empty-states",
+      "registered": false,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 26876,
+      "sha256": "8584741040e5911b922610dbd226d8fff366a0e8c5a567e1a87e0a947b79a45a"
+    },
+    {
+      "path": "empty-states/calendar-search-empty.png",
+      "category": "empty-states",
+      "registered": false,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 28020,
+      "sha256": "91f2c10e0a66c27c787838fb63e6f37b157e3c8c3881a23318093af2ba5b2c97"
+    },
+    {
+      "path": "empty-states/incomplete-details.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 27740,
+      "sha256": "3c8187b7ca11e7e7f0f07fd429627698b8ef6e1cfd8e066be9ebb8d59b385381"
+    },
+    {
+      "path": "empty-states/no-customers.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 25125,
+      "sha256": "3c180da970a8e25732ad5e0424fb9dfc65a41e337af7297ee5073c3aad680e72"
+    },
+    {
+      "path": "empty-states/no-documents.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 19185,
+      "sha256": "10ff8884e7e70b5f90ccd6052132e8c52e5557abe61f69f4bca9963cad8c0ecc"
+    },
+    {
+      "path": "empty-states/no-policies.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 20358,
+      "sha256": "dbbf0ef81b31df15e1926e8949b5216c55b0ec139eaf2c80399b251729612f47"
+    },
+    {
+      "path": "empty-states/no-renewals.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 27103,
+      "sha256": "edca81f39fee03a1251442aaf542648c9d02022b6c361c822dc295e1b3fd85f4"
+    },
+    {
+      "path": "empty-states/no-search-results.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 21761,
+      "sha256": "976199bde0cda1d4c9c8a4a96b441b381b1f36bd4c71b1fbd4a9135ce9437c1d"
+    },
+    {
+      "path": "empty-states/notifications-muted.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 25124,
+      "sha256": "b9fd9e1269e98c30837c8ee93be50bbeadc15f6dd784d3dcf3391b471ab97fd7"
+    },
+    {
+      "path": "empty-states/offline.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 24006,
+      "sha256": "925e91c8514b40bfc6e5f43d2bd51b242eb4e780ec47f0e88c0271c5c19e0fdd"
+    },
+    {
+      "path": "empty-states/opportunities-empty.png",
+      "category": "empty-states",
+      "registered": false,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 24278,
+      "sha256": "e0988cbf85cc798cc0204964d1d6bbdd0995f8bc1524211ebac9d1477a936dc5"
+    },
+    {
+      "path": "empty-states/policy-review.png",
+      "category": "empty-states",
+      "registered": false,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 25424,
+      "sha256": "8eb53b8fe80e7c21b33a13f0e296642a170a0614c4e5eaab3dc132b7b2dc45ae"
+    },
+    {
+      "path": "empty-states/policy-search-verified.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 31072,
+      "sha256": "d35ecbc7310baf437d3b49d3039cd5370d9e9cf6b86a346a5df8e397c6534502"
+    },
+    {
+      "path": "empty-states/policy-upload.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 28891,
+      "sha256": "7ddecc4d55d668377977367c3d13d29b1150803ebce99b31b54deed02566fe78"
+    },
+    {
+      "path": "empty-states/policy-verified.png",
+      "category": "empty-states",
+      "registered": false,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 25791,
+      "sha256": "094f0187be138cbbf42830cbdb56566a2436e5c31b5d5e4d5bca5ce0ec215887"
+    },
+    {
+      "path": "empty-states/support-resolved.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 26399,
+      "sha256": "92f26b0dcb53b9bacb16b60ce34189156b0a43b3d551d5f2b1fe6c2e7cf6d0a3"
+    },
+    {
+      "path": "empty-states/upload-failed.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 23139,
+      "sha256": "85d4ad4a020d0113e455166a842e9dde2162b1452b82864bf61d66beca7b578f"
+    },
+    {
+      "path": "empty-states/validation-error.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 28723,
+      "sha256": "744d7e62bc3922076bbd075ea3f19bd50c7020687797b0e165e90b748f705783"
+    },
+    {
+      "path": "empty-states/verification-failed.png",
+      "category": "empty-states",
+      "registered": true,
+      "dimensions": [
+        512,
+        512
+      ],
+      "bytes": 26440,
+      "sha256": "08ebe16345d99b5bfd7177036d32703d2b7b22cd6c2b9c7c7ef1c0f7f09bd2dd"
+    },
+    {
+      "path": "navigation/business.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5714,
+      "sha256": "747367faa59169dcc2a1b356dff1319c6be3e7a06f8f2afacc9b91a3e4d600f4"
+    },
+    {
+      "path": "navigation/claims.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5410,
+      "sha256": "ac9eb224922769ef68cd2b46757360005573ce71566bd27093a89dae081f256b"
+    },
+    {
+      "path": "navigation/customers.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5799,
+      "sha256": "edbc2c04c30446becff6633ca247b657b7a38b48b5b49bb89842bc1014ed2d77"
+    },
+    {
+      "path": "navigation/home.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5338,
+      "sha256": "30eee8ebd4f420e0feac08386babc525c8290b1127c47584f91413d7e1d84969"
+    },
+    {
+      "path": "navigation/notifications.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5758,
+      "sha256": "5315af2400a3e58968e9a4cc19218e25ec5274e4977d18d9ab4b04fd362a0102"
+    },
+    {
+      "path": "navigation/policies.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5846,
+      "sha256": "3b746eb76fc2fed8d657100b12d7e97647519d1b9cc207515134698496eaf075"
+    },
+    {
+      "path": "navigation/policy-intake.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 4292,
+      "sha256": "f0cd3ed3e6f0a99a87b574c8f96ac5f112ebb5c63b9e0aab4eb32915ababfc4e"
+    },
+    {
+      "path": "navigation/profile.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 4889,
+      "sha256": "89568583edfc84889f8d754d1d2c287c3ced2b3146196fda99b81c37844fac64"
+    },
+    {
+      "path": "navigation/renewals.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5530,
+      "sha256": "1df320f86b9673789fc28b87e9ee1c1fc20703d396f7cc0e542ff76a8e0cdaad"
+    },
+    {
+      "path": "navigation/search.png",
+      "category": "navigation",
+      "registered": true,
+      "dimensions": [
+        192,
+        192
+      ],
+      "bytes": 5076,
+      "sha256": "474cc31892f18a274f57388dc1227538ed3e60a7b8e9ced3354c000dc1abd703"
+    },
+    {
+      "path": "products/commercial-insurance.png",
+      "category": "products",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 26666,
+      "sha256": "44bb7c1e9a8ce543287cf1ee83bc28a44e355126e17187b772fe115033d2f15b"
+    },
+    {
+      "path": "products/family-insurance.png",
+      "category": "products",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 21580,
+      "sha256": "1d285bdc7f821523b9f02897e0826ba30c646cc994c35528237b36ee3d14881e"
+    },
+    {
+      "path": "products/health-insurance.png",
+      "category": "products",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 23222,
+      "sha256": "39286b19a32c93823e5e314376421e89716ac4ee9e4db7ae3b7035c92854d5fc"
+    },
+    {
+      "path": "products/motor-insurance.png",
+      "category": "products",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 24216,
+      "sha256": "1494de9602277da0361a0138f0f3ba1fce9fc24229fe02dbc722d8ef3ab7610a"
+    },
+    {
+      "path": "products/property-travel-insurance.png",
+      "category": "products",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 24421,
+      "sha256": "9ca21fdb711e2152f9b01d4a8fa508a685b75b7ef2f1326cf2c500b1db858b1d"
+    },
+    {
+      "path": "profile/avatar-01.png",
+      "category": "profile",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 20788,
+      "sha256": "404bab0c0ca3f6e81ecaa3aaf1c467fd2b92adae65c8af02b630138547781a67"
+    },
+    {
+      "path": "profile/avatar-02.png",
+      "category": "profile",
+      "registered": false,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 20181,
+      "sha256": "68fddd37fdcd380ef87176a554757c384fc0424f0e28dd5b51a04a9600c14889"
+    },
+    {
+      "path": "profile/avatar-03.png",
+      "category": "profile",
+      "registered": false,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 14379,
+      "sha256": "ed6c6395a5adf3b65d3f9aee6b4675d30e8eb3f192664ec438870f9297aa1170"
+    },
+    {
+      "path": "profile/avatar-04.png",
+      "category": "profile",
+      "registered": false,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 23133,
+      "sha256": "f2fa7332902ec6de67a76030e5aa0e027b4b0022ac09ec20b99a19026c08da05"
+    },
+    {
+      "path": "profile/avatar-05.png",
+      "category": "profile",
+      "registered": false,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 22649,
+      "sha256": "080e4c66b57becc613d032a7a68c3b871d93e459a4f82adf49d30c10785f668c"
+    },
+    {
+      "path": "profile/avatar-06.png",
+      "category": "profile",
+      "registered": true,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 22452,
+      "sha256": "83e46fbfc51fd85617b1e934ca3e7db8deba0f4848da29439bc19310cc9d33d7"
+    },
+    {
+      "path": "profile/avatar-07.png",
+      "category": "profile",
+      "registered": false,
+      "dimensions": [
+        384,
+        384
+      ],
+      "bytes": 21961,
+      "sha256": "9ed303e950a24814688834a1a501a94e010e75d34e2c948f75b2162b056216fb"
+    },
+    {
+      "path": "status/achievement.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 11157,
+      "sha256": "4b327a2a5670e34d35fc588420ac389ecc40fc5c973652a9672537353372c8b1"
+    },
+    {
+      "path": "status/announcement.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9250,
+      "sha256": "e27bb9160d3cb5dde18cb8f0303640f64d83368f891020bbe0d3c0d0d851965f"
+    },
+    {
+      "path": "status/apps-grid.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 7098,
+      "sha256": "96a8bb339aa90907f20b1357426462628ff1333cb62261d27cdf9c490ac405f5"
+    },
+    {
+      "path": "status/business-growth.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8053,
+      "sha256": "fd953d34ea3a6014538351035d4db06d3a3d786d179e060f8d416a302bc3489f"
+    },
+    {
+      "path": "status/business-insights.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10942,
+      "sha256": "cc39a68ae9e89d5a48c202d9e957de5b58e6b8f37af926d713a39f435932ab59"
+    },
+    {
+      "path": "status/claim-attention.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9362,
+      "sha256": "e13147eb8dc81f7d193f695e3827b12d451fcefecfa2cbe0f3fb56d5bf871d46"
+    },
+    {
+      "path": "status/customer-added.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 6983,
+      "sha256": "c5a98de0b333067afc0ca7de3c0f6c6693568f37131c21ef73b58460b7ad1e07"
+    },
+    {
+      "path": "status/document-upload-alt.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10151,
+      "sha256": "602d77ac3de664f7f1c3a19dd839e67659b58e628b827be97f5fd7220d4cff76"
+    },
+    {
+      "path": "status/document-upload.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 7342,
+      "sha256": "5c49e5c47263018bace51b8f799d70c61c08e8ed795b3f85a67c904b160b933d"
+    },
+    {
+      "path": "status/journey.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 7636,
+      "sha256": "294186db75eedf746c14ab7df11300bb2698be24297d9d092c88ba8ead3e09b7"
+    },
+    {
+      "path": "status/motor-renewal.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10573,
+      "sha256": "e0ef173e38f7a564e04f190a510dcd268a919fb856932cbba8f20521e2e36a93"
+    },
+    {
+      "path": "status/opportunity-alert.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8892,
+      "sha256": "ff166e5152de9ef485679d06dee525a9e44e585fe8f6f813f0f06ad8460b7f23"
+    },
+    {
+      "path": "status/payout-refresh.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9004,
+      "sha256": "3e0b00a22aee38676710d2602636f9d9bcaaec1492a9c3a3e25a3cea6f6ee7eb"
+    },
+    {
+      "path": "status/pending-review.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10252,
+      "sha256": "54ba48847a1b28db5b97aefeb9423f296e842930c1bc2d17d2eb4491c4c80dc7"
+    },
+    {
+      "path": "status/policy-active.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8278,
+      "sha256": "33555cccdf416c7786b43b84b45ed6b0a092e1150ef58a7b4adb0708da699ea5"
+    },
+    {
+      "path": "status/policy-attention.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8721,
+      "sha256": "38fd50f34f1b1889264d752afb95445d5c16c27232f5eb45e65d66a5d73bf9e4"
+    },
+    {
+      "path": "status/policy-open.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9894,
+      "sha256": "676b22a15a826ee158ebb2500ae33d73f924765b5934da095ca97037320b5403"
+    },
+    {
+      "path": "status/policy-pending.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 6945,
+      "sha256": "489842206e3aa4d85bdadc8ef8b8b2a9f80f10235725603bba60ba214d450561"
+    },
+    {
+      "path": "status/policy-renewed.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8307,
+      "sha256": "a59dbfb29451f4437517ff0ef1487026a801627c0f8baefd6b1ebd2d747fbf49"
+    },
+    {
+      "path": "status/rejected.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9583,
+      "sha256": "d4cb82e4a07ac4678b09bbb2e512ba0ada87d2b24892f451929169cacb48a0df"
+    },
+    {
+      "path": "status/renewal-due.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9805,
+      "sha256": "3cc4b4d810cd989f7c5bf758fd0193aa9e5616febf781f1834738c648b48e1ee"
+    },
+    {
+      "path": "status/renewal-refresh.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10085,
+      "sha256": "80a8d39b5008f59958ca3a141829a4d63f7266af7e94b4c14c919c0913830262"
+    },
+    {
+      "path": "status/settings.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 10234,
+      "sha256": "4fe5549fa7da4c6485f53e971efcdbc2084c0d306d3c41512202fbbea5012936"
+    },
+    {
+      "path": "status/support-refresh.png",
+      "category": "status",
+      "registered": false,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9425,
+      "sha256": "1d54fd25d71ca3a79fd7ed77c681d493f7c73ddcfe4b12d45cccd66d627af603"
+    },
+    {
+      "path": "status/support-reply.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9768,
+      "sha256": "a61f2f29a49ed6d963fa9077893998d70b204aeac20b10d388572065c0fc4128"
+    },
+    {
+      "path": "status/verified.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 9913,
+      "sha256": "e06ab40d660bf0c4a497727e40f14eccdffc7a5ca24b8456a53899e984b36566"
+    },
+    {
+      "path": "status/warning.png",
+      "category": "status",
+      "registered": true,
+      "dimensions": [
+        256,
+        256
+      ],
+      "bytes": 8136,
+      "sha256": "6822735cce5758f7185d63b95f18d1861af8a3447810c0094c28f63919caf70c"
+    }
+  ]
+}
