@@ -2,7 +2,6 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { ScopeCard } from '@/components/scope-card';
 import { partnerTheme } from '@/lib/theme';
@@ -19,9 +18,7 @@ export default function ProfileScreen() {
     <PartnerScreen
       eyebrow="ACCOUNT"
       title="Profile & registration"
-      action={
-        <PartnerIconButton icon="close" label="Close profile" onPress={() => router.back()} />
-      }
+      onBack={() => router.back()}
     >
       <View style={styles.hero}>
         <View style={styles.avatar}><Text style={styles.avatarText}>{initials(identity.display_name)}</Text></View>
