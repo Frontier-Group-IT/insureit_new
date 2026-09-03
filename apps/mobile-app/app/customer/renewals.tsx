@@ -144,9 +144,6 @@ export default function ComplianceRenewalsScreen() {
                       <InlineMetric value={summary.due} tone="amber" />
                       <InlineMetric value={summary.expired} tone="red" />
                     </View>
-                    <View style={styles.expandIconButton}>
-                      <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color="#526278" />
-                    </View>
                   </View>
                 ) : null}
               </Pressable>
@@ -278,7 +275,6 @@ const styles = StyleSheet.create({
   summaryIconHot: { backgroundColor: '#FFF0EE' },
   summaryTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   summaryRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
-  expandIconButton: { width: 28, height: 28, borderRadius: 9, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center' },
   inlineMetrics: { minWidth: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, paddingRight: 2 },
   inlineMetricValue: { minWidth: 24, textAlign: 'center', fontSize: 15, lineHeight: 18, fontWeight: '900' },
   metricAmber: { color: '#B7791F' },
