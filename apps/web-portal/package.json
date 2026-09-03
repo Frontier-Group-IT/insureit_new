@@ -26,6 +26,7 @@
     "backoffice-register-prefetch:regression": "node scripts/backoffice-register-prefetch-regression.mjs",
     "server-auth-claims:regression": "node scripts/server-auth-claims-regression.mjs",
     "claim-spot-multi-upload:regression": "node scripts/claim-spot-multi-upload-regression.mjs",
+    "claim-journey:regression": "node --experimental-strip-types scripts/claim-journey-regression.mjs",
     "auth-phase-observability:regression": "node scripts/auth-phase-observability-regression.mjs",
     "dashboard-performance:regression": "node scripts/dashboard-performance-regression.mjs",
     "portal-route-enhancements:regression": "node scripts/portal-route-enhancements-regression.mjs",
@@ -57,6 +58,7 @@
     "partner-web:core-regression": "node scripts/partner-web-core-regression.mjs"
   },
   "dependencies": {
+    "@insureit/claim-journey": "0.1.0",
     "@emotion/cache": "^11.14.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",

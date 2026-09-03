@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { projectInternalClaim } from '@insureit/claim-journey';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -7,17 +8,18 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { ClaimFinancialSummary, ClaimPrimaryAction } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
+import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
-import { customerStageCopy } from '@/lib/claim-workflow';
 import { formatJourneyAmount, formatJourneyDate, stageMainAmount } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
 import { palette, roleTheme } from '@/lib/theme';
-import type { Claim, ClaimDocument, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+import type { Claim, ClaimDocument, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
 const ASSISTANCE_TOOLTIP_STORAGE_KEY = 'claim-tracker-assistance-tooltip-seen-v1';
 
 type ClaimWithOwnership = Claim & {
   external_policy_id?: string | null;
+  policy_service_source?: 'sibl' | 'external' | null;
   claim_service_mode?: 'broker_managed' | 'self_managed' | null;
   assistance_status?: 'not_requested' | 'requested' | 'accepted' | 'declined' | 'cancelled' | null;
 };
@@ -33,6 +35,7 @@ export default function ClaimDetailScreen() {
   const [policy, setPolicy] = useState<PolicyDisplay | null>(null);
   const [insurer, setInsurer] = useState<InsuranceCompany | null>(null);
   const [documents, setDocuments] = useState<ClaimDocument[]>([]);
+  const [tasks, setTasks] = useState<ClaimTask[]>([]);
   const [reuploadNotices, setReuploadNotices] = useState<ReuploadNotice[]>([]);
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
   const [message, setMessage] = useState('');
@@ -50,16 +53,18 @@ export default function ClaimDetailScreen() {
     let active = true;
     void (async () => {
       if (!id) return;
-      const [claimResult, documentsResult, milestoneResult, activityResult] = await Promise.all([
+      const [claimResult, documentsResult, milestoneResult, activityResult, tasksResult] = await Promise.all([
         supabase.from('claims').select('*').eq('id', id).maybeSingle(),
         supabase.from('claim_documents').select('*').eq('claim_id', id).order('created_at', { ascending: false }),
         (supabase as any).from('claim_milestones').select('*').eq('claim_id', id),
         supabase.from('customer_activity_events').select('id,title,message,metadata,created_at').eq('claim_id', id).eq('event_type', 'claim_document_reuploaded').order('created_at', { ascending: false }).limit(5),
+        supabase.from('claim_tasks').select('*').eq('claim_id', id).eq('status', 'open'),
       ]);
       if (!active) return;
       const nextClaim = claimResult.data as ClaimWithOwnership | null;
       setClaim(nextClaim);
       setDocuments(documentsResult.data ?? []);
+      setTasks(tasksResult.data ?? []);
       setReuploadNotices((activityResult.data ?? []) as ReuploadNotice[]);
       setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
       if (!nextClaim) { setLoading(false); return; }
@@ -71,7 +76,7 @@ export default function ClaimDetailScreen() {
       let nextPolicy: PolicyDisplay | null = null;
       if (nextClaim.policy_id) {
         const result = await supabase.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('id', nextClaim.policy_id).maybeSingle();
-        if (result.data) nextPolicy = { ...(result.data as any), source: 'sibl' };
+        if (result.data) nextPolicy = { ...(result.data as any), source: nextClaim.policy_service_source === 'external' ? 'external' : 'sibl' };
       } else if (nextClaim.external_policy_id) {
         const result = await (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').eq('id', nextClaim.external_policy_id).maybeSingle();
         if (result.data) nextPolicy = { ...(result.data as any), source: 'external' };
@@ -109,9 +114,13 @@ export default function ClaimDetailScreen() {
 
   const completedKeys = useMemo(() => new Set(milestones.filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable').map((item) => item.milestone_key)), [milestones]);
   const selfStageIndex = useMemo(() => Math.max(0, SELF_MANAGED_MILESTONES.findIndex((stage) => !completedKeys.has(stage.key))), [completedKeys]);
-  const managedStageIndex = useMemo(() => managedStageFor(claim?.current_status), [claim?.current_status]);
-  const currentStageIndex = selfManaged ? (completedKeys.size >= 9 ? 8 : selfStageIndex) : managedStageIndex;
-  const progress = selfManaged ? Math.round((completedKeys.size / 9) * 100) : Math.round(((currentStageIndex + 1) / 9) * 100);
+  const requestedFinalDocumentTypes = useMemo(() => claim ? requestedFinalDocumentTypesFor(claim.id, tasks) : [], [claim, tasks]);
+  const internalProjection = useMemo(() => projectInternalClaim(claim?.current_status, {
+    hasRejectedDocuments: claim ? hasOutstandingRejectedDocumentsForStatus(claim, documents, requestedFinalDocumentTypes) : false,
+    hasRequiredDocuments: claim ? hasAllRequiredDocuments(claim, documents, requestedFinalDocumentTypes) : false,
+  }), [claim, documents, requestedFinalDocumentTypes]);
+  const currentStageIndex = selfManaged ? (completedKeys.size >= 9 ? 8 : selfStageIndex) : internalProjection.stageIndex;
+  const progress = selfManaged ? Math.round((completedKeys.size / 9) * 100) : internalProjection.progress;
 
   if (loading) return <Screen title="Claim Detail"><LoadingState /></Screen>;
   if (!claim) return <Screen title="Claim Detail"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
@@ -119,7 +128,7 @@ export default function ClaimDetailScreen() {
   const claimId = claim.id;
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
-  const settled = ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || (selfManaged && completedKeys.size >= 9);
+  const settled = selfManaged ? ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || completedKeys.size >= 9 : internalProjection.journeyState === 'completed';
   const compactClaimIntimation = selfManaged;
   const financialRows = selfManaged ? buildFinancialRows(milestones) : [];
 
@@ -187,7 +196,7 @@ export default function ClaimDetailScreen() {
         <View style={styles.pageHeadingCopy}>
           <Text style={styles.pageEyebrow}>{selfManaged ? 'EXTERNAL CLAIM' : 'CLAIMS'}</Text>
           <Text style={styles.pageTitle}>{selfManaged ? 'Claim Tracker' : 'Claim Detail'}</Text>
-          {!selfManaged ? <Text style={styles.pageSubtitle}>{customerStageCopy(claim.current_status)}</Text> : null}
+          {!selfManaged ? <Text style={styles.pageSubtitle}>{internalProjection.customerMessage}</Text> : null}
         </View>
         {selfManaged ? <View style={styles.headingActions}>
           <View style={styles.assistanceActionWrap}>
@@ -266,26 +275,26 @@ export default function ClaimDetailScreen() {
         <View style={[styles.currentAccent, { backgroundColor: tone.accent }]} />
         <Image source={currentMilestoneArtwork(currentStage?.key)} style={styles.currentIconArtwork} resizeMode="contain" />
         <View style={styles.currentCopy}>
-          <Text style={[styles.currentEyebrow, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : 'NEXT ACTION'}</Text>
+          <Text style={[styles.currentEyebrow, { color: tone.accent }]}>{selfManaged ? 'CURRENT MILESTONE' : internalProjection.customerActionRequired ? 'ACTION REQUIRED' : 'WAITING FOR OPERATIONS'}</Text>
           <Text style={styles.currentTitle}>{currentStage?.label ?? claim.current_status}</Text>
-          <Text numberOfLines={2} style={styles.currentBody}>{selfManaged ? currentStageHint(currentStage?.key) : customerStageCopy(claim.current_status)}</Text>
+          <Text numberOfLines={2} style={styles.currentBody}>{selfManaged ? currentStageHint(currentStage?.key) : internalProjection.customerMessage}</Text>
         </View>
         {selfManaged ? <View style={styles.currentContinue}>
           <MaterialCommunityIcons name="chevron-right" size={20} color={tone.accent} />
         </View> : null}
       </Pressable> : null}
 
-      {!selfManaged ? <ClaimPrimaryAction label="Upload Documents" icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} /> : null}
+      {!selfManaged && internalProjection.customerActionRequired ? <ClaimPrimaryAction label={internalProjection.substage === 'Replacement document required' ? 'Upload Replacement' : 'Upload Documents'} icon="cloud-upload-outline" onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })} /> : null}
 
       <SectionHeader title="Claim Journey" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
       {journeyExpanded ? <View style={[styles.sectionBody, styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
-        const done = selfManaged ? completedKeys.has(stage.key) : index < currentStageIndex;
+        const done = selfManaged ? completedKeys.has(stage.key) : index < internalProjection.completedStageCount;
         const current = !settled && index === currentStageIndex;
         const milestone = selfManaged ? milestones.find((item) => item.milestone_key === stage.key) : null;
         const editable = selfManaged && (done || current);
         const amount = selfManaged ? formatJourneyAmount(stageMainAmount(milestone)) : null;
         const dateText = selfManaged ? formatJourneyDate(milestone) : null;
-        const statusText = done ? stageCompletedCopy(stage.key) : current ? (milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current milestone') : 'Upcoming';
+        const statusText = done ? stageCompletedCopy(stage.key) : current ? (selfManaged ? milestone?.milestone_status === 'in_progress' ? 'In progress' : 'Current milestone' : internalProjection.substage) : 'Upcoming';
         return <Pressable key={stage.key} accessibilityRole={editable ? 'button' : undefined} disabled={!editable} onPress={() => openSelfStage(stage.key)} style={[styles.stageRow, current && styles.stageRowCurrent]}>
           <View style={styles.stageRail}>
             <View style={[styles.stageNode, done && styles.stageDone, current && styles.stageCurrent]}><MaterialCommunityIcons name={done ? 'check' : current ? 'circle-slice-8' : 'lock-outline'} size={9} color={done || current ? '#FFFFFF' : '#98A2B3'} /></View>
@@ -441,7 +450,6 @@ function SectionHeader({ title, subtitle, expanded, onPress }: { title: string; 
   const artwork = title === 'Claim Journey' ? require('../../assets/claims/claims.png') : title === 'Documents' ? require('../../assets/claims/claim-documents.png') : require('../../assets/claims/claim-approval.png');
   return <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={[styles.sectionHeader, compactJourney && styles.journeyHeader]}><Image source={artwork} style={[styles.sectionHeaderArtwork, compactJourney && styles.journeyHeaderArtwork]} resizeMode="contain" /><View style={styles.sectionHeaderCopy}><Text style={[styles.sectionTitle, compactJourney && styles.journeyHeaderTitle]}>{title}</Text><Text style={[styles.sectionSub, compactJourney && styles.journeyHeaderSub]}>{subtitle}</Text></View><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={compactJourney ? 16 : 22} color="#667C98" /></Pressable>;
 }
-function managedStageFor(status?: string | null) { const value = (status ?? '').toLowerCase(); if (/settled|closed|payment/.test(value)) return 8; if (/delivery/.test(value)) return 7; if (/do submitted|delivery order/.test(value)) return 6; if (/bill/.test(value)) return 5; if (/repair/.test(value)) return 4; if (/approval|estimate/.test(value)) return 3; if (/intimat|surveyor|inspected/.test(value)) return 2; if (/document/.test(value)) return 1; return 0; }
 const externalClaimTone = { accent:'#0A43A3',soft:'#EAF2FF',background:'#F7FAFF',border:'#BFD3EB' };
 function claimTone(status: string) { if (['Settled','Closed','Claim Complete'].includes(status)) return { accent:'#12805C',soft:'#E8F8F0',background:'#F7FCF9',border:'#BFE6D5' }; return { accent:'#B7791F',soft:'#FFF4E2',background:'#FFFBF3',border:'#F0D9AC' }; }
 function formatDate(value?: string | null) { return value ? new Date(value).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '-'; }

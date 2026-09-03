@@ -5,7 +5,8 @@
   "workspaces": [
     "apps/web-portal",
     "apps/mobile-app",
-    "apps/partner-app"
+    "apps/partner-app",
+    "packages/*"
   ],
   "overrides": {
     "expo-constants": "18.0.13",

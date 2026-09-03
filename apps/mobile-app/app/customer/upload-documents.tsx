@@ -7,8 +7,7 @@ import { Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { documentDrivenStatusFor, documentStatusLabel, finalDocumentGroups, requiredDocumentsForStatus } from '@/lib/claim-documents';
-import { recordClaimEvent } from '@/lib/claim-notifications';
+import { documentStatusLabel, finalDocumentGroups, matchesRequiredDocument, requestedFinalDocumentTypesFor, requiredDocumentsForStatus } from '@/lib/claim-documents';
 import { customerStageCopy } from '@/lib/claim-workflow';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
@@ -98,7 +97,7 @@ export default function UploadDocumentsScreen() {
     }
   }, [finalChecklistGroups.length, finalStepIndex]);
 
-  const completedCount = documentSections.filter((section) => selectedDocuments.some((item) => item.document_type === section.type && item.verification_status !== 'rejected')).length;
+  const completedCount = documentSections.filter((section) => selectedDocuments.some((item) => matchesRequiredDocument(item.document_type, section.type) && item.verification_status !== 'rejected')).length;
   const verifiedCount = selectedDocuments.filter((item) => item.verification_status === 'verified').length;
   const rejectedCount = selectedDocuments.filter((item) => item.verification_status === 'rejected').length;
   const completionPercent = documentSections.length ? Math.round((completedCount / documentSections.length) * 100) : 0;
@@ -204,11 +203,6 @@ export default function UploadDocumentsScreen() {
       if (uploadedRows.length) {
         const nextDocuments = [...uploadedRows.reverse(), ...documents];
         setDocuments(nextDocuments);
-
-        const nextStatus = await advanceAfterUpload(selectedClaim, nextDocuments, session.user.id, effectiveRequestedFinalDocumentTypes);
-        if (nextStatus) {
-          setClaims((current) => current.map((claim) => claim.id === selectedClaim.id ? { ...claim, current_status: nextStatus } : claim));
-        }
       }
 
       const skippedCount = oversized.length;
@@ -389,7 +383,7 @@ export default function UploadDocumentsScreen() {
 
             {activeFinalGroup.documents.map((section, index) => {
               const file = files[section.type];
-              const uploaded = selectedDocuments.filter((item) => item.document_type === section.type);
+              const uploaded = selectedDocuments.filter((item) => matchesRequiredDocument(item.document_type, section.type));
               const acceptedDocuments = uploaded.filter((item) => item.verification_status !== 'rejected');
               const rejectedDocuments = uploaded.filter((item) => item.verification_status === 'rejected');
               const isComplete = acceptedDocuments.length > 0;
@@ -453,7 +447,7 @@ export default function UploadDocumentsScreen() {
         </View>
       ) : documentSections.map((section) => {
         const file = files[section.type];
-        const uploaded = selectedDocuments.filter((item) => item.document_type === section.type);
+        const uploaded = selectedDocuments.filter((item) => matchesRequiredDocument(item.document_type, section.type));
         const acceptedDocuments = uploaded.filter((item) => item.verification_status !== 'rejected');
         const rejectedDocuments = uploaded.filter((item) => item.verification_status === 'rejected');
         const isComplete = acceptedDocuments.length > 0;
@@ -611,37 +605,6 @@ function tileTone(complete: boolean, rejected: boolean) {
 
 function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-}
-
-function requestedFinalDocumentTypesFor(claimId: string, tasks: ClaimTask[]) {
-  return tasks
-    .filter((task) => task.claim_id === claimId && task.status === 'open' && task.title.startsWith('Final document: '))
-    .map((task) => task.title.slice('Final document: '.length));
-}
-
-async function advanceAfterUpload(claim: Claim, documents: ClaimDocument[], changedBy: string, requestedFinalDocumentTypes: string[]) {
-  const claimDocuments = documents.filter((document) => document.claim_id === claim.id);
-  const nextStatus = documentDrivenStatusFor(claim, claimDocuments, requestedFinalDocumentTypes);
-  if (!nextStatus) return null;
-
-  const { error } = await supabase.from('claims').update({ current_status: nextStatus }).eq('id', claim.id);
-  if (error) return null;
-
-  try {
-    await recordClaimEvent({
-      claimId: claim.id,
-      customerId: claim.customer_id,
-      fromStatus: claim.current_status,
-      toStatus: nextStatus,
-      notes: 'Required document checklist completed.',
-      changedBy,
-      title: `Documents uploaded for ${claim.claim_no}`,
-    });
-  } catch {
-    // non-critical
-  }
-
-  return nextStatus;
 }
 
 function formatDate(value?: string | null) {
