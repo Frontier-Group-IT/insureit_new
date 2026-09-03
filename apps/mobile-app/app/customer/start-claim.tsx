@@ -38,6 +38,8 @@ type SelfManagedMilestoneRow = {
 };
 
 const SELF_MANAGED_MILESTONE_COUNT = 9;
+const selfTrackedPolicyIcon = require('../../assets/claims/policy.png');
+const managedPolicyIcon = require('../../assets/custom-icons/policy-detail/policy-booked.png');
 const SETTLED_SELF_MANAGED_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
 const COMPLETED_MILESTONE_STATUSES = new Set(['completed', 'not_applicable']);
 
@@ -201,7 +203,14 @@ export default function StartClaimScreen() {
                 <View style={styles.policyArcTwo} />
               </View>
               <View style={[styles.policyContent, selectedPolicy.source === 'external' && styles.policyContentCompact]}>
-                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}><MaterialCommunityIcons name={selectedPolicy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={selectedPolicy.source === 'external' ? 25 : 28} color="#0A43A3" /></View>
+                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}>
+                  <Image
+                    accessible={false}
+                    source={selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon}
+                    style={[styles.policyIconArtwork, selectedPolicy.source === 'external' && styles.policyIconArtworkCompact]}
+                    resizeMode="contain"
+                  />
+                </View>
                 <View style={styles.policyCopy}>
                   <Text style={[styles.policyMode, selectedPolicy.source === 'external' && styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
                   <Text style={[styles.policyNo, selectedPolicy.source === 'external' && styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
@@ -370,6 +379,8 @@ const styles = StyleSheet.create({
   policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   policyIconCompact: { width: 46, height: 46, borderRadius: 13 },
+  policyIconArtwork: { width: 43, height: 43 },
+  policyIconArtworkCompact: { width: 34, height: 34 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
   policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 },
   policyModeCompact: { fontSize: 8.8, letterSpacing: 0.42 },
