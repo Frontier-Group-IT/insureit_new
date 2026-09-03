@@ -145,7 +145,7 @@ function MenuRow({
       onPress={onPress}
       divider={!last}
       leading={
-        <View style={[styles.rowIcon, asset && styles.rowAssetIcon]}>
+        <View style={[styles.rowIcon, asset ? styles.rowAssetIcon : null]}>
           {asset ? (
             <Image source={asset} style={styles.rowAssetImage} resizeMode="contain" />
           ) : icon ? (
