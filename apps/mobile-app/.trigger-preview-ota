@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1174
-source_commit=dacdd97e790de2cb68f82967d6e52734cccbe3d8
-purpose=publish professional self-tracked claim section icons preview OTA
+source_pr=1176
+source_commit=dc537dd4f81e146e856a442b0120aa0fe7ec7e14
+purpose=publish self-tracked claim icon background removal preview OTA
