@@ -34,6 +34,7 @@ export default function ComplianceRenewalsScreen() {
   const [data, setData] = useState<DataState>({ vehicles: [], policies: [], accountNames: new Map() });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+  const [expandedKey, setExpandedKey] = useState<ComplianceDocumentKey | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -105,25 +106,73 @@ export default function ComplianceRenewalsScreen() {
       </View>
 
       <View style={styles.summaryList}>
-        {renewals.summaries.map((summary) => (
-          <View key={summary.key} style={[styles.summaryCard, !summary.tracked && styles.summaryCardDisabled]}>
-            <View style={styles.summaryMain}>
-              <View style={[styles.summaryIcon, summary.totalPending > 0 && styles.summaryIconHot]}>
-                <MaterialCommunityIcons name={iconFor[summary.key]} size={18} color={summary.totalPending > 0 ? '#C43D2D' : '#0A43A3'} />
-              </View>
-              <View style={styles.summaryCopy}>
-                <Text style={styles.summaryTitle} numberOfLines={1}>{summary.title}</Text>
-                {!summary.tracked ? <Text style={styles.notTracked}>Not tracked in vehicle records yet</Text> : null}
-              </View>
+        {renewals.summaries.map((summary) => {
+          const expanded = expandedKey === summary.key;
+          const summaryItems = renewals.items.filter((item) => item.key === summary.key);
+          return (
+            <View key={summary.key} style={styles.summaryGroup}>
+              <Pressable
+                disabled={!summary.tracked}
+                accessibilityRole={summary.tracked ? 'button' : undefined}
+                accessibilityState={summary.tracked ? { expanded } : undefined}
+                onPress={() => setExpandedKey((current) => current === summary.key ? null : summary.key)}
+                style={({ pressed }) => [
+                  styles.summaryCard,
+                  !summary.tracked && styles.summaryCardDisabled,
+                  expanded && styles.summaryCardExpanded,
+                  pressed && summary.tracked && styles.summaryCardPressed,
+                ]}
+              >
+                <View style={styles.summaryMain}>
+                  <View style={[styles.summaryIcon, summary.totalPending > 0 && styles.summaryIconHot]}>
+                    <MaterialCommunityIcons name={iconFor[summary.key]} size={18} color={summary.totalPending > 0 ? '#C43D2D' : '#0A43A3'} />
+                  </View>
+                  <View style={styles.summaryCopy}>
+                    <Text style={styles.summaryTitle} numberOfLines={1}>{summary.title}</Text>
+                    {!summary.tracked ? <Text style={styles.notTracked}>Not tracked in vehicle records yet</Text> : null}
+                  </View>
+                </View>
+                {summary.tracked ? (
+                  <View style={styles.summaryRight}>
+                    <View style={styles.inlineMetrics}>
+                      <InlineMetric value={summary.due} tone="amber" />
+                      <InlineMetric value={summary.expired} tone="red" />
+                    </View>
+                    <MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={17} color="#718198" />
+                  </View>
+                ) : null}
+              </Pressable>
+
+              {expanded && summary.tracked ? (
+                <View style={styles.expandedPanel}>
+                  {summaryItems.length ? summaryItems.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => router.push({ pathname: '/customer/vehicle-detail', params: { id: item.vehicleId } } as any)}
+                      style={({ pressed }) => [styles.expandedItem, pressed && styles.itemPressed]}
+                    >
+                      <View style={[styles.expandedItemIcon, item.status === 'expired' && styles.itemIconExpired]}>
+                        <MaterialCommunityIcons name={iconFor[item.key]} size={17} color={item.status === 'expired' ? '#C43D2D' : '#B7791F'} />
+                      </View>
+                      <View style={styles.itemCopy}>
+                        <Text style={styles.expandedItemTitle} numberOfLines={1}>{item.vehicleNo} - {item.customerName}</Text>
+                        <Text style={styles.expandedItemDate} numberOfLines={1}>{item.status === 'expired' ? 'Expired' : 'Due'} {formatDate(item.expiryDate)}{item.meta ? ` - ${item.meta}` : ''}</Text>
+                      </View>
+                      <View style={[styles.statusPill, item.status === 'expired' && styles.statusPillExpired]}>
+                        <Text style={[styles.statusText, item.status === 'expired' && styles.statusTextExpired]}>{item.status === 'expired' ? 'Expired' : `${item.daysUntil}d`}</Text>
+                      </View>
+                    </Pressable>
+                  )) : (
+                    <View style={styles.expandedEmpty}>
+                      <MaterialCommunityIcons name="check-circle-outline" size={17} color="#168F6A" />
+                      <Text style={styles.expandedEmptyText}>No due or expired items</Text>
+                    </View>
+                  )}
+                </View>
+              ) : null}
             </View>
-            {summary.tracked ? (
-              <View style={styles.inlineMetrics}>
-                <InlineMetric value={summary.due} tone="amber" />
-                <InlineMetric value={summary.expired} tone="red" />
-              </View>
-            ) : null}
-          </View>
-        ))}
+          );
+        })}
       </View>
 
       <View style={styles.sectionHeader}>
@@ -196,18 +245,29 @@ const styles = StyleSheet.create({
   legendDot: { width: 7, height: 7, borderRadius: 4 },
   legendLabel: { color: '#667085', fontSize: 9, fontWeight: '900' },
   summaryList: { gap: 7 },
+  summaryGroup: { gap: 0 },
   summaryCard: { minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  summaryCardExpanded: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomColor: '#E8EEF5' },
+  summaryCardPressed: { opacity: 0.9 },
   summaryCardDisabled: { backgroundColor: '#F8FAFC' },
   summaryMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
   summaryCopy: { flex: 1, minWidth: 0 },
   summaryIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
   summaryIconHot: { backgroundColor: '#FFF0EE' },
   summaryTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  inlineMetrics: { minWidth: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginLeft: 'auto', paddingRight: 4 },
+  summaryRight: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' },
+  inlineMetrics: { minWidth: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, paddingRight: 2 },
   inlineMetricValue: { minWidth: 24, textAlign: 'center', fontSize: 15, lineHeight: 18, fontWeight: '900' },
   metricAmber: { color: '#B7791F' },
   metricRed: { color: '#C43D2D' },
   notTracked: { color: '#7A8799', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 2 },
+  expandedPanel: { borderWidth: 1, borderTopWidth: 0, borderColor: '#DCE8F4', backgroundColor: '#FBFDFF', borderBottomLeftRadius: 14, borderBottomRightRadius: 14, paddingHorizontal: 8, paddingVertical: 6, gap: 5 },
+  expandedItem: { minHeight: 50, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8EEF5', paddingHorizontal: 8, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  expandedItemIcon: { width: 30, height: 30, borderRadius: 9, backgroundColor: '#FFF7EA', alignItems: 'center', justifyContent: 'center' },
+  expandedItemTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
+  expandedItemDate: { color: '#718198', fontSize: 9.2, fontWeight: '700', marginTop: 2 },
+  expandedEmpty: { minHeight: 44, borderRadius: 10, backgroundColor: '#F5FBF8', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingHorizontal: 10 },
+  expandedEmptyText: { color: '#357A64', fontSize: 10, fontWeight: '800' },
   sectionHeader: { marginTop: 13, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   expiredEmptyCard: { minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   expiredEmptyIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#EAF8F3', alignItems: 'center', justifyContent: 'center' },
