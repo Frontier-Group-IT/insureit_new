@@ -642,3 +642,33 @@ export async function getPartnerWebNetwork(): Promise<PartnerNetworkData> {
   if (error || !data) throw new Error(error?.message ?? "Commercial network is unavailable.");
   return data as PartnerNetworkData;
 }
+
+
+export type PartnerActivityData = {
+  generated_at: string;
+  attention: {
+    kind: string;
+    title: string;
+    subtitle: string;
+    route: string;
+    count: number;
+  }[];
+  items: {
+    kind: "policy" | "claim" | "intake" | "learn";
+    entity_id: string;
+    event_at: string;
+    title: string;
+    subtitle: string;
+    meta: string;
+    route: string;
+    tone: "business" | "service" | "attention" | "operations" | "learn";
+  }[];
+};
+
+export async function getPartnerWebActivity(limit = 40): Promise<PartnerActivityData> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_activity", { p_limit: limit });
+  if (error || !data) throw new Error(error?.message ?? "Recent activity is unavailable.");
+  return data as PartnerActivityData;
+}
