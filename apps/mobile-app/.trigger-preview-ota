@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1127
-source_commit=a35b4e6bf51e08c19a34c3df8e3e57ea49db3de0
-purpose=publish professional My Claims card icons preview OTA
+source_pr=1138
+source_commit=e77dad9f236b5087324cc1515ede273dd0f8aca4
+purpose=publish self-tracked claim icon contrast fix preview OTA
