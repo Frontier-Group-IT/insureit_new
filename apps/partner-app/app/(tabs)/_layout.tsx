@@ -42,9 +42,8 @@ export default function PartnerTabsLayout() {
 function tabIcon(inactive: IconName, active: IconName) {
   return function PartnerTabIcon({ color, focused }: { color: string; size: number; focused: boolean }) {
     return (
-      <View style={styles.iconWrap}>
-        <View style={[styles.activeMark, !focused && styles.activeMarkHidden]} />
-        <Ionicons name={focused ? active : inactive} color={color} size={21} />
+      <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+        <Ionicons name={focused ? active : inactive} color={color} size={20} />
       </View>
     );
   };
@@ -53,37 +52,32 @@ function tabIcon(inactive: IconName, active: IconName) {
 const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.canvas },
   tabBar: {
-    height: 76,
-    paddingTop: 4,
-    paddingBottom: 9,
+    height: 70,
+    paddingTop: 5,
+    paddingBottom: 7,
     backgroundColor: partnerTheme.colors.surface,
     borderTopColor: partnerTheme.colors.line,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   item: {
     minHeight: partnerTheme.control.minTouchTarget,
-    paddingTop: 1,
+    paddingTop: 0,
   },
   icon: { marginTop: 0 },
   iconWrap: {
-    width: 38,
-    height: 30,
+    width: 40,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
-  activeMark: {
-    position: 'absolute',
-    top: 0,
-    width: 16,
-    height: 2,
-    borderRadius: partnerTheme.radius.pill,
-    backgroundColor: partnerTheme.colors.brand,
+  iconWrapActive: {
+    backgroundColor: partnerTheme.colors.brandSoft,
   },
-  activeMarkHidden: { opacity: 0 },
   label: {
-    marginTop: 1,
-    fontSize: 9.5,
-    lineHeight: 13,
+    marginTop: 0,
+    fontSize: 9.25,
+    lineHeight: 12,
     fontWeight: '600',
   },
 });
