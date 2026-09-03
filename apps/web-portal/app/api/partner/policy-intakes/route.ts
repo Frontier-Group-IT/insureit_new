@@ -37,6 +37,8 @@ export async function GET(request: Request) {
   const auth = await authenticate(request);
   if (!auth.ok) return auth.response;
 
+  const identity = auth.identity;
+  const scope = auth.scope;
   const admin = createSupabaseAdminClient();
   const intakeSelect = "id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id";
   const url = new URL(request.url);
@@ -44,9 +46,9 @@ export async function GET(request: Request) {
   const view = url.searchParams.get("view")?.trim().toLowerCase();
 
   if (view === "sources") {
-    const sourceIds = auth.identity.actor_kind === "intermediary"
-      ? [auth.identity.intermediary_id]
-      : (auth.scope.intermediary_ids ?? []);
+    const sourceIds = identity.actor_kind === "intermediary"
+      ? [identity.intermediary_id]
+      : (scope.intermediary_ids ?? []);
     const { data: sources, error: sourcesError } = sourceIds.length
       ? await admin
           .from("intermediaries")
@@ -66,9 +68,9 @@ export async function GET(request: Request) {
       .select(intakeSelect)
       .eq("id", requestedId);
 
-    detailQuery = auth.identity.actor_kind === "employee"
-      ? detailQuery.eq("submitted_by_profile_id", auth.identity.profile_id)
-      : detailQuery.eq("submitted_by_portal_account_id", auth.identity.portal_account_id);
+    detailQuery = identity.actor_kind === "employee"
+      ? detailQuery.eq("submitted_by_profile_id", identity.profile_id)
+      : detailQuery.eq("submitted_by_portal_account_id", identity.portal_account_id);
 
     const { data: intake, error: intakeError } = await detailQuery.maybeSingle();
     if (intakeError) {
@@ -97,9 +99,9 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  query = auth.identity.actor_kind === "employee"
-    ? query.eq("submitted_by_profile_id", auth.identity.profile_id)
-    : query.eq("submitted_by_portal_account_id", auth.identity.portal_account_id);
+  query = identity.actor_kind === "employee"
+    ? query.eq("submitted_by_profile_id", identity.profile_id)
+    : query.eq("submitted_by_portal_account_id", identity.portal_account_id);
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
@@ -110,9 +112,9 @@ export async function GET(request: Request) {
       .from("policy_intake_requests")
       .select("id", { count: "exact", head: true });
 
-    countQuery = auth.identity.actor_kind === "employee"
-      ? countQuery.eq("submitted_by_profile_id", auth.identity.profile_id)
-      : countQuery.eq("submitted_by_portal_account_id", auth.identity.portal_account_id);
+    countQuery = identity.actor_kind === "employee"
+      ? countQuery.eq("submitted_by_profile_id", identity.profile_id)
+      : countQuery.eq("submitted_by_portal_account_id", identity.portal_account_id);
 
     if (statuses.length) {
       countQuery = excluded
