@@ -114,6 +114,24 @@ export default function ComplianceRenewalsScreen() {
             )}
           </View>
         ))}
+        {(() => {
+          const policySummary = renewals.summaries.find((summary) => summary.key === 'insurance_policy');
+          if (!policySummary) return null;
+          return (
+            <View key="policy-shortcut" style={styles.summaryCard}>
+              <View style={styles.summaryTop}>
+                <View style={[styles.summaryIcon, policySummary.totalPending > 0 && styles.summaryIconHot]}>
+                  <MaterialCommunityIcons name={iconFor.insurance_policy} size={18} color={policySummary.totalPending > 0 ? '#C43D2D' : '#0A43A3'} />
+                </View>
+                <Text style={styles.summaryTitle} numberOfLines={1}>Policy</Text>
+              </View>
+              <View style={styles.metricsRow}>
+                <Metric value={policySummary.due} tone="amber" />
+                <Metric value={policySummary.expired} tone="red" />
+              </View>
+            </View>
+          );
+        })()}
       </View>
 
       <View style={styles.sectionHeader}>
