@@ -51,4 +51,17 @@ assert.match(assistanceMigration, /claim_service_mode = 'broker_managed'/);
 assert.match(assistanceMigration, /revoke execute on function public\.resolve_claim_assistance\(uuid, text, text\) from authenticated/);
 assert.doesNotMatch(assistanceMigration, /update public\.claim_milestones/);
 
+const finalizationAction = await readFile(path.join(repoRoot, "apps/web-portal/app/claims/[id]/spot-survey-actions.ts"), "utf8");
+assert.match(finalizationAction, /if \(!advanced\) throw new Error/);
+assert.match(finalizationAction, /claim_service_mode !== "broker_managed"/);
+assert.doesNotMatch(finalizationAction, /await advanceAfterInitialDocumentsVerified\(claim, "", profile\?\.id \?\? null\);\s*revalidatePath/);
+
+const finalizationMigration = await readFile(path.join(repoRoot, "supabase/migrations/20260903160000_fix_initial_document_finalization.sql"), "utf8");
+for (const status of ["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"]) {
+  assert.match(finalizationMigration, new RegExp(`'${status}'`));
+}
+assert.match(finalizationMigration, /for update/);
+assert.match(finalizationMigration, /claim_service_mode = 'broker_managed'/);
+assert.match(finalizationMigration, /if not found then\s+raise exception 'The claim status could not be updated\.'/);
+
 console.log(`Claim journey regression passed for ${INTERNAL_CLAIM_STATUSES.length} internal statuses.`);

@@ -100,7 +100,16 @@ jobs:
           # This deployment gate currently has an automated schema-run dependency only
           # for the vehicle/policy intake resume migration. Do not wait on that unrelated
           # workflow for every future migration, which would deadlock production deploys.
-          if grep -qx 'supabase/migrations/20260831123000_vehicle_policy_intake_resume.sql' <<<"$changed_migrations"; then
+          if grep -qx 'supabase/migrations/20260903151000_reviewed_claim_assistance_intake.sql' <<<"$changed_migrations" || grep -qx 'supabase/migrations/20260903160000_fix_initial_document_finalization.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vxE 'supabase/migrations/20260903151000_reviewed_claim_assistance_intake.sql|supabase/migrations/20260903160000_fix_initial_document_finalization.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::Claim journey release contains an unrelated migration:"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-claim-journey-alignment-migrations.yml"
+            echo "Claim journey migrations detected. Waiting for their schema workflow..."
+          elif grep -qx 'supabase/migrations/20260831123000_vehicle_policy_intake_resume.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-vehicle-policy-intake-resume.yml"
             echo "Vehicle/policy intake migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260903120000_atomic_spot_surveyor_deputation.sql' <<<"$changed_migrations"; then

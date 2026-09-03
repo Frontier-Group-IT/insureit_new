@@ -96,6 +96,7 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
   const unclassifiedAttachments = documents.filter(isUnclassifiedSpotAttachment);
   const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
   const allDocumentsVerified = items.length > 0 && verifiedCount === items.length;
+  const canFinalizeInitialDocuments = ["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(claim.current_status ?? "");
   const driverName = extractDriverName(claim.accident_description);
   const driverMobile = extractDriverMobile(claim.accident_description) ?? claim.customers?.phone ?? null;
 
@@ -117,7 +118,7 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
         {allDocumentsVerified ? (
           claim.current_status === "Surveyor Appointed" ? <SurveyorAssignedNotice claimId={claim.id} details={surveyorDetails} /> :
           claim.current_status === "Initial Documents Verified" || claim.current_status === "Claim Intimated" ? <SurveyorDeputationForm claimId={claim.id} /> :
-          <FinalizeInitialDocumentVerificationButton claimId={claim.id} />
+          canFinalizeInitialDocuments ? <FinalizeInitialDocumentVerificationButton claimId={claim.id} /> : null
         ) : <div className="mt-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 text-[12px] font-semibold text-[#526178]">Complete all required document verification to enable spot surveyor deputation.</div>}
       </section>
     </div>

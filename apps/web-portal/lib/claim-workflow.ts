@@ -192,7 +192,7 @@ export function submittedStatusFor(status: ClaimStatus) {
 }
 
 export function verifiedStatusFor(status: ClaimStatus) {
-  if (["Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
+  if (["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
   if (["Final Documents Verification Pending", "Final Documents Submitted"].includes(status)) return "Final Documents Verified" as ClaimStatus;
   return status;
 }
