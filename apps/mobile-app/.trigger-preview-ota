@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1090
-source_commit=b2c06bd8a6520bf25ec44d2dbe341f9e6c0f633a
-purpose=publish expandable renewal card details preview OTA
+source_pr=1094
+source_commit=0e4fc4675102e29d149a5a2f2e1c35483dd916ac
+purpose=publish expandable renewals refinement and expired section removal preview OTA
