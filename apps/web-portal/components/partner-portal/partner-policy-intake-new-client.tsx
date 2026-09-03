@@ -87,7 +87,7 @@ export function PartnerPolicyIntakeNewClient() {
         type="button"
         onClick={() => router.back()}
         disabled={submitting}
-        className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] disabled:opacity-50"
+        className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:opacity-50"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Back
       </button>
@@ -95,7 +95,7 @@ export function PartnerPolicyIntakeNewClient() {
       <PartnerPageHeader
         eyebrow="New Policy Intake"
         title="Send policy to Operations"
-        description="Review the lead source and customer mobile, attach the policy copy, then submit it into the same Operations intake queue as the Partner app."
+        description="Add the customer mobile and policy copy, then submit the intake."
       />
 
       <section className="py-1">
@@ -104,7 +104,7 @@ export function PartnerPolicyIntakeNewClient() {
 
         {loading ? (
           <div className="mt-6 flex items-center gap-3 border-y border-[#DCE4ED] py-5 text-[10.5px] font-semibold text-[#526680]">
-            <Loader2 className="h-4 w-4 animate-spin" /> Preparing authorized lead sources…
+            <Loader2 className="h-4 w-4 animate-spin" /> Preparing lead sources…
           </div>
         ) : (
           <div className="mt-6 grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
@@ -120,7 +120,7 @@ export function PartnerPolicyIntakeNewClient() {
                           key={source.id}
                           type="button"
                           onClick={() => setSourceId(source.id)}
-                          className={"flex w-full items-center justify-between border-b px-1 py-3 text-left " + (active ? "border-[#3156B8] bg-[#F3F6FF]" : "border-[#E0E7EF] bg-transparent")}
+                          className={"flex w-full items-center justify-between border-b px-1 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 " + (active ? "border-[#3156B8] bg-[#F3F6FF]" : "border-[#E0E7EF] bg-transparent")}
                         >
                           <span>
                             <span className="block text-[11px] font-extrabold text-[#1B2F4E]">{source.display_name}</span>
@@ -147,7 +147,7 @@ export function PartnerPolicyIntakeNewClient() {
                   value={mobile}
                   onChange={(event) => setMobile(event.target.value.replace(/\D/g, "").slice(0, 10))}
                   placeholder="10 digit mobile number"
-                  className="h-11 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]"
+                  className="h-11 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[11px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
                 />
                 {mobile && !validMobile ? <span className="text-[9px] font-semibold text-[#B54A4A]">Enter a valid Indian mobile number.</span> : null}
               </label>
@@ -166,7 +166,7 @@ export function PartnerPolicyIntakeNewClient() {
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={submitting}
-                className="mt-2 flex min-h-[180px] w-full flex-col items-center justify-center rounded-[22px] border border-dashed border-[#BFCBDD] bg-[#F8FAFD] px-5 text-center transition hover:border-[#3156B8] hover:bg-[#F4F7FF] disabled:opacity-50"
+                className="mt-2 flex min-h-[180px] w-full flex-col items-center justify-center rounded-[16px] border border-dashed border-[#BFCBDD] bg-[#F8FAFD] px-5 text-center transition hover:border-[#3156B8] hover:bg-[#F4F7FF] disabled:opacity-50"
               >
                 <span className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#3156B8] shadow-sm"><FileUp className="h-5 w-5" /></span>
                 <span className="mt-3 text-[11px] font-extrabold text-[#1B2F4E]">{file ? file.name : "Choose policy PDF or image"}</span>
@@ -179,12 +179,12 @@ export function PartnerPolicyIntakeNewClient() {
         )}
 
         <div className="mt-6 flex flex-wrap justify-end gap-2 border-t border-[#E6ECF3] pt-4">
-          <button type="button" onClick={() => router.back()} disabled={submitting} className="h-10 rounded-xl border border-[#D2DCE9] bg-white px-4 text-[10.5px] font-bold text-[#203653] disabled:opacity-50">Cancel</button>
+          <button type="button" onClick={() => router.back()} disabled={submitting} className="h-10 rounded-lg border border-[#D2DCE9] bg-white px-4 text-[10.5px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:opacity-50">Cancel</button>
           <button
             type="button"
             onClick={() => void submit()}
             disabled={!canSubmit}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#111A35] px-5 text-[10.5px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#111A35] px-5 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
             {submitting ? "Submitting…" : "Submit to Operations"}

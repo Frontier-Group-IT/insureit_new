@@ -39,11 +39,11 @@ function statusLabel(row: PartnerPolicyIntake) {
 }
 
 function statusHelp(row: PartnerPolicyIntake) {
-  if (row.status === "processing" && row.ocr_status === "failed") return "Automatic extraction was unavailable. Operations can continue from the saved policy copy.";
+  if (row.status === "processing" && row.ocr_status === "failed") return "Automatic reading was unavailable. The policy copy is still available for review.";
   if (row.status === "processing") return "The uploaded policy copy is being read automatically.";
-  if (row.status === "ready_for_review") return "The extracted details are ready for an Operations reviewer.";
-  if (row.status === "in_review") return "An Operations user is reviewing this intake.";
-  if (row.status === "needs_attention") return "Read the Operations note below and upload a replacement policy copy.";
+  if (row.status === "ready_for_review") return "The extracted details are ready for review.";
+  if (row.status === "in_review") return "This intake is being reviewed.";
+  if (row.status === "needs_attention") return "Read the note below and upload a replacement policy copy.";
   if (row.status === "completed") return "The final policy was linked and this intake is closed.";
   if (row.status === "rejected") return "This intake was closed without policy onboarding.";
   return "Track this submission here.";
@@ -119,7 +119,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
         <div className="border-y border-[#DCE4ED] py-14 text-center">
           <AlertCircle className="mx-auto h-7 w-7 text-[#A66A18]" />
           <p className="mt-3 text-[12px] font-bold text-[#23395D]">Policy Intake unavailable</p>
-          <p className="mt-1 text-[10.5px] text-[#7A899F]">{error || "This submission is not available in your Partner account."}</p>
+          <p className="mt-1 text-[10.5px] text-[#7A899F]">{error || "This intake is not available."}</p>
         </div>
       </div>
     );
@@ -160,7 +160,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
       ) : null}
 
       {row.attention_reason ? (
-        <section className="rounded-[18px] border border-[#F0D7AE] bg-[#FFF8EC] p-5">
+        <section className="rounded-[16px] border border-[#F0D7AE] bg-[#FFF8EC] p-5">
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#A86809]" />
             <div>
@@ -196,7 +196,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
         </section>
 
         <section className="py-1">
-          <PartnerSectionHeading title="Extracted Policy" description={row.ocr_status === "completed" ? "OCR complete" : humanize(row.ocr_status)} />
+          <PartnerSectionHeading title="Extracted Policy" description={row.ocr_status === "completed" ? "Details ready" : humanize(row.ocr_status)} />
           <div className="mt-4 divide-y divide-[#E8EDF4]">
             <Detail label="Policy number" value={fields.get("policy_number")?.value || pendingLabel(row)} />
             <Detail label="Insurer" value={fields.get("insurer_name")?.value || pendingLabel(row)} />
