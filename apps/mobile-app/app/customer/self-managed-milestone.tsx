@@ -304,7 +304,7 @@ export default function SelfManagedMilestoneScreen() {
         <View style={styles.claimNumberBackdrop}>
           <View style={styles.claimNumberCard}>
             <View style={styles.claimNumberIcon}>
-              <MaterialCommunityIcons name="shield-check-outline" size={23} color="#0A43A3" />
+              <MaterialCommunityIcons name="shield-check-outline" size={18} color="#0A43A3" />
             </View>
             <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
 
@@ -1143,7 +1143,7 @@ const styles = StyleSheet.create({
   approvalFeedbackErrorText: { flex: 1, color: '#B42318', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   claimNumberBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 20, 48, 0.50)', paddingHorizontal: 24 },
   claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 14, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
-  claimNumberIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  claimNumberIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   claimNumberTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
   claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 12, borderWidth: 1.2, borderColor: '#164F9C', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 12, marginTop: 14 },
   claimNumberInputShellError: { borderColor: '#D92D20', backgroundColor: '#FFF9F8' },
