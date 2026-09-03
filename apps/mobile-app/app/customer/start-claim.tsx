@@ -383,20 +383,21 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   }
 
   return <View style={styles.vehicleField}>
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={selectedVehicle ? `Vehicle number ${selectedVehicle.vehicle_no}. Open vehicle selector.` : 'Open vehicle selector'}
-      accessibilityState={{ expanded: open }}
-      onPress={toggleSelector}
-      style={({ pressed }) => [styles.vehicleSelectorPressTarget, pressed && !open && styles.vehicleSelectorPressed]}
-    >
-      <Text pointerEvents="none" style={styles.sectionLabel}>Vehicle number *</Text>
-      <View ref={anchorRef} collapsable={false} pointerEvents="none" style={[styles.selectButton, open && styles.selectButtonHidden]}>
-        <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
-        <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
-      </View>
-    </Pressable>
+    <Text style={styles.sectionLabel}>Vehicle number *</Text>
+    <View ref={anchorRef} collapsable={false} style={[styles.selectButton, open && styles.selectButtonHidden]}>
+      <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
+      <View pointerEvents="none" style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open vehicle selector"
+        accessibilityState={{ expanded: open }}
+        hitSlop={8}
+        onPress={toggleSelector}
+        style={({ pressed }) => [styles.vehicleSelectorTrigger, pressed && styles.vehicleSelectorTriggerPressed]}
+      >
+        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={palette.navy} />
+      </Pressable>
+    </View>
 
     <Modal
       visible={open}
@@ -485,8 +486,8 @@ const styles = StyleSheet.create({
   chipText: { color: '#56657A', fontSize: 10.5, fontWeight: '800' },
   chipTextActive: { color: '#FFFFFF' },
   vehicleField: { gap: 6 },
-  vehicleSelectorPressTarget: { width: '100%' },
-  vehicleSelectorPressed: { opacity: 0.96 },
+  vehicleSelectorTrigger: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
+  vehicleSelectorTriggerPressed: { backgroundColor: '#EEF5FF' },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   selectButtonHidden: { opacity: 0 },
