@@ -109,8 +109,8 @@ assert(intakeApi.includes('searchParams.get("filter")'), "Policy Intake API must
 assert(intakeApi.includes('.range(offset, offset + limit - 1)'), "Policy Intake API must paginate before returning list rows");
 assert(intakeApi.includes('view === "sources"'), "Policy Intake API must expose a sources-only view");
 
-assert(intakeApi.includes('.eq("submitted_by_portal_account_id", auth.identity.portal_account_id)'), "Policy Intake detail must retain Partner ownership filtering");
-assert(intakeApi.includes('.eq("submitted_by_profile_id", auth.identity.profile_id)'), "Policy Intake detail must retain employee submitter filtering");
+assert(intakeApi.includes('.eq("submitted_by_portal_account_id", identity.portal_account_id)'), "Policy Intake detail must retain Partner ownership filtering");
+assert(intakeApi.includes('.eq("submitted_by_profile_id", identity.profile_id)'), "Policy Intake detail must retain employee submitter filtering");
 
 const registrationPage = read("app/partner/account/registration/page.tsx");
 assert(registrationPage.includes("getPartnerWebRegistrationOverview"), "registration page must use scoped Partner registration adapter");
