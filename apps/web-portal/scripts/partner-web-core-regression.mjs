@@ -81,6 +81,14 @@ const legacyPortal = read("app/intermediary-portal/page.tsx");
 assert(legacyPortal.includes('redirect("/partner/account/registration")'), "legacy intermediary portal must redirect to Partner registration");
 assert(!legacyPortal.includes("createSupabaseAdminClient"), "legacy compatibility route must not retain admin reads");
 
+const renewalsPage = read("app/partner/renewals/page.tsx");
+assert(renewalsPage.includes("listPartnerWebRenewals"), "renewals page must use backend-filtered renewal pagination");
+assert(!renewalsPage.includes("listPartnerWebPolicies"), "renewals page must not paginate generic policies then filter renewal windows locally");
+assert(!renewalsPage.includes("visibleRows"), "renewal window filtering must not happen after pagination");
+
+const partnerWeb = read("lib/partner-web.ts");
+assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
+
 const registrationPage = read("app/partner/account/registration/page.tsx");
 assert(registrationPage.includes("getPartnerWebRegistrationOverview"), "registration page must use scoped Partner registration adapter");
 assert(registrationPage.includes("PartnerIcallLauncher"), "registration page must use the Partner iCall launcher");
@@ -88,6 +96,15 @@ assert(registrationPage.includes("PartnerIcallLauncher"), "registration page mus
 const icallAction = read("app/partner/account/registration/icall-actions.ts");
 assert(icallAction.includes('supabase.rpc("partner_app_training_sso_context")'), "iCall launch must use scoped Partner SSO RPC");
 assert(!icallAction.includes("supabase-admin"), "iCall launch must not use service-role/admin reads");
+
+const renewalMigrationPath = path.resolve(root, "../../supabase/migrations/20260903150000_partner_web_renewal_window_pagination.sql");
+assert(fs.existsSync(renewalMigrationPath), "Partner renewal pagination migration is missing");
+if (fs.existsSync(renewalMigrationPath)) {
+  const renewalMigration = fs.readFileSync(renewalMigrationPath, "utf8");
+  assert(renewalMigration.includes("partner_app_list_renewals"), "Partner renewal list RPC migration missing");
+  assert(renewalMigration.includes("partner_app_commercial_scope"), "Partner renewal RPC must derive authorization from commercial scope");
+  assert(renewalMigration.includes("count(*) over() as total_count"), "Partner renewal RPC must count after renewal-window filtering");
+}
 
 const migrationPath = path.resolve(root, "../../supabase/migrations/20260903123000_partner_app_registration_training.sql");
 assert(fs.existsSync(migrationPath), "Partner registration/training migration is missing");
