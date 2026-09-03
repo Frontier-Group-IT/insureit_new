@@ -40,6 +40,7 @@ type SelfManagedMilestoneRow = {
 const SELF_MANAGED_MILESTONE_COUNT = 9;
 const selfTrackedPolicyIcon = require('../../assets/claims/policy.png');
 const managedPolicyIcon = require('../../assets/custom-icons/policy-detail/policy-booked.png');
+const vehicleNumberIcon = require('../../assets/custom-icons/policy-detail/linked-vehicle.png');
 const SETTLED_SELF_MANAGED_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
 const COMPLETED_MILESTONE_STATUSES = new Set(['completed', 'not_applicable']);
 
@@ -314,7 +315,7 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
   return <View style={styles.vehicleField}>
     <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={(event) => { event.stopPropagation(); onToggle(); }} style={[styles.selectButton, open && styles.selectButtonOpen]}>
-      <View style={styles.selectIcon}><MaterialCommunityIcons name="truck-outline" size={20} color="#145ED7" /></View>
+      <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
       <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
       <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
     </Pressable>
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
   vehicleField: { gap: 6 },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  selectIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  selectVehicleArtwork: { width: 36, height: 36 },
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
   selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
