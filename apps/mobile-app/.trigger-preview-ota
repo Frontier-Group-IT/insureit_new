@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1122
-source_commit=b08ddde4b9ce5b4aea4da69b38ff44be4cd6e873
-purpose=publish self-tracked claim icon without badge background preview OTA
+source_pr=1118
+source_commit=1260699d0d7cff940fe5cfaa618120c6280ba50d
+purpose=publish active and due Start Claim pulse preview OTA
