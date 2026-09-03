@@ -89,6 +89,15 @@ assert(!renewalsPage.includes("visibleRows"), "renewal window filtering must not
 const partnerWeb = read("lib/partner-web.ts");
 assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
 
+const intakeListClient = read("components/partner-portal/partner-policy-intake-list-client.tsx");
+assert(intakeListClient.includes("PAGE_SIZE = 25"), "Policy Intake register must use bounded server pagination");
+assert(intakeListClient.includes("offset: (page - 1) * PAGE_SIZE"), "Policy Intake register must send page offset to the server");
+assert(!intakeListClient.includes("visibleRows"), "Policy Intake register filters must not be computed from one downloaded slice");
+
+const intakeNewClient = read("components/partner-portal/partner-policy-intake-new-client.tsx");
+assert(intakeNewClient.includes("getPartnerPolicyIntakeSourcesWeb"), "New Policy Intake must fetch only authorized lead sources");
+assert(!intakeNewClient.includes("getPartnerPolicyIntakesWeb"), "New Policy Intake must not download intake history to get lead sources");
+
 const intakeDetailClient = read("components/partner-portal/partner-policy-intake-detail-client.tsx");
 assert(intakeDetailClient.includes("getPartnerPolicyIntakeWeb"), "Policy Intake detail must fetch only the requested intake");
 assert(!intakeDetailClient.includes("getPartnerPolicyIntakesWeb"), "Policy Intake detail must not load the full intake list");
@@ -96,6 +105,10 @@ assert(!intakeDetailClient.includes(".find((item) => item.id === intakeId)"), "P
 
 const intakeApi = read("app/api/partner/policy-intakes/route.ts");
 assert(intakeApi.includes('searchParams.get("id")'), "Policy Intake API must accept a scoped detail id");
+assert(intakeApi.includes('searchParams.get("filter")'), "Policy Intake API must accept server-side pipeline filters");
+assert(intakeApi.includes('.range(offset, offset + limit - 1)'), "Policy Intake API must paginate before returning list rows");
+assert(intakeApi.includes('view === "sources"'), "Policy Intake API must expose a sources-only view");
+
 assert(intakeApi.includes('.eq("submitted_by_portal_account_id", auth.identity.portal_account_id)'), "Policy Intake detail must retain Partner ownership filtering");
 assert(intakeApi.includes('.eq("submitted_by_profile_id", auth.identity.profile_id)'), "Policy Intake detail must retain employee submitter filtering");
 
