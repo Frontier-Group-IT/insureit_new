@@ -358,7 +358,7 @@ export default function SelfManagedMilestoneScreen() {
 
 function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void, milestones: ClaimMilestone[], claimId: string, customerId: string) {
   if (key === 'claim_intimation') return <>
-    <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" icon="clipboard-edit-outline">
+    <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../../assets/claims/claim-intimation.png')}>
       <DateField label="Claim Intimation Date *" value={values.claim_intimation_date ?? ''} onChange={(v) => set('claim_intimation_date', v)} />
       <Gap /><TextField label="Dealership Name *" value={values.dealership_name ?? ''} onChangeText={(v) => set('dealership_name', v)} />
       <Gap /><TextField label="Dealership Location *" value={values.dealership_location ?? ''} onChangeText={(v) => set('dealership_location', v)} />
@@ -369,7 +369,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   </>;
 
   if (key === 'work_approval') return <>
-    <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" icon="clipboard-check-outline">
+    <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" iconImage={require('../../assets/claims/claim-approval.png')}>
       <DateField label="Approval Received Date *" value={values.approval_received_date ?? ''} onChange={(v) => set('approval_received_date', v)} />
       <Gap /><ClaimChoice label="Cashless Claim *" value={values.cashless} options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} onChange={(v) => set('cashless', v)} />
       <Gap /><TextField label="Surveyor Name (Optional)" value={values.surveyor_name ?? ''} onChangeText={(v) => set('surveyor_name', v)} />
