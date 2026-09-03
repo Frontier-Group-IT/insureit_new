@@ -99,6 +99,11 @@ export default function ComplianceRenewalsScreen() {
       </View>
       {message ? <View style={styles.errorCard}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{message}</Text></View> : null}
 
+      <View style={styles.legendRow}>
+        <LegendDot color="#B7791F" label="Due" />
+        <LegendDot color="#C43D2D" label="Expired" />
+      </View>
+
       <View style={styles.summaryList}>
         {renewals.summaries.map((summary) => (
           <View key={summary.key} style={[styles.summaryCard, !summary.tracked && styles.summaryCardDisabled]}>
@@ -113,8 +118,8 @@ export default function ComplianceRenewalsScreen() {
             </View>
             {summary.tracked ? (
               <View style={styles.inlineMetrics}>
-                <InlineMetric label="Due" value={summary.due} tone="amber" />
-                <InlineMetric label="Expired" value={summary.expired} tone="red" />
+                <InlineMetric value={summary.due} tone="amber" />
+                <InlineMetric value={summary.expired} tone="red" />
               </View>
             ) : null}
           </View>
@@ -133,8 +138,8 @@ export default function ComplianceRenewalsScreen() {
                 </View>
               </View>
               <View style={styles.inlineMetrics}>
-                <InlineMetric label="Due" value={policySummary.due} tone="amber" />
-                <InlineMetric label="Expired" value={policySummary.expired} tone="red" />
+                <InlineMetric value={policySummary.due} tone="amber" />
+                <InlineMetric value={policySummary.expired} tone="red" />
               </View>
             </View>
           );
@@ -171,12 +176,16 @@ export default function ComplianceRenewalsScreen() {
   );
 }
 
-function InlineMetric({ label, value, tone }: { label: string; value: number; tone: 'amber' | 'red' }) {
+function InlineMetric({ value, tone }: { value: number; tone: 'amber' | 'red' }) {
   const textStyle = tone === 'red' ? styles.metricRed : styles.metricAmber;
+  return <Text style={[styles.inlineMetricValue, textStyle]}>{value}</Text>;
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
   return (
-    <View style={styles.inlineMetric}>
-      <Text style={styles.inlineMetricLabel}>{label}</Text>
-      <Text style={[styles.inlineMetricValue, textStyle]}>{value}</Text>
+    <View style={styles.legendItem}>
+      <View style={[styles.legendDot, { backgroundColor: color }]} />
+      <Text style={styles.legendLabel}>{label}</Text>
     </View>
   );
 }
@@ -202,6 +211,10 @@ const styles = StyleSheet.create({
   totalLabel: { color: '#D8E7FF', fontSize: 9.5, fontWeight: '800', marginTop: 1 },
   errorCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FECDCA', backgroundColor: '#FEF3F2', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   errorText: { flex: 1, color: '#B42318', fontSize: 11, fontWeight: '700' },
+  legendRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 6 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 7, height: 7, borderRadius: 4 },
+  legendLabel: { color: '#667085', fontSize: 9, fontWeight: '900' },
   summaryList: { gap: 7 },
   summaryCard: { minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   summaryCardDisabled: { backgroundColor: '#F8FAFC' },
@@ -210,10 +223,8 @@ const styles = StyleSheet.create({
   summaryIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
   summaryIconHot: { backgroundColor: '#FFF0EE' },
   summaryTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
-  inlineMetrics: { flexDirection: 'row', alignItems: 'center', gap: 12, marginLeft: 'auto' },
-  inlineMetric: { minWidth: 42, alignItems: 'center', justifyContent: 'center' },
-  inlineMetricLabel: { color: '#7A8799', fontSize: 8.5, lineHeight: 11, fontWeight: '800' },
-  inlineMetricValue: { fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 1 },
+  inlineMetrics: { minWidth: 84, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 18, marginLeft: 'auto', paddingRight: 4 },
+  inlineMetricValue: { minWidth: 24, textAlign: 'center', fontSize: 15, lineHeight: 18, fontWeight: '900' },
   metricAmber: { color: '#B7791F' },
   metricRed: { color: '#C43D2D' },
   notTracked: { color: '#7A8799', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 2 },
