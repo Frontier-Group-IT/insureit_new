@@ -28,6 +28,7 @@
 - Internal customers may open all nine journey stages. The dedicated internal stage route is read-only for Operations-owned fields; it must never call the self-managed milestone mutation contract.
 - Claim Intimation uses one canonical five-section, 26-document catalogue across mobile customer uploads, Operations requests, and Operations verification. Persisted casing/spelling variants are resolved through the shared normalized matcher rather than destructive data renaming.
 - On broker-managed claims, customers may replace pending or rejected files but must not delete documents already verified by Operations. Self-managed claim document deletion remains unchanged.
+- For a broker-managed claim at `Surveyor Appointed`, Operations `Survey Done` must atomically advance the claim to `Final Documents Awaited`, persist valid stage/history evidence, and verify the returned status before reporting success. That status is the explicit mobile contract that opens customer Claim Intimation uploads; the action must not rely on a zero-row direct update or an ignored follow-up insert.
 - Migration `20260903151000_reviewed_claim_assistance_intake.sql` implements reviewed assistance intake with row locking, explicit safe entry-stage selection, evidence checks and atomic history/activity persistence. A committed migration is not **APPLIED**.
 
 ### 2.1 Partner is the permanent parent identity
