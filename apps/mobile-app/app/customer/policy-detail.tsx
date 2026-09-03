@@ -106,7 +106,7 @@ export default function PolicyDetailScreen() {
         <View style={styles.heroLayout}>
           <View style={[styles.heroAccent, { backgroundColor: renewalTone(renewalState.tone).accent }]} />
           <View style={styles.heroTop}>
-            <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft, borderColor: renewalTone(renewalState.tone).border }]}>
+            <View style={[styles.heroIcon, { backgroundColor: '#FFFFFF', borderColor: renewalTone(renewalState.tone).border }]}>
               <Image source={policyDetailIcons.policy} resizeMode="contain" style={styles.heroIconImage} />
             </View>
             <View style={styles.heroCopy}>
