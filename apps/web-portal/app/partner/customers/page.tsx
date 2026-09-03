@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Mail, MapPin, Phone, Search, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -43,40 +44,38 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
 
   return (
     <PartnerPortalShell title="Customers">
-      <div className="space-y-4">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Customer Book</p>
-              <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Your customers</h2>
-              <p className="mt-1 text-[11px] font-medium text-[#74839A]">Only customers inside your Partner-authorized commercial scope are returned.</p>
-            </div>
-
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Customer Book"
+          title="Your customers"
+          description="Only customers inside your Partner-authorized commercial scope are returned."
+          action={
             <form action="/partner/customers" className="flex w-full max-w-[430px] gap-2">
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-11 w-full rounded-xl border border-[#D2DCE9] bg-white pl-10 pr-3 text-[11px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
               </div>
-              <button type="submit" className="h-11 rounded-xl bg-[#111A35] px-4 text-[11px] font-bold text-white">Search</button>
+              <button type="submit" className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white">Search</button>
             </form>
-          </div>
+          }
+        />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Summary label="Total Customers" value={summary.total_customers} />
-            <Summary label="Active" value={summary.active_customers} />
-            <Summary label="With Phone" value={summary.with_phone} />
-            <Summary label="With Email" value={summary.with_email} />
-          </div>
-        </section>
+        <PartnerMetricStrip
+          items={[
+            { label: "Total Customers", value: summary.total_customers },
+            { label: "Active", value: summary.active_customers },
+            { label: "With Phone", value: summary.with_phone },
+            { label: "With Email", value: summary.with_email },
+          ]}
+        />
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E6ECF3] px-5 py-4 sm:px-6">
-            <div>
-              <p className="text-[12px] font-extrabold text-[#172846]">{q ? "Search results for “" + q + "”" : "Customer Register"}</p>
-              <p className="mt-0.5 text-[10px] font-medium text-[#7A899F]">{total} scoped customer{total === 1 ? "" : "s"}</p>
-            </div>
-            {q ? <Link href="/partner/customers" className="text-[10.5px] font-bold text-[#3156B8]">Clear search</Link> : null}
-          </div>
+        <section>
+          <PartnerSectionHeading
+            title={q ? "Search results for “" + q + "”" : "Customer Register"}
+            description={total + " scoped customer" + (total === 1 ? "" : "s")}
+            action={q ? <Link href="/partner/customers" className="text-[10px] font-bold text-[#3156B8]">Clear search</Link> : null}
+          />
+          <div className="mt-3 border-y border-[#DCE4ED]">
 
           {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
@@ -105,7 +104,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
               ))}
             </div>
           ) : (
-            <div className="px-5 py-14 text-center">
+            <div className="py-14 text-center">
               <UsersRound className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No customers found</p>
               <p className="mt-1 text-[10.5px] text-[#7A899F]">{q ? "Try a different scoped customer search." : "No customers are currently available in this Partner scope."}</p>
@@ -113,7 +112,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
           )}
 
           {(hasPrevious || hasNext) ? (
-            <div className="flex items-center justify-between border-t border-[#E6ECF3] px-5 py-4 sm:px-6">
+            <div className="flex items-center justify-between border-t border-[#E6ECF3] py-4">
               <Link href={hasPrevious ? pageHref(page - 1) : "#"} aria-disabled={!hasPrevious} className={"inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-[10px] font-bold " + (hasPrevious ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Previous
               </Link>
@@ -123,17 +122,10 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
               </Link>
             </div>
           ) : null}
+          </div>
         </section>
       </div>
     </PartnerPortalShell>
   );
 }
 
-function Summary({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
-      <p className="text-[9px] font-black uppercase tracking-[0.11em] text-[#75849A]">{label}</p>
-      <p className="mt-2 text-[22px] font-extrabold text-[#162746]">{value}</p>
-    </div>
-  );
-}
