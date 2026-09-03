@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, usePathname, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
@@ -18,18 +18,6 @@ export const ClaimFinancialSummary = sharedUi.ClaimFinancialSummary;
 export const ClaimPrimaryAction = sharedUi.ClaimPrimaryAction;
 export const ClaimSecondaryAction = sharedUi.ClaimSecondaryAction;
 export const ClaimMetaRow = sharedUi.ClaimMetaRow;
-
-const stageIcons: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
-  'car-emergency',
-  'clipboard-check-outline',
-  'car-wrench',
-  'clipboard-check-multiple-outline',
-  'tools',
-  'receipt-text-outline',
-  'clipboard-plus-outline',
-  'truck-check-outline',
-  'cash-check',
-];
 
 type ClaimIdentityCardProps = {
   claimNo?: string | null;
@@ -86,7 +74,6 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
 
   const currentIndex = stageIndexFor(pathname, milestoneKey);
   const stage = SELF_MANAGED_MILESTONES[currentIndex] ?? SELF_MANAGED_MILESTONES[0];
-  const icon = stageIcons[Math.max(0, currentIndex)] ?? stageIcons[0];
   const { claimNo, insurerName, vehicleNo, policyNo, vehicleMeta } = props;
 
   return (
@@ -96,7 +83,7 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
 
       <View style={styles.headerRow}>
         <View style={[styles.iconBadge, styles.stageBadge]}>
-          <MaterialCommunityIcons name={icon} size={16} color="#FFFFFF" />
+          <Image source={require('../assets/claims/claim-intimation.png')} style={styles.badgeArtwork} resizeMode="contain" />
         </View>
         <Text style={styles.headerTitle} numberOfLines={1}>{stage.label}</Text>
         <Text style={styles.claimNoValue} numberOfLines={1}>{claimNo || 'New claim'}</Text>
@@ -108,7 +95,7 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
         <View style={styles.infoSection}>
           <View style={styles.mainInfoRow}>
             <View style={[styles.iconBadge, styles.vehicleBadge]}>
-              <MaterialCommunityIcons name="car-outline" size={16} color="#0A3A86" />
+              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.badgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.mainInfoLine} numberOfLines={1}>
               <Text style={styles.mainInfoLabel}>Vehicle: </Text>
@@ -118,7 +105,7 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
 
           <View style={styles.secondaryInfoRow}>
             <View style={[styles.iconBadge, styles.makeModelBadge]} accessible={false}>
-              <MaterialCommunityIcons name="car-info" size={16} color="#2C6FD5" />
+              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.badgeArtwork} resizeMode="contain" />
             </View>
             <Text accessibilityLabel={`Make and model: ${vehicleMeta || 'Not available'}`} style={styles.secondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
           </View>
@@ -129,7 +116,7 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
         <View style={styles.infoSection}>
           <View style={styles.mainInfoRow}>
             <View style={[styles.iconBadge, styles.policyBadge]}>
-              <MaterialCommunityIcons name="file-document-outline" size={16} color="#0B7A57" />
+              <Image source={require('../assets/claims/policy.png')} style={styles.badgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.mainInfoLine} numberOfLines={1}>
               <Text style={[styles.mainInfoLabel, styles.policyMainLabel]}>Policy: </Text>
@@ -139,7 +126,7 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
 
           <View style={styles.secondaryInfoRow}>
             <View style={[styles.iconBadge, styles.insurerBadge]} accessible={false}>
-              <MaterialCommunityIcons name="office-building-outline" size={16} color="#8A5A0A" />
+              <Image source={require('../assets/claims/accounts-finance.png')} style={styles.badgeArtwork} resizeMode="contain" />
             </View>
             <Text accessibilityLabel={`Insurance company: ${insurerName || 'Not available'}`} style={styles.secondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
           </View>
@@ -261,6 +248,7 @@ const styles = StyleSheet.create({
   glowSmall: { position: 'absolute', width: 110, height: 110, borderRadius: 55, borderWidth: 1, borderColor: 'rgba(120,169,255,0.16)', right: -20, top: -62 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
   iconBadge: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  badgeArtwork: { width: 21, height: 21 },
   stageBadge: { backgroundColor: '#0B51BE' },
   headerTitle: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 17, lineHeight: 21, fontWeight: '900' },
   claimNoValue: { maxWidth: '38%', color: '#FFFFFF', fontSize: 13.5, lineHeight: 17, fontWeight: '900', textAlign: 'right', letterSpacing: 0.1 },
