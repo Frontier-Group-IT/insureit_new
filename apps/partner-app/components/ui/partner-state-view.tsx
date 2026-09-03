@@ -45,7 +45,7 @@ export function PartnerStateView({
 
   return (
     <View style={styles.base} accessibilityLiveRegion="polite">
-      <View style={[styles.icon, asset && styles.assetIcon]}>
+      <View style={[styles.icon, asset ? styles.assetIcon : null]}>
         {asset ? (
           <Image source={asset} style={styles.assetImage} resizeMode="contain" />
         ) : (
