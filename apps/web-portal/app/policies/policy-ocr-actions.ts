@@ -490,31 +490,37 @@ async function processLayoutTables(args: {
   accessToken: string;
   signal: AbortSignal;
 }): Promise<StructuredPolicyTable[]> {
-  const endpoint = `https://${args.config.location}-documentai.googleapis.com/v1/projects/${encodeURIComponent(args.config.projectId)}/locations/${encodeURIComponent(args.config.location)}/processors/${encodeURIComponent(args.config.layoutProcessorId)}:process`;
-  const response = await fetch(endpoint, {
-    method: "POST",
+  try {
+    const endpoint = `https://${args.config.location}-documentai.googleapis.com/v1/projects/${encodeURIComponent(args.config.projectId)}/locations/${encodeURIComponent(args.config.location)}/processors/${encodeURIComponent(args.config.layoutProcessorId)}:process`;
+    const response = await fetch(endpoint, {
+      method: "POST",
     headers: {
       Authorization: `Bearer ${args.accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      rawDocument: { content: args.content, mimeType: args.mimeType },
-      processOptions: {
-        layoutConfig: {
-          enableTableAnnotation: true,
+      body: JSON.stringify({
+        rawDocument: { content: args.content, mimeType: args.mimeType },
+        processOptions: {
+          layoutConfig: {
+            enableTableAnnotation: true,
+          },
         },
-      },
-    }),
-    cache: "no-store",
-    signal: args.signal,
-  });
+      }),
+      cache: "no-store",
+      signal: args.signal,
+    });
 
-  const payload = await response.json().catch(() => null) as DocumentAiResponse | null;
-  if (!response.ok) {
-    console.error("Google Layout Parser request failed", response.status, payload?.error?.status);
+    const payload = await response.json().catch(() => null) as DocumentAiResponse | null;
+    if (!response.ok) {
+      console.error("Google Layout Parser request failed", response.status, payload?.error?.status);
+      return [];
+    }
+    return extractDocumentLayoutTables(payload?.document);
+  } catch (error) {
+    // Layout tables improve structured extraction but must not make primary OCR unavailable.
+    console.error("Google Layout Parser request failed", safeErrorName(error));
     return [];
   }
-  return extractDocumentLayoutTables(payload?.document);
 }
 
 async function getGoogleAccessToken(config: NonNullable<ReturnType<typeof getGoogleConfig>>, subjectToken: string, signal: AbortSignal) {

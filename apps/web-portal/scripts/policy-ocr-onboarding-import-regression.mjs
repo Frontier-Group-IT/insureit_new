@@ -8,6 +8,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const panel = fs.readFileSync(path.join(here, "../components/policy-ocr-import-panel.tsx"), "utf8");
 const form = fs.readFileSync(path.join(here, "../components/policy-unified-form.tsx"), "utf8");
 const mapper = fs.readFileSync(path.join(here, "../lib/policy-ocr-onboarding-apply.ts"), "utf8");
+const ocrActions = fs.readFileSync(path.join(here, "../app/policies/policy-ocr-actions.ts"), "utf8");
 
 const regexChecks = [
   ["Section 02 field contract is exported", panel, /export const SECTION_02_OCR_FIELDS = \[[\s\S]*vehicle_registration_number[\s\S]*vehicle_chassis_number[\s\S]*vehicle_engine_number/],
@@ -26,6 +27,7 @@ const regexChecks = [
   ["Parent owns complete create-form reset", form, /function clearPolicyForm\(\)\{[\s\S]*sessionStorage\.removeItem\(POLICY_DRAFT_KEY\)[\s\S]*setForm\((?:stateFrom\(initialValues\)|\{\.\.\.stateFrom\(initialValues\),businessLine:"Motor"\})\)[\s\S]*setVehicleRegistrationMode\("registered"\)[\s\S]*setAppliedRc\(null\)[\s\S]*setPendingPayload\(null\)/],
   ["Fresh create reset keeps Motor as default", form, /setForm\(\{\.\.\.stateFrom\(initialValues\),businessLine:"Motor"\}\)/],
   ["Header wires parent reset callback", form, /onClearForm=\{clearPolicyForm\}/],
+  ["Layout Parser failure falls back to primary OCR", ocrActions, /async function processLayoutTables[\s\S]*\{\s*try \{[\s\S]*catch \(error\) \{[\s\S]*Google Layout Parser request failed[\s\S]*return \[\];\s*\}/],
   ["Payin-Payout is integrated into summary rail", form, /function LiveSummary\([\s\S]*Payin–Payout[\s\S]*Insurer Pay-in[\s\S]*Partner Payout/],
   ["Summary rail restored to wider desktop width", form, /xl:grid-cols-\[minmax\(0,1fr\)_336px\]/],
   ["Compact policy title row", form, /min-h-\[52px\][\s\S]*text-\[15px\][\s\S]*\{headerTitle\}/],
