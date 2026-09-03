@@ -1,4 +1,4 @@
-import { Building2, GitBranch, Network, UserRound, UsersRound } from "lucide-react";
+import { Building2, Network, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
