@@ -39,7 +39,26 @@ export async function GET(request: Request) {
 
   const admin = createSupabaseAdminClient();
   const intakeSelect = "id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id";
-  const requestedId = new URL(request.url).searchParams.get("id")?.trim();
+  const url = new URL(request.url);
+  const requestedId = url.searchParams.get("id")?.trim();
+  const view = url.searchParams.get("view")?.trim().toLowerCase();
+
+  if (view === "sources") {
+    const sourceIds = auth.identity.actor_kind === "intermediary"
+      ? [auth.identity.intermediary_id]
+      : (auth.scope.intermediary_ids ?? []);
+    const { data: sources, error: sourcesError } = sourceIds.length
+      ? await admin
+          .from("intermediaries")
+          .select("id,intermediary_type,display_name,intermediary_code,account_status")
+          .in("id", sourceIds)
+          .eq("account_status", "active")
+          .order("display_name")
+      : { data: [], error: null };
+
+    if (sourcesError) return json({ ok: false, error: "Authorized lead sources could not be loaded." }, 500);
+    return json({ ok: true, sources: sources ?? [] });
+  }
 
   if (requestedId) {
     let detailQuery = admin
@@ -62,34 +81,76 @@ export async function GET(request: Request) {
     return json({ ok: true, intake });
   }
 
+  const requestedLimit = Number(url.searchParams.get("limit") ?? "25");
+  const requestedOffset = Number(url.searchParams.get("offset") ?? "0");
+  const limit = Number.isFinite(requestedLimit) ? Math.max(1, Math.min(50, Math.floor(requestedLimit))) : 25;
+  const offset = Number.isFinite(requestedOffset) ? Math.max(0, Math.min(100000, Math.floor(requestedOffset))) : 0;
+  const filter = url.searchParams.get("filter")?.trim().toLowerCase() ?? "all";
+
+  if (!["all", "attention", "in_progress", "completed"].includes(filter)) {
+    return json({ ok: false, error: "Invalid Policy Intake filter." }, 400);
+  }
+
   let query = admin
     .from("policy_intake_requests")
-    .select(intakeSelect)
+    .select(intakeSelect, { count: "exact" })
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(offset, offset + limit - 1);
 
   query = auth.identity.actor_kind === "employee"
     ? query.eq("submitted_by_profile_id", auth.identity.profile_id)
     : query.eq("submitted_by_portal_account_id", auth.identity.portal_account_id);
 
-  const { data, error } = await query;
-  if (error) {
-    return json({ ok: false, error: "Policy intakes could not be loaded." }, 500);
+  if (filter === "attention") query = query.eq("status", "needs_attention");
+  if (filter === "completed") query = query.eq("status", "completed");
+  if (filter === "in_progress") query = query.in("status", ["processing", "ready_for_review", "in_review"]);
+
+  async function ownedCount(statuses: string[], excluded = false) {
+    let countQuery = admin
+      .from("policy_intake_requests")
+      .select("id", { count: "exact", head: true });
+
+    countQuery = auth.identity.actor_kind === "employee"
+      ? countQuery.eq("submitted_by_profile_id", auth.identity.profile_id)
+      : countQuery.eq("submitted_by_portal_account_id", auth.identity.portal_account_id);
+
+    if (statuses.length) {
+      countQuery = excluded
+        ? countQuery.not("status", "in", "(" + statuses.join(",") + ")")
+        : countQuery.in("status", statuses);
+    }
+
+    const { count, error } = await countQuery;
+    if (error) throw error;
+    return count ?? 0;
   }
 
-  const sourceIds = auth.identity.actor_kind === "intermediary"
-    ? [auth.identity.intermediary_id]
-    : (auth.scope.intermediary_ids ?? []);
-  const { data: sources } = sourceIds.length
-    ? await admin
-        .from("intermediaries")
-        .select("id,intermediary_type,display_name,intermediary_code,account_status")
-        .in("id", sourceIds)
-        .eq("account_status", "active")
-        .order("display_name")
-    : { data: [] };
+  try {
+    const [
+      listResult,
+      active,
+      attention,
+      progress,
+      completed,
+    ] = await Promise.all([
+      query,
+      ownedCount(["completed", "rejected"], true),
+      ownedCount(["needs_attention"]),
+      ownedCount(["processing", "ready_for_review", "in_review"]),
+      ownedCount(["completed"]),
+    ]);
 
-  return json({ ok: true, intakes: data ?? [], sources: sources ?? [] });
+    if (listResult.error) throw listResult.error;
+
+    return json({
+      ok: true,
+      intakes: listResult.data ?? [],
+      total: listResult.count ?? 0,
+      counts: { active, attention, progress, completed },
+    });
+  } catch {
+    return json({ ok: false, error: "Policy intakes could not be loaded." }, 500);
+  }
 }
 
 export async function POST(request: Request) {
