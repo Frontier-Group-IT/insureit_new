@@ -133,8 +133,12 @@ export async function middleware(request: NextRequest) {
       return clearSessionCookies(NextResponse.redirect(loginUrl));
     }
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
-    if (check.role === "intermediary" && !pathname.startsWith("/intermediary-portal")) return redirect(request, "/intermediary-portal", refreshedSession, check.role);
-    if (check.role !== "intermediary" && pathname.startsWith("/intermediary-portal")) return redirect(request, internalLaunchHome, refreshedSession, check.role);
+    if (check.role === "intermediary" && !pathname.startsWith("/partner") && !pathname.startsWith("/intermediary-portal")) {
+      return redirect(request, "/partner", refreshedSession, check.role);
+    }
+    if (check.role !== "intermediary" && (pathname.startsWith("/partner") || pathname.startsWith("/intermediary-portal"))) {
+      return redirect(request, internalLaunchHome, refreshedSession, check.role);
+    }
 
     if (isIntermediaryOnlyLaunch && check.role !== "intermediary") {
       if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, "/access-denied", refreshedSession, check.role);
@@ -168,5 +172,6 @@ export const config = {
     "/settings/:path*",
     "/claim-documents/:path*",
     "/intermediary-portal/:path*",
+    "/partner/:path*",
   ],
 };
