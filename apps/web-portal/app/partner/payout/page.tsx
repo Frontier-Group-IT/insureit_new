@@ -32,7 +32,7 @@ export default async function PartnerPayoutPage() {
           <PartnerPageHeader
             eyebrow="Commercial"
             title="Payout overview"
-            description="Only payout information explicitly available to this Partner account is shown."
+            description="View your payout records."
           />
 
           <PartnerMetricStrip
