@@ -19,18 +19,6 @@ export const ClaimPrimaryAction = sharedUi.ClaimPrimaryAction;
 export const ClaimSecondaryAction = sharedUi.ClaimSecondaryAction;
 export const ClaimMetaRow = sharedUi.ClaimMetaRow;
 
-const stageIcons: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
-  'car-emergency',
-  'clipboard-check-outline',
-  'car-wrench',
-  'clipboard-check-multiple-outline',
-  'tools',
-  'receipt-text-outline',
-  'clipboard-plus-outline',
-  'truck-check-outline',
-  'cash-check',
-];
-
 type ClaimIdentityCardProps = {
   claimNo?: string | null;
   insurerName?: string | null;
@@ -86,7 +74,6 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
 
   const currentIndex = stageIndexFor(pathname, milestoneKey);
   const stage = SELF_MANAGED_MILESTONES[currentIndex] ?? SELF_MANAGED_MILESTONES[0];
-  const icon = stageIcons[Math.max(0, currentIndex)] ?? stageIcons[0];
   const { claimNo, insurerName, vehicleNo, policyNo, vehicleMeta } = props;
 
   return (
