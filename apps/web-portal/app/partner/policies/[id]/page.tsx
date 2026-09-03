@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Car, ShieldCheck, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebPolicyDetail } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -31,12 +32,12 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
 
   return (
     <PartnerPortalShell title="Policy Detail">
-      <div className="space-y-4">
+      <div className="space-y-7">
         <Link href="/partner/policies" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]">
           <ArrowLeft className="h-3.5 w-3.5" /> Policy Register
         </Link>
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
+        <section className="overflow-hidden border-y border-[#DCE4ED] bg-white/45">
           <div className="flex flex-col gap-4 border-b border-[#E6ECF3] px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><ShieldCheck className="h-5 w-5" /></span>
@@ -57,8 +58,8 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
           </div>
         </section>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+        <div className="grid gap-8 xl:grid-cols-2">
+          <section className="py-1">
             <SectionTitle title="Policy Overview" />
             <div className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
               <Info label="Category" value={category} />
@@ -70,7 +71,7 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
             </div>
           </section>
 
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+          <section className="py-1">
             <SectionTitle title="Premium Breakup" />
             <div className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
               <Info label="Net Premium" value={currency(data.premium.net_premium)} />
@@ -83,24 +84,24 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
           </section>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+        <div className="grid gap-8 xl:grid-cols-2">
+          <section className="py-1">
             <SectionTitle title={data.vehicle ? "Customer & Vehicle" : "Customer & Insured Risk"} />
             <div className="mt-4 space-y-3">
               {data.customer.id ? (
-                <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
+                <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
                   <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
                   <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.customer.name}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.customer.customer_code || "Customer"}</span></span>
                 </Link>
               ) : null}
-              <div className="flex items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
+              <div className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
                 <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#3156B8]"><Car className="h-4 w-4" /></span>
                 <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.vehicle?.vehicle_no || data.policy.policy_product || data.policy.policy_type || "Insured risk"}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.vehicle ? display(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type) : "No vehicle linked to this policy"}</span></span>
               </div>
             </div>
           </section>
 
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+          <section className="py-1">
             <SectionTitle title="Commercial Attribution" />
             <div className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
               <Info label="Intermediary" value={display(humanize(data.commercial.intermediary_type), data.commercial.intermediary_code) || "Not recorded"} />
@@ -118,5 +119,5 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
 function HeroMetric({ label, value }: { label: string; value: string }) {
   return <div className="border-b border-[#E6ECF3] px-5 py-4 sm:border-r sm:px-6 xl:border-b-0 xl:last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">{label}</p><p className="mt-1.5 truncate text-[11px] font-extrabold text-[#203653]">{value}</p></div>;
 }
-function SectionTitle({ title }: { title: string }) { return <h3 className="text-[16px] font-extrabold text-[#152746]">{title}</h3>; }
+function SectionTitle({ title }: { title: string }) { return <PartnerSectionHeading title={title} />; }
 function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#8390A3]">{label}</p><p className="mt-1 text-[10.5px] font-semibold text-[#203653]">{value}</p></div>; }
