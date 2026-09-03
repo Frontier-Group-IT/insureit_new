@@ -38,9 +38,33 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   const admin = createSupabaseAdminClient();
+  const intakeSelect = "id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id";
+  const requestedId = new URL(request.url).searchParams.get("id")?.trim();
+
+  if (requestedId) {
+    let detailQuery = admin
+      .from("policy_intake_requests")
+      .select(intakeSelect)
+      .eq("id", requestedId);
+
+    detailQuery = auth.identity.actor_kind === "employee"
+      ? detailQuery.eq("submitted_by_profile_id", auth.identity.profile_id)
+      : detailQuery.eq("submitted_by_portal_account_id", auth.identity.portal_account_id);
+
+    const { data: intake, error: intakeError } = await detailQuery.maybeSingle();
+    if (intakeError) {
+      return json({ ok: false, error: "Policy Intake could not be loaded." }, 500);
+    }
+    if (!intake) {
+      return json({ ok: false, error: "This Policy Intake is not available in your Partner account." }, 404);
+    }
+
+    return json({ ok: true, intake });
+  }
+
   let query = admin
     .from("policy_intake_requests")
-    .select("id,intake_number,status,lead_source_name,lead_source_type,lead_source_code,customer_mobile,file_name,ocr_status,ocr_fields,attention_reason,created_at,updated_at,final_policy_id")
+    .select(intakeSelect)
     .order("created_at", { ascending: false })
     .limit(100);
 

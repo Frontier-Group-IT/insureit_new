@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileUp, Loader2, RefreshCw } from "lucide-react";
 import {
-  getPartnerPolicyIntakesWeb,
+  getPartnerPolicyIntakeWeb,
   POLICY_INTAKE_ACCEPT,
   submitPartnerPolicyIntakeReplacementWeb,
   validatePolicyIntakeFile,
@@ -67,8 +67,8 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
     if (!manual) setLoading(true);
     setError("");
     try {
-      const result = await getPartnerPolicyIntakesWeb();
-      setRow(result.intakes.find((item) => item.id === intakeId) ?? null);
+      const result = await getPartnerPolicyIntakeWeb(intakeId);
+      setRow(result.intake);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intake could not be loaded.");
     } finally {
