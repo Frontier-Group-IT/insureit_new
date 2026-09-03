@@ -55,7 +55,7 @@ export default async function PartnerAccountPage() {
 
         <section className="py-1">
           <div className="flex items-start gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><ShieldCheck className="h-4 w-4" /></span>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><ShieldCheck className="h-4 w-4" /></span>
             <div>
               <h3 className="text-[14px] font-extrabold text-[#172846]">Authorized Partner access</h3>
               <p className="mt-1 text-[10.5px] font-medium leading-5 text-[#74839A]">This website follows the same Partner family and commercial scope as INSUREIT Partner. Registration and qualification actions remain on the existing secure portal until their dedicated Partner-scoped account contract is migrated.</p>
@@ -69,9 +69,9 @@ export default async function PartnerAccountPage() {
 
 function AccountAction({ href, icon: Icon, title, text }: { href: string; icon: typeof UserRound; title: string; text: string }) {
   return (
-    <Link href={href} className="group flex min-h-[92px] items-center gap-4 border-b border-[#E0E7EF] px-1 py-4 transition hover:bg-white/70 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#111A35] text-white"><Icon className="h-5 w-5" /></span>
-      <span className="min-w-0 flex-1"><span className="block text-[12px] font-extrabold text-[#172846]">{title}</span><span className="mt-1 block text-[10px] font-medium leading-4 text-[#74839A]">{text}</span></span>
+    <Link href={href} className="group flex min-h-[84px] items-center gap-3 border-b border-[#E0E7EF] px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#111A35] text-white"><Icon className="h-5 w-5" /></span>
+      <span className="min-w-0 flex-1"><span className="block break-words text-[11.5px] font-extrabold leading-4 text-[#172846] sm:text-[12px]">{title}</span><span className="mt-1 block break-words text-[10px] font-medium leading-4 text-[#74839A]">{text}</span></span>
       <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
     </Link>
   );
