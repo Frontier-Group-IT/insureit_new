@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, MapPin, ShieldAlert, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebClaimDetail } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -35,12 +36,12 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
 
   return (
     <PartnerPortalShell title="Claim Detail">
-      <div className="space-y-4">
+      <div className="space-y-7">
         <Link href="/partner/claims" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]">
           <ArrowLeft className="h-3.5 w-3.5" /> Claim Register
         </Link>
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
+        <section className="overflow-hidden border-y border-[#DCE4ED] bg-white/45">
           <div className="flex flex-col gap-4 border-b border-[#E6ECF3] px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#FFF6E7] text-[#B56A00]"><ShieldAlert className="h-5 w-5" /></span>
@@ -68,9 +69,9 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
           </section>
         ) : null}
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-            <h3 className="text-[16px] font-extrabold text-[#152746]">Claim Overview</h3>
+        <div className="grid gap-8 xl:grid-cols-2">
+          <section className="py-1">
+            <PartnerSectionHeading title="Claim Overview" />
             <div className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
               <Info label="Accident Date" value={dateTime(data.claim.accident_at)} />
               <Info label="Location" value={data.claim.accident_location || "Not recorded"} />
@@ -79,8 +80,8 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
             </div>
           </section>
 
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-            <h3 className="text-[16px] font-extrabold text-[#152746]">Financial Snapshot</h3>
+          <section className="py-1">
+            <PartnerSectionHeading title="Financial Snapshot" />
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <Amount label="Estimated Loss" value={currency(data.claim.estimated_loss)} />
               <Amount label="Approved" value={currency(data.claim.approved_amount)} />
@@ -89,25 +90,22 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
           </section>
         </div>
 
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <h3 className="text-[16px] font-extrabold text-[#152746]">Customer & Risk</h3>
+        <section className="py-1">
+          <PartnerSectionHeading title="Customer & Risk" />
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
+            <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
               <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
               <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.customer.name}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.customer.customer_code || "Customer"}</span></span>
             </Link>
-            <div className="flex items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4">
+            <div className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
               <span className="grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#3156B8]"><MapPin className="h-4 w-4" /></span>
               <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.vehicle.vehicle_no || "Vehicle not linked"}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.policy.policy_no || "External policy"}</span></span>
             </div>
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-[16px] font-extrabold text-[#152746]">Claim Journey</h3>
-            <span className="text-[9.5px] font-semibold text-[#7A899F]">{events.length} recorded events</span>
-          </div>
+        <section className="py-1">
+          <PartnerSectionHeading title="Claim Journey" description={events.length + " recorded events"} />
           {events.length ? (
             <div className="mt-5 space-y-0">
               {events.map((event, index) => (
@@ -124,7 +122,7 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
                 </div>
               ))}
             </div>
-          ) : <div className="mt-4 rounded-2xl bg-[#F8FAFD] px-4 py-8 text-center text-[10.5px] font-medium text-[#7A899F]">Recorded claim stages and status updates will appear here.</div>}
+          ) : <div className="mt-4 border-y border-[#E0E7EF] py-8 text-center text-[10.5px] font-medium text-[#7A899F]">Recorded claim stages and status updates will appear here.</div>}
         </section>
       </div>
     </PartnerPortalShell>
@@ -135,4 +133,4 @@ function HeroMetric({ label, value }: { label: string; value: string }) {
   return <div className="border-b border-[#E6ECF3] px-5 py-4 sm:border-r sm:px-6 xl:border-b-0 xl:last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">{label}</p><p className="mt-1.5 truncate text-[10.5px] font-extrabold text-[#203653]">{value}</p></div>;
 }
 function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#8390A3]">{label}</p><p className="mt-1 text-[10.5px] font-semibold text-[#203653]">{value}</p></div>; }
-function Amount({ label, value }: { label: string; value: string }) { return <div className="rounded-2xl bg-[#F8FAFD] p-4 text-center"><p className="text-[13px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>; }
+function Amount({ label, value }: { label: string; value: string }) { return <div className="border-r border-[#E0E7EF] py-3 text-center last:border-r-0"><p className="text-[13px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>; }
