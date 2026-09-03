@@ -115,7 +115,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
   if (!row) {
     return (
       <div className="space-y-7">
-        <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
+        <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
         <div className="border-y border-[#DCE4ED] py-14 text-center">
           <AlertCircle className="mx-auto h-7 w-7 text-[#A66A18]" />
           <p className="mt-3 text-[12px] font-bold text-[#23395D]">Policy Intake unavailable</p>
@@ -128,18 +128,18 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
   return (
     <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
-        <button type="button" onClick={() => void load(true)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
+        <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
+        <button type="button" onClick={() => void load(true)} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
       </div>
 
       {submitted ? (
-        <section className="flex items-start gap-3 rounded-[22px] border border-[#CDE7D7] bg-[#F3FBF6] px-4 py-3">
+        <section className="flex items-start gap-3 rounded-[16px] border border-[#CDE7D7] bg-[#F3FBF6] px-4 py-3">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#2F7F52]" />
           <div><p className="text-[10.5px] font-extrabold text-[#285E41]">Policy Intake {row.intake_number} submitted</p><p className="mt-0.5 text-[9.5px] font-medium text-[#4F735F]">Received by Operations. Track progress here.</p></div>
         </section>
       ) : null}
 
-      {error ? <section className="rounded-[20px] border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</section> : null}
+      {error ? <section className="rounded-[14px] border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</section> : null}
 
       <section className="py-1">
         <PartnerPageHeader
@@ -154,13 +154,13 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
       </section>
 
       {row.final_policy_id ? (
-        <Link href={"/partner/policies/" + encodeURIComponent(row.final_policy_id)} className="flex min-h-12 items-center justify-between border-y border-[#DCE4ED] px-1 text-[10.5px] font-extrabold text-[#203653]">
+        <Link href={"/partner/policies/" + encodeURIComponent(row.final_policy_id)} className="flex min-h-12 items-center justify-between border-y border-[#DCE4ED] px-1 text-[10.5px] font-extrabold text-[#203653] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
           Open final policy <span aria-hidden="true">→</span>
         </Link>
       ) : null}
 
       {row.attention_reason ? (
-        <section className="rounded-[24px] border border-[#F0D7AE] bg-[#FFF8EC] p-5">
+        <section className="rounded-[18px] border border-[#F0D7AE] bg-[#FFF8EC] p-5">
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#A86809]" />
             <div>
@@ -175,7 +175,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
             type="button"
             disabled={replacing}
             onClick={() => fileRef.current?.click()}
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-[#111A35] px-4 text-[10.5px] font-bold text-white disabled:opacity-50"
+            className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25 disabled:opacity-50"
           >
             {replacing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
             {replacing ? "Uploading replacement…" : "Upload replacement policy copy"}
@@ -245,11 +245,11 @@ function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
 }
 
 function Detail({ label, value }: { label: string; value: string }) {
-  return <div className="flex min-h-11 items-center justify-between gap-4 py-3"><p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#8491A3]">{label}</p><p className="max-w-[65%] text-right text-[10px] font-semibold text-[#203653]">{value}</p></div>;
+  return <div className="flex min-h-11 items-center justify-between gap-4 py-3"><p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#8491A3]">{label}</p><p className="max-w-[68%] break-words text-right text-[10px] font-semibold leading-4 text-[#203653]">{value}</p></div>;
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#8491A3]">{label}</p><p className="mt-1 text-[10px] font-semibold text-[#203653]">{value}</p></div>;
+  return <div><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#8491A3]">{label}</p><p className="mt-1 break-words text-[10px] font-semibold leading-4 text-[#203653]">{value}</p></div>;
 }
 
 function UploadProgress({ progress }: { progress: IntakeProgress }) {
