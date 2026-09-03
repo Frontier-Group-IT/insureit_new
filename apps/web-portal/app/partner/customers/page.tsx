@@ -84,14 +84,14 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><UsersRound className="h-5 w-5" /></span>
                     <div className="min-w-0">
-                      <p className="truncate text-[12px] font-extrabold text-[#172846]">{row.customer_name || row.company_name || "Customer"}</p>
-                      <p className="mt-0.5 truncate text-[10px] font-medium text-[#74839A]">{row.customer_code || row.company_name || row.customer_type || "Customer record"}</p>
+                      <p className="break-words text-[12px] font-extrabold leading-4 text-[#172846]">{row.customer_name || row.company_name || "Customer"}</p>
+                      <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_code || row.company_name || row.customer_type || "Customer record"}</p>
                     </div>
                   </div>
 
                   <div className="min-w-0 space-y-1">
-                    {row.phone ? <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold text-[#536680]"><Phone className="h-3 w-3" />{row.phone}</p> : null}
-                    {row.email ? <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold text-[#536680]"><Mail className="h-3 w-3" />{row.email}</p> : null}
+                    {row.phone ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[10px] font-semibold leading-4 text-[#536680]"><Phone className="h-3 w-3" />{row.phone}</p> : null}
+                    {row.email ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[10px] font-semibold leading-4 text-[#536680]"><Mail className="h-3 w-3" />{row.email}</p> : null}
                   </div>
 
                   <div>
@@ -107,7 +107,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
             <div className="py-14 text-center">
               <UsersRound className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No customers found</p>
-              <p className="mt-1 text-[10.5px] text-[#7A899F]">{q ? "Try a different scoped customer search." : "No customers are currently available in this Partner scope."}</p>
+              <p className="mt-1 text-[10.5px] text-[#7A899F]">{q ? "Try a different search." : "No customers available yet."}</p>
             </div>
           )}
 
