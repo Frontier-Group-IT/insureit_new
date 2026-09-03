@@ -121,7 +121,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/") return continueRequest(request, refreshedSession, check.role);
 
   if (pathname === "/login") {
-    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/intermediary-portal" : internalLaunchHome, refreshedSession, check.role);
+    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
     return clearSessionCookies(continueRequest(request));
   }
