@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1148
-source_commit=dad3d3ea46b9f1d09ea81c56b26f1b29cf76218e
-purpose=publish Android vehicle search autofocus modal lifecycle fix preview OTA
+source_pr=1150
+source_commit=dffe4f5766249e4d054a430ef1cf05470938494f
+purpose=publish customer claim card navy accent preview OTA
