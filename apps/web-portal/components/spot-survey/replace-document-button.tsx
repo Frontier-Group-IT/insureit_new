@@ -1,18 +1,21 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { replaceSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 
 export function ReplaceDocumentButton({ claimId, customerId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; message?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const previewUrl = useMemo(() => selectedFile && selectedFile.type.startsWith("image/") ? URL.createObjectURL(selectedFile) : null, [selectedFile]);
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]">{actionLabel}</button>
+      <button type="button"       onClick={() => { setResult(null); setOpen(true); }} className="h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]">{actionLabel}</button>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
           <form
@@ -21,9 +24,12 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
               event.preventDefault();
               const formData = new FormData(event.currentTarget);
               startTransition(async () => {
-                await replaceSpotSurveyDocument(formData);
-                setSelectedFile(null);
-                setOpen(false);
+                const response = await replaceSpotSurveyDocument(formData);
+                setResult(response);
+                if (response.ok) {
+                  setSelectedFile(null);
+                  router.refresh();
+                }
               });
             }}
             className="w-full max-w-[520px] overflow-hidden rounded-xl bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
@@ -48,7 +54,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                 <input
                   name="file"
                   type="file"
-                  accept={documentType.toLowerCase().includes("video") ? "video/mp4,video/quicktime,video/webm" : "image/jpeg,image/png,image/webp,application/pdf"}
+                  accept={documentType.toLowerCase().includes("video") ? "video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.mp4,.mov,.webm,.mkv,.avi" : "image/jpeg,image/png,image/webp,application/pdf"}
                   className="hidden"
                   required
                   onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
@@ -58,7 +64,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                   <span className="mt-2 block text-[13px] font-semibold text-[#071D49]">Drag &amp; drop file here</span>
                   <span className="block text-[12px] text-[#68758A]">or</span>
                   <span className="mt-1 inline-flex h-8 items-center rounded-md bg-[#071D49] px-5 text-[12px] font-semibold text-white">Select File</span>
-                  <span className="mt-2 block text-[10px] text-[#68758A]">{documentType.toLowerCase().includes("video") ? "Supported formats: MP4, MOV, WEBM (Max size 50MB)" : "Supported formats: JPG, PNG, PDF (Max size 5MB)"}</span>
+                  <span className="mt-2 block text-[10px] text-[#68758A]">{documentType.toLowerCase().includes("video") ? "Supported formats: MP4, MOV, WEBM, MKV, AVI (Max size 50MB)" : "Supported formats: JPG, PNG, PDF (Max size 5MB)"}</span>
                 </span>
               </label>
 
@@ -86,11 +92,12 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                   </div>
                 ) : <p className="mt-2 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF] px-3 py-3 text-[12px] text-[#8B98A9]">No file selected.</p>}
               </div>
+              {result ? <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? (result.ok ? "Upload completed." : "Upload failed.")}</p> : null}
             </div>
 
             <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">
-              <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-md border border-[#B8C5D6] px-8 text-[13px] font-semibold text-[#071D49]">Cancel</button>
-              <button type="submit" disabled={!selectedFile || isPending} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55">{isPending ? "Uploading..." : "Upload"}</button>
+              <button type="button" onClick={() => { setSelectedFile(null); setResult(null); setOpen(false); }} className="h-10 rounded-md border border-[#B8C5D6] px-8 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button>
+              <button type="submit" disabled={!selectedFile || isPending || Boolean(result?.ok)} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55">{isPending ? "Uploading..." : "Upload"}</button>
             </div>
           </form>
         </div>

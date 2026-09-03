@@ -10,6 +10,7 @@ import { canVerifyClaimDocuments } from "@/lib/roles";
 const bucketName = "claim-documents";
 const maxDocumentSizeBytes = 5 * 1024 * 1024;
 const maxVideoSizeBytes = 50 * 1024 * 1024;
+const maxSpotPhotoSizeBytes = 20 * 1024 * 1024;
 const spotRequiredFields = ["spot_axle_status", "spot_overturned"] as const;
 const rcDateFields = ["fitness_valid_upto", "tax_valid_upto", "insurance_valid_upto", "pucc_valid_upto", "local_permit_valid_upto", "national_permit_valid_upto"] as const;
 const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "ncb_verified", "policy_type_check", "gvw_kg"] as const;
@@ -260,10 +261,11 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
       "video/quicktime",
       "video/webm"
     ]);
-    const maxFileSize = 20 * 1024 * 1024;
     for (const file of files) {
-      if (!allowedTypes.has(file.type)) throw new Error(`${file.name} is not a supported photo/video format.`);
-      if (file.size > maxFileSize) throw new Error(`${file.name} exceeds the 20MB per-file limit.`);
+      const isVideo = file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name);
+      if (!allowedTypes.has(file.type) && !/\.(jpg|jpeg|png|webp|heic|mp4|mov|webm|mkv|avi)$/i.test(file.name)) throw new Error(`${file.name} is not a supported photo/video format.`);
+      const maxFileSize = isVideo ? maxVideoSizeBytes : maxSpotPhotoSizeBytes;
+      if (file.size > maxFileSize) throw new Error(`${file.name} exceeds the ${isVideo ? "50MB video" : "20MB photo"} per-file limit.`);
     }
 
     const profile = await currentProfile();
@@ -378,7 +380,10 @@ export async function replaceSpotSurveyDocument(formData: FormData): Promise<Act
     const maxSize = isVideo ? maxVideoSizeBytes : maxDocumentSizeBytes;
     if (file.size > maxSize) throw new Error(`The selected file exceeds the ${isVideo ? "50 MB" : "5 MB"} limit.`);
     const allowedTypes = isVideo ? ["video/mp4", "video/quicktime", "video/webm"] : ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (file.type && !allowedTypes.includes(file.type)) throw new Error("Unsupported document format.");
+    const extensionAllowed = isVideo
+      ? /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name)
+      : /\.(jpg|jpeg|png|webp|pdf)$/i.test(file.name);
+    if (file.type && !allowedTypes.includes(file.type) && !extensionAllowed) throw new Error("Unsupported document format.");
     const profile = await currentProfile(); await loadClaim(claimId); const supabase = await createServerSupabaseClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_"); const storagePath = `${claimId}/${Date.now()}-${safeName}`;
     const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
