@@ -59,6 +59,7 @@ export default function SelfManagedMilestoneScreen() {
   const [claimNo, setClaimNo] = useState('');
   const [insurerClaimNo, setInsurerClaimNo] = useState('');
   const [claimNumberPromptVisible, setClaimNumberPromptVisible] = useState(false);
+  const [claimNumberPromptContext, setClaimNumberPromptContext] = useState<'entry' | 'after_save'>('entry');
   const [claimNumberDraft, setClaimNumberDraft] = useState('');
   const [claimNumberSaving, setClaimNumberSaving] = useState(false);
   const [claimNumberError, setClaimNumberError] = useState('');
@@ -97,6 +98,7 @@ export default function SelfManagedMilestoneScreen() {
         && !nextInsurerClaimNo
       ) {
         setClaimNumberError('');
+        setClaimNumberPromptContext('entry');
         setClaimNumberPromptVisible(true);
       }
       setCustomerId(identity.customer_id ?? '');
@@ -132,15 +134,22 @@ export default function SelfManagedMilestoneScreen() {
     router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: key } });
   }
 
-  function openNextStageAfterClaimNumberPrompt() {
+  function closeClaimNumberPrompt() {
     setClaimNumberPromptVisible(false);
     setClaimNumberError('');
-    router.replace({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key: 'work_approval' } });
+  }
+
+  function finishClaimNumberPrompt() {
+    const shouldContinue = claimNumberPromptContext === 'after_save';
+    closeClaimNumberPrompt();
+    if (shouldContinue) {
+      router.replace({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key: 'work_approval' } });
+    }
   }
 
   function skipClaimNumberForNow() {
     if (claimNumberSaving) return;
-    openNextStageAfterClaimNumberPrompt();
+    finishClaimNumberPrompt();
   }
 
   async function saveInsurerClaimNumber() {
@@ -165,7 +174,7 @@ export default function SelfManagedMilestoneScreen() {
     }
 
     setInsurerClaimNo(nextClaimNumber);
-    openNextStageAfterClaimNumberPrompt();
+    finishClaimNumberPrompt();
   }
 
   function continueAfterSave(completed = true) {
@@ -227,6 +236,7 @@ export default function SelfManagedMilestoneScreen() {
     if (key === 'claim_intimation' && !insurerClaimNo.trim()) {
       setClaimNumberDraft('');
       setClaimNumberError('');
+      setClaimNumberPromptContext('after_save');
       setClaimNumberPromptVisible(true);
       return;
     }
