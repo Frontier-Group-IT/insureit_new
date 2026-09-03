@@ -1,4 +1,4 @@
 triggered_by=chatgpt
 source_pr=1156
-source_commit=f2a3747f2d51d78cee38a9a2d43003fed1059a90
-purpose=publish claim number review stage navigation fix preview OTA
+source_commit=a72cc1f82a998892674c44b2e8332daf7fc5f6ed
+purpose=retrigger claim number review navigation fix from exact current main
