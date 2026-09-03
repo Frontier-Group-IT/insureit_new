@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, ArrowRight, FileText, Plus, RefreshCw } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
 type IntakeFilter = "all" | "attention" | "in_progress" | "completed";
+const PAGE_SIZE = 25;
 
 function humanize(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -38,42 +39,40 @@ function field(row: PartnerPolicyIntake, key: string) {
 export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [filter, setFilter] = useState<IntakeFilter>("all");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [counts, setCounts] = useState({ active: 0, attention: 0, progress: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  async function load(manual = false) {
+  const load = useCallback(async (manual = false) => {
     if (manual) setRefreshing(true);
     else setLoading(true);
     setError("");
     try {
-      const result = await getPartnerPolicyIntakesWeb();
+      const result = await getPartnerPolicyIntakesWeb({
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+        filter,
+      });
       setRows(result.intakes);
+      setTotal(result.total);
+      setCounts(result.counts);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }
+  }, [filter, page]);
 
   useEffect(() => {
     void load(false);
-  }, []);
+  }, [load]);
 
-  const counts = useMemo(() => ({
-    active: rows.filter((row) => !["completed", "rejected"].includes(row.status)).length,
-    attention: rows.filter((row) => row.status === "needs_attention").length,
-    progress: rows.filter((row) => ["processing", "ready_for_review", "in_review"].includes(row.status)).length,
-    completed: rows.filter((row) => row.status === "completed").length,
-  }), [rows]);
-
-  const visibleRows = useMemo(() => rows.filter((row) => {
-    if (filter === "all") return true;
-    if (filter === "attention") return row.status === "needs_attention";
-    if (filter === "completed") return row.status === "completed";
-    return ["processing", "ready_for_review", "in_review"].includes(row.status);
-  }), [filter, rows]);
+  const hasPrevious = page > 1;
+  const hasNext = page * PAGE_SIZE < total;
 
   return (
     <div className="space-y-4">
@@ -119,14 +118,14 @@ export function PartnerPolicyIntakeListClient() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setFilter(value)}
+                onClick={() => { setFilter(value); setPage(1); }}
                 className={"rounded-xl px-3 py-2 text-[10px] font-bold " + (filter === value ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}
               >
                 {label}
               </button>
             ))}
           </div>
-          <p className="text-[9.5px] font-semibold text-[#7A899F]">{visibleRows.length} shown · {rows.length} total</p>
+          <p className="text-[9.5px] font-semibold text-[#7A899F]">{rows.length} shown · {total} matched</p>
         </div>
 
         {error ? (
@@ -138,9 +137,9 @@ export function PartnerPolicyIntakeListClient() {
             <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#7F90A8]" />
             <p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intakes…</p>
           </div>
-        ) : visibleRows.length ? (
+        ) : rows.length ? (
           <div className="divide-y divide-[#E8EDF4]">
-            {visibleRows.map((row) => (
+            {rows.map((row) => (
               <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group block px-5 py-4 transition hover:bg-[#F8FAFD] sm:px-6">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -178,10 +177,31 @@ export function PartnerPolicyIntakeListClient() {
         ) : (
           <div className="px-5 py-14 text-center">
             <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
-            <p className="mt-3 text-[12px] font-bold text-[#23395D]">{rows.length ? "No submissions in this filter" : "No Policy Intakes yet"}</p>
-            <p className="mt-1 text-[10.5px] text-[#7A899F]">{rows.length ? "Choose another pipeline filter." : "Create an intake when you have a policy copy that Operations needs to onboard."}</p>
+            <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions on this page" : "No Policy Intakes yet"}</p>
+            <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Go back a page or choose another pipeline filter." : "Create an intake when you have a policy copy that Operations needs to onboard."}</p>
           </div>
         )}
+        {(hasPrevious || hasNext) ? (
+          <div className="flex items-center justify-between border-t border-[#E6ECF3] px-5 py-4 sm:px-6">
+            <button
+              type="button"
+              onClick={() => setPage((value) => Math.max(1, value - 1))}
+              disabled={!hasPrevious || loading}
+              className="inline-flex min-h-9 items-center rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <p className="text-[10px] font-semibold text-[#74839A]">Page {page}</p>
+            <button
+              type="button"
+              onClick={() => setPage((value) => value + 1)}
+              disabled={!hasNext || loading}
+              className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : null}
       </section>
     </div>
   );
