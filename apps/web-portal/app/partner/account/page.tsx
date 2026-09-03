@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, GraduationCap, LifeBuoy, ShieldCheck, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebSession } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -16,22 +17,22 @@ export default async function PartnerAccountPage() {
 
   return (
     <PartnerPortalShell title="Account">
-      <div className="space-y-4">
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-          <div className="bg-[#111A35] px-5 py-6 text-white sm:px-6">
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/60">Partner Account</p>
-            <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em]">{identity.display_name}</h2>
-            <p className="mt-1 text-[10.5px] font-medium text-white/65">{intermediary ? humanize(intermediary.intermediary_type) + " · " + (intermediary.intermediary_code || "Code not recorded") : "Partner workspace"}</p>
-          </div>
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-            <Info label="Partner Family" value={intermediary?.partner_name || "—"} />
-            <Info label="Partner Code" value={intermediary?.partner_code || "—"} />
-            <Info label="Portal Status" value="Active" />
-            <Info label="Commercial Scope" value={humanize(scope.scope_mode)} />
-          </div>
-        </section>
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Partner Account"
+          title={identity.display_name}
+          description={intermediary ? humanize(intermediary.intermediary_type) + " · " + (intermediary.intermediary_code || "Code not recorded") : "Partner workspace"}
+        />
+        <PartnerMetricStrip
+          items={[
+            { label: "Partner Family", value: intermediary?.partner_name || "—" },
+            { label: "Partner Code", value: intermediary?.partner_code || "—" },
+            { label: "Portal Status", value: "Active" },
+            { label: "Commercial Scope", value: humanize(scope.scope_mode) },
+          ]}
+        />
 
-        <section className="grid gap-3 lg:grid-cols-3">
+        <section className="grid border-y border-[#DCE4ED] lg:grid-cols-3">
           <AccountAction
             href="/partner/profile"
             icon={UserRound}
@@ -52,7 +53,7 @@ export default async function PartnerAccountPage() {
           />
         </section>
 
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+        <section className="py-1">
           <div className="flex items-start gap-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><ShieldCheck className="h-4 w-4" /></span>
             <div>
@@ -66,13 +67,9 @@ export default async function PartnerAccountPage() {
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return <div className="border-b border-[#E6ECF3] px-5 py-4 sm:border-r sm:px-6 xl:border-b-0 xl:last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">{label}</p><p className="mt-1.5 truncate text-[10.5px] font-extrabold text-[#203653]">{value}</p></div>;
-}
-
 function AccountAction({ href, icon: Icon, title, text }: { href: string; icon: typeof UserRound; title: string; text: string }) {
   return (
-    <Link href={href} className="group flex min-h-[124px] items-center gap-4 rounded-[24px] border border-[#D7E0EC] bg-white p-5 shadow-[0_12px_35px_rgba(34,56,89,.06)] transition hover:-translate-y-0.5">
+    <Link href={href} className="group flex min-h-[92px] items-center gap-4 border-b border-[#E0E7EF] px-1 py-4 transition hover:bg-white/70 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#111A35] text-white"><Icon className="h-5 w-5" /></span>
       <span className="min-w-0 flex-1"><span className="block text-[12px] font-extrabold text-[#172846]">{title}</span><span className="mt-1 block text-[10px] font-medium leading-4 text-[#74839A]">{text}</span></span>
       <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />

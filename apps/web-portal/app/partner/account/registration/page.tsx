@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { PartnerIcallLauncher } from "@/components/partner-portal/partner-icall-launcher";
 import { getPartnerWebRegistrationOverview } from "@/lib/partner-web";
 
@@ -97,51 +98,45 @@ export default async function PartnerRegistrationPage() {
 
   return (
     <PartnerPortalShell title="Registration & Training">
-      <div className="space-y-4">
+      <div className="space-y-7">
         <Link href="/partner/account" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]">
           <ArrowLeft className="h-3.5 w-3.5" /> Account
         </Link>
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-          <div className="bg-[#111A35] px-5 py-6 text-white sm:px-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/55">Registration & Training</p>
-                <h2 className="mt-1 truncate text-[23px] font-extrabold tracking-[-0.025em]">{data.intermediary.display_name}</h2>
-                <p className="mt-1 text-[10.5px] font-medium text-white/65">{humanize(data.intermediary.intermediary_type)} · {data.intermediary.intermediary_code || "Code not recorded"}</p>
-              </div>
-              <span className="inline-flex w-fit rounded-xl bg-white/10 px-3 py-1.5 text-[9.5px] font-bold text-white">{humanize(registrationStatus)}</span>
-            </div>
+        <PartnerPageHeader
+          eyebrow="Registration & Training"
+          title={data.intermediary.display_name}
+          description={humanize(data.intermediary.intermediary_type) + " · " + (data.intermediary.intermediary_code || "Code not recorded")}
+          action={<span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2.5 py-1.5 text-[9.5px] font-bold text-[#425672]">{humanize(registrationStatus)}</span>}
+        />
 
-            <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[9.5px] font-medium text-white/70">
-              <span className="inline-flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {data.intermediary.email || "Email not recorded"}</span>
-              <span className="inline-flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {data.intermediary.mobile || "Mobile not recorded"}</span>
-            </div>
-          </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-[9.5px] font-medium text-[#74839A]">
+          <span className="inline-flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {data.intermediary.email || "Email not recorded"}</span>
+          <span className="inline-flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {data.intermediary.mobile || "Mobile not recorded"}</span>
+        </div>
 
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-            <HeaderMetric label="Account" value={humanize(data.intermediary.account_status)} />
-            <HeaderMetric label="Portal Access" value={humanize(data.intermediary.portal_access_status)} />
-            <HeaderMetric label="Qualification" value={qualification ? accountLabel : "Not linked"} />
-            <HeaderMetric label="Registration" value={humanize(registrationStatus)} />
-          </div>
-        </section>
+        <PartnerMetricStrip
+          items={[
+            { label: "Account", value: humanize(data.intermediary.account_status) },
+            { label: "Portal Access", value: humanize(data.intermediary.portal_access_status) },
+            { label: "Qualification", value: qualification ? accountLabel : "Not linked" },
+            { label: "Registration", value: humanize(registrationStatus) },
+          ]}
+        />
 
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.12em] text-[#687A96]">Onboarding</p>
-              <h3 className="mt-1 text-[16px] font-extrabold text-[#152746]">Registration journey</h3>
-            </div>
-            {qualification ? <span className="rounded-xl bg-[#EEF4FF] px-3 py-1.5 text-[9px] font-bold text-[#3156B8]">{accountLabel}</span> : null}
-          </div>
+        <section className="py-1">
+          <PartnerSectionHeading
+            eyebrow="Onboarding"
+            title="Registration journey"
+            action={qualification ? <span className="text-[9px] font-bold text-[#3156B8]">{accountLabel}</span> : null}
+          />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <div className="mt-5 grid border-y border-[#DCE4ED] sm:grid-cols-2 xl:grid-cols-6">
             {steps.map((step, index) => <TimelineStep key={step.label} number={index + 1} {...step} />)}
           </div>
         </section>
 
-        <div className="grid gap-4 xl:grid-cols-[1.25fr_.75fr]">
+        <div className="grid gap-8 xl:grid-cols-[1.25fr_.75fr]">
           <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -158,7 +153,7 @@ export default async function PartnerRegistrationPage() {
               <span className="rounded-xl bg-[#EEF3F8] px-3 py-1.5 text-[9px] font-bold text-[#425672]">{humanize(trainingStatus)}</span>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid border-y border-[#DCE4ED] sm:grid-cols-3">
               <MiniMetric label="Training" value={humanize(trainingStatus)} />
               <MiniMetric label="Examination" value={humanize(examStatus)} />
               <MiniMetric label="Deadline" value={dateLabel(assignment?.training_deadline)} />
@@ -193,19 +188,15 @@ export default async function PartnerRegistrationPage() {
   );
 }
 
-function HeaderMetric({ label, value }: { label: string; value: string }) {
-  return <div className="border-b border-[#E6ECF3] px-5 py-4 sm:border-r sm:px-6 xl:border-b-0 xl:last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#7A899F]">{label}</p><p className="mt-1.5 truncate text-[10.5px] font-extrabold text-[#203653]">{value}</p></div>;
-}
-
 function TimelineStep({ number, label, icon: Icon, tone, status }: { number: number; label: string; icon: LucideIcon; tone: StepTone; status: string }) {
   const toneStyles = {
-    complete: "border-[#CDE7D7] bg-[#F3FBF6] text-[#2F7F52]",
-    active: "border-[#C9D7FA] bg-[#F2F6FF] text-[#3156B8]",
-    pending: "border-[#E1E7F0] bg-[#F8FAFD] text-[#73839A]",
+    complete: "border-[#E0E7EF] bg-[#F7FBF8] text-[#2F7F52]",
+    active: "border-[#E0E7EF] bg-[#F5F7FF] text-[#3156B8]",
+    pending: "border-[#E0E7EF] bg-transparent text-[#73839A]",
   }[tone];
 
   return (
-    <div className={"relative rounded-2xl border p-4 text-center " + toneStyles}>
+    <div className={"relative border-b border-[#E0E7EF] p-4 text-center sm:border-r xl:border-b-0 xl:last:border-r-0 " + toneStyles}>
       <span className="mx-auto grid h-9 w-9 place-items-center rounded-full bg-white shadow-sm">
         {tone === "complete" ? <Check className="h-4 w-4" /> : <span className="text-[10px] font-black">{number}</span>}
       </span>
@@ -217,7 +208,7 @@ function TimelineStep({ number, label, icon: Icon, tone, status }: { number: num
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4"><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7A899F]">{label}</p><p className="mt-1 text-[10.5px] font-extrabold text-[#203653]">{value}</p></div>;
+  return <div className="border-r border-[#E0E7EF] px-3 py-4 last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7A899F]">{label}</p><p className="mt-1 text-[10.5px] font-extrabold text-[#203653]">{value}</p></div>;
 }
 
 function StatusRow({ label, value, complete }: { label: string; value: string; complete: boolean }) {

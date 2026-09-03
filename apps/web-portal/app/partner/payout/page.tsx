@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BadgeIndianRupee, CircleDollarSign, LockKeyhole, ReceiptIndianRupee } from "lucide-react";
+import { ArrowRight, LockKeyhole, ReceiptIndianRupee } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebPayoutSummary } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -27,27 +28,21 @@ export default async function PartnerPayoutPage() {
   return (
     <PartnerPortalShell title="Payout">
       {payout.available ? (
-        <div className="space-y-4">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-            <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Commercial</p>
-              <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Payout overview</h2>
-              <p className="mt-1 text-[11px] font-medium text-[#74839A]">Only payout information explicitly available to this Partner account is shown.</p>
-            </div>
+        <div className="space-y-7">
+          <PartnerPageHeader
+            eyebrow="Commercial"
+            title="Payout overview"
+            description="Only payout information explicitly available to this Partner account is shown."
+          />
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <Metric label="Recorded" value={currency(payout.recorded_amount)} icon={ReceiptIndianRupee} />
-              <Metric label="Eligible" value={currency(payout.eligible_amount)} icon={BadgeIndianRupee} />
-              <Metric label="Paid" value={currency(payout.paid_amount)} icon={CircleDollarSign} />
-              <Metric label="Needs Review" value={currency(payout.needs_review_amount)} icon={LockKeyhole} />
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <Count label="Pending Records" value={payout.pending_count} />
-              <Count label="Paid Records" value={payout.paid_count} />
-              <Count label="Need Review" value={payout.needs_review_count} />
-            </div>
-          </section>
+          <PartnerMetricStrip
+            items={[
+              { label: "Recorded", value: currency(payout.recorded_amount), meta: payout.pending_count + " pending records" },
+              { label: "Eligible", value: currency(payout.eligible_amount), meta: "Commercially eligible" },
+              { label: "Paid", value: currency(payout.paid_amount), meta: payout.paid_count + " paid records" },
+              { label: "Needs Review", value: currency(payout.needs_review_amount), meta: payout.needs_review_count + " records" },
+            ]}
+          />
 
           {payout.needs_review_count > 0 ? (
             <section className="rounded-[22px] border border-[#F0D7AE] bg-[#FFF8EC] px-5 py-4">
@@ -56,14 +51,8 @@ export default async function PartnerPayoutPage() {
             </section>
           ) : null}
 
-          <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-            <div className="flex items-center justify-between border-b border-[#E6ECF3] px-5 py-4 sm:px-6">
-              <div>
-                <p className="text-[12px] font-extrabold text-[#172846]">Recent payout records</p>
-                <p className="mt-0.5 text-[9.5px] font-medium text-[#7A899F]">{payout.total_rows} total recorded</p>
-              </div>
-              <span className="rounded-xl bg-[#EEF3F8] px-3 py-1.5 text-[9px] font-bold text-[#425672]">{payout.intermediary_code}</span>
-            </div>
+          <section className="overflow-hidden border-y border-[#DCE4ED]">
+            <div className="py-4"><PartnerSectionHeading title="Recent payout records" description={payout.total_rows + " total recorded"} action={<span className="text-[9px] font-bold text-[#667892]">{payout.intermediary_code}</span>} /></div>
 
             {payout.recent.length ? (
               <div className="divide-y divide-[#E8EDF4]">
@@ -103,9 +92,3 @@ export default async function PartnerPayoutPage() {
   );
 }
 
-function Metric({ label, value, icon: Icon }: { label: string; value: string; icon: typeof BadgeIndianRupee }) {
-  return <div className="flex items-center gap-3 rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-[#3156B8]"><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[0.09em] text-[#75849A]">{label}</p><p className="mt-1 truncate text-[18px] font-extrabold text-[#162746]">{value}</p></div></div>;
-}
-function Count({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-2xl border border-[#E1E7F0] bg-white px-4 py-3"><p className="text-[9px] font-black uppercase tracking-[0.09em] text-[#75849A]">{label}</p><p className="mt-1 text-[18px] font-extrabold text-[#162746]">{value}</p></div>;
-}
