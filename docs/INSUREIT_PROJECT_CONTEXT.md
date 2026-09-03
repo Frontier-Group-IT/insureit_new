@@ -18,6 +18,15 @@
 
 ## 2. Product domain model
 
+### 2.0 Claim service ownership and customer journey
+
+- External claims remain customer-controlled in `claim_milestones` while `claim_service_mode = 'self_managed'`. Operations must not use internal processing controls until the customer requests assistance and Operations accepts it.
+- Assistance acceptance is the only conversion boundary to `broker_managed`; it must preserve `policy_service_source = 'external'` and must not rewrite customer milestones.
+- Internal customer journey presentation is a deterministic projection of authoritative claim status and document evidence. It is not a second writable milestone model.
+- Customers may upload requested internal-claim documents but must not update `claims.current_status`. Operational transitions remain server-authoritative.
+- `packages/claim-journey` is the shared web/mobile projection contract. Every supported internal status must map explicitly; unknown states default to Operations review rather than customer action.
+- Migration `20260903151000_reviewed_claim_assistance_intake.sql` implements reviewed assistance intake with row locking, explicit safe entry-stage selection, evidence checks and atomic history/activity persistence. A committed migration is not **APPLIED**.
+
 ### 2.1 Partner is the permanent parent identity
 
 A Partner is the permanent parent business identity. It is not a qualification account.

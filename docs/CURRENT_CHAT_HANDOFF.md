@@ -6,6 +6,27 @@
 
 ## Active track
 
+## Claim workflow alignment boundary — user-approved 2026-09-03
+
+**APPROVED SCOPE:** Align the customer-facing presentation and read model for internal claims with the existing external claim experience, but do not change the external claim workflow.
+
+- External/self-managed claims remain customer-controlled exactly as they are today. Customers may enter milestone details, upload documents, and progress those claims at their discretion.
+- Operations must not process or alter an external claim unless the customer explicitly requests assistance.
+- An accepted assistance request is the deliberate conversion boundary: the claim becomes broker/internal-managed and then follows the Operations-controlled workflow.
+- Do not backfill external claims into internal milestones, change their status semantics, restrict their existing customer actions, or replace their existing screens/storage behavior as part of internal alignment.
+- Internal claims may reuse compatible customer-facing journey components, but all internal verification, rejection/reupload requests, surveyor deputation, insurer actions, approval, repair, delivery, settlement, and closure remain Operations-authoritative.
+- `claim_service_mode`, `assistance_status`, and `current_status` remain separate concepts. Assistance acceptance may change service mode; ordinary internal workflow progress must not.
+
+**IMPLEMENTED / NOT APPLIED OR DEPLOYED:** the first safe alignment tranche adds `packages/claim-journey` as the shared web/mobile internal projection for all 40 known claim statuses. Mobile internal claim detail/list now distinguish customer action from Operations waiting, use document evidence and legacy aliases, and no longer update `claims.current_status` after customer uploads. External `claim_milestones`, screens and `save_self_managed_milestone` behavior are unchanged.
+
+**IMPLEMENTED / NOT APPLIED OR DEPLOYED:** Operations claim rows show the projected customer stage/next owner and retain an External policy assisted badge. Self-managed claim detail is read-only unless assistance is requested. The new assistance intake screen requires Operations to review customer milestones/documents and explicitly choose one of three safe internal entry stages. Migration `20260903151000_reviewed_claim_assistance_intake.sql` validates the actor, locks the request, verifies required document evidence for advanced entry stages, preserves external source/milestones, and atomically records the decision, stage, history and customer activity. The older resolver's authenticated execution is revoked because it cannot record reviewed entry-stage selection.
+
+**VERIFIED LOCALLY:** claim projection regression covers every known status and external-boundary source assertions; web/mobile typechecks, targeted lint, mobile web export, Next.js production build with non-secret build placeholders, and `git diff --check` passed.
+
+**REMAINING:** do not apply or deploy this tranche without the protected migration and canonical feature-PR gates. Mobile staff direct claim/document mutations and web post-spot direct transitions remain unsafe legacy paths; replace or retire them through later expected-status RPC phases. Customer DO acceptance, payment-receipt semantics, rejection/reopen authority and SLA escalation still require approved contracts before implementation.
+
+**IMPLEMENTED / NOT APPLIED OR DEPLOYED:** production evidence exposed a false-success reconciliation case for an all-verified claim still at `Initial Documents Pending`. The generic helper treated that state as unchanged, returned without calling the RPC, and the server action still returned success. The fix makes all initial pending/submitted legacy variants eligible only after six-category verification, requires a confirmed RPC advancement before success, restricts the reconciliation button to those states, and renders success/error feedback with the correct tone. Migration `20260903160000_fix_initial_document_finalization.sql` additively updates the already-applied RPC; it must not be treated as **APPLIED** until its protected workflow succeeds.
+
 ## External policy claim linking
 
 **IMPLEMENTED / APPLIED / DEPLOYED:** Operations claim details now resolve the claim's direct `external_policy_id` alongside ordinary `policy_id`, showing policy number, coverage dates, premium/IDV when present, and an authorized policy-copy link. New mobile external-policy uploads persist `customer_documents.external_policy_id`; older rows remain supported through `external_policies.document_storage_path`. Migration `202609030001_external_policy_document_link.sql` adds the nullable relationship and index. The isolated migration workflow applied and verified the relationship/index. Production deployment was completed for the merged queue release; latest GitHub deployment `6222655881` reports success at `https://insureit-fyg7hg0l8-insureit.vercel.app`.
@@ -1457,3 +1478,11 @@ Locked product decisions:
 - mobile engagement modules such as Impact, Journey, Learn, Stories and Recognition are secondary and should be added only if they provide useful web value.
 
 No implementation beyond documentation was performed in this decision-lock step.
+
+## Secure initial-document stage reconciliation — 2026-09-03
+
+**DEPLOYED:** PR #1133 merged as `702cb22815705f986994f5f3b07f654492c61bc8`; canonical web verification run `33728720766` passed for feature head `2ae55267792d915908283f51c6168a2ea0ed34b9`. The protected `advance_initial_documents_verified` RPC migration was applied and verified by run `33729021865`.
+
+**DEPLOYED:** The production deployment workflow completed successfully in run `33730265587`; `https://portal.insureit.in` returned HTTP 200 afterward. PR #1134 (`b312239d92c4b056b9ca19f72b67895b8b15375d`) fixed the deploy gate to recognize manually dispatched schema workflow runs before deployment.
+
+Remaining operator verification: refresh the affected Spot Survey claim, click **Finalize verification**, confirm `Initial Documents Verified`, then verify surveyor deputation can be opened and saved.

@@ -6,7 +6,7 @@ import { finalizeInitialDocumentVerification } from "@/app/claims/[id]/spot-surv
 
 export function FinalizeInitialDocumentVerificationButton({ claimId }: { claimId: string }) {
   const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<string | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const router = useRouter();
 
   return (
@@ -20,9 +20,10 @@ export function FinalizeInitialDocumentVerificationButton({ claimId }: { claimId
           type="button"
           disabled={pending}
           onClick={() => startTransition(async () => {
-            const result = await finalizeInitialDocumentVerification(claimId);
-            setMessage(result.message ?? null);
-            if (!result.ok) return;
+            setResult(null);
+            const actionResult = await finalizeInitialDocumentVerification(claimId);
+            setResult({ ok: actionResult.ok, message: actionResult.message ?? (actionResult.ok ? "Verification finalized." : "Could not finalize verification.") });
+            if (!actionResult.ok) return;
             router.refresh();
           })}
           className="inline-flex h-10 items-center rounded-lg bg-[#071D49] px-5 text-[13px] font-semibold text-white transition hover:bg-[#12356C] disabled:cursor-not-allowed disabled:opacity-60"
@@ -30,7 +31,7 @@ export function FinalizeInitialDocumentVerificationButton({ claimId }: { claimId
           {pending ? "Finalizing..." : "Finalize verification"}
         </button>
       </div>
-      {message ? <p className="mt-3 text-[12px] font-semibold text-red-700">{message}</p> : null}
+      {result ? <p className={`mt-3 text-[12px] font-semibold ${result.ok ? "text-emerald-700" : "text-red-700"}`}>{result.message}</p> : null}
     </div>
   );
 }

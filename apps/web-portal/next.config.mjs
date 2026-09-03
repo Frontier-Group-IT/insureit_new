@@ -49,6 +49,7 @@ const embeddedEditorHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: projectRoot,
+  transpilePackages: ["@insureit/claim-journey"],
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

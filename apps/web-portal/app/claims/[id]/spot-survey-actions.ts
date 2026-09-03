@@ -17,7 +17,7 @@ const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "
 const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss_vehicle"] as const;
 const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
 
-type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null };
+type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed" };
 type ClaimDocumentStatus = { id: string; document_type: string; verification_status: string };
 type ActionResult = { ok: boolean; message?: string };
 type VerificationType = "rc" | "insurance" | "document" | "detail";
@@ -31,14 +31,15 @@ async function currentProfile() {
 
 async function loadClaim(claimId: string) {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, accident_at").eq("id", claimId).maybeSingle<ClaimForVerification>();
+  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode").eq("id", claimId).maybeSingle<ClaimForVerification>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
+  if (data.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
   return data;
 }
 
 async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification, documentId: string, profileId: string | null) {
   const nextStatus = verifiedStatusFor(claim.current_status);
-  if (!nextStatus || nextStatus === claim.current_status) return;
+  if (!nextStatus || nextStatus === claim.current_status) return false;
 
   const supabase = await createServerSupabaseClient();
   const { data: documents, error: documentsError } = await supabase
@@ -55,7 +56,7 @@ async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification,
       (document.id === documentId || document.verification_status === "verified")
     )
   );
-  if (!allVerified) return;
+  if (!allVerified) return false;
 
   const { data: updatedClaim, error: updateError } = await supabase.rpc("advance_initial_documents_verified", {
     p_claim_id: claim.id,
@@ -66,6 +67,7 @@ async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification,
     throw new Error("All required documents are verified, but the claim status could not be advanced.");
   }
 
+  return true;
 }
 
 function collectVerificationDetails(formData: FormData) {
@@ -233,7 +235,8 @@ export async function finalizeInitialDocumentVerification(claimId: string): Prom
     if (!claimId.trim()) throw new Error("Missing claim id.");
     const profile = await currentProfile();
     const claim = await loadClaim(claimId);
-    await advanceAfterInitialDocumentsVerified(claim, "", profile?.id ?? null);
+    const advanced = await advanceAfterInitialDocumentsVerified(claim, "", profile?.id ?? null);
+    if (!advanced) throw new Error("This claim is not eligible for initial document finalization.");
     revalidatePath(`/claims/${claimId}`);
     revalidatePath("/claims");
     revalidatePath("/dashboard");

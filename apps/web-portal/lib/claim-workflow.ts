@@ -1,45 +1,6 @@
-export const claimStatuses = [
-  "Draft",
-  "Accident Reported",
-  "Initial Documents Pending",
-  "Initial Documents Verification Pending",
-  "Initial Documents Submitted",
-  "Initial Documents Verified",
-  "Documents Pending",
-  "Documents Submitted",
-  "Claim Intimated",
-  "Surveyor Appointed",
-  "Spot Survey Completed",
-  "Vehicle Inspected",
-  "Final Documents Awaited",
-  "Final Documents Verification Pending",
-  "Final Documents Submitted",
-  "Final Documents Verified",
-  "Claim Intimation",
-  "Final Surveyor Details",
-  "Survey Status",
-  "Survey Done",
-  "Work Approval Status",
-  "Work Approval Received",
-  "Under Repair",
-  "Repair Done",
-  "RA Intimation",
-  "RA Intimation Done",
-  "DO Status",
-  "Payment Stage",
-  "Claim Completion In Progress",
-  "Claim Complete",
-  "Estimate Submitted",
-  "Approval Pending",
-  "Repair Started",
-  "Repair Completed",
-  "DO Submitted",
-  "Final Bill Submitted",
-  "Settlement Under Process",
-  "Settled",
-  "Rejected",
-  "Closed"
-] as const;
+import { INTERNAL_CLAIM_STATUSES } from "@insureit/claim-journey";
+
+export const claimStatuses = INTERNAL_CLAIM_STATUSES;
 
 export type ClaimStatus = (typeof claimStatuses)[number];
 
@@ -231,7 +192,7 @@ export function submittedStatusFor(status: ClaimStatus) {
 }
 
 export function verifiedStatusFor(status: ClaimStatus) {
-  if (["Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
+  if (["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
   if (["Final Documents Verification Pending", "Final Documents Submitted"].includes(status)) return "Final Documents Verified" as ClaimStatus;
   return status;
 }
