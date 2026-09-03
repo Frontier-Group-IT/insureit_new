@@ -34,7 +34,7 @@ export default async function PartnerNetworkPage() {
         <PartnerPageHeader
           eyebrow="My Network"
           title="Commercial relationships"
-          description="This hierarchy comes directly from the backend-authorized Partner family scope; the website does not reconstruct commercial ownership locally."
+          description="View your Partner network."
         />
 
         <PartnerMetricStrip
