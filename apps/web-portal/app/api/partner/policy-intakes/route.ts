@@ -2,6 +2,7 @@ import { after } from "next/server";
 import { NextResponse } from "next/server";
 
 import { createSupabaseWithAccessToken } from "@/lib/auth";
+import { getServerAccessToken } from "@/lib/auth-server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
 }
 
 async function authenticate(request: Request) {
-  const token = bearerToken(request.headers.get("authorization"));
+  const token = bearerToken(request.headers.get("authorization")) ?? await getServerAccessToken();
   if (!token) return { ok: false as const, response: json({ ok: false, error: "Authentication required." }, 401) };
 
   const scoped = createSupabaseWithAccessToken(token);
