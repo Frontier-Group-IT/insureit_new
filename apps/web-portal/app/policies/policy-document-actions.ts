@@ -71,14 +71,14 @@ export async function openPolicyCopy(documentId: string): Promise<PolicyCopyOpen
 }
 
 export async function uploadPolicyCopy(
-  policyCode: string,
+  policyId: string,
   formData: FormData,
 ): Promise<PolicyCopyUploadResult> {
   const profile = await requirePolicyEditor();
-  const normalizedPolicyCode = policyCode.trim();
+  const normalizedPolicyId = policyId.trim();
   const file = formData.get("file");
 
-  if (!normalizedPolicyCode) return { ok: false, error: "Policy reference is missing." };
+  if (!normalizedPolicyId) return { ok: false, error: "Policy reference is missing." };
   if (!(file instanceof File) || file.size <= 0) return { ok: false, error: "Select a policy copy to upload." };
   if (file.size > MAX_POLICY_COPY_BYTES) return { ok: false, error: "Policy copy must be 50 MB or smaller." };
   if (!ALLOWED_POLICY_COPY_TYPES.has(file.type)) {
@@ -89,7 +89,7 @@ export async function uploadPolicyCopy(
   const { data: policy, error: policyError } = await admin
     .from("policies")
     .select("id")
-    .eq("policy_code", normalizedPolicyCode)
+    .eq("id", normalizedPolicyId)
     .maybeSingle<{ id: string }>();
 
   if (policyError) return { ok: false, error: "Could not verify the saved policy. Please try again." };
