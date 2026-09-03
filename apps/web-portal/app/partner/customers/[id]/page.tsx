@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Building2, Car, ClipboardList, Mail, MapPin, Phone, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebCustomerDetail } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -32,12 +33,12 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
 
   return (
     <PartnerPortalShell title="Customer Detail">
-      <div className="space-y-4">
+      <div className="space-y-7">
         <Link href="/partner/customers" className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]">
           <ArrowLeft className="h-3.5 w-3.5" /> Customer Register
         </Link>
 
-        <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
+        <section className="overflow-hidden border-y border-[#DCE4ED] bg-white/45">
           <div className="flex flex-col gap-4 border-b border-[#E6ECF3] px-5 py-5 sm:px-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-5 w-5" /></span>
@@ -58,14 +59,14 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid border-y border-[#DCE4ED] sm:grid-cols-2 xl:grid-cols-4">
           <Summary icon={ShieldCheck} label="Policies" value={data.summary.policies} />
           <Summary icon={Car} label="Vehicles" value={data.summary.vehicles} />
           <Summary icon={ClipboardList} label="Claims" value={data.summary.claims} />
           <Summary icon={RefreshCw} label="Renewals 30d" value={data.summary.renewals_30_days} />
         </section>
 
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+        <section className="py-1">
           <SectionTitle title="Policies" meta={String(data.policies.length) + " visible"} />
           {data.policies.length ? (
             <div className="mt-3 divide-y divide-[#E8EDF4]">
@@ -87,8 +88,8 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
           ) : <Empty text="No scoped policies recorded." />}
         </section>
 
-        <div className="grid gap-4 xl:grid-cols-2">
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+        <div className="grid gap-8 xl:grid-cols-2">
+          <section className="py-1">
             <SectionTitle title="Vehicles" meta={String(data.vehicles.length) + " visible"} />
             {data.vehicles.length ? (
               <div className="mt-3 divide-y divide-[#E8EDF4]">
@@ -114,7 +115,7 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
             ) : <Empty text="No vehicles recorded." />}
           </section>
 
-          <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
+          <section className="py-1">
             <SectionTitle title="Claims" meta={String(data.claims.length) + " visible"} />
             {data.claims.length ? (
               <div className="mt-3 divide-y divide-[#E8EDF4]">
@@ -152,7 +153,7 @@ function Contact({ icon: Icon, label, value }: { icon: typeof Phone; label: stri
 
 function Summary({ icon: Icon, label, value }: { icon: typeof ShieldCheck; label: string; value: number }) {
   return (
-    <div className="flex items-center gap-3 rounded-[22px] border border-[#D7E0EC] bg-white p-4 shadow-[0_12px_35px_rgba(34,56,89,.06)]">
+    <div className="flex items-center gap-3 border-b border-[#E0E7EF] px-1 py-4 sm:border-r sm:px-4 xl:border-b-0 xl:last:border-r-0">
       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
       <div>
         <p className="text-[20px] font-extrabold text-[#162746]">{value}</p>
@@ -163,11 +164,11 @@ function Summary({ icon: Icon, label, value }: { icon: typeof ShieldCheck; label
 }
 
 function SectionTitle({ title, meta }: { title: string; meta: string }) {
-  return <div className="flex items-center justify-between"><h3 className="text-[16px] font-extrabold text-[#152746]">{title}</h3><span className="text-[9.5px] font-semibold text-[#7A899F]">{meta}</span></div>;
+  return <PartnerSectionHeading title={title} description={meta} />;
 }
 
 function Empty({ text }: { text: string }) {
-  return <div className="mt-3 rounded-2xl bg-[#F8FAFD] px-4 py-8 text-center text-[10.5px] font-medium text-[#7A899F]">{text}</div>;
+  return <div className="mt-3 border-y border-[#E0E7EF] py-8 text-center text-[10.5px] font-medium text-[#7A899F]">{text}</div>;
 }
 
 function Expiry({ label, value }: { label: string; value: string | null }) {
