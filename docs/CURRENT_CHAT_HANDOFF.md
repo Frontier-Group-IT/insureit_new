@@ -1424,3 +1424,26 @@ Begin **Asset Batch 1** before large dashboard restructuring:
 5. banner visual template system.
 
 After Batch 1 is approved, integrate it into a controlled OTA-safe dashboard Brand Experience slice and validate on the installed Partner app before expanding to empty states/profile/notifications.
+
+
+## Partner Web Portal goal locked — 2026-09-03
+
+**USER-APPROVED GOAL:** build a full Partner-facing web portal inside the existing web application on `portal.insureit.in`.
+
+Controlling plan:
+`docs/PARTNER_WEB_PORTAL_IMPLEMENTATION_PLAN_2026_09_03.md`
+
+Locked product decisions:
+- keep the same public domain and login surface;
+- authenticated intermediary/Partner identities should route to the Partner Web experience, while Operations users continue to the existing Operations portal;
+- use `/partner` as the canonical Partner Web route family, preserving `/intermediary-portal` as a compatibility redirect during migration;
+- expose the important Partner App workflows/data on web, without requiring complete mobile feature parity;
+- Partner Web design/layout must follow the existing Operations portal visual system exactly in shell language, spacing, navigation geometry, header treatment, cards and responsive behavior;
+- use a Partner-only navigation surface; never expose Operations menus/actions merely through frontend hiding;
+- reuse existing Partner identity, commercial-scope and `partner_app_*` RPC contracts rather than creating a second Partner authorization/business model;
+- normal Partner Web business reads must not expand the existing static intermediary page's service-role/admin-read pattern;
+- retain the useful onboarding/training/exam/agreement/IIB capability from the current static `/intermediary-portal` as an Account/Registration area inside Partner Web;
+- core first-release modules are Home, My Business, Customers, Policies, Renewals, Claims, Policy Intake, Payout, Network, Search, Activity, Account/Registration/Training, Profile and Support;
+- mobile engagement modules such as Impact, Journey, Learn, Stories and Recognition are secondary and should be added only if they provide useful web value.
+
+No implementation beyond documentation was performed in this decision-lock step.
