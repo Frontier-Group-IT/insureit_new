@@ -38,7 +38,7 @@ export default async function PartnerProfilePage() {
         </section>
 
         <section>
-          <PartnerSectionHeading title="Commercial Access" description="The identifiers below are returned by the same backend scope contract used by the Partner app." />
+          <PartnerSectionHeading title="Commercial Access" description="Your current access details." />
           <div className="mt-3">
             <PartnerMetricStrip
               items={[

@@ -73,7 +73,7 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
         <PartnerPageHeader
           eyebrow="Policy Book"
           title="Your policies"
-          description="Same scoped policy portfolio and lifecycle definitions as INSUREIT Partner."
+          description="View your policy portfolio."
           action={<Link href="/partner/policy-intakes" className="inline-flex h-9 items-center rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white">Policy Intake</Link>}
         />
 

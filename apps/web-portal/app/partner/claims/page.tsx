@@ -68,7 +68,7 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
         <PartnerPageHeader
           eyebrow="Service"
           title="Your claims"
-          description="Partner-scoped claim tracking with the same active/completed definitions as INSUREIT Partner."
+          description="Track active and completed claims."
         />
 
         <PartnerMetricStrip

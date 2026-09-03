@@ -51,7 +51,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
         <PartnerPageHeader
           eyebrow={humanize(performance.scope_mode) + " Scope"}
           title="Business performance"
-          description="Partner-authorized performance from the same business contracts used by INSUREIT Partner."
+          description="Review your business performance."
           action={
             <form className="flex flex-wrap items-end gap-2" action="/partner/business">
               <label className="grid gap-1">

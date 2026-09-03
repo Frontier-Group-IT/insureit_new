@@ -48,7 +48,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
         <PartnerPageHeader
           eyebrow="Customer Book"
           title="Your customers"
-          description="Only customers inside your Partner-authorized commercial scope are returned."
+          description="View and search your customers."
           action={
             <form action="/partner/customers" className="flex w-full gap-2 sm:max-w-[430px]">
               <div className="relative min-w-0 flex-1">
@@ -72,7 +72,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
         <section>
           <PartnerSectionHeading
             title={q ? "Search results for “" + q + "”" : "Customer Register"}
-            description={total + " scoped customer" + (total === 1 ? "" : "s")}
+            description={total + " customer" + (total === 1 ? "" : "s")}
             action={q ? <Link href="/partner/customers" className="text-[10px] font-bold text-[#3156B8]">Clear search</Link> : null}
           />
           <div className="mt-3 border-y border-[#DCE4ED]">

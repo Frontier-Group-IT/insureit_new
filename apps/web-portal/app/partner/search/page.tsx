@@ -37,7 +37,7 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
         <PartnerPageHeader
           eyebrow="Universal Search"
           title="Search your business"
-          description="Customers, policies and claims are searched only inside your authorized Partner scope."
+          description="Search customers, policies and claims."
         />
 
         <section>
