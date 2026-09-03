@@ -122,7 +122,7 @@ export default function SelfManagedSpotStatusScreen() {
         setMessage('We could not save Spot Status right now. Please try again.');
         return;
       }
-      router.replace({ pathname: '/customer/self-managed-milestone', params: { id, key: 'claim_intimation' } });
+      router.replace({ pathname: '/customer/self-managed-milestone', params: { id, key: 'claim_intimation', suppressClaimPrompt: '1' } });
     } catch (error) {
       console.error('Self-managed Spot Status submit failed', error);
       setMessage('We could not save Spot Status right now. Please try again.');
