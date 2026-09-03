@@ -46,10 +46,10 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
               <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
             </div>
-            <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white">Search</button>
+            <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
           </form>
 
-          {failed ? <div className="mt-4 rounded-xl border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3 text-[10px] font-semibold text-[#80511A]">{failed} search section{failed === 1 ? "" : "s"} could not be refreshed. Available results are shown below.</div> : null}
+          {failed ? <div className="mt-4 rounded-lg border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3 text-[10px] font-semibold text-[#80511A]">{failed} search section{failed === 1 ? "" : "s"} could not be refreshed. Available results are shown below.</div> : null}
         </section>
 
         {!ready ? (
@@ -99,9 +99,9 @@ function ResultSection({ title, count, children }: { title: string; count: numbe
 
 function Result({ href, icon: Icon, title, subtitle, status }: { href: string; icon: LucideIcon; title: string; subtitle: string; status?: string }) {
   return (
-    <Link href={href} className="group flex items-center gap-3 px-1 py-4 transition hover:bg-white/70 sm:px-4">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
-      <div className="min-w-0 flex-1"><p className="truncate text-[11.5px] font-extrabold text-[#1B2F4E]">{title}</p><p className="mt-0.5 truncate text-[10px] font-medium text-[#74839A]">{subtitle || "Record"}</p></div>
+    <Link href={href} className="group flex items-center gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0 flex-1"><p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{title}</p><p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{subtitle || "Record"}</p></div>
       {status ? <span className="hidden rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672] sm:inline-flex">{status}</span> : null}
       <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
     </Link>
