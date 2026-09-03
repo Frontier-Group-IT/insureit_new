@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileUp, Loader2, RefreshCw } from "lucide-react";
 import {
@@ -63,7 +63,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function load(manual = false) {
+  const load = useCallback(async (manual = false) => {
     if (!manual) setLoading(true);
     setError("");
     try {
@@ -74,11 +74,11 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
     } finally {
       setLoading(false);
     }
-  }
+  }, [intakeId]);
 
   useEffect(() => {
     void load(false);
-  }, [intakeId]);
+  }, [load]);
 
   const fields = useMemo(() => new Map((row?.ocr_fields ?? []).map((field) => [field.key, field])), [row?.ocr_fields]);
 
