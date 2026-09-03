@@ -395,7 +395,7 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
         onPress={toggleSelector}
         style={({ pressed }) => [styles.vehicleSelectorTrigger, pressed && styles.vehicleSelectorTriggerPressed]}
       >
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={palette.navy} />
+        <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
       </Pressable>
     </View>
 
