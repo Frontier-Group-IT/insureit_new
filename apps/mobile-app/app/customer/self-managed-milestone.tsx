@@ -50,7 +50,7 @@ const WORK_APPROVAL_ICONS = {
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; key?: string }>();
+  const params = useLocalSearchParams<{ id?: string; key?: string; suppressClaimPrompt?: string }>();
   const claimId = typeof params.id === 'string' ? params.id : '';
   const key = (typeof params.key === 'string' ? params.key : '') as ClaimMilestoneKey;
   const definition = SELF_MANAGED_MILESTONES.find((item) => item.key === key);
@@ -94,6 +94,7 @@ export default function SelfManagedMilestoneScreen() {
       setClaimNumberDraft(nextInsurerClaimNo);
       if (
         key === 'claim_intimation'
+        && params.suppressClaimPrompt !== '1'
         && (current?.milestone_status === 'completed' || current?.milestone_status === 'not_applicable')
         && !nextInsurerClaimNo
       ) {
@@ -123,7 +124,7 @@ export default function SelfManagedMilestoneScreen() {
     }
     void load();
     return () => { active = false; };
-  }, [claimId, definition, key]);
+  }, [claimId, definition, key, params.suppressClaimPrompt]);
 
   const step = useMemo(() => Math.max(1, SELF_MANAGED_MILESTONES.findIndex((item) => item.key === key) + 1), [key]);
   const displayClaimNo = insurerClaimNo || claimNo;
@@ -308,6 +309,7 @@ export default function SelfManagedMilestoneScreen() {
             <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
 
             <View style={[styles.claimNumberInputShell, Boolean(claimNumberError) && styles.claimNumberInputShellError]}>
+              <MaterialCommunityIcons name="file-document-outline" size={16} color="#0A43A3" />
               <TextInput
                 value={claimNumberDraft}
                 onChangeText={(value) => {
@@ -1140,12 +1142,12 @@ const styles = StyleSheet.create({
   approvalFeedbackError: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   approvalFeedbackErrorText: { flex: 1, color: '#B42318', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   claimNumberBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 20, 48, 0.50)', paddingHorizontal: 24 },
-  claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 22, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 15, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
+  claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 14, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
   claimNumberIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   claimNumberTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
-  claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 13, borderWidth: 1.2, borderColor: '#CFD9E6', backgroundColor: '#F9FBFD', justifyContent: 'center', marginTop: 14 },
+  claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 12, borderWidth: 1.2, borderColor: '#164F9C', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 12, marginTop: 14 },
   claimNumberInputShellError: { borderColor: '#D92D20', backgroundColor: '#FFF9F8' },
-  claimNumberInput: { minHeight: 46, paddingHorizontal: 13, color: palette.navy, fontSize: 13, fontWeight: '800' },
+  claimNumberInput: { flex: 1, minHeight: 46, paddingLeft: 0, paddingRight: 12, color: palette.navy, fontSize: 13, fontWeight: '800' },
   claimNumberError: { alignSelf: 'stretch', color: '#B42318', fontSize: 9.5, lineHeight: 13, fontWeight: '700', marginTop: 5 },
   claimNumberActions: { width: '100%', flexDirection: 'row', marginTop: 13, gap: 8 },
   claimNumberPrimary: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },
