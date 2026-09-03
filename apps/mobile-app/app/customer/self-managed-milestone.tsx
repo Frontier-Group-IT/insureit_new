@@ -92,16 +92,6 @@ export default function SelfManagedMilestoneScreen() {
       setClaimNo(identity.claim_no ?? '');
       setInsurerClaimNo(nextInsurerClaimNo);
       setClaimNumberDraft(nextInsurerClaimNo);
-      if (
-        key === 'claim_intimation'
-        && params.suppressClaimPrompt !== '1'
-        && (current?.milestone_status === 'completed' || current?.milestone_status === 'not_applicable')
-        && !nextInsurerClaimNo
-      ) {
-        setClaimNumberError('');
-        setClaimNumberPromptContext('entry');
-        setClaimNumberPromptVisible(true);
-      }
       setCustomerId(identity.customer_id ?? '');
       if (identity.vehicle_id) {
         const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
