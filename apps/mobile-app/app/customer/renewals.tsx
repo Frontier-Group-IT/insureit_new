@@ -90,28 +90,24 @@ export default function ComplianceRenewalsScreen() {
       </View>
       {message ? <View style={styles.errorCard}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{message}</Text></View> : null}
 
-      <View style={styles.legendRow}>
-        <LegendDot color="#B7791F" label="Due" />
-        <LegendDot color="#C43D2D" label="Expired" />
-      </View>
-
-      <View style={styles.summaryGrid}>
+      <View style={styles.summaryList}>
         {renewals.summaries.map((summary) => (
           <View key={summary.key} style={[styles.summaryCard, !summary.tracked && styles.summaryCardDisabled]}>
-            <View style={styles.summaryTop}>
+            <View style={styles.summaryMain}>
               <View style={[styles.summaryIcon, summary.totalPending > 0 && styles.summaryIconHot]}>
                 <MaterialCommunityIcons name={iconFor[summary.key]} size={18} color={summary.totalPending > 0 ? '#C43D2D' : '#0A43A3'} />
               </View>
-              <Text style={styles.summaryTitle} numberOfLines={1}>{summary.title}</Text>
+              <View style={styles.summaryCopy}>
+                <Text style={styles.summaryTitle} numberOfLines={1}>{summary.title}</Text>
+                {!summary.tracked ? <Text style={styles.notTracked}>Not tracked in vehicle records yet</Text> : null}
+              </View>
             </View>
             {summary.tracked ? (
-              <View style={styles.metricsRow}>
-                <Metric value={summary.due} tone="amber" />
-                <Metric value={summary.expired} tone="red" />
+              <View style={styles.inlineMetrics}>
+                <InlineMetric label="Due" value={summary.due} tone="amber" />
+                <InlineMetric label="Expired" value={summary.expired} tone="red" />
               </View>
-            ) : (
-              <Text style={styles.notTracked}>Not tracked in vehicle records yet</Text>
-            )}
+            ) : null}
           </View>
         ))}
       </View>
@@ -146,16 +142,12 @@ export default function ComplianceRenewalsScreen() {
   );
 }
 
-function Metric({ value, tone }: { value: number; tone: 'amber' | 'red' }) {
-  const textStyle = tone === 'red' ? styles.metricRed : tone === 'amber' ? styles.metricAmber : styles.metricNavy;
-  return <View style={styles.metric}><Text style={[styles.metricValue, textStyle]}>{value}</Text></View>;
-}
-
-function LegendDot({ color, label }: { color: string; label: string }) {
+function InlineMetric({ label, value, tone }: { label: string; value: number; tone: 'amber' | 'red' }) {
+  const textStyle = tone === 'red' ? styles.metricRed : styles.metricAmber;
   return (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendDot, { backgroundColor: color }]} />
-      <Text style={styles.legendLabel}>{label}</Text>
+    <View style={styles.inlineMetric}>
+      <Text style={styles.inlineMetricLabel}>{label}</Text>
+      <Text style={[styles.inlineMetricValue, textStyle]}>{value}</Text>
     </View>
   );
 }
@@ -175,24 +167,21 @@ const styles = StyleSheet.create({
   totalLabel: { color: '#D8E7FF', fontSize: 9.5, fontWeight: '800', marginTop: 1 },
   errorCard: { borderRadius: 12, borderWidth: 1, borderColor: '#FECDCA', backgroundColor: '#FEF3F2', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   errorText: { flex: 1, color: '#B42318', fontSize: 11, fontWeight: '700' },
-  legendRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginBottom: 6 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDot: { width: 7, height: 7, borderRadius: 4 },
-  legendLabel: { color: '#667085', fontSize: 9, fontWeight: '900' },
-  summaryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  summaryCard: { width: '48.8%', borderRadius: 15, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 10 },
+  summaryList: { gap: 7 },
+  summaryCard: { minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   summaryCardDisabled: { backgroundColor: '#F8FAFC' },
-  summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  summaryIcon: { width: 32, height: 32, borderRadius: 11, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
+  summaryMain: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  summaryCopy: { flex: 1, minWidth: 0 },
+  summaryIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
   summaryIconHot: { backgroundColor: '#FFF0EE' },
-  summaryTitle: { flex: 1, color: palette.navy, fontSize: 13, fontWeight: '900' },
-  metricsRow: { flexDirection: 'row', marginTop: 9, gap: 7 },
-  metric: { flex: 1, minHeight: 35, borderRadius: 11, backgroundColor: '#F8FBFF', alignItems: 'center', justifyContent: 'center' },
-  metricValue: { fontSize: 17, fontWeight: '900' },
+  summaryTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  inlineMetrics: { flexDirection: 'row', alignItems: 'center', gap: 12, marginLeft: 'auto' },
+  inlineMetric: { minWidth: 42, alignItems: 'center', justifyContent: 'center' },
+  inlineMetricLabel: { color: '#7A8799', fontSize: 8.5, lineHeight: 11, fontWeight: '800' },
+  inlineMetricValue: { fontSize: 15, lineHeight: 18, fontWeight: '900', marginTop: 1 },
   metricAmber: { color: '#B7791F' },
   metricRed: { color: '#C43D2D' },
-  metricNavy: { color: palette.navy },
-  notTracked: { color: '#7A8799', fontSize: 9.5, lineHeight: 13, fontWeight: '700', marginTop: 8 },
+  notTracked: { color: '#7A8799', fontSize: 9, lineHeight: 12, fontWeight: '700', marginTop: 2 },
   sectionHeader: { marginTop: 13, marginBottom: 8, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   expiredEmptyCard: { minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 12, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   expiredEmptyIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#EAF8F3', alignItems: 'center', justifyContent: 'center' },
