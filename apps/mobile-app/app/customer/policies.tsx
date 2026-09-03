@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
@@ -13,6 +13,12 @@ import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
 type PolicyFilter = 'All' | 'Active' | 'Renewal Due' | 'Expired';
 type PolicyTone = 'active' | 'due' | 'expired';
+
+const policyCardIcons = {
+  active: require('../../assets/custom-icons/policies-list/policy-booked.png'),
+  due: require('../../assets/custom-icons/policies-list/renewal.png'),
+  expired: require('../../assets/custom-icons/policies-list/expired-policy.png'),
+} satisfies Record<PolicyTone, ImageSourcePropType>;
 type PolicyRow = {
   id: string;
   customer_id: string;
@@ -118,7 +124,7 @@ export default function PoliciesScreen() {
 
             <View style={styles.policyTop}>
               <View style={styles.statusIcon}>
-                <MaterialCommunityIcons name={policyIcon(policy.source, tone)} size={23} color={palette.navy} />
+                <Image source={policyCardIcons[tone]} resizeMode="contain" style={styles.statusIconImage} />
               </View>
 
               <View style={styles.policyTitleCopy}>
@@ -220,13 +226,6 @@ function policyStageLabel(policy: PolicyRow, tone: PolicyTone) {
   return 'ACTIVE COVER';
 }
 
-function policyIcon(source: PolicyRow['source'], tone: PolicyTone): keyof typeof MaterialCommunityIcons.glyphMap {
-  if (source === 'external') return 'account-edit-outline';
-  if (tone === 'expired') return 'shield-alert-outline';
-  if (tone === 'due') return 'calendar-alert';
-  return 'shield-check-outline';
-}
-
 const styles = StyleSheet.create({
   searchSection: { marginTop: 0, marginBottom: 10 },
   searchHeadingRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
@@ -245,7 +244,8 @@ const styles = StyleSheet.create({
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
   policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#F1F5FB', alignItems: 'center', justifyContent: 'center' },
+  statusIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center' },
+  statusIconImage: { width: 32, height: 32 },
   policyTitleCopy: { flex: 1, minWidth: 0 },
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
