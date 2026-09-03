@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase";
 type UserMenuProps = {
   profile: Profile | null;
   user: Pick<User, "email" | "id"> | null;
+  homeHref?: string;
 };
 
 function initialsFor(name?: string | null, email?: string | null) {
@@ -17,7 +18,7 @@ function initialsFor(name?: string | null, email?: string | null) {
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "IU";
 }
 
-export function UserMenu({ profile, user }: UserMenuProps) {
+export function UserMenu({ profile, user, homeHref = internalLaunchHome }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -31,7 +32,7 @@ export function UserMenu({ profile, user }: UserMenuProps) {
     setIsSendingReset(true);
     setResetMessage(null);
     const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(internalLaunchHome)}`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(homeHref)}`;
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo });
     setResetMessage(error ? error.message : "Password reset link sent to your email.");
     setIsSendingReset(false);

@@ -41,7 +41,7 @@ export function LoginForm() {
     }
     const sessionResponse = await fetch("/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ access_token: data.session.access_token, refresh_token: data.session.refresh_token, expires_in: data.session.expires_in }) });
     if (!sessionResponse.ok) { setIsSubmitting(false); setMessage("Signed in, but could not create the secure browser session. Please try again."); return; }
-    const nextPath = profile.role === "intermediary" ? "/intermediary-portal" : requestedPath.startsWith("/intermediary-portal") ? "/dashboard" : requestedPath;
+    const nextPath = profile.role === "intermediary" ? "/partner" : requestedPath.startsWith("/partner") || requestedPath.startsWith("/intermediary-portal") ? "/dashboard" : requestedPath;
     window.location.replace(nextPath);
   }
 
