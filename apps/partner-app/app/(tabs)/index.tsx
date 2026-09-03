@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Animated, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -16,6 +16,7 @@ import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
@@ -121,7 +122,58 @@ export default function PartnerHomeScreen() {
             </View>
           ) : null}
 
-          <PartnerEnter delay={20}>
+          {data.today.length ? (
+            <PartnerEnter delay={20}>
+              <View style={styles.attentionSection}>
+                <PartnerSectionHeader title="For you" />
+                <View style={styles.attentionList}>
+                  {data.today.slice(0, 3).map((item, index) => (
+                    <Pressable
+                      key={`${item.kind}-${item.route}-${index}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item.title}. ${item.subtitle}. ${item.count}`}
+                      onPress={() => router.push(item.route as never)}
+                      style={({ pressed }) => [
+                        styles.attentionRow,
+                        index < Math.min(data.today.length, 3) - 1 && styles.attentionRowBorder,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <View style={styles.attentionArtwork}>
+                        <Image source={attentionAsset(item.kind)} style={styles.attentionImage} resizeMode="contain" />
+                      </View>
+                      <View style={styles.attentionCopy}>
+                        <View style={styles.attentionTitleRow}>
+                          <Text numberOfLines={1} style={styles.attentionTitle}>{item.title}</Text>
+                          {item.count > 0 ? (
+                            <View style={styles.attentionCount}>
+                              <Text style={styles.attentionCountText}>{item.count}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Text numberOfLines={2} style={styles.attentionSubtitle}>{item.subtitle}</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={partnerTheme.colors.inkSubtle} />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            </PartnerEnter>
+          ) : null}
+
+          <PartnerEnter delay={80}>
+          <View style={styles.quickSection}>
+            <PartnerSectionHeader title="Quick actions" />
+            <View style={styles.quickGrid}>
+              <QuickAction asset={PartnerAssets.navigation.policyIntake} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+              <QuickAction asset={PartnerAssets.actions.renewals} label="Renewals" onPress={() => router.push('/renewals')} />
+              <QuickAction asset={PartnerAssets.navigation.claims} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+              <QuickAction asset={PartnerAssets.navigation.customers} label="Customers" onPress={() => router.push('/customers')} />
+            </View>
+          </View>
+          </PartnerEnter>
+
+          <PartnerEnter delay={140}>
           <View style={styles.businessBlock}>
             <View style={styles.businessHeading}>
               <View>
@@ -166,18 +218,6 @@ export default function PartnerHomeScreen() {
               <View style={styles.statCellLast}>
                 <PartnerStatBlock value={data.service.active_claims} label="Claims" />
               </View>
-            </View>
-          </View>
-          </PartnerEnter>
-
-          <PartnerEnter delay={140}>
-          <View style={styles.quickSection}>
-            <PartnerSectionHeader title="Quick actions" />
-            <View style={styles.quickGrid}>
-              <QuickAction icon="document-text" tone="brand" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-              <QuickAction icon="sync" tone="renewal" label="Renewals" onPress={() => router.push('/renewals')} />
-              <QuickAction icon="shield-checkmark" tone="claim" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
-              <QuickAction icon="people" tone="customer" label="Customers" onPress={() => router.push('/customers')} />
             </View>
           </View>
           </PartnerEnter>
@@ -256,9 +296,8 @@ function HomeSkeleton() {
   );
 }
 
-function QuickAction({ icon, tone, label, onPress }: {
-  icon: 'document-text' | 'sync' | 'shield-checkmark' | 'people';
-  tone: 'brand' | 'renewal' | 'claim' | 'customer';
+function QuickAction({ asset, label, onPress }: {
+  asset: number;
   label: string;
   onPress: () => void;
 }) {
@@ -297,8 +336,8 @@ function QuickAction({ icon, tone, label, onPress }: {
           { transform: [{ scale }, { translateY: lift }] },
         ]}
       >
-        <View style={[styles.quickIcon, styles[`quickIcon_${tone}`]]}>
-          <Ionicons name={icon} size={22} color={quickActionColor(tone)} />
+        <View style={styles.quickIcon}>
+          <Image source={asset} style={styles.quickImage} resizeMode="contain" />
         </View>
         <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
@@ -306,11 +345,10 @@ function QuickAction({ icon, tone, label, onPress }: {
   );
 }
 
-function quickActionColor(tone: 'brand' | 'renewal' | 'claim' | 'customer') {
-  if (tone === 'renewal') return partnerTheme.colors.warning;
-  if (tone === 'claim') return partnerTheme.colors.accent;
-  if (tone === 'customer') return partnerTheme.colors.success;
-  return partnerTheme.colors.brandStrong;
+function attentionAsset(kind: PartnerHomeData['today'][number]['kind']) {
+  if (kind === 'intake_attention') return PartnerAssets.navigation.policyIntake;
+  if (kind === 'renewal') return PartnerAssets.actions.renewals;
+  return PartnerAssets.navigation.claims;
 }
 
 function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
@@ -416,8 +454,72 @@ const styles = StyleSheet.create({
   refreshWarning: { marginBottom: 6 },
   pressed: { opacity: 0.76 },
 
-  businessBlock: {
+  attentionSection: {
     marginTop: 2,
+    paddingHorizontal: 14,
+    paddingBottom: 6,
+    borderRadius: 18,
+    backgroundColor: partnerTheme.colors.surface,
+  },
+  attentionList: {
+    marginTop: -2,
+  },
+  attentionRow: {
+    minHeight: 76,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+  },
+  attentionRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: partnerTheme.colors.line,
+  },
+  attentionArtwork: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attentionImage: {
+    width: 44,
+    height: 44,
+  },
+  attentionCopy: {
+    flex: 1,
+    minWidth: 0,
+  },
+  attentionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  attentionTitle: {
+    flexShrink: 1,
+    color: partnerTheme.colors.ink,
+    ...partnerTheme.typography.cardTitle,
+  },
+  attentionSubtitle: {
+    marginTop: 2,
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.caption,
+  },
+  attentionCount: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: partnerTheme.radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  attentionCountText: {
+    color: partnerTheme.colors.brandStrong,
+    ...partnerTheme.typography.meta,
+  },
+
+  businessBlock: {
+    marginTop: 12,
     padding: 14,
     borderRadius: 18,
     backgroundColor: partnerTheme.colors.surface,
@@ -507,16 +609,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFBFD',
   },
   quickIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 46,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quickIcon_brand: { backgroundColor: partnerTheme.colors.brandSoft },
-  quickIcon_renewal: { backgroundColor: partnerTheme.colors.warningSoft },
-  quickIcon_claim: { backgroundColor: partnerTheme.colors.accentSoft },
-  quickIcon_customer: { backgroundColor: partnerTheme.colors.successSoft },
+  quickImage: {
+    width: 44,
+    height: 44,
+  },
   quickLabel: {
     marginTop: 5,
     color: partnerTheme.colors.ink,
