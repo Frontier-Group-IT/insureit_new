@@ -178,6 +178,10 @@ assert(customerSearchField.includes('portalResults && mounted'));
 assert(policyForm.includes('const isCpmClass=form.vehicleClass.trim().toUpperCase()==="CPM"'));
 assert(policyForm.includes('cpaOpted:isCpmClass?false'));
 
-assert(policyForm.includes('? <Field label="TP premium" type="number" value="0" disabled readOnly aria-disabled="true" tabIndex={-1} placeholder="Not applicable for CPM"/>'));
+assert(policyForm.includes('? <BlockedPremiumField label="TP premium"/>'));
 assert(policyForm.includes(': <Field label="TP premium" type="number" min="0" value={form.tp}'));
-assert(policyForm.includes('? <Field label="CPA amount" type="number" value="0" disabled readOnly aria-disabled="true" tabIndex={-1} placeholder="Not applicable for CPM"/>'));
+assert(policyForm.includes('? <BlockedPremiumField label="CPA amount"/>'));
+
+assert(policyForm.includes('function BlockedPremiumField({label}:{label:string})'));
+assert(policyForm.includes('cursor-not-allowed'));
+assert(policyForm.includes('aria-disabled="true"'));
