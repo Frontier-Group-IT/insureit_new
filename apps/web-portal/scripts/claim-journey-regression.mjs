@@ -97,4 +97,16 @@ assert.match(finalizationMigration, /for update/);
 assert.match(finalizationMigration, /claim_service_mode = 'broker_managed'/);
 assert.match(finalizationMigration, /if not found then\s+raise exception 'The claim status could not be updated\.'/);
 
+const surveyDoneAction = await readFile(path.join(repoRoot, "apps/web-portal/components/spot-survey/survey-done-actions.ts"), "utf8");
+assert.match(surveyDoneAction, /rpc\("complete_spot_survey"/);
+assert.match(surveyDoneAction, /data\.next_status !== "Final Documents Awaited"/);
+assert.doesNotMatch(surveyDoneAction, /\.from\("claims"\)\.update/);
+
+const surveyDoneMigration = await readFile(path.join(repoRoot, "supabase/migrations/20260903193000_complete_spot_survey_atomically.sql"), "utf8");
+assert.match(surveyDoneMigration, /current_status = 'Surveyor Appointed'/);
+assert.match(surveyDoneMigration, /v_next_status public\.claim_status := 'Final Documents Awaited'/);
+assert.match(surveyDoneMigration, /claim_service_mode = 'broker_managed'/);
+assert.match(surveyDoneMigration, /for update/);
+assert.match(surveyDoneMigration, /if not found then\s+raise exception 'The claim status could not be updated\.'/);
+
 console.log(`Claim journey regression passed for ${INTERNAL_CLAIM_STATUSES.length} internal statuses.`);
