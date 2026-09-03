@@ -433,6 +433,36 @@ export async function listPartnerWebPolicies({
   return (data ?? []) as PartnerPolicyRow[];
 }
 
+
+export type PartnerRenewalMode = "due" | "expired";
+export type PartnerRenewalWindow = "all" | "0_7" | "8_15" | "16_30";
+
+export async function listPartnerWebRenewals({
+  limit = 25,
+  offset = 0,
+  search,
+  mode = "due",
+  window = "all",
+}: {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  mode?: PartnerRenewalMode;
+  window?: PartnerRenewalWindow;
+} = {}): Promise<PartnerPolicyRow[]> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_list_renewals", {
+    p_limit: limit,
+    p_offset: offset,
+    p_search: search?.trim() || null,
+    p_mode: mode,
+    p_window: mode === "expired" ? "all" : window,
+  });
+  if (error) throw error;
+  return (data ?? []) as PartnerPolicyRow[];
+}
+
 export async function getPartnerWebRenewalSummary(): Promise<PartnerRenewalSummary> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
