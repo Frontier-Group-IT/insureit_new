@@ -176,9 +176,6 @@ assert(customerSearchField.includes('createPortal('));
 assert(customerSearchField.includes('portalResults && mounted'));
 
 assert(policyForm.includes('const isCpmClass=form.vehicleClass.trim().toUpperCase()==="CPM"'));
-assert(policyForm.includes('value={isCpmClass?"0":form.tp}'));
-assert(policyForm.includes('disabled={isCpmClass} required={!isCpmClass}'));
-assert(policyForm.includes('value={isCpmClass?"0":form.cpa}'));
 assert(policyForm.includes('cpaOpted:isCpmClass?false'));
 
 assert(policyForm.includes('? <Field label="TP premium" type="number" value="0" disabled readOnly aria-disabled="true" tabIndex={-1} placeholder="Not applicable for CPM"/>'));
