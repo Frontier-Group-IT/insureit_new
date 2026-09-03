@@ -174,3 +174,9 @@ assert(nonMotorPolicyForm.includes('<div className="min-w-0"><CustomerSearchFiel
 assert(nonMotorPolicyForm.includes('required portalResults onSelectionChange={changeCustomer}'));
 assert(customerSearchField.includes('createPortal('));
 assert(customerSearchField.includes('portalResults && mounted'));
+
+assert(policyUnifiedForm.includes('const isCpmClass=form.vehicleClass==="CPM"'));
+assert(policyUnifiedForm.includes('value={isCpmClass?"0":form.tp}'));
+assert(policyUnifiedForm.includes('disabled={isCpmClass} required={!isCpmClass}'));
+assert(policyUnifiedForm.includes('value={isCpmClass?"0":form.cpa}'));
+assert(policyUnifiedForm.includes('cpaOpted:isCpmClass?false'));
