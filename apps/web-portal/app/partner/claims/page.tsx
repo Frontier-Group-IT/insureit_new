@@ -112,13 +112,13 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF6E7] text-[#B56A00]"><ShieldAlert className="h-4 w-4" /></span>
                       <div className="min-w-0">
-                        <p className="truncate text-[11.5px] font-extrabold text-[#1B2F4E]">{row.claim_no || "Claim"}</p>
-                        <p className="mt-0.5 truncate text-[10px] font-medium text-[#74839A]">{row.customer_name}</p>
+                        <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.claim_no || "Claim"}</p>
+                        <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_name}</p>
                       </div>
                     </div>
                     <div>
-                      <p className="truncate text-[10px] font-semibold text-[#536680]">{row.insurer_name || "Insurer not recorded"}</p>
-                      <p className="mt-0.5 truncate text-[9.5px] text-[#7F8EA4]">{[row.vehicle_no || "Vehicle not linked", row.policy_no || "External policy"].join(" · ")}</p>
+                      <p className="break-words text-[10px] font-semibold leading-4 text-[#536680]">{row.insurer_name || "Insurer not recorded"}</p>
+                      <p className="mt-0.5 break-words text-[9.5px] leading-4 text-[#7F8EA4]">{[row.vehicle_no || "Vehicle not linked", row.policy_no || "External policy"].join(" · ")}</p>
                     </div>
                     <div>
                       <p className="text-[10.5px] font-extrabold text-[#203653]">{currency(amount)}</p>
@@ -134,7 +134,7 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
             <div className="py-14 text-center">
               <ShieldAlert className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No claims found</p>
-              <p className="mt-1 text-[10.5px] text-[#7A899F]">There are no claims matching this authorized scope and filter.</p>
+              <p className="mt-1 text-[10.5px] text-[#7A899F]">No claims match this search or filter.</p>
             </div>
           )}
 
