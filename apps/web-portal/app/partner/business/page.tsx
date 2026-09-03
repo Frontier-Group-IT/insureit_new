@@ -56,13 +56,13 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
             <form className="flex flex-wrap items-end gap-2" action="/partner/business">
               <label className="grid gap-1">
                 <span className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#74839A]">From</span>
-                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
               </label>
               <label className="grid gap-1">
                 <span className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#74839A]">To</span>
-                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none focus:border-[#3156B8]" />
+                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
               </label>
-              <button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white">
+              <button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
                 <CalendarRange className="h-3.5 w-3.5" /> Apply
               </button>
             </form>
@@ -144,7 +144,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
                 return (
                   <div key={item.label} className="py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="truncate text-[10.5px] font-bold text-[#203653]">{humanize(item.label)}</p>
+                      <p className="break-words text-[10.5px] font-bold leading-4 text-[#203653]">{humanize(item.label)}</p>
                       <p className="shrink-0 text-[9.5px] font-semibold text-[#677A94]">{currency(premium)} · {item.policies}</p>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
@@ -174,10 +174,10 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
 function Action({ href, title, subtitle }: { href: string; title: string; subtitle: string }) {
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[72px] items-center justify-between px-1 py-3.5 transition hover:bg-white/70 sm:px-4">
+    <Link href={href} prefetch={false} className="group flex min-h-[68px] items-center justify-between gap-3 px-1 py-3 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
       <span>
-        <span className="block text-[11px] font-extrabold text-[#172846]">{title}</span>
-        <span className="mt-0.5 block text-[9.5px] font-medium text-[#74839A]">{subtitle}</span>
+        <span className="block break-words text-[11px] font-extrabold leading-4 text-[#172846]">{title}</span>
+        <span className="mt-0.5 block break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{subtitle}</span>
       </span>
       <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
     </Link>
