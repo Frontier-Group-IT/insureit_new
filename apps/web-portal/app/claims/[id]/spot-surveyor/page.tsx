@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { SurveyorDeputationForm } from "@/components/spot-survey/surveyor-deputation-form";
@@ -54,6 +55,7 @@ export default async function SpotSurveyorPage({ params }: { params: Promise<{ i
 
   if (error || !claim) notFound();
 
+  const canDeputeSurveyor = claim.current_status === "Initial Documents Verified" || claim.current_status === "Claim Intimated";
   const title = `Depute Spot Surveyor - ${claim.claim_no}${claim.insurer_claim_no ? ` / ${claim.insurer_claim_no}` : ""}`;
 
   return (
@@ -61,7 +63,19 @@ export default async function SpotSurveyorPage({ params }: { params: Promise<{ i
       <div className="mx-auto max-w-[1440px] space-y-2 pb-4">
         <InfoStrip claim={claim} />
         <SpotSurveyDetailsPanel driverName={extractDriverName(claim.accident_description)} driverMobile={extractDriverMobile(claim.accident_description) ?? claim.customers?.phone ?? null} lossLocation={claim.accident_location} />
-        <SurveyorDeputationForm claimId={claim.id} variant="form" backHref={`/claims/${claim.id}`} />
+        {canDeputeSurveyor ? (
+          <SurveyorDeputationForm claimId={claim.id} variant="form" backHref={`/claims/${claim.id}`} />
+        ) : (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <h2 className="text-[18px] font-semibold text-[#071D49]">Spot surveyor deputation is not available yet</h2>
+            <p className="mt-1 text-[13px] text-[#526178]">
+              Complete initial document verification before deputing a surveyor. This claim is currently at “{claim.current_status}”.
+            </p>
+            <Link href={`/claims/${claim.id}`} className="mt-4 inline-flex h-10 items-center rounded-lg bg-[#071D49] px-5 text-[13px] font-semibold text-white hover:bg-[#12356C]">
+              Return to claim
+            </Link>
+          </section>
+        )}
       </div>
     </ClaimManagerShell>
   );
