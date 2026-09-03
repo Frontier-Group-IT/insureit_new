@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1119
-source_commit=1e4353644a1c4fedb4aa6c0536763edd5c70437f
-purpose=publish professional vehicle selector icon without background preview OTA
+source_pr=1122
+source_commit=b08ddde4b9ce5b4aea4da69b38ff44be4cd6e873
+purpose=publish self-tracked claim icon without badge background preview OTA
