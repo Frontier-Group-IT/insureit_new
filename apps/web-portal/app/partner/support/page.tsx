@@ -32,7 +32,7 @@ export default async function PartnerSupportPage() {
         <PartnerPageHeader
           eyebrow="Support"
           title="Partner assistance"
-          description="Your relationship contact and current Operations workload, scoped to this Partner account."
+          description="Contact support and view open work."
           action={<p className="text-[9.5px] font-semibold text-[#8190A5]">{updatedLabel(data.generated_at)}</p>}
         />
 
