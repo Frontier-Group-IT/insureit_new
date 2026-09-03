@@ -269,7 +269,16 @@ export default function ProfileScreen() {
 
       {!customer ? <Pressable accessibilityRole="button" disabled={kycAwaitingReview} onPress={() => router.push(kycRoute)} style={styles.kycActionCard}><View style={styles.kycActionIcon}><MaterialCommunityIcons name={kycAwaitingReview ? 'clipboard-clock-outline' : 'shield-account-outline'} size={25} color="#0A43A3" /></View><View style={styles.kycActionCopy}><Text style={styles.kycActionTitle}>{kycAwaitingReview ? 'Verification in progress' : onboarding?.partner_type ? 'Continue KYC' : 'Complete your KYC'}</Text><Text style={styles.kycActionText}>{kycAwaitingReview ? 'Your submitted details are being reviewed.' : 'Complete identity and business details to activate your customer profile.'}</Text></View>{kycAwaitingReview ? <View style={styles.reviewPill}><Text style={styles.reviewPillText}>Submitted</Text></View> : <MaterialCommunityIcons name="chevron-right" size={23} color="#0A43A3" />}</Pressable> : null}
 
-      <Section title="Contact Information" icon="account-outline" iconSource={contactInformationIcon} action={editing ? undefined : 'Edit'} onAction={() => setEditing(true)}>
+      <Section
+        title="Contact Information"
+        icon="account-outline"
+        iconSource={contactInformationIcon}
+        action={editing ? undefined : 'Edit'}
+        onAction={() => {
+          setDraft((current) => ({ ...current, address: profileAddress }));
+          setEditing(true);
+        }}
+      >
         {editing ? <View style={styles.editForm}><TextField label="Full name" value={draft.name} onChangeText={(name) => setDraft((current) => ({ ...current, name }))} /><TextField label="Mobile number" value={draft.phone} keyboardType="phone-pad" onChangeText={(phone) => setDraft((current) => ({ ...current, phone }))} /><TextField label="Email address" value={draft.email} keyboardType="email-address" autoCapitalize="none" onChangeText={(email) => setDraft((current) => ({ ...current, email }))} />{customer ? <TextField label="Address" value={draft.address} multiline onChangeText={(address) => setDraft((current) => ({ ...current, address }))} /> : null}<Pressable accessibilityRole="button" disabled={saving} onPress={() => void saveContactDetails()} style={[styles.saveButton, saving && styles.disabled]}><Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save changes'}</Text></Pressable></View> : <><ActionRow icon="phone-outline" label={customer?.phone ?? profile?.phone ?? 'Add mobile number'} onPress={() => void call(customer?.phone ?? profile?.phone)} /><ActionRow icon="email-outline" label={customer?.email ?? profile?.email ?? 'Add email address'} onPress={() => void email(customer?.email ?? profile?.email)} />{customer ? <ActionRow icon="map-marker-outline" label={profileAddress || 'Add your address'} onPress={() => void openMap(profileAddress)} /> : null}</>}
       </Section>
 
