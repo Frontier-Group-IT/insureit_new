@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AlertCircle, ArrowRight, FileText, Plus, RefreshCw } from "lucide-react";
+import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
 type IntakeFilter = "all" | "attention" | "in_progress" | "completed";
@@ -75,14 +76,12 @@ export function PartnerPolicyIntakeListClient() {
   const hasNext = page * PAGE_SIZE < total;
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Policy Intake</p>
-            <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">My submissions</h2>
-            <p className="mt-1 text-[11px] font-medium text-[#74839A]">Send policy copies to Operations and track the same onboarding pipeline used by the Partner app.</p>
-          </div>
+    <div className="space-y-7">
+      <PartnerPageHeader
+        eyebrow="Policy Intake"
+        title="My submissions"
+        description="Send policy copies to Operations and track the same onboarding pipeline used by the Partner app."
+        action={
           <div className="flex gap-2">
             <button
               type="button"
@@ -96,18 +95,20 @@ export function PartnerPolicyIntakeListClient() {
               <Plus className="h-4 w-4" /> New Intake
             </Link>
           </div>
-        </div>
+        }
+      />
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <Summary label="Active" value={counts.active} />
-          <Summary label="Need You" value={counts.attention} />
-          <Summary label="In Progress" value={counts.progress} />
-          <Summary label="Completed" value={counts.completed} />
-        </div>
-      </section>
+      <PartnerMetricStrip
+        items={[
+          { label: "Active", value: counts.active },
+          { label: "Need You", value: counts.attention },
+          { label: "In Progress", value: counts.progress },
+          { label: "Completed", value: counts.completed },
+        ]}
+      />
 
-      <section className="overflow-hidden rounded-[26px] border border-[#D7E0EC] bg-white shadow-[0_16px_45px_rgba(34,56,89,.07)]">
-        <div className="flex flex-col gap-3 border-b border-[#E6ECF3] px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+      <section>
+        <div className="flex flex-col gap-3 border-y border-[#DCE4ED] py-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             {([
               ["all", "All"],
@@ -127,13 +128,15 @@ export function PartnerPolicyIntakeListClient() {
           </div>
           <p className="text-[9.5px] font-semibold text-[#7A899F]">{rows.length} shown · {total} matched</p>
         </div>
+        <div className="mt-5"><PartnerSectionHeading title="Policy Intake Register" description={total + " matched"} /></div>
+        <div className="mt-3 border-y border-[#DCE4ED]">
 
         {error ? (
           <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">{error}</div>
         ) : null}
 
         {loading && !rows.length ? (
-          <div className="px-5 py-14 text-center">
+          <div className="py-14 text-center">
             <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#7F90A8]" />
             <p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intakes…</p>
           </div>
@@ -175,14 +178,14 @@ export function PartnerPolicyIntakeListClient() {
             ))}
           </div>
         ) : (
-          <div className="px-5 py-14 text-center">
+          <div className="py-14 text-center">
             <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
             <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions on this page" : "No Policy Intakes yet"}</p>
             <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Go back a page or choose another pipeline filter." : "Create an intake when you have a policy copy that Operations needs to onboard."}</p>
           </div>
         )}
         {(hasPrevious || hasNext) ? (
-          <div className="flex items-center justify-between border-t border-[#E6ECF3] px-5 py-4 sm:px-6">
+          <div className="flex items-center justify-between border-t border-[#E6ECF3] py-4">
             <button
               type="button"
               onClick={() => setPage((value) => Math.max(1, value - 1))}
@@ -202,13 +205,10 @@ export function PartnerPolicyIntakeListClient() {
             </button>
           </div>
         ) : null}
+        </div>
       </section>
     </div>
   );
-}
-
-function Summary({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-2xl border border-[#E1E7F0] bg-[#F8FAFD] p-4"><p className="text-[9px] font-black uppercase tracking-[0.11em] text-[#75849A]">{label}</p><p className="mt-2 text-[22px] font-extrabold text-[#162746]">{value}</p></div>;
 }
 
 function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileUp, Loader2, RefreshCw } from "lucide-react";
+import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import {
   getPartnerPolicyIntakeWeb,
   POLICY_INTAKE_ACCEPT,
@@ -108,14 +109,14 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
   }
 
   if (loading) {
-    return <div className="rounded-[26px] border border-[#D7E0EC] bg-white px-5 py-14 text-center shadow-[0_16px_45px_rgba(34,56,89,.07)]"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#7E90A8]" /><p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intake…</p></div>;
+    return <div className="border-y border-[#DCE4ED] py-14 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#7E90A8]" /><p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intake…</p></div>;
   }
 
   if (!row) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-7">
         <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
-        <div className="rounded-[26px] border border-[#D7E0EC] bg-white px-5 py-14 text-center shadow-[0_16px_45px_rgba(34,56,89,.07)]">
+        <div className="border-y border-[#DCE4ED] py-14 text-center">
           <AlertCircle className="mx-auto h-7 w-7 text-[#A66A18]" />
           <p className="mt-3 text-[12px] font-bold text-[#23395D]">Policy Intake unavailable</p>
           <p className="mt-1 text-[10.5px] text-[#7A899F]">{error || "This submission is not available in your Partner account."}</p>
@@ -125,7 +126,7 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
         <button type="button" onClick={() => void load(true)} className="inline-flex min-h-9 items-center gap-2 rounded-xl border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653]"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
@@ -140,23 +141,20 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
 
       {error ? <section className="rounded-[20px] border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</section> : null}
 
-      <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">Policy Intake</p>
-            <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">{row.intake_number}</h2>
-            <p className="mt-1 text-[11px] font-semibold text-[#4E627E]">{statusLabel(row)}</p>
-            <p className="mt-1 max-w-2xl text-[10px] font-medium leading-4 text-[#7A899F]">{statusHelp(row)}</p>
-          </div>
-          <span className="inline-flex w-fit rounded-xl bg-[#EEF3F8] px-3 py-1.5 text-[9.5px] font-bold text-[#425672]">{humanize(row.status)}</span>
-        </div>
+      <section className="py-1">
+        <PartnerPageHeader
+          eyebrow="Policy Intake"
+          title={row.intake_number}
+          description={statusHelp(row)}
+          action={<span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2.5 py-1.5 text-[9.5px] font-bold text-[#425672]">{statusLabel(row)}</span>}
+        />
 
         <IntakeProgress row={row} />
         <p className="mt-3 text-right text-[9px] font-medium text-[#8190A5]">Updated {dateLabel(row.updated_at)}</p>
       </section>
 
       {row.final_policy_id ? (
-        <Link href={"/partner/policies/" + encodeURIComponent(row.final_policy_id)} className="flex min-h-12 items-center justify-between rounded-[20px] border border-[#D7E0EC] bg-white px-4 text-[10.5px] font-extrabold text-[#203653] shadow-[0_10px_28px_rgba(34,56,89,.05)]">
+        <Link href={"/partner/policies/" + encodeURIComponent(row.final_policy_id)} className="flex min-h-12 items-center justify-between border-y border-[#DCE4ED] px-1 text-[10.5px] font-extrabold text-[#203653]">
           Open final policy <span aria-hidden="true">→</span>
         </Link>
       ) : null}
@@ -186,8 +184,8 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <h3 className="text-[16px] font-extrabold text-[#152746]">Submission</h3>
+        <section className="py-1">
+          <PartnerSectionHeading title="Submission" />
           <div className="mt-4 divide-y divide-[#E8EDF4]">
             <Detail label="Customer mobile" value={row.customer_mobile} />
             <Detail label="Lead source" value={row.lead_source_name} />
@@ -197,8 +195,8 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
           </div>
         </section>
 
-        <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-          <div className="flex items-center justify-between gap-3"><h3 className="text-[16px] font-extrabold text-[#152746]">Extracted Policy</h3><span className="text-[9px] font-semibold text-[#8190A5]">{row.ocr_status === "completed" ? "OCR complete" : humanize(row.ocr_status)}</span></div>
+        <section className="py-1">
+          <PartnerSectionHeading title="Extracted Policy" description={row.ocr_status === "completed" ? "OCR complete" : humanize(row.ocr_status)} />
           <div className="mt-4 divide-y divide-[#E8EDF4]">
             <Detail label="Policy number" value={fields.get("policy_number")?.value || pendingLabel(row)} />
             <Detail label="Insurer" value={fields.get("insurer_name")?.value || pendingLabel(row)} />
@@ -209,8 +207,8 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
         </section>
       </div>
 
-      <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-        <div className="flex items-center justify-between gap-3"><h3 className="text-[16px] font-extrabold text-[#152746]">Extracted Vehicle</h3><span className="text-[9px] font-semibold text-[#8190A5]">{fields.get("vehicle_registration_number")?.value || "Pending / not found"}</span></div>
+      <section className="py-1">
+        <PartnerSectionHeading title="Extracted Vehicle" description={fields.get("vehicle_registration_number")?.value || "Pending / not found"} />
         <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
           <Info label="Registration" value={fields.get("vehicle_registration_number")?.value || pendingLabel(row)} />
           <Info label="Make" value={fields.get("vehicle_make")?.value || pendingLabel(row)} />

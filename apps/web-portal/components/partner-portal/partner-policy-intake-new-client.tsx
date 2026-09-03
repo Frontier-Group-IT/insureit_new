@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileUp, Loader2, ShieldCheck } from "lucide-react";
+import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import {
   getPartnerPolicyIntakeSourcesWeb,
   POLICY_INTAKE_ACCEPT,
@@ -81,7 +82,7 @@ export function PartnerPolicyIntakeNewClient() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-7">
       <button
         type="button"
         onClick={() => router.back()}
@@ -91,20 +92,23 @@ export function PartnerPolicyIntakeNewClient() {
         <ArrowLeft className="h-3.5 w-3.5" /> Back
       </button>
 
-      <section className="rounded-[26px] border border-[#D7E0EC] bg-white p-5 shadow-[0_16px_45px_rgba(34,56,89,.07)] sm:p-6">
-        <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#687A96]">New Policy Intake</p>
-        <h2 className="mt-1 text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">Send policy to Operations</h2>
-        <p className="mt-1 text-[11px] font-medium text-[#74839A]">Review the lead source and customer mobile, attach the policy copy, then submit it into the same Operations intake queue as the Partner app.</p>
+      <PartnerPageHeader
+        eyebrow="New Policy Intake"
+        title="Send policy to Operations"
+        description="Review the lead source and customer mobile, attach the policy copy, then submit it into the same Operations intake queue as the Partner app."
+      />
+
+      <section className="py-1">
 
         {error ? <div className="mt-4 rounded-2xl border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</div> : null}
 
         {loading ? (
-          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-[#F8FAFD] px-4 py-5 text-[10.5px] font-semibold text-[#526680]">
+          <div className="mt-6 flex items-center gap-3 border-y border-[#DCE4ED] py-5 text-[10.5px] font-semibold text-[#526680]">
             <Loader2 className="h-4 w-4 animate-spin" /> Preparing authorized lead sources…
           </div>
         ) : (
           <div className="mt-6 grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
-            <div className="space-y-4">
+            <div className="space-y-7">
               <div>
                 <label className="text-[9px] font-black uppercase tracking-[0.1em] text-[#72809A]">Lead Source</label>
                 {sources.length > 1 ? (
@@ -116,7 +120,7 @@ export function PartnerPolicyIntakeNewClient() {
                           key={source.id}
                           type="button"
                           onClick={() => setSourceId(source.id)}
-                          className={"flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left " + (active ? "border-[#3156B8] bg-[#EEF4FF]" : "border-[#DCE3EC] bg-white")}
+                          className={"flex w-full items-center justify-between border-b px-1 py-3 text-left " + (active ? "border-[#3156B8] bg-[#F3F6FF]" : "border-[#E0E7EF] bg-transparent")}
                         >
                           <span>
                             <span className="block text-[11px] font-extrabold text-[#1B2F4E]">{source.display_name}</span>
@@ -128,7 +132,7 @@ export function PartnerPolicyIntakeNewClient() {
                     })}
                   </div>
                 ) : (
-                  <div className="mt-2 rounded-2xl border border-[#DCE3EC] bg-[#F8FAFD] px-4 py-3">
+                  <div className="mt-2 border-y border-[#DCE4ED] py-3">
                     <p className="text-[11px] font-extrabold text-[#1B2F4E]">{selectedSource?.display_name || "No active lead source available"}</p>
                     {selectedSource ? <p className="mt-0.5 text-[9.5px] text-[#74839A]">{selectedSource.intermediary_type.toUpperCase()}{selectedSource.intermediary_code ? " · " + selectedSource.intermediary_code : ""}</p> : null}
                   </div>
@@ -195,7 +199,7 @@ function UploadProgress({ progress }: { progress: IntakeProgress }) {
   const percent = progress.stage === "preparing" ? 8 : progress.stage === "submitting" ? 96 : Math.max(12, Math.min(92, progress.percent ?? 12));
   const label = progress.stage === "preparing" ? "Preparing secure upload" : progress.stage === "submitting" ? "Sending to Operations" : "Uploading policy copy";
   return (
-    <div className="mt-3 rounded-2xl border border-[#DCE3EC] bg-white px-4 py-3">
+    <div className="mt-3 border-y border-[#DCE4ED] py-3">
       <div className="flex items-center justify-between text-[9.5px] font-semibold text-[#526680]"><span>{label}</span><span>{Math.round(percent)}%</span></div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#EDF1F6]"><div className="h-full rounded-full bg-[#3156B8]" style={{ width: String(percent) + "%" }} /></div>
     </div>
