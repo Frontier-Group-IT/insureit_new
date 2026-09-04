@@ -79,6 +79,9 @@ jobs:
       - name: Verify pre-APK OTA freeze
         run: npm --workspace apps/partner-app run verify:pre-apk
 
+      - name: Verify pre-APK UAT and security contracts
+        run: npm --workspace apps/partner-app run verify:uat
+
       - name: Partner app typecheck
         run: npm run typecheck:partner
 
@@ -108,6 +111,7 @@ jobs:
             echo "- Route/deep-link integrity: verified"
             echo "- Phase 5 resilience/accessibility contracts: verified"
             echo "- Pre-APK OTA runtime freeze: verified"
+            echo "- Pre-APK UAT/security contracts: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Review build: Expo web export"
             echo "- Production deployment: not triggered by this workflow"

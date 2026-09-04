@@ -12,6 +12,7 @@
     "verify:routes": "node scripts/verify-routes.mjs",
     "verify:phase5": "node scripts/verify-phase5-contracts.mjs",
     "verify:pre-apk": "node scripts/verify-pre-apk-freeze.mjs",
+    "verify:uat": "node scripts/verify-pre-apk-uat.mjs",
     "build:web": "expo export --platform web --output-dir dist-web"
   },
   "dependencies": {
