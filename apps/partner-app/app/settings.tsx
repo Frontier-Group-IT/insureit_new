@@ -1,33 +1,38 @@
+import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
+import { checkForPartnerUpdate } from '@/lib/partner-updates';
 import { partnerTheme } from '@/lib/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
+
+  const checkForUpdate = async () => {
+    if (checkingUpdate) return;
+    setCheckingUpdate(true);
+    setUpdateMessage('Checking for the latest Partner update…');
+    try {
+      const result = await checkForPartnerUpdate();
+      setUpdateMessage(result.message);
+    } catch {
+      setUpdateMessage('Could not check for updates right now. Try again later.');
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   return (
-    <PartnerScreen
-      eyebrow="ACCOUNT"
-      title="Settings & app info"
-      onBack={() => router.back()}
-    >
+    <PartnerScreen eyebrow="ACCOUNT" title="Settings & app info" onBack={() => router.back()}>
       <PartnerSectionHeader title="Account" />
       <View style={styles.menu}>
-        <SettingsLink
-          icon="person-outline"
-          title="Profile & registration"
-          onPress={() => router.push('/profile')}
-        />
-        <SettingsLink
-          icon="headset-outline"
-          title="Support"
-          onPress={() => router.push('/support')}
-          last
-        />
+        <SettingsLink icon="person-outline" title="Profile & registration" onPress={() => router.push('/profile')} />
+        <SettingsLink icon="headset-outline" title="Support" onPress={() => router.push('/support')} last />
       </View>
 
       <PartnerSectionHeader title="Privacy" />
@@ -48,6 +53,16 @@ export default function SettingsScreen() {
         <InfoRow label="Updates" value="Automatic on launch" last />
       </View>
 
+      <View style={[styles.menu, styles.updateMenu]}>
+        <SettingsLink
+          icon="cloud-download-outline"
+          title={checkingUpdate ? 'Checking for updates…' : 'Check for updates'}
+          onPress={() => void checkForUpdate()}
+          last
+        />
+      </View>
+      {updateMessage ? <Text accessibilityLiveRegion="polite" style={styles.updateMessage}>{updateMessage}</Text> : null}
+
       <View style={styles.note}>
         <Ionicons name="shield-checkmark-outline" size={18} color={partnerTheme.colors.brand} />
         <Text style={styles.noteText}>Business and commercial access follows your authorized Partner account.</Text>
@@ -56,13 +71,8 @@ export default function SettingsScreen() {
   );
 }
 
-function SettingsLink({
-  icon,
-  title,
-  onPress,
-  last = false,
-}: {
-  icon: 'person-outline' | 'headset-outline' | 'shield-checkmark-outline';
+function SettingsLink({ icon, title, onPress, last = false }: {
+  icon: 'person-outline' | 'headset-outline' | 'shield-checkmark-outline' | 'cloud-download-outline';
   title: string;
   onPress: () => void;
   last?: boolean;
@@ -92,6 +102,7 @@ function InfoRow({ label, value, last = false }: { label: string; value: string;
 
 const styles = StyleSheet.create({
   menu: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  updateMenu: { marginTop: 8 },
   linkRow: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13 },
   linkIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   linkTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
@@ -100,6 +111,7 @@ const styles = StyleSheet.create({
   infoLabel: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   infoValue: { flex: 1, color: partnerTheme.colors.ink, textAlign: 'right', ...partnerTheme.typography.bodyStrong },
   divider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  updateMessage: { marginTop: 6, paddingHorizontal: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   note: { marginTop: partnerTheme.spacing.lg, minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.brandSoft },
   noteText: { flex: 1, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   pressed: { backgroundColor: partnerTheme.colors.surfaceMuted },

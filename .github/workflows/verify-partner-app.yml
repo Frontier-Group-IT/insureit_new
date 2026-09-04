@@ -76,20 +76,8 @@ jobs:
       - name: Verify Phase 5 resilience and accessibility contracts
         run: npm --workspace apps/partner-app run verify:phase5
 
-      - name: Block native date picker from runtime 0.1.0
-        shell: bash
-        run: |
-          set -euo pipefail
-          node <<'NODE'
-          const pkg = require('./apps/partner-app/package.json');
-          if (pkg.dependencies?.['@react-native-community/datetimepicker']) {
-            throw new Error('Partner runtime 0.1.0 must not declare @react-native-community/datetimepicker before the next approved native build.');
-          }
-          NODE
-          if grep -R --line-number --fixed-string "@react-native-community/datetimepicker" apps/partner-app/app apps/partner-app/components apps/partner-app/lib; then
-            echo "::error::Partner runtime 0.1.0 APK does not embed @react-native-community/datetimepicker. Do not import it in OTA-delivered source until the next approved native build."
-            exit 1
-          fi
+      - name: Verify pre-APK OTA freeze
+        run: npm --workspace apps/partner-app run verify:pre-apk
 
       - name: Partner app typecheck
         run: npm run typecheck:partner
@@ -119,7 +107,7 @@ jobs:
             echo "- Dependency lockfile: synchronized"
             echo "- Route/deep-link integrity: verified"
             echo "- Phase 5 resilience/accessibility contracts: verified"
-            echo "- Frozen smoke route contracts: verified"
+            echo "- Pre-APK OTA runtime freeze: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Review build: Expo web export"
             echo "- Production deployment: not triggered by this workflow"

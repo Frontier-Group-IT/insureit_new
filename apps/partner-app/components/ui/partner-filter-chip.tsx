@@ -26,7 +26,7 @@ export function PartnerFilterChip({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 36,
+    minHeight: partnerTheme.control.minTouchTarget,
     justifyContent: 'center',
     borderRadius: partnerTheme.radius.pill,
     paddingHorizontal: 11,

@@ -15,15 +15,11 @@ let checks = 0;
 function expect(relativePath, pattern, description) {
   checks += 1;
   const text = read(relativePath);
-  if (!pattern.test(text)) {
-    failures.push(`${relativePath}: ${description}`);
-  }
+  if (!pattern.test(text)) failures.push(`${relativePath}: ${description}`);
 }
 
 function expectAll(relativePath, expectations) {
-  for (const [pattern, description] of expectations) {
-    expect(relativePath, pattern, description);
-  }
+  for (const [pattern, description] of expectations) expect(relativePath, pattern, description);
 }
 
 // App-level render/runtime recovery contract.
@@ -97,33 +93,14 @@ expectAll('app/policy-intakes/[id].tsx', [
 ]);
 
 // Frozen smoke journey route contracts.
-expectAll('app/customers.tsx', [
-  [/router\.push\([\s\S]*\/customer\//, 'Customers list must open customer detail'],
-]);
+expectAll('app/customers.tsx', [[/router\.push\([\s\S]*\/customer\//, 'Customers list must open customer detail']]);
 expectAll('app/customer/[id].tsx', [
   [/router\.push\(\`\/policy\//, 'Customer detail must open policy detail'],
   [/router\.back\(\)/, 'Customer detail must support Back'],
 ]);
-expectAll('app/policy/[id].tsx', [
-  [/router\.back\(\)/, 'Policy detail must support Back'],
-]);
-expectAll('app/policy-intake-new.tsx', [
-  [/router\.replace\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'new Policy Intake must route to tracked status after submit'],
-]);
-expectAll('app/policy-intakes/[id].tsx', [
-  [/POLICY INTAKE/, 'Policy Intake tracking route must remain available'],
-]);
-
-if (failures.length) {
-  console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
-  for (const failure of failures) console.error(`- ${failure}`);
-  console.error(`\n${failures.length} of ${checks} checks failed.`);
-  process.exit(1);
-}
-
-console.log(`Partner Phase 5 resilience/accessibility contracts OK: ${checks} checks passed.`);
-console.log('Smoke contracts covered: Login -> Customers -> Customer detail -> Policy -> Back; Login -> New Policy Intake -> Submit -> Track status.');
-
+expectAll('app/policy/[id].tsx', [[/router\.back\(\)/, 'Policy detail must support Back']]);
+expectAll('app/policy-intake-new.tsx', [[/router\.replace\(\{ pathname: '\/policy-intakes\/\[id\]'/, 'new Policy Intake must route to tracked status after submit']]);
+expectAll('app/policy-intakes/[id].tsx', [[/POLICY INTAKE/, 'Policy Intake tracking route must remain available']]);
 
 // Final Phase 5 hardening contracts.
 expectAll('lib/partner-observability.ts', [
@@ -161,3 +138,14 @@ expectAll('app.json', [
   [/"runtimeVersion"\s*:\s*\{\s*"policy"\s*:\s*"appVersion"/s, 'OTA runtime must remain pinned to app version compatibility'],
   [/"checkAutomatically"\s*:\s*"ON_LOAD"/, 'preview binary must continue checking OTA updates on launch'],
 ]);
+
+// Evaluate every contract only after all checks have run.
+if (failures.length) {
+  console.error('Partner Phase 5 resilience/accessibility contract verification failed:');
+  for (const failure of failures) console.error(`- ${failure}`);
+  console.error(`\n${failures.length} of ${checks} checks failed.`);
+  process.exit(1);
+}
+
+console.log(`Partner Phase 5 resilience/accessibility contracts OK: ${checks} checks passed.`);
+console.log('Smoke contracts covered: Login -> Customers -> Customer detail -> Policy -> Back; Login -> New Policy Intake -> Submit -> Track status.');
