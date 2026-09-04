@@ -602,3 +602,39 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
   revalidatePath("/claims");
   revalidatePath("/dashboard");
 }
+
+export async function saveSpotIntimationDetails(claimId: string, formData: FormData) {
+  const profile = await requireClaimStagePermission();
+  const supabase = await createServerSupabaseClient();
+  const claim = await loadClaimForWorkflow(claimId);
+  const accidentAt = textValue(formData, "accident_at");
+  const spotIntimationAt = textValue(formData, "spot_intimation_at");
+  const accidentLocation = textValue(formData, "accident_location");
+  const accidentDescription = textValue(formData, "accident_description");
+  const details = {
+    milestone_key: "spot_intimation",
+    ...(accidentAt ? { accident_at: accidentAt } : {}),
+    ...(spotIntimationAt ? { spot_intimation_at: spotIntimationAt } : {}),
+    ...(accidentLocation ? { accident_location: accidentLocation } : {}),
+    ...(accidentDescription ? { accident_description: accidentDescription } : {})
+  };
+
+  const { error: claimError } = await supabase.from("claims").update({
+    ...(accidentAt ? { accident_at: new Date(accidentAt).toISOString() } : {}),
+    ...(accidentLocation ? { accident_location: accidentLocation } : {}),
+    ...(accidentDescription ? { accident_description: accidentDescription } : {})
+  }).eq("id", claimId);
+  if (claimError) throw new Error(claimError.message);
+
+  const { error: detailError } = await supabase.from("claim_stage_details").insert({
+    claim_id: claimId,
+    stage: claim.current_status,
+    details,
+    created_by: profile?.id ?? null
+  });
+  if (detailError) throw new Error(detailError.message);
+
+  revalidatePath(`/claims/${claimId}`);
+  revalidatePath("/claims");
+  revalidatePath("/dashboard");
+}
