@@ -28,7 +28,9 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
                 setResult(response);
                 if (response.ok) {
                   setSelectedFile(null);
-                  router.refresh();
+                  setOpen(false);
+                  // Keep the modal responsive while the authoritative row refreshes.
+                  setTimeout(() => router.refresh(), 0);
                 }
               });
             }}
