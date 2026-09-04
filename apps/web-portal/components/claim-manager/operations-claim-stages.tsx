@@ -93,8 +93,12 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   );
 
   useEffect(() => {
+    if (state.ok && active?.key === "claim_intimation" && next === "Final Documents Submitted") {
+      router.push(`/claims/${claimId}/final-documents`);
+      return;
+    }
     if (state.ok) router.refresh();
-  }, [router, state.ok]);
+  }, [active?.key, claimId, next, router, state.ok]);
 
   return (
     <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
