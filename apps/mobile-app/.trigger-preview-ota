@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1248
-source_commit=eed117428cf0ad8c8d149a56aab0f91053c5c77c
-purpose=publish exact current main with compact external Stage 1 header
+source_pr=1250
+source_commit=9fba9929d5eeefc67a95a5a8f0e06c55386615b5
+purpose=republish current main after exact internal Stage 1 external-header match
