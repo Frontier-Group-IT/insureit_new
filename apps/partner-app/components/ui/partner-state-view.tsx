@@ -44,16 +44,23 @@ export function PartnerStateView({
           : 'file-tray-outline');
 
   return (
-    <View style={styles.base} accessibilityLiveRegion="polite">
-      <View style={[styles.icon, asset ? styles.assetIcon : null]}>
-        {asset ? (
-          <Image source={asset} style={styles.assetImage} resizeMode="contain" />
-        ) : (
-          <Ionicons name={resolvedIcon} size={26} color={state === 'error' ? partnerTheme.colors.danger : partnerTheme.colors.brand} />
-        )}
-      </View>
-      <Text style={styles.title}>{title || defaultTitle(state)}</Text>
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+    <View style={[styles.base, asset ? styles.assetBase : null]} accessibilityLiveRegion="polite">
+      {asset ? (
+        <View style={styles.assetTitleRow}>
+          <View style={[styles.icon, styles.assetIcon]}>
+            <Image source={asset} style={styles.assetImage} resizeMode="contain" />
+          </View>
+          <Text style={[styles.title, styles.assetTitle]}>{title || defaultTitle(state)}</Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.icon}>
+            <Ionicons name={resolvedIcon} size={26} color={state === 'error' ? partnerTheme.colors.danger : partnerTheme.colors.brand} />
+          </View>
+          <Text style={styles.title}>{title || defaultTitle(state)}</Text>
+        </>
+      )}
+      {message ? <Text style={[styles.message, asset ? styles.assetMessage : null]}>{message}</Text> : null}
       {actionLabel && onAction ? (
         <View style={styles.action}>
           <PartnerButton label={actionLabel} onPress={onAction} variant="secondary" fullWidth={false} />
@@ -81,6 +88,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: partnerTheme.colors.line,
   },
+  assetBase: { minHeight: 150, alignItems: 'stretch' },
+  assetTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   icon: {
     width: 48,
     height: 48,
@@ -90,8 +99,10 @@ const styles = StyleSheet.create({
     backgroundColor: partnerTheme.colors.surfaceMuted,
   },
   assetIcon: { backgroundColor: 'transparent' },
-  assetImage: { width: 44, height: 44 },
+  assetImage: { width: 42, height: 42 },
   title: { marginTop: 12, color: partnerTheme.colors.ink, textAlign: 'center', ...partnerTheme.typography.cardTitle },
+  assetTitle: { flexShrink: 1, marginTop: 0, textAlign: 'left' },
   message: { marginTop: 5, maxWidth: 300, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
+  assetMessage: { alignSelf: 'center' },
   action: { marginTop: 14 },
 });
