@@ -1,16 +1,9 @@
 name: Deploy production to Vercel
 
 on:
-  workflow_dispatch:
-    inputs:
-      verified_commit:
-        description: Feature/PR head commit verified by the canonical web-portal gate
-        required: true
-        type: string
-      verification_run_id:
-        description: Successful Verify web portal GitHub Actions run ID for verified_commit
-        required: true
-        type: string
+  push:
+    branches:
+      - main
 
 permissions:
   actions: read
@@ -23,7 +16,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Validate verified release and deploy
+    name: Validate verified merge and deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -37,54 +30,49 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_VERIFIED_COMMIT: ${{ inputs.verified_commit }}
-          INPUT_VERIFICATION_RUN_ID: ${{ inputs.verification_run_id }}
         run: |
           set -euo pipefail
 
           remote_main=$(git ls-remote origin refs/heads/main | awk '{print $1}')
           if [[ "$remote_main" != "$GITHUB_SHA" ]]; then
-            echo "::error::main advanced after this deployment started. The newer main merge will receive its own deployment run."
-            exit 1
+            echo "::notice::main advanced after this deployment started. The newer main merge will receive its own deployment run."
+            exit 0
           fi
 
-          VERIFIED_COMMIT="$INPUT_VERIFIED_COMMIT"
-          VERIFICATION_RUN_ID="$INPUT_VERIFICATION_RUN_ID"
+          prs_json=$(gh api -H "Accept: application/vnd.github+json" \
+            "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls")
+          pr_json=$(jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | sort_by(.merged_at) | last // {}' <<<"$prs_json")
 
-          if [[ ${#VERIFIED_COMMIT} -ne 40 || ! "$VERIFIED_COMMIT" =~ ^[0-9a-f]+$ ]]; then
-            echo "::error::verified_commit must be a full 40-character Git SHA."
-            exit 1
+          PR_NUMBER=$(jq -r '.number // empty' <<<"$pr_json")
+          VERIFIED_COMMIT=$(jq -r '.head.sha // empty' <<<"$pr_json")
+
+          if [[ -z "$PR_NUMBER" || -z "$VERIFIED_COMMIT" ]]; then
+            echo "::notice::Current main commit is not a merged pull request. Skipping automatic production deployment."
+            exit 0
           fi
-          if [[ ! "$VERIFICATION_RUN_ID" =~ ^[0-9]+$ ]]; then
-            echo "::error::verification_run_id must be numeric."
-            exit 1
-          fi
+
           if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
-            echo "::error::The verified commit is not contained in the selected main snapshot."
+            echo "::error::Merged PR head $VERIFIED_COMMIT is not contained in current main $GITHUB_SHA."
             exit 1
           fi
 
-          run_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$VERIFICATION_RUN_ID")
-          run_name=$(jq -r '.name' <<<"$run_json")
-          run_event=$(jq -r '.event' <<<"$run_json")
-          run_head=$(jq -r '.head_sha' <<<"$run_json")
-          run_conclusion=$(jq -r '.conclusion' <<<"$run_json")
-          if [[ "$run_name" != "Verify web portal" || "$run_event" != "pull_request" || "$run_head" != "$VERIFIED_COMMIT" || "$run_conclusion" != "success" ]]; then
-            echo "::error::Verification provenance mismatch: expected a successful Verify web portal pull_request run for $VERIFIED_COMMIT."
+          runs_json=$(gh api \
+            "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$VERIFIED_COMMIT&event=pull_request&status=completed&per_page=100")
+          run_json=$(jq --arg sha "$VERIFIED_COMMIT" '[.workflow_runs[] | select(.name == "Verify web portal" and .event == "pull_request" and .head_sha == $sha and .conclusion == "success")] | sort_by(.created_at) | last // {}' <<<"$runs_json")
+          VERIFICATION_RUN_ID=$(jq -r '.id // empty' <<<"$run_json")
+
+          if [[ -z "$VERIFICATION_RUN_ID" ]]; then
+            echo "::error::No successful Verify web portal pull_request run found for merged PR head $VERIFIED_COMMIT."
             exit 1
           fi
 
-          merged_pr_count=$(gh api -H "Accept: application/vnd.github+json"             "repos/$GITHUB_REPOSITORY/commits/$VERIFIED_COMMIT/pulls"             --jq '[.[] | select(.base.ref == "main" and .merged_at != null)] | length')
-          if [[ "$merged_pr_count" -lt 1 ]]; then
-            echo "::error::The verified commit is not associated with a merged pull request into main."
-            exit 1
-          fi
-
+          echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
           echo "VERIFIED_COMMIT=$VERIFIED_COMMIT" >> "$GITHUB_ENV"
           echo "VERIFICATION_RUN_ID=$VERIFICATION_RUN_ID" >> "$GITHUB_ENV"
-          echo "Verified release provenance: run $VERIFICATION_RUN_ID -> commit $VERIFIED_COMMIT -> current main $GITHUB_SHA"
+          echo "Verified release provenance: PR #$PR_NUMBER -> run $VERIFICATION_RUN_ID -> commit $VERIFIED_COMMIT -> current main $GITHUB_SHA"
 
       - name: Wait for required schema deployment
+        if: env.VERIFIED_COMMIT != ''
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -97,9 +85,6 @@ jobs:
             exit 0
           fi
 
-          # This deployment gate currently has an automated schema-run dependency only
-          # for the vehicle/policy intake resume migration. Do not wait on that unrelated
-          # workflow for every future migration, which would deadlock production deploys.
           if grep -qx 'supabase/migrations/20260903151000_reviewed_claim_assistance_intake.sql' <<<"$changed_migrations" || grep -qx 'supabase/migrations/20260903160000_fix_initial_document_finalization.sql' <<<"$changed_migrations"; then
             unexpected_migrations=$(grep -vxE 'supabase/migrations/20260903151000_reviewed_claim_assistance_intake.sql|supabase/migrations/20260903160000_fix_initial_document_finalization.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then
@@ -134,32 +119,31 @@ jobs:
             exit 1
           fi
 
-          if [[ -n "${schema_workflow:-}" ]]; then
-            for attempt in {1..60}; do
-              runs_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$schema_workflow/runs?head_sha=$GITHUB_SHA&per_page=10")
-              run_json=$(jq '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and (.event == "push" or .event == "workflow_dispatch"))] | sort_by(.created_at) | last // {}' <<<"$runs_json")
-              conclusion=$(jq -r '.conclusion // empty' <<<"$run_json")
-              status=$(jq -r '.status // empty' <<<"$run_json")
-              run_id=$(jq -r '.id // empty' <<<"$run_json")
+          for attempt in {1..60}; do
+            runs_json=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$schema_workflow/runs?head_sha=$GITHUB_SHA&per_page=10")
+            run_json=$(jq '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and (.event == "push" or .event == "workflow_dispatch"))] | sort_by(.created_at) | last // {}' <<<"$runs_json")
+            conclusion=$(jq -r '.conclusion // empty' <<<"$run_json")
+            status=$(jq -r '.status // empty' <<<"$run_json")
+            run_id=$(jq -r '.id // empty' <<<"$run_json")
 
-              if [[ "$conclusion" == "success" ]]; then
-                echo "Schema deployment succeeded in run $run_id."
-                exit 0
-              fi
-              if [[ "$conclusion" == "failure" || "$conclusion" == "cancelled" || "$conclusion" == "timed_out" ]]; then
-                echo "::error::Schema deployment run $run_id finished with conclusion: $conclusion"
-                exit 1
-              fi
+            if [[ "$conclusion" == "success" ]]; then
+              echo "Schema deployment succeeded in run $run_id."
+              exit 0
+            fi
+            if [[ "$conclusion" == "failure" || "$conclusion" == "cancelled" || "$conclusion" == "timed_out" ]]; then
+              echo "::error::Schema deployment run $run_id finished with conclusion: $conclusion"
+              exit 1
+            fi
 
-              echo "Schema deployment status: ${status:-not-started}; waiting..."
-              sleep 5
-            done
+            echo "Schema deployment status: ${status:-not-started}; waiting..."
+            sleep 5
+          done
 
-            echo "::error::Timed out waiting for the schema deployment."
-            exit 1
-          fi
+          echo "::error::Timed out waiting for the schema deployment."
+          exit 1
 
       - name: Verify deploy hook secret
+        if: env.VERIFIED_COMMIT != ''
         shell: bash
         env:
           VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
@@ -170,6 +154,7 @@ jobs:
           fi
 
       - name: Trigger Vercel production deploy hook
+        if: env.VERIFIED_COMMIT != ''
         id: deploy
         shell: bash
         env:
@@ -177,7 +162,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          http_status=$(curl             --silent             --show-error             --output vercel-response.json             --write-out "%{http_code}"             --request POST             "$VERCEL_DEPLOY_HOOK_URL")
+          http_status=$(curl \
+            --silent \
+            --show-error \
+            --output vercel-response.json \
+            --write-out "%{http_code}" \
+            --request POST \
+            "$VERCEL_DEPLOY_HOOK_URL")
 
           echo "Vercel response status: $http_status"
           cat vercel-response.json
@@ -189,18 +180,18 @@ jobs:
           fi
 
       - name: Write deployment summary
+        if: env.VERIFIED_COMMIT != ''
         shell: bash
         run: |
           {
-            echo "## Vercel production deployment requested"
+            echo "## Automatic Vercel production deployment requested"
             echo
             echo "- Branch: `main`"
-            echo "- Trigger commit: `${GITHUB_SHA}`"
+            echo "- Main commit: `${GITHUB_SHA}`"
+            echo "- Merged PR: `#${PR_NUMBER}`"
+            echo "- Verified PR head: `${VERIFIED_COMMIT}`"
+            echo "- Verify web portal run: `${VERIFICATION_RUN_ID}`"
             echo "- Trigger: `${GITHUB_EVENT_NAME}`"
-            echo "- Requested by: `${GITHUB_ACTOR}`"
-            echo "- Full verification run reused: `${VERIFICATION_RUN_ID}`"
-            echo "- Verified feature commit: `${VERIFIED_COMMIT}`"
-            echo "- Release provenance: successful PR gate, merged into the exact current main snapshot"
             echo
-            echo "This workflow is the explicit production path and invokes the production deploy hook only after verified merge provenance is established. Check Vercel for the final build and deployment result."
+            echo "The production deploy hook was invoked automatically only after the merged PR's canonical verification was confirmed."
           } >> "$GITHUB_STEP_SUMMARY"
