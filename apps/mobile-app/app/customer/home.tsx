@@ -180,7 +180,7 @@ export default function CustomerMockupHomeScreen() {
   if (error) return <View style={styles.loading}><Text style={styles.error}>{error}</Text><Pressable onPress={() => void loadDashboard('refresh')}><Text style={styles.retry}>Try again</Text></Pressable><Pressable onPress={() => void resetLocalAuthState(router)}><Text style={styles.retry}>Reset login</Text></Pressable><Pressable onPress={() => void signOut(router)}><Text style={styles.retry}>Sign out</Text></Pressable></View>;
   if (profile && isPortfolioDashboardContext(selectedContext)) return <GroupHomeScreen profile={profile} groupContext={selectedContext} />;
 
-  return <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+  return <SafeAreaView style={styles.safeArea} edges={['top']}>
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
       <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
