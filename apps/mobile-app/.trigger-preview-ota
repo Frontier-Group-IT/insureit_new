@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1247
-source_commit=d297d4340af53c28fdd99faa2882474276a8ed2e
-purpose=publish exact current main with internal claim stage 1 external layout
+source_pr=1248
+source_commit=eed117428cf0ad8c8d149a56aab0f91053c5c77c
+purpose=publish exact current main with compact external Stage 1 header
