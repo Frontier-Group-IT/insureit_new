@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { getCurrentSession, getRestoredSession, routeSignedInUser } from '@/lib/auth';
+import { getCurrentSession, getRestoredSession } from '@/lib/auth';
+import { logStartupDiagnostic } from '@/lib/startup-diagnostics';
+import { routeRestoredUser } from '@/lib/startup-routing';
 import { Screen, Button, Message } from '@/components/ui';
 
 export default function IndexScreen() {
@@ -11,16 +13,21 @@ export default function IndexScreen() {
 
   useEffect(() => {
     async function load() {
+      await logStartupDiagnostic('bootstrap_started');
       try {
         const restoredSession = await withTimeout(getRestoredSession(), 10000);
         const session = restoredSession ?? await confirmStoredSession();
+        await logStartupDiagnostic('session_resolved', { sessionPresent: Boolean(session?.user) });
+
         if (session?.user) {
-          await withTimeout(routeSignedInUser(session.user, router), 12000);
+          await withTimeout(routeRestoredUser(session.user, router), 12000);
         } else {
+          await logStartupDiagnostic('routing_to_login', { reason: 'no_restored_session' });
           router.replace('/login');
         }
       } catch {
-        setError('We could not open your account. Please sign in again.');
+        await logStartupDiagnostic('bootstrap_failed', { reason: 'startup_or_account_resolution_failed' });
+        setError('We could not open your account. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -33,6 +40,7 @@ export default function IndexScreen() {
   return (
     <Screen title="InsureIT" subtitle="Policy support and claim access.">
       {error ? <Message type="error">{error}</Message> : null}
+      <Button label="Try again" onPress={() => router.replace('/')} />
       <Button label="Sign in" onPress={() => router.replace('/login')} />
     </Screen>
   );
