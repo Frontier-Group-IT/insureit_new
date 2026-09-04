@@ -7,8 +7,9 @@ const actions = await readFile(new URL("../app/claims/[id]/spot-survey-actions.t
 
 assert.match(workspace, /Spot Intimation Date/, "Claim header must show Spot Intimation Date.");
 assert.match(workspace, /Spot Intimation Time/, "Claim header must show Spot Intimation Time.");
-assert.match(workspace, /formatIntimationDate\(claim\.created_at\)/, "Spot intimation date must come from persisted claim creation timestamp.");
-assert.match(workspace, /formatIntimationTime\(claim\.created_at\)/, "Spot intimation time must come from persisted claim creation timestamp.");
+assert.match(workspace, /const spotAt = claim\.spotIntimationAt \?\? claim\.created_at;/, "Spot intimation display must prefer the persisted stage timestamp and retain a creation-time fallback.");
+assert.match(workspace, /formatIntimationDate\(spotAt\)/, "Spot intimation date must use the resolved persisted timestamp.");
+assert.match(workspace, /formatIntimationTime\(spotAt\)/, "Spot intimation time must use the resolved persisted timestamp.");
 assert.match(workspace, /<SpotMediaUploadButton claimId=\{claim\.id\}/, "Spot Photo card must expose the multi-upload action.");
 assert.match(workspace, /documentCount: spotDocuments\.length/, "Spot Photo card must retain awareness of multiple uploaded media records.");
 
