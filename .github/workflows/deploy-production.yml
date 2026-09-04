@@ -51,7 +51,7 @@ jobs:
           VERIFIED_COMMIT="$INPUT_VERIFIED_COMMIT"
           VERIFICATION_RUN_ID="$INPUT_VERIFICATION_RUN_ID"
 
-          if [[ ! "$VERIFIED_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+          if [[ ${#VERIFIED_COMMIT} -ne 40 || ! "$VERIFIED_COMMIT" =~ ^[0-9a-f]+$ ]]; then
             echo "::error::verified_commit must be a full 40-character Git SHA."
             exit 1
           fi
