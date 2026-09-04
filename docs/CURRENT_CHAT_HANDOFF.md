@@ -61,6 +61,8 @@ This is intentionally a narrow step. No claim ownership, status-transition, RLS,
 
 **IMPLEMENTED, NOT DEPLOYED:** The active Spot Survey document-verification action was not advancing the claim after the final document was verified; it only marked the document and wrote verification records. It now checks all required initial documents and advances `Initial Documents Verification Pending`/submitted states to `Initial Documents Verified`, verifying the affected row and surfacing transition failures.
 
+**IMPLEMENTED, NOT DEPLOYED:** The operations claim detail now includes a web-only nine-stage journey panel aligned to the existing mobile external-claim field contract. It preserves historical claim statuses, renames the final-document presentation to Claim Intimation, stores operations-entered stage values in `claim_stage_details`, updates insurer claim number on `claims`, enforces mobile-matching mandatory fields, and leaves customer document upload/replacement behavior unchanged. No mobile files, mobile workflow, migration, or production configuration changed.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.

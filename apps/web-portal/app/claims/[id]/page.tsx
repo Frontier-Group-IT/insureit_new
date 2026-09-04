@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
+import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
 import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
 import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
 import { type ClaimStatus } from "@/lib/claim-workflow";
@@ -39,6 +40,7 @@ type StageDetailRow = {
   id: string;
   claim_id: string;
   details: Record<string, unknown> | null;
+  stage: string | null;
   created_at: string;
 };
 
@@ -123,7 +125,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
       .returns<SpotSurveyVerification[]>(),
     admin
       .from("claim_stage_details")
-      .select("id, claim_id, details, created_at")
+      .select("id, claim_id, stage, details, created_at")
       .eq("claim_id", id)
       .order("created_at", { ascending: false })
       .returns<StageDetailRow[]>()
@@ -210,6 +212,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
       <SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
+      <OperationsClaimStages claimId={claim.id} currentStatus={claim.current_status} insurerClaimNo={claim.insurer_claim_no} details={stageRows ?? []} />
     </ClaimManagerShell>
   );
 }
