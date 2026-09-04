@@ -1,0 +1,183 @@
+name: Temporary internal claim stage 1 UI patch
+
+on:
+  push:
+    branches:
+      - ui/internal-claim-stage1-external-layout
+    paths:
+      - '.github/workflows/tmp-internal-claim-stage1-ui.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/internal-claim-stage1-external-layout
+          fetch-depth: 0
+
+      - name: Apply Stage 1 UI-only layout alignment
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('apps/mobile-app/app/customer/internal-claim-stage.tsx')
+          text = path.read_text()
+
+          text = text.replace(
+              "import { ExternalClaimStageHeader } from '@/components/external-claim-ui';",
+              "import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';",
+              1,
+          )
+          text = text.replace(
+              "  const [vehicleNo, setVehicleNo] = useState('');\n",
+              "  const [vehicleNo, setVehicleNo] = useState('');\n  const [vehicleMeta, setVehicleMeta] = useState('');\n",
+              1,
+          )
+          text = text.replace(
+              "      const vehicleResult = await supabase.from('vehicles').select('vehicle_no').eq('id', nextClaim.vehicle_id).maybeSingle();\n      if (active) {\n        setVehicleNo(vehicleResult.data?.vehicle_no ?? '');\n        setLoading(false);\n      }",
+              "      const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', nextClaim.vehicle_id).maybeSingle();\n      if (active) {\n        setVehicleNo(vehicleResult.data?.vehicle_no ?? '');\n        setVehicleMeta([vehicleResult.data?.make, vehicleResult.data?.model].filter(Boolean).join(' · '));\n        setLoading(false);\n      }",
+              1,
+          )
+          text = text.replace(
+              "        subtitle={isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}",
+              "        subtitle={stageKey === 'spot_intimation' ? 'Start tracking an incident.' : isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}",
+              1,
+          )
+
+          start_marker = "      <View style={styles.readOnlyNotice}>"
+          end_marker = "      {stageKey === 'claim_intimation' ? ("
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+          replacement = '''      {stageKey === 'spot_intimation' ? <>
+        <ClaimIdentityCard
+          claimNo={claim.insurer_claim_no || claim.claim_no}
+          insurerName="Sankalp Managed"
+          vehicleNo={vehicleNo}
+          vehicleMeta={vehicleMeta}
+        />
+
+        {message ? <Message type="error">{message}</Message> : null}
+
+        <ClaimFormSection
+          title="Incident Details"
+          subtitle="Accident date, time and first insurer intimation"
+          iconImage={require('../../assets/claims/claim-intimation.png')}
+        >
+          <StageOneReadOnlyField label="Accident Date & Time" value={firstValue(mergedDetails, ['accident_at'])} />
+          <StageOneReadOnlyField label="Accident Location" value={firstValue(mergedDetails, ['accident_location'])} />
+          <StageOneReadOnlyField label="Accident Description" value={firstValue(mergedDetails, ['accident_description'])} />
+        </ClaimFormSection>
+
+        <View style={styles.stageOneDocumentsCard}>
+          <View style={styles.stageOneDocumentsHeader}>
+            <View style={styles.stageOneDocumentsHeaderCopy}>
+              <Text style={styles.stageOneDocumentsTitle}>Upload claim documents</Text>
+            </View>
+            <View style={styles.stageOneDocumentsBadge}><Text style={styles.stageOneDocumentsBadgeText}>Claims desk</Text></View>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })}
+            style={({ pressed }) => [styles.stageOneDocumentsAction, pressed && styles.stageOneDocumentsActionPressed]}
+          >
+            <View style={styles.stageOneDocumentsIcon}><MaterialCommunityIcons name="file-upload-outline" size={22} color="#0A43A3" /></View>
+            <View style={styles.stageOneDocumentsCopy}>
+              <Text style={styles.stageOneDocumentsActionTitle}>Initial claim documents</Text>
+              <Text style={styles.stageOneDocumentsActionText}>Upload or replace the Spot Intimation documents requested by Operations.</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#0A43A3" />
+          </Pressable>
+        </View>
+
+        <View style={styles.stageOneManagedNote}>
+          <MaterialCommunityIcons name="shield-lock-outline" size={18} color="#0A43A3" />
+          <Text style={styles.stageOneManagedNoteText}>Stage details are updated by the Claims Desk and remain read-only.</Text>
+        </View>
+      </> : <>
+        <View style={styles.readOnlyNotice}>
+          <View style={styles.noticeIcon}><MaterialCommunityIcons name="shield-lock-outline" size={20} color="#0A43A3" /></View>
+          <View style={styles.noticeCopy}>
+            <Text style={styles.noticeTitle}>Claims desk controlled</Text>
+            <Text style={styles.noticeText}>You can review this stage and upload requested documents. Operational details stay read-only and are updated by the Claims Desk.</Text>
+          </View>
+        </View>
+
+        {message ? <Message type="error">{message}</Message> : null}
+
+        <View style={styles.fieldsCard}>
+          <View style={styles.fieldsHeader}>
+            <Text style={styles.fieldsTitle}>Stage details</Text>
+            <View style={styles.readOnlyBadge}><MaterialCommunityIcons name="eye-outline" size={13} color="#526178" /><Text style={styles.readOnlyBadgeText}>READ ONLY</Text></View>
+          </View>
+          <View style={styles.fieldGrid}>
+            {STAGE_FIELDS[stageKey].map((field) => (
+              <ReadOnlyValue
+                key={field.label}
+                label={field.label}
+                value={firstValue(mergedDetails, field.keys, field.fallback)}
+                money={field.money}
+              />
+            ))}
+          </View>
+        </View>
+      </>}
+
+'''
+          text = text[:start] + replacement + text[end:]
+
+          helper_marker = "function ReadOnlyValue({ label, value, money }: { label: string; value: unknown; money?: boolean }) {"
+          helper = '''function StageOneReadOnlyField({ label, value }: { label: string; value: unknown }) {
+  const display = formatValue(value);
+  return (
+    <View style={styles.stageOneReadOnlyField}>
+      <Text style={styles.stageOneReadOnlyLabel}>{label}</Text>
+      <View style={styles.stageOneReadOnlyValueRow}>
+        <Text style={[styles.stageOneReadOnlyValue, !display && styles.stageOneReadOnlyValueEmpty]}>{display || 'Awaiting Claims Desk'}</Text>
+        <MaterialCommunityIcons name="lock-outline" size={14} color="#94A3B8" />
+      </View>
+    </View>
+  );
+}
+
+'''
+          text = text.replace(helper_marker, helper + helper_marker, 1)
+
+          styles_marker = "const styles = StyleSheet.create({\n"
+          styles_add = '''const styles = StyleSheet.create({
+  stageOneReadOnlyField: { marginBottom: 11, borderRadius: 13, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 10 },
+  stageOneReadOnlyLabel: { color: '#526178', fontSize: 10, lineHeight: 14, fontWeight: '800', marginBottom: 5 },
+  stageOneReadOnlyValueRow: { minHeight: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  stageOneReadOnlyValue: { flex: 1, color: palette.navy, fontSize: 12.5, lineHeight: 17, fontWeight: '800' },
+  stageOneReadOnlyValueEmpty: { color: '#94A3B8', fontWeight: '700' },
+  stageOneDocumentsCard: { marginBottom: 10, borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 11 },
+  stageOneDocumentsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 9 },
+  stageOneDocumentsHeaderCopy: { flex: 1 },
+  stageOneDocumentsTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' },
+  stageOneDocumentsBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 8, paddingVertical: 5 },
+  stageOneDocumentsBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
+  stageOneDocumentsAction: { minHeight: 68, borderRadius: 14, borderWidth: 1, borderColor: '#D9E5F4', backgroundColor: '#F8FBFF', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stageOneDocumentsActionPressed: { backgroundColor: '#EFF6FF' },
+  stageOneDocumentsIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#E7F0FF', alignItems: 'center', justifyContent: 'center' },
+  stageOneDocumentsCopy: { flex: 1 },
+  stageOneDocumentsActionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  stageOneDocumentsActionText: { color: '#607089', fontSize: 9.5, lineHeight: 13.5, fontWeight: '600', marginTop: 2 },
+  stageOneManagedNote: { marginBottom: 10, borderRadius: 13, borderWidth: 1, borderColor: '#D9E5F4', backgroundColor: '#F8FBFF', paddingHorizontal: 10, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stageOneManagedNoteText: { flex: 1, color: '#526178', fontSize: 9.8, lineHeight: 14, fontWeight: '600' },
+'''
+          text = text.replace(styles_marker, styles_add, 1)
+
+          path.write_text(text)
+
+      - name: Remove temporary workflow and commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/tmp-internal-claim-stage1-ui.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/internal-claim-stage.tsx .github/workflows/tmp-internal-claim-stage1-ui.yml
+          git commit -m "Align internal claim Stage 1 with external layout"
+          git push origin HEAD:ui/internal-claim-stage1-external-layout
