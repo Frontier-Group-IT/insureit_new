@@ -283,10 +283,10 @@ function HomeSkeleton() {
         <PartnerSkeleton width="30%" height={18} />
       </View>
       <View style={styles.quickGrid}>
-        <PartnerSkeleton width="23%" height={72} radius={14} />
-        <PartnerSkeleton width="23%" height={72} radius={14} />
-        <PartnerSkeleton width="23%" height={72} radius={14} />
-        <PartnerSkeleton width="23%" height={72} radius={14} />
+        <PartnerSkeleton width="23%" height={84} radius={14} />
+        <PartnerSkeleton width="23%" height={84} radius={14} />
+        <PartnerSkeleton width="23%" height={84} radius={14} />
+        <PartnerSkeleton width="23%" height={84} radius={14} />
       </View>
       <View style={styles.skeletonHeader}>
         <PartnerSkeleton width="30%" height={18} />
@@ -339,7 +339,7 @@ function QuickAction({ asset, label, onPress }: {
         <View style={styles.quickIcon}>
           <Image source={asset} style={styles.quickImage} resizeMode="contain" />
         </View>
-        <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
+        <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
     </Pressable>
   );
@@ -597,33 +597,33 @@ const styles = StyleSheet.create({
   quickGrid: { flexDirection: 'row', gap: 6 },
   quickActionTouch: {
     flex: 1,
-    minHeight: 60,
+    minHeight: 84,
   },
   quickAction: {
     flex: 1,
-    minHeight: 60,
-    flexDirection: 'row',
+    minHeight: 84,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 5,
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 3,
     borderRadius: 14,
     backgroundColor: '#FAFBFD',
   },
   quickIcon: {
-    width: 30,
-    height: 30,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   quickImage: {
-    width: 29,
-    height: 29,
+    width: 35,
+    height: 35,
   },
   quickLabel: {
-    flexShrink: 1,
+    width: '100%',
     color: partnerTheme.colors.ink,
-    textAlign: 'left',
+    textAlign: 'center',
     ...partnerTheme.typography.meta,
   },
 
