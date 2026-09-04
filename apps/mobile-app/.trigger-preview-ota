@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1228
-source_commit=8e147f3bfc59ca989933bcac6eaef3c52f603b6d
-purpose=publish customer home bottom navigation overlap fix preview OTA
+source_pr=1224
+source_commit=bb86ed36d9287c9ab61a7ffa5fb87f2cc9f07259
+purpose=publish stage 6 whole bill card clickable preview OTA
