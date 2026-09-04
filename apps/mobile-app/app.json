@@ -40,7 +40,8 @@
       "buildNumber": "5",
       "supportsTablet": false,
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "InsureIt uses your microphone only when you choose to record an incident voice note."
       }
     },
     "web": {
