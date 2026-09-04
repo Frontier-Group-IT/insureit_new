@@ -10,7 +10,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimFormSection, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -240,17 +240,7 @@ export default function InternalClaimStageScreen() {
 
     return (
       <Screen title="Spot Intimation" showTitleHeader={false}>
-        <ExternalClaimStageHeader
-          step={1}
-          title="Spot Intimation"
-          subtitle="Start tracking an incident."
-          vehicleNo={vehicleNo}
-          claimNo={claim.insurer_claim_no || claim.claim_no}
-          serviceLabel="Sankalp Managed"
-          onBack={() => router.back()}
-        />
-
-        <ClaimIdentityCard
+        <InternalSpotIntimationIdentityCard
           claimNo={claim.insurer_claim_no || claim.claim_no}
           insurerName={insurerName || 'Insurance company'}
           vehicleNo={vehicleNo || 'Vehicle'}
@@ -414,6 +404,60 @@ export default function InternalClaimStageScreen() {
         />
       ) : null}
     </Screen>
+  );
+}
+
+function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: { claimNo?: string | null; insurerName?: string | null; vehicleNo?: string | null; policyNo?: string | null; vehicleMeta?: string | null }) {
+  return (
+    <View style={styles.spotStatusCard}>
+      <View style={styles.spotStatusGlowLarge} />
+      <View style={styles.spotStatusGlowSmall} />
+      <View style={styles.spotStatusHeaderRow}>
+        <View style={[styles.spotStatusIconBadge, styles.spotStatusStageBadge]}>
+          <Image source={require('../../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+        </View>
+        <Text style={styles.spotStatusHeaderTitle} numberOfLines={1}>Spot Intimation</Text>
+        <Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text>
+      </View>
+      <View style={styles.spotStatusHeaderDivider} />
+      <View style={styles.spotStatusInfoGrid}>
+        <View style={styles.spotStatusInfoSection}>
+          <View style={styles.spotStatusMainInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}>
+              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
+              <Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text>
+              <Text style={styles.spotStatusMainInfoValue}>{vehicleNo || 'Vehicle'}</Text>
+            </Text>
+          </View>
+          <View style={styles.spotStatusSecondaryInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}>
+              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
+          </View>
+        </View>
+        <View style={styles.spotStatusSectionDivider} />
+        <View style={styles.spotStatusInfoSection}>
+          <View style={styles.spotStatusMainInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}>
+              <Image source={require('../../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
+              <Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text>
+              <Text style={styles.spotStatusMainInfoValue}>{policyNo || '—'}</Text>
+            </Text>
+          </View>
+          <View style={styles.spotStatusSecondaryInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}>
+              <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }
 
