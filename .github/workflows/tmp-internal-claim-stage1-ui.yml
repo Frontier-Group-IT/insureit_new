@@ -18,11 +18,95 @@ jobs:
         with:
           ref: ui/internal-claim-stage1-external-layout
           fetch-depth: 0
+
       - name: Apply Stage 1 UI-only layout alignment
         shell: bash
         run: |
-          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnBhdGggPSBQYXRoKCJhcHBzL21vYmlsZS1hcHAvYXBwL2N1c3RvbWVyL2ludGVybmFsLWNsYWltLXN0YWdlLnRzeCIpCnRleHQgPSBwYXRoLnJlYWRfdGV4dCgpCgp0ZXh0ID0gdGV4dC5yZXBsYWNlKAogICAgImltcG9ydCB7IEV4dGVybmFsQ2xhaW1TdGFnZUhlYWRlciB9IGZyb20gJ0AvY29tcG9uZW50cy9leHRlcm5hbC1jbGFpbS11aSc7IiwKICAgICJpbXBvcnQgeyBDbGFpbUZvcm1TZWN0aW9uLCBDbGFpbUlkZW50aXR5Q2FyZCwgRXh0ZXJuYWxDbGFpbVN0YWdlSGVhZGVyIH0gZnJvbSAnQC9jb21wb25lbnRzL2V4dGVybmFsLWNsYWltLXVpJzsiLAogICAgMSwKKQp0ZXh0ID0gdGV4dC5yZXBsYWNlKAogICAgIiAgY29uc3QgW3ZlaGljbGVObywgc2V0VmVoaWNsZU5vXSA9IHVzZVN0YXRlKCcnKTtcbiIsCiAgICAiICBjb25zdCBbdmVoaWNsZU5vLCBzZXRWZWhpY2xlTm9dID0gdXNlU3RhdGUoJycpO1xuICBjb25zdCBbdmVoaWNsZU1ldGEsIHNldFZlaGljbGVNZXRhXSA9IHVzZVN0YXRlKCcnKTtcbiIsCiAgICAxLAopCnRleHQgPSB0ZXh0LnJlcGxhY2UoCiAgICAiICAgICAgY29uc3QgdmVoaWNsZVJlc3VsdCA9IGF3YWl0IHN1cGFiYXNlLmZyb20oJ3ZlaGljbGVzJykuc2VsZWN0KCd2ZWhpY2xlX25vJykuZXEoJ2lkJywgbmV4dENsYWltLnZlaGljbGVfaWQpLm1heWJlU2luZ2xlKCk7XG4gICAgICBpZiAoYWN0aXZlKSB7XG4gICAgICAgIHNldFZlaGljbGVObyh2ZWhpY2xlUmVzdWx0LmRhdGE/LnZlaGljbGVfbm8gPz8gJycpO1xuICAgICAgICBzZXRMb2FkaW5nKGZhbHNlKTtcbiAgICAgIH0iLAogICAgIiAgICAgIGNvbnN0IHZlaGljbGVSZXN1bHQgPSBhd2FpdCBzdXBhYmFzZS5mcm9tKCd2ZWhpY2xlcycpLnNlbGVjdCgndmVoaWNsZV9ubyxtYWtlLG1vZGVsJykuZXEoJ2lkJywgbmV4dENsYWltLnZlaGljbGVfaWQpLm1heWJlU2luZ2xlKCk7XG4gICAgICBpZiAoYWN0aXZlKSB7XG4gICAgICAgIHNldFZlaGljbGVObyh2ZWhpY2xlUmVzdWx0LmRhdGE/LnZlaGljbGVfbm8gPz8gJycpO1xuICAgICAgICBzZXRWZWhpY2xlTWV0YShbdmVoaWNsZVJlc3VsdC5kYXRhPy5tYWtlLCB2ZWhpY2xlUmVzdWx0LmRhdGE/Lm1vZGVsXS5maWx0ZXIoQm9vbGVhbikuam9pbignIMK3ICcpKTtcbiAgICAgICAgc2V0TG9hZGluZyhmYWxzZSk7XG4gICAgICB9IiwKICAgIDEsCikKdGV4dCA9IHRleHQucmVwbGFjZSgKICAgICIgICAgICAgIHN1YnRpdGxlPXtpc0NvbXBsZXRlZCA/ICdDb21wbGV0ZWQgYnkgdGhlIGNsYWltcyBkZXNrJyA6IGlzQ3VycmVudCA/IHByb2plY3Rpb24uc3Vic3RhZ2UgOiAnQXdhaXRpbmcgdGhpcyBvcGVyYXRpb25zIHN0YWdlJ30iLAogICAgIiAgICAgICAgc3VidGl0bGU9e3N0YWdlS2V5ID09PSAnc3BvdF9pbnRpbWF0aW9uJyA/ICdTdGFydCB0cmFja2luZyBhbiBpbmNpZGVudC4nIDogaXNDb21wbGV0ZWQgPyAnQ29tcGxldGVkIGJ5IHRoZSBjbGFpbXMgZGVzaycgOiBpc0N1cnJlbnQgPyBwcm9qZWN0aW9uLnN1YnN0YWdlIDogJ0F3YWl0aW5nIHRoaXMgb3BlcmF0aW9ucyBzdGFnZSd9IiwKICAgIDEsCikKCnN0YXJ0X21hcmtlciA9ICIgICAgICA8VmlldyBzdHlsZT17c3R5bGVzLnJlYWRPbmx5Tm90aWNlfT4iCmVuZF9tYXJrZXIgPSAiICAgICAge3N0YWdlS2V5ID09PSAnY2xhaW1faW50aW1hdGlvbicgPyAoIgpzdGFydCA9IHRleHQuaW5kZXgoc3RhcnRfbWFya2VyKQplbmQgPSB0ZXh0LmluZGV4KGVuZF9tYXJrZXIsIHN0YXJ0KQoKcmVwbGFjZW1lbnQgPSAiIiIgICAgICB7c3RhZ2VLZXkgPT09ICdzcG90X2ludGltYXRpb24nID8gPD4KICAgICAgICA8Q2xhaW1JZGVudGl0eUNhcmQKICAgICAgICAgIGNsYWltTm89e2NsYWltLmluc3VyZXJfY2xhaW1fbm8gfHwgY2xhaW0uY2xhaW1fbm99CiAgICAgICAgICBpbnN1cmVyTmFtZT0iU2Fua2FscCBNYW5hZ2VkIgogICAgICAgICAgdmVoaWNsZU5vPXt2ZWhpY2xlTm99CiAgICAgICAgICB2ZWhpY2xlTWV0YT17dmVoaWNsZU1ldGF9CiAgICAgICAgLz4KCiAgICAgICAge21lc3NhZ2UgPyA8TWVzc2FnZSB0eXBlPSJlcnJvciI+e21lc3NhZ2V9PC9NZXNzYWdlPiA6IG51bGx9CgogICAgICAgIDxDbGFpbUZvcm1TZWN0aW9uCiAgICAgICAgICB0aXRsZT0iSW5jaWRlbnQgRGV0YWlscyIKICAgICAgICAgIHN1YnRpdGxlPSJBY2NpZGVudCBkYXRlLCB0aW1lIGFuZCBmaXJzdCBpbnN1cmVyIGludGltYXRpb24iCiAgICAgICAgICBpY29uSW1hZ2U9e3JlcXVpcmUoJy4uLy4uL2Fzc2V0cy9jbGFpbXMvY2xhaW0taW50aW1hdGlvbi5wbmcnKX0KICAgICAgICA+CiAgICAgICAgICA8U3RhZ2VPbmVSZWFkT25seUZpZWxkIGxhYmVsPSJBY2NpZGVudCBEYXRlICYgVGltZSIgdmFsdWU9e2ZpcnN0VmFsdWUobWVyZ2VkRGV0YWlscywgWydhY2NpZGVudF9hdCddKX0gLz4KICAgICAgICAgIDxTdGFnZU9uZVJlYWRPbmx5RmllbGQgbGFiZWw9IkFjY2lkZW50IExvY2F0aW9uIiB2YWx1ZT17Zmlyc3RWYWx1ZShtZXJnZWREZXRhaWxzLCBbJ2FjY2lkZW50X2xvY2F0aW9uJ10pfSAvPgogICAgICAgICAgPFN0YWdlT25lUmVhZE9ubHlGaWVsZCBsYWJlbD0iQWNjaWRlbnQgRGVzY3JpcHRpb24iIHZhbHVlPXtmaXJzdFZhbHVlKG1lcmdlZERldGFpbHMsIFsnYWNjaWRlbnRfZGVzY3JpcHRpb24nKX0gLz4KICAgICAgICA8L0NsYWltRm9ybVNlY3Rpb24+CgogICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMuc3RhZ2VPbmVEb2N1bWVudHNDYXJkfT4KICAgICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMuc3RhZ2VPbmVEb2N1bWVudHNIZWFkZXJ9PgogICAgICAgICAgICA8VGV4dCBzdHlsZT17c3R5bGVzLnN0YWdlT25lRG9jdW1lbnRzVGl0bGV9PlVwbG9hZCBjbGFpbSBkb2N1bWVudHM8L1RleHQ+CiAgICAgICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMuc3RhZ2VPbmVEb2N1bWVudHNCYWRnZX0+PFRleHQgc3R5bGU9e3N0eWxlcy5zdGFnZU9uZURvY3VtZW50c0JhZGdlVGV4dH0+Q2xhaW1zIGRlc2s8L1RleHQ+PC9WaWV3PgogICAgICAgICAgPC9WaWV3PgogICAgICAgICAgPFByZXNzYWJsZQogICAgICAgICAgICBhY2Nlc3NpYmlsaXR5Um9sZT0iYnV0dG9uIgogICAgICAgICAgICBvblByZXNzPXsoKSA9PiByb3V0ZXIucHVzaCh7IHBhdGhuYW1lOiAnL2N1c3RvbWVyL3VwbG9hZC1kb2N1bWVudHMnLCBwYXJhbXM6IHsgY2xhaW1JZDogY2xhaW0uaWQgfSB9KX0KICAgICAgICAgICAgc3R5bGU9eyh7IHByZXNzZWQgfSkgPT4gW3N0eWxlcy5zdGFnZU9uZURvY3VtZW50c0FjdGlvbiwgcHJlc3NlZCAmJiBzdHlsZXMuc3RhZ2VPbmVEb2N1bWVudHNBY3Rpb25QcmVzc2VkXX0KICAgICAgICAgID4KICAgICAgICAgICAgPFZpZXcgc3R5bGU9e3N0eWxlcy5zdGFnZU9uZURvY3VtZW50c0ljb259PjxNYXRlcmlhbENvbW11bml0eUljb25zIG5hbWU9ImZpbGUtdXBsb2FkLW91dGxpbmUiIHNpemU9ezIyfSBjb2xvcj0iIzBBNDNBMyIgLz48L1ZpZXc+CiAgICAgICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMuc3RhZ2VPbmVEb2N1bWVudHNDb3B5fT4KICAgICAgICAgICAgICA8VGV4dCBzdHlsZT17c3R5bGVzLnN0YWdlT25lRG9jdW1lbnRzQWN0aW9uVGl0bGV9PkluaXRpYWwgY2xhaW0gZG9jdW1lbnRzPC9UZXh0PgogICAgICAgICAgICAgIDxUZXh0IHN0eWxlPXtzdHlsZXMuc3RhZ2VPbmVEb2N1bWVudHNBY3Rpb25UZXh0fT5VcGxvYWQgb3IgcmVwbGFjZSB0aGUgU3BvdCBJbnRpbWF0aW9uIGRvY3VtZW50cyByZXF1ZXN0ZWQgYnkgT3BlcmF0aW9ucy48L1RleHQ+CiAgICAgICAgICAgIDwvVmlldz4KICAgICAgICAgICAgPE1hdGVyaWFsQ29tbXVuaXR5SWNvbnMgbmFtZT0iY2hldnJvbi1yaWdodCIgc2l6ZT17MjB9IGNvbG9yPSIjMEE0M0EzIiAvPgogICAgICAgICAgPC9QcmVzc2FibGU+CiAgICAgICAgPC9WaWV3PgoKICAgICAgICA8VmlldyBzdHlsZT17c3R5bGVzLnN0YWdlT25lTWFuYWdlZE5vdGV9PgogICAgICAgICAgPE1hdGVyaWFsQ29tbXVuaXR5SWNvbnMgbmFtZT0ic2hpZWxkLWxvY2stb3V0bGluZSIgc2l6ZT17MTh9IGNvbG9yPSIjMEE0M0EzIiAvPgogICAgICAgICAgPFRleHQgc3R5bGU9e3N0eWxlcy5zdGFnZU9uZU1hbmFnZWROb3RlVGV4dH0+U3RhZ2UgZGV0YWlscyBhcmUgdXBkYXRlZCBieSB0aGUgQ2xhaW1zIERlc2sgYW5kIHJlbWFpbiByZWFkLW9ubHkuPC9UZXh0PgogICAgICAgIDwvVmlldz4KICAgICAgPC8+IDogPD4KICAgICAgICA8VmlldyBzdHlsZT17c3R5bGVzLnJlYWRPbmx5Tm90aWNlfT4KICAgICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMubm90aWNlSWNvbn0+PE1hdGVyaWFsQ29tbXVuaXR5SWNvbnMgbmFtZT0ic2hpZWxkLWxvY2stb3V0bGluZSIgc2l6ZT17MjB9IGNvbG9yPSIjMEE0M0EzIiAvPjwvVmlldz4KICAgICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMubm90aWNlQ29weX0+CiAgICAgICAgICAgIDxUZXh0IHN0eWxlPXtzdHlsZXMubm90aWNlVGl0bGV9PkNsYWltcyBkZXNrIGNvbnRyb2xsZWQ8L1RleHQ+CiAgICAgICAgICAgIDxUZXh0IHN0eWxlPXtzdHlsZXMubm90aWNlVGV4dH0+WW91IGNhbiByZXZpZXcgdGhpcyBzdGFnZSBhbmQgdXBsb2FkIHJlcXVlc3RlZCBkb2N1bWVudHMuIE9wZXJhdGlvbmFsIGRldGFpbHMgc3RheSByZWFkLW9ubHkgYW5kIGFyZSB1cGRhdGVkIGJ5IHRoZSBDbGFpbXMgRGVzay48L1RleHQ+CiAgICAgICAgICA8L1ZpZXc+CiAgICAgICAgPC9WaWV3PgoKICAgICAgICB7bWVzc2FnZSA/IDxNZXNzYWdlIHR5cGU9ImVycm9yIj57bWVzc2FnZX08L01lc3NhZ2U+IDogbnVsbH0KCiAgICAgICAgPFZpZXcgc3R5bGU9e3N0eWxlcy5maWVsZHNDYXJkfT4KICAgICAgICAgIDxWaWV3IHN0eWxlPXtzdHlsZXMuZmllbGRzSGVhZGVyfT4KICAgICAgICAgICAgPFRleHQgc3R5bGU9e3N0eWxlcy5maWVsZHNUaXRsZX0+U3RhZ2UgZGV0YWlsczwvVGV4dD4KICAgICAgICAgICAgPFZpZXcgc3R5bGU9e3N0eWxlcy5yZWFkT25seUJhZGdlfT48TWF0ZXJpYWxDb21tdW5pdHlJY29ucyBuYW1lPSJleWUtb3V0bGluZSIgc2l6ZT17MTN9IGNvbG9yPSIjNTI2MTc4IiAvPjxUZXh0IHN0eWxlPXtzdHlsZXMucmVhZE9ubHlCYWRnZVRleHR9PlJFQUQgT05MWTwvVGV4dD48L1ZpZXc+CiAgICAgICAgICA8L1ZpZXc+CiAgICAgICAgICA8VmlldyBzdHlsZT17c3R5bGVzLmZpZWxkR3JpZH0+CiAgICAgICAgICAgIHtTVEFHRV9GSUVMRFNbc3RhZ2VLZXldLm1hcCgoZmllbGQpID0+ICgKICAgICAgICAgICAgICA8UmVhZE9ubHlWYWx1ZQogICAgICAgICAgICAgICAga2V5PXtmaWVsZC5sYWJlbH0KICAgICAgICAgICAgICAgIGxhYmVsPXtmaWVsZC5sYWJlbH0KICAgICAgICAgICAgICAgIHZhbHVlPXtmaXJzdFZhbHVlKG1lcmdlZERldGFpbHMsIGZpZWxkLmtleXMsIGZpZWxkLmZhbGxiYWNrKX0KICAgICAgICAgICAgICAgIG1vbmV5PXtmaWVsZC5tb25leX0KICAgICAgICAgICAgICAvPgogICAgICAgICAgICApKX0KICAgICAgICAgIDwvVmlldz4KICAgICAgICA8L1ZpZXc+CiAgICAgIDwvPn0KCiIiIgp0ZXh0ID0gdGV4dFs6c3RhcnRdICsgcmVwbGFjZW1lbnQgKyB0ZXh0W2VuZDpdCgpoZWxwZXJfbWFya2VyID0gImZ1bmN0aW9uIFJlYWRPbmx5VmFsdWUoeyBsYWJlbCwgdmFsdWUsIG1vbmV5IH06IHsgbGFiZWw6IHN0cmluZzsgdmFsdWU6IHVua25vd247IG1vbmV5PzogYm9vbGVhbiB9KSB7IgpoZWxwZXIgPSAiIiJmdW5jdGlvbiBTdGFnZU9uZVJlYWRPbmx5RmllbGQoeyBsYWJlbCwgdmFsdWUgfTogeyBsYWJlbDogc3RyaW5nOyB2YWx1ZTogdW5rbm93biB9KSB7CiAgY29uc3QgZGlzcGxheSA9IGZvcm1hdFZhbHVlKHZhbHVlKTsKICByZXR1cm4gKAogICAgPFZpZXcgc3R5bGU9e3N0eWxlcy5zdGFnZU9uZVJlYWRPbmx5RmllbGR9PgogICAgICA8VGV4dCBzdHlsZT17c3R5bGVzLnN0YWdlT25lUmVhZE9ubHlMYWJlbH0+e2xhYmVsfTwvVGV4dD4KICAgICAgPFZpZXcgc3R5bGU9e3N0eWxlcy5zdGFnZU9uZVJlYWRPbmx5VmFsdWVSb3d9PgogICAgICAgIDxUZXh0IHN0eWxlPXtbc3R5bGVzLnN0YWdlT25lUmVhZE9ubHlWYWx1ZSwgIWRpc3BsYXkgJiYgc3R5bGVzLnN0YWdlT25lUmVhZE9ubHlWYWx1ZUVtcHR5XX0+e2Rpc3BsYXkgfHwgJ0F3YWl0aW5nIENsYWltcyBEZXNrJ308L1RleHQ+CiAgICAgICAgPE1hdGVyaWFsQ29tbXVuaXR5SWNvbnMgbmFtZT0ibG9jay1vdXRsaW5lIiBzaXplPXsxNH0gY29sb3I9IiM5NEEzQjgiIC8+CiAgICAgIDwvVmlldz4KICAgIDwvVmlldz4KICApOwp9CgoiIiIKdGV4dCA9IHRleHQucmVwbGFjZShoZWxwZXJfbWFya2VyLCBoZWxwZXIgKyBoZWxwZXJfbWFya2VyLCAxKQoKc3R5bGVzX21hcmtlciA9ICJjb25zdCBzdHlsZXMgPSBTdHlsZVNoZWV0LmNyZWF0ZSh7XG4iCnN0eWxlc19hZGQgPSAiIiJjb25zdCBzdHlsZXMgPSBTdHlsZVNoZWV0LmNyZWF0ZSh7CiAgc3RhZ2VPbmVSZWFkT25seUZpZWxkOiB7IG1hcmdpbkJvdHRvbTogMTEsIGJvcmRlclJhZGl1czogMTMsIGJvcmRlcldpZHRoOiAxLCBib3JkZXJDb2xvcjogJyNEN0UyRUYnLCBiYWNrZ3JvdW5kQ29sb3I6ICcjRkZGRkZGJywgcGFkZGluZ0hvcml6b250YWw6IDEyLCBwYWRkaW5nVmVydGljYWw6IDEwIH0sCiAgc3RhZ2VPbmVSZWFkT25seUxhYmVsOiB7IGNvbG9yOiAnIzUyNjE3OCcsIGZvbnRTaXplOiAxMCwgbGluZUhlaWdodDogMTQsIGZvbnRXZWlnaHQ6ICc4MDAnLCBtYXJnaW5Cb3R0b206IDUgfSwKICBzdGFnZU9uZVJlYWRPbmx5VmFsdWVSb3c6IHsgbWluSGVpZ2h0OiAyMiwgZmxleERpcmVjdGlvbjogJ3JvdycsIGFsaWduSXRlbXM6ICdjZW50ZXInLCBqdXN0aWZ5Q29udGVudDogJ3NwYWNlLWJldHdlZW4nLCBnYXA6IDggfSwKICBzdGFnZU9uZVJlYWRPbmx5VmFsdWU6IHsgZmxleDogMSwgY29sb3I6IHBhbGV0dGUubmF2eSwgZm9udFNpemU6IDEyLjUsIGxpbmVIZWlnaHQ6IDE3LCBmb250V2VpZ2h0OiAnODAwJyB9LAogIHN0YWdlT25lUmVhZE9ubHlWYWx1ZUVtcHR5OiB7IGNvbG9yOiAnIzk0QTNCOCcsIGZvbnRXZWlnaHQ6ICc3MDAnIH0sCiAgc3RhZ2VPbmVEb2N1bWVudHNDYXJkOiB7IG1hcmdpbkJvdHRvbTogMTAsIGJvcmRlclJhZGl1czogMTgsIGJvcmRlcldpZHRoOiAxLCBib3JkZXJDb2xvcjogJyNEN0UyRUYnLCBiYWNrZ3JvdW5kQ29sb3I6ICcjRkZGRkZGJywgcGFkZGluZzogMTEgfSwKICBzdGFnZU9uZURvY3VtZW50c0hlYWRlcjogeyBmbGV4RGlyZWN0aW9uOiAncm93JywgYWxpZ25JdGVtczogJ2NlbnRlcicsIGp1c3RpZnlDb250ZW50OiAnc3BhY2UtYmV0d2VlbicsIGdhcDogOCwgbWFyZ2luQm90dG9tOiA5IH0sCiAgc3RhZ2VPbmVEb2N1bWVudHNUaXRsZTogeyBjb2xvcjogcGFsZXR0ZS5uYXZ5LCBmb250U2l6ZTogMTUsIGZvbnRXZWlnaHQ6ICc5MDAnIH0sCiAgc3RhZ2VPbmVEb2N1bWVudHNCYWRnZTogeyBib3JkZXJSYWRpdXM6IDk5OSwgYmFja2dyb3VuZENvbG9yOiAnI0VFRjVGRicsIHBhZGRpbmdIb3Jpem9udGFsOiA4LCBwYWRkaW5nVmVydGljYWw6IDUgfSwKICBzdGFnZU9uZURvY3VtZW50c0JhZGdlVGV4dDogeyBjb2xvcjogJyMwQTQzQT MnLCBmb250U2l6ZTogOC41LCBmb250V2VpZ2h0OiAnOTAwJyB9LAogIHN0YWdlT25lRG9jdW1lbnRzQWN0aW9uOiB7IG1pbkhlaWdodDogNjgsIGJvcmRlclJhZGl1czogMTQsIGJvcmRlcldpZHRoOiAxLCBib3JkZXJDb2xvcjogJyNEOUU1RjQnLCBiYWNrZ3JvdW5kQ29sb3I6ICcjRjhGQkZGJywgcGFkZGluZzogMTAsIGZsZXhEaXJlY3Rpb246ICdyb3cnLCBhbGlnbkl0ZW1zOiAnY2VudGVyJywgZ2FwOiAxMCB9LAogIHN0YWdlT25lRG9jdW1lbnRzQWN0aW9uUHJlc3NlZDogeyBiYWNrZ3JvdW5kQ29sb3I6ICcjRUZGNkZGJyB9LAogIHN0YWdlT25lRG9jdW1lbnRzSWNvbjogeyB3aWR0aDogNDIsIGhlaWdodDogNDIsIGJvcmRlclJhZGl1czogMTMsIGJhY2tncm91bmRDb2xvcjogJyNFN0YwRkYnLCBhbGlnbkl0ZW1zOiAnY2VudGVyJywganVzdGlmeUNvbnRlbnQ6ICdjZW50ZXInIH0sCiAgc3RhZ2VPbmVEb2N1bWVudHNDb3B5OiB7IGZsZXg6IDEgfSwKICBzdGFnZU9uZURvY3VtZW50c0FjdGlvblRpdGxlOiB7IGNvbG9yOiBwYWxldHRlLm5hdnksIGZvbnRTaXplOiAxMi41LCBmb250V2VpZ2h0OiAnOTAwJyB9LAogIHN0YWdlT25lRG9jdW1lbnRzQWN0aW9uVGV4dDogeyBjb2xvcjogJyM2MDcwODknLCBmb250U2l6ZTogOS41LCBsaW5lSGVpZ2h0OiAxMy41LCBmb250V2VpZ2h0OiAnNjAwJywgbWFyZ2luVG9wOiAyIH0sCiAgc3RhZ2VPbmVNYW5hZ2VkTm90ZTogeyBtYXJnaW5Cb3R0b206IDEwLCBib3JkZXJSYWRpdXM6IDEzLCBib3JkZXJXaWR0aDogMSwgYm9yZGVyQ29sb3I6ICcjRDlFNUY0JywgYmFja2dyb3VuZENvbG9yOiAnI0Y4RkJGRicsIHBhZGRpbmdIb3Jpem9udGFsOiAxMCwgcGFkZGluZ1ZlcnRpY2FsOiA5LCBmbGV4RGlyZWN0aW9uOiAncm93JywgYWxpZ25JdGVtczogJ2NlbnRlcicsIGdhcDogOCB9LAogIHN0YWdlT25lTWFuYWdlZE5vdGVUZXh0OiB7IGZsZXg6IDEsIGNvbG9yOiAnIzUyNjE3OCcsIGZvbnRTaXplOiA5LjgsIGxpbmVIZWlnaHQ6IDE0LCBmb250V2VpZ2h0OiAnNjAwJyB9LAoiIiIKdGV4dCA9IHRleHQucmVwbGFjZShzdHlsZXNfbWFya2VyLCBzdHlsZXNfYWRkLCAxKQoKcGF0aC53cml0ZV90ZXh0KHRleHQpCg==' | base64 -d > /tmp/patch.py
+          cat > /tmp/patch.py <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/internal-claim-stage.tsx')
+          text = path.read_text()
+
+          def once(old, new):
+              global text
+              if old not in text:
+                  raise SystemExit(f'missing expected fragment: {old[:80]}')
+              text = text.replace(old, new, 1)
+
+          once(
+              "import { ExternalClaimStageHeader } from '@/components/external-claim-ui';",
+              "import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';",
+          )
+          once(
+              "  const [vehicleNo, setVehicleNo] = useState('');",
+              "  const [vehicleNo, setVehicleNo] = useState('');\n  const [vehicleMeta, setVehicleMeta] = useState('');",
+          )
+          once(
+              "const vehicleResult = await supabase.from('vehicles').select('vehicle_no').eq('id', nextClaim.vehicle_id).maybeSingle();",
+              "const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', nextClaim.vehicle_id).maybeSingle();",
+          )
+          once(
+              "        setVehicleNo(vehicleResult.data?.vehicle_no ?? '');\n        setLoading(false);",
+              "        setVehicleNo(vehicleResult.data?.vehicle_no ?? '');\n        setVehicleMeta([vehicleResult.data?.make, vehicleResult.data?.model].filter(Boolean).join(' · '));\n        setLoading(false);",
+          )
+          once(
+              "subtitle={isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}",
+              "subtitle={stageKey === 'spot_intimation' ? 'Start tracking an incident.' : isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}",
+          )
+
+          header_end = "      />\n\n      <View style={styles.readOnlyNotice}>"
+          once(header_end, """      />
+
+      {stageKey === 'spot_intimation' ? (
+        <ClaimIdentityCard
+          claimNo={claim.insurer_claim_no || claim.claim_no}
+          insurerName="Sankalp Managed"
+          vehicleNo={vehicleNo}
+          vehicleMeta={vehicleMeta}
+        />
+      ) : null}
+
+      {stageKey !== 'spot_intimation' ? <View style={styles.readOnlyNotice}>""")
+          once(
+              "      </View>\n\n      {message ? <Message type=\"error\">{message}</Message> : null}\n\n      <View style={styles.fieldsCard}>",
+              "      </View> : null}\n\n      {message ? <Message type=\"error\">{message}</Message> : null}\n\n      {stageKey === 'spot_intimation' ? (\n        <ClaimFormSection title=\"Incident Details\" subtitle=\"Accident date, time and first insurer intimation\" iconImage={require('../../assets/claims/claim-intimation.png')}>\n          <View style={styles.stageOneFieldGrid}>\n            {STAGE_FIELDS.spot_intimation.map((field) => <ReadOnlyValue key={field.label} label={field.label} value={firstValue(mergedDetails, field.keys, field.fallback)} money={field.money} />)}\n          </View>\n        </ClaimFormSection>\n      ) : <View style={styles.fieldsCard}>",
+          )
+          once(
+              "        </View>\n      </View>\n\n      {stageKey === 'spot_intimation' ? (",
+              "        </View>\n      </View>}\n\n      {stageKey === 'spot_intimation' ? (",
+          )
+
+          once(
+              "style={({ pressed }) => [styles.initialDocumentsAction, pressed && styles.initialDocumentsActionPressed]}",
+              "style={({ pressed }) => [styles.initialDocumentsAction, styles.stageOneDocumentsAction, pressed && styles.initialDocumentsActionPressed]}",
+          )
+          once(
+              '<View style={styles.initialDocumentsIcon}><MaterialCommunityIcons name="file-upload-outline" size={21} color="#FFFFFF" /></View>',
+              '<View style={[styles.initialDocumentsIcon, styles.stageOneDocumentsIcon]}><MaterialCommunityIcons name="file-upload-outline" size={21} color="#0A43A3" /></View>',
+          )
+          once(
+              '<Text style={styles.initialDocumentsTitle}>Initial claim documents</Text>',
+              '<Text style={[styles.initialDocumentsTitle, styles.stageOneDocumentsTitle]}>Initial claim documents</Text>',
+          )
+          once(
+              '<Text style={styles.initialDocumentsText}>Upload or replace the Spot Intimation documents requested by Operations.</Text>',
+              '<Text style={[styles.initialDocumentsText, styles.stageOneDocumentsText]}>Upload or replace the Spot Intimation documents requested by Operations.</Text>',
+          )
+          once(
+              '<MaterialCommunityIcons name="chevron-right" size={20} color="#FFFFFF" />',
+              '<MaterialCommunityIcons name="chevron-right" size={20} color="#0A43A3" />',
+          )
+
+          once(
+              "const styles = StyleSheet.create({\n",
+              "const styles = StyleSheet.create({\n  stageOneFieldGrid: { gap: 8 },\n  stageOneDocumentsAction: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D7E2EF' },\n  stageOneDocumentsIcon: { backgroundColor: '#EAF2FF' },\n  stageOneDocumentsTitle: { color: palette.navy },\n  stageOneDocumentsText: { color: '#607089' },\n",
+          )
+
+          path.write_text(text)
+          PY
           python /tmp/patch.py
+
       - name: Remove temporary workflow and commit patch
         shell: bash
         run: |
