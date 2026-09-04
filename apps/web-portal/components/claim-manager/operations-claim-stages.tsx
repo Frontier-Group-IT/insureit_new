@@ -144,7 +144,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         })}
       </ol>
       {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} /> : null}
-      {selected.key === "spot_intimation" ? <div className="mt-3">{spotContent}</div> : null}
+      {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Spot Intimation Details"} pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>{spotState.ok ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => router.refresh()} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
       {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
       {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
         <input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
@@ -175,6 +175,11 @@ function StageForm({ stage, active, detail, spotDetails, fields, next, insurerCl
   const spot = stage.key === "spot_intimation";
   const [location, setLocation] = useState(spotDetails?.location ?? "");
   const [locationError, setLocationError] = useState("");
+  useEffect(() => {
+    if (!locationError) return;
+    const timeout = window.setTimeout(() => setLocationError(""), 3000);
+    return () => window.clearTimeout(timeout);
+  }, [locationError]);
   const captureLocation = () => {
     if (!navigator.geolocation) {
       setLocationError("Location capture is not supported in this browser.");
@@ -186,9 +191,9 @@ function StageForm({ stage, active, detail, spotDetails, fields, next, insurerCl
       () => setLocationError("Unable to access your location. Enter it manually."),
     );
   };
-  return <form action={formAction} className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+  return <form id="spot-intimation-form" action={formAction} className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
     {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[stage.key].map((field) => {
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{fields[stage.key].map((field) => {
       const storedValue = detail?.details?.[field.name];
       const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? "" : field.name === "incident_at" ? spotDetails?.incident_at ?? accidentAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "spot_intimation_at" ? spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_name" ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_phone" ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
       const required = requiredFields[stage.key]?.includes(field.name);
@@ -197,8 +202,7 @@ function StageForm({ stage, active, detail, spotDetails, fields, next, insurerCl
         {spot && field.name === "location" ? <><button type="button" onClick={captureLocation} className="mt-1 text-[10px] font-semibold normal-case tracking-normal text-[#174EA6] hover:underline">Use current location</button>{locationError ? <span role="alert" className="mt-1 block text-[10px] font-medium normal-case tracking-normal text-rose-700">{locationError}</span> : null}</> : null}
       </label>;
     })}</div>
-    {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
-    <FormSubmitButton label={standalone ? "Save Spot Intimation Details" : `Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
+    {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
   </form>;
 }
 

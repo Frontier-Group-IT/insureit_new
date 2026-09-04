@@ -53,8 +53,8 @@ export function validateInternalSpotIntimation(incidentAt: string | null, spotIn
   if (!incidentAt || !spotIntimationAt) {
     throw new Error("Accident date/time and Spot Intimation date/time are required.");
   }
-  const incident = new Date(incidentAt);
-  const intimation = new Date(spotIntimationAt);
+  const incident = parseInternalDateTime(incidentAt);
+  const intimation = parseInternalDateTime(spotIntimationAt);
   if (Number.isNaN(incident.getTime()) || Number.isNaN(intimation.getTime())) {
     throw new Error("Enter valid accident and Spot Intimation date/time values.");
   }
@@ -65,4 +65,8 @@ export function validateInternalSpotIntimation(incidentAt: string | null, spotIn
     throw new Error("Spot Intimation cannot be earlier than the accident.");
   }
   return { incidentAt: incident.toISOString(), spotIntimationAt: intimation.toISOString() };
+}
+
+function parseInternalDateTime(value: string) {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? new Date(`${value}:00+05:30`) : new Date(value);
 }
