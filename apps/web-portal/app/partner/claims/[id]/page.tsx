@@ -48,10 +48,10 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
               <div className="min-w-0">
                 <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#6F8098]">Current Status</p>
                 <h2 className="mt-1 break-words text-[21px] sm:text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">{humanize(data.claim.current_status || "Status not recorded")}</h2>
-                <p className="mt-1 text-[10.5px] font-medium text-[#74839A]">{[data.claim.claim_no, data.customer.name, data.vehicle.vehicle_no].filter(Boolean).join(" · ")}</p>
+                <p className="mt-1 break-words text-[10.5px] font-medium leading-4 text-[#74839A]">{[data.claim.claim_no, data.customer.name, data.vehicle.vehicle_no].filter(Boolean).join(" · ")}</p>
               </div>
             </div>
-            <span className="inline-flex w-fit rounded-xl bg-[#EEF3F8] px-3 py-1.5 text-[9.5px] font-bold text-[#425672]">{humanize(data.claim.claim_service_mode || "Service mode not recorded")}</span>
+            <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-3 py-1.5 text-[9.5px] font-bold text-[#425672]">{humanize(data.claim.claim_service_mode || "Service mode not recorded")}</span>
           </div>
 
           <div className="grid sm:grid-cols-2 xl:grid-cols-4">
@@ -63,9 +63,9 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
         </section>
 
         {needsAttention(data.claim.assistance_status) ? (
-          <section className="rounded-[22px] border border-[#F3D8A8] bg-[#FFF9EF] px-5 py-4">
-            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#A86600]">Partner Attention</p>
-            <p className="mt-1 text-[11px] font-semibold text-[#6E4B10]">Assistance is {humanize(data.claim.assistance_status)}. Review the latest journey update or contact Support if clarification is needed.</p>
+          <section className="rounded-[16px] border border-[#F3D8A8] bg-[#FFF9EF] px-4 py-3.5 sm:px-5 sm:py-4">
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-[#A86600]">Needs Attention</p>
+            <p className="mt-1 break-words text-[11px] font-semibold leading-4 text-[#6E4B10]">Assistance is {humanize(data.claim.assistance_status)}. Check the latest update or contact Support.</p>
           </section>
         ) : null}
 
@@ -93,19 +93,19 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
         <section className="py-1">
           <PartnerSectionHeading title="Customer & Risk" />
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
-              <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.customer.name}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.customer.customer_code || "Customer"}</span></span>
+            <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 last:border-b-0">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
+              <span className="min-w-0"><span className="block break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{data.customer.name}</span><span className="mt-0.5 block break-words text-[9.5px] leading-4 text-[#74839A]">{data.customer.customer_code || "Customer"}</span></span>
             </Link>
             <div className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#3156B8]"><MapPin className="h-4 w-4" /></span>
-              <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.vehicle.vehicle_no || "Vehicle not linked"}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.policy.policy_no || "External policy"}</span></span>
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#3156B8]"><MapPin className="h-4 w-4" /></span>
+              <span className="min-w-0"><span className="block break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{data.vehicle.vehicle_no || "Vehicle not linked"}</span><span className="mt-0.5 block break-words text-[9.5px] leading-4 text-[#74839A]">{data.policy.policy_no || "External policy"}</span></span>
             </div>
           </div>
         </section>
 
         <section className="py-1">
-          <PartnerSectionHeading title="Claim Journey" description={events.length + " recorded events"} />
+          <PartnerSectionHeading title="Claim Journey" description={events.length + (events.length === 1 ? " event" : " events")} />
           {events.length ? (
             <div className="mt-5 space-y-0">
               {events.map((event, index) => (
@@ -116,13 +116,13 @@ export default async function PartnerClaimDetailPage({ params }: { params: Promi
                   </div>
                   <div className="pb-5">
                     <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#3156B8]">{event.kind}</p>
-                    <p className="mt-1 text-[11px] font-extrabold text-[#1B2F4E]">{event.title}</p>
+                    <p className="mt-1 break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{event.title}</p>
                     <p className="mt-1 text-[9.5px] font-medium text-[#7A899F]">{dateTime(event.date)}</p>
                   </div>
                 </div>
               ))}
             </div>
-          ) : <div className="mt-4 border-y border-[#E0E7EF] py-8 text-center text-[10.5px] font-medium text-[#7A899F]">Recorded claim stages and status updates will appear here.</div>}
+          ) : <div className="mt-4 border-y border-[#E0E7EF] py-8 text-center text-[10.5px] font-medium text-[#7A899F]">Claim updates will appear here.</div>}
         </section>
       </div>
     </PartnerPortalShell>
@@ -133,4 +133,4 @@ function HeroMetric({ label, value }: { label: string; value: string }) {
   return <div className="border-b border-[#E6ECF3] px-1 py-3.5 sm:border-r sm:px-4 sm:py-4 xl:border-b-0 xl:last:border-r-0"><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">{label}</p><p className="mt-1.5 break-words text-[10.5px] font-extrabold leading-4 text-[#203653]">{value}</p></div>;
 }
 function Info({ label, value }: { label: string; value: string }) { return <div><p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#8390A3]">{label}</p><p className="mt-1 break-words text-[10.5px] font-semibold leading-4 text-[#203653]">{value}</p></div>; }
-function Amount({ label, value }: { label: string; value: string }) { return <div className="border-r border-[#E0E7EF] py-3 text-center last:border-r-0"><p className="text-[13px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>; }
+function Amount({ label, value }: { label: string; value: string }) { return <div className="border-r border-[#E0E7EF] py-3 text-center last:border-r-0"><p className="break-words text-[13px] font-extrabold leading-4 text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>; }
