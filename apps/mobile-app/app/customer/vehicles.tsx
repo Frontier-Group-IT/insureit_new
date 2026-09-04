@@ -235,6 +235,7 @@ export default function VehiclesScreen() {
         const externalPolicy = policy?.source === 'external';
         const insurerLogo = insurerImage(insurer?.name);
         const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
+        const displayVehicleNo = vehicle.vehicle_no.replace(/^NEW-/i, '');
         const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
         const vehicleImage = vehicleSketchFor(vehicle);
         const health = vehicleComplianceHealth(vehicle, policy);
@@ -247,14 +248,14 @@ export default function VehiclesScreen() {
                 {accountName ? <Text style={styles.accountName} numberOfLines={1}>{accountName}</Text> : null}
                 <View style={styles.chipRow}>
                   <View style={styles.vehicleNoChip}>
-                    <Text style={styles.vehicleNoText}>{vehicle.vehicle_no}</Text>
+                    <Text style={styles.vehicleNoText}>{displayVehicleNo}</Text>
                     <MaterialCommunityIcons name="content-copy" size={13} color={palette.navy} />
                   </View>
                 </View>
 
                 <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
 
-                <Text style={styles.vehicleMake} numberOfLines={1}>{vehicleDescriptor}</Text>
+                <Text style={styles.vehicleMake}>{vehicleDescriptor}</Text>
               </View>
 
               <View style={styles.rightPane}>
@@ -297,7 +298,7 @@ export default function VehiclesScreen() {
                     </View>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={`${vehiclePolicyActionLabel} for ${vehicle.vehicle_no}`}
+                      accessibilityLabel={`${vehiclePolicyActionLabel} for ${displayVehicleNo}`}
                       onPress={(event) => {
                         event.stopPropagation();
                         router.push({ pathname: '/customer/add-policy', params: { vehicleId: vehicle.id } });
@@ -816,7 +817,7 @@ function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive, 
         </View>
         <View style={styles.infoValueRow}>
           {typeof statusActive === 'boolean' ? <BlinkingPolicyDot active={statusActive} /> : null}
-          <Text style={styles.infoValue} numberOfLines={2}>{value}</Text>
+          <Text style={styles.infoValue}>{value}</Text>
         </View>
       </View>
     </View>
@@ -1126,26 +1127,26 @@ const styles = StyleSheet.create({
   cardMain: { flexDirection: 'row', gap: 10 },
   leftPane: { width: 164, paddingRight: 4 },
   accountName: { color: '#0A43A3', fontSize: 10.8, lineHeight: 13, fontWeight: '900', marginBottom: 3, textTransform: 'uppercase' },
-  chipRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  vehicleNoChip: { minHeight: 31, borderRadius: 8, backgroundColor: '#EAF3FF', paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  vehicleNoText: { color: palette.navy, fontSize: 15.2, lineHeight: 18, fontWeight: '900' },
+  chipRow: { width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  vehicleNoChip: { width: '100%', minHeight: 31, borderRadius: 8, backgroundColor: '#EAF3FF', paddingHorizontal: 8, paddingVertical: 5, flexDirection: 'row', alignItems: 'flex-start', gap: 5 },
+  vehicleNoText: { flex: 1, minWidth: 0, flexShrink: 1, color: palette.navy, fontSize: 13.2, lineHeight: 16, fontWeight: '900' },
   truckImage: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10 },
   twpVehicleVisual: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   twpRoadLine: { position: 'absolute', bottom: 8, width: 112, height: 2, borderRadius: 2, backgroundColor: '#D6E5F7' },
-  vehicleMake: { color: palette.navy, fontSize: 12.4, lineHeight: 15, fontWeight: '900', marginTop: 5 },
+  vehicleMake: { color: palette.navy, fontSize: 12.4, lineHeight: 15, fontWeight: '900', marginTop: 5, flexShrink: 1 },
 
   rightPane: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: '#E5ECF5', paddingLeft: 10, position: 'relative' },
   infoBlock: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
   infoIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   insurerLogo: { width: 24, height: 24 },
-  infoCopy: { flex: 1, minWidth: 0 },
+  infoCopy: { flex: 1, minWidth: 0, paddingVertical: 5 },
   infoLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   infoLabel: { color: palette.slate, fontSize: 9.8, fontWeight: '800' },
   externalBadge: { borderRadius: 5, backgroundColor: '#F1F5F9', borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 4, paddingVertical: 1 },
   externalBadgeText: { color: '#64748B', fontSize: 7.2, lineHeight: 9, fontWeight: '800' },
-  infoValueRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
-  infoValue: { color: palette.navy, fontSize: 11.4, lineHeight: 14, fontWeight: '900', marginTop: 1 },
-  policyStatusDot: { width: 8, height: 8, borderRadius: 4 },
+  infoValueRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 1 },
+  infoValue: { flex: 1, minWidth: 0, flexShrink: 1, color: palette.navy, fontSize: 11.4, lineHeight: 14, fontWeight: '900', marginTop: 1 },
+  policyStatusDot: { width: 8, height: 8, borderRadius: 4, marginTop: 3 },
   policyStatusDotActive: { backgroundColor: '#12B76A' },
   policyStatusDotInactive: { backgroundColor: '#D92D20' },
   policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F6FAFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 9, paddingVertical: 9, justifyContent: 'center' },
