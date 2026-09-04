@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -125,6 +125,7 @@ export default function InternalClaimStageScreen() {
   const definition = INTERNAL_JOURNEY_STAGES.find((stage) => stage.key === stageKey);
   const [claim, setClaim] = useState<ManagedClaim | null>(null);
   const [vehicleNo, setVehicleNo] = useState('');
+  const [vehicleMeta, setVehicleMeta] = useState('');
   const [stageDetails, setStageDetails] = useState<StageDetail[]>([]);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -157,9 +158,10 @@ export default function InternalClaimStageScreen() {
 
       setClaim(nextClaim);
       setStageDetails((detailsResult.data ?? []) as unknown as StageDetail[]);
-      const vehicleResult = await supabase.from('vehicles').select('vehicle_no').eq('id', nextClaim.vehicle_id).maybeSingle();
+      const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', nextClaim.vehicle_id).maybeSingle();
       if (active) {
         setVehicleNo(vehicleResult.data?.vehicle_no ?? '');
+        setVehicleMeta([vehicleResult.data?.make, vehicleResult.data?.model].filter(Boolean).join(' · '));
         setLoading(false);
       }
     })();
@@ -205,53 +207,88 @@ export default function InternalClaimStageScreen() {
       <ExternalClaimStageHeader
         step={step}
         title={definition.label}
-        subtitle={isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}
+        subtitle={stageKey === 'spot_intimation' ? 'Start tracking an incident.' : isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}
         vehicleNo={vehicleNo}
         claimNo={claim.insurer_claim_no || claim.claim_no}
         serviceLabel="Sankalp Managed"
         onBack={() => router.back()}
       />
 
-      <View style={styles.readOnlyNotice}>
-        <View style={styles.noticeIcon}><MaterialCommunityIcons name="shield-lock-outline" size={20} color="#0A43A3" /></View>
-        <View style={styles.noticeCopy}>
-          <Text style={styles.noticeTitle}>Claims desk controlled</Text>
-          <Text style={styles.noticeText}>You can review this stage and upload requested documents. Operational details stay read-only and are updated by the Claims Desk.</Text>
+      {stageKey === 'spot_intimation' ? (
+        <ClaimIdentityCard
+          claimNo={claim.insurer_claim_no || claim.claim_no}
+          insurerName="Sankalp Managed"
+          vehicleNo={vehicleNo || 'Vehicle'}
+          vehicleMeta={vehicleMeta}
+        />
+      ) : (
+        <View style={styles.readOnlyNotice}>
+          <View style={styles.noticeIcon}><MaterialCommunityIcons name="shield-lock-outline" size={20} color="#0A43A3" /></View>
+          <View style={styles.noticeCopy}>
+            <Text style={styles.noticeTitle}>Claims desk controlled</Text>
+            <Text style={styles.noticeText}>You can review this stage and upload requested documents. Operational details stay read-only and are updated by the Claims Desk.</Text>
+          </View>
         </View>
-      </View>
+      )}
 
       {message ? <Message type="error">{message}</Message> : null}
 
-      <View style={styles.fieldsCard}>
-        <View style={styles.fieldsHeader}>
-          <Text style={styles.fieldsTitle}>Stage details</Text>
-          <View style={styles.readOnlyBadge}><MaterialCommunityIcons name="eye-outline" size={13} color="#526178" /><Text style={styles.readOnlyBadgeText}>READ ONLY</Text></View>
+      {stageKey === 'spot_intimation' ? (
+        <ClaimFormSection
+          title="Incident Details"
+          subtitle="Accident date, time and first insurer intimation"
+          iconImage={require('../../assets/claims/claim-intimation.png')}
+        >
+          <View style={styles.stageOneFieldGrid}>
+            {STAGE_FIELDS.spot_intimation.map((field) => (
+              <ReadOnlyValue
+                key={field.label}
+                label={field.label}
+                value={firstValue(mergedDetails, field.keys, field.fallback)}
+                money={field.money}
+                fullWidth
+              />
+            ))}
+          </View>
+        </ClaimFormSection>
+      ) : (
+        <View style={styles.fieldsCard}>
+          <View style={styles.fieldsHeader}>
+            <Text style={styles.fieldsTitle}>Stage details</Text>
+            <View style={styles.readOnlyBadge}><MaterialCommunityIcons name="eye-outline" size={13} color="#526178" /><Text style={styles.readOnlyBadgeText}>READ ONLY</Text></View>
+          </View>
+          <View style={styles.fieldGrid}>
+            {STAGE_FIELDS[stageKey].map((field) => (
+              <ReadOnlyValue
+                key={field.label}
+                label={field.label}
+                value={firstValue(mergedDetails, field.keys, field.fallback)}
+                money={field.money}
+              />
+            ))}
+          </View>
         </View>
-        <View style={styles.fieldGrid}>
-          {STAGE_FIELDS[stageKey].map((field) => (
-            <ReadOnlyValue
-              key={field.label}
-              label={field.label}
-              value={firstValue(mergedDetails, field.keys, field.fallback)}
-              money={field.money}
-            />
-          ))}
-        </View>
-      </View>
+      )}
 
       {stageKey === 'spot_intimation' ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })}
-          style={({ pressed }) => [styles.initialDocumentsAction, pressed && styles.initialDocumentsActionPressed]}
-        >
-          <View style={styles.initialDocumentsIcon}><MaterialCommunityIcons name="file-upload-outline" size={21} color="#FFFFFF" /></View>
-          <View style={styles.initialDocumentsCopy}>
-            <Text style={styles.initialDocumentsTitle}>Initial claim documents</Text>
-            <Text style={styles.initialDocumentsText}>Upload or replace the Spot Intimation documents requested by Operations.</Text>
+        <View style={styles.stageOneDocumentsCard}>
+          <View style={styles.stageOneDocumentsHeader}>
+            <Text style={styles.stageOneDocumentsHeaderTitle}>Upload claim documents</Text>
+            <View style={styles.stageOneDocumentsBadge}><Text style={styles.stageOneDocumentsBadgeText}>Claims desk</Text></View>
           </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} color="#FFFFFF" />
-        </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/customer/upload-documents', params: { claimId: claim.id } })}
+            style={({ pressed }) => [styles.initialDocumentsAction, styles.stageOneDocumentsAction, pressed && styles.initialDocumentsActionPressed]}
+          >
+            <View style={[styles.initialDocumentsIcon, styles.stageOneDocumentsIcon]}><MaterialCommunityIcons name="file-upload-outline" size={21} color="#0A43A3" /></View>
+            <View style={styles.initialDocumentsCopy}>
+              <Text style={[styles.initialDocumentsTitle, styles.stageOneDocumentsTitle]}>Initial claim documents</Text>
+              <Text style={[styles.initialDocumentsText, styles.stageOneDocumentsText]}>Upload or replace the Spot Intimation documents requested by Operations.</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color="#0A43A3" />
+          </Pressable>
+        </View>
       ) : null}
 
       {stageKey === 'claim_intimation' ? (
@@ -266,10 +303,10 @@ export default function InternalClaimStageScreen() {
   );
 }
 
-function ReadOnlyValue({ label, value, money }: { label: string; value: unknown; money?: boolean }) {
+function ReadOnlyValue({ label, value, money, fullWidth = false }: { label: string; value: unknown; money?: boolean; fullWidth?: boolean }) {
   const display = formatValue(value, money);
   return (
-    <View style={styles.readOnlyField}>
+    <View style={[styles.readOnlyField, fullWidth && styles.readOnlyFieldFull]}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Text style={[styles.fieldValue, !display && styles.fieldValueEmpty]}>{display || 'Awaiting Claims Desk'}</Text>
       <MaterialCommunityIcons name="lock-outline" size={13} color="#94A3B8" style={styles.fieldLock} />
@@ -298,6 +335,16 @@ function formatValue(value: unknown, money?: boolean) {
 }
 
 const styles = StyleSheet.create({
+  stageOneFieldGrid: { gap: 8 },
+  stageOneDocumentsCard: { marginBottom: 10, borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 11 },
+  stageOneDocumentsHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 9 },
+  stageOneDocumentsHeaderTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' },
+  stageOneDocumentsBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 8, paddingVertical: 5 },
+  stageOneDocumentsBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
+  stageOneDocumentsAction: { marginBottom: 0, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#D9E5F4' },
+  stageOneDocumentsIcon: { backgroundColor: '#EAF2FF' },
+  stageOneDocumentsTitle: { color: palette.navy },
+  stageOneDocumentsText: { color: '#607089' },
   readOnlyNotice: { marginBottom: 10, borderRadius: 16, borderWidth: 1, borderColor: '#CFE0F7', backgroundColor: '#F3F8FF', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 },
   noticeIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E1EDFF', alignItems: 'center', justifyContent: 'center' },
   noticeCopy: { flex: 1 },
@@ -310,6 +357,7 @@ const styles = StyleSheet.create({
   readOnlyBadgeText: { color: '#526178', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   readOnlyField: { width: '48.5%', minHeight: 67, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 9, paddingRight: 25, position: 'relative' },
+  readOnlyFieldFull: { width: '100%', minHeight: 62, backgroundColor: '#FFFFFF', borderColor: '#D7E2EF' },
   fieldLabel: { color: '#64748B', fontSize: 8.8, lineHeight: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.35 },
   fieldValue: { color: '#334155', fontSize: 11.2, lineHeight: 15, fontWeight: '800', marginTop: 5 },
   fieldValueEmpty: { color: '#94A3B8', fontWeight: '700' },
