@@ -21,121 +21,91 @@ jobs:
           fetch-depth: 0
 
       - name: Install PNG validators
-        shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq pngcheck file
+          sudo apt-get install -y -qq pngcheck
           python -m pip install --quiet pillow
 
-      - name: Recover corrupt PNGs from repository history when possible
-        shell: bash
+      - name: Recover corrupt PNGs from repository history
         run: |
           set -euo pipefail
-          report="$RUNNER_TEMP/png-recovery-report.txt"
-          : > "$report"
-          mapfile -d '' pngs < <(find apps/mobile-app -type f -iname '*.png' -print0 | sort -z)
-          echo "PNG files found: ${#pngs[@]}" | tee -a "$report"
+          validate_png() {
+            pngcheck -q "$1" >/dev/null 2>&1 && python -c "from PIL import Image; import sys; im=Image.open(sys.argv[1]); im.verify()" "$1" >/dev/null 2>&1
+          }
+          total=0
           repaired=0
           unrecovered=0
-
-          validate_png() {
-            local p="$1"
-            pngcheck -q "$p" >/dev/null 2>&1 || return 1
-            python - "$p" <<'PY'
-from PIL import Image
-import sys
-p=sys.argv[1]
-with Image.open(p) as im:
-    im.verify()
-PY
-          }
-
-          for p in "${pngs[@]}"; do
+          : > png-recovery-report.txt
+          while IFS= read -r -d '' p; do
+            total=$((total+1))
             if validate_png "$p"; then
               continue
             fi
-            echo "INVALID: $p" | tee -a "$report"
+            echo "INVALID: $p" | tee -a png-recovery-report.txt
             recovered=0
             while read -r commit; do
               [ -n "$commit" ] || continue
               tmp="$RUNNER_TEMP/recover.png"
               if git show "$commit:$p" > "$tmp" 2>/dev/null && validate_png "$tmp"; then
                 cp "$tmp" "$p"
-                echo "RECOVERED: $p from $commit" | tee -a "$report"
+                echo "RECOVERED: $p from $commit" | tee -a png-recovery-report.txt
                 repaired=$((repaired+1))
                 recovered=1
                 break
               fi
             done < <(git rev-list --all -- "$p")
             if [ "$recovered" -eq 0 ]; then
-              echo "UNRECOVERED: $p" | tee -a "$report"
+              echo "UNRECOVERED: $p" | tee -a png-recovery-report.txt
               unrecovered=$((unrecovered+1))
             fi
-          done
-
-          echo "Recovered files: $repaired" | tee -a "$report"
-          echo "Unrecovered files: $unrecovered" | tee -a "$report"
-          cp "$report" png-recovery-report.txt
-          [ "$unrecovered" -eq 0 ] || exit 2
+          done < <(find apps/mobile-app -type f -iname '*.png' -print0 | sort -z)
+          echo "TOTAL_PNG=$total" | tee -a png-recovery-report.txt
+          echo "RECOVERED_PNG=$repaired" | tee -a png-recovery-report.txt
+          echo "UNRECOVERED_PNG=$unrecovered" | tee -a png-recovery-report.txt
+          [ "$unrecovered" -eq 0 ]
 
       - name: Full PNG structural and decode audit
-        shell: bash
         run: |
           set -euo pipefail
-          report='png-audit-report.txt'
-          : > "$report"
           total=0
           failed=0
-          oversized=0
+          over10=0
+          : > png-audit-report.txt
           while IFS= read -r -d '' p; do
             total=$((total+1))
-            size=$(stat -c%s "$p")
-            if [ "$size" -gt 10485760 ]; then
-              oversized=$((oversized+1))
-              echo "LARGE >10MB: $p ($size bytes)" >> "$report"
+            bytes=$(stat -c%s "$p")
+            if [ "$bytes" -gt 10485760 ]; then
+              over10=$((over10+1))
+              echo "LARGE_GT_10MB: $p bytes=$bytes" >> png-audit-report.txt
             fi
             if ! pngcheck -q "$p" >/dev/null 2>&1; then
-              echo "PNGCHK_FAIL: $p" >> "$report"
               failed=$((failed+1))
+              echo "PNGCHK_FAIL: $p" >> png-audit-report.txt
               continue
             fi
-            if ! python - "$p" <<'PY'
-from PIL import Image
-import sys
-p=sys.argv[1]
-with Image.open(p) as im:
-    im.verify()
-PY
-            then
-              echo "PIL_DECODE_FAIL: $p" >> "$report"
+            if ! python -c "from PIL import Image; import sys; im=Image.open(sys.argv[1]); im.verify()" "$p" >/dev/null 2>&1; then
               failed=$((failed+1))
+              echo "PIL_DECODE_FAIL: $p" >> png-audit-report.txt
             fi
           done < <(find apps/mobile-app -type f -iname '*.png' -print0 | sort -z)
-          {
-            echo "TOTAL_PNG=$total"
-            echo "FAILED_PNG=$failed"
-            echo "OVER_10MB=$oversized"
-          } | tee -a "$report"
-          cat "$report"
+          echo "TOTAL_PNG=$total" | tee -a png-audit-report.txt
+          echo "FAILED_PNG=$failed" | tee -a png-audit-report.txt
+          echo "OVER_10MB=$over10" | tee -a png-audit-report.txt
+          cat png-audit-report.txt
           [ "$failed" -eq 0 ]
 
       - name: Commit recovered PNGs only
-        shell: bash
         run: |
           set -euo pipefail
           git fetch origin feat/customer-native-release-readiness
-          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)" ] || {
-            echo 'Release branch advanced during audit; refusing to push.' >&2
-            exit 1
-          }
-          git status --short
-          changed=$(git diff --name-only -- 'apps/mobile-app/**/*.png' ':(glob)apps/mobile-app/**/*.png')
-          if [ -z "$changed" ]; then
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)" ] || exit 1
+          mapfile -t changed < <(git diff --name-only -- ':(glob)apps/mobile-app/**/*.png')
+          if [ "${#changed[@]}" -eq 0 ]; then
             echo 'No PNG binaries required recovery.'
             exit 0
           fi
-          echo "$changed"
+          printf '%s\n' "${changed[@]}"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -- ':(glob)apps/mobile-app/**/*.png'
