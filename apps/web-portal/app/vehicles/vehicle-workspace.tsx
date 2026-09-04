@@ -20,6 +20,8 @@ type VehicleRow = {
   make: string | null;
   model: string | null;
   permit_no: string | null;
+  chassis_no: string | null;
+  engine_no: string | null;
   registration_status: string | null;
   customers: { company_name: string | null; contact_name: string } | null;
   policies: { count: number }[];
@@ -44,7 +46,7 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
 
   const types = useMemo(() => Array.from(new Set(rows.map((row) => row.vehicle_type).filter(Boolean))).sort(), [rows]);
   const filtered = useMemo(() => rows.filter((row) => {
-    const haystack = [row.vehicle_no, row.vehicle_type, row.make, row.model, row.permit_no, row.registration_status, row.customers?.company_name, row.customers?.contact_name].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.vehicle_no, row.vehicle_type, row.make, row.model, row.permit_no, row.chassis_no, row.engine_no, row.registration_status, row.customers?.company_name, row.customers?.contact_name].filter(Boolean).join(" ").toLowerCase();
     const matchesType = type === "all" || row.vehicle_type === type;
     const matchesView =
       view === "all" ||
@@ -80,7 +82,7 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
       <BrokerRegisterToolbar
         query={query}
         onQueryChange={(value) => { setQuery(value); setPage(1); }}
-        searchPlaceholder="Search registration, customer, permit, make or model"
+        searchPlaceholder="Search registration, chassis, engine, customer, permit, make or model"
         activeViewLabel={`${filtered.length} in current view`}
         action={<Link prefetch={false} href="/vehicles/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />Add Vehicle</Link>}
       >
@@ -177,7 +179,10 @@ function NextAction({ vehicle }: { vehicle: VehicleRow }) {
   return <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><Wrench className="h-3.5 w-3.5" />Maintained</span>;
 }
 
-function displayVehicleNo(vehicle: VehicleRow) { return isRegistrationPending(vehicle) ? "Registration pending" : vehicle.vehicle_no; }
+function displayVehicleNo(vehicle: VehicleRow) {
+  const vehicleNo = vehicle.vehicle_no.toUpperCase();
+  return /^(?:NEW|PENDING)-/.test(vehicleNo) ? "Registration pending" : vehicle.vehicle_no;
+}
 function isRegistrationPending(vehicle: VehicleRow) {
   const vehicleNo = vehicle.vehicle_no.toUpperCase();
   return vehicle.registration_status === "registration_pending" || vehicleNo.startsWith("NEW-") || vehicleNo.startsWith("PENDING-");

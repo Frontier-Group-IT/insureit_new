@@ -15,6 +15,8 @@ type VehicleRow = {
   make: string | null;
   model: string | null;
   permit_no: string | null;
+  chassis_no: string | null;
+  engine_no: string | null;
   registration_status: string | null;
   customers: { company_name: string | null; contact_name: string } | null;
   policies: { count: number }[];
@@ -47,7 +49,7 @@ export default async function VehiclesPage() {
 
   let query = admin
     .from("vehicles")
-    .select("id, vehicle_no, vehicle_type, make, model, permit_no, registration_status, customers!inner(company_name, contact_name), policies(count), claims(count)")
+    .select("id, vehicle_no, vehicle_type, make, model, permit_no, chassis_no, engine_no, registration_status, customers!inner(company_name, contact_name), policies(count), claims(count)")
     .order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<VehicleRow[]>();

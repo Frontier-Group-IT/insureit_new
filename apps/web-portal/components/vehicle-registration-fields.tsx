@@ -95,13 +95,12 @@ export function VehicleRegistrationFields({
 
       {initialMode === "registered" && Boolean(initialVehicleNo) && mode === "unregistered" ? (
         <div className="md:col-span-2 lg:col-span-3 xl:col-span-6 rounded-xl border border-[#F5D7A8] bg-[#FFF9EF] px-3 py-2 text-[9.5px] leading-4 text-[#8A5A16]">
-          Saving as Unregistered will replace the current registration number with a temporary chassis-based reference. Linked policies will remain attached to the same vehicle record.
+          Saving as Unregistered will keep the current registration number and linked history, while moving this vehicle to RC pending.
         </div>
       ) : null}
     </>
   );
 }
-
 
 function RegistrationBadgeIcon({ active }: { active: boolean }) {
   return (

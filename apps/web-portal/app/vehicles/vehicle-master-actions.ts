@@ -163,27 +163,36 @@ export async function saveVehicleMaster(id: string, formData: FormData) {
 
   const { data: currentVehicle, error: currentError } = await admin
     .from("vehicles")
-    .select("id,vehicle_no,registration_status")
+    .select("id,vehicle_no,vehicle_no_normalized,registration_status,registration_date")
     .eq("id", id)
-    .maybeSingle<{ id: string; vehicle_no: string; registration_status: string | null }>();
+    .maybeSingle<{ id: string; vehicle_no: string; vehicle_no_normalized: string | null; registration_status: string | null; registration_date: string | null }>();
   if (currentError || !currentVehicle) {
     redirect(errorUrl(`/vehicles/${id}/edit`, currentError?.message ?? "The vehicle record no longer exists."));
   }
 
+  const wasPending = isPendingVehicle(currentVehicle);
+  const willBePending = payload.registration_status === "registration_pending";
+  const convertingRegisteredToPending = !wasPending && willBePending;
+  const updatePayload = convertingRegisteredToPending
+    ? {
+        ...payload,
+        vehicle_no: currentVehicle.vehicle_no,
+        vehicle_no_normalized: currentVehicle.vehicle_no_normalized ?? normalizeVehicleRegistrationNumber(currentVehicle.vehicle_no),
+        registration_date: currentVehicle.registration_date,
+      }
+    : payload;
+
   let registrationConflict: { id: string; vehicle_no: string } | null = null;
   try {
-    registrationConflict = await findRegistrationConflict(admin, payload.vehicle_no_normalized, id);
+    registrationConflict = await findRegistrationConflict(admin, updatePayload.vehicle_no_normalized, id);
   } catch (error) {
     redirect(errorUrl(`/vehicles/${id}/edit`, `Unable to validate the registration number: ${error instanceof Error ? error.message : "Unknown error"}`));
   }
   if (registrationConflict) {
-    redirect(errorUrl(`/vehicles/${id}/edit`, `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
+    redirect(errorUrl(`/vehicles/${id}/edit`, `Registration number ${updatePayload.vehicle_no} already belongs to another vehicle.`));
   }
 
-  const wasPending = isPendingVehicle(currentVehicle);
-  const willBePending = payload.registration_status === "registration_pending";
-
-  const { error } = await admin.from("vehicles").update({ ...payload, updated_at: new Date().toISOString() }).eq("id", id);
+  const { error } = await admin.from("vehicles").update({ ...updatePayload, updated_at: new Date().toISOString() }).eq("id", id);
   if (error) redirect(errorUrl(`/vehicles/${id}/edit`, `Vehicle could not be updated: ${error.message}`));
 
   await recordVehicleActivity(admin, id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_EDITED);
