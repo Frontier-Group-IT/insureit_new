@@ -36,7 +36,7 @@ type PolicyRow = {
   source_name: string | null;
   policy_documents: PolicyDocument[];
   customers: { company_name: string | null; contact_name: string } | null;
-  vehicles: { vehicle_no: string } | null;
+  vehicles: { vehicle_no: string; chassis_no: string | null; engine_no: string | null } | null;
   insurance_companies: { name: string } | null;
   non_motor_policy_details: NonMotorDetails | null;
   claims: { count: number }[];
@@ -151,7 +151,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
 
   const baseFiltered = useMemo(() => enriched.filter((row) => {
-    const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
     const matchesBusiness = business === "all" || policyBusinessLine(row) === business;
     const matchesCategory = business !== "Non Motor" || category === "all" || policyCategory(row) === category;
     const matchesSource = source === "all" || policySourceKey(row) === source;
@@ -219,8 +219,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
               <input
                 value={query}
                 onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-                placeholder="Search policy, customer, insurer, vehicle, risk or source"
-                aria-label="Search policy, customer, insurer, vehicle, risk or source"
+                placeholder="Search policy, customer, insurer, vehicle, chassis, engine, risk or source"
+                aria-label="Search policy, customer, insurer, vehicle, chassis, engine, risk or source"
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
