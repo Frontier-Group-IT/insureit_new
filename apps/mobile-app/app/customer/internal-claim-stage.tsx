@@ -8,9 +8,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ClaimFormSection, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -356,6 +357,69 @@ export default function InternalClaimStageScreen() {
     );
   }
 
+  if (stageKey === 'claim_intimation') {
+    const claimIntimationDate = isoDateValue(firstValue(mergedDetails, ['claim_intimation_date', 'intimation_date']));
+    const dealershipName = stringDisplay(firstValue(mergedDetails, ['dealership_name', 'garage_name']));
+    const dealershipLocation = stringDisplay(firstValue(mergedDetails, ['dealership_location', 'dealership_address', 'garage_address']));
+    const gateInDate = isoDateValue(firstValue(mergedDetails, ['gate_in_date', 'gate_in_at']));
+    const estimateAmount = formatValue(firstValue(mergedDetails, ['estimate_amount', 'estimated_loss']), true);
+
+    return (
+      <Screen title="Claim Intimation" showTitleHeader={false}>
+        <CompactDocumentStageHeader
+          step={3}
+          title="Claim Intimation"
+          subtitle="Record dealership, gate-in and estimate details."
+          vehicleNo={vehicleNo}
+          claimNo={claim.insurer_claim_no || claim.claim_no}
+        />
+
+        <ClaimIdentityCard
+          claimNo={claim.insurer_claim_no || claim.claim_no}
+          insurerName={insurerName || 'Insurance company'}
+          vehicleNo={vehicleNo || 'Vehicle'}
+          policyNo={policyNo || undefined}
+          vehicleMeta={vehicleMeta}
+        />
+
+        {message ? <Message type="error">{message}</Message> : null}
+
+        <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../../assets/claims/claim-intimation.png')}>
+          <View pointerEvents="none">
+            <AppDatePicker
+              label="Claim Intimation Date *"
+              value={claimIntimationDate}
+              onChange={() => undefined}
+              formatDisplay={formatDisplayDate}
+            />
+          </View>
+          <View style={styles.gap} />
+          <View pointerEvents="none"><TextField label="Dealership Name *" value={dealershipName} /></View>
+          <View style={styles.gap} />
+          <View pointerEvents="none"><TextField label="Dealership Location *" value={dealershipLocation} /></View>
+          <View style={styles.gap} />
+          <View pointerEvents="none">
+            <AppDatePicker
+              label="Gate-in Date *"
+              value={gateInDate}
+              onChange={() => undefined}
+              formatDisplay={formatDisplayDate}
+            />
+          </View>
+          <View style={styles.gap} />
+          <View pointerEvents="none"><TextField label="Estimate Amount *" value={estimateAmount} keyboardType="decimal-pad" /></View>
+        </ClaimFormSection>
+
+        <ExternalClaimDocumentTabs
+          claimId={claim.id}
+          customerId={claim.customer_id}
+          mode="broker-managed"
+          uploadsEnabled={uploadsEnabled}
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen title={definition.label} showTitleHeader={false}>
       <ExternalClaimStageHeader
@@ -394,15 +458,6 @@ export default function InternalClaimStageScreen() {
           ))}
         </View>
       </View>
-
-      {stageKey === 'claim_intimation' ? (
-        <ExternalClaimDocumentTabs
-          claimId={claim.id}
-          customerId={claim.customer_id}
-          mode="broker-managed"
-          uploadsEnabled={uploadsEnabled}
-        />
-      ) : null}
     </Screen>
   );
 }
