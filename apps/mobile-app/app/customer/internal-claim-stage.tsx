@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimFormSection, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -239,22 +239,12 @@ export default function InternalClaimStageScreen() {
 
     return (
       <Screen title="Spot Intimation" showTitleHeader={false}>
-        <ExternalClaimStageHeader
-          step={1}
-          title="Spot Intimation"
-          subtitle="Start tracking an incident."
+        <StageOneCompactHeader
+          claimNo={claim.insurer_claim_no || claim.claim_no}
           vehicleNo={vehicleNo}
-          claimNo={claim.insurer_claim_no || claim.claim_no}
-          serviceLabel="Sankalp Managed"
-          onBack={() => router.back()}
-        />
-
-        <ClaimIdentityCard
-          claimNo={claim.insurer_claim_no || claim.claim_no}
-          insurerName={insurerName || 'Insurance company'}
-          vehicleNo={vehicleNo || 'Vehicle'}
-          policyNo={policyNo || undefined}
+          policyNo={policyNo}
           vehicleMeta={vehicleMeta}
+          insurerName={insurerName}
         />
 
         {message ? <Message type="error">{message}</Message> : null}
@@ -279,41 +269,37 @@ export default function InternalClaimStageScreen() {
 
         <View style={styles.documentReadyCard}>
           <View style={styles.documentReadyHeader}>
-            <View style={styles.documentReadyHeaderCopy}>
-              <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
-            </View>
+            <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
             <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
           </View>
           <View style={styles.documentReadyGrid}>
-            <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.rc)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.insurance)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.licence)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.gr)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Accident Photo" source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_photo)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Accident Video" artwork="accident-video" saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_video)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReplicaTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.rc)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReplicaTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.insurance)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReplicaTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.licence)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReplicaTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.gr)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReplicaTile title="Accident Photo" source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_photo)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReplicaTile title="Accident Video" video saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_video)} onPress={() => openDocuments(router, claim.id)} />
           </View>
-          <View style={styles.bulkUploadShell}>
-            <Pressable accessibilityRole="button" onPress={() => openDocuments(router, claim.id)} style={styles.bulkUpload}>
-              <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />
-              <View style={styles.bulkUploadCopy}>
-                <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
-                <Text style={styles.bulkUploadText}>Select several files now, or tap again later to add more.</Text>
-              </View>
-              <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" />
-            </Pressable>
-          </View>
+          <Pressable accessibilityRole="button" onPress={() => openDocuments(router, claim.id)} style={styles.bulkUpload}>
+            <Image source={require('../../assets/claims/documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />
+            <View style={styles.bulkUploadCopy}>
+              <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
+              <Text style={styles.bulkUploadText}>Select several files now, or tap again later to add more.</Text>
+            </View>
+            <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#0A43A3" />
+          </Pressable>
         </View>
 
         <View style={styles.voicePlaceholder}>
           <View style={styles.voiceHeadingRow}>
-            <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={25} color="#0A43A3" /></View>
+            <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={26} color="#0A43A3" /></View>
             <View style={styles.voiceCopy}>
               <Text style={styles.voiceTitle}>Incident Voice Note</Text>
               <Text style={styles.voiceText}>Describe what happened in your own words so the incident is easier to understand later.</Text>
             </View>
           </View>
-          <View style={styles.voiceButton}><MaterialCommunityIcons name="microphone" size={18} color="#FFFFFF" /><Text style={styles.voiceButtonText}>Record Voice Note</Text></View>
-          <View style={styles.voiceComingSoon}><MaterialCommunityIcons name="clock-outline" size={14} color="#60738B" /><Text style={styles.voiceComingSoonText}>This feature will be added soon.</Text></View>
+          <View style={styles.voiceButton}><MaterialCommunityIcons name="microphone" size={20} color="#FFFFFF" /><Text style={styles.voiceButtonText}>Record Voice Note</Text></View>
+          <View style={styles.voiceComingSoon}><MaterialCommunityIcons name="clock-outline" size={16} color="#68778D" /><Text style={styles.voiceComingSoonText}>This feature will be added soon.</Text></View>
         </View>
 
         <View style={styles.stageFooterActions}>
@@ -376,6 +362,45 @@ export default function InternalClaimStageScreen() {
   );
 }
 
+function StageOneCompactHeader({ claimNo, vehicleNo, policyNo, vehicleMeta, insurerName }: { claimNo: string; vehicleNo: string; policyNo: string; vehicleMeta: string; insurerName: string }) {
+  return (
+    <View style={styles.stageOneCompactHeader}>
+      <View style={styles.stageOneCompactGlow} />
+      <View style={styles.stageOneCompactTopRow}>
+        <View style={styles.stageOneCompactTitleWrap}>
+          <Image source={require('../../assets/claims/claim-intimation.png')} style={styles.stageOneCompactIconImage} resizeMode="contain" />
+          <Text style={styles.stageOneCompactTitle}>Spot Intimation</Text>
+        </View>
+        <Text style={styles.stageOneCompactClaimNo} numberOfLines={1}>{claimNo}</Text>
+      </View>
+      <View style={styles.stageOneCompactDivider} />
+      <View style={styles.stageOneCompactDetails}>
+        <View style={styles.stageOneCompactColumn}>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="truck-outline" size={17} color="#0A43A3" /></View>
+            <Text style={styles.stageOneCompactValue} numberOfLines={1}>Vehicle: {vehicleNo || 'Vehicle'}</Text>
+          </View>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="truck-outline" size={17} color="#0A43A3" /></View>
+            <Text style={styles.stageOneCompactMeta} numberOfLines={1}>{vehicleMeta || 'Vehicle details'}</Text>
+          </View>
+        </View>
+        <View style={styles.stageOneCompactVerticalDivider} />
+        <View style={styles.stageOneCompactColumn}>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="file-document-check-outline" size={17} color="#0A43A3" /></View>
+            <Text style={[styles.stageOneCompactValue, styles.stageOneCompactPolicyValue]} numberOfLines={1}>Policy: {policyNo || 'Policy'}</Text>
+          </View>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="shield-check-outline" size={17} color="#0A43A3" /></View>
+            <Text style={styles.stageOneCompactMeta} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function openDocuments(router: ReturnType<typeof useRouter>, claimId: string) {
   router.push({ pathname: '/customer/upload-documents', params: { claimId } });
 }
@@ -397,29 +422,16 @@ function StageOneValue({ label, value, icon, trailingLabel }: { label: string; v
   );
 }
 
-function DocumentReadyTile({ title, source, artwork, saved, onPress }: { title: string; source?: any; artwork?: 'accident-video'; saved: boolean; onPress: () => void }) {
+function DocumentReplicaTile({ title, source, video, saved, onPress }: { title: string; source?: any; video?: boolean; saved: boolean; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ selected: saved }} onPress={onPress} style={[styles.documentReadyTile, saved && styles.documentReadyTileSelected]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.documentReadyTile, saved && styles.documentReadyTileSelected]}>
       {saved ? <View style={styles.documentSelectedCheck}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}
-      {saved ? <View style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></View> : null}
       <View style={styles.documentReadyArtworkWrap}>
-        {artwork === 'accident-video' ? <AccidentVideoArtwork /> : source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : null}
+        {source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : video ? <View style={styles.accidentVideoArtwork}><MaterialCommunityIcons name="video" size={20} color="#FFFFFF" /></View> : null}
       </View>
       <Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>
       <Text style={[styles.documentReadyStatus, saved && styles.documentReadyStatusSelected]}>{saved ? 'Saved' : 'Tap to upload'}</Text>
     </Pressable>
-  );
-}
-
-function AccidentVideoArtwork() {
-  return (
-    <View style={styles.accidentVideoArtwork}>
-      <View style={styles.accidentVideoGloss} />
-      <View style={styles.accidentVideoFold} />
-      <MaterialCommunityIcons name="video" size={18} color="#FFFFFF" />
-      <View style={styles.accidentVideoLineLong} />
-      <View style={styles.accidentVideoLineShort} />
-    </View>
   );
 }
 
@@ -476,6 +488,22 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  stageOneCompactHeader: { position: 'relative', overflow: 'hidden', borderRadius: 18, backgroundColor: '#0A3F91', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 12, marginBottom: 12, shadowColor: '#0A2D63', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  stageOneCompactGlow: { position: 'absolute', top: -34, right: -22, width: 130, height: 130, borderRadius: 65, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  stageOneCompactTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  stageOneCompactTitleWrap: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  stageOneCompactIconImage: { width: 30, height: 30 },
+  stageOneCompactTitle: { flex: 1, color: '#FFFFFF', fontSize: 17, lineHeight: 21, fontWeight: '900' },
+  stageOneCompactClaimNo: { maxWidth: '34%', color: '#FFFFFF', fontSize: 12.5, lineHeight: 16, fontWeight: '900', textAlign: 'right' },
+  stageOneCompactDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.20)', marginTop: 10, marginBottom: 9 },
+  stageOneCompactDetails: { flexDirection: 'row', alignItems: 'stretch' },
+  stageOneCompactColumn: { flex: 1, gap: 7 },
+  stageOneCompactVerticalDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 10 },
+  stageOneCompactItem: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  stageOneCompactRoundIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F2F8FF', alignItems: 'center', justifyContent: 'center' },
+  stageOneCompactValue: { flex: 1, color: '#FFFFFF', fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
+  stageOneCompactPolicyValue: { color: '#D8FFD9' },
+  stageOneCompactMeta: { flex: 1, color: '#F3F7FF', fontSize: 8.8, lineHeight: 12, fontWeight: '700' },
   stageOneLabelRow: { minHeight: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   stageOneLabel: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   stageOneInput: { minHeight: 62, borderRadius: 16, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', paddingHorizontal: 13, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 9 },
@@ -485,26 +513,19 @@ const styles = StyleSheet.create({
   locationReplicaText: { color: '#0A43A3', fontSize: 10.5, fontWeight: '900' },
   documentReadyCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12, shadowColor: '#14375F', shadowOpacity: 0.05, shadowRadius: 9, shadowOffset: { width: 0, height: 4 }, elevation: 1 },
   documentReadyHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
-  documentReadyHeaderCopy: { flex: 1, minWidth: 0 },
   documentReadyTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   documentReadyBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 },
   documentReadyBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' },
   documentReadyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   documentReadyTile: { position: 'relative', width: '31.5%', minWidth: 0, minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' },
-  documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F', shadowColor: '#18864B', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 1 },
+  documentReadyTileSelected: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' },
   documentSelectedCheck: { position: 'absolute', top: 5, left: 5, width: 22, height: 22, borderRadius: 11, backgroundColor: 'rgba(46, 173, 99, 0.16)', alignItems: 'center', justifyContent: 'center' },
-  documentRemoveButton: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   documentReadyArtworkWrap: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' },
   documentReadyArtwork: { width: 43, height: 43 },
-  accidentVideoArtwork: { width: 36, height: 38, borderRadius: 8, backgroundColor: '#FF1018', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', paddingTop: 1, shadowColor: '#B60000', shadowOpacity: 0.18, shadowRadius: 2, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
-  accidentVideoGloss: { position: 'absolute', top: 2, left: 3, width: 21, height: 8, borderRadius: 7, backgroundColor: 'rgba(255,255,255,0.20)', transform: [{ rotate: '-12deg' }] },
-  accidentVideoFold: { position: 'absolute', top: 0, right: 0, width: 11, height: 11, borderBottomLeftRadius: 7, backgroundColor: '#FFDDE2' },
-  accidentVideoLineLong: { width: 19, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 3 },
-  accidentVideoLineShort: { width: 12, height: 2.5, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 2 },
+  accidentVideoArtwork: { width: 36, height: 38, borderRadius: 8, backgroundColor: '#FF1018', alignItems: 'center', justifyContent: 'center' },
   documentReadyTileText: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 },
   documentReadyStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 },
   documentReadyStatusSelected: { color: '#18864B' },
-  bulkUploadShell: { position: 'relative' },
   bulkUpload: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
   bulkUploadIconArtwork: { width: 34, height: 34 },
   bulkUploadCopy: { flex: 1, minWidth: 0 },
