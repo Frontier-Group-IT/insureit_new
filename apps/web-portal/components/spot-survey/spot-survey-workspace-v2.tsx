@@ -9,6 +9,7 @@ import { SurveyorDeputationForm } from "./surveyor-deputation-form";
 import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-document-verification-button";
 import { VerificationActionButton } from "./verification-action-button";
 import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
+import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
 export type SpotSurveyClaim = {
   id: string;
@@ -27,6 +28,7 @@ export type SpotSurveyClaim = {
   policySource?: "sibl" | "external";
   policyCopy?: { fileName: string; signedUrl: string; documentId: string } | null;
   spotIntimationAt?: string | null;
+  spotDetails?: InternalSpotIntimationDetails | null;
 };
 
 export type SpotSurveyDocument = {
@@ -102,13 +104,14 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
   const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
   const allDocumentsVerified = items.length > 0 && verifiedCount === items.length;
   const canFinalizeInitialDocuments = ["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(claim.current_status ?? "");
-  const driverName = extractDriverName(claim.accident_description);
-  const driverMobile = extractDriverMobile(claim.accident_description) ?? claim.customers?.phone ?? null;
+  const driverName = claim.spotDetails?.driver_name ?? extractDriverName(claim.accident_description);
+  const driverMobile = claim.spotDetails?.driver_phone ?? extractDriverMobile(claim.accident_description) ?? claim.customers?.phone ?? null;
+  const lossLocation = claim.spotDetails?.location ?? claim.accident_location;
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-2 pb-4">
       {showContext ? <SpotClaimHeader claim={claim} /> : null}
-      {showSpotDetails ? <SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={claim.accident_location} /> : null}
+      {showSpotDetails ? <SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={lossLocation} /> : null}
       {unclassifiedAttachments.length ? <UnclassifiedAttachments claimId={claim.id} documents={unclassifiedAttachments} /> : null}
       <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
         <div className="mb-3 flex items-start justify-between gap-4">

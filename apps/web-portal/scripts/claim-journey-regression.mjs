@@ -59,6 +59,24 @@ assert.match(internalStage, /CLAIM_INTIMATION_UPLOAD_STATUSES/);
 assert.doesNotMatch(internalStage, /save_self_managed_milestone/);
 assert.doesNotMatch(internalStage, /\.from\(['"]claims['"]\)\.update/);
 
+const operationsStages = await readFile(path.join(repoRoot, "apps/web-portal/components/claim-manager/operations-claim-stages.tsx"), "utf8");
+assert.match(operationsStages, /fields\[stage\.key\]\.map/);
+assert.match(operationsStages, /name: "incident_at"/);
+assert.match(operationsStages, /name: "driver_name"/);
+assert.match(operationsStages, /name: "driver_phone"/);
+assert.match(operationsStages, /name: "location"/);
+assert.match(operationsStages, /Use current location/);
+
+const internalSpotContract = await readFile(path.join(repoRoot, "apps/web-portal/lib/internal-spot-intimation.ts"), "utf8");
+assert.match(internalSpotContract, /validateInternalSpotIntimation/);
+assert.match(internalSpotContract, /Spot Intimation cannot be earlier than the accident/);
+
+const operationsActions = await readFile(path.join(repoRoot, "apps/web-portal/app/actions.ts"), "utf8");
+assert.match(operationsActions, /claim\.claim_service_mode !== "broker_managed"/);
+assert.match(operationsActions, /driver_name: driverName/);
+assert.match(operationsActions, /driver_phone: driverPhone/);
+assert.match(operationsActions, /location,/);
+
 const claimDetail = await readFile(path.join(repoRoot, "apps/mobile-app/app/customer/claim-detail.tsx"), "utf8");
 assert.match(claimDetail, /\/customer\/internal-claim-stage/);
 assert.doesNotMatch(claimDetail, /<ClaimPrimaryAction[^>]+Upload Documents/);

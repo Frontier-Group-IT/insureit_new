@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { claimStatuses, finalDocumentTypes, isClaimStatus, managerTransitions, matchesRequiredDocument, replacementStatusFor, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
 import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";
 import { canManageUsers, canUpdateClaimStage, canVerifyClaimDocuments, isAppRole } from "@/lib/roles";
+import { validateInternalSpotIntimation } from "@/lib/internal-spot-intimation";
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -413,6 +414,7 @@ type ClaimForWorkflow = {
   claim_no: string;
   customer_id: string;
   current_status: ClaimStatus;
+  claim_service_mode: "broker_managed" | "self_managed";
 };
 
 type ClaimDocumentForWorkflow = {
@@ -460,7 +462,7 @@ async function loadClaimForWorkflow(claimId: string) {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("claims")
-    .select("id, claim_no, customer_id, current_status")
+    .select("id, claim_no, customer_id, current_status, claim_service_mode")
     .eq("id", claimId)
     .maybeSingle<ClaimForWorkflow>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
@@ -568,6 +570,9 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
   const profile = await requireClaimStagePermission();
   const supabase = await createServerSupabaseClient();
   const claim = await loadClaimForWorkflow(claimId);
+  if (claim.claim_service_mode !== "broker_managed") {
+    throw new Error("Operations can advance only managed claims.");
+  }
   const requestedStatus = textValue(formData, "next_status");
   const nextStatus = isClaimStatus(requestedStatus) ? requestedStatus : null;
   const allowedStatus = managerTransitions[claim.current_status];
@@ -578,15 +583,26 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
   }
 
   const insurerClaimNo = textValue(formData, "insurer_claim_no");
-  const accidentAt = textValue(formData, "accident_at");
+  const incidentAt = textValue(formData, "incident_at") ?? textValue(formData, "accident_at");
+  const spotIntimationAt = textValue(formData, "spot_intimation_at");
+  const location = textValue(formData, "location") ?? textValue(formData, "accident_location");
+  const isSpotStage = ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Initial Documents Verified", "Documents Pending", "Documents Submitted"].includes(claim.current_status);
+  const normalizedSpot = isSpotStage ? validateInternalSpotIntimation(incidentAt, spotIntimationAt) : null;
   const { error } = await supabase.from("claims").update({
     current_status: nextStatus,
     ...(insurerClaimNo ? { insurer_claim_no: insurerClaimNo } : {}),
-    ...(claim.current_status && ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(claim.current_status) && accidentAt ? { accident_at: new Date(accidentAt).toISOString() } : {})
+    ...(normalizedSpot ? { accident_at: normalizedSpot.incidentAt } : {}),
+    ...(isSpotStage ? { accident_location: location } : {})
   }).eq("id", claimId);
   if (error) throw new Error(error.message);
 
   const details = stageDetailsFromForm(formData);
+  if (normalizedSpot) {
+    details.milestone_key = "spot_intimation";
+    details.incident_at = normalizedSpot.incidentAt;
+    details.accident_at = normalizedSpot.incidentAt;
+    details.spot_intimation_at = normalizedSpot.spotIntimationAt;
+  }
   if (Object.keys(details).length) {
     const { error: detailError } = await supabase.from("claim_stage_details").insert({
       claim_id: claimId,
@@ -607,22 +623,32 @@ export async function saveSpotIntimationDetails(claimId: string, formData: FormD
   const profile = await requireClaimStagePermission();
   const supabase = await createServerSupabaseClient();
   const claim = await loadClaimForWorkflow(claimId);
-  const accidentAt = textValue(formData, "accident_at");
+  if (claim.claim_service_mode !== "broker_managed") {
+    throw new Error("Operations can update Spot Intimation only for managed claims.");
+  }
+  const incidentAt = textValue(formData, "incident_at") ?? textValue(formData, "accident_at");
   const spotIntimationAt = textValue(formData, "spot_intimation_at");
-  const accidentLocation = textValue(formData, "accident_location");
+  const { incidentAt: normalizedIncidentAt, spotIntimationAt: normalizedSpotIntimationAt } = validateInternalSpotIntimation(incidentAt, spotIntimationAt);
+  const driverName = textValue(formData, "driver_name");
+  const driverPhone = textValue(formData, "driver_phone");
+  const location = textValue(formData, "location") ?? textValue(formData, "accident_location");
   const accidentDescription = textValue(formData, "accident_description");
   const details = {
     milestone_key: "spot_intimation",
-    ...(accidentAt ? { accident_at: accidentAt } : {}),
-    ...(spotIntimationAt ? { spot_intimation_at: spotIntimationAt } : {}),
-    ...(accidentLocation ? { accident_location: accidentLocation } : {}),
-    ...(accidentDescription ? { accident_description: accidentDescription } : {})
+    incident_at: normalizedIncidentAt,
+    accident_at: normalizedIncidentAt,
+    spot_intimation_at: normalizedSpotIntimationAt,
+    driver_name: driverName,
+    driver_phone: driverPhone,
+    location,
+    accident_location: location,
+    accident_description: accidentDescription
   };
 
   const { error: claimError } = await supabase.from("claims").update({
-    ...(accidentAt ? { accident_at: new Date(accidentAt).toISOString() } : {}),
-    ...(accidentLocation ? { accident_location: accidentLocation } : {}),
-    ...(accidentDescription ? { accident_description: accidentDescription } : {})
+    accident_at: normalizedIncidentAt,
+    accident_location: location,
+    accident_description: accidentDescription
   }).eq("id", claimId);
   if (claimError) throw new Error(claimError.message);
 
