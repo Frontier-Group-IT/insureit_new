@@ -52,7 +52,10 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
       const response = await action();
       setResult(response);
       setPendingAction(null);
-      if (response.ok) router.refresh();
+      if (response.ok) {
+        // Let the success state render before refreshing the server-backed rows.
+        setTimeout(() => router.refresh(), 0);
+      }
     });
   }
 
