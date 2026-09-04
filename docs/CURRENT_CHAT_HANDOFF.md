@@ -69,6 +69,8 @@ This is intentionally a narrow step. No claim ownership, status-transition, RLS,
 
 **IMPLEMENTED, NOT DEPLOYED:** The internal Spot Intimation editor now keeps all five inputs on one desktop row, places its save action below Document Verification, removes the duplicate driver/location strip from the stage view, uses a compact success dialog, expires browser-location errors after three seconds, and preserves India-local date/time values during save to prevent clock shifts.
 
+**IMPLEMENTED, NOT DEPLOYED:** The Spot Intimation success dialog now has independent dismissal state. The OK action closes the dialog before refreshing, and a new save resets the dismissal state so the confirmation remains usable across repeated saves.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.
