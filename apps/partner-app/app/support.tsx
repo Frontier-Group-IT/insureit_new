@@ -5,7 +5,6 @@ import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerSupport, type PartnerSupport } from '@/lib/engagement';
@@ -38,7 +37,7 @@ export default function SupportScreen() {
     <PartnerScreen
       eyebrow="SUPPORT"
       title="Support"
-      action={<PartnerIconButton icon="close" label="Close support" onPress={() => router.back()} />}
+      onBack={() => router.back()}
     >
       {loading ? (
         <PartnerStateView state="loading" title="Loading support" />

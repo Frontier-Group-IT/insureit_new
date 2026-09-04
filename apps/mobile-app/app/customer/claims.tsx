@@ -1,15 +1,26 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { projectInternalClaim } from '@insureit/claim-journey';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
+import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import type { Claim, ClaimStatus, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+import type { Claim, ClaimDocument, ClaimStatus, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+
+const claimCardIcons = {
+  default: require('../../assets/custom-icons/claims-list/claims.png'),
+  documents: require('../../assets/custom-icons/claims-list/claim-documents.png'),
+  survey: require('../../assets/custom-icons/claims-list/claim-survey.png'),
+  assessment: require('../../assets/custom-icons/claims-list/claim-assessment.png'),
+  settlement: require('../../assets/custom-icons/claims-list/claim-settlement.png'),
+  completed: require('../../assets/custom-icons/claims-list/tasks-completed.png'),
+} satisfies Record<string, ImageSourcePropType>;
 
 type ClaimFilter = 'All' | 'Open' | 'Action Required' | 'Completed';
 type CustomerClaim = Claim & {
@@ -26,6 +37,8 @@ export default function ClaimsScreen() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [insurers, setInsurers] = useState<InsuranceCompany[]>([]);
   const [milestones, setMilestones] = useState<ClaimMilestone[]>([]);
+  const [documents, setDocuments] = useState<ClaimDocument[]>([]);
+  const [tasks, setTasks] = useState<ClaimTask[]>([]);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<ClaimFilter>(requestedFilter);
   const [loading, setLoading] = useState(true);
@@ -48,15 +61,21 @@ export default function ClaimsScreen() {
         ]);
         const nextClaims = (claimResult.data ?? []) as CustomerClaim[];
         const claimIds = nextClaims.map((claim) => claim.id);
-        const milestoneResult = claimIds.length
-          ? await (supabase as any).from('claim_milestones').select('*').in('claim_id', claimIds)
-          : { data: [], error: null };
+        const [milestoneResult, documentsResult, tasksResult] = claimIds.length
+          ? await Promise.all([
+              (supabase as any).from('claim_milestones').select('*').in('claim_id', claimIds),
+              supabase.from('claim_documents').select('*').in('claim_id', claimIds),
+              supabase.from('claim_tasks').select('*').in('claim_id', claimIds).eq('status', 'open'),
+            ])
+          : [{ data: [], error: null }, { data: [], error: null }, { data: [], error: null }];
         if (milestoneResult.error) console.warn('Customer claim milestones load failed', milestoneResult.error.message);
         setClaims(nextClaims);
         setVehicles(vehicleResult.data ?? []);
         setPolicies(policyResult.data ?? []);
         setInsurers(insurerResult.data ?? []);
         setMilestones((milestoneResult.data ?? []) as ClaimMilestone[]);
+        setDocuments(documentsResult.data ?? []);
+        setTasks(tasksResult.data ?? []);
       }
       setLoading(false);
     }
@@ -72,7 +91,7 @@ export default function ClaimsScreen() {
   const filteredClaims = useMemo(() => {
     const search = query.trim().toLowerCase();
     return claims.filter((claim) => {
-      if (!matchesFilter(claim, filter)) return false;
+      if (!matchesFilter(claim, filter, documents, tasks)) return false;
       const vehicle = vehicles.find((item) => item.id === claim.vehicle_id);
       const policy = policies.find((item) => item.id === claim.policy_id);
       const insurerId = claim.insurance_company_id || policy?.insurance_company_id;
@@ -80,7 +99,7 @@ export default function ClaimsScreen() {
       const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, claim.accident_location, vehicle?.vehicle_no, vehicle?.make, vehicle?.model, policy?.policy_no, insurer?.name].filter(Boolean).join(' ').toLowerCase();
       return !search || haystack.includes(search);
     });
-  }, [claims, filter, insurers, policies, query, vehicles]);
+  }, [claims, documents, filter, insurers, policies, query, tasks, vehicles]);
 
   if (loading) return <Screen title="My Claims"><LoadingState /></Screen>;
 
@@ -97,7 +116,7 @@ export default function ClaimsScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
         {(['All', 'Open', 'Action Required', 'Completed'] as ClaimFilter[]).map((item) => (
           <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: filter === item }} onPress={() => setFilter(item)} style={[styles.filterChip, filter === item && styles.filterChipActive]}>
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, claims)})</Text>
+            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, claims, documents, tasks)})</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -115,14 +134,20 @@ export default function ClaimsScreen() {
         const completed = ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
         const selfTrackedStatusColor = completed ? '#12805C' : '#C43838';
         const assistanceRequested = selfTracked && !completed && claim.assistance_status === 'requested';
+        const claimDocuments = documents.filter((document) => document.claim_id === claim.id);
+        const requestedFinalDocumentTypes = requestedFinalDocumentTypesFor(claim.id, tasks);
+        const internalProjection = projectInternalClaim(claim.current_status, {
+          hasRejectedDocuments: hasOutstandingRejectedDocumentsForStatus(claim, claimDocuments, requestedFinalDocumentTypes),
+          hasRequiredDocuments: hasAllRequiredDocuments(claim, claimDocuments, requestedFinalDocumentTypes),
+        });
 
         return (
           <Pressable key={claim.id} accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no}`} onPress={() => router.push({ pathname: selfTracked ? '/customer/self-managed-claim-detail' : '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, selfTracked && styles.externalCard, { borderColor: selfTracked ? '#C9DAF2' : tone.border }]}>
-            <View style={[styles.accentBar, { backgroundColor: selfTracked ? selfTrackedStatusColor : tone.accent }]} />
+            <View style={[styles.accentBar, { backgroundColor: palette.navy }]} />
 
             <View style={styles.claimTop}>
-              <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#EEF5FF' : tone.soft }]}>
-                <MaterialCommunityIcons name={selfTracked ? 'timeline-check-outline' : statusIcon(claim.current_status)} size={22} color={selfTracked ? '#0A43A3' : tone.accent} />
+              <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#F7FAFF' : tone.soft }]}>
+                <Image source={claimCardIcon(claim.current_status, selfTracked)} resizeMode="contain" style={styles.statusIconImage} />
               </View>
               <View style={styles.claimTitleCopy}>
                 <Text style={[styles.modeLabel, { color: selfTracked ? selfTrackedStatusColor : tone.accent }]}>{selfTracked ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
@@ -140,7 +165,7 @@ export default function ClaimsScreen() {
             <View style={styles.currentRow}>
               <View style={styles.currentCopy}>
                 <Text style={styles.currentLabel}>{selfTracked ? 'CURRENT MILESTONE' : 'CURRENT STATUS'}</Text>
-                <Text style={styles.currentValue}>{selfTracked ? selfManagedCurrentMilestone(milestonesByClaimId.get(claim.id) ?? []) : claim.current_status}</Text>
+                <Text style={styles.currentValue}>{selfTracked ? selfManagedCurrentMilestone(milestonesByClaimId.get(claim.id) ?? []) : internalProjection.substage}</Text>
               </View>
               <View style={styles.incidentCopy}>
                 <Text style={styles.currentLabel}>INCIDENT</Text>
@@ -171,16 +196,24 @@ function validClaimFilter(value?: string): ClaimFilter {
   return value === 'Open' || value === 'Action Required' || value === 'Completed' || value === 'All' ? value : 'All';
 }
 
-function matchesFilter(claim: CustomerClaim, filter: ClaimFilter) {
+function matchesFilter(claim: CustomerClaim, filter: ClaimFilter, documents: ClaimDocument[], tasks: ClaimTask[]) {
   if (filter === 'All') return true;
   if (filter === 'Completed') return ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
-  if (filter === 'Action Required') return claim.current_status.includes('Document') || claim.current_status.includes('Awaited') || claim.current_status.includes('Pending');
+  if (filter === 'Action Required') {
+    if (claim.claim_service_mode === 'self_managed') return claim.current_status.includes('Document') || claim.current_status.includes('Awaited') || claim.current_status.includes('Pending');
+    const claimDocuments = documents.filter((document) => document.claim_id === claim.id);
+    const requestedFinalDocumentTypes = requestedFinalDocumentTypesFor(claim.id, tasks);
+    return projectInternalClaim(claim.current_status, {
+      hasRejectedDocuments: hasOutstandingRejectedDocumentsForStatus(claim, claimDocuments, requestedFinalDocumentTypes),
+      hasRequiredDocuments: hasAllRequiredDocuments(claim, claimDocuments, requestedFinalDocumentTypes),
+    }).customerActionRequired;
+  }
   return !['Closed', 'Settled', 'Claim Complete', 'Rejected'].includes(claim.current_status);
 }
-function countForFilter(filter: ClaimFilter, claims: CustomerClaim[]) { return claims.filter((claim) => matchesFilter(claim, filter)).length; }
+function countForFilter(filter: ClaimFilter, claims: CustomerClaim[], documents: ClaimDocument[], tasks: ClaimTask[]) { return claims.filter((claim) => matchesFilter(claim, filter, documents, tasks)).length; }
 function claimStageLabel(status: ClaimStatus) { if (status.includes('Document') || status.includes('Awaited')) return 'DOCUMENT STAGE'; if (status.includes('Survey') || status.includes('Inspected')) return 'SURVEY STAGE'; if (status.includes('Approval') || status.includes('Estimate')) return 'APPROVAL STAGE'; if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return 'REPAIR / DO STAGE'; if (status.includes('Payment') || status.includes('Settlement')) return 'PAYMENT STAGE'; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'COMPLETED'; return 'CLAIM STAGE'; }
 function claimTone(status: ClaimStatus) { if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return { accent: '#12805C', soft: '#E8F8F0', border: '#BFEBD0' }; if (status === 'Rejected') return { accent: '#C43838', soft: '#FDECEC', border: '#F2C6C6' }; if (status.includes('Payment') || status.includes('Settlement')) return { accent: '#B7791F', soft: '#FFF4E2', border: '#F7DCA2' }; if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return { accent: '#7C3AED', soft: '#F0E9FF', border: '#D8C8FF' }; if (status.includes('Document') || status.includes('Awaited')) return { accent: '#C83272', soft: '#FFF0F6', border: '#F8BFD7' }; return { accent: '#0B63CE', soft: '#EEF5FF', border: '#CFE0FF' }; }
-function statusIcon(status: ClaimStatus): keyof typeof MaterialCommunityIcons.glyphMap { if (status.includes('Document')) return 'file-document-check-outline'; if (status.includes('Survey')) return 'clipboard-search-outline'; if (status.includes('Repair')) return 'wrench-outline'; if (status.includes('Payment') || status.includes('Settlement')) return 'bank-transfer'; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'check-circle-outline'; if (status === 'Rejected') return 'close-circle-outline'; return 'shield-check-outline'; }
+function claimCardIcon(status: ClaimStatus, selfTracked: boolean): ImageSourcePropType { if (selfTracked) return claimCardIcons.default; if (status.includes('Document') || status.includes('Awaited')) return claimCardIcons.documents; if (status.includes('Survey') || status.includes('Inspected')) return claimCardIcons.survey; if (status.includes('Approval') || status.includes('Estimate') || status.includes('Repair') || status.includes('DO') || status.includes('RA')) return claimCardIcons.assessment; if (status.includes('Payment') || status.includes('Settlement')) return claimCardIcons.settlement; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return claimCardIcons.completed; return claimCardIcons.default; }
 function formatDate(value?: string | null) { if (!value) return '-'; return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isIncidentAfterPolicyExpiry(claim: CustomerClaim, policy?: Policy | null) { const incident = claim.accident_at ? new Date(claim.accident_at) : null; const expiry = policyExpiryEndOfDay(policy?.end_date); if (!incident || Number.isNaN(incident.getTime()) || !expiry) return false; return incident.getTime() > expiry.getTime(); }
 function policyExpiryEndOfDay(value?: string | null) { if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return null; const [year, month, day] = value.slice(0, 10).split('-').map(Number); const parsed = new Date(year, month - 1, day, 23, 59, 59, 999); return Number.isNaN(parsed.getTime()) ? null : parsed; }
@@ -188,5 +221,5 @@ function policyExpiryEndOfDay(value?: string | null) { if (!value || !/^\d{4}-\d
 const styles = StyleSheet.create({
   pageHeader: { marginBottom: 12 }, eyebrow: { color: '#0A43A3', fontSize: 10, fontWeight: '900', letterSpacing: 1 }, pageTitle: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 }, pageSubtitle: { color: '#667085', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 3 },
   filterScroller: { maxHeight: 44, marginTop: 10, marginBottom: 12 }, filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 }, filterChip: { minHeight: 36, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: palette.slate, fontSize: 11, fontWeight: '900' }, filterTextActive: { color: '#FFFFFF' },
-  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, vehicleMeta: { color: '#7A8799', fontSize: 10, fontWeight: '600', marginTop: 2 }, identityRow: { marginTop: 11, paddingTop: 10, paddingHorizontal: 9, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 10 }, identityBlock: { flex: 1, minWidth: 0 }, identityBlockRight: { flex: 0, alignItems: 'flex-end' }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.8, fontWeight: '900', marginTop: 2 }, currentRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#F8FAFC', padding: 9, flexDirection: 'row', gap: 10 }, currentCopy: { flex: 1, minWidth: 0 }, incidentCopy: { alignItems: 'flex-end' }, currentLabel: { color: '#98A2B3', fontSize: 8.3, fontWeight: '900', letterSpacing: 0.4 }, currentValue: { color: palette.navy, fontSize: 11.2, fontWeight: '900', marginTop: 2 }, incidentValue: { color: '#344054', fontSize: 10.5, fontWeight: '800', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
+  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, statusIconImage: { width: 32, height: 32 }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, vehicleMeta: { color: '#7A8799', fontSize: 10, fontWeight: '600', marginTop: 2 }, identityRow: { marginTop: 11, paddingTop: 10, paddingHorizontal: 9, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 10 }, identityBlock: { flex: 1, minWidth: 0 }, identityBlockRight: { flex: 0, alignItems: 'flex-end' }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.8, fontWeight: '900', marginTop: 2 }, currentRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#F8FAFC', padding: 9, flexDirection: 'row', gap: 10 }, currentCopy: { flex: 1, minWidth: 0 }, incidentCopy: { alignItems: 'flex-end' }, currentLabel: { color: '#98A2B3', fontSize: 8.3, fontWeight: '900', letterSpacing: 0.4 }, currentValue: { color: palette.navy, fontSize: 11.2, fontWeight: '900', marginTop: 2 }, incidentValue: { color: '#344054', fontSize: 10.5, fontWeight: '800', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
 });

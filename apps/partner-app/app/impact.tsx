@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerImpact, type PartnerImpactData } from '@/lib/impact';
 import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
@@ -35,17 +35,18 @@ export default function ImpactScreen() {
     <PartnerScreen
       eyebrow="MY IMPACT"
       title="Protection delivered"
-      action={
-        <PartnerIconButton icon="close" label="Close impact" onPress={() => router.back()} />
-      }
+      onBack={() => router.back()}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading your impact" />
       ) : error || !data ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error || 'Impact is unavailable.'}</Text>
-          <Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable>
-        </View>
+        <PartnerStateView
+          state="error"
+          title="Your impact is temporarily unavailable"
+          message={error || 'Your impact could not be loaded.'}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
       ) : (
         <>
           <View style={styles.hero}>
@@ -125,12 +126,6 @@ function MonthStat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  close: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 280, alignItems: 'center', justifyContent: 'center' },
-  errorCard: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  errorText: { color: partnerTheme.colors.inkMuted, fontSize: 10 },
-  retry: { marginTop: 10, color: partnerTheme.colors.brand, fontSize: 10, fontWeight: '800' },
-
   hero: { borderRadius: partnerTheme.radius.xl, padding: 12, backgroundColor: partnerTheme.colors.nav },
   heroEyebrow: { color: '#8FD1CE', fontSize: 8, fontWeight: '800', letterSpacing: 1.25 },
   heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 29, fontWeight: '800' },

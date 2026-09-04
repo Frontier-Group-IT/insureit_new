@@ -122,7 +122,7 @@ export default function SelfManagedSpotStatusScreen() {
         setMessage('We could not save Spot Status right now. Please try again.');
         return;
       }
-      router.replace({ pathname: '/customer/self-managed-milestone', params: { id, key: 'claim_intimation' } });
+      router.replace({ pathname: '/customer/self-managed-milestone', params: { id, key: 'claim_intimation', suppressClaimPrompt: '1' } });
     } catch (error) {
       console.error('Self-managed Spot Status submit failed', error);
       setMessage('We could not save Spot Status right now. Please try again.');
@@ -152,11 +152,11 @@ export default function SelfManagedSpotStatusScreen() {
         vehicleMeta={vehicleMeta}
       />
 
-      <ClaimFormSection title="Spot Survey" icon="clipboard-check-outline">
+      <ClaimFormSection title="Spot Survey" iconImage={require('../../assets/claims/claim-survey.png')}>
         <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
       </ClaimFormSection>
 
-      <ClaimFormSection title="Surveyor Details" optional icon="account-tie-outline">
+      <ClaimFormSection title="Surveyor Details" optional iconImage={require('../../assets/claims/claim-assessment.png')}>
         <TextField label="Surveyor Name (Optional)" value={surveyorName} onChangeText={setSurveyorName} />
         <View style={styles.gap} />
         <TextField label="Surveyor Email (Optional)" value={surveyorEmail} onChangeText={setSurveyorEmail} keyboardType="email-address" autoCapitalize="none" />

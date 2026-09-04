@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
+import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
 import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
 import { type ClaimStatus } from "@/lib/claim-workflow";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
@@ -13,6 +14,10 @@ type ClaimDetail = SpotSurveyClaim & {
   policy_id: string | null;
   external_policy_id: string | null;
   current_status: ClaimStatus;
+  claim_service_mode: "broker_managed" | "self_managed" | null;
+  assistance_status: "not_requested" | "requested" | "accepted" | "declined" | "cancelled" | null;
+  assistance_notes: string | null;
+  policy_service_source: "sibl" | "external" | null;
   accident_at: string | null;
   accident_description: string | null;
   estimated_loss: number | null;
@@ -47,7 +52,7 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   const admin = createSupabaseAdminClient();
   const { data: claim, error } = await admin
     .from("claims")
-    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
+    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, claim_service_mode, assistance_status, assistance_notes, policy_service_source, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
     .eq("id", id)
     .maybeSingle<ClaimDetail>();
 
@@ -172,6 +177,37 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
   const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
+
+  if (claim.claim_service_mode === "self_managed") {
+    const { data: milestoneRows } = await admin
+      .from("claim_milestones")
+      .select("milestone_key, milestone_status")
+      .eq("claim_id", id)
+      .order("created_at", { ascending: true })
+      .returns<Array<{ milestone_key: string; milestone_status: string }>>();
+
+    return (
+      <ClaimManagerShell title={`Assistance Review - ${claim.claim_no}`} backHref={backHref}>
+        <AssistanceIntakePanel
+          claimId={claim.id}
+          claimNo={claim.claim_no}
+          currentStatus={claim.current_status}
+          assistanceStatus={claim.assistance_status}
+          assistanceNote={claim.assistance_notes}
+          customerName={claim.customers?.company_name || claim.customers?.contact_name || "-"}
+          vehicleNo={claim.vehicles?.vehicle_no ?? "-"}
+          documents={signedDocs.map((document) => ({
+            id: document.id,
+            documentType: document.document_type ?? "Document",
+            fileName: document.file_name,
+            verificationStatus: document.verification_status,
+            openUrl: document.signedUrl ?? "#",
+          }))}
+          milestones={(milestoneRows ?? []).map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
+        />
+      </ClaimManagerShell>
+    );
+  }
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>

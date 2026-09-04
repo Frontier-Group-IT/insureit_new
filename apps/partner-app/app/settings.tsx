@@ -3,7 +3,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { partnerTheme } from '@/lib/theme';
 
@@ -14,7 +13,7 @@ export default function SettingsScreen() {
     <PartnerScreen
       eyebrow="ACCOUNT"
       title="Settings & app info"
-      action={<PartnerIconButton icon="close" label="Close settings" onPress={() => router.back()} />}
+      onBack={() => router.back()}
     >
       <PartnerSectionHeader title="Account" />
       <View style={styles.menu}>

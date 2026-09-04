@@ -1,0 +1,78 @@
+import Link from "next/link";
+import { ArrowRight, GraduationCap, LifeBuoy, ShieldCheck, UserRound } from "lucide-react";
+import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerMetricStrip, PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
+import { getPartnerWebSession } from "@/lib/partner-web";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+function humanize(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export default async function PartnerAccountPage() {
+  const { identity, scope } = await getPartnerWebSession();
+  const intermediary = identity.actor_kind === "intermediary" ? identity : null;
+
+  return (
+    <PartnerPortalShell title="Account">
+      <div className="space-y-7">
+        <PartnerPageHeader
+          eyebrow="Partner Account"
+          title={identity.display_name}
+          description={intermediary ? humanize(intermediary.intermediary_type) + " · " + (intermediary.intermediary_code || "Code not recorded") : "Partner workspace"}
+        />
+        <PartnerMetricStrip
+          items={[
+            { label: "Partner Family", value: intermediary?.partner_name || "—" },
+            { label: "Partner Code", value: intermediary?.partner_code || "—" },
+            { label: "Portal Status", value: "Active" },
+            { label: "Access Type", value: humanize(scope.scope_mode) },
+          ]}
+        />
+
+        <section className="grid border-y border-[#DCE4ED] lg:grid-cols-3">
+          <AccountAction
+            href="/partner/profile"
+            icon={UserRound}
+            title="Profile & Registration"
+            text="View your profile and registration details."
+          />
+          <AccountAction
+            href="/partner/account/registration"
+            icon={GraduationCap}
+            title="Registration & Training"
+            text="Continue registration, training and examination."
+          />
+          <AccountAction
+            href="/partner/support"
+            icon={LifeBuoy}
+            title="Support"
+            text="Contact support and view open work."
+          />
+        </section>
+
+        <section className="py-1">
+          <div className="flex items-start gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><ShieldCheck className="h-4 w-4" /></span>
+            <div>
+              <h3 className="text-[14px] font-extrabold text-[#172846]">Account access</h3>
+              <p className="mt-1 text-[10.5px] font-medium leading-5 text-[#74839A]">Your access is based on your Partner profile and linked business. Registration and training are available from this account.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </PartnerPortalShell>
+  );
+}
+
+function AccountAction({ href, icon: Icon, title, text }: { href: string; icon: typeof UserRound; title: string; text: string }) {
+  return (
+    <Link href={href} className="group flex min-h-[84px] items-center gap-3 border-b border-[#E0E7EF] px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#111A35] text-white"><Icon className="h-5 w-5" /></span>
+      <span className="min-w-0 flex-1"><span className="block break-words text-[11.5px] font-extrabold leading-4 text-[#172846] sm:text-[12px]">{title}</span><span className="mt-1 block break-words text-[10px] font-medium leading-4 text-[#74839A]">{text}</span></span>
+      <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
+    </Link>
+  );
+}

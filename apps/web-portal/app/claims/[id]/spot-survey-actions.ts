@@ -4,7 +4,7 @@ import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effecti
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import type { ClaimStatus } from "@/lib/claim-workflow";
+import { matchesRequiredDocument, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
 import { canVerifyClaimDocuments } from "@/lib/roles";
 
 const bucketName = "claim-documents";
@@ -17,7 +17,8 @@ const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "
 const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss_vehicle"] as const;
 const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
 
-type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null };
+type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed" };
+type ClaimDocumentStatus = { id: string; document_type: string; verification_status: string };
 type ActionResult = { ok: boolean; message?: string };
 type VerificationType = "rc" | "insurance" | "document" | "detail";
 
@@ -30,9 +31,43 @@ async function currentProfile() {
 
 async function loadClaim(claimId: string) {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, accident_at").eq("id", claimId).maybeSingle<ClaimForVerification>();
+  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode").eq("id", claimId).maybeSingle<ClaimForVerification>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
+  if (data.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
   return data;
+}
+
+async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification, documentId: string, profileId: string | null) {
+  const nextStatus = verifiedStatusFor(claim.current_status);
+  if (!nextStatus || nextStatus === claim.current_status) return false;
+
+  const supabase = await createServerSupabaseClient();
+  const { data: documents, error: documentsError } = await supabase
+    .from("claim_documents")
+    .select("id, document_type, verification_status")
+    .eq("claim_id", claim.id)
+    .returns<ClaimDocumentStatus[]>();
+  if (documentsError) throw new Error(documentsError.message);
+
+  const requiredTypes = requiredDocumentTypesForStatus(claim.current_status);
+  const allVerified = requiredTypes.length > 0 && requiredTypes.every((type) =>
+    documents.some((document) =>
+      matchesRequiredDocument(document.document_type, type) &&
+      (document.id === documentId || document.verification_status === "verified")
+    )
+  );
+  if (!allVerified) return false;
+
+  const { data: updatedClaim, error: updateError } = await supabase.rpc("advance_initial_documents_verified", {
+    p_claim_id: claim.id,
+    p_actor_id: profileId
+  });
+  if (updateError) throw new Error(updateError.message);
+  if (!updatedClaim?.ok || updatedClaim.next_status !== nextStatus) {
+    throw new Error("All required documents are verified, but the claim status could not be advanced.");
+  }
+
+  return true;
 }
 
 function collectVerificationDetails(formData: FormData) {
@@ -185,12 +220,30 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     if (reviewError) throw new Error(reviewError.message);
     await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile?.id ?? null });
     await saveVerificationHistory({ claimId, documentId: document.id, documentType: document.document_type, verificationType: verificationTypeForDocument(document.document_type), incidentDate, isValid: true, invalidReason: null, details: detailsPayload, verifiedBy: profile?.id ?? null });
+    await advanceAfterInitialDocumentsVerified(claim, document.id, profile?.id ?? null);
     await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${document.document_type} verified during spot survey.`, changed_by: profile?.id ?? null });
     revalidatePath(`/claims/${claimId}`); revalidatePath("/claims"); revalidatePath("/dashboard");
     return { ok: true, message: "Document verified successfully." };
   } catch (error) {
     console.error("verifySpotSurveyDocument failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Verification failed." };
+  }
+}
+
+export async function finalizeInitialDocumentVerification(claimId: string): Promise<ActionResult> {
+  try {
+    if (!claimId.trim()) throw new Error("Missing claim id.");
+    const profile = await currentProfile();
+    const claim = await loadClaim(claimId);
+    const advanced = await advanceAfterInitialDocumentsVerified(claim, "", profile?.id ?? null);
+    if (!advanced) throw new Error("This claim is not eligible for initial document finalization.");
+    revalidatePath(`/claims/${claimId}`);
+    revalidatePath("/claims");
+    revalidatePath("/dashboard");
+    return { ok: true, message: "Initial document verification finalized." };
+  } catch (error) {
+    console.error("finalizeInitialDocumentVerification failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Could not finalize document verification." };
   }
 }
 

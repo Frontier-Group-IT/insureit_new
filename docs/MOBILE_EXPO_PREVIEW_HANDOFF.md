@@ -171,6 +171,20 @@ Use visual inspection for the changed UI. If the relevant screen is blocked by d
 
 ## 7. Current Recent Preview Evidence
 
+Latest published preview OTA for internal claim stage/document alignment:
+
+```text
+Source commit: afc533f9f629032cb6d2be6ebb01b30eb448cf9f
+Message: Expo preview from main afc533f9f629032cb6d2be6ebb01b30eb448cf9f
+Update group ID: 144f2c6a-e0e8-42b5-b7b6-af427b25d49e
+Android update ID: 01a0671a-f487-79b7-a73c-0c64cb33ff73
+iOS update ID: 01a0671a-f487-7f52-86ce-b55d244ef6d2
+Runtime version: 0.2.0
+GitHub Actions run: 33751628079
+```
+
+The protected publisher verified exact current `main`, the compatible runtime, and completed successfully for Android and iOS. No APK/native build ran. No Android device was connected through ADB, so the installed app and changed internal claim screens remain **UNVERIFIED ON DEVICE**.
+
 Latest verified preview OTA for the refined customer Start Claim screen:
 
 ```text

@@ -6,11 +6,40 @@
 
 ## Active track
 
+## Claim workflow alignment boundary — user-approved 2026-09-03
+
+**APPROVED SCOPE:** Align the customer-facing presentation and read model for internal claims with the existing external claim experience, but do not change the external claim workflow.
+
+- External/self-managed claims remain customer-controlled exactly as they are today. Customers may enter milestone details, upload documents, and progress those claims at their discretion.
+- Operations must not process or alter an external claim unless the customer explicitly requests assistance.
+- An accepted assistance request is the deliberate conversion boundary: the claim becomes broker/internal-managed and then follows the Operations-controlled workflow.
+- Do not backfill external claims into internal milestones, change their status semantics, restrict their existing customer actions, or replace their existing screens/storage behavior as part of internal alignment.
+- Internal claims may reuse compatible customer-facing journey components, but all internal verification, rejection/reupload requests, surveyor deputation, insurer actions, approval, repair, delivery, settlement, and closure remain Operations-authoritative.
+- `claim_service_mode`, `assistance_status`, and `current_status` remain separate concepts. Assistance acceptance may change service mode; ordinary internal workflow progress must not.
+
+**DEPLOYED / VERIFIED:** the first safe alignment tranche added `packages/claim-journey` as the shared web/mobile internal projection for all 40 known claim statuses. Mobile internal claim detail/list distinguish customer action from Operations waiting, use document evidence and legacy aliases, and no longer update `claims.current_status` after customer uploads. External `claim_milestones`, screens and `save_self_managed_milestone` behavior are unchanged. PR #1153 merged at `b10801ece825c10af1eefc4a5507080b27986fdc`; migration workflow `33745731871` and production deployment workflow `33745812103` succeeded; Vercel deployment `Cna1HCuYtJ5FvceeApBhqdc2Xoip` reached success.
+
+**DEPLOYED / VERIFIED:** Operations claim rows show projected customer stage/next owner, and accepted external assistance uses an explicit reviewed internal entry stage. Migration `20260903151000_reviewed_claim_assistance_intake.sql` validates and locks the request, preserves external source/milestones, and atomically records the decision, stage, history and activity.
+
+**DEPLOYED / EXPO PUBLISHED:** all nine internal mobile journey stages are now clickable through a dedicated read-only route. Operations-owned fields render as locked/faded values; the route never writes milestones or claim status. Spot Intimation links to the existing initial-document uploader, while Claim Intimation embeds the existing five-section upload experience in broker-managed mode. The redundant generic internal Upload Documents action was removed from claim detail. External/self-managed route selection, fields and `save_self_managed_milestone` remain unchanged. PR #1161 merged as `c38a72e09483a592af93087c74bed9d5d1d70bde`; the exact released `main` snapshot was `afc533f9f629032cb6d2be6ebb01b30eb448cf9f`.
+
+**APPLIED / DEPLOYED:** `@insureit/claim-journey` now owns the canonical 26-document Claim Intimation catalogue and legacy-name matcher. Mobile uploads, Operations request tasks and the web five-tab verification workspace consume the same Vehicle Docs, Driver Docs, Permit / Tax, KYC / Other and Forms groups. The web list now includes Spot Report and Estimate Copy. Migration `20260903170000_protect_verified_managed_claim_documents.sql` prevents customer deletion of Operations-verified broker-managed rows/storage objects while preserving self-managed deletion and replacement of pending/rejected managed files. Protected migration run `33751488467` applied and directly verified both policies after the verification-query correction in PR #1164.
+
+**DEPLOYED / PUBLISHED EVIDENCE:** canonical web verification run `33749542027` and mobile verification run `33749541992` passed for the feature commit. Production workflow `33751553270` deployed `afc533f9f629032cb6d2be6ebb01b30eb448cf9f`; GitHub deployment `6243218301` reports success. Expo workflow `33751628079` published the same source to `preview`, runtime `0.2.0`, group `144f2c6a-e0e8-42b5-b7b6-af427b25d49e`.
+
+**IMPLEMENTED / UNAPPLIED:** the active Operations `Survey Done` action now calls migration-backed RPC `complete_spot_survey` instead of separate direct writes that could report success without advancing the claim. Migration `20260903193000_complete_spot_survey_atomically.sql` locks an accessible broker-managed claim at `Surveyor Appointed`, advances it to `Final Documents Awaited`, and writes valid stage/history evidence in one transaction. The action verifies the returned status before redirecting, so the existing internal mobile Claim Intimation gate opens only after a confirmed transition. External/self-managed claims and milestone mutations are unchanged. The migration is not **APPLIED**, the code is not **DEPLOYED**, and no OTA is required because the mobile gate already recognizes `Final Documents Awaited`.
+
+**UNVERIFIED ON DEVICE:** no Android device was connected through ADB during publication, so cold-launch and changed-screen verification remain blocked. Do not infer installed-app success from OTA publication alone. The implementation does not connect the pre-existing Operations “Submit Claim Intimation” button or invent a new status transition. Customer DO acceptance, payment-receipt semantics, rejection/reopen authority and SLA escalation still require approved contracts.
+
+**DEPLOYED / VERIFIED:** production evidence exposed a false-success reconciliation case for an all-verified claim still at `Initial Documents Pending`. The fix makes all initial pending/submitted legacy variants eligible only after six-category verification, requires a confirmed RPC advancement before success, restricts the reconciliation button to those states, and renders success/error feedback with the correct tone. Migration `20260903160000_fix_initial_document_finalization.sql` was applied in workflow `33745731871` and included in the production deployment above.
+
 ## External policy claim linking
 
 **IMPLEMENTED / APPLIED / DEPLOYED:** Operations claim details now resolve the claim's direct `external_policy_id` alongside ordinary `policy_id`, showing policy number, coverage dates, premium/IDV when present, and an authorized policy-copy link. New mobile external-policy uploads persist `customer_documents.external_policy_id`; older rows remain supported through `external_policies.document_storage_path`. Migration `202609030001_external_policy_document_link.sql` adds the nullable relationship and index. The isolated migration workflow applied and verified the relationship/index. Production deployment was completed for the merged queue release; latest GitHub deployment `6222655881` reports success at `https://insureit-fyg7hg0l8-insureit.vercel.app`.
 
 Policy Onboarding OCR hardening remains an active workstream. Production portal is `https://portal.insureit.in`. Ordinary commits do not intentionally deploy production. After explicit `deploy now` or `finish and deploy` approval, dispatch the protected production workflow with the already-successful feature-PR verification run ID and verified commit; do not create a deployment-trigger commit/PR or repeat the full gate.
+
+**IMPLEMENTED / NOT DEPLOYED:** Policy Onboarding OCR now treats Layout Parser network/transport exceptions as a structured-extraction fallback instead of failing the entire primary OCR request. Existing insurer refiners continue withholding table-dependent financial fields when structured evidence is unavailable. The onboarding OCR regression covers this fallback; live production behavior remains unverified until deployment and an authenticated upload.
 
 **IMPLEMENTED, NOT DEPLOYED:** Policy Onboarding post-save policy-copy persistence was hardened in commit `c4d04cf8`. The save confirmation now carries the transactional policy UUID (`policy_id`) to the server upload action instead of resolving by policy code, and refreshes the policy register after upload/retry success so the stored `policy_documents` row is visible when the entry is reopened. Typecheck, lint (existing warnings only), and `git diff --check` passed; production build compiled but could not prerender `/invite` without configured Supabase environment variables.
 
@@ -25,6 +54,12 @@ This is intentionally a narrow step. No claim ownership, status-transition, RLS,
 **DEPLOYED / VERIFIED:** Claim-detail server rendering was hardened in PR #1045 and follow-up PR #1050. The remaining production crash was caused by interactive client forms using the React `form action` prop with inline callback functions; these were changed to explicit `onSubmit` handlers while preserving server-action calls. PR #1050 merged as `f51d367e48df35d122b86884fa00d12ee8498412`, canonical verification run `33609915719`, and production deployment workflow `33610213675`. Authenticated browser verification now successfully renders `/claims/8864a09a-d5b0-424f-8cd4-3b7deb877583` with multi-file accident photos and unclassified bulk attachments visible.
 
 **DEPLOYED / VERIFIED:** Internal and external claims are now available through top-level Operations queue tabs, with only the selected type visible. Internal claims remain the default; external claims prioritize assistance requests. Search, status filtering, counts, and pagination are preserved. PR #1077 merged as `24c199a1863060add555f305fb59fdbf0b241d25`; canonical verification run `33631214420`; production workflow `33631556961`; GitHub deployment `6222655881` reports a completed production deployment.
+
+**APPLIED / VERIFIED 2026-09-03:** The `claim-documents` Supabase Storage bucket now accepts the supported claim video MIME types (`video/mp4`, QuickTime, WebM, Matroska and AVI) while retaining the 50 MB limit. Migration `202609030002_allow_claim_video_uploads.sql` was applied and verified by protected workflow `33718163048`; the workflow was added in PR #1092 and merged as `0e4fc4675102e29d149a5a2f2e1c35483dd916ac`.
+
+**IMPLEMENTED, NOT APPLIED:** Spot surveyor deputation now calls an atomic `depute_spot_surveyor` RPC. It locks and validates eligible claim stages, persists stage details/status/history/activity together, verifies the status transition, and exposes errors instead of returning success after an RLS-filtered or partial write. Migration `20260903120000_atomic_spot_surveyor_deputation.sql` also registers the `spot_surveyor_deputed` activity event. The migration still requires protected application and canonical web verification before merge/deployment.
+
+**IMPLEMENTED, NOT DEPLOYED:** The active Spot Survey document-verification action was not advancing the claim after the final document was verified; it only marked the document and wrote verification records. It now checks all required initial documents and advances `Initial Documents Verification Pending`/submitted states to `Initial Documents Verified`, verifying the affected row and surfacing transition failures.
 
 **IMPLEMENTED, NOT DEPLOYED:** The operations claim detail now includes a web-only nine-stage journey panel aligned to the existing mobile external-claim field contract. It preserves historical claim statuses, renames the final-document presentation to Claim Intimation, stores operations-entered stage values in `claim_stage_details`, updates insurer claim number on `claims`, enforces mobile-matching mandatory fields, and leaves customer document upload/replacement behavior unchanged. No mobile files, mobile workflow, migration, or production configuration changed.
 
@@ -1451,3 +1486,11 @@ Locked product decisions:
 - mobile engagement modules such as Impact, Journey, Learn, Stories and Recognition are secondary and should be added only if they provide useful web value.
 
 No implementation beyond documentation was performed in this decision-lock step.
+
+## Secure initial-document stage reconciliation — 2026-09-03
+
+**DEPLOYED:** PR #1133 merged as `702cb22815705f986994f5f3b07f654492c61bc8`; canonical web verification run `33728720766` passed for feature head `2ae55267792d915908283f51c6168a2ea0ed34b9`. The protected `advance_initial_documents_verified` RPC migration was applied and verified by run `33729021865`.
+
+**DEPLOYED:** The production deployment workflow completed successfully in run `33730265587`; `https://portal.insureit.in` returned HTTP 200 afterward. PR #1134 (`b312239d92c4b056b9ca19f72b67895b8b15375d`) fixed the deploy gate to recognize manually dispatched schema workflow runs before deployment.
+
+Remaining operator verification: refresh the affected Spot Survey claim, click **Finalize verification**, confirm `Initial Documents Verified`, then verify surveyor deputation can be opened and saved.

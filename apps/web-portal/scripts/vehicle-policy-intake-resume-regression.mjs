@@ -174,3 +174,14 @@ assert(nonMotorPolicyForm.includes('<div className="min-w-0"><CustomerSearchFiel
 assert(nonMotorPolicyForm.includes('required portalResults onSelectionChange={changeCustomer}'));
 assert(customerSearchField.includes('createPortal('));
 assert(customerSearchField.includes('portalResults && mounted'));
+
+assert(policyForm.includes('const isCpmClass=form.vehicleClass.trim().toUpperCase()==="CPM"'));
+assert(policyForm.includes('cpaOpted:isCpmClass?false'));
+
+assert(policyForm.includes('? <BlockedPremiumField label="TP premium"/>'));
+assert(policyForm.includes(': <Field label="TP premium" type="number" min="0" value={form.tp}'));
+assert(policyForm.includes('? <BlockedPremiumField label="CPA amount"/>'));
+
+assert(policyForm.includes('function BlockedPremiumField({label}:{label:string})'));
+assert(policyForm.includes('cursor-not-allowed'));
+assert(policyForm.includes('aria-disabled="true"'));

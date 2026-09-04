@@ -3,6 +3,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { matchesClaimIntimationDocument } from '@insureit/claim-journey';
 import { finalDocumentGroups, type FinalDocumentGroup, type RequiredDocument } from '@/lib/claim-documents';
 import { getCurrentSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
@@ -16,38 +17,43 @@ const DELETE_UPLOAD_KEY = '__delete__';
 
 function documentArtwork(type: string) {
   if (type === 'RC Copy') return require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png');
-  if (type === 'Insurance copy') return require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
+  if (type === 'Insurance Copy') return require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png');
   if (type === 'Driver Licence') return require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png');
-  if (type === 'GR/Load bill') return require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png');
+  if (type === 'GR/Load Bill') return require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png');
 
-  if (type === 'Fitness copy') return require('../assets/claims/tasks-completed.png');
+  if (type === 'Fitness Copy') return require('../assets/claims/tasks-completed.png');
   if (type === 'Fasttag report last 15 days') return require('../assets/claims/reports-analytics.png');
   if (type === 'Spot Report') return require('../assets/claims/claim-survey.png');
-  if (type === 'Estimate Copy' || type === 'Repair estimate') return require('../assets/claims/claim-assessment.png');
+  if (type === 'Estimate Copy' || type === 'Repair Estimate') return require('../assets/claims/claim-assessment.png');
 
   if (type === 'Towing Bill') return require('../assets/claims/fleet-vehicle.png');
-  if (type === 'NCB VERIFICATION') return require('../assets/claims/claim-approval.png');
+  if (type === 'NCB Verification') return require('../assets/claims/claim-approval.png');
   if (type === 'Road Tax') return require('../assets/claims/receipts-posted.png');
-  if (type === 'Local permit A' || type === 'LOCAL PERMIT B' || type === 'National Permit') return require('../assets/claims/policy.png');
+  if (type === 'Local Permit A' || type === 'Local Permit B' || type === 'National Permit') return require('../assets/claims/policy.png');
 
-  if (type === 'Driver Aadharcard front' || type === 'Driver Aadharcard Back' || type === 'Aadharcard' || type === 'Pancard') return require('../assets/claims/kyc.png');
-  if (type === 'KYC FORM') return require('../assets/claims/kyc-completed.png');
-  if (type === 'GST' || type === 'Cancel Cheque') return require('../assets/claims/accounts-finance.png');
+  if (type === 'Driver Aadhaar front' || type === 'Driver Aadhaar back' || type === 'Aadhaar' || type === 'PAN') return require('../assets/claims/kyc.png');
+  if (type === 'KYC Form') return require('../assets/claims/kyc-completed.png');
+  if (type === 'GST' || type === 'Cancelled Cheque') return require('../assets/claims/accounts-finance.png');
 
   if (type === 'TP Affidavit') return require('../assets/claims/documents.png');
   return require('../assets/claims/claim-documents.png');
 }
 
-const orderedGroups: Array<{ key: string; label: string }> = [
-  { key: 'spots-papers', label: 'Vehicle Docs' },
-  { key: 'driver-docs', label: 'Driver Docs' },
-  { key: 'permit-tax', label: 'Permit / Tax' },
-  { key: 'kyc-dealership', label: 'KYC / Other' },
-  { key: 'forms', label: 'Forms' },
-];
+type ExternalClaimDocumentTabsProps = {
+  claimId: string;
+  customerId: string;
+  mode?: 'self-managed' | 'broker-managed';
+  uploadsEnabled?: boolean;
+};
 
-export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: string; customerId: string }) {
-  const [activeKey, setActiveKey] = useState(orderedGroups[0].key);
+export function ExternalClaimDocumentTabs({
+  claimId,
+  customerId,
+  mode = 'self-managed',
+  uploadsEnabled = true,
+}: ExternalClaimDocumentTabsProps) {
+  const isManaged = mode === 'broker-managed';
+  const [activeKey, setActiveKey] = useState(finalDocumentGroups[0].key);
   const [documents, setDocuments] = useState<ClaimDocument[]>([]);
   const [uploadingType, setUploadingType] = useState('');
   const [message, setMessage] = useState('');
@@ -70,16 +76,23 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
     return () => { active = false; };
   }, [claimId]);
 
-  const groups = useMemo(() => orderedGroups.map((item) => ({
-    ...item,
-    group: finalDocumentGroups.find((group) => group.key === item.key),
-  })).filter((item): item is { key: string; label: string; group: FinalDocumentGroup } => Boolean(item.group)), []);
+  const groups = useMemo(() => finalDocumentGroups.map((group: FinalDocumentGroup) => ({
+    key: group.key,
+    label: group.title,
+    group,
+  })), []);
 
   const activeGroup = groups.find((item) => item.key === activeKey) ?? groups[0];
   const bulkUploadedCount = documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected').length;
+  const bulkDeletableCount = documents.filter((item) =>
+    item.document_type === BULK_DOCUMENT_TYPE &&
+    item.verification_status !== 'rejected' &&
+    (!isManaged || item.verification_status !== 'verified'),
+  ).length;
   const bulkUploading = uploadingType === BULK_UPLOAD_KEY;
 
   async function pickAndUpload(document: RequiredDocument) {
+    if (!uploadsEnabled) return;
     setMessage('');
     const result = await DocumentPicker.getDocumentAsync({
       type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
@@ -127,7 +140,8 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
         uploaded_by: session.user.id,
       }).select('*').single();
       if (error || !data) {
-        setMessage('The file uploaded, but its claim record could not be saved.');
+        await supabase.storage.from('claim-documents').remove([storagePath]);
+        setMessage('This document could not be saved. Please try again.');
         return;
       }
       setDocuments((current) => [data, ...current]);
@@ -140,6 +154,10 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
 
   async function deleteUploadedDocument(document: ClaimDocument) {
     if (uploadingType) return;
+    if (isManaged && document.verification_status === 'verified') {
+      setMessage('Verified documents are locked by the claims desk.');
+      return;
+    }
     setMessage('');
     setSuccessMessage('');
     setUploadingType(`${DELETE_UPLOAD_KEY}${document.id}`);
@@ -163,12 +181,16 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   }
 
   async function deleteBulkDocuments() {
-    if (uploadingType || !bulkUploadedCount) return;
+    if (uploadingType || !bulkDeletableCount) return;
     setMessage('');
     setSuccessMessage('');
     setUploadingType(`${DELETE_UPLOAD_KEY}bulk`);
     try {
-      const bulkDocuments = documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected');
+      const bulkDocuments = documents.filter((item) =>
+        item.document_type === BULK_DOCUMENT_TYPE &&
+        item.verification_status !== 'rejected' &&
+        (!isManaged || item.verification_status !== 'verified'),
+      );
       const ids = bulkDocuments.map((item) => item.id).filter(Boolean);
       if (!ids.length) return;
       const removeRecords = await supabase.from('claim_documents').delete().eq('claim_id', claimId).in('id', ids);
@@ -197,6 +219,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
 
   function requestIndividualDelete(document: ClaimDocument) {
     if (uploadingType) return;
+    if (isManaged && document.verification_status === 'verified') return;
     setSuccessMessage('');
     setIndividualDeleteTarget(document);
   }
@@ -209,7 +232,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   }
 
   function requestBulkDelete() {
-    if (uploadingType || !bulkUploadedCount) return;
+    if (uploadingType || !bulkDeletableCount) return;
     setSuccessMessage('');
     setBulkDeleteConfirmVisible(true);
   }
@@ -221,7 +244,7 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
   }
 
   async function pickAndUploadSeveral() {
-    if (uploadingType) return;
+    if (uploadingType || !uploadsEnabled) return;
     setMessage('');
     let result: Awaited<ReturnType<typeof DocumentPicker.getDocumentAsync>>;
     try {
@@ -309,9 +332,14 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={styles.title}>Document Upload <Text style={styles.optional}>(Optional)</Text></Text>
+          <Text style={styles.title}>
+            {isManaged ? 'Documents for verification' : 'Document Upload '}
+            {!isManaged ? <Text style={styles.optional}>(Optional)</Text> : null}
+          </Text>
         </View>
-        <View style={styles.optionalBadge}><Text style={styles.optionalBadgeText}>All optional</Text></View>
+        <View style={styles.optionalBadge}>
+          <Text style={styles.optionalBadgeText}>{isManaged ? 'Claims desk review' : 'All optional'}</Text>
+        </View>
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabs}>
@@ -324,20 +352,25 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
       </ScrollView>
 
       {message ? <View style={styles.message}><MaterialCommunityIcons name="alert-circle-outline" size={17} color="#A15C00" /><Text style={styles.messageText}>{message}</Text></View> : null}
+      {!uploadsEnabled ? <View style={styles.message}><MaterialCommunityIcons name="lock-outline" size={17} color="#526178" /><Text style={styles.messageText}>This document stage is visible now. Uploads will open when the claims desk requests the Claim Intimation documents.</Text></View> : null}
 
       <View style={styles.grid}>
         {activeGroup.group.documents.map((document) => {
-          const uploaded = documents.find((item) => item.document_type === document.type && item.verification_status !== 'rejected');
+          const uploaded = documents.find((item) =>
+            matchesClaimIntimationDocument(item.document_type, document.type) &&
+            item.verification_status !== 'rejected',
+          );
           const uploading = uploadingType === document.type;
+          const canModify = uploadsEnabled && (!isManaged || uploaded?.verification_status !== 'verified');
           const artwork = documentArtwork(document.type);
-          return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded]}>
-            {uploaded ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${document.title}`} disabled={Boolean(uploadingType)} onPress={() => requestIndividualDelete(uploaded)} hitSlop={8} style={styles.documentDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#C43232" /></Pressable> : null}
+          return <View key={document.type} style={[styles.documentCard, uploaded && styles.documentCardUploaded, !canModify && styles.documentCardReadOnly]}>
+            {uploaded && canModify ? <Pressable accessibilityRole="button" accessibilityLabel={`Delete ${document.title}`} disabled={Boolean(uploadingType)} onPress={() => requestIndividualDelete(uploaded)} hitSlop={8} style={styles.documentDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#C43232" /></Pressable> : null}
             <Image source={artwork} style={styles.documentArtwork} resizeMode="contain" />
             <Text style={styles.documentTitle} numberOfLines={2}>{document.title}</Text>
-            <Text style={styles.documentBody} numberOfLines={2}>{uploaded ? 'Uploaded' : document.body}</Text>
-            <Pressable accessibilityRole="button" disabled={Boolean(uploadingType)} onPress={() => void pickAndUpload(document)} style={[styles.uploadButton, uploaded && styles.replaceButton, Boolean(uploadingType) && !uploading && styles.uploadButtonDisabled]}>
-              <MaterialCommunityIcons name={uploaded ? 'refresh' : 'upload-outline'} size={15} color="#FFFFFF" />
-              <Text style={styles.uploadButtonText}>{uploading ? 'Uploading…' : uploaded ? 'Replace' : 'Upload'}</Text>
+            <Text style={styles.documentBody} numberOfLines={2}>{uploaded?.verification_status === 'verified' ? 'Verified by claims desk' : uploaded ? 'Uploaded' : document.body}</Text>
+            <Pressable accessibilityRole="button" disabled={Boolean(uploadingType) || !canModify} onPress={() => void pickAndUpload(document)} style={[styles.uploadButton, uploaded && styles.replaceButton, (!canModify || (Boolean(uploadingType) && !uploading)) && styles.uploadButtonDisabled]}>
+              <MaterialCommunityIcons name={uploaded?.verification_status === 'verified' ? 'check-decagram' : uploaded ? 'refresh' : uploadsEnabled ? 'upload-outline' : 'lock-outline'} size={15} color="#FFFFFF" />
+              <Text style={styles.uploadButtonText}>{uploading ? 'Uploading…' : uploaded?.verification_status === 'verified' ? 'Verified' : uploaded ? 'Replace' : uploadsEnabled ? 'Upload' : 'Locked'}</Text>
             </Pressable>
           </View>;
         })}
@@ -347,20 +380,20 @@ export function ExternalClaimDocumentTabs({ claimId, customerId }: { claimId: st
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Upload several claim documents"
-          accessibilityState={{ disabled: Boolean(uploadingType) }}
-          disabled={Boolean(uploadingType)}
+          accessibilityState={{ disabled: Boolean(uploadingType) || !uploadsEnabled }}
+          disabled={Boolean(uploadingType) || !uploadsEnabled}
           onPress={() => void pickAndUploadSeveral()}
           android_ripple={{ color: '#E6F0FF' }}
-          style={({ pressed }) => [styles.bulkHint, bulkUploadedCount > 0 && styles.bulkHintUploaded, pressed && styles.bulkHintPressed, Boolean(uploadingType) && styles.bulkHintDisabled]}
+          style={({ pressed }) => [styles.bulkHint, bulkUploadedCount > 0 && styles.bulkHintUploaded, pressed && styles.bulkHintPressed, (Boolean(uploadingType) || !uploadsEnabled) && styles.bulkHintDisabled]}
         >
           <Image source={require('../assets/claims/documents.png')} style={styles.bulkArtwork} resizeMode="contain" />
           <View style={styles.bulkCopy}>
-            <Text style={styles.bulkTitle}>{bulkUploading ? 'Uploading selected files…' : 'Need to upload several files?'}</Text>
-            <Text style={styles.bulkText}>{bulkUploading ? 'Please keep this page open while the files are saved.' : bulkUploadedCount > 0 ? `${bulkUploadedCount} additional file${bulkUploadedCount === 1 ? '' : 's'} uploaded · Tap to add more.` : 'Tap here to select multiple PDF or image files at once. They will be saved as additional claim documents.'}</Text>
+            <Text style={styles.bulkTitle}>{bulkUploading ? 'Uploading selected files…' : uploadsEnabled ? 'Need to upload several files?' : 'Additional uploads locked'}</Text>
+            <Text style={styles.bulkText}>{bulkUploading ? 'Please keep this page open while the files are saved.' : bulkUploadedCount > 0 ? `${bulkUploadedCount} additional file${bulkUploadedCount === 1 ? '' : 's'} uploaded${uploadsEnabled ? ' · Tap to add more.' : '.'}` : uploadsEnabled ? 'Tap here to select multiple PDF or image files at once. They will be saved as additional claim documents.' : 'The claims desk will open uploads when these documents are required.'}</Text>
           </View>
           {bulkUploadedCount === 0 ? <MaterialCommunityIcons name="chevron-right" size={20} color="#0A43A3" /> : null}
         </Pressable>
-        {bulkUploadedCount > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Delete all uploaded additional claim documents" disabled={Boolean(uploadingType)} onPress={requestBulkDelete} hitSlop={8} style={styles.bulkDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#C43232" /></Pressable> : null}
+        {bulkDeletableCount > 0 && uploadsEnabled ? <Pressable accessibilityRole="button" accessibilityLabel="Delete all uploaded additional claim documents" disabled={Boolean(uploadingType)} onPress={requestBulkDelete} hitSlop={8} style={styles.bulkDeleteButton}><MaterialCommunityIcons name="close" size={15} color="#C43232" /></Pressable> : null}
       </View>
 
       <Modal visible={Boolean(successMessage)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setSuccessMessage('')}>
@@ -422,7 +455,7 @@ const styles = StyleSheet.create({
   optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 8, paddingVertical: 4 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.2, fontWeight: '900' },
   tabs: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E6EDF5', backgroundColor: '#F7FAFF' }, tab: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 11, borderBottomWidth: 3, borderBottomColor: 'transparent' }, tabActive: { borderBottomColor: '#165DDB', backgroundColor: '#FFFFFF' }, tabText: { color: '#667085', fontSize: 9.5, fontWeight: '800' }, tabTextActive: { color: '#0A43A3' },
   message: { margin: 10, marginBottom: 0, borderRadius: 11, backgroundColor: '#FFF6E5', padding: 8, flexDirection: 'row', gap: 7, alignItems: 'center' }, messageText: { flex: 1, color: '#855200', fontSize: 10, lineHeight: 14, fontWeight: '700' },
-  grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, columnGap: 8 }, documentArtwork: { width: 42, height: 42, marginBottom: 6 }, documentCard: { width: '31%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
+  grid: { padding: 10, flexDirection: 'row', flexWrap: 'wrap', rowGap: 8, columnGap: 8 }, documentArtwork: { width: 42, height: 42, marginBottom: 6 }, documentCard: { width: '31%', minHeight: 154, borderRadius: 15, borderWidth: 1, borderColor: '#DFE6EE', backgroundColor: '#FCFDFF', padding: 8, alignItems: 'center', position: 'relative' }, documentCardUploaded: { borderColor: '#9FD4B6', backgroundColor: '#F1FBF5' }, documentCardReadOnly: { opacity: 0.72 }, documentDeleteButton: { position: 'absolute', top: 6, right: 6, zIndex: 2, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' }, documentTitle: { color: palette.navy, fontSize: 10.3, lineHeight: 13.5, fontWeight: '900', textAlign: 'center', minHeight: 27 }, documentBody: { color: '#7A8799', fontSize: 8.6, lineHeight: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 2, flex: 1 }, uploadButton: { minHeight: 32, borderRadius: 10, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', marginTop: 6 }, replaceButton: { backgroundColor: '#168161' }, uploadButtonDisabled: { opacity: 0.55 }, uploadButtonText: { color: '#FFFFFF', fontSize: 9.3, fontWeight: '900' },
   bulkWrap: { position: 'relative' }, bulkHint: { margin: 10, marginTop: 0, borderRadius: 14, borderWidth: 1, borderStyle: 'dashed', borderColor: '#91A9C8', backgroundColor: '#F8FBFF', padding: 9, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkHintUploaded: { borderStyle: 'solid', borderColor: '#9FD4B6', backgroundColor: '#F1FBF5', paddingRight: 40 }, bulkHintPressed: { backgroundColor: '#EEF5FF' }, bulkHintDisabled: { opacity: 0.6 }, bulkArtwork: { width: 40, height: 40, flexShrink: 0 }, bulkCopy: { flex: 1, minWidth: 0 }, bulkTitle: { color: palette.navy, fontSize: 10.3, fontWeight: '900' }, bulkText: { color: '#708097', fontSize: 9.1, lineHeight: 12.5, fontWeight: '600', marginTop: 1 }, bulkDeleteButton: { position: 'absolute', top: 6, right: 18, zIndex: 2, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#F0B7B7', alignItems: 'center', justifyContent: 'center' },
   validationBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7, 24, 50, 0.48)', paddingHorizontal: 24 },
   deleteSuccessToastOverlay: { flex: 1, justifyContent: 'flex-start', paddingTop: 54, paddingHorizontal: 14 },

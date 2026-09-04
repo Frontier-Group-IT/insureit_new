@@ -1,26 +1,51 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerWeeklyStory, type PartnerWeeklyStory } from '@/lib/engagement';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function WeeklyStoryScreen() {
   const router = useRouter();
   const [data, setData] = useState<PartnerWeeklyStory | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    getPartnerWeeklyStory().then(setData).finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setData(await getPartnerWeeklyStory());
+    } catch {
+      setData(null);
+      setError('Your weekly summary could not be loaded.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   return (
-    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" action={<PartnerIconButton icon="close" label="Close weekly story" onPress={() => router.back()} />}>
-      {loading || !data ? <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View> : (
+    <PartnerScreen eyebrow="YOUR WEEK" title="A week with INSUREIT" onBack={() => router.back()}>
+      {loading ? (
+        <PartnerStateView state="loading" title="Loading your week" />
+      ) : error || !data ? (
+        <PartnerStateView
+          state="error"
+          title="Your week is temporarily unavailable"
+          message={error || 'Your weekly summary could not be loaded.'}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
+      ) : (
         <>
           <View style={styles.hero}>
             <Text style={styles.dates}>{formatDate(data.week_start)} — {formatDate(data.week_end)}</Text>
@@ -41,7 +66,7 @@ export default function WeeklyStoryScreen() {
 
           <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Coming next</Text></View>
           <View style={styles.nextCard}>
-            <View style={styles.nextIcon}><Ionicons name="refresh-outline" size={21} color={partnerTheme.colors.brand} /></View>
+            <View style={styles.nextIcon}><Image source={PartnerAssets.actions.renewals} style={styles.nextArtwork} resizeMode="contain" /></View>
             <View style={styles.nextBody}>
               <Text style={styles.nextTitle}>{data.renewals_next_week} renewal{data.renewals_next_week === 1 ? '' : 's'} next week</Text>
               <Text style={styles.nextText}>{formatIndianCurrency(data.renewal_premium_next_week)} gross premium is approaching renewal.</Text>
@@ -74,8 +99,6 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  close:{width:38,height:38,borderRadius:12,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  loading:{minHeight:280,alignItems:'center',justifyContent:'center'},
   hero:{borderRadius:partnerTheme.radius.xl,padding:15,backgroundColor:partnerTheme.colors.nav},
   dates:{color:'#AAA5FF',fontSize:8,fontWeight:'800',letterSpacing:1},
   heroValue:{marginTop:5,color:'#FFFFFF',fontSize:30,fontWeight:'800'},
@@ -87,6 +110,6 @@ const styles = StyleSheet.create({
   compareValue:{color:partnerTheme.colors.ink,fontSize:17,fontWeight:'800'},compareLabel:{marginTop:3,color:partnerTheme.colors.inkMuted,fontSize:8},
   trend:{flexDirection:'row',alignItems:'center',gap:5,borderRadius:999,paddingHorizontal:10,paddingVertical:7},trendText:{fontSize:9,fontWeight:'800'},
   nextCard:{minHeight:66,flexDirection:'row',alignItems:'center',gap:11,borderRadius:18,padding:14,backgroundColor:partnerTheme.colors.surface,borderWidth:1,borderColor:partnerTheme.colors.line},
-  nextIcon:{width:36,height:36,borderRadius:14,alignItems:'center',justifyContent:'center',backgroundColor:partnerTheme.colors.brandSoft},nextBody:{flex:1},nextTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},nextText:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},
+  nextIcon:{width:36,height:36,alignItems:'center',justifyContent:'center'},nextArtwork:{width:34,height:34},nextBody:{flex:1},nextTitle:{color:partnerTheme.colors.ink,fontSize:10.5,fontWeight:'800'},nextText:{marginTop:4,color:partnerTheme.colors.inkMuted,fontSize:8.5,lineHeight:13},
   endCard:{marginTop:11,borderRadius:partnerTheme.radius.lg,padding:13,backgroundColor:partnerTheme.colors.accentSoft},endEyebrow:{color:'#3C7B78',fontSize:7.5,fontWeight:'800',letterSpacing:1},endTitle:{marginTop:5,color:partnerTheme.colors.ink,fontSize:12,fontWeight:'800'},
 });

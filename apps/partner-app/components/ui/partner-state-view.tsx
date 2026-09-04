@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerButton } from '@/components/ui/partner-button';
@@ -12,6 +12,7 @@ export function PartnerStateView({
   title,
   message,
   icon,
+  asset,
   actionLabel,
   onAction,
 }: {
@@ -19,6 +20,7 @@ export function PartnerStateView({
   title?: string;
   message?: string;
   icon?: IconName;
+  asset?: ImageSourcePropType;
   actionLabel?: string;
   onAction?: () => void;
 }) {
@@ -43,8 +45,12 @@ export function PartnerStateView({
 
   return (
     <View style={styles.base} accessibilityLiveRegion="polite">
-      <View style={styles.icon}>
-        <Ionicons name={resolvedIcon} size={26} color={state === 'error' ? partnerTheme.colors.danger : partnerTheme.colors.brand} />
+      <View style={[styles.icon, asset ? styles.assetIcon : null]}>
+        {asset ? (
+          <Image source={asset} style={styles.assetImage} resizeMode="contain" />
+        ) : (
+          <Ionicons name={resolvedIcon} size={26} color={state === 'error' ? partnerTheme.colors.danger : partnerTheme.colors.brand} />
+        )}
       </View>
       <Text style={styles.title}>{title || defaultTitle(state)}</Text>
       {message ? <Text style={styles.message}>{message}</Text> : null}
@@ -83,6 +89,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: partnerTheme.colors.surfaceMuted,
   },
+  assetIcon: { backgroundColor: 'transparent' },
+  assetImage: { width: 44, height: 44 },
   title: { marginTop: 12, color: partnerTheme.colors.ink, textAlign: 'center', ...partnerTheme.typography.cardTitle },
   message: { marginTop: 5, maxWidth: 300, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
   action: { marginTop: 14 },

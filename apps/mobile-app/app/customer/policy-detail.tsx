@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -9,6 +9,16 @@ import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette, radii } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
+
+const policyDetailIcons = {
+  policy: require('../../assets/custom-icons/policy-detail/policy-booked.png'),
+  insurer: require('../../assets/custom-icons/policy-detail/insurer.png'),
+  renewal: require('../../assets/custom-icons/policy-detail/renewal.png'),
+  finance: require('../../assets/custom-icons/policy-detail/financial-summary.png'),
+  premium: require('../../assets/custom-icons/policy-detail/premium.png'),
+  idv: require('../../assets/custom-icons/policy-detail/idv.png'),
+  vehicle: require('../../assets/custom-icons/policy-detail/linked-vehicle.png'),
+} satisfies Record<string, ImageSourcePropType>;
 
 type PolicyDisplay = {
   id: string;
@@ -96,8 +106,8 @@ export default function PolicyDetailScreen() {
         <View style={styles.heroLayout}>
           <View style={[styles.heroAccent, { backgroundColor: renewalTone(renewalState.tone).accent }]} />
           <View style={styles.heroTop}>
-            <View style={[styles.heroIcon, { backgroundColor: renewalTone(renewalState.tone).soft, borderColor: renewalTone(renewalState.tone).border }]}>
-              <MaterialCommunityIcons name={policy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={25} color={renewalTone(renewalState.tone).accent} />
+            <View style={[styles.heroIcon, { backgroundColor: '#FFFFFF', borderColor: renewalTone(renewalState.tone).border }]}>
+              <Image source={policyDetailIcons.policy} resizeMode="contain" style={styles.heroIconImage} />
             </View>
             <View style={styles.heroCopy}>
               <Text style={[styles.eyebrow, { color: renewalTone(renewalState.tone).accent }]}>POLICY DETAIL</Text>
@@ -107,12 +117,12 @@ export default function PolicyDetailScreen() {
             <StatusBadge state={renewalState.tone} label={renewalState.label} />
           </View>
           <View style={styles.heroMetaRow}>
-            <HeroMetric icon="shield-outline" label="Insurer" value={company?.name ?? 'Insurer pending'} />
-            <HeroMetric icon="calendar-blank-outline" label="Cover left" value={renewalState.helper || '-'} />
+            <HeroMetric image={policyDetailIcons.insurer} label="Insurer" value={company?.name ?? 'Insurer pending'} />
+            <HeroMetric image={policyDetailIcons.renewal} label="Cover left" value={renewalState.helper || '-'} />
           </View>
           <View style={styles.heroMetaRow}>
-            <HeroMetric icon="calendar-blank-outline" label="Start date" value={formatDate(policy.start_date)} />
-            <HeroMetric icon="calendar-blank-outline" label="End date" value={formatDate(policy.end_date)} />
+            <HeroMetric image={policyDetailIcons.renewal} label="Start date" value={formatDate(policy.start_date)} />
+            <HeroMetric image={policyDetailIcons.renewal} label="End date" value={formatDate(policy.end_date)} />
           </View>
           {renewalState.action ? <View style={styles.heroActionRow}>
             <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
@@ -123,15 +133,15 @@ export default function PolicyDetailScreen() {
         </View>
 
         <Card style={styles.financialCard}>
-          <SectionTitle icon="wallet-outline" title="Financial summary" hint="Policy financial information" strongIcon />
+          <SectionTitle image={policyDetailIcons.finance} title="Financial summary" hint="Policy financial information" strongIcon />
           <View style={styles.financialGrid}>
-            <FinancialValue icon="currency-inr" label="Premium" value={formatCurrency(policy.premium_amount)} primary />
-            <FinancialValue icon="shield-outline" label="IDV" value={formatCurrency(policy.insured_declared_value)} />
+            <FinancialValue image={policyDetailIcons.premium} label="Premium" value={formatCurrency(policy.premium_amount)} primary />
+            <FinancialValue image={policyDetailIcons.idv} label="IDV" value={formatCurrency(policy.insured_declared_value)} />
           </View>
         </Card>
 
         <Card style={styles.vehicleCard}>
-          <SectionTitle icon="truck-outline" title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} strongIcon />
+          <SectionTitle image={policyDetailIcons.vehicle} title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} strongIcon />
           <View style={styles.vehicleFacts}>
             <CompactFact label="Vehicle number" value={vehicle?.vehicle_no} />
             <CompactFact label="Vehicle type" value={vehicle?.vehicle_type} />
@@ -161,10 +171,10 @@ function StatusBadge({ state, label }: { state: 'success' | 'warning' | 'danger'
   );
 }
 
-function HeroMetric({ icon, label, value }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string }) {
+function HeroMetric({ image, label, value }: { image: ImageSourcePropType; label: string; value: string }) {
   return (
     <View style={styles.heroMetric}>
-      <MaterialCommunityIcons name={icon} size={18} color="#52637A" />
+      <Image source={image} resizeMode="contain" style={styles.heroMetricIconImage} />
       <View style={styles.heroMetricCopy}>
         <Text style={styles.heroMetricLabel}>{label}</Text>
         <Text style={styles.heroMetricValue} numberOfLines={1}>{value}</Text>
@@ -173,10 +183,10 @@ function HeroMetric({ icon, label, value }: { icon: keyof typeof MaterialCommuni
   );
 }
 
-function FinancialValue({ icon, label, value, primary = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value: string; primary?: boolean }) {
+function FinancialValue({ image, label, value, primary = false }: { image: ImageSourcePropType; label: string; value: string; primary?: boolean }) {
   return (
     <View style={[styles.financialValue, primary && styles.financialValuePrimary]}>
-      <View style={styles.financialIcon}><MaterialCommunityIcons name={icon} size={17} color="#0A9A6A" /></View>
+      <View style={styles.financialIcon}><Image source={image} resizeMode="contain" style={styles.financialIconImage} /></View>
       <View style={styles.financialCopy}>
         <Text style={styles.financialLabel}>{label}</Text>
         <Text style={styles.financialAmount} numberOfLines={1}>{value}</Text>
@@ -185,11 +195,11 @@ function FinancialValue({ icon, label, value, primary = false }: { icon: keyof t
   );
 }
 
-function SectionTitle({ icon, title, hint, strongIcon = false }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; hint?: string; strongIcon?: boolean }) {
+function SectionTitle({ image, title, hint, strongIcon = false }: { image: ImageSourcePropType; title: string; hint?: string; strongIcon?: boolean }) {
   return (
     <View style={styles.sectionTitleRow}>
       <View style={[styles.sectionIcon, strongIcon && styles.sectionIconStrong]}>
-        <MaterialCommunityIcons name={icon} size={18} color={strongIcon ? '#FFFFFF' : palette.navy} />
+        <Image source={image} resizeMode="contain" style={[styles.sectionIconImage, strongIcon && styles.sectionIconImageStrong]} />
       </View>
       <View style={styles.sectionCopy}>
         <Text style={styles.sectionTitle}>{title}</Text>
@@ -234,6 +244,7 @@ const styles = StyleSheet.create({
   heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   heroIcon: { width: 44, height: 44, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  heroIconImage: { width: 31, height: 31 },
   heroCopy: { flex: 1, minWidth: 0 },
   eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
   policyNo: { color: palette.navy, fontSize: 20, lineHeight: 23, fontWeight: '900', marginTop: 1 },
@@ -241,6 +252,7 @@ const styles = StyleSheet.create({
 
   heroMetaRow: { flexDirection: 'row', gap: 7, marginTop: 7 },
   heroMetric: { flex: 1, minHeight: 48, borderRadius: 11, backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroMetricIconImage: { width: 21, height: 21 },
   heroMetricCopy: { flex: 1, minWidth: 0 },
   heroMetricLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
   heroMetricValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
@@ -259,7 +271,9 @@ const styles = StyleSheet.create({
 
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 7 },
   sectionIcon: { width: 34, height: 34, borderRadius: radii.sm, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
-  sectionIconStrong: { width: 38, height: 38, borderRadius: 19, backgroundColor: palette.navy },
+  sectionIconStrong: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#F4F7FB' },
+  sectionIconImage: { width: 25, height: 25 },
+  sectionIconImageStrong: { width: 29, height: 29 },
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' },
   sectionHint: { color: palette.slate, fontSize: 10.5, lineHeight: 13, fontWeight: '600', marginTop: 1 },
@@ -267,7 +281,8 @@ const styles = StyleSheet.create({
   financialGrid: { flexDirection: 'row', gap: 8 },
   financialValue: { flex: 1, minHeight: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
   financialValuePrimary: { borderColor: '#D6E2EF', backgroundColor: '#FFFFFF' },
-  financialIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#EAF8F2', alignItems: 'center', justifyContent: 'center' },
+  financialIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F4F7FB', alignItems: 'center', justifyContent: 'center' },
+  financialIconImage: { width: 23, height: 23 },
   financialCopy: { flex: 1, minWidth: 0 },
   financialLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
   financialAmount: { color: palette.navy, fontSize: 14, fontWeight: '900', marginTop: 2 },

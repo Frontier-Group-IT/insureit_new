@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerJourney, type PartnerJourneyData } from '@/lib/journey';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function JourneyScreen() {
@@ -39,17 +39,18 @@ export default function JourneyScreen() {
     <PartnerScreen
       eyebrow="MY JOURNEY"
       title="My progress"
-      action={
-        <PartnerIconButton icon="close" label="Close journey" onPress={() => router.back()} />
-      }
+      onBack={() => router.back()}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading your journey" />
       ) : error || !data ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error || 'Journey is unavailable.'}</Text>
-          <Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable>
-        </View>
+        <PartnerStateView
+          state="error"
+          title="Your journey is temporarily unavailable"
+          message={error || 'Your journey could not be loaded.'}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
       ) : (
         <>
           <View style={styles.hero}>
@@ -97,11 +98,12 @@ export default function JourneyScreen() {
               ))}
             </View>
           ) : (
-            <View style={styles.empty}>
-              <Ionicons name="trail-sign-outline" size={28} color="#9AA3B2" />
-              <Text style={styles.emptyTitle}>Your journey is just beginning</Text>
-              <Text style={styles.emptyText}>Business and service milestones will appear as real events are recorded.</Text>
-            </View>
+            <PartnerStateView
+              state="empty"
+              title="Your journey is just beginning"
+              message="Business and service milestones will appear as real events are recorded."
+              asset={PartnerAssets.status.journey}
+            />
           )}
 
         </>
@@ -127,12 +129,6 @@ function formatDate(value: string) {
 }
 
 const styles = StyleSheet.create({
-  close: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 280, alignItems: 'center', justifyContent: 'center' },
-  errorCard: { minHeight: 180, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  errorText: { color: partnerTheme.colors.inkMuted, fontSize: 10 },
-  retry: { marginTop: 10, color: partnerTheme.colors.brand, fontSize: 10, fontWeight: '800' },
-
   hero: { borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: partnerTheme.colors.nav },
   heroEyebrow: { color: '#AAA5FF', fontSize: 8, fontWeight: '800', letterSpacing: 1.2 },
   heroTitle: { marginTop: 4, color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
@@ -160,9 +156,5 @@ const styles = StyleSheet.create({
   timelineDate: { color: partnerTheme.colors.brand, fontSize: 8, fontWeight: '800', letterSpacing: 0.5 },
   timelineTitle: { marginTop: 4, color: partnerTheme.colors.ink, fontSize: 11.5, fontWeight: '800' },
   timelineText: { marginTop: 3, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13 },
-
-  empty: { minHeight: 190, alignItems: 'center', justifyContent: 'center', borderRadius: 18, backgroundColor: partnerTheme.colors.surface },
-  emptyTitle: { marginTop: 9, color: partnerTheme.colors.ink, fontSize: 11.5, fontWeight: '800' },
-  emptyText: { marginTop: 4, maxWidth: 270, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13, textAlign: 'center' },
 
 });

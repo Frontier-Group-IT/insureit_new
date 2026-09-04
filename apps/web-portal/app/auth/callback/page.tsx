@@ -79,7 +79,7 @@ export default function AuthCallbackPage() {
       return;
     }
 
-    window.location.replace("/intermediary-portal");
+    window.location.replace("/partner");
   }
 
   return (

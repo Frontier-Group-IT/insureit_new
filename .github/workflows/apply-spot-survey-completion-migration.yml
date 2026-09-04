@@ -1,0 +1,74 @@
+name: Apply spot survey completion migration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Open Claim Intimation uploads after Survey Done
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260903193000_complete_spot_survey_atomically.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply spot survey completion migration
+        run: supabase db query --linked --file supabase/migrations/20260903193000_complete_spot_survey_atomically.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260903193000
+
+      - name: Verify spot survey completion contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.complete_spot_survey(uuid,uuid)') is not null as function_ready,
+              position('Final Documents Awaited' in pg_get_functiondef(
+                to_regprocedure('public.complete_spot_survey(uuid,uuid)')
+              )) > 0 as upload_status_ready,
+              position('claim_service_mode = ''broker_managed''' in pg_get_functiondef(
+                to_regprocedure('public.complete_spot_survey(uuid,uuid)')
+              )) > 0 as managed_claim_guard_ready,
+              position('current_status = ''Surveyor Appointed''' in pg_get_functiondef(
+                to_regprocedure('public.complete_spot_survey(uuid,uuid)')
+              )) > 0 as expected_status_guard_ready,
+              has_function_privilege(
+                'authenticated',
+                'public.complete_spot_survey(uuid,uuid)',
+                'EXECUTE'
+              ) as authenticated_execute_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"upload_status_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"managed_claim_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"expected_status_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"authenticated_execute_ready"[[:space:]]*:[[:space:]]*true'

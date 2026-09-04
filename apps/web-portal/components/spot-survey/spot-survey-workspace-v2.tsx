@@ -6,6 +6,7 @@ import { ReplaceDocumentButton } from "./replace-document-button";
 import { RequestReuploadButton } from "./request-reupload-button";
 import { SurveyDoneButton } from "./survey-done-button";
 import { SurveyorDeputationForm } from "./surveyor-deputation-form";
+import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-document-verification-button";
 import { VerificationActionButton } from "./verification-action-button";
 import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
 
@@ -95,6 +96,7 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
   const unclassifiedAttachments = documents.filter(isUnclassifiedSpotAttachment);
   const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
   const allDocumentsVerified = items.length > 0 && verifiedCount === items.length;
+  const canFinalizeInitialDocuments = ["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(claim.current_status ?? "");
   const driverName = extractDriverName(claim.accident_description);
   const driverMobile = extractDriverMobile(claim.accident_description) ?? claim.customers?.phone ?? null;
 
@@ -113,7 +115,11 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
           <div className="rounded-xl bg-[#F4F7FC] px-3 py-2 text-right"><p className="text-[9px] font-medium uppercase tracking-[0.12em] text-[#68758A]">Documents Verified</p><p className="text-[17px] font-semibold text-[#071D49]">{verifiedCount}/{items.length}</p></div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{items.map((item) => <DocumentCard key={item.key} item={item} claim={claim} verification={latestVerificationForItem(item, verifications)} verifications={verifications} />)}</div>
-        {allDocumentsVerified ? (claim.current_status === "Surveyor Appointed" ? <SurveyorAssignedNotice claimId={claim.id} details={surveyorDetails} /> : <SurveyorDeputationForm claimId={claim.id} />) : <div className="mt-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 text-[12px] font-semibold text-[#526178]">Complete all required document verification to enable spot surveyor deputation.</div>}
+        {allDocumentsVerified ? (
+          claim.current_status === "Surveyor Appointed" ? <SurveyorAssignedNotice claimId={claim.id} details={surveyorDetails} /> :
+          claim.current_status === "Initial Documents Verified" || claim.current_status === "Claim Intimated" ? <SurveyorDeputationForm claimId={claim.id} /> :
+          canFinalizeInitialDocuments ? <FinalizeInitialDocumentVerificationButton claimId={claim.id} /> : null
+        ) : <div className="mt-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 text-[12px] font-semibold text-[#526178]">Complete all required document verification to enable spot surveyor deputation.</div>}
       </section>
     </div>
   );

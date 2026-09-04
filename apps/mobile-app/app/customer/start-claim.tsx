@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
@@ -38,6 +38,9 @@ type SelfManagedMilestoneRow = {
 };
 
 const SELF_MANAGED_MILESTONE_COUNT = 9;
+const selfTrackedPolicyIcon = require('../../assets/claims/policy.png');
+const managedPolicyIcon = require('../../assets/custom-icons/policy-detail/policy-booked.png');
+const vehicleNumberIcon = require('../../assets/custom-icons/policy-detail/linked-vehicle.png');
 const SETTLED_SELF_MANAGED_STATUSES = new Set(['Settled', 'Closed', 'Claim Complete']);
 const COMPLETED_MILESTONE_STATUSES = new Set(['completed', 'not_applicable']);
 
@@ -177,8 +180,27 @@ export default function StartClaimScreen() {
       ) : null}
 
       <View style={[styles.section, styles.vehicleSection]}>
-        <Text style={styles.sectionLabel}>Vehicle number *</Text>
-        {accountVehicles.length ? <VehicleDropdown vehicles={filteredVehicles} query={vehicleQuery} selectedVehicle={selectedVehicle} open={vehicleOpen} onToggle={() => setVehicleOpen((value) => !value)} onQueryChange={setVehicleQuery} onSelect={(vehicle) => { setSelectedVehicleId(vehicle.id); setVehicleQuery(''); setVehicleOpen(false); setSelectedCustomerId(vehicle.customer_id); }} /> : <EmptyState title="No vehicle found" body="Add a vehicle before starting a claim." />}
+        {accountVehicles.length ? (
+          <VehicleDropdown
+            vehicles={filteredVehicles}
+            query={vehicleQuery}
+            selectedVehicle={selectedVehicle}
+            open={vehicleOpen}
+            onToggle={() => setVehicleOpen((value) => !value)}
+            onQueryChange={setVehicleQuery}
+            onSelect={(vehicle) => {
+              setSelectedVehicleId(vehicle.id);
+              setVehicleQuery('');
+              setVehicleOpen(false);
+              setSelectedCustomerId(vehicle.customer_id);
+            }}
+          />
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>Vehicle number *</Text>
+            <EmptyState title="No vehicle found" body="Add a vehicle before starting a claim." />
+          </>
+        )}
         <Text style={styles.helper}>Start typing to find a vehicle.</Text>
       </View>
 
@@ -201,18 +223,31 @@ export default function StartClaimScreen() {
                 <View style={styles.policyArcTwo} />
               </View>
               <View style={[styles.policyContent, selectedPolicy.source === 'external' && styles.policyContentCompact]}>
-                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}><MaterialCommunityIcons name={selectedPolicy.source === 'external' ? 'account-edit-outline' : 'shield-check-outline'} size={selectedPolicy.source === 'external' ? 25 : 28} color="#0A43A3" /></View>
+                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}>
+                  <Image
+                    accessible={false}
+                    source={selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon}
+                    style={[
+                      styles.policyIconArtwork,
+                      selectedPolicy.source === 'external' && styles.policyIconArtworkCompact,
+                      selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
+                    ]}
+                    resizeMode="contain"
+                  />
+                </View>
                 <View style={styles.policyCopy}>
                   <Text style={[styles.policyMode, selectedPolicy.source === 'external' && styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
                   <Text style={[styles.policyNo, selectedPolicy.source === 'external' && styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
                   <Text style={[styles.policyInsurer, selectedPolicy.source === 'external' && styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
                   <Text style={[styles.policyDates, selectedPolicy.source === 'external' && styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
-                {selectedPolicyCondition === 'expired' ? (
+                {selectedPolicy.source === 'external' ? (
+                  <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
+                ) : selectedPolicyCondition === 'expired' ? (
                   <ExpiredPolicyPulse />
                 ) : (
-                  <View style={[styles.policyCheck, selectedPolicy.source === 'external' && styles.policyCheckCompact, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
-                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicy.source === 'external' ? (selectedPolicyCondition === 'due' ? 16 : 15) : (selectedPolicyCondition === 'due' ? 21 : 20)} color="#FFFFFF" />
+                  <View style={[styles.policyCheck, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
+                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />
                   </View>
                 )}
               </View>
@@ -276,7 +311,7 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
   return null;
 }
 
-function ExpiredPolicyPulse() {
+function PolicyStatusPulse({ condition }: { condition: PolicyCondition }) {
   const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -290,12 +325,29 @@ function ExpiredPolicyPulse() {
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.72, 1] });
+  const conditionStyle = condition === 'expired'
+    ? styles.policyCheckExpired
+    : condition === 'due'
+      ? styles.policyCheckDue
+      : null;
 
   return (
-    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, styles.policyCheckExpired, { opacity, transform: [{ scale }] }]}>
-      <Text style={styles.policyStatusExclamation}>!</Text>
+    <Animated.View style={[styles.policyCheck, styles.policyCheckCompact, conditionStyle, { opacity, transform: [{ scale }] }]}>
+      {condition === 'expired' ? (
+        <Text style={styles.policyStatusExclamation}>!</Text>
+      ) : (
+        <MaterialCommunityIcons
+          name={condition === 'due' ? 'alert-outline' : 'check'}
+          size={condition === 'due' ? 16 : 15}
+          color="#FFFFFF"
+        />
+      )}
     </Animated.View>
   );
+}
+
+function ExpiredPolicyPulse() {
+  return <PolicyStatusPulse condition="expired" />;
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
@@ -303,16 +355,110 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 }
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
+  const anchorRef = useRef<View>(null);
+  const searchInputRef = useRef<TextInput>(null);
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  function focusSearchInput() {
+    requestAnimationFrame(() => {
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+    });
+  }
+
+  function closeSelector() {
+    Keyboard.dismiss();
+    if (open) onToggle();
+  }
+
+  function toggleSelector() {
+    if (open) {
+      Keyboard.dismiss();
+      onToggle();
+      return;
+    }
+    anchorRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ x, y, width, height });
+      onToggle();
+    });
+  }
+
   return <View style={styles.vehicleField}>
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={(event) => { event.stopPropagation(); onToggle(); }} style={[styles.selectButton, open && styles.selectButtonOpen]}>
-      <View style={styles.selectIcon}><MaterialCommunityIcons name="truck-outline" size={20} color="#145ED7" /></View>
-      <View style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
-      <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={23} color={palette.navy} />
-    </Pressable>
-    {open ? <View style={styles.makeMenu}>
-      <View style={styles.makeSearch} onTouchStart={(event) => event.stopPropagation()}><MaterialCommunityIcons name="magnify" size={19} color="#145ED7" /><TextInput value={query} onChangeText={onQueryChange} autoFocus autoCapitalize="characters" returnKeyType="search" placeholder="Search vehicle number, make or model" placeholderTextColor="#6E7F96" style={styles.makeSearchInput} /></View>
-      {vehicles.length ? vehicles.map((vehicle) => <Pressable key={vehicle.id} accessibilityRole="button" onPress={(event) => { event.stopPropagation(); onSelect(vehicle); }} style={[styles.makeOption, selectedVehicle?.id === vehicle.id && styles.selectOptionActive]}><View style={styles.vehicleOptionCopy}><Text style={[styles.selectOptionText, selectedVehicle?.id === vehicle.id && styles.selectOptionTextActive]} numberOfLines={1}>{vehicle.vehicle_no}</Text><Text style={styles.optionMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}</Text></View>{selectedVehicle?.id === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={17} color="#0A43A3" /> : null}</Pressable>) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
-    </View> : null}
+    <Text style={styles.sectionLabel}>Vehicle number *</Text>
+    <View ref={anchorRef} collapsable={false} style={[styles.selectButton, open && styles.selectButtonHidden]}>
+      <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
+      <View pointerEvents="none" style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open vehicle selector"
+        accessibilityState={{ expanded: open }}
+        hitSlop={8}
+        onPress={toggleSelector}
+        style={({ pressed }) => [styles.vehicleSelectorTrigger, pressed && styles.vehicleSelectorTriggerPressed]}
+      >
+        <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
+      </Pressable>
+    </View>
+
+    <Modal
+      visible={open}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={closeSelector}
+      onShow={focusSearchInput}
+    >
+      <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleDropdownOverlay}>
+        <Pressable
+          onPress={(event) => event.stopPropagation()}
+          style={[
+            styles.vehicleAnchoredMenu,
+            {
+              left: anchor.x,
+              top: anchor.y + anchor.height + 4,
+              width: anchor.width,
+            },
+          ]}
+        >
+          <View style={styles.makeSearch}>
+            <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
+            <TextInput
+              ref={searchInputRef}
+              value={query}
+              onChangeText={onQueryChange}
+              autoCapitalize="characters"
+              returnKeyType="search"
+              placeholder="Search vehicle number, make or model"
+              placeholderTextColor="#6E7F96"
+              style={styles.makeSearchInput}
+            />
+          </View>
+
+          <ScrollView
+            keyboardShouldPersistTaps="always"
+            showsVerticalScrollIndicator={false}
+            style={styles.vehicleModalOptions}
+          >
+            {vehicles.length ? vehicles.map((vehicle) => (
+              <Pressable
+                key={vehicle.id}
+                accessibilityRole="button"
+                onPress={() => {
+                  Keyboard.dismiss();
+                  onSelect(vehicle);
+                }}
+                style={[styles.makeOption, selectedVehicle?.id === vehicle.id && styles.selectOptionActive]}
+              >
+                <View style={styles.vehicleOptionCopy}>
+                  <Text style={[styles.selectOptionText, selectedVehicle?.id === vehicle.id && styles.selectOptionTextActive]} numberOfLines={1}>{vehicle.vehicle_no}</Text>
+                  <Text style={styles.optionMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}</Text>
+                </View>
+                {selectedVehicle?.id === vehicle.id ? <MaterialCommunityIcons name="check-circle" size={17} color="#0A43A3" /> : null}
+              </Pressable>
+            )) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
+          </ScrollView>
+        </Pressable>
+      </Pressable>
+    </Modal>
   </View>;
 }
 
@@ -340,14 +486,20 @@ const styles = StyleSheet.create({
   chipText: { color: '#56657A', fontSize: 10.5, fontWeight: '800' },
   chipTextActive: { color: '#FFFFFF' },
   vehicleField: { gap: 6 },
+  vehicleSelectorTrigger: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
+  vehicleSelectorTriggerPressed: { backgroundColor: '#EEF5FF' },
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
-  selectIcon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' },
+  selectButtonHidden: { opacity: 0 },
+  selectVehicleArtwork: { width: 36, height: 36 },
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
   selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
   placeholder: { color: '#7A8798', fontWeight: '700' },
   makeMenu: { borderRadius: 15, borderWidth: 1, borderColor: '#C8D9EF', backgroundColor: '#FFFFFF', overflow: 'hidden', marginTop: 4 },
+  vehicleDropdownOverlay: { flex: 1, backgroundColor: 'transparent' },
+  vehicleAnchoredMenu: { position: 'absolute', maxHeight: 330, borderRadius: 15, borderWidth: 1, borderColor: '#C8D9EF', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  vehicleModalOptions: { maxHeight: 270 },
   makeSearch: { minHeight: 50, margin: 7, borderRadius: 12, borderWidth: 2, borderColor: '#6FA1EA', backgroundColor: '#F0F6FF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
   makeSearchInput: { flex: 1, minHeight: 46, color: palette.navy, fontSize: 13, fontWeight: '700' },
   makeOption: { minHeight: 54, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#EEF2F6' },
@@ -369,7 +521,10 @@ const styles = StyleSheet.create({
   policyContent: { position: 'relative', zIndex: 2, minHeight: 145, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 11 },
   policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
-  policyIconCompact: { width: 46, height: 46, borderRadius: 13 },
+  policyIconCompact: { width: 46, height: 46, borderRadius: 13, backgroundColor: 'transparent' },
+  policyIconArtwork: { width: 43, height: 43 },
+  policyIconArtworkCompact: { width: 34, height: 34 },
+  selfTrackedPolicyIconArtwork: { tintColor: '#FFFFFF', opacity: 0.96 },
   policyCopy: { flex: 1, minWidth: 0, zIndex: 2 },
   policyMode: { color: '#8EB8FF', fontSize: 9.5, fontWeight: '900', letterSpacing: 0.55 },
   policyModeCompact: { fontSize: 8.8, letterSpacing: 0.42 },

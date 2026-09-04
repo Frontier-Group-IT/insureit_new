@@ -1,24 +1,19 @@
 "use client";
 
+import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
-import { isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
+import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
 
 type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string; mode?: string };
 const allowedPageSizes = [5, 10, 20, 50, 100];
-const workflowStages = [
-  { key: "spot-intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"] as ClaimStatus[] },
-  { key: "spot-status", label: "Spot Status", statuses: ["Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected"] as ClaimStatus[] },
-  { key: "claim-intimation", label: "Claim Intimation", statuses: ["Spot Survey Completed", "Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation"] as ClaimStatus[] },
-  { key: "work-approval", label: "Work Approval", statuses: ["Estimate Submitted", "Approval Pending", "Work Approval Status", "Work Approval Received"] as ClaimStatus[] },
-  { key: "repair-ri", label: "Repair & RI", statuses: ["Final Surveyor Details", "Survey Status", "Survey Done", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation", "RA Intimation Done"] as ClaimStatus[] },
-  { key: "billing", label: "Billing", statuses: ["Final Bill Submitted"] as ClaimStatus[] },
-  { key: "delivery-order", label: "Delivery Order", statuses: ["DO Status", "DO Submitted"] as ClaimStatus[] },
-  { key: "vehicle-delivery", label: "Vehicle Delivery", statuses: ["Claim Complete"] as ClaimStatus[] },
-  { key: "payment-encashment", label: "Payment Encashment", statuses: ["Payment Stage", "Claim Completion In Progress", "Settlement Under Process", "Settled", "Closed"] as ClaimStatus[] },
-] as const;
+const workflowStages = INTERNAL_JOURNEY_STAGES.map((stage) => ({
+  key: stage.key.replaceAll("_", "-"),
+  label: stage.label,
+  statuses: claimStatuses.filter((status) => projectInternalClaim(status).stageKey === stage.key),
+}));
 
 export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: QueueClaimRow[]; initialParams: SearchParams; loadError: string | null }) {
   const [query, setQuery] = useState(initialParams.q ?? "");
@@ -93,8 +88,9 @@ function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeCh
           <thead><tr className="bg-[#003A83] text-center text-[10.5px] font-medium tracking-[0.01em] text-white"><th className="rounded-tl-lg px-2 py-2">Sr. No.</th><th className="px-2 py-2">Customer / Mobile</th><th className="px-2 py-2">Vehicle No.</th><th className="px-2 py-2">Vehicle</th><th className="px-2 py-2">Loss Date</th><th className="px-2 py-2">Insurer</th><th className="px-2 py-2">Policy</th><th className="px-2 py-2">Control No.</th><th className="px-2 py-2">Claim No.</th><th className="px-2 py-2">Process</th><th className="rounded-tr-lg px-2 py-2">Action</th></tr></thead>
           <tbody>{visibleRows.length ? visibleRows.map((claim, index) => {
             const process = operationsQueueForStatus(claim.current_status);
+            const customerProjection = projectInternalClaim(claim.current_status);
             const customer = claim.customers?.company_name ?? claim.customers?.contact_name ?? "-";
-            return <tr key={claim.id} className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]"><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{start + index + 1}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block font-medium">{customer}</span><span className="text-[10px] text-[#344256]">{claim.customers?.phone ?? "-"}</span></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicles?.vehicle_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicles?.make, claim.vehicles?.model].filter(Boolean).join(" ") || "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accident_at ?? claim.created_at)}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurance_companies?.name ?? "InsureIT"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.policies?.policy_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.claim_no}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurer_claim_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2">{process?.label ?? claim.current_status}</td><td className="px-2 py-2 text-center"><Link prefetch={false} href={`/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white">Proceed</Link></td></tr>;
+            return <tr key={claim.id} className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]"><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{start + index + 1}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block font-medium">{customer}</span><span className="text-[10px] text-[#344256]">{claim.customers?.phone ?? "-"}</span></td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicles?.vehicle_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicles?.make, claim.vehicles?.model].filter(Boolean).join(" ") || "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accident_at ?? claim.created_at)}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurance_companies?.name ?? "InsureIT"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.policies?.policy_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.claim_no}</td><td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.insurer_claim_no ?? "-"}</td><td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block">{process?.label ?? claim.current_status}</span><span className="mt-0.5 block text-[9px] text-[#65748A]">{customerProjection.stageLabel} · {customerProjection.nextActionOwner === "customer" ? "Customer action" : customerProjection.nextActionOwner === "operations" ? "Operations action" : "Complete"}</span>{claim.policy_service_source === "external" && claim.claim_service_mode !== "self_managed" ? <span className="mt-1 inline-flex rounded-full bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold text-amber-800">External policy · assisted</span> : null}</td><td className="px-2 py-2 text-center"><Link prefetch={false} href={`/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white">Proceed</Link></td></tr>;
           }) : <tr><td className="px-3 py-8 text-center text-sm text-slate-500" colSpan={11}>No matching claims found.</td></tr>}</tbody>
         </table>
       </div>

@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
+import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   getPartnerLearningToday,
   submitPartnerLearningAnswer,
@@ -60,17 +60,18 @@ export default function LearnScreen() {
     <PartnerScreen
       eyebrow="60 SEC LEARN"
       title="60-Second Learn"
-      action={
-        <PartnerIconButton icon="close" label="Close learning" onPress={() => router.back()} />
-      }
+      onBack={() => router.back()}
     >
       {loading ? (
-        <View style={styles.loading}><ActivityIndicator color={partnerTheme.colors.brand} /></View>
+        <PartnerStateView state="loading" title="Loading today’s learning card" />
       ) : error && !data ? (
-        <View style={styles.errorCard}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={load}><Text style={styles.retry}>Try again</Text></Pressable>
-        </View>
+        <PartnerStateView
+          state="error"
+          title="Learning is temporarily unavailable"
+          message={error}
+          actionLabel="Try again"
+          onAction={() => void load()}
+        />
       ) : !data?.available || !data.card ? (
         <View style={styles.emptyCard}>
           <Ionicons name="book-outline" size={28} color="#9AA3B2" />
@@ -188,11 +189,6 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
-  close: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  loading: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
-  errorCard: { minHeight: 190, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  errorText: { color: partnerTheme.colors.inkMuted, fontSize: 10, textAlign: 'center' },
-  retry: { marginTop: 10, color: partnerTheme.colors.brand, fontSize: 10, fontWeight: '800' },
   emptyCard: { minHeight: 220, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
   emptyTitle: { marginTop: 10, color: partnerTheme.colors.ink, fontSize: 12, fontWeight: '800' },
   emptyText: { marginTop: 4, color: partnerTheme.colors.inkMuted, fontSize: 9 },

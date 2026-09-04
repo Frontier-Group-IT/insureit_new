@@ -1,0 +1,66 @@
+name: Apply claim video storage MIME types
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply claim video storage MIME types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/202609030002_allow_claim_video_uploads.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply claim video storage MIME migration
+        run: supabase db query --linked --file supabase/migrations/202609030002_allow_claim_video_uploads.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 202609030002
+
+      - name: Verify claim video storage MIME types
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              file_size_limit = 52428800 as size_limit_ready,
+              allowed_mime_types @> array[
+                'video/mp4',
+                'video/quicktime',
+                'video/webm',
+                'video/x-matroska',
+                'video/x-msvideo'
+              ]::text[] as video_types_ready
+            from storage.buckets
+            where id = 'claim-documents'
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"size_limit_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"video_types_ready"[[:space:]]*:[[:space:]]*true'

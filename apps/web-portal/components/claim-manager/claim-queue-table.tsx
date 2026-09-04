@@ -10,6 +10,7 @@ export type QueueClaimRow = {
   insurer_claim_no: string | null;
   claim_service_mode?: string | null;
   assistance_status?: string | null;
+  policy_service_source?: string | null;
   current_status: ClaimStatus;
   accident_at: string | null;
   created_at: string | null;

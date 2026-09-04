@@ -36,6 +36,7 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
   const loadingOnly = isValidElement(children) && children.type === LoadingState;
   const tabRole = profileRole ?? (pathname.startsWith('/customer') ? 'customer' : null);
   const profileTopPadding = insets.top + topPaddingFor(topSpacing);
+  const dashboardLogoEnabled = pathname !== '/customer/start-claim';
   void showLogout;
 
   useEffect(() => {
@@ -117,9 +118,17 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
               <MaterialCommunityIcons name="chevron-left" size={25} color={customerHeader ? '#FFFFFF' : palette.ink} />
             </Pressable>
           ) : null}
-          <Pressable accessibilityRole="button" onPress={openDashboard} style={styles.brandPressable}>
-            <BrandLogo width={customerHeader ? 132 : 158} inverse={customerHeader} />
-          </Pressable>
+          <View style={styles.fixedBrandSlot}>
+            {dashboardLogoEnabled ? (
+              <Pressable accessibilityRole="button" accessibilityLabel="Open dashboard" onPress={openDashboard} style={styles.fixedBrandPressable}>
+                <BrandLogo width={customerHeader ? 132 : 158} inverse={customerHeader} />
+              </Pressable>
+            ) : (
+              <View pointerEvents="none" style={styles.fixedBrandStatic}>
+                <BrandLogo width={customerHeader ? 132 : 158} inverse={customerHeader} />
+              </View>
+            )}
+          </View>
           {customerHeader ? (
             <View style={styles.customerBellShell}>
               <NotificationBell color="#FFFFFF" />
@@ -569,6 +578,9 @@ export const styles = StyleSheet.create({
   fixedBrandRow: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, height: 66, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, paddingVertical: 6, backgroundColor: 'rgba(255,255,255,0.98)', borderBottomWidth: 1, borderBottomColor: 'rgba(207,224,244,0.9)' },
   customerHeaderContentDimmer: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 19, backgroundColor: palette.navy },
   customerFixedBrandRow: { height: 58, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: palette.navy, borderBottomColor: '#12305F' },
+  fixedBrandSlot: { flex: 1, minWidth: 0, alignItems: 'flex-start', justifyContent: 'center' },
+  fixedBrandPressable: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center' },
+  fixedBrandStatic: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center' },
   brandRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginHorizontal: -14, paddingHorizontal: 14, paddingTop: 24, paddingBottom: 10, marginBottom: 10, backgroundColor: 'transparent', zIndex: 10 },
   backButton: { width: 40, height: 40, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.86)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(191,216,255,0.78)' },
   customerBackButton: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.28)' },

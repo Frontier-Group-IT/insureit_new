@@ -615,7 +615,7 @@ export default function SelfManagedClaimScreen() {
         onClose={() => setMessage('')}
       />
 
-      <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" icon="clipboard-text-outline">
+      <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" iconImage={require('../../assets/claims/claim-intimation.png')}>
         <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
         <TimePickerField label="Accident Time *" value={incidentTime} onPress={() => setTimeTarget('incident')} />
         <View style={styles.subsection}><Text style={styles.subsectionTitle}>Spot Intimation</Text></View>

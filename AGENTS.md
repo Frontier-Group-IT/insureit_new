@@ -804,3 +804,21 @@ When a new request touches any area above, first fetch the current `main` implem
 - If preview appears to lose approved work, compare the served OTA source with current `main`; restore/merge approved code into `main`, verify it, then republish from `main`. Do not repair by sending another isolated branch to `preview`.
 - JS/assets-only OTA publishing must not create an APK. Native/runtime/build-profile changes require separate explicit approval.
 - Do not change Expo app version, runtimeVersion, EAS channel/build configuration, project ID, owner, package/bundle IDs, or other protected mobile configuration merely to solve OTA ordering.
+
+## Customer Start Claim vehicle selector interaction rule
+
+**USER-APPROVED REQUIREMENT / LEARNING (2026-09-03):** in `apps/mobile-app/app/customer/start-claim.tsx`, keep the Vehicle number label and selected-vehicle card inert. Only the small trailing selector icon on the far right may open the vehicle dropdown.
+
+- Taps on the label, vehicle artwork, vehicle number, make/model text, blank card area, or card border must do nothing.
+- The trailing selector icon must use its own dedicated press target and only toggle the vehicle dropdown.
+- Preserve the anchored dropdown and search autofocus unless a separate verified issue requires changing them.
+- Do not restore whole-card clickability during unrelated Start Claim refinements unless the user explicitly asks to change this rule.
+
+
+### Partner app Phase 1 visual identity rule — 2026-09-03
+
+- Phase 1 Partner navigation/Home/global-feedback refinement uses the approved custom Partner asset library at `apps/partner-app/assets/partner` via `apps/partner-app/lib/partner-assets.ts` for feature-identity artwork where a direct semantic match exists.
+- Keep utility controls lightweight: back, close, chevron, overflow, filter, calendar, eye and similar small interaction glyphs should remain vector icons unless a later explicit design change says otherwise.
+- Do not add decorative backgrounds behind the custom artwork merely to make it look like a generic icon tile; the approved Partner artwork should remain visually clean.
+- Stories is an immersive full-screen flow, so its Close/X semantics are intentional; ordinary pushed screens should use shared Back semantics.
+- Phase 1 completion must be visually verified through Partner preview OTA from exact current `main`; OTA-safe Phase 1 work must not trigger an APK/AAB.

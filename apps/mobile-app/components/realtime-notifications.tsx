@@ -18,6 +18,8 @@ type ClaimNotification = {
   route: Href;
 };
 
+type CustomerNotificationFilter = 'all' | 'claim' | 'policies' | 'vehicle';
+
 type NotificationContextValue = {
   latest: ClaimNotification | null;
   unreadCount: number;
@@ -182,6 +184,7 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   const panelTranslateY = useRef(new Animated.Value(-8)).current;
   const [panelMessage, setPanelMessage] = useState('');
   const [panelNotifications, setPanelNotifications] = useState<Notification[]>([]);
+  const [panelFilter, setPanelFilter] = useState<CustomerNotificationFilter>('all');
   const customerMode = pathname.startsWith('/customer');
 
   async function loadCustomerNotifications() {
@@ -223,6 +226,7 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   }
 
   function openCustomerPanel() {
+    setPanelFilter('all');
     setPanelMounted(true);
     panelOpacity.setValue(0);
     panelTranslateY.setValue(-8);
@@ -282,6 +286,9 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
   }
 
   const panelUnreadCount = panelNotifications.filter((item) => item.status === 'unread').length;
+  const filteredPanelNotifications = panelFilter === 'all'
+    ? panelNotifications
+    : panelNotifications.filter((notification) => customerNotificationCategory(notification) === panelFilter);
 
   return (
     <>
@@ -315,6 +322,28 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                 {panelUnreadCount > 0 ? <Text style={styles.notificationPanelCount}>{panelUnreadCount} unread</Text> : null}
               </View>
 
+              <View style={styles.notificationFilterRow}>
+                {([
+                  ['all', 'All'],
+                  ['claim', 'Claim'],
+                  ['policies', 'Policies'],
+                  ['vehicle', 'Vehicle'],
+                ] as const).map(([key, label]) => {
+                  const active = panelFilter === key;
+                  return (
+                    <Pressable
+                      key={key}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      onPress={() => setPanelFilter(key)}
+                      style={[styles.notificationFilterPill, active && styles.notificationFilterPillActive]}
+                    >
+                      <Text style={[styles.notificationFilterText, active && styles.notificationFilterTextActive]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
               {panelLoading ? (
                 <View style={styles.notificationSkeletonWrap}>
                   {[0, 1, 2].map((item) => (
@@ -335,14 +364,20 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                 <View style={styles.notificationPanelState}>
                   <Text style={styles.notificationPanelStateText}>No notifications yet.</Text>
                 </View>
+              ) : !filteredPanelNotifications.length ? (
+                <View style={styles.notificationPanelState}>
+                  <Text style={styles.notificationPanelStateText}>No {panelFilter === 'claim' ? 'claim' : panelFilter} notifications yet.</Text>
+                </View>
               ) : (
                 <ScrollView
                   style={styles.notificationPanelList}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                 >
-                  {panelNotifications.map((notification, index) => {
+                  {filteredPanelNotifications.map((notification, index) => {
                     const unread = notification.status === 'unread';
+                    const category = customerNotificationCategory(notification);
+                    const icon = customerNotificationIcon(category);
                     return (
                       <Pressable
                         key={notification.id}
@@ -352,9 +387,12 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
                           styles.notificationPanelRow,
                           unread && styles.notificationPanelRowUnread,
                           pressed && styles.notificationPanelRowPressed,
-                          index === panelNotifications.length - 1 && styles.notificationPanelRowLast,
+                          index === filteredPanelNotifications.length - 1 && styles.notificationPanelRowLast,
                         ]}
                       >
+                        <View style={[styles.notificationTypeIcon, category === 'claim' && styles.notificationTypeIconClaim, category === 'policies' && styles.notificationTypeIconPolicy, category === 'vehicle' && styles.notificationTypeIconVehicle]}>
+                          <MaterialCommunityIcons name={icon} size={14} color={category === 'claim' ? '#0A43A3' : category === 'policies' ? '#7A4D00' : category === 'vehicle' ? '#167C69' : '#667085'} />
+                        </View>
                         <View style={styles.notificationPanelCopy}>
                           <View style={styles.notificationPanelTitleRow}>
                             <Text
@@ -379,6 +417,22 @@ export function NotificationBell({ color = palette.ink }: { color?: string }) {
       ) : null}
     </>
   );
+}
+
+function customerNotificationIcon(category: Exclude<CustomerNotificationFilter, 'all'> | null) {
+  if (category === 'claim') return 'shield-check-outline' as const;
+  if (category === 'policies') return 'file-document-outline' as const;
+  if (category === 'vehicle') return 'car-outline' as const;
+  return 'bell-outline' as const;
+}
+
+function customerNotificationCategory(notification: Notification): Exclude<CustomerNotificationFilter, 'all'> | null {
+  if (notification.claim_id) return 'claim';
+
+  const text = `${notification.title} ${notification.message}`.toLowerCase();
+  if (/policy|renewal|endorsement|premium|insurer|insurance/.test(text)) return 'policies';
+  if (/vehicle|registration|\brc\b|fitness|\bpuc\b|permit|road tax|challan/.test(text)) return 'vehicle';
+  return null;
 }
 
 function formatPanelNotificationTime(value?: string) {
@@ -442,12 +496,21 @@ const styles = StyleSheet.create({
   notificationPanel: { position: 'absolute', left: 12, right: 12, maxHeight: 430, overflow: 'hidden', borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E5F2', shadowColor: '#071D49', shadowOpacity: 0.18, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 14 },
   notificationPanelHeader: { minHeight: 44, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D9E5F2' },
   notificationPanelTitle: { color: palette.ink, fontSize: 14, fontWeight: '900' },
+  notificationFilterRow: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4ECF5', backgroundColor: '#FBFDFF' },
+  notificationFilterPill: { minHeight: 30, borderRadius: 999, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F3F6FA', borderWidth: 1, borderColor: '#E0E7EF' },
+  notificationFilterPillActive: { backgroundColor: palette.navy, borderColor: palette.navy },
+  notificationFilterText: { color: '#667085', fontSize: 10.5, fontWeight: '800' },
+  notificationFilterTextActive: { color: '#FFFFFF', fontWeight: '900' },
   notificationPanelCount: { color: roleTheme.customer.accent, fontSize: 11, fontWeight: '900' },
   notificationPanelList: { maxHeight: 378 },
   notificationPanelRow: { minHeight: 72, paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#E4ECF5' },
   notificationPanelRowUnread: { backgroundColor: '#F2F7FF' },
   notificationPanelRowPressed: { opacity: 0.72, transform: [{ scale: 0.995 }] },
   notificationPanelRowLast: { borderBottomWidth: 0 },
+  notificationTypeIcon: { width: 26, height: 26, borderRadius: 8, backgroundColor: '#F3F6FA', alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start', marginTop: 1, flexShrink: 0 },
+  notificationTypeIconClaim: { backgroundColor: '#EEF4FF' },
+  notificationTypeIconPolicy: { backgroundColor: '#FFF7E8' },
+  notificationTypeIconVehicle: { backgroundColor: '#ECF9F5' },
   notificationPanelCopy: { flex: 1, minWidth: 0 },
   notificationPanelTitleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   notificationPanelRowTitle: { flex: 1, minWidth: 0, color: palette.ink, fontSize: 13, lineHeight: 17, fontWeight: '700' },

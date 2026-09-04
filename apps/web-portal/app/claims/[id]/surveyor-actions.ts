@@ -1,18 +1,15 @@
 "use server";
 
-import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canVerifyClaimDocuments } from "@/lib/roles";
-import type { ClaimStatus } from "@/lib/claim-workflow";
 
 type ActionResult = { ok: boolean; message?: string };
-type ClaimForSurveyor = { id: string; current_status: ClaimStatus; customer_id: string | null };
-
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
+  if (!profile) throw new Error("You must be signed in to depute a spot surveyor.");
   if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) throw new Error("You do not have permission to depute a spot surveyor.");
   return profile;
 }
@@ -31,58 +28,16 @@ export async function deputeSpotSurveyor(formData: FormData): Promise<ActionResu
 
     const profile = await currentProfile();
     const supabase = await createServerSupabaseClient();
-
-    const { data: claim, error: claimError } = await supabase
-      .from("claims")
-      .select("id, current_status, customer_id")
-      .eq("id", claimId)
-      .maybeSingle<ClaimForSurveyor>();
-
-    if (claimError || !claim) throw new Error(claimError?.message ?? "Claim not found.");
-
-    const nextStatus: ClaimStatus = "Surveyor Appointed";
-    const detailsPayload = {
-      verification_type: "spot_surveyor_deputation",
-      surveyor_name: surveyorName,
-      surveyor_number: surveyorNumber,
-      surveyor_email: surveyorEmail,
-      deputed_at: new Date().toISOString(),
-      deputed_by: profile?.id ?? null
-    };
-
-    const { error: detailError } = await supabase.from("claim_stage_details").insert({
-      claim_id: claimId,
-      stage: nextStatus,
-      details: detailsPayload,
-      created_by: profile?.id ?? null
+    const { data, error } = await supabase.rpc("depute_spot_surveyor", {
+      p_claim_id: claimId,
+      p_surveyor_name: surveyorName,
+      p_surveyor_number: surveyorNumber,
+      p_surveyor_email: surveyorEmail,
+      p_deputed_by: profile.id
     });
-    if (detailError) throw new Error(detailError.message);
-
-    const { error: updateError } = await supabase
-      .from("claims")
-      .update({ current_status: nextStatus, updated_at: new Date().toISOString() })
-      .eq("id", claimId);
-    if (updateError) throw new Error(updateError.message);
-
-    await supabase.from("claim_status_history").insert({
-      claim_id: claimId,
-      from_status: claim.current_status,
-      to_status: nextStatus,
-      notes: `Spot surveyor deputed: ${surveyorName}, ${surveyorNumber}, ${surveyorEmail}`,
-      changed_by: profile?.id ?? null
-    });
-
-    if (claim.customer_id) {
-      await supabase.from("customer_activity_events").insert({
-        customer_id: claim.customer_id,
-        claim_id: claimId,
-        event_type: "spot_surveyor_deputed",
-        title: "Spot surveyor deputed",
-        message: `${surveyorName} has been deputed for spot survey.`,
-        priority: "medium",
-        status: "new",
-        metadata: detailsPayload
-      });
+    if (error) throw new Error(error.message);
+    if (!data?.ok || data.next_status !== "Surveyor Appointed") {
+      throw new Error("The surveyor details were not saved and the claim did not move to Surveyor Appointed.");
     }
 
     revalidatePath(`/claims/${claimId}`);

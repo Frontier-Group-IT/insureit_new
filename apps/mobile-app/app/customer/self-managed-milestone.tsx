@@ -50,7 +50,7 @@ const WORK_APPROVAL_ICONS = {
 
 export default function SelfManagedMilestoneScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; key?: string }>();
+  const params = useLocalSearchParams<{ id?: string; key?: string; suppressClaimPrompt?: string }>();
   const claimId = typeof params.id === 'string' ? params.id : '';
   const key = (typeof params.key === 'string' ? params.key : '') as ClaimMilestoneKey;
   const definition = SELF_MANAGED_MILESTONES.find((item) => item.key === key);
@@ -59,6 +59,7 @@ export default function SelfManagedMilestoneScreen() {
   const [claimNo, setClaimNo] = useState('');
   const [insurerClaimNo, setInsurerClaimNo] = useState('');
   const [claimNumberPromptVisible, setClaimNumberPromptVisible] = useState(false);
+  const [claimNumberPromptContext, setClaimNumberPromptContext] = useState<'entry' | 'after_save'>('entry');
   const [claimNumberDraft, setClaimNumberDraft] = useState('');
   const [claimNumberSaving, setClaimNumberSaving] = useState(false);
   const [claimNumberError, setClaimNumberError] = useState('');
@@ -91,14 +92,6 @@ export default function SelfManagedMilestoneScreen() {
       setClaimNo(identity.claim_no ?? '');
       setInsurerClaimNo(nextInsurerClaimNo);
       setClaimNumberDraft(nextInsurerClaimNo);
-      if (
-        key === 'claim_intimation'
-        && (current?.milestone_status === 'completed' || current?.milestone_status === 'not_applicable')
-        && !nextInsurerClaimNo
-      ) {
-        setClaimNumberError('');
-        setClaimNumberPromptVisible(true);
-      }
       setCustomerId(identity.customer_id ?? '');
       if (identity.vehicle_id) {
         const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', identity.vehicle_id).maybeSingle();
@@ -121,7 +114,7 @@ export default function SelfManagedMilestoneScreen() {
     }
     void load();
     return () => { active = false; };
-  }, [claimId, definition, key]);
+  }, [claimId, definition, key, params.suppressClaimPrompt]);
 
   const step = useMemo(() => Math.max(1, SELF_MANAGED_MILESTONES.findIndex((item) => item.key === key) + 1), [key]);
   const displayClaimNo = insurerClaimNo || claimNo;
@@ -132,15 +125,22 @@ export default function SelfManagedMilestoneScreen() {
     router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: key } });
   }
 
-  function openNextStageAfterClaimNumberPrompt() {
+  function closeClaimNumberPrompt() {
     setClaimNumberPromptVisible(false);
     setClaimNumberError('');
-    router.replace({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key: 'work_approval' } });
+  }
+
+  function finishClaimNumberPrompt() {
+    const shouldContinue = claimNumberPromptContext === 'after_save';
+    closeClaimNumberPrompt();
+    if (shouldContinue) {
+      router.replace({ pathname: '/customer/self-managed-milestone', params: { id: claimId, key: 'work_approval' } });
+    }
   }
 
   function skipClaimNumberForNow() {
     if (claimNumberSaving) return;
-    openNextStageAfterClaimNumberPrompt();
+    finishClaimNumberPrompt();
   }
 
   async function saveInsurerClaimNumber() {
@@ -165,7 +165,7 @@ export default function SelfManagedMilestoneScreen() {
     }
 
     setInsurerClaimNo(nextClaimNumber);
-    openNextStageAfterClaimNumberPrompt();
+    finishClaimNumberPrompt();
   }
 
   function continueAfterSave(completed = true) {
@@ -227,6 +227,7 @@ export default function SelfManagedMilestoneScreen() {
     if (key === 'claim_intimation' && !insurerClaimNo.trim()) {
       setClaimNumberDraft('');
       setClaimNumberError('');
+      setClaimNumberPromptContext('after_save');
       setClaimNumberPromptVisible(true);
       return;
     }
@@ -293,11 +294,12 @@ export default function SelfManagedMilestoneScreen() {
         <View style={styles.claimNumberBackdrop}>
           <View style={styles.claimNumberCard}>
             <View style={styles.claimNumberIcon}>
-              <MaterialCommunityIcons name="shield-check-outline" size={23} color="#0A43A3" />
+              <MaterialCommunityIcons name="shield-check-outline" size={18} color="#0A43A3" />
             </View>
             <Text style={styles.claimNumberTitle}>Add insurer claim number?</Text>
 
             <View style={[styles.claimNumberInputShell, Boolean(claimNumberError) && styles.claimNumberInputShellError]}>
+              <MaterialCommunityIcons name="file-document-outline" size={16} color="#0A43A3" />
               <TextInput
                 value={claimNumberDraft}
                 onChangeText={(value) => {
@@ -346,7 +348,7 @@ export default function SelfManagedMilestoneScreen() {
 
 function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void, milestones: ClaimMilestone[], claimId: string, customerId: string) {
   if (key === 'claim_intimation') return <>
-    <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" icon="clipboard-edit-outline">
+    <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../../assets/claims/claim-intimation.png')}>
       <DateField label="Claim Intimation Date *" value={values.claim_intimation_date ?? ''} onChange={(v) => set('claim_intimation_date', v)} />
       <Gap /><TextField label="Dealership Name *" value={values.dealership_name ?? ''} onChangeText={(v) => set('dealership_name', v)} />
       <Gap /><TextField label="Dealership Location *" value={values.dealership_location ?? ''} onChangeText={(v) => set('dealership_location', v)} />
@@ -357,7 +359,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
   </>;
 
   if (key === 'work_approval') return <>
-    <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" icon="clipboard-check-outline">
+    <ClaimFormSection title="Stage Details" subtitle="Record approval and surveyor details" iconImage={require('../../assets/claims/claim-approval.png')}>
       <DateField label="Approval Received Date *" value={values.approval_received_date ?? ''} onChange={(v) => set('approval_received_date', v)} />
       <Gap /><ClaimChoice label="Cashless Claim *" value={values.cashless} options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} onChange={(v) => set('cashless', v)} />
       <Gap /><TextField label="Surveyor Name (Optional)" value={values.surveyor_name ?? ''} onChangeText={(v) => set('surveyor_name', v)} />
@@ -367,14 +369,14 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     {claimId && customerId ? <WorkApprovalPdfUpload claimId={claimId} customerId={customerId} /> : null}
   </>;
 
-  if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" icon="tools">
+  if (key === 'repair_ri') return <ClaimFormSection title="Stage Details" subtitle="Repair completion and re-inspection details" iconImage={require('../../assets/claims/claim-assessment.png')}>
     <DateField label="Repair Complete Date *" value={values.repair_complete_date ?? ''} onChange={(v) => set('repair_complete_date', v)} />
     <View style={styles.subsectionHeader}><Text style={styles.subsectionTitle}>Re-inspection</Text><Text style={styles.subsectionMeta}>Always available</Text></View>
     <DateField label="RI Requested Date (Optional)" value={values.ri_requested_date ?? ''} onChange={(v) => set('ri_requested_date', v)} />
     <Gap /><DateField label="RI Done Date *" value={values.ri_done_date ?? ''} onChange={(v) => set('ri_done_date', v)} />
   </ClaimFormSection>;
 
-  if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" icon="receipt-text-outline">
+  if (key === 'billing') return <ClaimFormSection title="Stage Details" subtitle="Record the final workshop bill" iconImage={require('../../assets/claims/receipts-posted.png')}>
     <DateField label="Bill Date *" value={values.bill_date ?? ''} onChange={(v) => set('bill_date', v)} />
     <Gap /><MoneyField label="Bill Amount *" value={values.bill_amount ?? ''} onChange={(v) => set('bill_amount', v)} />
     {claimId ? <><Gap /><FinalBillUpload claimId={claimId} /></> : null}
@@ -385,7 +387,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     const currentDo = numberValue(values.do_amount);
     const contribution = bill !== null && currentDo !== null ? Math.max(0, bill - currentDo) : null;
     return <>
-      <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" icon="clipboard-plus-outline">
+      <ClaimFormSection title="Stage Details" subtitle="Record assessment and delivery order details" iconImage={require('../../assets/claims/claim-documents.png')}>
         <ClaimChoice label="Assessment Received? *" value={values.assessment_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('assessment_received', v)} />
         <Gap /><DateField label="DO Date *" value={values.do_date ?? ''} onChange={(v) => set('do_date', v)} />
         <Gap /><MoneyField label="DO Amount *" value={values.do_amount ?? ''} onChange={(v) => set('do_amount', v)} />
@@ -403,7 +405,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     </>;
   }
 
-  if (key === 'vehicle_delivery') return <ClaimFormSection title="Stage Details" subtitle="Confirm whether the repaired vehicle has been received" icon="truck-check-outline">
+  if (key === 'vehicle_delivery') return <ClaimFormSection title="Stage Details" subtitle="Confirm whether the repaired vehicle has been received" iconImage={require('../../assets/claims/fleet-vehicle.png')}>
     <ClaimChoice label="Vehicle Received? *" value={values.vehicle_received} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'Not Yet' }]} onChange={(v) => set('vehicle_received', v)} />
     {values.vehicle_received === 'yes' ? <><Gap /><DateField label="Vehicle Received Date *" value={values.vehicle_received_date ?? ''} onChange={(v) => set('vehicle_received_date', v)} /></> : <ClaimInlineNote tone="warning">This stage stays in progress until the vehicle is received.</ClaimInlineNote>}
   </ClaimFormSection>;
@@ -412,7 +414,7 @@ function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldK
     const doAmount = milestoneAmount(milestones, 'delivery_order', 'do_amount');
     const received = numberValue(values.payment_received_amount);
     const deduction = doAmount !== null && received !== null ? Math.max(0, doAmount - received) : null;
-    return <ClaimFormSection title="Stage Details" subtitle="Record final documents and settlement payment" icon="cash-check">
+    return <ClaimFormSection title="Stage Details" subtitle="Record final documents and settlement payment" iconImage={require('../../assets/claims/accounts-finance.png')}>
       <ClaimChoice label="Depreciation Slip Submitted? *" value={values.depreciation_submitted} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('depreciation_submitted', v)} />
       <Gap /><ClaimChoice label="Satisfaction Voucher Submitted? *" value={values.satisfaction_submitted} options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} onChange={(v) => set('satisfaction_submitted', v)} />
       <Gap /><DateField label="Documents Submit Date" value={values.documents_submit_date ?? ''} onChange={(v) => set('documents_submit_date', v)} />
@@ -1130,12 +1132,12 @@ const styles = StyleSheet.create({
   approvalFeedbackError: { marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
   approvalFeedbackErrorText: { flex: 1, color: '#B42318', fontSize: 8.5, lineHeight: 12, fontWeight: '800' },
   claimNumberBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(5, 20, 48, 0.50)', paddingHorizontal: 24 },
-  claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 22, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 15, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
-  claimNumberIcon: { width: 44, height: 44, borderRadius: 15, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  claimNumberCard: { width: '100%', maxWidth: 342, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 14, alignItems: 'center', shadowColor: '#071D49', shadowOpacity: 0.2, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 12 },
+  claimNumberIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D2E2FA', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   claimNumberTitle: { color: palette.navy, fontSize: 17, lineHeight: 22, fontWeight: '900', textAlign: 'center' },
-  claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 13, borderWidth: 1.2, borderColor: '#CFD9E6', backgroundColor: '#F9FBFD', justifyContent: 'center', marginTop: 14 },
+  claimNumberInputShell: { width: '100%', minHeight: 48, borderRadius: 12, borderWidth: 1.2, borderColor: '#164F9C', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 12, marginTop: 14 },
   claimNumberInputShellError: { borderColor: '#D92D20', backgroundColor: '#FFF9F8' },
-  claimNumberInput: { minHeight: 46, paddingHorizontal: 13, color: palette.navy, fontSize: 13, fontWeight: '800' },
+  claimNumberInput: { flex: 1, minHeight: 46, paddingLeft: 0, paddingRight: 12, color: palette.navy, fontSize: 13, fontWeight: '800' },
   claimNumberError: { alignSelf: 'stretch', color: '#B42318', fontSize: 9.5, lineHeight: 13, fontWeight: '700', marginTop: 5 },
   claimNumberActions: { width: '100%', flexDirection: 'row', marginTop: 13, gap: 8 },
   claimNumberPrimary: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12 },

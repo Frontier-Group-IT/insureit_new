@@ -30,33 +30,53 @@ export default async function ReportsPage({ searchParams }: Props) {
       activeValue={filters.period}
       options={PERIODS}
       showActiveFilterCount={false}
-      trailing={<ReportCompactFilters
-        path="/reports/business"
-        businessLine={filters.businessLine}
-        category={filters.category}
-        categories={report.filters.categories}
-        period={filters.period}
-        fromDate={filters.fromDate}
-        toDate={filters.toDate}
-        compactDrawer
-        clearAppliedFilters
-        fields={[
-          { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
-          { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
-          { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name !== x.code ? `${x.name} · ${x.code}` : x.name})) },
-          { name:"from", label:"From", value:filters.fromDate ?? "", type:"date" },
-          { name:"to", label:"To", value:filters.toDate ?? "", type:"date" },
-        ]}
-      />}
+      trailing={<>
+        {filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}
+        <ReportCompactFilters
+          path="/reports/business"
+          businessLine={filters.businessLine}
+          category={filters.category}
+          categories={report.filters.categories}
+          period={filters.period}
+          fromDate={filters.fromDate}
+          toDate={filters.toDate}
+          compactDrawer
+          clearAppliedFilters
+          fields={[
+            { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
+            { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
+            { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name !== x.code ? `${x.name} · ${x.code}` : x.name})) },
+          ]}
+        />
+      </>}
     />
   }>
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Policies" value={integer(report.summary.policy_count)} detail={`${integer(report.summary.motor_policy_count)} Motor · ${integer(report.summary.non_motor_policy_count)} Non-Motor`} /><Metric label="Gross premium" value={currency(report.summary.gross_premium)} detail={`${currency(report.summary.motor_gross_premium)} Motor · ${currency(report.summary.non_motor_gross_premium)} Non-Motor`} /><Metric label="Net premium" value={currency(report.summary.net_premium)} /><Metric label="Average premium" value={currency(report.summary.average_premium)} /><Metric label="Intermediaries" value={integer(report.summary.intermediary_count)} /></section>
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Policies" value={integer(report.summary.policy_count)} detail={`Motor ${integer(report.summary.motor_policy_count)}\nNon-Motor ${integer(report.summary.non_motor_policy_count)}`} /><Metric label="Gross premium" value={currency(report.summary.gross_premium)} detail={`Motor ${compactCurrency(report.summary.motor_gross_premium)}\nNon-Motor ${compactCurrency(report.summary.non_motor_gross_premium)}`} /><Metric label="Net premium" value={currency(report.summary.net_premium)} /><Metric label="Average premium" value={currency(report.summary.average_premium)} /><Metric label="Intermediaries" value={integer(report.summary.intermediary_count)} /></section>
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)]"><article className="portal-card p-5 sm:p-6"><HeaderTitle title="Premium production trend" /><Trend rows={report.trend} /></article><article className="portal-card p-5 sm:p-6"><HeaderTitle title={filters.businessLine === "Motor" ? "Premium composition" : filters.businessLine === "Non Motor" ? "Non-Motor category mix" : "Business mix"} /><Composition report={report} businessLine={filters.businessLine} /></article></section>
     <section className="grid gap-4 xl:grid-cols-2"><article className="portal-card overflow-hidden"><Header title="Insurance company contribution" /><InsurerTable rows={report.insurers} /></article><article className="portal-card overflow-hidden"><Header title="RM production" /><RmTable rows={report.rms} /></article></section>
     <section className="portal-card overflow-hidden"><div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">Policy business register</h2></div><Register rows={report.register.rows} /><Pagination page={report.register.page} pages={pages} total={report.register.total_count} prev={href("/reports/business", filters, Math.max(1, report.register.page - 1))} next={href("/reports/business", filters, report.register.page + 1)} /></section>
   </ReportPageShell></AppShell>;
 }
-function Metric({label,value,detail}:{label:string;value:string;detail?:string}){return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[.1em] text-[#7c899b]">{label}</p><p className="mt-2 text-[23px] font-semibold tracking-[-.03em] text-[#14213c]">{value}</p>{detail?<p className="mt-1.5 text-[8.5px] font-semibold text-[#7c899b]">{detail}</p>:null}</article>}
+function CustomDateRange({filters}:{filters:PolicyBusinessFilters}) {
+  return <form action="/reports/business" method="get" className="flex flex-wrap items-end gap-2 rounded-xl border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-2">
+    <input type="hidden" name="period" value="custom" />
+    {filters.insurerId ? <input type="hidden" name="insurer" value={filters.insurerId} /> : null}
+    {filters.rmEmployeeId ? <input type="hidden" name="rm" value={filters.rmEmployeeId} /> : null}
+    {filters.intermediaryCode ? <input type="hidden" name="intermediary" value={filters.intermediaryCode} /> : null}
+    {filters.businessLine ? <input type="hidden" name="business" value={filters.businessLine} /> : null}
+    {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
+    <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
+      From
+      <input name="from" type="date" required defaultValue={filters.fromDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
+    </label>
+    <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
+      To
+      <input name="to" type="date" required defaultValue={filters.toDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
+    </label>
+    <button type="submit" className="h-8 rounded-lg bg-[#223a78] px-3 text-[9.5px] font-bold text-white transition hover:bg-[#1c3167]">Apply</button>
+  </form>;
+}
+function Metric({label,value,detail}:{label:string;value:string;detail?:string}){return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[.1em] text-[#7c899b]">{label}</p><p className="mt-2 text-[23px] font-semibold tracking-[-.03em] text-[#14213c]">{value}</p>{detail?<p className="report-metric-detail mt-1.5 font-semibold">{detail}</p>:null}</article>}
 function HeaderTitle({title}:{title:string}){return <h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2>}
 function Header({title}:{title:string}){return <div className="border-b border-[#e9edf3] px-5 py-4"><HeaderTitle title={title}/></div>}
 function Trend({rows}:{rows:PolicyBusinessReport["trend"]}){if(!rows.length)return <Empty/>;const max=Math.max(...rows.map(x=>x.gross_premium),1);return <div className="mt-5 space-y-3">{rows.map(x=><div key={x.month} className="grid grid-cols-[78px_minmax(0,1fr)_100px] items-center gap-3"><div><p className="text-[10px] font-bold text-[#35445d]">{month(x.month)}</p><p className="text-[8.5px] text-[#8a96a7]">{integer(x.policy_count)}</p></div><div className="h-2.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#3559a8]" style={{width:`${Math.max((x.gross_premium/max)*100,2)}%`}}/></div><p className="text-right text-[10px] font-bold tabular-nums text-[#23334f]">{currency(x.gross_premium)}</p></div>)}</div>}
@@ -67,6 +87,6 @@ function Register({rows}:{rows:PolicyBusinessReport["register"]["rows"]}){if(!ro
 function Pagination({page,pages,total,prev,next}:{page:number;pages:number;total:number;prev:string;next:string}){return <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-3 text-[9.5px] text-[#738095]"><span>{integer(total)} records</span><div className="flex items-center gap-2"><Link href={page<=1?"#":prev} className={`rounded-md border px-3 py-1.5 font-bold ${page<=1?"pointer-events-none opacity-40":""}`}>Previous</Link><span>{page} / {pages}</span><Link href={page>=pages?"#":next} className={`rounded-md border px-3 py-1.5 font-bold ${page>=pages?"pointer-events-none opacity-40":""}`}>Next</Link></div></div>}
 function Empty(){return <ReportEmptyState/>}
 function href(path:string,f:PolicyBusinessFilters,page?:number){const s=new URLSearchParams();s.set("period",f.period);if(f.period==="custom"){if(f.fromDate)s.set("from",f.fromDate);if(f.toDate)s.set("to",f.toDate)}if(f.insurerId)s.set("insurer",f.insurerId);if(f.rmEmployeeId)s.set("rm",f.rmEmployeeId);if(f.intermediaryCode)s.set("intermediary",f.intermediaryCode);if(f.businessLine)s.set("business",f.businessLine);if(f.category)s.set("category",f.category);if(page)s.set("page",String(page));return `${path}?${s}`}
-function currency(v:number){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v||0)}function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}function percent(v:number){return`${new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(v||0)}%`}function date(v:string){return v?new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`)):"—"}function month(v:string){return v?new Intl.DateTimeFormat("en-IN",{month:"short",year:"2-digit",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`)):"—"}
+function currency(v:number){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v||0)}function compactCurrency(v:number){const n=Math.abs(v||0);const format=(value:number,suffix:string)=>`₹${new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(value)} ${suffix}`;if(n>=1e7)return format(n/1e7,"Cr");if(n>=1e5)return format(n/1e5,"L");if(n>=1e3)return format(n/1e3,"K");return `₹${integer(n)}`}function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}function percent(v:number){return`${new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(v||0)}%`}function date(v:string){return v?new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`)):"—"}function month(v:string){return v?new Intl.DateTimeFormat("en-IN",{month:"short",year:"2-digit",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`)):"—"}
 function fallbackFilters():PolicyBusinessFilters{return{period:"90d",fromDate:null,toDate:null,insurerId:null,rmEmployeeId:null,intermediaryCode:null,businessLine:null,category:null,page:1}}
 function emptyReport():PolicyBusinessReport{return{summary:{policy_count:0,active_policy_count:0,gross_premium:0,net_premium:0,od_premium:0,tp_premium:0,cpa_amount:0,average_premium:0,insurer_count:0,intermediary_count:0,motor_policy_count:0,non_motor_policy_count:0,motor_gross_premium:0,non_motor_gross_premium:0},trend:[],category_mix:[],insurers:[],rms:[],filters:{insurers:[],rms:[],intermediaries:[],categories:[]},register:{rows:[],total_count:0,page:1,page_size:25}}}
