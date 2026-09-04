@@ -150,6 +150,34 @@ for (const navFile of [
   }
 }
 
+const visualSurface = [
+  ...walk("app/partner"),
+  ...walk("components/partner-portal"),
+].filter((file, index, files) => files.indexOf(file) === index);
+
+const forbiddenVisualPatterns = [
+  ["rounded-[26px]", "old oversized Partner card radius"],
+  ["shadow-[0_16px_45px", "old heavy Partner card shadow"],
+];
+const forbiddenUserFacingCopy = [
+  ["Partner-authorized commercial scope", "internal authorization wording"],
+  ["authorized Partner scope", "internal authorization wording"],
+  ["backend-authorized", "internal backend wording"],
+  ["same backend summary contract", "internal backend contract wording"],
+  ["same scoped policy portfolio", "internal scope wording"],
+  ["Commercial Attribution", "internal attribution wording"],
+];
+
+for (const file of visualSurface) {
+  const source = read(file);
+  for (const [pattern, description] of forbiddenVisualPatterns) {
+    assert(!source.includes(pattern), file + " reintroduced " + description + ": " + pattern);
+  }
+  for (const [pattern, description] of forbiddenUserFacingCopy) {
+    assert(!source.includes(pattern), file + " reintroduced " + description + ": " + pattern);
+  }
+}
+
 if (!process.exitCode) {
   console.log("Partner web core regression passed.");
 }
