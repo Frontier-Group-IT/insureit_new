@@ -1,4 +1,4 @@
-name: Build Customer release-candidate APK
+name: Build Customer production AAB
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
@@ -33,11 +33,11 @@ jobs:
           set -euo pipefail
           git fetch origin main feat/customer-native-release-readiness
           [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)" ] || {
-            echo "Refusing RC build: checkout is not current release branch head." >&2
+            echo "Refusing production build: checkout is not current release branch head." >&2
             exit 1
           }
           git merge-base --is-ancestor origin/main HEAD || {
-            echo "Refusing RC build: release branch is not based on current main." >&2
+            echo "Refusing production build: release branch is not based on current main." >&2
             exit 1
           }
 
@@ -50,24 +50,24 @@ jobs:
           const pkg = require('./apps/mobile-app/package.json');
           const expo = app.expo || {};
           if (expo.version !== '0.3.0' || pkg.version !== '0.3.0') {
-            console.error(`Refusing RC build: expected app/package version 0.3.0, found ${expo.version}/${pkg.version}.`);
+            console.error(`Refusing production build: expected app/package version 0.3.0, found ${expo.version}/${pkg.version}.`);
             process.exit(1);
           }
           if (expo.android?.package !== 'com.insureit.mobile') {
-            console.error('Refusing RC build: unexpected Android package identity.');
+            console.error('Refusing production build: unexpected Android package identity.');
             process.exit(1);
           }
           if (!expo.android?.permissions?.includes('android.permission.RECORD_AUDIO')) {
-            console.error('Refusing RC build: RECORD_AUDIO permission is missing.');
+            console.error('Refusing production build: RECORD_AUDIO permission is missing.');
             process.exit(1);
           }
           const plugins = expo.plugins || [];
           const hasAudio = plugins.some((plugin) => plugin === 'expo-audio' || (Array.isArray(plugin) && plugin[0] === 'expo-audio'));
           if (!hasAudio) {
-            console.error('Refusing RC build: expo-audio plugin is missing.');
+            console.error('Refusing production build: expo-audio plugin is missing.');
             process.exit(1);
           }
-          console.log(`Customer release candidate runtime: ${expo.version}`);
+          console.log(`Customer production runtime: ${expo.version}`);
           NODE
 
       - name: Require Expo token
@@ -99,21 +99,21 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Build Android release-candidate APK
+      - name: Build Android production AAB
         id: eas_build
         working-directory: apps/mobile-app
         shell: bash
         run: |
           set -euo pipefail
-          npx eas-cli build --platform android --profile preview --non-interactive --wait --json > customer-rc-build.json
-          cat customer-rc-build.json
+          npx eas-cli build --platform android --profile production --non-interactive --wait --json > customer-production-build.json
+          cat customer-production-build.json
 
       - name: Upload EAS build metadata
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: customer-release-candidate-build-metadata
-          path: apps/mobile-app/customer-rc-build.json
+          name: customer-production-build-metadata
+          path: apps/mobile-app/customer-production-build.json
           if-no-files-found: ignore
 
       - name: Build summary
@@ -121,13 +121,13 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## INSUREIT Customer 0.3.0 release candidate"
+            echo "## INSUREIT Customer 0.3.0 production AAB"
             echo
             echo "- Source branch: \`feat/customer-native-release-readiness\`"
             echo "- Android package: \`com.insureit.mobile\`"
             echo "- Runtime/app version: \`0.3.0\`"
-            echo "- EAS profile: \`preview\`"
-            echo "- Distribution: internal APK"
-            echo "- Purpose: physical-device microphone and video-compression QA"
-            echo "- Production Play AAB: not built by this workflow"
+            echo "- EAS profile: \`production\`"
+            echo "- Output: Google Play Android App Bundle (AAB)"
+            echo "- Intended first destination: Google Play Internal testing"
+            echo "- Public production rollout: only after device QA passes"
           } >> "$GITHUB_STEP_SUMMARY"
