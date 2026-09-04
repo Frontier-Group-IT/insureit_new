@@ -4,7 +4,7 @@ import type { Href } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Linking, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { BrandLogo } from '@/components/first-look';
@@ -45,6 +45,7 @@ const closedStatuses = new Set<Claim['current_status']>(['Settled', 'Closed', 'R
 
 export default function CustomerMockupHomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [selectedContext, setSelectedContext] = useState<CustomerAccountContext | null>(null);
@@ -187,7 +188,7 @@ export default function CustomerMockupHomeScreen() {
     </View>
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={styles.body}
+      contentContainerStyle={[styles.body, { paddingBottom: 112 + Math.max(insets.bottom, 10) }]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadDashboard('refresh')} tintColor={palette.navy} colors={[palette.navy]} />}
     >
@@ -221,7 +222,7 @@ export default function CustomerMockupHomeScreen() {
       />
       <SupportActionCenter onSupport={() => router.push('/customer/support')} />
     </ScrollView>
-    <UniversalBottomTabs role="customer" pathname="/customer/home" bottomInset={0} customerContext={selectedContext} />
+    <UniversalBottomTabs role="customer" pathname="/customer/home" bottomInset={insets.bottom} customerContext={selectedContext} />
     <KycRequiredModal
       visible={!customer && !kycPromptDismissed}
       application={onboarding}
@@ -578,7 +579,7 @@ const styles = StyleSheet.create({
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#12305F', borderWidth: 2, borderColor: 'rgba(255,255,255,0.96)', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: '#FFFFFF', fontWeight: '900', fontSize: 17 },
   scroll: { flex: 1 },
-  body: { flexGrow: 1, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 92, gap: 9 },
+  body: { flexGrow: 1, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 112, gap: 9 },
   greetingBlock: { paddingHorizontal: 2, paddingTop: 2, paddingBottom: 1 },
   greeting: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900' },
   greetingMetaRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7 },
