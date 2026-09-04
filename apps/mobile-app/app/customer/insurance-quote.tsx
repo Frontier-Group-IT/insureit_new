@@ -194,7 +194,7 @@ export default function InsuranceQuoteScreen() {
         <View style={styles.hero}>
           <View style={styles.heroGlow} />
           <View style={styles.heroTop}>
-            <View style={styles.heroIcon}><MaterialCommunityIcons name="shield-check-outline" size={27} color="#0B63CE" /></View>
+            <View style={styles.heroIcon}><MaterialCommunityIcons name="shield-check-outline" size={27} color="#D6E5F8" /></View>
             <View style={styles.heroCopy}>
               <Text style={styles.title}>Get Insurance Quote</Text>
               <Text style={styles.subtitle}>Share your vehicle details and we’ll help you with suitable options.</Text>
@@ -219,7 +219,7 @@ export default function InsuranceQuoteScreen() {
             <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="Email (optional)" placeholderTextColor="#8A94A6" style={styles.input} />
           </View>
         ) : (
-          <View style={styles.customerStrip}><MaterialCommunityIcons name="account-check-outline" size={19} color="#0F9F6E" /><Text style={styles.customerStripText}>We’ll use your registered contact details for this request.</Text></View>
+          <View style={styles.customerStrip}><MaterialCommunityIcons name="account-check-outline" size={19} color={palette.navy} /><Text style={styles.customerStripText}>We’ll use your registered contact details for this request.</Text></View>
         )}
 
         <View style={styles.card}>
@@ -266,10 +266,10 @@ export default function InsuranceQuoteScreen() {
 }
 
 function Benefit({ icon, label }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string }) {
-  return <View style={styles.benefit}><MaterialCommunityIcons name={icon} size={17} color="#0B63CE" /><Text style={styles.benefitText}>{label}</Text></View>;
+  return <View style={styles.benefit}><MaterialCommunityIcons name={icon} size={17} color="#A9C8FF" /><Text style={styles.benefitText}>{label}</Text></View>;
 }
 function ConsentRow({ checked, onPress, label, optional }: { checked: boolean; onPress: () => void; label: string; optional?: boolean }) {
-  return <Pressable onPress={onPress} style={({ pressed }) => [styles.consentRow, pressed && styles.pressed]}><MaterialCommunityIcons name={checked ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color={checked ? '#0B63CE' : '#7B8798'} /><Text style={styles.consentText}>{label}{optional ? <Text style={styles.optional}> Optional</Text> : null}</Text></Pressable>;
+  return <Pressable onPress={onPress} style={({ pressed }) => [styles.consentRow, pressed && styles.pressed]}><MaterialCommunityIcons name={checked ? 'checkbox-marked' : 'checkbox-blank-outline'} size={23} color={checked ? palette.navy : '#7B8798'} /><Text style={styles.consentText}>{label}{optional ? <Text style={styles.optional}> Optional</Text> : null}</Text></Pressable>;
 }
 function normalizeMobile(value: string) { return value.replace(/\D/g, '').slice(0, 10); }
 function normalizeVehicle(value: string) { return value.replace(/[^A-Za-z0-9]/g, '').toUpperCase(); }
@@ -288,27 +288,27 @@ const styles = StyleSheet.create({
   back: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FAFD' },
   brand: { flex: 1, alignItems: 'center' }, headerSpacer: { width: 40 },
   body: { padding: 14, gap: 10, paddingBottom: 30 },
-  hero: { borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 15, overflow: 'hidden' },
-  heroGlow: { position: 'absolute', width: 170, height: 170, borderRadius: 85, right: -65, top: -85, backgroundColor: '#E8F2FF' },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heroIcon: { width: 50, height: 50, borderRadius: 16, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' }, heroCopy: { flex: 1 },
-  title: { color: palette.navy, fontSize: 23, fontWeight: '900' }, subtitle: { color: '#66758A', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginTop: 3 },
-  benefits: { flexDirection: 'row', gap: 6, marginTop: 14 }, benefit: { flex: 1, minHeight: 58, borderRadius: 14, backgroundColor: '#F7FAFE', borderWidth: 1, borderColor: '#E3ECF7', padding: 7, alignItems: 'center', justifyContent: 'center', gap: 4 }, benefitText: { color: palette.navy, fontSize: 8.8, lineHeight: 12, textAlign: 'center', fontWeight: '800' },
+  hero: { borderRadius: 22, backgroundColor: palette.navy, borderWidth: 1, borderColor: palette.navy, padding: 15, overflow: 'hidden' },
+  heroGlow: { position: 'absolute', width: 170, height: 170, borderRadius: 85, right: -65, top: -85, backgroundColor: '#163F79' },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 12 }, heroIcon: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' }, heroCopy: { flex: 1 },
+  title: { color: '#FFFFFF', fontSize: 23, fontWeight: '900' }, subtitle: { color: '#D6E5F8', fontSize: 11.5, lineHeight: 16, fontWeight: '700', marginTop: 3 },
+  benefits: { flexDirection: 'row', gap: 6, marginTop: 14 }, benefit: { flex: 1, minHeight: 58, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', padding: 7, alignItems: 'center', justifyContent: 'center', gap: 4 }, benefitText: { color: '#FFFFFF', fontSize: 8.8, lineHeight: 12, textAlign: 'center', fontWeight: '800' },
   card: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 12, gap: 9 },
-  customerStrip: { borderRadius: 15, backgroundColor: '#F2FBF6', borderWidth: 1, borderColor: '#C7EAD7', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 8 }, customerStripText: { flex: 1, color: '#516477', fontSize: 10.5, fontWeight: '700' },
+  customerStrip: { borderRadius: 15, backgroundColor: '#F3F6FA', borderWidth: 1, borderColor: '#CBD7E6', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 8 }, customerStripText: { flex: 1, color: '#516477', fontSize: 10.5, fontWeight: '700' },
   sectionTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '900' },
   input: { minHeight: 46, borderRadius: 13, borderWidth: 1, borderColor: '#D8E4F0', backgroundColor: '#FAFCFF', paddingHorizontal: 11, color: palette.navy, fontSize: 12.5, fontWeight: '700' },
   row: { flexDirection: 'row', gap: 8 }, flex: { flex: 1 },
-  smallButton: { minWidth: 92, borderRadius: 13, backgroundColor: '#0B63CE', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 }, greenButton: { backgroundColor: '#0F9F6E' }, smallButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
-  segment: { flexDirection: 'row', padding: 3, borderRadius: 13, backgroundColor: '#F1F5F9' }, segmentItem: { flex: 1, minHeight: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, segmentActive: { backgroundColor: '#FFFFFF' }, segmentText: { color: '#77859A', fontSize: 11, fontWeight: '900' }, segmentTextActive: { color: '#0B63CE' },
+  smallButton: { minWidth: 92, borderRadius: 13, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10 }, greenButton: { backgroundColor: palette.navy }, smallButtonText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
+  segment: { flexDirection: 'row', padding: 3, borderRadius: 13, backgroundColor: '#F1F5F9' }, segmentItem: { flex: 1, minHeight: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center' }, segmentActive: { backgroundColor: '#FFFFFF' }, segmentText: { color: '#77859A', fontSize: 11, fontWeight: '900' }, segmentTextActive: { color: palette.navy },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  chip: { minHeight: 32, borderRadius: 999, borderWidth: 1, borderColor: '#D8E4F0', backgroundColor: '#FFFFFF', paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' }, chipActive: { borderColor: '#91BDF1', backgroundColor: '#EEF5FF' }, chipText: { color: palette.navy, fontSize: 10, fontWeight: '900' },
-  needChip: { minHeight: 35, borderRadius: 11, borderWidth: 1, borderColor: '#D8E4F0', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFCFF' }, needChipActive: { backgroundColor: '#0B63CE', borderColor: '#0B63CE' }, needText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, needTextActive: { color: '#FFFFFF' }, note: { minHeight: 72, paddingTop: 10 },
+  chip: { minHeight: 32, borderRadius: 999, borderWidth: 1, borderColor: '#D8E4F0', backgroundColor: '#FFFFFF', paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center' }, chipActive: { borderColor: '#8FAAD0', backgroundColor: '#EAF2FF' }, chipText: { color: palette.navy, fontSize: 10, fontWeight: '900' },
+  needChip: { minHeight: 35, borderRadius: 11, borderWidth: 1, borderColor: '#D8E4F0', paddingHorizontal: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFCFF' }, needChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, needText: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, needTextActive: { color: '#FFFFFF' }, note: { minHeight: 72, paddingTop: 10 },
   consentCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE9F6', padding: 12, gap: 8 }, consentCardAttention: { borderColor: '#E26A5C', backgroundColor: '#FFF9F8' },
   consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, consentText: { flex: 1, color: '#4F5F73', fontSize: 10.5, lineHeight: 15, fontWeight: '700' }, optional: { color: '#8A94A6', fontWeight: '800' },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginLeft: 31 }, link: { color: '#0B63CE', fontSize: 10, fontWeight: '900', textDecorationLine: 'underline' }, dot: { color: '#98A3B3', fontSize: 10 }, divider: { height: 1, backgroundColor: '#EEF2F6', marginVertical: 2 }, disclaimer: { color: '#7B8798', fontSize: 9.2, lineHeight: 13, fontWeight: '700', marginLeft: 31 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginLeft: 31 }, link: { color: palette.navy, fontSize: 10, fontWeight: '900', textDecorationLine: 'underline' }, dot: { color: '#98A3B3', fontSize: 10 }, divider: { height: 1, backgroundColor: '#EEF2F6', marginVertical: 2 }, disclaimer: { color: '#7B8798', fontSize: 9.2, lineHeight: 13, fontWeight: '700', marginLeft: 31 },
   message: { borderRadius: 13, padding: 10, borderWidth: 1 }, error: { backgroundColor: '#FFF4F2', borderColor: '#FFD1CB' }, success: { backgroundColor: '#F1FBF6', borderColor: '#BFE8D4' }, info: { backgroundColor: '#F2F7FF', borderColor: '#CFE0FF' }, messageText: { color: '#536477', fontSize: 11, lineHeight: 15, fontWeight: '800' },
-  primaryButton: { minHeight: 54, borderRadius: 16, backgroundColor: '#0B63CE', alignItems: 'center', justifyContent: 'center' }, primaryPressed: { transform: [{ scale: 0.985 }], opacity: 0.9 }, primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
+  primaryButton: { minHeight: 54, borderRadius: 16, backgroundColor: palette.navy, alignItems: 'center', justifyContent: 'center' }, primaryPressed: { transform: [{ scale: 0.985 }], opacity: 0.9 }, primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '900' },
   doneCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CDE7D9', padding: 16, alignItems: 'center', gap: 5 }, doneTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' }, reference: { color: '#0F7A54', fontSize: 13, fontWeight: '900' }, doneText: { color: '#66758A', fontSize: 10.5, fontWeight: '700' },
-  secondaryButton: { marginTop: 7, minHeight: 40, borderRadius: 12, paddingHorizontal: 18, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' }, secondaryButtonText: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
+  secondaryButton: { marginTop: 7, minHeight: 40, borderRadius: 12, paddingHorizontal: 18, backgroundColor: '#EAF2FF', alignItems: 'center', justifyContent: 'center' }, secondaryButtonText: { color: palette.navy, fontSize: 11, fontWeight: '900' },
   pressed: { opacity: 0.72 }, disabled: { opacity: 0.55 },
 });
