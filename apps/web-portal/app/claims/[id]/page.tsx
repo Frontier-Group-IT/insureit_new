@@ -2,7 +2,10 @@ import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
 import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
+import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
+import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
 import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
+import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { type ClaimStatus } from "@/lib/claim-workflow";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
@@ -44,8 +47,9 @@ type StageDetailRow = {
   created_at: string;
 };
 
-export default async function ClaimDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClaimDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ stage?: string }> }) {
   const { id } = await params;
+  const requestedStage = (await searchParams)?.stage;
   const profile = await requireCapability("view_claims");
   if (!profile?.id) redirect("/access-denied");
 
@@ -175,6 +179,21 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
+  const finalRows: FinalDocumentRowV2[] = finalDocumentDefinitions.map((document, index) => {
+    const uploaded = (documents ?? []).find((item) => matchesClaimIntimationDocument(item.document_type ?? "", document.type) && item.verification_status !== "rejected");
+    return {
+      sr: index + 1,
+      groupIndex: document.groupIndex,
+      groupSr: document.groupSr,
+      type: document.type,
+      name: document.name,
+      documentId: uploaded?.id ?? null,
+      fileName: uploaded?.file_name ?? null,
+      viewUrl: uploaded?.id ? `/claim-documents/${uploaded.id}/open` : null,
+      status: uploaded?.verification_status === "verified" ? "Verified" : uploaded ? "Uploaded" : "Pending"
+    };
+  });
+  const dealershipDetails = extractDealershipDetails(stageRows ?? []);
   const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
 
@@ -211,8 +230,24 @@ export default async function ClaimDetailPage({ params }: { params: Promise<{ id
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
-      <OperationsClaimStages claimId={claim.id} currentStatus={claim.current_status} insurerClaimNo={claim.insurer_claim_no} details={stageRows ?? []} />
+      <OperationsClaimStages
+        claimId={claim.id}
+        currentStatus={claim.current_status}
+        insurerClaimNo={claim.insurer_claim_no}
+        details={stageRows ?? []}
+        claim={{
+          claim_no: claim.claim_no,
+          policy_no: claimForVerification.policies?.policy_no,
+          vehicle_no: claim.vehicles?.vehicle_no,
+          vehicle_make: claim.vehicles?.make,
+          vehicle_model: claim.vehicles?.model,
+          customer_name: claim.customers?.company_name || claim.customers?.contact_name,
+          insurer_name: claim.insurance_companies?.name
+        }}
+        spotContent={<SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} />}
+        claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
+        initialStageKey={requestedStage}
+      />
     </ClaimManagerShell>
   );
 }
@@ -226,6 +261,17 @@ function extractSurveyorDetails(rows: StageDetailRow[]): SurveyorDetails | null 
   const deputedAt = typeof row.details.deputed_at === "string" ? row.details.deputed_at : row.created_at;
   if (!name && !mobile && !email) return null;
   return { name, mobile, email, deputedAt };
+}
+
+function extractDealershipDetails(rows: StageDetailRow[]): DealershipDetailsV2 | null {
+  const row = rows.find((item) => item.details?.verification_type === "final_documents_dealership_details");
+  if (!row?.details) return null;
+  return {
+    dealership_name: typeof row.details.dealership_name === "string" ? row.details.dealership_name : "",
+    dealership_address: typeof row.details.dealership_address === "string" ? row.details.dealership_address : "",
+    contact_person_name: typeof row.details.contact_person_name === "string" ? row.details.contact_person_name : "",
+    contact_number: typeof row.details.contact_number === "string" ? row.details.contact_number : ""
+  };
 }
 
 function verificationTypeFromDocument(documentType: string): "rc" | "insurance" | "document" | "detail" {
