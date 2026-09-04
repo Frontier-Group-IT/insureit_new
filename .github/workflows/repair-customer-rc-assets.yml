@@ -1,4 +1,4 @@
-name: Repair customer RC PNG asset
+name: Audit and repair customer RC PNG assets
 
 on:
   push:
@@ -9,10 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  repair:
-    if: contains(github.event.head_commit.message, '[run-asset-repair]')
+  audit_repair:
+    if: contains(github.event.head_commit.message, '[run-png-audit]')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Check out exact release branch head
         uses: actions/checkout@v4
@@ -20,36 +20,124 @@ jobs:
           ref: feat/customer-native-release-readiness
           fetch-depth: 0
 
-      - name: Re-encode claim settlement PNG losslessly
+      - name: Install PNG validators
         shell: bash
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo apt-get install -y -qq pngcrush pngcheck
-          asset='apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png'
-          cp "$asset" "$asset.before"
-          pngcrush -q -rem alla "$asset.before" "$asset.reencoded"
-          mv "$asset.reencoded" "$asset"
-          rm "$asset.before"
-          pngcheck -q "$asset"
-          test -s "$asset"
+          sudo apt-get install -y -qq pngcheck file
+          python -m pip install --quiet pillow
 
-      - name: Commit repaired binary only
+      - name: Recover corrupt PNGs from repository history when possible
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="$RUNNER_TEMP/png-recovery-report.txt"
+          : > "$report"
+          mapfile -d '' pngs < <(find apps/mobile-app -type f -iname '*.png' -print0 | sort -z)
+          echo "PNG files found: ${#pngs[@]}" | tee -a "$report"
+          repaired=0
+          unrecovered=0
+
+          validate_png() {
+            local p="$1"
+            pngcheck -q "$p" >/dev/null 2>&1 || return 1
+            python - "$p" <<'PY'
+from PIL import Image
+import sys
+p=sys.argv[1]
+with Image.open(p) as im:
+    im.verify()
+PY
+          }
+
+          for p in "${pngs[@]}"; do
+            if validate_png "$p"; then
+              continue
+            fi
+            echo "INVALID: $p" | tee -a "$report"
+            recovered=0
+            while read -r commit; do
+              [ -n "$commit" ] || continue
+              tmp="$RUNNER_TEMP/recover.png"
+              if git show "$commit:$p" > "$tmp" 2>/dev/null && validate_png "$tmp"; then
+                cp "$tmp" "$p"
+                echo "RECOVERED: $p from $commit" | tee -a "$report"
+                repaired=$((repaired+1))
+                recovered=1
+                break
+              fi
+            done < <(git rev-list --all -- "$p")
+            if [ "$recovered" -eq 0 ]; then
+              echo "UNRECOVERED: $p" | tee -a "$report"
+              unrecovered=$((unrecovered+1))
+            fi
+          done
+
+          echo "Recovered files: $repaired" | tee -a "$report"
+          echo "Unrecovered files: $unrecovered" | tee -a "$report"
+          cp "$report" png-recovery-report.txt
+          [ "$unrecovered" -eq 0 ] || exit 2
+
+      - name: Full PNG structural and decode audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          report='png-audit-report.txt'
+          : > "$report"
+          total=0
+          failed=0
+          oversized=0
+          while IFS= read -r -d '' p; do
+            total=$((total+1))
+            size=$(stat -c%s "$p")
+            if [ "$size" -gt 10485760 ]; then
+              oversized=$((oversized+1))
+              echo "LARGE >10MB: $p ($size bytes)" >> "$report"
+            fi
+            if ! pngcheck -q "$p" >/dev/null 2>&1; then
+              echo "PNGCHK_FAIL: $p" >> "$report"
+              failed=$((failed+1))
+              continue
+            fi
+            if ! python - "$p" <<'PY'
+from PIL import Image
+import sys
+p=sys.argv[1]
+with Image.open(p) as im:
+    im.verify()
+PY
+            then
+              echo "PIL_DECODE_FAIL: $p" >> "$report"
+              failed=$((failed+1))
+            fi
+          done < <(find apps/mobile-app -type f -iname '*.png' -print0 | sort -z)
+          {
+            echo "TOTAL_PNG=$total"
+            echo "FAILED_PNG=$failed"
+            echo "OVER_10MB=$oversized"
+          } | tee -a "$report"
+          cat "$report"
+          [ "$failed" -eq 0 ]
+
+      - name: Commit recovered PNGs only
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin feat/customer-native-release-readiness
           [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)" ] || {
-            echo 'Release branch advanced during asset repair; refusing to push.' >&2
+            echo 'Release branch advanced during audit; refusing to push.' >&2
             exit 1
           }
           git status --short
-          git diff --quiet -- apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png && {
-            echo 'pngcrush produced no binary change; refusing to claim a repair.' >&2
-            exit 1
-          }
+          changed=$(git diff --name-only -- 'apps/mobile-app/**/*.png' ':(glob)apps/mobile-app/**/*.png')
+          if [ -z "$changed" ]; then
+            echo 'No PNG binaries required recovery.'
+            exit 0
+          fi
+          echo "$changed"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png
-          git commit -m 'Repair claim settlement PNG encoding [asset-repair]'
+          git add -- ':(glob)apps/mobile-app/**/*.png'
+          git commit -m 'Recover corrupt customer PNG assets [png-audit-repair]'
           git push origin HEAD:feat/customer-native-release-readiness
