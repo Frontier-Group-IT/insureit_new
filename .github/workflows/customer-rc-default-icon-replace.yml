@@ -33,8 +33,8 @@ jobs:
         run: |
           set -euo pipefail
           sources=(
-            "apps/mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png"
-            "apps/mobile-app/assets/brand/spot-intimation/pink_document_file_icon.png"
+            "apps/mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png"
+            "apps/mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png"
           )
           for p in "${sources[@]}"; do
             test -f "$p"
@@ -46,8 +46,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          video_default="apps/mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png"
-          settlement_default="apps/mobile-app/assets/brand/spot-intimation/pink_document_file_icon.png"
+          video_default="apps/mobile-app/assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png"
+          settlement_default="apps/mobile-app/assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png"
 
           cp "$video_default" "apps/mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png"
           cp "$video_default" "apps/mobile-app/assets/brand/spot-intimation/glossy_red_video_file_icon.png"
