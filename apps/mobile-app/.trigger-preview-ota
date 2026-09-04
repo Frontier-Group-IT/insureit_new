@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1184
-source_commit=dd90eb2b9f7f736b9ee2f9162991dd2162a68727
-purpose=publish clearer Stage 9 payment encashment icon preview OTA
+source_pr=1189
+source_commit=87f96ea48ed8caca02a2de936a1f18e4d82116c6
+purpose=publish full splash tagline visibility fix preview OTA
