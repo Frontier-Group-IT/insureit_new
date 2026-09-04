@@ -44,10 +44,10 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
               <div className="min-w-0">
                 <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#6F8098]">{category}</p>
                 <h2 className="mt-1 break-words text-[21px] sm:text-[23px] font-extrabold tracking-[-0.025em] text-[#142541]">{data.policy.policy_no || data.policy.policy_code || "Policy"}</h2>
-                <p className="mt-1 text-[10.5px] font-medium text-[#74839A]">{data.insurer.name || "Insurer not recorded"}</p>
+                <p className="mt-1 break-words text-[10.5px] font-medium leading-4 text-[#74839A]">{data.insurer.name || "Insurer not recorded"}</p>
               </div>
             </div>
-            <span className="inline-flex w-fit rounded-xl bg-[#EEF3F8] px-3 py-1.5 text-[9.5px] font-bold text-[#425672]">{humanize(data.policy.lifecycle_status)}</span>
+            <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-3 py-1.5 text-[9.5px] font-bold text-[#425672]">{humanize(data.policy.lifecycle_status)}</span>
           </div>
 
           <div className="grid sm:grid-cols-2 xl:grid-cols-4">
@@ -89,24 +89,24 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
             <SectionTitle title={data.vehicle ? "Customer & Vehicle" : "Customer & Insured Risk"} />
             <div className="mt-4 space-y-3">
               {data.customer.id ? (
-                <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
-                  <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.customer.name}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.customer.customer_code || "Customer"}</span></span>
+                <Link href={"/partner/customers/" + encodeURIComponent(data.customer.id)} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 last:border-b-0">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
+                  <span className="min-w-0"><span className="block break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{data.customer.name}</span><span className="mt-0.5 block break-words text-[9.5px] leading-4 text-[#74839A]">{data.customer.customer_code || "Customer"}</span></span>
                 </Link>
               ) : null}
               <div className="flex items-center gap-3 border-b border-[#E0E7EF] py-3.5 last:border-b-0">
-                <span className="grid h-10 w-10 place-items-center rounded-xl bg-white text-[#3156B8]"><Car className="h-4 w-4" /></span>
-                <span><span className="block text-[11px] font-extrabold text-[#1B2F4E]">{data.vehicle?.vehicle_no || data.policy.policy_product || data.policy.policy_type || "Insured risk"}</span><span className="mt-0.5 block text-[9.5px] text-[#74839A]">{data.vehicle ? display(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type) : "No vehicle linked to this policy"}</span></span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#3156B8]"><Car className="h-4 w-4" /></span>
+                <span className="min-w-0"><span className="block break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{data.vehicle?.vehicle_no || data.policy.policy_product || data.policy.policy_type || "Insured risk"}</span><span className="mt-0.5 block break-words text-[9.5px] leading-4 text-[#74839A]">{data.vehicle ? display(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type) : "No vehicle linked"}</span></span>
               </div>
             </div>
           </section>
 
           <section className="py-1">
-            <SectionTitle title="Commercial Attribution" />
+            <SectionTitle title="Business Details" />
             <div className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
               <Info label="Intermediary" value={display(humanize(data.commercial.intermediary_type), data.commercial.intermediary_code) || "Not recorded"} />
-              <Info label="RM" value={data.commercial.rm_name || "Not recorded"} />
-              <Info label="Group" value={display(data.commercial.group_name, data.commercial.group_code) || "No policy snapshot"} />
+              <Info label="Relationship Manager" value={data.commercial.rm_name || "Not recorded"} />
+              <Info label="Group" value={display(data.commercial.group_name, data.commercial.group_code) || "Not recorded"} />
               <Info label="Policy Lifecycle" value={humanize(data.policy.lifecycle_status)} />
             </div>
           </section>
