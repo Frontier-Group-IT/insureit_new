@@ -1,7 +1,7 @@
 import 'react-native-url-polyfill/auto';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
 import { beginTrackedLoading, endTrackedLoading } from '@/lib/loading-tracker';
@@ -24,6 +24,20 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
   },
 });
+
+if (Platform.OS !== 'web') {
+  if (AppState.currentState === 'active') {
+    supabase.auth.startAutoRefresh();
+  }
+
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}
 
 function platformFetch(input: RequestInfo | URL, init?: RequestInit) {
   const url = requestUrl(input);
