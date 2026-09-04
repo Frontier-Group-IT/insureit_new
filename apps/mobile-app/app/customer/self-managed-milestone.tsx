@@ -929,25 +929,20 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
 
   return <View>
     <Text style={styles.billUploadLabel}>Bill Upload</Text>
-    <View style={[styles.billUploadBox, document && styles.billUploadBoxSaved]}>
+    <Pressable accessibilityRole="button" disabled={loading || uploading || removing} onPress={() => void chooseAndUpload()} style={[styles.billUploadBox, document && styles.billUploadBoxSaved]}>
       <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.billUploadIconImage} resizeMode="contain" />
       <View style={styles.billUploadCopy}>
         <Text style={styles.billUploadTitle}>{document ? document.file_name : 'Upload final workshop bill'}</Text>
         <Text style={styles.billUploadFormats}>{document ? 'Uploaded' : 'PDF, JPG, PNG'}</Text>
       </View>
-      {!loading && !document ? <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.billUploadChooseButton}>
+      {!loading && !document ? <View style={styles.billUploadChooseButton}>
         <Text style={styles.billUploadChooseText}>{uploading ? 'Uploading...' : 'Choose File'}</Text>
-      </Pressable> : null}
+      </View> : null}
       {loading ? <Text style={styles.billUploadLoading}>Checking...</Text> : null}
-      {document ? <>
-        <Pressable accessibilityRole="button" accessibilityLabel="Delete bill" disabled={uploading || removing} onPress={() => setConfirmRemove(true)} hitSlop={6} style={styles.billUploadRemoveIcon}>
-          <MaterialCommunityIcons name="close" size={12} color="#C43232" />
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Replace bill" disabled={uploading || removing} onPress={() => void chooseAndUpload()} hitSlop={6} style={styles.billUploadReplaceIcon}>
-          <MaterialCommunityIcons name={uploading ? 'progress-clock' : 'refresh'} size={13} color="#0A43A3" />
-        </Pressable>
-      </> : null}
-    </View>
+      {document ? <Pressable accessibilityRole="button" accessibilityLabel="Delete bill" disabled={uploading || removing} onPress={(event) => { event.stopPropagation(); setConfirmRemove(true); }} hitSlop={6} style={styles.billUploadRemoveIcon}>
+        <MaterialCommunityIcons name="close" size={12} color="#C43232" />
+      </Pressable> : null}
+    </Pressable>
 
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
