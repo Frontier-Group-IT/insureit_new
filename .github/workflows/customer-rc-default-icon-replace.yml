@@ -1,0 +1,101 @@
+name: Replace customer RC corrupt PNGs with defaults
+
+on:
+  push:
+    branches:
+      - feat/customer-native-release-readiness
+    paths:
+      - .github/workflows/customer-rc-default-icon-replace.yml
+
+permissions:
+  contents: write
+
+jobs:
+  replace_defaults:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/customer-native-release-readiness
+          fetch-depth: 0
+
+      - name: Install PNG validators
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pngcheck
+          python -m pip install --quiet pillow
+
+      - name: Validate default source icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          sources=(
+            "apps/mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png"
+            "apps/web-portal/public/assets/Custom-Icons/optimized-128/claim-settlement.png"
+          )
+          for p in "${sources[@]}"; do
+            test -f "$p"
+            pngcheck -q "$p"
+            python -c "from PIL import Image; import sys; im=Image.open(sys.argv[1]); im.verify()" "$p"
+          done
+
+      - name: Replace four corrupt PNGs with existing defaults
+        shell: bash
+        run: |
+          set -euo pipefail
+          video_default="apps/mobile-app/assets/brand/spot-intimation/glossy_pink_camera_document_icon.png"
+          settlement_default="apps/web-portal/public/assets/Custom-Icons/optimized-128/claim-settlement.png"
+
+          cp "$video_default" "apps/mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png"
+          cp "$video_default" "apps/mobile-app/assets/brand/spot-intimation/glossy_red_video_file_icon.png"
+          cp "$settlement_default" "apps/mobile-app/assets/claims/claim-settlement.png"
+          cp "$settlement_default" "apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png"
+
+      - name: Audit every customer mobile PNG
+        shell: bash
+        run: |
+          set -euo pipefail
+          total=0
+          failed=0
+          over10=0
+          while IFS= read -r -d '' p; do
+            total=$((total+1))
+            bytes=$(stat -c%s "$p")
+            if [ "$bytes" -gt 10485760 ]; then
+              echo "LARGE_GT_10MB: $p bytes=$bytes"
+              over10=$((over10+1))
+            fi
+            if ! pngcheck -q "$p"; then
+              echo "PNGCHK_FAIL: $p"
+              failed=$((failed+1))
+              continue
+            fi
+            if ! python -c "from PIL import Image; import sys; im=Image.open(sys.argv[1]); im.verify()" "$p"; then
+              echo "PIL_DECODE_FAIL: $p"
+              failed=$((failed+1))
+            fi
+          done < <(find apps/mobile-app -type f -iname '*.png' -print0 | sort -z)
+          echo "TOTAL_PNG=$total"
+          echo "FAILED_PNG=$failed"
+          echo "OVER_10MB=$over10"
+          test "$failed" = "0"
+
+      - name: Commit binary replacements
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/customer-native-release-readiness
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- \
+            apps/mobile-app/assets/brand/spot-intimation/glossy_red_video_document_icon.png \
+            apps/mobile-app/assets/brand/spot-intimation/glossy_red_video_file_icon.png \
+            apps/mobile-app/assets/claims/claim-settlement.png \
+            apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png
+          git diff --cached --quiet && { echo 'No replacements to commit'; exit 1; }
+          git commit -m 'Replace corrupt customer PNGs with validated default icons'
+          git push origin HEAD:feat/customer-native-release-readiness
