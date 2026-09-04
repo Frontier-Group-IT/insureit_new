@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1220
-source_commit=4840ffb847a0eda6c9012dda9c0cedb89304cbe1
-purpose=publish mobile startup session and OTA stability fix preview OTA
+source_pr=1222
+source_commit=dca65914cf4181e6503f7f6b1e7234a2a884a4ba
+purpose=publish mobile startup auth safety and diagnostics preview OTA
