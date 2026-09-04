@@ -122,14 +122,14 @@ export default function ClaimDetailScreen() {
   const currentStageIndex = selfManaged ? (completedKeys.size >= 9 ? 8 : selfStageIndex) : internalProjection.stageIndex;
   const progress = selfManaged ? Math.round((completedKeys.size / 9) * 100) : internalProjection.progress;
 
-  if (loading) return <Screen title="Claim Detail"><LoadingState /></Screen>;
-  if (!claim) return <Screen title="Claim Detail"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
+  if (loading) return <Screen title="Claim Tracker"><LoadingState /></Screen>;
+  if (!claim) return <Screen title="Claim Tracker"><EmptyState title="Claim not found" body="Please choose another claim from your list." /></Screen>;
 
   const claimId = claim.id;
   const tone = selfManaged ? externalClaimTone : claimTone(claim.current_status);
   const currentStage = SELF_MANAGED_MILESTONES[currentStageIndex];
   const settled = selfManaged ? ['Settled', 'Closed', 'Claim Complete'].includes(claim.current_status) || completedKeys.size >= 9 : internalProjection.journeyState === 'completed';
-  const compactClaimIntimation = selfManaged;
+  const compactClaimIntimation = true;
   const financialRows = selfManaged ? buildFinancialRows(milestones) : [];
 
   function openSelfStage(key: ClaimMilestoneKey) {
@@ -196,12 +196,11 @@ export default function ClaimDetailScreen() {
 
 
   return (
-    <Screen title="Claim Detail" showLogout showTitleHeader={false}>
+    <Screen title="Claim Tracker" showLogout showTitleHeader={false}>
       <View style={styles.pageHeading}>
         <View style={styles.pageHeadingCopy}>
-          <Text style={styles.pageEyebrow}>{selfManaged ? 'EXTERNAL CLAIM' : 'CLAIMS'}</Text>
-          <Text style={styles.pageTitle}>{selfManaged ? 'Claim Tracker' : 'Claim Detail'}</Text>
-          {!selfManaged ? <Text style={styles.pageSubtitle}>{internalProjection.customerMessage}</Text> : null}
+          <Text style={styles.pageEyebrow}>CLAIMS</Text>
+          <Text style={styles.pageTitle}>Claim Tracker</Text>
         </View>
         {selfManaged ? <View style={styles.headingActions}>
           <View style={styles.assistanceActionWrap}>
