@@ -578,9 +578,11 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
   }
 
   const insurerClaimNo = textValue(formData, "insurer_claim_no");
+  const accidentAt = textValue(formData, "accident_at");
   const { error } = await supabase.from("claims").update({
     current_status: nextStatus,
-    ...(insurerClaimNo ? { insurer_claim_no: insurerClaimNo } : {})
+    ...(insurerClaimNo ? { insurer_claim_no: insurerClaimNo } : {}),
+    ...(claim.current_status && ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(claim.current_status) && accidentAt ? { accident_at: new Date(accidentAt).toISOString() } : {})
   }).eq("id", claimId);
   if (error) throw new Error(error.message);
 

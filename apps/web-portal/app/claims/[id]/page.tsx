@@ -179,6 +179,11 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
+  const spotIntimationAt = stageRows?.find((row) => typeof row.details?.spot_intimation_at === "string")?.details?.spot_intimation_at;
+  const claimWithSpotIntimation = {
+    ...claimForVerification,
+    spotIntimationAt: typeof spotIntimationAt === "string" ? spotIntimationAt : null
+  };
   const finalRows: FinalDocumentRowV2[] = finalDocumentDefinitions.map((document, index) => {
     const uploaded = (documents ?? []).find((item) => matchesClaimIntimationDocument(item.document_type ?? "", document.type) && item.verification_status !== "rejected");
     return {
@@ -230,13 +235,15 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotClaimHeader claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
+      <SpotClaimHeader claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       <OperationsClaimStages
         claimId={claim.id}
         currentStatus={claim.current_status}
         insurerClaimNo={claim.insurer_claim_no}
         details={stageRows ?? []}
-        spotContent={<SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} />}
+        accidentAt={claim.accident_at}
+        spotIntimationAt={claimWithSpotIntimation.spotIntimationAt}
+        spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} />}
         claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
         initialStageKey={requestedStage}
       />
