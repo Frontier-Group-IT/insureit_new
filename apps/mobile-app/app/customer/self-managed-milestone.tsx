@@ -939,13 +939,15 @@ function FinalBillUpload({ claimId }: { claimId: string }) {
         <Text style={styles.billUploadChooseText}>{uploading ? 'Uploading...' : 'Choose File'}</Text>
       </Pressable> : null}
       {loading ? <Text style={styles.billUploadLoading}>Checking...</Text> : null}
+      {document ? <>
+        <Pressable accessibilityRole="button" accessibilityLabel="Delete bill" disabled={uploading || removing} onPress={() => setConfirmRemove(true)} hitSlop={6} style={styles.billUploadRemoveIcon}>
+          <MaterialCommunityIcons name="close" size={12} color="#C43232" />
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Replace bill" disabled={uploading || removing} onPress={() => void chooseAndUpload()} hitSlop={6} style={styles.billUploadReplaceIcon}>
+          <MaterialCommunityIcons name={uploading ? 'progress-clock' : 'refresh'} size={13} color="#0A43A3" />
+        </Pressable>
+      </> : null}
     </View>
-
-    {document ? <View style={styles.billUploadActions}>
-      <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void viewBill()} style={styles.billUploadSecondaryButton}><MaterialCommunityIcons name="eye-outline" size={16} color="#0A43A3" /><Text style={styles.billUploadSecondaryText}>View</Text></Pressable>
-      <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => void chooseAndUpload()} style={styles.billUploadSecondaryButton}><MaterialCommunityIcons name="refresh" size={16} color="#0A43A3" /><Text style={styles.billUploadSecondaryText}>{uploading ? 'Uploading...' : 'Replace'}</Text></Pressable>
-      <Pressable accessibilityRole="button" disabled={uploading || removing} onPress={() => setConfirmRemove(true)} style={styles.billUploadRemoveButton}><MaterialCommunityIcons name="trash-can-outline" size={15} color="#C43232" /><Text style={styles.billUploadRemoveText}>{removing ? 'Removing...' : 'Remove'}</Text></Pressable>
-    </View> : null}
 
     {success ? <View style={styles.approvalFeedbackSuccess}><MaterialCommunityIcons name="check-circle-outline" size={14} color="#168161" /><Text style={styles.approvalFeedbackSuccessText}>{success}</Text></View> : null}
     {error ? <View style={styles.approvalFeedbackError}><MaterialCommunityIcons name="alert-circle-outline" size={14} color="#B42318" /><Text style={styles.approvalFeedbackErrorText}>{error}</Text></View> : null}
@@ -1112,8 +1114,8 @@ const styles = StyleSheet.create({
   deliveryReportUploadText: { color: '#FFFFFF', fontSize: 8.3, fontWeight: '900' },
   deliveryReportRemove: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   billUploadLabel: { color: palette.navy, fontSize: 11, fontWeight: '800', marginBottom: 5 },
-  billUploadBox: { minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'solid', borderColor: '#DDE5EF', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  billUploadBoxSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' },
+  billUploadBox: { position: 'relative', minHeight: 58, borderRadius: 13, borderWidth: 1.5, borderStyle: 'solid', borderColor: '#DDE5EF', backgroundColor: '#F9FBFF', paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  billUploadBoxSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4', paddingRight: 42 },
   billUploadIconImage: { width: 34, height: 34 },
   billUploadCopy: { flex: 1, minWidth: 0 },
   billUploadTitle: { color: palette.navy, fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
@@ -1121,6 +1123,8 @@ const styles = StyleSheet.create({
   billUploadChooseButton: { minHeight: 36, borderRadius: 9, backgroundColor: '#0A43A3', paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   billUploadChooseText: { color: '#FFFFFF', fontSize: 9.5, fontWeight: '900' },
   billUploadLoading: { color: '#718198', fontSize: 8.5, fontWeight: '800' },
+  billUploadRemoveIcon: { position: 'absolute', top: 5, right: 6, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
+  billUploadReplaceIcon: { position: 'absolute', top: 32, right: 6, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#AFC8E8', alignItems: 'center', justifyContent: 'center' },
   billUploadActions: { flexDirection: 'row', gap: 7, marginTop: 7 },
   billUploadSecondaryButton: { flex: 1, minHeight: 36, borderRadius: 10, borderWidth: 1, borderColor: '#AFC8E8', backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   billUploadSecondaryText: { color: '#0A43A3', fontSize: 9, fontWeight: '900' },
