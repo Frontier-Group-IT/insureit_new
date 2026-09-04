@@ -1,0 +1,55 @@
+name: Repair customer RC PNG asset
+
+on:
+  push:
+    branches:
+      - feat/customer-native-release-readiness
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: contains(github.event.head_commit.message, '[run-asset-repair]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact release branch head
+        uses: actions/checkout@v4
+        with:
+          ref: feat/customer-native-release-readiness
+          fetch-depth: 0
+
+      - name: Re-encode claim settlement PNG losslessly
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq pngcrush pngcheck
+          asset='apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png'
+          cp "$asset" "$asset.before"
+          pngcrush -q -rem alla "$asset.before" "$asset.reencoded"
+          mv "$asset.reencoded" "$asset"
+          rm "$asset.before"
+          pngcheck -q "$asset"
+          test -s "$asset"
+
+      - name: Commit repaired binary only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/customer-native-release-readiness
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)" ] || {
+            echo 'Release branch advanced during asset repair; refusing to push.' >&2
+            exit 1
+          }
+          git status --short
+          git diff --quiet -- apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png && {
+            echo 'pngcrush produced no binary change; refusing to claim a repair.' >&2
+            exit 1
+          }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/assets/custom-icons/claims-list/claim-settlement.png
+          git commit -m 'Repair claim settlement PNG encoding [asset-repair]'
+          git push origin HEAD:feat/customer-native-release-readiness
