@@ -30,7 +30,7 @@ type ClaimDetail = SpotSurveyClaim & {
   created_at: string | null;
   customers: { company_name: string | null; contact_name: string; phone: string | null; email: string | null } | null;
   vehicles: { vehicle_no: string; vehicle_type: string | null; make: string | null; model: string | null } | null;
-  policies: { policy_no: string | null; policy_type: string | null; start_date: string | null; end_date: string | null } | null;
+  policies: { policy_no: string | null; policy_type: string | null; start_date: string | null; end_date: string | null; premium_amount: number | null; insured_declared_value: number | null } | null;
   insurance_companies: { name: string | null; contact_email: string | null; contact_phone: string | null } | null;
 };
 
@@ -56,7 +56,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const admin = createSupabaseAdminClient();
   const { data: claim, error } = await admin
     .from("claims")
-    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, claim_service_mode, assistance_status, assistance_notes, policy_service_source, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date), insurance_companies(name, contact_email, contact_phone)")
+    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, claim_service_mode, assistance_status, assistance_notes, policy_service_source, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date, premium_amount, insured_declared_value), insurance_companies(name, contact_email, contact_phone)")
     .eq("id", id)
     .maybeSingle<ClaimDetail>();
 
@@ -65,7 +65,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   const { data: vehiclePolicies } = await admin
     .from("policies")
-    .select("id, vehicle_id, customer_id, policy_no, policy_type, start_date, end_date")
+    .select("id, vehicle_id, customer_id, policy_no, policy_type, start_date, end_date, premium_amount, insured_declared_value")
     .eq("vehicle_id", claim.vehicle_id)
     .eq("customer_id", claim.customer_id)
     .order("end_date", { ascending: false });
@@ -105,9 +105,9 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
         insured_declared_value: externalPolicy.insured_declared_value,
       }
     : vehicleRegisterPolicy
-      ? { ...vehicleRegisterPolicy, premium_amount: null, insured_declared_value: null }
+      ? vehicleRegisterPolicy
       : claim.policies
-        ? { ...claim.policies, premium_amount: null, insured_declared_value: null }
+        ? claim.policies
         : null;
   const claimForVerification: ClaimDetail = {
     ...claim,
