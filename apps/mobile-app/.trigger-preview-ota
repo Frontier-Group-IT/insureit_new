@@ -1,4 +1,4 @@
 triggered_by=chatgpt
 source_pr=1245
-source_commit=39a8a1128251c566dcbdd27e4d4ea428ef6f8e83
-purpose=publish internal claim stage 1 external-layout preview OTA
+source_commit=fc56c1e5ff677c491e5719b69821dbb66f9ecdaa
+purpose=re-publish internal claim stage 1 layout from latest current main
