@@ -1,0 +1,79 @@
+name: Apply preserved registered vehicle identity
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260904075000_preserve_registered_vehicle_identity_when_pending.sql'
+      - '.github/workflows/apply-preserve-registered-vehicle-identity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply preserved registered vehicle identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply vehicle identity preservation migration
+        run: supabase db query --linked --file supabase/migrations/20260904075000_preserve_registered_vehicle_identity_when_pending.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260904075000
+
+      - name: Verify vehicle identity preservation logic
+        shell: bash
+        run: |
+          result=$(supabase db query --linked --output-format json "
+            select
+              position('old.registration_status is distinct from ''registration_pending''' in lower(pg_get_functiondef('public.sync_pending_vehicle_no_from_chassis()'::regprocedure))) > 0 as transition_guard_ready,
+              position('old.vehicle_no' in lower(pg_get_functiondef('public.sync_pending_vehicle_no_from_chassis()'::regprocedure))) > 0 as registered_identity_preserved,
+              exists (
+                select 1
+                from pg_trigger
+                where tgname = 'vehicles_sync_pending_vehicle_no_from_chassis'
+                  and not tgisinternal
+              ) as trigger_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"transition_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"registered_identity_preserved"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
