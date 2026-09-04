@@ -8,7 +8,7 @@ import {
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { palette } from '@/lib/theme';
@@ -39,34 +39,7 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
   const [message, setMessage] = useState('');
   const stoppingRef = useRef(false);
 
-  useEffect(() => {
-    onRecordingChange?.(recorderState.isRecording);
-  }, [onRecordingChange, recorderState.isRecording]);
-
-  useEffect(() => {
-    if (!recorderState.isRecording || recorderState.durationMillis < MAX_RECORDING_MS || stoppingRef.current) return;
-    stoppingRef.current = true;
-    void stopRecording().finally(() => { stoppingRef.current = false; });
-  }, [recorderState.durationMillis, recorderState.isRecording]);
-
-  async function startRecording() {
-    if (busy || recorderState.isRecording) return;
-    setMessage('');
-    const permission = await requestRecordingPermissionsAsync();
-    if (!permission.granted) {
-      setMessage('Microphone permission is needed to record a voice note.');
-      return;
-    }
-    try {
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-    } catch {
-      setMessage('Voice recording could not be started. Please try again.');
-    }
-  }
-
-  async function stopRecording() {
+  const stopRecording = useCallback(async () => {
     if (!recorderState.isRecording) return;
     try {
       await recorder.stop();
@@ -85,6 +58,33 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
       setMessage('Voice note ready. It will be uploaded with this claim stage.');
     } catch {
       setMessage('Voice recording could not be stopped safely. Please try again.');
+    }
+  }, [onChange, recorder, recorderState.isRecording]);
+
+  useEffect(() => {
+    onRecordingChange?.(recorderState.isRecording);
+  }, [onRecordingChange, recorderState.isRecording]);
+
+  useEffect(() => {
+    if (!recorderState.isRecording || recorderState.durationMillis < MAX_RECORDING_MS || stoppingRef.current) return;
+    stoppingRef.current = true;
+    void stopRecording().finally(() => { stoppingRef.current = false; });
+  }, [recorderState.durationMillis, recorderState.isRecording, stopRecording]);
+
+  async function startRecording() {
+    if (busy || recorderState.isRecording) return;
+    setMessage('');
+    const permission = await requestRecordingPermissionsAsync();
+    if (!permission.granted) {
+      setMessage('Microphone permission is needed to record a voice note.');
+      return;
+    }
+    try {
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+    } catch {
+      setMessage('Voice recording could not be started. Please try again.');
     }
   }
 
