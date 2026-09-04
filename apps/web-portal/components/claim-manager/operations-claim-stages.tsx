@@ -14,17 +14,6 @@ type Props = {
   currentStatus: ClaimStatus;
   insurerClaimNo?: string | null;
   details: StageDetail[];
-  claim: {
-    claim_no: string;
-    accident_at?: string | null;
-    policy_no?: string | null;
-    vehicle_no?: string | null;
-    vehicle_make?: string | null;
-    vehicle_model?: string | null;
-    customer_name?: string | null;
-    insurer_name?: string | null;
-  };
-  spotContent: ReactNode;
   claimIntimationContent: ReactNode;
   initialStageKey?: string;
 };
@@ -88,7 +77,7 @@ const requiredFields: Record<string, string[]> = {
   payment_encashment: ["depreciation_submitted", "satisfaction_submitted", "payment_received_date", "payment_received_amount"]
 };
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, claim, spotContent, claimIntimationContent, initialStageKey }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, claimIntimationContent, initialStageKey }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -123,7 +112,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   return (
     <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
-      <ClaimOverview claim={claim} insurerClaimNo={insurerClaimNo} currentStatus={currentStatus} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2><p className="mt-1 text-[12px] text-[#526178]">Internal stage controls aligned with the customer claim journey. Historical statuses remain unchanged.</p></div>
         <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-3 py-1 text-[11px] font-semibold text-[#174EA6]">{selected.label}</span>
@@ -135,7 +123,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           return <li key={stage.key}><button type="button" disabled={!available} aria-current={stage.key === selected.key ? "step" : undefined} onClick={() => setSelectedKey(stage.key)} className={`w-full rounded-lg border px-2 py-2 text-left text-[10px] font-semibold transition ${stage.key === selected.key ? "border-[#174EA6] bg-[#EEF4FF] text-[#003A83]" : available ? "border-[#E4ECF6] text-[#526178] hover:border-[#BFD3F7] hover:bg-[#F8FBFF]" : "cursor-not-allowed border-[#EEF2F7] bg-[#FBFCFE] text-[#A0ACBB]"}`}>{stage.label}<span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.06em]">{isCurrent ? "Current" : index < activeIndex ? "Completed" : "Locked"}</span></button></li>;
         })}
       </ol>
-      {selected.key === "spot_intimation" ? <div className="mt-3">{spotContent}</div> : null}
       {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
       {detail?.details && Object.keys(detail.details).length ? <div className="mt-3 grid gap-2 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(detail.details).filter(([key]) => key !== "milestone_key").map(([key, value]) => <div key={key}><p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{key.replaceAll("_", " ")}</p><p className="mt-0.5 break-words text-[12px] font-semibold text-[#071D49]">{String(value ?? "-")}</p></div>)}</div> : null}
       {editable && active ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
@@ -158,16 +145,4 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </form> : selected.key !== "spot_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
     </section>
   );
-}
-
-function ClaimOverview({ claim, insurerClaimNo, currentStatus }: { claim: Props["claim"]; insurerClaimNo?: string | null; currentStatus: string }) {
-  const items = [
-    ["Customer", claim.customer_name || "-"],
-    ["Vehicle", [claim.vehicle_no, claim.vehicle_make, claim.vehicle_model].filter(Boolean).join(" · ") || "-"],
-    ["Policy", claim.policy_no || "-"],
-    ["Insurer", claim.insurer_name || "-"],
-    ["Claim no.", insurerClaimNo || claim.claim_no],
-    ["Status", currentStatus],
-  ];
-  return <div className="mb-4 grid overflow-hidden rounded-xl border border-[#D9E3F0] bg-[#F8FBFF] sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">{items.map(([label, value], index) => <div key={label} className={`min-w-0 border-b border-[#E4ECF6] px-3 py-2.5 ${index % 3 !== 2 ? "lg:border-r" : ""}`}><p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{label}</p><p className="mt-1 break-words text-[12px] font-semibold leading-4 text-[#071D49]">{value}</p></div>)}</div>;
 }
