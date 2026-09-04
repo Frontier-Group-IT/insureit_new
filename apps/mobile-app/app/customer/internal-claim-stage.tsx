@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimFormSection, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -239,22 +239,12 @@ export default function InternalClaimStageScreen() {
 
     return (
       <Screen title="Spot Intimation" showTitleHeader={false}>
-        <ExternalClaimStageHeader
-          step={1}
-          title="Spot Intimation"
-          subtitle="Start tracking an incident."
+        <StageOneCompactHeader
+          claimNo={claim.insurer_claim_no || claim.claim_no}
           vehicleNo={vehicleNo}
-          claimNo={claim.insurer_claim_no || claim.claim_no}
-          serviceLabel="Sankalp Managed"
-          onBack={() => router.back()}
-        />
-
-        <ClaimIdentityCard
-          claimNo={claim.insurer_claim_no || claim.claim_no}
-          insurerName={insurerName || 'Insurance company'}
-          vehicleNo={vehicleNo || 'Vehicle'}
-          policyNo={policyNo || undefined}
+          policyNo={policyNo}
           vehicleMeta={vehicleMeta}
+          insurerName={insurerName}
         />
 
         {message ? <Message type="error">{message}</Message> : null}
@@ -372,6 +362,45 @@ export default function InternalClaimStageScreen() {
   );
 }
 
+function StageOneCompactHeader({ claimNo, vehicleNo, policyNo, vehicleMeta, insurerName }: { claimNo: string; vehicleNo: string; policyNo: string; vehicleMeta: string; insurerName: string }) {
+  return (
+    <View style={styles.stageOneCompactHeader}>
+      <View style={styles.stageOneCompactGlow} />
+      <View style={styles.stageOneCompactTopRow}>
+        <View style={styles.stageOneCompactTitleWrap}>
+          <Image source={require('../../assets/claims/claim-intimation.png')} style={styles.stageOneCompactIconImage} resizeMode="contain" />
+          <Text style={styles.stageOneCompactTitle}>Spot Intimation</Text>
+        </View>
+        <Text style={styles.stageOneCompactClaimNo} numberOfLines={1}>{claimNo}</Text>
+      </View>
+      <View style={styles.stageOneCompactDivider} />
+      <View style={styles.stageOneCompactDetails}>
+        <View style={styles.stageOneCompactColumn}>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="truck-outline" size={17} color="#0A43A3" /></View>
+            <Text style={styles.stageOneCompactValue} numberOfLines={1}>Vehicle: {vehicleNo || 'Vehicle'}</Text>
+          </View>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="truck-outline" size={17} color="#0A43A3" /></View>
+            <Text style={styles.stageOneCompactMeta} numberOfLines={1}>{vehicleMeta || 'Vehicle details'}</Text>
+          </View>
+        </View>
+        <View style={styles.stageOneCompactVerticalDivider} />
+        <View style={styles.stageOneCompactColumn}>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="file-document-check-outline" size={17} color="#0A43A3" /></View>
+            <Text style={[styles.stageOneCompactValue, styles.stageOneCompactPolicyValue]} numberOfLines={1}>Policy: {policyNo || 'Policy'}</Text>
+          </View>
+          <View style={styles.stageOneCompactItem}>
+            <View style={styles.stageOneCompactRoundIcon}><MaterialCommunityIcons name="shield-check-outline" size={17} color="#0A43A3" /></View>
+            <Text style={styles.stageOneCompactMeta} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function openDocuments(router: ReturnType<typeof useRouter>, claimId: string) {
   router.push({ pathname: '/customer/upload-documents', params: { claimId } });
 }
@@ -459,6 +488,22 @@ const styles = StyleSheet.create({
   gap: { height: 10 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
+  stageOneCompactHeader: { position: 'relative', overflow: 'hidden', borderRadius: 18, backgroundColor: '#0A3F91', paddingHorizontal: 13, paddingTop: 11, paddingBottom: 12, marginBottom: 12, shadowColor: '#0A2D63', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  stageOneCompactGlow: { position: 'absolute', top: -34, right: -22, width: 130, height: 130, borderRadius: 65, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  stageOneCompactTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  stageOneCompactTitleWrap: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  stageOneCompactIconImage: { width: 30, height: 30 },
+  stageOneCompactTitle: { flex: 1, color: '#FFFFFF', fontSize: 17, lineHeight: 21, fontWeight: '900' },
+  stageOneCompactClaimNo: { maxWidth: '34%', color: '#FFFFFF', fontSize: 12.5, lineHeight: 16, fontWeight: '900', textAlign: 'right' },
+  stageOneCompactDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.20)', marginTop: 10, marginBottom: 9 },
+  stageOneCompactDetails: { flexDirection: 'row', alignItems: 'stretch' },
+  stageOneCompactColumn: { flex: 1, gap: 7 },
+  stageOneCompactVerticalDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.18)', marginHorizontal: 10 },
+  stageOneCompactItem: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  stageOneCompactRoundIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F2F8FF', alignItems: 'center', justifyContent: 'center' },
+  stageOneCompactValue: { flex: 1, color: '#FFFFFF', fontSize: 10.5, lineHeight: 14, fontWeight: '900' },
+  stageOneCompactPolicyValue: { color: '#D8FFD9' },
+  stageOneCompactMeta: { flex: 1, color: '#F3F7FF', fontSize: 8.8, lineHeight: 12, fontWeight: '700' },
   stageOneLabelRow: { minHeight: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   stageOneLabel: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   stageOneInput: { minHeight: 62, borderRadius: 16, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', paddingHorizontal: 13, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 9 },
