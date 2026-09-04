@@ -58,7 +58,7 @@ export default async function FinalDocumentsPage({ params }: { params: Promise<{
   if (error || !claim) notFound();
 
   const backHref = "/claims";
-  const title = `Final Documents - ${claim.claim_no}${claim.insurer_claim_no ? ` / ${claim.insurer_claim_no}` : ""}`;
+  const title = `Claim Intimation - ${claim.claim_no}${claim.insurer_claim_no ? ` / ${claim.insurer_claim_no}` : ""}`;
   const rows: FinalDocumentRowV2[] = finalDocumentDefinitions.map((document, index) => {
     const uploaded = latestActiveDocument(documents ?? [], document.type);
     return {

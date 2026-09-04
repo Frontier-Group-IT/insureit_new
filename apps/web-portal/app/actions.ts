@@ -556,7 +556,7 @@ export async function requestFinalDocuments(claimId: string, formData: FormData)
 function stageDetailsFromForm(formData: FormData) {
   const details: Record<string, string | number> = {};
   for (const [key, value] of formData.entries()) {
-    if (key === "notes" || key === "next_status" || key === "current_status") continue;
+    if (key === "notes" || key === "next_status" || key === "current_status" || key === "insurer_claim_no") continue;
     if (typeof value !== "string" || !value.trim()) continue;
     const numericValue = Number(value.replace(/,/g, ""));
     details[key] = Number.isFinite(numericValue) && /amount|tds|gst|labour|parts|bill|received/i.test(key) ? numericValue : value.trim();
@@ -577,7 +577,11 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
     throw new Error("This status change is not allowed for the current claim stage.");
   }
 
-  const { error } = await supabase.from("claims").update({ current_status: nextStatus }).eq("id", claimId);
+  const insurerClaimNo = textValue(formData, "insurer_claim_no");
+  const { error } = await supabase.from("claims").update({
+    current_status: nextStatus,
+    ...(insurerClaimNo ? { insurer_claim_no: insurerClaimNo } : {})
+  }).eq("id", claimId);
   if (error) throw new Error(error.message);
 
   const details = stageDetailsFromForm(formData);

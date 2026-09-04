@@ -26,6 +26,8 @@ This is intentionally a narrow step. No claim ownership, status-transition, RLS,
 
 **DEPLOYED / VERIFIED:** Internal and external claims are now available through top-level Operations queue tabs, with only the selected type visible. Internal claims remain the default; external claims prioritize assistance requests. Search, status filtering, counts, and pagination are preserved. PR #1077 merged as `24c199a1863060add555f305fb59fdbf0b241d25`; canonical verification run `33631214420`; production workflow `33631556961`; GitHub deployment `6222655881` reports a completed production deployment.
 
+**IMPLEMENTED, NOT DEPLOYED:** The operations claim detail now includes a web-only nine-stage journey panel aligned to the existing mobile external-claim field contract. It preserves historical claim statuses, renames the final-document presentation to Claim Intimation, stores operations-entered stage values in `claim_stage_details`, updates insurer claim number on `claims`, enforces mobile-matching mandatory fields, and leaves customer document upload/replacement behavior unchanged. No mobile files, mobile workflow, migration, or production configuration changed.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.
