@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { advanceClaimWorkflow } from "@/app/actions";
+import { advanceClaimWorkflow, saveSpotIntimationDetails } from "@/app/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
 
@@ -106,6 +106,17 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     },
     { ok: false, message: "" },
   );
+  const [spotState, spotFormAction] = useActionState(
+    async (_previous: { ok: boolean; message: string }, formData: FormData) => {
+      try {
+        await saveSpotIntimationDetails(claimId, formData);
+        return { ok: true, message: "Spot Intimation details saved." };
+      } catch (error) {
+        return { ok: false, message: error instanceof Error ? error.message : "Unable to save Spot Intimation details." };
+      }
+    },
+    { ok: false, message: "" },
+  );
 
   useEffect(() => {
     if (state.ok && active?.key === "claim_intimation" && next === "Final Documents Submitted") {
@@ -114,6 +125,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     }
     if (state.ok) router.refresh();
   }, [active?.key, claimId, next, router, state.ok]);
+  useEffect(() => {
+    if (spotState.ok) router.refresh();
+  }, [router, spotState.ok]);
 
   return (
     <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
@@ -128,7 +142,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           return <li key={stage.key} className="border-b border-[#E4ECF6] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"><button type="button" disabled={!available} aria-current={stage.key === selected.key ? "step" : undefined} onClick={() => setSelectedKey(stage.key)} className={`relative w-full px-2 py-3 text-left text-[10px] font-semibold transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${stage.key === selected.key ? "text-[#003A83] after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-[#174EA6]" : available ? "text-[#526178] hover:bg-[#F8FBFF] hover:text-[#174EA6]" : "cursor-not-allowed text-[#A0ACBB]"}`}>{stage.label}<span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.06em]">{isCurrent ? "Current" : index < activeIndex ? "Completed" : "Locked"}</span></button></li>;
         })}
       </ol>
-      {editable && active && next && selected.key === "spot_intimation" ? <StageForm active={active} detail={spotDetail ?? detail} fields={fields} next={next} insurerClaimNo={insurerClaimNo} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={formAction} state={state} /> : null}
+      {selected.key === "spot_intimation" ? <StageForm active={active ?? stages[0]} detail={spotDetail ?? detail} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} /> : null}
       {selected.key === "spot_intimation" ? <div className="mt-3">{spotContent}</div> : null}
       {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
       {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
@@ -156,10 +170,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 type StageField = { name: string; label: string; type?: string };
 type StageFields = Record<string, StageField[]>;
 
-function StageForm({ active, detail, fields, next, insurerClaimNo, accidentAt, spotIntimationAt, formAction, state }: { active: (typeof stages)[number]; detail: StageDetail | undefined; fields: StageFields; next: ClaimStatus; insurerClaimNo?: string | null; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: { ok: boolean; message: string } }) {
+function StageForm({ active, detail, fields, next, insurerClaimNo, accidentAt, spotIntimationAt, formAction, state, standalone = false }: { active: (typeof stages)[number]; detail: StageDetail | undefined; fields: StageFields; next?: ClaimStatus; insurerClaimNo?: string | null; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: { ok: boolean; message: string }; standalone?: boolean }) {
   return <form action={formAction} className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
-    <input type="hidden" name="next_status" value={next} />
-    <input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
+    {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[active.key].map((field) => {
       const storedValue = detail?.details?.[field.name];
       const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? "" : field.name === "accident_at" ? accidentAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "spot_intimation_at" ? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "") : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
@@ -169,7 +182,7 @@ function StageForm({ active, detail, fields, next, insurerClaimNo, accidentAt, s
       </label>;
     })}</div>
     {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
-    <FormSubmitButton label={`Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
+    <FormSubmitButton label={standalone ? "Save Spot Intimation Details" : `Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
   </form>;
 }
 
