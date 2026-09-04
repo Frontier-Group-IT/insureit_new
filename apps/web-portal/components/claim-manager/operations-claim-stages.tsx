@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { advanceClaimWorkflow, saveSpotIntimationDetails } from "@/app/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
+import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
 type StageDetail = { stage?: string | null; details: Record<string, unknown> | null; created_at: string };
 
@@ -19,6 +20,7 @@ type Props = {
   initialStageKey?: string;
   accidentAt?: string | null;
   spotIntimationAt?: string | null;
+  spotDetails?: InternalSpotIntimationDetails | null;
 };
 
 const stages = [
@@ -35,9 +37,10 @@ const stages = [
 
 const fields: StageFields = {
   spot_intimation: [
-    { name: "accident_at", label: "Accident date and time", type: "datetime-local" },
+    { name: "incident_at", label: "Accident date and time", type: "datetime-local" },
     { name: "spot_intimation_at", label: "Spot Intimation date and time", type: "datetime-local" },
-    { name: "accident_location", label: "Accident location" }, { name: "accident_description", label: "Accident description" }
+    { name: "driver_name", label: "Driver name" }, { name: "driver_phone", label: "Driver number", type: "tel" },
+    { name: "location", label: "Location" }
   ],
   spot_status: [
     { name: "surveyor_name", label: "Surveyor name" }, { name: "surveyor_phone", label: "Surveyor mobile" },
@@ -72,6 +75,7 @@ const fields: StageFields = {
 };
 
 const requiredFields: Record<string, string[]> = {
+  spot_intimation: ["incident_at", "spot_intimation_at"],
   claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "claim_intimation_date", "gate_in_date", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date", "ri_done_date"],
@@ -81,18 +85,15 @@ const requiredFields: Record<string, string[]> = {
   payment_encashment: ["depreciation_submitted", "satisfaction_submitted", "payment_received_date", "payment_received_amount"]
 };
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
   const [selectedKey, setSelectedKey] = useState(() => stages.some((stage) => stage.key === initialStageKey) ? initialStageKey! : active?.key ?? stages[0].key);
-  useEffect(() => {
-    if (active?.key) setSelectedKey(active.key);
-  }, [active?.key]);
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
   const detail = [...details].find((row) => row.details?.milestone_key === selected.key || (selected.statuses as readonly string[]).includes(row.stage ?? ""));
-  const spotDetail = [...details].find((row) => typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
+  const spotDetail = [...details].find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
   const next = managerTransitions[currentStatus];
   const editable = Boolean(active?.key === selected.key && next && fields[selected.key]);
   const [state, formAction] = useActionState(
@@ -142,7 +143,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           return <li key={stage.key} className="border-b border-[#E4ECF6] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"><button type="button" disabled={!available} aria-current={stage.key === selected.key ? "step" : undefined} onClick={() => setSelectedKey(stage.key)} className={`relative w-full px-2 py-3 text-left text-[10px] font-semibold transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${stage.key === selected.key ? "text-[#003A83] after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-[#174EA6]" : available ? "text-[#526178] hover:bg-[#F8FBFF] hover:text-[#174EA6]" : "cursor-not-allowed text-[#A0ACBB]"}`}>{stage.label}<span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.06em]">{isCurrent ? "Current" : index < activeIndex ? "Completed" : "Locked"}</span></button></li>;
         })}
       </ol>
-      {selected.key === "spot_intimation" ? <StageForm active={active ?? stages[0]} detail={spotDetail ?? detail} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} /> : null}
+      {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} /> : null}
       {selected.key === "spot_intimation" ? <div className="mt-3">{spotContent}</div> : null}
       {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
       {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
@@ -170,15 +171,30 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 type StageField = { name: string; label: string; type?: string };
 type StageFields = Record<string, StageField[]>;
 
-function StageForm({ active, detail, fields, next, insurerClaimNo, accidentAt, spotIntimationAt, formAction, state, standalone = false }: { active: (typeof stages)[number]; detail: StageDetail | undefined; fields: StageFields; next?: ClaimStatus; insurerClaimNo?: string | null; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: { ok: boolean; message: string }; standalone?: boolean }) {
+function StageForm({ stage, active, detail, spotDetails, fields, next, insurerClaimNo, accidentAt, spotIntimationAt, formAction, state, standalone = false }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; fields: StageFields; next?: ClaimStatus; insurerClaimNo?: string | null; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: { ok: boolean; message: string }; standalone?: boolean }) {
+  const spot = stage.key === "spot_intimation";
+  const [location, setLocation] = useState(spotDetails?.location ?? "");
+  const [locationError, setLocationError] = useState("");
+  const captureLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Location capture is not supported in this browser.");
+      return;
+    }
+    setLocationError("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => setLocation(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`),
+      () => setLocationError("Unable to access your location. Enter it manually."),
+    );
+  };
   return <form action={formAction} className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
     {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[active.key].map((field) => {
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[stage.key].map((field) => {
       const storedValue = detail?.details?.[field.name];
-      const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? "" : field.name === "accident_at" ? accidentAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "spot_intimation_at" ? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "") : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
-      const required = requiredFields[active.key]?.includes(field.name);
+      const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? "" : field.name === "incident_at" ? spotDetails?.incident_at ?? accidentAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "spot_intimation_at" ? spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_name" ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_phone" ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
+      const required = requiredFields[stage.key]?.includes(field.name);
       return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
-        {field.type === "select" ? <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select> : <input name={field.name} type={field.type ?? "text"} defaultValue={toDateTimeLocal(value, field.type)} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]" />}
+        {field.type === "select" ? <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select> : <input name={field.name} type={field.type ?? "text"} value={spot && field.name === "location" ? location : undefined} defaultValue={spot && field.name !== "location" ? toDateTimeLocal(value, field.type) : undefined} onChange={spot && field.name === "location" ? (event) => setLocation(event.target.value) : undefined} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]" />}
+        {spot && field.name === "location" ? <><button type="button" onClick={captureLocation} className="mt-1 text-[10px] font-semibold normal-case tracking-normal text-[#174EA6] hover:underline">Use current location</button>{locationError ? <span role="alert" className="mt-1 block text-[10px] font-medium normal-case tracking-normal text-rose-700">{locationError}</span> : null}</> : null}
       </label>;
     })}</div>
     {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}

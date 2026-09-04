@@ -10,6 +10,7 @@ import { type ClaimStatus } from "@/lib/claim-workflow";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { readInternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
@@ -179,10 +180,11 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   const surveyorDetails = extractSurveyorDetails(stageRows ?? []);
   const mergedVerifications = [...(verificationRows ?? []), ...stageVerifications];
-  const spotIntimationAt = stageRows?.find((row) => typeof row.details?.spot_intimation_at === "string")?.details?.spot_intimation_at;
+  const spotDetails = readInternalSpotIntimationDetails(stageRows ?? [], claim);
   const claimWithSpotIntimation = {
     ...claimForVerification,
-    spotIntimationAt: typeof spotIntimationAt === "string" ? spotIntimationAt : null
+    spotIntimationAt: spotDetails.spot_intimation_at,
+    spotDetails
   };
   const finalRows: FinalDocumentRowV2[] = finalDocumentDefinitions.map((document, index) => {
     const uploaded = (documents ?? []).find((item) => matchesClaimIntimationDocument(item.document_type ?? "", document.type) && item.verification_status !== "rejected");
@@ -243,6 +245,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
         details={stageRows ?? []}
         accidentAt={claim.accident_at}
         spotIntimationAt={claimWithSpotIntimation.spotIntimationAt}
+        spotDetails={spotDetails}
         spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} />}
         claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
         initialStageKey={requestedStage}

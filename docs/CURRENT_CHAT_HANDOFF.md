@@ -65,6 +65,8 @@ This is intentionally a narrow step. No claim ownership, status-transition, RLS,
 
 **IMPLEMENTED, NOT DEPLOYED:** Spot Intimation now contains editable Accident Date/Time and Spot Intimation Date/Time fields while retaining the original claim overview above the stage menu. Saved accident time updates `claims.accident_at`, saved Spot Intimation time is read from `claim_stage_details`, and the unexplained raw bottom stage-detail panel was removed. The existing Spot Intimation Document Verification layout was not changed.
 
+**IMPLEMENTED, NOT DEPLOYED:** Internal Operations Spot Intimation parity now uses a normalized `claim_stage_details` contract (`incident_at`, `spot_intimation_at`, `driver_name`, `driver_phone`, `location`) with legacy fallbacks. The selected stage now controls the rendered form, preventing Claim Intimation fields from appearing under Spot Intimation. Managed-only saves enforce the mobile chronology rules and synchronize the overview; external/self-managed claims and `claim_milestones` remain unchanged. Focused typecheck and claim-journey regression checks pass.
+
 ## Active performance remediation
 
 **IMPLEMENTED, NOT DEPLOYED:** feature branch `perf/safe-remediation-foundation` adds Vercel Speed Insights, replaces the 224 KB remote GitHub brand mark with a local 14.5 KB WebP, and adds hover/focus prefetch only for common read routes. Typecheck, lint (zero errors; existing warnings), production build, and `git diff --check` passed locally. No production data, Supabase schema/RLS/storage, Vercel region, environment, permission, or business workflow was changed.
