@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1222
-source_commit=dca65914cf4181e6503f7f6b1e7234a2a884a4ba
-purpose=publish mobile startup auth safety and diagnostics preview OTA
+source_pr=1223
+source_commit=98ec8f0daaef1adc211a6d79cc1963a8d38d1a09
+purpose=publish customer vehicle card text wrapping preview OTA
