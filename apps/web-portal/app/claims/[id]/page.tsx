@@ -4,7 +4,7 @@ import { OperationsClaimStages } from "@/components/claim-manager/operations-cla
 import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
-import { SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
+import { SpotClaimHeader, SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { type ClaimStatus } from "@/lib/claim-workflow";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
@@ -230,12 +230,13 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
+      <SpotClaimHeader claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       <OperationsClaimStages
         claimId={claim.id}
         currentStatus={claim.current_status}
         insurerClaimNo={claim.insurer_claim_no}
         details={stageRows ?? []}
-        spotContent={<SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />}
+        spotContent={<SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} />}
         claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
         initialStageKey={requestedStage}
       />

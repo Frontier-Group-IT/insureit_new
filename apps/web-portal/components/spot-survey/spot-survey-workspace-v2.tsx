@@ -91,7 +91,11 @@ const insurerBrandLogos: Record<string, BrandLogo> = {
   sbi: { src: "/assets/insurers/sbi-general.png", label: "SBI General" }
 };
 
-export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean }) {
+export function SpotClaimHeader({ claim }: { claim: SpotSurveyClaim }) {
+  return <><InfoStrip claim={claim} /><PolicyDetails claim={claim} /></>;
+}
+
+export function SpotSurveyWorkspace({ claim, documents, verifications = [], surveyorDetails = null, showContext = true, showSpotDetails = true }: { claim: SpotSurveyClaim; documents: SpotSurveyDocument[]; verifications?: SpotSurveyVerification[]; surveyorDetails?: SurveyorDetails | null; showContext?: boolean; showSpotDetails?: boolean }) {
   const items = buildDocumentItems(documents);
   const unclassifiedAttachments = documents.filter(isUnclassifiedSpotAttachment);
   const verifiedCount = items.filter((item) => isItemVerified(item, verifications)).length;
@@ -102,7 +106,8 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
 
   return (
     <div className="mx-auto max-w-[1440px] space-y-2 pb-4">
-      {showContext ? <><InfoStrip claim={claim} /><PolicyDetails claim={claim} /><SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={claim.accident_location} /></> : null}
+      {showContext ? <SpotClaimHeader claim={claim} /> : null}
+      {showSpotDetails ? <SpotSurveyDetailsPanel driverName={driverName} driverMobile={driverMobile} lossLocation={claim.accident_location} /> : null}
       {unclassifiedAttachments.length ? <UnclassifiedAttachments claimId={claim.id} documents={unclassifiedAttachments} /> : null}
       <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
         <div className="mb-3 flex items-start justify-between gap-4">
