@@ -1,4 +1,4 @@
 triggered_by=chatgpt
-source_pr=1223
-source_commit=98ec8f0daaef1adc211a6d79cc1963a8d38d1a09
-purpose=publish customer vehicle card text wrapping preview OTA
+source_pr=1228
+source_commit=8e147f3bfc59ca989933bcac6eaef3c52f603b6d
+purpose=publish customer home bottom navigation overlap fix preview OTA
