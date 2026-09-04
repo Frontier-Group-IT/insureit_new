@@ -24,7 +24,7 @@ type PolicyRow = {
   policy_premium_details: { gross_premium: number | null } | null;
   policy_documents: { id: string; document_type: string; file_name: string }[];
   customers: { company_name: string | null; contact_name: string } | null;
-  vehicles: { vehicle_no: string } | null;
+  vehicles: { vehicle_no: string; chassis_no: string | null; engine_no: string | null } | null;
   insurance_companies: { name: string } | null;
   non_motor_policy_details: { category: string | null; risk_title: string | null; risk_location: string | null; transit_from: string | null; transit_to: string | null; nature_of_business: string | null; liability_type: string | null; risk_details: Record<string, unknown> | null } | null;
   claims: { count: number }[];
@@ -86,7 +86,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       });
       return <AppShell title="Policies"><BackofficePolicyRegister rows={[]} /></AppShell>;
     }
-    let safeQuery = admin.from("policies").select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no),insurance_companies(name)").order("created_at", { ascending: false });
+    let safeQuery = admin.from("policies").select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no,chassis_no,engine_no),insurance_companies(name)").order("created_at", { ascending: false });
     if (accessibleCustomerIds !== null) safeQuery = safeQuery.in("customer_id", accessibleCustomerIds);
     const { data, error } = await safeQuery.returns<BackofficePolicyRow[]>();
     const finishedAt = performance.now();
@@ -120,7 +120,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     return <AppShell title="Policies"><PolicyWorkspace rows={[]} sourceOptions={sourceOptions} /></AppShell>;
   }
 
-  let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
+  let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const [sourceResult, policyResult] = await Promise.all([activeSourcesPromise, query.returns<PolicyRow[]>()]);
   const finishedAt = performance.now();
