@@ -246,7 +246,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
         accidentAt={claim.accident_at}
         spotIntimationAt={claimWithSpotIntimation.spotIntimationAt}
         spotDetails={spotDetails}
-        spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} />}
+        spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
         claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
         initialStageKey={requestedStage}
       />
