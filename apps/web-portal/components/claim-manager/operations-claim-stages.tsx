@@ -14,6 +14,7 @@ type Props = {
   currentStatus: ClaimStatus;
   insurerClaimNo?: string | null;
   details: StageDetail[];
+  spotContent: ReactNode;
   claimIntimationContent: ReactNode;
   initialStageKey?: string;
 };
@@ -77,7 +78,7 @@ const requiredFields: Record<string, string[]> = {
   payment_encashment: ["depreciation_submitted", "satisfaction_submitted", "payment_received_date", "payment_received_amount"]
 };
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, claimIntimationContent, initialStageKey }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
@@ -123,6 +124,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           return <li key={stage.key}><button type="button" disabled={!available} aria-current={stage.key === selected.key ? "step" : undefined} onClick={() => setSelectedKey(stage.key)} className={`w-full rounded-lg border px-2 py-2 text-left text-[10px] font-semibold transition ${stage.key === selected.key ? "border-[#174EA6] bg-[#EEF4FF] text-[#003A83]" : available ? "border-[#E4ECF6] text-[#526178] hover:border-[#BFD3F7] hover:bg-[#F8FBFF]" : "cursor-not-allowed border-[#EEF2F7] bg-[#FBFCFE] text-[#A0ACBB]"}`}>{stage.label}<span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.06em]">{isCurrent ? "Current" : index < activeIndex ? "Completed" : "Locked"}</span></button></li>;
         })}
       </ol>
+      {selected.key === "spot_intimation" ? <div className="mt-3">{spotContent}</div> : null}
       {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
       {detail?.details && Object.keys(detail.details).length ? <div className="mt-3 grid gap-2 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(detail.details).filter(([key]) => key !== "milestone_key").map(([key, value]) => <div key={key}><p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{key.replaceAll("_", " ")}</p><p className="mt-0.5 break-words text-[12px] font-semibold text-[#071D49]">{String(value ?? "-")}</p></div>)}</div> : null}
       {editable && active ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">

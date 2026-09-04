@@ -230,12 +230,12 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />
       <OperationsClaimStages
         claimId={claim.id}
         currentStatus={claim.current_status}
         insurerClaimNo={claim.insurer_claim_no}
         details={stageRows ?? []}
+        spotContent={<SpotSurveyWorkspace claim={{ ...claimForVerification, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} />}
         claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
         initialStageKey={requestedStage}
       />
