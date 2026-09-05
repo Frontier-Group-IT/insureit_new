@@ -224,15 +224,14 @@ function StageForm({ stage, active, detail, spotDetails, fields, next, insurerCl
       () => setLocationError("Unable to access your location. Enter it manually."),
     );
   };
-  return <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-[linear-gradient(180deg,#F8FBFF_0%,#F3F8FF_100%)] shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
+  return <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
     {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
     {spot ? <div className="flex items-center gap-3 border-b border-[#DCE9F8] px-4 py-3">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#E8F2FF] text-[#2F80ED]">
+      <span className="grid h-5 w-5 shrink-0 place-items-center text-[#2F80ED]">
         <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
       </span>
       <div className="min-w-0">
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
-        <p className="mt-0.5 text-[11px] font-medium text-[#68758A]">Capture the key details of the accident and spot intimation.</p>
       </div>
     </div> : null}
     <div className="p-4">
