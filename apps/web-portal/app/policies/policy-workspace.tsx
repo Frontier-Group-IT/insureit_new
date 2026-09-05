@@ -45,6 +45,7 @@ type PolicyRow = {
 type SourceOption = { value: string; label: string };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
 type BusinessFilter = "all" | "Motor" | "Non Motor";
+type TimeScope = "mtd" | "all";
 const PAGE_SIZE = 10;
 
 function policySourceDatabaseType(value: string | null) {
@@ -134,9 +135,36 @@ function PolicyDateRangeFilter({
   );
 }
 
+function PolicyPeriodFilter({
+  value,
+  mtdCount,
+  allCount,
+  onChange,
+}: {
+  value: TimeScope;
+  mtdCount: number;
+  allCount: number;
+  onChange: (value: TimeScope) => void;
+}) {
+  const selectedCount = value === "mtd" ? mtdCount : allCount;
+  return (
+    <details className="group relative shrink-0">
+      <summary className="flex h-8 min-w-[74px] cursor-pointer list-none items-center justify-between gap-1.5 rounded-lg bg-[#17365D] px-2.5 text-[10px] font-bold text-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#17365D]/20 [&::-webkit-details-marker]:hidden">
+        <span>{value === "mtd" ? "MTD" : "All"} <span className="opacity-80">{selectedCount}</span></span>
+        <ChevronDown className="h-3 w-3 transition group-open:rotate-180" />
+      </summary>
+      <div className="absolute right-0 top-9 z-40 min-w-[118px] rounded-xl border border-[#D7E0EA] bg-white p-1.5 shadow-[0_16px_36px_rgba(15,23,42,.16)]">
+        <button type="button" onClick={() => onChange("mtd")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#53627A] hover:bg-[#F8FAFC]"}`}><span>MTD</span><span className="text-[9px] tabular-nums opacity-70">{mtdCount}</span></button>
+        <button type="button" onClick={() => onChange("all")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#53627A] hover:bg-[#F8FAFC]"}`}><span>All</span><span className="text-[9px] tabular-nums opacity-70">{allCount}</span></button>
+      </div>
+    </details>
+  );
+}
+
 export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[]; sourceOptions?: SourceOption[] }) {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ViewKey>("all");
+  const [timeScope, setTimeScope] = useState<TimeScope>("mtd");
   const [business, setBusiness] = useState<BusinessFilter>("all");
   const [category, setCategory] = useState("all");
   const [source, setSource] = useState("all");
@@ -145,12 +173,13 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
+  const { from: mtdStart, to: mtdEnd } = monthToDateBounds();
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurance_companies?.name).filter(Boolean))).sort() as string[], [rows]);
   const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
 
-  const baseFiltered = useMemo(() => enriched.filter((row) => {
+  const controlFiltered = useMemo(() => enriched.filter((row) => {
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
     const matchesBusiness = business === "all" || policyBusinessLine(row) === business;
     const matchesCategory = business !== "Non Motor" || category === "all" || policyCategory(row) === category;
@@ -162,6 +191,12 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
     return matchesBusiness && matchesCategory && matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesQuery;
   }), [business, category, enriched, fromDate, insurer, query, source, toDate]);
+
+  const mtdFiltered = useMemo(() => controlFiltered.filter((row) => {
+    const businessDate = policyBusinessDate(row);
+    return businessDate >= mtdStart && businessDate <= mtdEnd;
+  }), [controlFiltered, mtdEnd, mtdStart]);
+  const baseFiltered = timeScope === "mtd" ? mtdFiltered : controlFiltered;
 
   const stats = useMemo(() => {
     const active = baseFiltered.filter((row) => row.status === "Active").length;
@@ -188,12 +223,35 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     setPage(1);
   }
 
+  function changeTimeScope(next: TimeScope) {
+    setTimeScope(next);
+    setFromDate("");
+    setToDate("");
+    setView("all");
+    setPage(1);
+  }
+
+  function changeCustomFromDate(value: string) {
+    setTimeScope("all");
+    setFromDate(value);
+    setView("all");
+    setPage(1);
+  }
+
+  function changeCustomToDate(value: string) {
+    setTimeScope("all");
+    setToDate(value);
+    setView("all");
+    setPage(1);
+  }
+
   function resetFilters() {
     setQuery("");
     setBusiness("all");
     setCategory("all");
     setSource("all");
     setInsurer("all");
+    setTimeScope("mtd");
     setFromDate("");
     setToDate("");
     setView("all");
@@ -267,22 +325,26 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
           <PolicyDateRangeFilter
             fromDate={fromDate}
             toDate={toDate}
-            onFromDateChange={(value) => { setFromDate(value); setPage(1); }}
-            onToDateChange={(value) => { setToDate(value); setPage(1); }}
+            onFromDateChange={changeCustomFromDate}
+            onToDateChange={changeCustomToDate}
             onClear={() => { setFromDate(""); setToDate(""); setPage(1); }}
           />
-          <div className="min-w-0 max-w-full xl:min-w-[330px] xl:[&>div]:w-full xl:[&>div]:justify-between xl:[&>div]:gap-0.5 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
-            <RegisterViewTabs
-              value={view}
-              onChange={changeView}
-              options={[
-                { value: "all", label: "All", count: stats.all },
-                { value: "active", label: "Active", count: stats.active },
-                { value: "expiring", label: "Renewal due", count: stats.expiring },
-                { value: "expired", label: "Expired", count: stats.expired },
-                { value: "claims", label: "Claims", count: business === "Non Motor" ? undefined : stats.claims, disabled: business === "Non Motor", title: business === "Non Motor" ? "Non-Motor claim workflow is not enabled yet." : undefined }
-              ]}
-            />
+          <div className="min-w-0 max-w-full xl:min-w-[330px]">
+            <div className="flex w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
+              <PolicyPeriodFilter value={timeScope} mtdCount={mtdFiltered.length} allCount={controlFiltered.length} onChange={changeTimeScope} />
+              <div className="min-w-0 flex-1 [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
+                <RegisterViewTabs
+                  value={view}
+                  onChange={changeView}
+                  options={[
+                    { value: "active", label: "Active", count: stats.active },
+                    { value: "expiring", label: "Due", count: stats.expiring },
+                    { value: "expired", label: "Expired", count: stats.expired },
+                    { value: "claims", label: "Claims", count: business === "Non Motor" ? undefined : stats.claims, disabled: business === "Non Motor", title: business === "Non Motor" ? "Non-Motor claim workflow is not enabled yet." : undefined }
+                  ]}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -365,7 +427,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
 function PolicyStatus({ policy }: { policy: PolicyRow & { status?: string; daysLeft?: number } }) {
   const status = policy.status ?? policyStatus(policy.end_date);
   if (status === "Expired") return <RegisterStatusPill tone="red">Expired</RegisterStatusPill>;
-  if (status === "Expiring soon") return <RegisterStatusPill tone="amber">Renewal due</RegisterStatusPill>;
+  if (status === "Expiring soon") return <RegisterStatusPill tone="amber">Due</RegisterStatusPill>;
   return <RegisterStatusPill tone="green">Active</RegisterStatusPill>;
 }
 
@@ -457,6 +519,14 @@ function validityHint(policy: PolicyRow & { daysLeft?: number }) {
 }
 function policyBusinessDate(row: Pick<PolicyRow, "issuance_date" | "created_at">) {
   return row.issuance_date || row.created_at.slice(0, 10);
+}
+
+function monthToDateBounds() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return { from: `${year}-${month}-01`, to: `${year}-${month}-${day}` };
 }
 
 function policyStatus(endDate: string) {
