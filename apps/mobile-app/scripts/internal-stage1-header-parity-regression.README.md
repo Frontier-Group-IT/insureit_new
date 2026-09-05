@@ -1,0 +1,1 @@
+This branch switches broker-managed internal Spot Intimation Stage 1 from the legacy custom identity header to the exact shared external claim header and identity card components. The regression script documents the required component usage for review.
