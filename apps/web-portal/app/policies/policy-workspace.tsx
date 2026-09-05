@@ -151,13 +151,13 @@ function PolicyPeriodFilter({
   const selectedCount = value === "mtd" ? mtdCount : allCount;
   return (
     <details className="group relative shrink-0">
-      <summary className="flex h-8 min-w-[74px] cursor-pointer list-none items-center justify-between gap-1.5 rounded-lg bg-[#17365D] px-2.5 text-[10px] font-bold text-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#17365D]/20 [&::-webkit-details-marker]:hidden">
+      <summary className="flex h-8 min-w-[74px] cursor-pointer list-none items-center justify-between gap-1.5 rounded-lg bg-[#0F766E] px-2.5 text-[10px] font-bold text-white shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[#0F766E]/20 [&::-webkit-details-marker]:hidden">
         <span>{value === "mtd" ? "MTD" : "All"} <span className="opacity-80">{selectedCount}</span></span>
         <ChevronDown className="h-3 w-3 transition group-open:rotate-180" />
       </summary>
       <div className="absolute right-0 top-9 z-40 min-w-[118px] rounded-xl border border-[#D7E0EA] bg-white p-1.5 shadow-[0_16px_36px_rgba(15,23,42,.16)]">
-        <button type="button" onClick={() => onChange("mtd")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#53627A] hover:bg-[#F8FAFC]"}`}><span>MTD</span><span className="text-[9px] tabular-nums opacity-70">{mtdCount}</span></button>
-        <button type="button" onClick={() => onChange("all")} className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "bg-[#EEF4FB] text-[#17365D]" : "text-[#53627A] hover:bg-[#F8FAFC]"}`}><span>All</span><span className="text-[9px] tabular-nums opacity-70">{allCount}</span></button>
+        <button type="button" onClick={(event) => { onChange("mtd"); event.currentTarget.closest("details")?.removeAttribute("open"); }} className={`flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "mtd" ? "border-[#99E2D0] bg-[#E8F7F2] text-[#0F766E]" : "border-transparent bg-[#F2FBF8] text-[#16836F] hover:bg-[#E8F7F2]"}`}><span>MTD</span><span className="text-[9px] tabular-nums opacity-75">{mtdCount}</span></button>
+        <button type="button" onClick={(event) => { onChange("all"); event.currentTarget.closest("details")?.removeAttribute("open"); }} className={`mt-1 flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[10px] font-bold transition ${value === "all" ? "border-[#B8CCE4] bg-[#E8F0F9] text-[#17365D]" : "border-transparent bg-[#F2F6FB] text-[#385674] hover:bg-[#E8F0F9]"}`}><span>All</span><span className="text-[9px] tabular-nums opacity-75">{allCount}</span></button>
       </div>
     </details>
   );
