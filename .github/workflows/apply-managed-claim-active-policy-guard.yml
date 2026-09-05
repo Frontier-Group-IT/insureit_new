@@ -2,6 +2,12 @@ name: Apply managed claim active policy guard
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260905195000_prevent_duplicate_active_managed_claims.sql'
+      - '.github/workflows/apply-managed-claim-active-policy-guard.yml'
 
 permissions:
   contents: read
