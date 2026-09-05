@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
@@ -21,6 +20,7 @@ import {
   type PartnerPolicySummary,
 } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -159,7 +159,7 @@ export default function PoliciesScreen() {
   ) : (
     <PartnerStateView
       state="empty"
-      icon="document-text-outline"
+      asset={PartnerAssets.emptyStates.noPolicies}
       title="No policies found"
       message="Try another search term or policy lifecycle filter."
     />
@@ -221,12 +221,8 @@ function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => voi
       meta={`Ends ${formatDate(row.end_date)}`}
       status={<PartnerStatusBadge label={humanize(row.lifecycle_status)} tone={lifecycleTone(row.lifecycle_status)} />}
       leading={
-        <View style={styles.policyIcon}>
-          <Ionicons
-            name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'}
-            size={17}
-            color={partnerTheme.colors.brandStrong}
-          />
+        <View style={styles.policyArtwork}>
+          <Image source={policyArtwork(category)} style={styles.policyArtworkImage} resizeMode="contain" />
         </View>
       }
       onPress={onPress}
@@ -234,6 +230,13 @@ function PolicyRow({ row, onPress }: { row: PartnerPolicyRow; onPress: () => voi
       divider={false}
     />
   );
+}
+
+function policyArtwork(category: ReturnType<typeof policyCategory>) {
+  if (category === 'Motor') return PartnerAssets.products.motorInsurance;
+  if (category === 'Health') return PartnerAssets.products.healthInsurance;
+  if (category === 'Life') return PartnerAssets.products.familyInsurance;
+  return PartnerAssets.products.commercialInsurance;
 }
 
 function policyCategory(row: PartnerPolicyRow) {
@@ -287,14 +290,13 @@ const styles = StyleSheet.create({
   search: { marginTop: 10 },
   tabs: { marginTop: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
-  policyIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  policyArtwork: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.brandSoft,
   },
+  policyArtworkImage: { width: 36, height: 36 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
