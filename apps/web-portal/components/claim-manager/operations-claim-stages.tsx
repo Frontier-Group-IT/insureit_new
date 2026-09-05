@@ -153,7 +153,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 className={`relative flex min-h-[72px] w-full items-center gap-2.5 px-3 py-3 text-left transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isSelected ? "bg-[#EEF3FF]" : available ? "bg-white hover:bg-[#F8FBFF]" : "cursor-not-allowed bg-white"}`}
               >
                 <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${isCompleted ? "bg-[#EAFBF4] text-[#0A9B72]" : isCurrent ? "bg-[#4F46E5] text-white" : "bg-[#F1F5F9] text-[#91A0B4]"}`}>
-                  {isCompleted ? "✓" : index + 1}
+                  {isCompleted ? "✓" : isCurrent ? index + 1 : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[1.8]"><rect x="6.5" y="10" width="11" height="9" rx="2"/><path d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"/></svg>
+                  )}
                 </span>
                 <span className="min-w-0">
                   <span className={`block text-[10px] font-medium leading-4 ${isSelected ? "text-[#2837A6]" : available ? "text-[#526178]" : "text-[#A7B3C2]"}`}>{stage.label}</span>
