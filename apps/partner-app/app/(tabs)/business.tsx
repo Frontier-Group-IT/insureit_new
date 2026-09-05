@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -11,10 +11,11 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
+import { formatIndianCurrency } from '@/lib/format';
 import { getPartnerNetwork, type PartnerNetworkData } from '@/lib/network';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerPayoutSummary, type PartnerPayoutSummary } from '@/lib/payout';
 import { getPartnerRenewalSummary, type PartnerRenewalSummary } from '@/lib/policies';
-import { formatIndianCurrency } from '@/lib/format';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
@@ -144,14 +145,14 @@ export default function BusinessScreen() {
           <PartnerSectionHeader title="Today" />
           <View style={styles.actionGrid}>
             <ActionStat
-              icon="refresh-outline"
+              asset={PartnerAssets.actions.renewals}
               value={renewals?.due_30_count ?? 0}
               label="Renewals in 30d"
               meta={formatIndianCurrency(renewals?.due_30_premium ?? 0)}
               onPress={() => router.push('/renewals')}
             />
             <ActionStat
-              icon="shield-outline"
+              asset={PartnerAssets.navigation.claims}
               value={claims?.active_claims ?? 0}
               label="Active claims"
               meta={claims?.assistance_requested ? `${claims.assistance_requested} assistance open` : 'Service queue'}
@@ -192,12 +193,8 @@ export default function BusinessScreen() {
           />
 
           <Pressable accessibilityRole="button" onPress={() => router.push('/network')} style={({ pressed }) => [styles.networkCard, pressed && styles.pressed]}>
-            <View style={styles.networkVisual}>
-              <View style={styles.networkRoot}><Ionicons name="git-network-outline" size={21} color="#FFFFFF" /></View>
-              <View style={styles.networkLine} />
-              <View style={styles.networkNodes}>
-                {Array.from({ length: Math.max(1, Math.min(network.total_partners, 4)) }).map((_, index) => <View key={index} style={styles.networkNode} />)}
-              </View>
+            <View style={styles.networkArtworkWrap}>
+              <Image source={PartnerAssets.actions.businessPerformance} style={styles.networkArtwork} resizeMode="contain" />
             </View>
             <View style={styles.networkCopy}>
               <Text style={styles.networkTitle}>{network.total_partners} Partner {network.total_partners === 1 ? 'family' : 'families'}</Text>
@@ -320,8 +317,8 @@ function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
   );
 }
 
-function ActionStat({ icon, value, label, meta, onPress }: {
-  icon: 'refresh-outline' | 'shield-outline';
+function ActionStat({ asset, value, label, meta, onPress }: {
+  asset: ImageSourcePropType;
   value: number;
   label: string;
   meta: string;
@@ -329,7 +326,7 @@ function ActionStat({ icon, value, label, meta, onPress }: {
 }) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.actionStat, pressed && styles.pressed]}>
-      <View style={styles.actionIcon}><Ionicons name={icon} size={20} color={partnerTheme.colors.brand} /></View>
+      <View style={styles.actionArtworkWrap}><Image source={asset} style={styles.actionArtwork} resizeMode="contain" /></View>
       <View style={styles.actionBody}>
         <Text style={styles.actionValue}>{value}</Text>
         <Text style={styles.actionLabel}>{label}</Text>
@@ -437,20 +434,21 @@ const styles = StyleSheet.create({
   heroStatValue: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: '800' },
   heroStatLabel: { marginTop: 3, color: '#9EA9BA', ...partnerTheme.typography.meta },
   actionGrid: { flexDirection: 'row', gap: 9 },
-  actionStat: { flex: 1, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  actionIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  actionStat: { flex: 1, minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  actionArtworkWrap: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  actionArtwork: { width: 40, height: 40 },
   actionBody: { flex: 1 },
   actionValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '800' },
   actionLabel: { marginTop: 2, color: partnerTheme.colors.ink, ...partnerTheme.typography.meta },
   actionMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  chartCard: { borderRadius: 18, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  chartCard: { borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   chart: { height: 126, flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   barColumn: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
   barValue: { height: 14, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
   barTrack: { height: 80, width: '74%', justifyContent: 'flex-end', overflow: 'hidden', borderRadius: 7, backgroundColor: '#F0F2F7' },
   bar: { width: '100%', borderRadius: 7, backgroundColor: partnerTheme.colors.brand },
   barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  mixCard: { borderRadius: 18, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  mixCard: { borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   mixRow: { marginBottom: 13 },
   mixTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   mixLabel: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
@@ -479,16 +477,13 @@ const styles = StyleSheet.create({
   restrictedTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   restrictedText: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  networkCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  networkVisual: { width: 58, height: 64, alignItems: 'center' },
-  networkRoot: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandStrong },
-  networkLine: { width: 1, height: 9, backgroundColor: '#C8CFDB' },
-  networkNodes: { flexDirection: 'row', gap: 3 },
-  networkNode: { width: 8, height: 8, borderRadius: 4, backgroundColor: partnerTheme.colors.accent },
+  networkCard: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  networkArtworkWrap: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  networkArtwork: { width: 46, height: 46 },
   networkCopy: { flex: 1 },
   networkTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   networkText: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  contributionList: { overflow: 'hidden', borderRadius: 18, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  contributionList: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   contributionRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   rank: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
   rankText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta },

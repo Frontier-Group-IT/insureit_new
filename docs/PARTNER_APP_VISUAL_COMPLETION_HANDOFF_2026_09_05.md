@@ -17,32 +17,30 @@ The user's installed-screen audit showed that technical completion of Phases 0�
 - Feature identity, meaningful status, empty/error states, banners, profile and support surfaces should prefer approved Partner artwork.
 - Back, close, chevron, overflow, filter, calendar, edit, small contact shortcuts and other lightweight utility controls remain vector icons.
 - Do not replace every glyph with 3D art.
-- Do not assign a generated banner/avatar a semantic meaning it does not clearly represent.
+- Do not assign generated banner/avatar artwork a semantic meaning it does not clearly represent.
 - The current banner batch is mainly generic business-growth artwork; do **not** relabel it as Claims Assistance, Renewal Opportunities, Academy, pending intake or insurer announcements.
 
-## Slice 1 — shared feature identity
+## Completed visual slices
+
+### Slice 1 — shared feature identity
 
 **MERGED:** PR #1333  
 **Merge:** `53b52a5abb6383be33d5146c19b7afcb9b803dc6`  
 **Partner Verify:** #186 / `33979348613` success  
 **Web Verify:** #3014 / `33979348649` success
 
-Delivered shared feature artwork in the common screen shells, centralized feature-art mapping, branded common failure states, complete More feature-art coverage and the initial `verify:visual` CI contract.
+Shared feature artwork was added to common screen shells, feature-art mapping was centralized, common failure states became branded, More feature-art coverage was completed and `verify:visual` was introduced.
 
-**Release state:** merged only; no Partner OTA, APK or AAB.
-
-## Slice 2 — core operational list/state artwork
+### Slice 2 — core operational list/state artwork
 
 **MERGED:** PR #1334  
 **Merge:** `28ac62daf0092fe7f8a320b9669f4d0209e0f29f`  
 **Partner Verify:** #187 / `33979804980` success  
 **Web Verify:** #3015 / `33979804906` success
 
-Delivered branded Customers/Policies/Claims/Renewals/Policy Intake list and empty/status artwork while preserving identity initials and all business/data behavior.
+Customers, Policies, Claims, Renewals and Policy Intake history received appropriate branded list/empty/status artwork without changing data behavior.
 
-**Release state:** merged only; no Partner OTA, APK or AAB.
-
-## Slice 3 — Search, Support, Settings and Activity
+### Slice 3 — Search, Support, Settings and Activity
 
 **MERGED:** PR #1336  
 **Merge:** `bb16602adae63f43b6b9e5595d42abea909ffa84`  
@@ -50,17 +48,11 @@ Delivered branded Customers/Policies/Claims/Renewals/Policy Intake list and empt
 **Partner Verify:** #192 / `33980782882` success  
 **Web Verify:** #3021 / `33980782864` success
 
-Important CI lesson:
+Delivered branded Search/Support/Settings surfaces plus event-specific Activity artwork and readable Activity timeline typography.
 
-- final-head Partner CI first failed because `asset && styles.linkArtwork` in Settings produced a React Native TypeScript style-union error;
-- fixed by using `asset ? styles.linkArtwork : undefined`;
-- exact final head then passed Partner and Web verification before merge.
+**CI lesson:** `asset && styles.linkArtwork` in React Native Settings created a TypeScript style union containing `0`; use `asset ? styles.linkArtwork : undefined` instead. Final exact head passed both gates before merge.
 
-Delivered Search, Support and Settings branded feature artwork plus event-specific Activity artwork and readable Activity timeline typography.
-
-**Release state:** merged only; no Partner OTA, APK or AAB.
-
-## Slice 4 — Impact and Journey body normalization
+### Slice 4 — Impact and Journey
 
 **MERGED:** PR #1338  
 **Merge:** `62ea263c7bcd958efbc7748da366feb93cf5277b`  
@@ -68,41 +60,54 @@ Delivered Search, Support and Settings branded feature artwork plus event-specif
 **Partner Verify:** #193 / `33981084342` success  
 **Web Verify:** #3023 / `33981084184` success
 
+Impact now uses Motor/Customers/Policies/Claims artwork, Verified claim-outcome artwork and Journey artwork. Journey timeline dots were replaced with Journey artwork. Both screens had legacy tiny typography removed.
+
+### Slice 5 — Your Week, Recognition, Learn and Profile audit
+
+**MERGED:** PR #1342  
+**Merge:** `e03f392ea47d5e642951ebe9ee880c5db6cd232d`  
+**Final head:** `2563489876a6b7f3c3c7da8a054d506dc9d527ae`  
+**Partner Verify:** #194 / `33981465353` success  
+**Web Verify:** #3028 / `33981465350` success
+
 Delivered:
 
-- Impact feature cards use approved Motor, Customers, Policies and Claims artwork;
-- claim outcome uses Verified artwork and journey action uses Journey artwork;
-- Impact legacy 7.5–8.5px labels moved to shared readable typography;
-- Journey timeline dots replaced with Journey artwork;
-- Journey legacy tiny timeline/summary text moved to shared readable typography;
-- `verify:visual` protects these choices.
+- **Your Week:** retained correct Renewal artwork and replaced remaining 7.5–9px local labels with shared typography.
+- **Recognition:** milestone cards use Learn, Renewal and Journey artwork instead of generic feature glyphs; tiny text removed.
+- **Learn:** no-card and learning-feedback states use Learn artwork, correct-answer feedback uses Verified artwork, and tiny option/stats/explanation/footnote typography was normalized. Quiz loading/submission/scoring semantics were not changed.
+- **Profile audit:** no body code change was justified. Real signed-in-user initials are intentionally retained because arbitrary avatar artwork could misrepresent identity; registration rows already use shared typography and the common header supplies branded Profile identity.
+- `verify:visual` protects these engagement decisions.
 
-**Release state:** merged only; no Partner OTA, APK or AAB.
+**Release state for Slices 1–5:** source merged only. No Partner OTA, APK or AAB was created by this visual-completion stream.
 
-## Slice 5 — Your Week, Recognition, Learn and Profile audit
+## Business body pass
 
-**IN PROGRESS:** branch `partner/visual-system-completion-slice5`  
-**Base:** Slice 4 merge `62ea263c7bcd958efbc7748da366feb93cf5277b`.
+**IN PROGRESS:** branch `partner/visual-system-completion-business`  
+**Base:** Slice 5 merge `e03f392ea47d5e642951ebe9ee880c5db6cd232d`.
+
+The Business screen was deliberately isolated because it contains commercial/network/payout visibility and should not be broadly redesigned.
 
 Implemented:
 
-- **Your Week:** retained the correct Renewal artwork for upcoming renewal work and replaced the remaining 7.5–9px local labels with shared `meta`, `caption`, `bodyStrong` and `sectionTitle` typography. No weekly calculations/routes changed.
-- **Recognition:** milestone cards now use approved Learn, Renewal and Journey artwork instead of generic feature Ionicons; tiny item/date/next-milestone typography moved to the shared readable scale; Achievement artwork remains the hero and empty-state identity.
-- **Learn:** no-card state now uses Learn/Policy Checklist artwork; correct answers use Verified artwork and explanation/learning feedback uses Learn artwork; remaining 7.2–9px labels/footnote/options/stats text moved to shared readable typography. Quiz load, answer submission, scoring and answer semantics are unchanged.
-- **Profile audit:** no code change is currently justified. The real signed-in person's initials are intentionally retained because arbitrary generated avatar variants could misrepresent identity. Registration rows already use shared typography, and the centralized screen header supplies Profile artwork.
-- `verify:visual` now protects Your Week, Recognition and Learn artwork and prevents tiny typography from returning.
+- Today → Renewals now uses `PartnerAssets.actions.renewals` instead of the generic refresh glyph.
+- Today → Active claims now uses `PartnerAssets.navigation.claims` instead of the generic shield glyph.
+- My network now uses `PartnerAssets.actions.businessPerformance` instead of a locally drawn generic network glyph/tree.
+- Action/network/card radii use the shared Partner radius where touched.
+- The restricted payout lock intentionally remains a vector security/authorization symbol.
+- `verify:visual` now protects the Business feature artwork and explicitly checks that the existing payout authorization gate and `getPartnerPayoutSummary()` service call remain in place.
 
-No API, data calculation, auth/scope, quiz logic, backend, schema/RLS, runtime or native configuration changed.
+**Explicitly unchanged:** business-performance calculations, trend/mix calculations, payout amounts/status mapping, payout authorization, Partner scope, network sorting, routes, API/RPC/service calls, backend/schema/RLS, runtime/native configuration.
 
 ## Remaining visual-completion work
 
-Priority order after Slice 5:
+After the Business pass:
 
-1. **Business body** — isolate this pass because it contains commercial/network/payout UI. Replace generic renewal/claim/network feature imagery where a correct Partner asset exists and normalize local styling without altering calculations or authorization.
-2. **Policy Intake new/detail** — map Upload/Review/Attention/Completed/Failed artwork into upload/retry/detail states without changing processing behavior.
-3. **Customer / Policy / Claim detail pages** — audit body spacing, section/card hierarchy and meaningful status/product artwork.
-4. **Banner review** — current approved banner set is generic business-growth artwork only; use it only on genuinely business/growth surfaces and never mislabel it.
-5. Final source audit + one consolidated installed-app screen-by-screen QA and Partner preview OTA publication when explicitly intended.
+1. **Policy Intake new/detail** — map Upload/Review/Attention/Completed/Failed artwork into upload/retry/detail states without changing draft, upload or submission processing.
+2. **Customer / Policy / Claim detail pages** — audit body spacing, section/card hierarchy and meaningful status/product artwork.
+3. **Banner review** — current approved banner set is generic business-growth artwork only. Use only where genuinely business/growth oriented; do not force banners into operational screens.
+4. **Final source audit** — verify all major Partner routes against the visual system and remaining generic feature-level glyphs.
+5. **One consolidated Partner preview OTA** after all OTA-safe visual work is merged and intended for device review.
+6. **Installed-app screen-by-screen QA** including two cold launches, then decide whether OTA visual refinement is accepted and native Phase 6 may be reconsidered.
 
 ## Acceptance gate before native Phase 6
 
@@ -110,7 +115,7 @@ Visual completion is not done until:
 
 - every major Partner route follows the same header/spacing/card/section system;
 - feature artwork is intentional and consistent;
-- vector icons remain only for utilities or when no correct custom asset exists;
+- vector icons remain only for utilities/security semantics or when no correct custom asset exists;
 - relevant empty/error/offline states are branded;
 - banner use is semantically correct and does not displace operational work;
 - exact-head Partner CI and relevant web regression are green;
