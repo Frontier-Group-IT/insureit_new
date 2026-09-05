@@ -284,7 +284,7 @@ export default function InternalClaimStageScreen() {
         <ClaimFormSection
           title="Incident Details"
           subtitle="Accident date, time and first insurer intimation"
-          iconImage={require('../../assets/claims/claim-intimation.png')}
+          iconImage={require('../assets/claims/claim-intimation.png')}
         >
           <StageOneValue label="Accident Date *" value={incidentAt ? formatDate(incidentAt) : ''} icon="calendar-month-outline" />
           <StageOneValue label="Accident Time *" value={incidentAt ? formatTime(incidentAt) : ''} icon="clock-outline" />
@@ -307,16 +307,16 @@ export default function InternalClaimStageScreen() {
             <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
           </View>
           <View style={styles.documentReadyGrid}>
-            <DocumentReadyTile title="RC Copy" source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.rc)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Insurance Copy" source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.insurance)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Driver Licence" source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.licence)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="GR / Load Bill" source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.gr)} onPress={() => openDocuments(router, claim.id)} />
-            <DocumentReadyTile title="Accident Photo" source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_photo)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReadyTile title="RC Copy" source={require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.rc)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReadyTile title="Insurance Copy" source={require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.insurance)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReadyTile title="Driver Licence" source={require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.licence)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReadyTile title="GR / Load Bill" source={require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.gr)} onPress={() => openDocuments(router, claim.id)} />
+            <DocumentReadyTile title="Accident Photo" source={require('../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_photo)} onPress={() => openDocuments(router, claim.id)} />
             <DocumentReadyTile title="Accident Video" artwork="accident-video" saved={documentTypes.includes(DOCUMENT_TYPE_BY_KEY.accident_video)} onPress={() => openDocuments(router, claim.id)} />
           </View>
           <View style={styles.bulkUploadShell}>
             <Pressable accessibilityRole="button" onPress={() => openDocuments(router, claim.id)} style={styles.bulkUpload}>
-              <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />
               <View style={styles.bulkUploadCopy}>
                 <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
                 <Text style={styles.bulkUploadText}>Select several files now, or tap again later to add more.</Text>
@@ -365,7 +365,7 @@ export default function InternalClaimStageScreen() {
 
         {message ? <Message type="error">{message}</Message> : null}
 
-        <ClaimFormSection title="Spot Survey" iconImage={require('../../assets/claims/claim-survey.png')}>
+        <ClaimFormSection title="Spot Survey" iconImage={require('../assets/claims/claim-survey.png')}>
           <View pointerEvents="none">
             <AppDatePicker
               label="Spot Survey Done Date *"
@@ -376,7 +376,7 @@ export default function InternalClaimStageScreen() {
           </View>
         </ClaimFormSection>
 
-        <ClaimFormSection title="Surveyor Details" optional iconImage={require('../../assets/claims/claim-assessment.png')}>
+        <ClaimFormSection title="Surveyor Details" optional iconImage={require('../assets/claims/claim-assessment.png')}>
           <View pointerEvents="none"><TextField label="Surveyor Name (Optional)" value={surveyorName} /></View>
           <View style={styles.gap} />
           <View pointerEvents="none"><TextField label="Surveyor Email (Optional)" value={surveyorEmail} keyboardType="email-address" autoCapitalize="none" /></View>
@@ -414,7 +414,7 @@ export default function InternalClaimStageScreen() {
 
         {message ? <Message type="error">{message}</Message> : null}
 
-        <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../../assets/claims/claim-intimation.png')}>
+        <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../assets/claims/claim-intimation.png')}>
           <View pointerEvents="none">
             <AppDatePicker
               label="Claim Intimation Date *"
@@ -499,7 +499,7 @@ function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, p
       <View style={styles.spotStatusGlowSmall} />
       <View style={styles.spotStatusHeaderRow}>
         <View style={[styles.spotStatusIconBadge, styles.spotStatusStageBadge]}>
-          <Image source={require('../../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+          <Image source={require('../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
         </View>
         <Text style={styles.spotStatusHeaderTitle} numberOfLines={1}>Spot Intimation</Text>
         <Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text>
@@ -509,7 +509,7 @@ function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, p
         <View style={styles.spotStatusInfoSection}>
           <View style={styles.spotStatusMainInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}>
-              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
               <Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text>
@@ -518,7 +518,7 @@ function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, p
           </View>
           <View style={styles.spotStatusSecondaryInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}>
-              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
           </View>
@@ -527,7 +527,7 @@ function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, p
         <View style={styles.spotStatusInfoSection}>
           <View style={styles.spotStatusMainInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}>
-              <Image source={require('../../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
               <Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text>
@@ -536,7 +536,7 @@ function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, p
           </View>
           <View style={styles.spotStatusSecondaryInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}>
-              <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
           </View>
@@ -553,7 +553,7 @@ function InternalSpotStatusIdentityCard({ claimNo, insurerName, vehicleNo, polic
       <View style={styles.spotStatusGlowSmall} />
       <View style={styles.spotStatusHeaderRow}>
         <View style={[styles.spotStatusIconBadge, styles.spotStatusStageBadge]}>
-          <Image source={require('../../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+          <Image source={require('../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
         </View>
         <Text style={styles.spotStatusHeaderTitle} numberOfLines={1}>Spot Status</Text>
         <Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text>
@@ -563,7 +563,7 @@ function InternalSpotStatusIdentityCard({ claimNo, insurerName, vehicleNo, polic
         <View style={styles.spotStatusInfoSection}>
           <View style={styles.spotStatusMainInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}>
-              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
               <Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text>
@@ -572,7 +572,7 @@ function InternalSpotStatusIdentityCard({ claimNo, insurerName, vehicleNo, polic
           </View>
           <View style={styles.spotStatusSecondaryInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}>
-              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
           </View>
@@ -581,7 +581,7 @@ function InternalSpotStatusIdentityCard({ claimNo, insurerName, vehicleNo, polic
         <View style={styles.spotStatusInfoSection}>
           <View style={styles.spotStatusMainInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}>
-              <Image source={require('../../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
               <Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text>
@@ -590,7 +590,7 @@ function InternalSpotStatusIdentityCard({ claimNo, insurerName, vehicleNo, polic
           </View>
           <View style={styles.spotStatusSecondaryInfoRow}>
             <View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}>
-              <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+              <Image source={require('../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
             </View>
             <Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
           </View>
