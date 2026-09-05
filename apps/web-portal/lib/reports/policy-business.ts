@@ -1,5 +1,6 @@
 import "server-only";
-import { getAccessibleCustomerIds, getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile = { id: string; role: string | null };
@@ -18,22 +19,17 @@ export type PolicyBusinessRow = {id:string;policy_no:string;business_date:string
 
 export async function loadPolicyBusinessReport(profile:ViewerProfile,query:PolicyBusinessQuery){
  const filters=resolvePolicyBusinessFilters(query);
- const [customerIds,scope]=await Promise.all([getAccessibleCustomerIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);
- if(customerIds!==null&&customerIds.length===0)return{report:emptyPolicyBusinessReport(filters.page),filters,scopeMode:scope.mode};
+ const [scopeRmEmployeeIds,scope]=await Promise.all([getAccessiblePolicyRmEmployeeIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);
+ if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return{report:emptyPolicyBusinessReport(filters.page),filters,scopeMode:scope.mode};
  const admin=createSupabaseAdminClient();
- const [reportResult,rmResult]=await Promise.all([
-  admin.rpc("get_policy_business_report_v3",{p_customer_ids:customerIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_rm_employee_id:filters.rmEmployeeId,p_intermediary_code:filters.intermediaryCode,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:25}),
-  admin.rpc("get_reporting_rm_options",{p_customer_ids:customerIds})
- ]);
+ const reportResult=await admin.rpc("get_policy_business_report_v4",{p_scope_rm_employee_ids:scopeRmEmployeeIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_rm_employee_id:filters.rmEmployeeId,p_intermediary_code:filters.intermediaryCode,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:25});
  if(reportResult.error)throw new Error(`Policy business report query failed: ${reportResult.error.message}`);
- if(rmResult.error)throw new Error(`Reporting RM options query failed: ${rmResult.error.message}`);
  const report=normalizePolicyBusinessReport(reportResult.data,filters.page);
- report.filters.rms=normalizeRmOptions(rmResult.data);
  return{report,filters,scopeMode:scope.mode};
 }
 
 export function resolvePolicyBusinessFilters(query:PolicyBusinessQuery):PolicyBusinessFilters{
- const period=isPeriod(query.period)?query.period:"90d";const today=indiaDate(new Date());const todayDate=new Date(`${today}T00:00:00+05:30`);let fromDate:string|null=null;let toDate:string|null=today;
+ const period=isPeriod(query.period)?query.period:"mtd";const today=indiaDate(new Date());const todayDate=new Date(`${today}T00:00:00+05:30`);let fromDate:string|null=null;let toDate:string|null=today;
  if(period==="90d")fromDate=indiaDate(addDays(todayDate,-89));if(period==="mtd")fromDate=`${today.slice(0,8)}01`;if(period==="ytd")fromDate=`${today.slice(0,4)}-01-01`;if(period==="all")toDate=null;if(period==="custom"){fromDate=validDate(query.from);toDate=validDate(query.to)}if(fromDate&&toDate&&fromDate>toDate)[fromDate,toDate]=[toDate,fromDate];
  return{period,fromDate,toDate,insurerId:validUuid(query.insurer),rmEmployeeId:validUuid(query.rm),intermediaryCode:cleanText(query.intermediary,120),businessLine:businessLine(query.business),category:cleanText(query.category,120),page:positiveInteger(query.page)};
 }
@@ -47,11 +43,10 @@ function normalizePolicyBusinessReport(value:unknown,page:number):PolicyBusiness
   category_mix:arrayValue(raw.category_mix).map(row=>{const x=objectValue(row);return{category:stringValue(x.category),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium)}}),
   insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),gross_premium:numberValue(x.gross_premium),share_percent:numberValue(x.share_percent)}}),
   rms:arrayValue(raw.rms).map(row=>{const x=objectValue(row);return{employee_id:nullableString(x.employee_id),name:stringValue(x.name),policy_count:numberValue(x.policy_count),intermediary_count:numberValue(x.intermediary_count),gross_premium:numberValue(x.gross_premium),average_premium:numberValue(x.average_premium)}}),
-  filters:{insurers:arrayValue(filters.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter(x=>x.id&&x.name),rms:[],intermediaries:arrayValue(filters.intermediaries).map(row=>{const x=objectValue(row);return{code:stringValue(x.code),type:nullableString(x.type),name:stringValue(x.name)}}).filter(x=>x.code),categories:arrayValue(filters.categories).map(stringValue).filter(Boolean)},
+  filters:{insurers:arrayValue(filters.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter(x=>x.id&&x.name),rms:arrayValue(filters.rms).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter((x):x is {id:string;name:string}=>Boolean(x.id&&x.name)),intermediaries:arrayValue(filters.intermediaries).map(row=>{const x=objectValue(row);return{code:stringValue(x.code),type:nullableString(x.type),name:stringValue(x.name)}}).filter(x=>x.code),categories:arrayValue(filters.categories).map(stringValue).filter(Boolean)},
   register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}
  };
 }
-function normalizeRmOptions(value:unknown):Array<{id:string;name:string}>{return arrayValue(value).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter((x):x is {id:string;name:string}=>Boolean(x.id&&x.name))}
 function normalizeRow(row:unknown):PolicyBusinessRow{const x=objectValue(row);return{id:stringValue(x.id),policy_no:stringValue(x.policy_no),business_date:stringValue(x.business_date),policy_type:stringValue(x.policy_type),policy_product:stringValue(x.policy_product),business_type:nullableString(x.business_type),business_line:stringValue(x.business_line)||"Motor",category:stringValue(x.category)||stringValue(x.policy_type),start_date:stringValue(x.start_date),end_date:stringValue(x.end_date),status:stringValue(x.status),customer_name:stringValue(x.customer_name),customer_code:stringValue(x.customer_code),vehicle_no:stringValue(x.vehicle_no),risk_reference:stringValue(x.risk_reference),risk_secondary:nullableString(x.risk_secondary),insurer_name:stringValue(x.insurer_name),rm_name:nullableString(x.rm_name),intermediary_code:nullableString(x.intermediary_code),intermediary_type:nullableString(x.intermediary_type),gross_premium:numberValue(x.gross_premium),net_premium:numberValue(x.net_premium),od_premium:numberValue(x.od_premium),tp_premium:numberValue(x.tp_premium),cpa_amount:numberValue(x.cpa_amount),insured_declared_value:nullableNumber(x.insured_declared_value)}}
 function emptyPolicyBusinessReport(page:number):PolicyBusinessReport{return{summary:{policy_count:0,active_policy_count:0,gross_premium:0,net_premium:0,od_premium:0,tp_premium:0,cpa_amount:0,average_premium:0,insurer_count:0,intermediary_count:0,motor_policy_count:0,non_motor_policy_count:0,motor_gross_premium:0,non_motor_gross_premium:0},trend:[],category_mix:[],insurers:[],rms:[],filters:{insurers:[],rms:[],intermediaries:[],categories:[]},register:{rows:[],total_count:0,page,page_size:25}}}
 function isPeriod(value:string|undefined):value is PolicyBusinessFilters["period"]{return value==="90d"||value==="mtd"||value==="ytd"||value==="all"||value==="custom"}

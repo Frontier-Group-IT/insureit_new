@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Eye, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
+import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -31,6 +31,8 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
   const profile = await requireCapability("view_policies");
   if (!profile?.id) redirect("/access-denied");
   const { id } = await params;
+  if (!(await canAccessPolicy(profile.id, profile.role, id, "view_policies"))) redirect("/access-denied");
+
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policies")
@@ -38,8 +40,6 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
     .eq("id", id)
     .maybeSingle<PolicyDetail>();
   if (error || !data) notFound();
-  const accessibleIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_policies");
-  if (accessibleIds !== null && !accessibleIds.includes(data.customer_id)) redirect("/access-denied");
 
   return (
     <AppShell title="Policy details" backHref="/policies">
