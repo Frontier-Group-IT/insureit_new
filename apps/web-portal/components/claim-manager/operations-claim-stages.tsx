@@ -137,39 +137,64 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   }, [spotState.ok]);
 
   return (
-    <section className="rounded-2xl border border-[#DFE8F4] bg-white p-4 shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2></div>
-        <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-3 py-1 text-[11px] font-semibold text-[#174EA6]">{selected.label}</span>
+    <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+        <h2 className="text-[17px] font-semibold text-[#071D49]">Operations claim journey</h2>
+        <span className="rounded-full border border-[#BFD3F7] bg-[#F4F8FF] px-4 py-1.5 text-[11px] font-semibold text-[#174EA6]">{selected.label}</span>
       </div>
-      <ol className="mt-3 grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
+      <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
         {stages.map((stage, index) => {
           const available = index <= activeIndex;
           const isCurrent = stage.key === active?.key;
-          return <li key={stage.key} className="border-b border-[#E4ECF6] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"><button type="button" disabled={!available} aria-current={stage.key === selected.key ? "step" : undefined} onClick={() => setSelectedKey(stage.key)} className={`relative w-full px-2 py-3 text-left text-[10px] font-semibold transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${stage.key === selected.key ? "text-[#003A83] after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-[#174EA6]" : available ? "text-[#526178] hover:bg-[#F8FBFF] hover:text-[#174EA6]" : "cursor-not-allowed text-[#A0ACBB]"}`}>{stage.label}<span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.06em]">{isCurrent ? "Current" : index < activeIndex ? "Completed" : "Locked"}</span></button></li>;
+          const isCompleted = index < activeIndex;
+          const isSelected = stage.key === selected.key;
+          return (
+            <li key={stage.key} className="border-b border-[#D9E3F0] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+              <button
+                type="button"
+                disabled={!available}
+                aria-current={isSelected ? "step" : undefined}
+                onClick={() => setSelectedKey(stage.key)}
+                className={`flex min-h-[92px] w-full flex-col items-center justify-center gap-2 px-2 py-3 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
+              >
+                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_4px_10px_rgba(21,94,239,0.22)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
+                  {isCompleted ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4.5 w-4.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
+                  ) : isCurrent ? (
+                    <span className="text-[12px] font-semibold">{index + 1}</span>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
+                  )}
+                </span>
+                <span className={`block text-[10px] font-semibold leading-4 ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
+              </button>
+            </li>
+          );
         })}
       </ol>
-      {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }} /> : null}
-      {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Spot Intimation Details"} pendingLabel="Saving..." forcePending={spotSubmitting} className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
-      {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
-      {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
-        <input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[selected.key].map((field) => {
-          const value = field.name === "insurer_claim_no"
-            ? insurerClaimNo ?? ""
-            : typeof detail?.details?.[field.name] === "string" || typeof detail?.details?.[field.name] === "number"
-              ? String(detail.details[field.name])
-              : "";
-          const required = requiredFields[active.key]?.includes(field.name);
-          return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
-            {field.type === "select"
-              ? <select name={field.name} defaultValue={value ?? ""} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select>
-              : <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]" />}
-          </label>;
-        })}</div>
-        {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
-        <FormSubmitButton label={`Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
-      </form> : selected.key !== "spot_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
+      <div className="p-4">
+        {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }} /> : null}
+        {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Spot Intimation Details"} pendingLabel="Saving..." forcePending={spotSubmitting} className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
+        {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
+        {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+          <input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[selected.key].map((field) => {
+            const value = field.name === "insurer_claim_no"
+              ? insurerClaimNo ?? ""
+              : typeof detail?.details?.[field.name] === "string" || typeof detail?.details?.[field.name] === "number"
+                ? String(detail.details[field.name])
+                : "";
+            const required = requiredFields[active.key]?.includes(field.name);
+            return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
+              {field.type === "select"
+                ? <select name={field.name} defaultValue={value ?? ""} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select>
+                : <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]" />}
+            </label>;
+          })}</div>
+          {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
+          <FormSubmitButton label={`Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
+        </form> : selected.key !== "spot_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
+      </div>
     </section>
   );
 }
