@@ -80,15 +80,15 @@ export default function MoreScreen() {
       </MenuSection>
 
       <MenuSection title="Grow & Learn">
-        <MenuRow icon="bulb-outline" title="60-Second Learn" onPress={() => router.push('/learn')} />
+        <MenuRow asset={PartnerAssets.actions.policyChecklist} title="60-Second Learn" onPress={() => router.push('/learn')} />
         <MenuRow asset={PartnerAssets.status.achievement} title="Recognition" onPress={() => router.push('/recognition')} />
-        <MenuRow icon="play-circle-outline" title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
+        <MenuRow asset={PartnerAssets.status.businessGrowth} title="INSUREIT Stories" onPress={() => router.push('/stories')} last />
       </MenuSection>
 
       <MenuSection title="Account">
         <MenuRow asset={PartnerAssets.navigation.profile} title="Profile & registration" onPress={() => router.push('/profile')} />
         <MenuRow asset={PartnerAssets.actions.support} title="Support" onPress={() => router.push('/support')} />
-        <MenuRow icon="settings-outline" title="Settings & app info" onPress={() => router.push('/settings')} last />
+        <MenuRow asset={PartnerAssets.status.settings} title="Settings & app info" onPress={() => router.push('/settings')} last />
       </MenuSection>
 
       <View style={styles.logout}>
