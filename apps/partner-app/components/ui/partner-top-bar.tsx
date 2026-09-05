@@ -2,6 +2,7 @@ import type { ComponentProps, ReactNode } from 'react';
 import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { resolvePartnerScreenArtwork } from '@/lib/partner-screen-artwork';
 import { partnerTheme } from '@/lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -29,6 +30,8 @@ export function PartnerTopBar({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const resolvedArtwork = artwork ?? resolvePartnerScreenArtwork({ title, eyebrow });
+
   return (
     <View style={styles.root}>
       {onBack ? (
@@ -45,9 +48,9 @@ export function PartnerTopBar({
         </Pressable>
       ) : null}
 
-      {artwork ? (
+      {resolvedArtwork ? (
         <View style={styles.artworkWrap}>
-          <Image source={artwork} style={styles.artwork} resizeMode="contain" />
+          <Image source={resolvedArtwork} style={styles.artwork} resizeMode="contain" />
         </View>
       ) : null}
 
