@@ -27,7 +27,13 @@ type CustomerRcLookupResponse = {
   error?: string;
 };
 
-export async function lookupCustomerRc(registrationNumber: string) {
+// A successful lookup has already passed the response/details validation below.
+type CustomerRcLookupSuccessResponse = Omit<CustomerRcLookupResponse, 'status' | 'details'> & {
+  status: 'success';
+  details: CustomerRcLookupDetails;
+};
+
+export async function lookupCustomerRc(registrationNumber: string): Promise<CustomerRcLookupSuccessResponse> {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Please sign in again to fetch vehicle details.');
 
@@ -52,7 +58,11 @@ export async function lookupCustomerRc(registrationNumber: string) {
       throw new Error(payload.error || 'We could not fetch the vehicle details. You can continue manually.');
     }
 
-    return payload;
+    return {
+      ...payload,
+      status: 'success',
+      details: payload.details,
+    };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Vehicle details are taking longer than usual. Please try again.');
