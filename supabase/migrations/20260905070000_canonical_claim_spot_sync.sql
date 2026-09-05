@@ -152,3 +152,32 @@ create trigger trg_sync_claim_spot_from_milestone
 after insert or update of details on public.claim_milestones
 for each row
 execute function public.sync_claim_spot_from_milestone();
+
+-- These tables were not previously in the Supabase Realtime publication.
+-- Add them idempotently so open web/mobile claim screens can receive changes immediately.
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'claims'
+    ) then
+      alter publication supabase_realtime add table public.claims;
+    end if;
+
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'claim_stage_details'
+    ) then
+      alter publication supabase_realtime add table public.claim_stage_details;
+    end if;
+
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'claim_milestones'
+    ) then
+      alter publication supabase_realtime add table public.claim_milestones;
+    end if;
+  end if;
+end;
+$$;
