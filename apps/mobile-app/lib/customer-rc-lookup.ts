@@ -27,6 +27,7 @@ type CustomerRcLookupResponse = {
   error?: string;
 };
 
+// A successful lookup has already passed the response/details validation below.
 type CustomerRcLookupSuccessResponse = Omit<CustomerRcLookupResponse, 'status' | 'details'> & {
   status: 'success';
   details: CustomerRcLookupDetails;
