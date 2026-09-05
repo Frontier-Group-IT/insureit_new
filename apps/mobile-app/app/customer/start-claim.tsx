@@ -223,39 +223,31 @@ export default function StartClaimScreen() {
             onPress={() => router.push({ pathname: '/customer/policy-detail', params: { id: selectedPolicy.id, source: selectedPolicy.source } } as any)}
             style={({ pressed }) => [styles.policyCardShadow, pressed && styles.policyCardPressed]}
           >
-            <View style={[styles.policyCard, selectedPolicy.source === 'external' && styles.policyCardCompact]}>
+            <View style={[styles.policyCard, styles.policyCardCompact]}>
               <View pointerEvents="none" style={styles.policyDecoration}>
                 <View style={styles.policyArcOne} />
                 <View style={styles.policyArcTwo} />
               </View>
-              <View style={[styles.policyContent, selectedPolicy.source === 'external' && styles.policyContentCompact]}>
-                <View style={[styles.policyIcon, selectedPolicy.source === 'external' && styles.policyIconCompact]}>
+              <View style={[styles.policyContent, styles.policyContentCompact]}>
+                <View style={[styles.policyIcon, styles.policyIconCompact]}>
                   <Image
                     accessible={false}
                     source={selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon}
                     style={[
                       styles.policyIconArtwork,
-                      selectedPolicy.source === 'external' && styles.policyIconArtworkCompact,
+                      styles.policyIconArtworkCompact,
                       selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
                     ]}
                     resizeMode="contain"
                   />
                 </View>
                 <View style={styles.policyCopy}>
-                  <Text style={[styles.policyMode, selectedPolicy.source === 'external' && styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
-                  <Text style={[styles.policyNo, selectedPolicy.source === 'external' && styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
-                  <Text style={[styles.policyInsurer, selectedPolicy.source === 'external' && styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
-                  <Text style={[styles.policyDates, selectedPolicy.source === 'external' && styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
+                  <Text style={[styles.policyMode, styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
+                  <Text style={[styles.policyNo, styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
+                  <Text style={[styles.policyInsurer, styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
+                  <Text style={[styles.policyDates, styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
-                {selectedPolicy.source === 'external' ? (
-                  <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
-                ) : selectedPolicyCondition === 'expired' ? (
-                  <ExpiredPolicyPulse />
-                ) : (
-                  <View style={[styles.policyCheck, selectedPolicyCondition === 'due' && styles.policyCheckDue]}>
-                    <MaterialCommunityIcons name={selectedPolicyCondition === 'due' ? 'alert-outline' : 'check'} size={selectedPolicyCondition === 'due' ? 21 : 20} color="#FFFFFF" />
-                  </View>
-                )}
+                <PolicyStatusPulse condition={selectedPolicyCondition ?? 'active'} />
               </View>
             </View>
           </Pressable>
@@ -362,10 +354,6 @@ function PolicyStatusPulse({ condition }: { condition: PolicyCondition }) {
       )}
     </Animated.View>
   );
-}
-
-function ExpiredPolicyPulse() {
-  return <PolicyStatusPulse condition="expired" />;
 }
 
 function ChoiceChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
