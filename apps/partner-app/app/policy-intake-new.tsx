@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -10,6 +10,7 @@ import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerField } from '@/components/ui/partner-field';
 import { PartnerConfirmDialog } from '@/components/ui/partner-confirm-dialog';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerAssets } from '@/lib/partner-assets';
 import {
   clearPartnerPolicyIntakeDraft,
   loadPartnerPolicyIntakeDraft,
@@ -240,8 +241,8 @@ export default function NewPolicyIntakeScreen() {
               onPress={pickFile}
               style={({ pressed }) => [styles.upload, file && styles.uploadSelected, pressed && !submitting && styles.pressed, submitting && styles.disabled]}
             >
-              <View style={styles.uploadIcon}>
-                <Ionicons name={file ? 'checkmark-circle-outline' : 'cloud-upload-outline'} size={24} color={file ? partnerTheme.colors.success : partnerTheme.colors.brand} />
+              <View style={styles.uploadArtworkWrap}>
+                <Image source={file ? PartnerAssets.status.verified : PartnerAssets.status.documentUpload} style={styles.uploadArtwork} resizeMode="contain" />
               </View>
               <View style={styles.uploadBody}>
                 <Text numberOfLines={2} style={styles.uploadTitle}>{file ? file.name : 'Choose policy PDF or image'}</Text>
@@ -263,8 +264,8 @@ export default function NewPolicyIntakeScreen() {
           {file && selectedSource && validMobile ? (
             <View style={styles.reviewCard}>
               <View style={styles.reviewTop}>
+                <View style={styles.reviewArtworkWrap}><Image source={PartnerAssets.status.verified} style={styles.reviewArtwork} resizeMode="contain" /></View>
                 <Text style={styles.reviewTitle}>Ready to submit</Text>
-                <Ionicons name="checkmark-circle-outline" size={18} color={partnerTheme.colors.success} />
               </View>
               <ReviewRow label="Lead source" value={selectedSource.display_name} />
               <ReviewRow label="Customer" value={mobile} />
@@ -281,7 +282,6 @@ export default function NewPolicyIntakeScreen() {
               onPress={submit}
             />
           </View>
-
         </>
       )}
     </PartnerScreen>
@@ -358,9 +358,10 @@ const styles = StyleSheet.create({
   sourceNameActive: { color: partnerTheme.colors.brandStrong },
   sourceMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   sourceMetaActive: { color: '#68629A' },
-  upload: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: partnerTheme.colors.line },
+  upload: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: partnerTheme.colors.line },
   uploadSelected: { backgroundColor: partnerTheme.colors.successSoft, borderColor: '#CBE7D7' },
-  uploadIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
+  uploadArtworkWrap: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  uploadArtwork: { width: 40, height: 40 },
   uploadBody: { flex: 1 },
   uploadTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   uploadMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
@@ -374,8 +375,10 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.brandStrong },
   feedback: { marginTop: partnerTheme.spacing.md },
   reviewCard: { marginTop: partnerTheme.spacing.md, backgroundColor: partnerTheme.colors.surface, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: partnerTheme.colors.line },
-  reviewTop: { minHeight: 42, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  reviewTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  reviewTop: { minHeight: 48, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
+  reviewArtworkWrap: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  reviewArtwork: { width: 32, height: 32 },
+  reviewTitle: { flex: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   reviewRow: { minHeight: 40, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   reviewRowLast: { borderBottomWidth: 0 },
   reviewLabel: { width: 88, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
