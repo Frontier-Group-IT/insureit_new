@@ -6,6 +6,7 @@ import { Animated, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Te
 import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
+import { findActiveManagedClaim } from '@/lib/active-managed-claim';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -125,25 +126,31 @@ export default function StartClaimScreen() {
 
   async function continueClaim() {
     if (!selectedVehicle || !selectedPolicy || checkingActiveClaim) return;
-    if (selectedPolicy.source === 'external') {
-      setMessage('');
-      setCheckingActiveClaim(true);
-      try {
+    setMessage('');
+    setCheckingActiveClaim(true);
+    try {
+      if (selectedPolicy.source === 'external') {
         const existingClaim = await findActiveSelfManagedClaim(selectedPolicy.id);
         if (existingClaim) {
           setExistingActiveClaimId(existingClaim.id);
           return;
         }
         router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id } } as any);
-      } catch (error) {
-        console.warn('Active self-tracked claim check failed', error);
-        setMessage('We could not verify existing claims right now. Please try again.');
-      } finally {
-        setCheckingActiveClaim(false);
+        return;
       }
-      return;
+
+      const existingClaim = await findActiveManagedClaim(selectedPolicy.id);
+      if (existingClaim) {
+        setExistingActiveClaimId(existingClaim.id);
+        return;
+      }
+      router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
+    } catch (error) {
+      console.warn('Active claim check failed', error);
+      setMessage('We could not verify existing claims right now. Please try again.');
+    } finally {
+      setCheckingActiveClaim(false);
     }
-    router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
   }
 
   function addPolicy() {
