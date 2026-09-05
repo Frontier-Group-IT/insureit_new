@@ -33,6 +33,8 @@ type PolicyRow = {
   gross_premium: number | null;
   intermediary_type: string | null;
   intermediary_code: string | null;
+  rm_name: string | null;
+  rm_employee_id: string | null;
   source_name: string | null;
   policy_documents: PolicyDocument[];
   customers: { company_name: string | null; contact_name: string } | null;
@@ -168,7 +170,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [business, setBusiness] = useState<BusinessFilter>("all");
   const [category, setCategory] = useState("all");
   const [source, setSource] = useState("all");
-  const [insurer, setInsurer] = useState("all");
+  const [rm, setRm] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [page, setPage] = useState(1);
@@ -176,21 +178,21 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const { from: mtdStart, to: mtdEnd } = monthToDateBounds();
 
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
-  const insurers = useMemo(() => Array.from(new Set(rows.map((row) => row.insurance_companies?.name).filter(Boolean))).sort() as string[], [rows]);
+  const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
   const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
 
   const controlFiltered = useMemo(() => enriched.filter((row) => {
-    const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.rm_name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
     const matchesBusiness = business === "all" || policyBusinessLine(row) === business;
     const matchesCategory = business !== "Non Motor" || category === "all" || policyCategory(row) === category;
     const matchesSource = source === "all" || policySourceKey(row) === source;
-    const matchesInsurer = insurer === "all" || row.insurance_companies?.name === insurer;
+    const matchesRm = rm === "all" || row.rm_name?.trim() === rm;
     const businessDate = policyBusinessDate(row);
     const matchesFromDate = !fromDate || businessDate >= fromDate;
     const matchesToDate = !toDate || businessDate <= toDate;
     const matchesQuery = !query.trim() || haystack.includes(query.trim().toLowerCase());
-    return matchesBusiness && matchesCategory && matchesSource && matchesInsurer && matchesFromDate && matchesToDate && matchesQuery;
-  }), [business, category, enriched, fromDate, insurer, query, source, toDate]);
+    return matchesBusiness && matchesCategory && matchesSource && matchesRm && matchesFromDate && matchesToDate && matchesQuery;
+  }), [business, category, enriched, fromDate, query, rm, source, toDate]);
 
   const mtdFiltered = useMemo(() => controlFiltered.filter((row) => {
     const businessDate = policyBusinessDate(row);
@@ -250,7 +252,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     setBusiness("all");
     setCategory("all");
     setSource("all");
-    setInsurer("all");
+    setRm("all");
     setTimeScope("mtd");
     setFromDate("");
     setToDate("");
@@ -277,8 +279,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
               <input
                 value={query}
                 onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-                placeholder="Search policy, customer, insurer, vehicle, chassis, engine, risk or source"
-                aria-label="Search policy, customer, insurer, vehicle, chassis, engine, risk or source"
+                placeholder="Search policy, customer, insurer, RM, vehicle, chassis, engine, risk or source"
+                aria-label="Search policy, customer, insurer, RM, vehicle, chassis, engine, risk or source"
                 className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10"
               />
             </label>
@@ -317,9 +319,9 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             </RegisterSelect>
           </div>
           <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-full">
-            <RegisterSelect value={insurer} onChange={(value) => { setInsurer(value); setPage(1); }} label="Insurance company">
-              <option value="all">All insurers</option>
-              {insurers.map((item) => <option key={item} value={item}>{item}</option>)}
+            <RegisterSelect value={rm} onChange={(value) => { setRm(value); setPage(1); }} label="Relationship manager">
+              <option value="all">All RMs</option>
+              {rms.map((item) => <option key={item} value={item}>{item}</option>)}
             </RegisterSelect>
           </div>
           <PolicyDateRangeFilter
@@ -351,7 +353,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
 
       <div className="mobile-card-list p-3 md:hidden">
         {pageRows.map((policy) => <PolicyMobileCard key={policy.id} policy={policy} />)}
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer, date range or status view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, RM, date range or status view." /> : null}
       </div>
 
       <div className="hidden overflow-x-auto md:block">
@@ -385,7 +387,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             ))}
           </tbody>
         </table>
-        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, insurer, date range or status view." /> : null}
+        {!pageRows.length ? <RegisterEmpty title="No matching policies" description="Adjust the search, source, RM, date range or status view." /> : null}
       </div>
 
       <RegisterPagination pageRows={pageRows.length} filteredRows={filtered.length} safePage={safePage} totalPages={totalPages} pageSize={PAGE_SIZE} onPrevious={() => setPage((p) => Math.max(1, p - 1))} onNext={() => setPage((p) => Math.min(totalPages, p + 1))} />
