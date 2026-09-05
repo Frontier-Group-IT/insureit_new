@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -9,6 +9,7 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerPolicyDetail, type PartnerPolicyDetail } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function PolicyDetailScreen() {
@@ -59,8 +60,8 @@ export default function PolicyDetailScreen() {
         <>
           <View style={styles.hero}>
             <View style={styles.heroTop}>
-              <View style={styles.heroIcon}>
-                <Ionicons name={category === 'Motor' ? 'car-outline' : category === 'Health' ? 'medkit-outline' : category === 'Life' ? 'heart-outline' : 'business-outline'} size={20} color={partnerTheme.colors.brandStrong} />
+              <View style={styles.heroArtworkWrap}>
+                <Image source={policyArtwork(category)} style={styles.heroArtwork} resizeMode="contain" />
               </View>
               <View style={styles.heroBody}>
                 <Text style={styles.heroNo}>{data.policy.policy_no || data.policy.policy_code || 'Policy'}</Text>
@@ -118,7 +119,7 @@ export default function PolicyDetailScreen() {
               onPress={() => data.customer.id ? router.push(`/customer/${data.customer.id}` as never) : undefined}
               style={({ pressed }) => [styles.entity, pressed && data.customer.id ? styles.pressed : null]}
             >
-              <View style={styles.entityIcon}><Ionicons name="person-outline" size={19} color={partnerTheme.colors.brand} /></View>
+              <View style={styles.entityArtworkWrap}><Image source={PartnerAssets.navigation.customers} style={styles.entityArtwork} resizeMode="contain" /></View>
               <View style={styles.entityBody}>
                 <Text style={styles.entityTitle}>{data.customer.name}</Text>
                 <Text style={styles.entityMeta}>{data.customer.customer_code || 'Customer'}</Text>
@@ -128,7 +129,7 @@ export default function PolicyDetailScreen() {
 
             {data.vehicle ? (
               <View style={styles.entity}>
-                <View style={styles.entityIcon}><Ionicons name="car-outline" size={19} color={partnerTheme.colors.accent} /></View>
+                <View style={styles.entityArtworkWrap}><Image source={PartnerAssets.products.motorInsurance} style={styles.entityArtwork} resizeMode="contain" /></View>
                 <View style={styles.entityBody}>
                   <Text style={styles.entityTitle}>{data.vehicle.vehicle_no || 'Vehicle'}</Text>
                   <Text style={styles.entityMeta}>{displayParts(data.vehicle.make, data.vehicle.model, data.vehicle.year) || humanize(data.vehicle.vehicle_type || 'vehicle')}</Text>
@@ -136,7 +137,7 @@ export default function PolicyDetailScreen() {
               </View>
             ) : (
               <View style={styles.entity}>
-                <View style={styles.entityIcon}><Ionicons name="business-outline" size={19} color={partnerTheme.colors.accent} /></View>
+                <View style={styles.entityArtworkWrap}><Image source={PartnerAssets.products.commercialInsurance} style={styles.entityArtwork} resizeMode="contain" /></View>
                 <View style={styles.entityBody}>
                   <Text style={styles.entityTitle}>{data.policy.policy_product || data.policy.policy_type || data.policy.business_line || 'Non-motor insured risk'}</Text>
                   <Text style={styles.entityMeta}>No vehicle is linked to this policy.</Text>
@@ -206,6 +207,13 @@ function Info({ label, value }: { label: string; value: string }) {
   return <View style={styles.info}><Text style={styles.infoLabel}>{label}</Text><Text style={styles.infoValue}>{value}</Text></View>;
 }
 
+function policyArtwork(category: string): ImageSourcePropType {
+  if (category === 'Motor') return PartnerAssets.products.motorInsurance;
+  if (category === 'Health') return PartnerAssets.products.healthInsurance;
+  if (category === 'Life') return PartnerAssets.products.lifeInsurance;
+  return PartnerAssets.products.commercialInsurance;
+}
+
 function displayParts(...values: Array<string | number | null | undefined>) {
   return values
     .map((value) => value == null ? '' : String(value).trim())
@@ -245,7 +253,8 @@ function nullableMoney(value: number | string | null) {
 const styles = StyleSheet.create({
   hero: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   heroTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  heroIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  heroArtworkWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  heroArtwork: { width: 42, height: 42 },
   heroBody: { flex: 1 },
   heroNo: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
   heroInsurer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
@@ -267,7 +276,8 @@ const styles = StyleSheet.create({
   infoValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
   entityStack: { gap: 0 },
   entity: { minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, backgroundColor: partnerTheme.colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  entityIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.surfaceMuted },
+  entityArtworkWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  entityArtwork: { width: 38, height: 38 },
   entityBody: { flex: 1 },
   entityTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   entityMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
