@@ -8,7 +8,6 @@ import { ClaimFormSection } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { palette } from '@/lib/theme';
 
 export default function InternalSpotStatusScreen() {
   const router = useRouter();
@@ -173,7 +172,7 @@ function CompactSpotStatusHeader({ claimNo, vehicleNo, vehicleMeta, policyNo, in
         <View style={styles.spotStatusVerticalDivider} />
         <View style={styles.spotStatusInfoSection}>
           <View style={styles.spotStatusMainInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}><Image source={require('../../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusMainInfoLine} numberOfLines={1}><Text style={styles.spotStatusMainInfoLabel}>Policy: </Text><Text style={styles.spotStatusMainInfoValue}>{policyNo || 'Policy'}</Text></Text></View>
-          <View style={styles.spotStatusSubInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}><Image source={require('../../assets/claims/insurance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusSubInfoText} numberOfLines={2}>{insurerName || 'Insurance company'}</Text></View>
+          <View style={styles.spotStatusSubInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}><Image source={require('../../assets/claims/claim-approval.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusSubInfoText} numberOfLines={2}>{insurerName || 'Insurance company'}</Text></View>
         </View>
       </View>
     </View>
