@@ -58,21 +58,22 @@ No data fetching, filtering, pagination, routing, processing, claim/policy/custo
 
 **Release state:** merged only; no Partner OTA, APK or AAB.
 
-## Slice 3 — utility surfaces
+## Slice 3 — utility and activity surfaces
 
-**IN PROGRESS:** branch `partner/visual-system-completion-slice3`  
-**Base:** Slice 2 merge `28ac62daf0092fe7f8a320b9669f4d0209e0f29f`.
+**IN PROGRESS:** branch `partner/visual-system-completion-slice3` / PR #1336  
+**Original base:** Slice 2 merge `28ac62daf0092fe7f8a320b9669f4d0209e0f29f`.  
+**Concurrent main note:** while Slice 3 was prepared, unrelated claim PR #1332 merged to `main` as `8aafe8decf076e2d3828e0f9a01280edddbcc111`; PR #1336 targets the newer main and must pass canonical CI before merge.
 
-Implemented so far:
+Implemented:
 
 - **Search:** initial search state uses Search artwork; no-results uses `noSearchResults`; Customer/Policy/Claim result rows use their Partner artwork; completed claims use Verified artwork.
 - **Support:** Operations Desk fallback uses `supportVerified` artwork. Relationship-contact initials remain because they identify a real person. Call/email/chevron remain utility vectors. Support-unavailable errors deliberately use the shared generic branded error state rather than misusing `supportResolved` artwork.
 - **Settings:** Profile, Support and Check for Updates feature rows use Partner artwork; Privacy Policy remains a lightweight shield utility/legal icon; chevrons remain utility vectors.
-- `verify:visual` expanded to protect Search, Support and Settings artwork semantics, including a guard against using `supportResolved` for Support-unavailable errors.
+- **Activity:** recent timeline now uses Policy/Claim/Policy Intake/Learn artwork by event type instead of colored dots; empty timeline uses Announcement artwork; extremely small 7–8.5px timeline text was raised to a more readable mobile scale while preserving the same data and routes.
+- `verify:visual` protects Search, Support, Settings and Activity artwork semantics and prevents the tiny Activity typography from returning.
 
 Still remaining after Slice 3:
 
-- Activity category/status artwork review.
 - Profile body visual consistency; use profile/avatar artwork only where semantically valid.
 - Your Week / Impact / Journey / Recognition / Learn body-format normalization.
 - Business screen body: replace locally generic feature/status imagery and normalize hero/action/network spacing/hierarchy.
