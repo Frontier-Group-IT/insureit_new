@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
@@ -10,6 +10,7 @@ import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { PartnerTopTabs } from '@/components/ui/partner-top-tabs';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { listPartnerPolicyIntakes, type PartnerPolicyIntake } from '@/lib/policy-intakes';
 import { partnerTheme } from '@/lib/theme';
 
@@ -133,6 +134,9 @@ export default function PolicyIntakesScreen() {
                 ]}
               >
                 <View style={styles.rowTop}>
+                  <View style={styles.rowArtwork}>
+                    <Image source={intakeArtwork(row)} style={styles.rowArtworkImage} resizeMode="contain" />
+                  </View>
                   <View style={styles.identity}>
                     <Text style={styles.number}>{row.intake_number}</Text>
                     <Text numberOfLines={1} style={styles.customer}>{row.customer_mobile} · {row.lead_source_name}</Text>
@@ -164,7 +168,7 @@ export default function PolicyIntakesScreen() {
       ) : (
         <PartnerStateView
           state="empty"
-          icon="cloud-upload-outline"
+          asset={rows.length ? PartnerAssets.emptyStates.noSearchResults : PartnerAssets.emptyStates.policyUpload}
           title={rows.length ? 'No submissions in this filter' : 'No Policy Intakes yet'}
           message={rows.length ? 'Choose another pipeline filter.' : 'Create an intake when you have a policy copy that Operations needs to onboard.'}
           actionLabel={rows.length ? undefined : 'Create first intake'}
@@ -173,6 +177,14 @@ export default function PolicyIntakesScreen() {
       )}
     </PartnerScreen>
   );
+}
+
+function intakeArtwork(row: PartnerPolicyIntake) {
+  if (row.status === 'completed') return PartnerAssets.status.verified;
+  if (row.status === 'rejected') return PartnerAssets.status.rejected;
+  if (row.status === 'needs_attention') return PartnerAssets.status.policyAttention;
+  if (['ready_for_review', 'in_review'].includes(row.status)) return PartnerAssets.status.pendingReview;
+  return PartnerAssets.status.documentUpload;
 }
 
 function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
@@ -250,6 +262,8 @@ const styles = StyleSheet.create({
   },
   rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  rowArtwork: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  rowArtworkImage: { width: 34, height: 34 },
   identity: { flex: 1, minWidth: 0 },
   number: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
   customer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
