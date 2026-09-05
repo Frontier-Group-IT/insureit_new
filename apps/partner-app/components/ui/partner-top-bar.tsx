@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { partnerTheme } from '@/lib/theme';
@@ -12,6 +12,7 @@ export function PartnerTopBar({
   subtitle,
   onBack,
   backDisabled = false,
+  artwork,
   action,
   actionIcon,
   actionLabel = 'Action',
@@ -22,6 +23,7 @@ export function PartnerTopBar({
   subtitle?: string;
   onBack?: () => void;
   backDisabled?: boolean;
+  artwork?: ImageSourcePropType;
   action?: ReactNode;
   actionIcon?: IconName;
   actionLabel?: string;
@@ -41,6 +43,12 @@ export function PartnerTopBar({
         >
           <Ionicons name="arrow-back" size={20} color={backDisabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.ink} />
         </Pressable>
+      ) : null}
+
+      {artwork ? (
+        <View style={styles.artworkWrap}>
+          <Image source={artwork} style={styles.artwork} resizeMode="contain" />
+        </View>
       ) : null}
 
       <View style={styles.copy}>
@@ -71,6 +79,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: partnerTheme.spacing.sm,
+  },
+  artworkWrap: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artwork: {
+    width: 38,
+    height: 38,
   },
   copy: { flex: 1, minWidth: 0 },
   eyebrow: {
