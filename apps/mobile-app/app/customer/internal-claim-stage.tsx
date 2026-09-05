@@ -1,6 +1,6 @@
 import { useLocalSearchParams } from 'expo-router';
 
-import InternalClaimStageLegacy from './internal-claim-stage-legacy';
+import InternalClaimStageLegacy from '@/components/internal-claim-stage-legacy';
 import InternalClaimStageParity from '@/components/internal-claim-stage-parity';
 
 export default function InternalClaimStageScreen() {
