@@ -125,25 +125,31 @@ export default function StartClaimScreen() {
 
   async function continueClaim() {
     if (!selectedVehicle || !selectedPolicy || checkingActiveClaim) return;
-    if (selectedPolicy.source === 'external') {
-      setMessage('');
-      setCheckingActiveClaim(true);
-      try {
+    setMessage('');
+    setCheckingActiveClaim(true);
+    try {
+      if (selectedPolicy.source === 'external') {
         const existingClaim = await findActiveSelfManagedClaim(selectedPolicy.id);
         if (existingClaim) {
           setExistingActiveClaimId(existingClaim.id);
           return;
         }
         router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id } } as any);
-      } catch (error) {
-        console.warn('Active self-tracked claim check failed', error);
-        setMessage('We could not verify existing claims right now. Please try again.');
-      } finally {
-        setCheckingActiveClaim(false);
+        return;
       }
-      return;
+
+      const existingClaim = await findActiveManagedClaim(selectedPolicy.id);
+      if (existingClaim) {
+        setExistingActiveClaimId(existingClaim.id);
+        return;
+      }
+      router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
+    } catch (error) {
+      console.warn('Active claim check failed', error);
+      setMessage('We could not verify existing claims right now. Please try again.');
+    } finally {
+      setCheckingActiveClaim(false);
     }
-    router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
   }
 
   function addPolicy() {
@@ -275,6 +281,18 @@ export default function StartClaimScreen() {
       <Image accessible={false} source={require('../../assets/brand/start-claim/start-claim-footer-scene.png')} style={styles.footerArtwork} resizeMode="contain" />
     </Screen>
   );
+}
+
+async function findActiveManagedClaim(policyId: string): Promise<SelfManagedClaimRow | null> {
+  const { data, error } = await (supabase as any)
+    .from('claims')
+    .select('id,current_status,created_at')
+    .eq('policy_id', policyId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  const claims = (data ?? []) as SelfManagedClaimRow[];
+  return claims.find((claim) => !SETTLED_SELF_MANAGED_STATUSES.has(claim.current_status ?? '')) ?? null;
 }
 
 async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<SelfManagedClaimRow | null> {
