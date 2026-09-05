@@ -57,7 +57,12 @@ export async function lookupCustomerRc(registrationNumber: string): Promise<Cust
       throw new Error(payload.error || 'We could not fetch the vehicle details. You can continue manually.');
     }
 
-    return payload as CustomerRcLookupSuccessResponse;
+    const successPayload: CustomerRcLookupSuccessResponse = {
+      ...payload,
+      status: 'success',
+      details: payload.details,
+    };
+    return successPayload;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Vehicle details are taking longer than usual. Please try again.');
