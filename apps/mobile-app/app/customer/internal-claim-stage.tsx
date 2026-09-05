@@ -26,6 +26,7 @@ type ManagedClaim = {
   current_status: string;
   claim_service_mode?: 'broker_managed' | 'self_managed' | null;
   accident_at: string | null;
+  spot_intimation_at: string | null;
   accident_location: string | null;
   accident_description: string | null;
   estimated_loss: number | null;
@@ -156,7 +157,7 @@ export default function InternalClaimStageScreen() {
       }
 
       const [claimResult, detailsResult, documentsResult] = await Promise.all([
-        supabase.from('claims').select('id,claim_no,insurer_claim_no,customer_id,vehicle_id,policy_id,current_status,claim_service_mode,accident_at,accident_location,accident_description,estimated_loss,approved_amount,settlement_amount').eq('id', claimId).maybeSingle(),
+        supabase.from('claims').select('id,claim_no,insurer_claim_no,customer_id,vehicle_id,policy_id,current_status,claim_service_mode,accident_at,spot_intimation_at,accident_location,accident_description,estimated_loss,approved_amount,settlement_amount').eq('id', claimId).maybeSingle(),
         supabase.from('claim_stage_details').select('stage,details,created_at').eq('claim_id', claimId).order('created_at', { ascending: false }),
         supabase.from('claim_documents').select('document_type').eq('claim_id', claimId),
       ]);
@@ -198,6 +199,34 @@ export default function InternalClaimStageScreen() {
     return () => { active = false; };
   }, [claimId, definition]);
 
+  useEffect(() => {
+    if (!claimId || !definition) return;
+
+    const refreshStageDetails = async () => {
+      const result = await supabase
+        .from('claim_stage_details')
+        .select('stage,details,created_at')
+        .eq('claim_id', claimId)
+        .order('created_at', { ascending: false });
+      if (!result.error) setStageDetails((result.data ?? []) as unknown as StageDetail[]);
+    };
+
+    const channel = supabase
+      .channel(`managed-claim-sync-${claimId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${claimId}` }, (payload) => {
+        const next = payload.new as Partial<ManagedClaim>;
+        setClaim((current) => current ? { ...current, ...next } : current);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claim_stage_details', filter: `claim_id=eq.${claimId}` }, () => {
+        void refreshStageDetails();
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [claimId, definition]);
+
   const projection = useMemo(
     () => projectInternalClaim(claim?.current_status),
     [claim?.current_status],
@@ -212,6 +241,7 @@ export default function InternalClaimStageScreen() {
     if (claim) {
       Object.assign(merged, {
         accident_at: claim.accident_at,
+        spot_intimation_at: claim.spot_intimation_at,
         accident_location: claim.accident_location,
         accident_description: claim.accident_description,
         insurer_claim_no: claim.insurer_claim_no,
