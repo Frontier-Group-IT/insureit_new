@@ -76,6 +76,9 @@ jobs:
       - name: Verify Phase 5 resilience and accessibility contracts
         run: npm --workspace apps/partner-app run verify:phase5
 
+      - name: Verify Partner visual-system completion contracts
+        run: npm --workspace apps/partner-app run verify:visual
+
       - name: Verify pre-APK OTA freeze
         run: npm --workspace apps/partner-app run verify:pre-apk
 
@@ -110,6 +113,7 @@ jobs:
             echo "- Dependency lockfile: synchronized"
             echo "- Route/deep-link integrity: verified"
             echo "- Phase 5 resilience/accessibility contracts: verified"
+            echo "- Partner visual-system completion contracts: verified"
             echo "- Pre-APK OTA runtime freeze: verified"
             echo "- Pre-APK UAT/security contracts: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"
