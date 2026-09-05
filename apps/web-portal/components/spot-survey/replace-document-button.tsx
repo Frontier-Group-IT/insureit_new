@@ -1,5 +1,6 @@
 "use client";
 
+import { FilePenLine } from "lucide-react";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { replaceSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
@@ -12,10 +13,20 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   const previewUrl = useMemo(() => selectedFile && selectedFile.type.startsWith("image/") ? URL.createObjectURL(selectedFile) : null, [selectedFile]);
+  const isReplaceAction = actionLabel === "Replace";
 
   return (
     <>
-      <button type="button"       onClick={() => { setResult(null); setOpen(true); }} className="h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]">{actionLabel}</button>
+      <button
+        type="button"
+        onClick={() => { setResult(null); setOpen(true); }}
+        {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : {})}
+        className={isReplaceAction
+          ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#D15B5B] bg-white text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30"
+          : "h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]"}
+      >
+        {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : actionLabel}
+      </button>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
           <form

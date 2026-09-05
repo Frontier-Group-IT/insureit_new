@@ -303,6 +303,13 @@ summary:active {
   overscroll-behavior: contain;
 }
 
+/* Keep the three verified-document row actions compact and grouped like the approved mockup. */
+div:has(> button[data-document-action="view"]):has(> button[data-document-action="reupload"]):has(> button[data-document-action="replace"]) {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;
