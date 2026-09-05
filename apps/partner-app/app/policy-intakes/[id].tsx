@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerButton } from '@/components/ui/partner-button';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
+import { PartnerAssets } from '@/lib/partner-assets';
 import {
   listPartnerPolicyIntakes,
   submitPartnerPolicyIntakeReplacement,
@@ -110,7 +111,7 @@ export default function PolicyIntakeDetailScreen() {
           onAction={() => void load()}
         />
       ) : !row ? (
-        <PartnerStateView state="empty" title="Policy Intake unavailable" message="This submission is not available in your account." />
+        <PartnerStateView state="empty" asset={PartnerAssets.emptyStates.policyUpload} title="Policy Intake unavailable" message="This submission is not available in your account." />
       ) : (
         <>
           {error ? (
@@ -121,7 +122,7 @@ export default function PolicyIntakeDetailScreen() {
 
           <View style={styles.statusCard}>
             <View style={styles.statusTop}>
-              <View style={styles.statusIcon}><Ionicons name="git-network-outline" size={21} color={partnerTheme.colors.brand} /></View>
+              <View style={styles.statusArtworkWrap}><Image source={statusArtwork(row)} style={styles.statusArtwork} resizeMode="contain" /></View>
               <View style={styles.statusBody}>
                 <Text style={styles.statusLabel}>CURRENT STATUS</Text>
                 <Text style={styles.statusValue}>{statusLabel(row)}</Text>
@@ -145,7 +146,7 @@ export default function PolicyIntakeDetailScreen() {
           {row.attention_reason ? (
             <View style={styles.attention}>
               <View style={styles.attentionTop}>
-                <Ionicons name="alert-circle-outline" size={19} color="#9A5B12" />
+                <View style={styles.attentionArtworkWrap}><Image source={PartnerAssets.status.policyAttention} style={styles.attentionArtwork} resizeMode="contain" /></View>
                 <Text style={styles.attentionTitle}>Operations needs your response</Text>
               </View>
               <Text style={styles.attentionText}>{row.attention_reason}</Text>
@@ -202,7 +203,6 @@ export default function PolicyIntakeDetailScreen() {
               <Detail label="Chassis" value={fields.get('vehicle_chassis_number')?.value || pendingLabel(row)} last />
             </View>
           </DetailDisclosure>
-
         </>
       )}
     </PartnerScreen>
@@ -269,6 +269,7 @@ function ReplacementProgress({ progress }: { progress: PartnerPolicyIntakeUpload
       style={styles.replacementProgress}
     >
       <View style={styles.replacementProgressTop}>
+        <View style={styles.replacementArtworkWrap}><Image source={PartnerAssets.status.documentUpload} style={styles.replacementArtwork} resizeMode="contain" /></View>
         <Text style={styles.replacementProgressText}>{replacementLabel(progress)}</Text>
         <Text style={styles.replacementProgressText}>{Math.round(percent)}%</Text>
       </View>
@@ -319,6 +320,15 @@ function Detail({ label, value, last = false }: { label: string; value: string; 
   );
 }
 
+function statusArtwork(row: PartnerPolicyIntake): ImageSourcePropType {
+  const manual = row.status === 'processing' && row.ocr_status === 'failed';
+  if (row.status === 'completed') return PartnerAssets.status.verified;
+  if (row.status === 'rejected') return PartnerAssets.status.rejected;
+  if (row.status === 'needs_attention' || manual) return PartnerAssets.status.policyAttention;
+  if (row.status === 'ready_for_review' || row.status === 'in_review') return PartnerAssets.status.pendingReview;
+  return PartnerAssets.status.documentUpload;
+}
+
 function statusLabel(row: PartnerPolicyIntake) {
   if (row.status === 'processing' && row.ocr_status === 'failed') return 'Manual review required';
   return ({
@@ -366,7 +376,8 @@ const styles = StyleSheet.create({
   banner: { marginBottom: 10 },
   statusCard: { paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line, backgroundColor: partnerTheme.colors.surface },
   statusTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  statusIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  statusArtworkWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  statusArtwork: { width: 42, height: 42 },
   statusBody: { flex: 1 },
   statusLabel: { color: partnerTheme.colors.inkMuted, letterSpacing: 0.7, ...partnerTheme.typography.meta },
   statusValue: { marginTop: 3, color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
@@ -385,12 +396,16 @@ const styles = StyleSheet.create({
   updated: { marginTop: 7, color: partnerTheme.colors.inkSubtle, textAlign: 'right', ...partnerTheme.typography.meta },
   finalPolicy: { marginTop: 10 },
   attention: { marginTop: 10, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#F0D7AE', backgroundColor: '#FFF7E8' },
-  attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  attentionTitle: { color: '#80511A', ...partnerTheme.typography.bodyStrong },
+  attentionTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  attentionArtworkWrap: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  attentionArtwork: { width: 36, height: 36 },
+  attentionTitle: { flex: 1, color: '#80511A', ...partnerTheme.typography.bodyStrong },
   attentionText: { marginTop: 5, color: '#80511A', ...partnerTheme.typography.caption },
   replacementProgress: { marginTop: 9 },
-  replacementProgressTop: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
-  replacementProgressText: { color: '#80511A', ...partnerTheme.typography.meta },
+  replacementProgressTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  replacementArtworkWrap: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
+  replacementArtwork: { width: 28, height: 28 },
+  replacementProgressText: { flexShrink: 1, color: '#80511A', ...partnerTheme.typography.meta },
   replacementTrack: { height: 7, marginTop: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: '#F0D7AE' },
   replacementFill: { height: '100%', borderRadius: 999, backgroundColor: '#A36A22' },
   replaceButton: { marginTop: 9 },

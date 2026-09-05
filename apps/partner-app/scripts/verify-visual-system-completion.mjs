@@ -26,6 +26,8 @@ const policies = read('app/(tabs)/policies.tsx');
 const claims = read('app/(tabs)/claims.tsx');
 const renewals = read('app/renewals.tsx');
 const policyIntakes = read('app/policy-intakes.tsx');
+const policyIntakeNew = read('app/policy-intake-new.tsx');
+const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
 const search = read('app/search.tsx');
 const support = read('app/support.tsx');
 const settings = read('app/settings.tsx');
@@ -77,6 +79,22 @@ requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty sta
 requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows must use Partner renewal artwork.');
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
 for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
+
+for (const intakeAsset of ['status.documentUpload', 'status.verified']) {
+  requireText(policyIntakeNew, `PartnerAssets.${intakeAsset}`, `New Policy Intake is missing ${intakeAsset} artwork.`);
+}
+requireText(policyIntakeNew, 'submitPartnerPolicyIntake({', 'New Policy Intake must preserve the existing submit service path.');
+requireText(policyIntakeNew, 'savePartnerPolicyIntakeDraft({', 'New Policy Intake must preserve draft saving.');
+requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intake must preserve draft restore.');
+
+for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.pendingReview', 'status.policyAttention', 'status.verified', 'status.rejected']) {
+  requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
+}
+requireText(policyIntakeDetail, 'function statusArtwork(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-artwork mapping.');
+requireText(policyIntakeDetail, 'submitPartnerPolicyIntakeReplacement({', 'Policy Intake detail must preserve the replacement upload service path.');
+if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.includes('alert-circle-outline')) {
+  throw new Error('Policy Intake status and attention surfaces must not regress to generic feature glyphs.');
+}
 
 requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
 for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
