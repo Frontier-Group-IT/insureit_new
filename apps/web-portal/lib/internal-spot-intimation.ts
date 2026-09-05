@@ -33,18 +33,19 @@ function legacyDriverPhone(description: string | null) {
 
 export function readInternalSpotIntimationDetails(rows: StageDetailLike[], claim: {
   accident_at?: string | null;
+  spot_intimation_at?: string | null;
   accident_location?: string | null;
   accident_description?: string | null;
 }) {
   const row = rows.find((item) => item.details?.milestone_key === "spot_intimation" || typeof item.details?.spot_intimation_at === "string" || typeof item.details?.incident_at === "string");
   const details = row?.details ?? {};
-  const description = stringValue(details.accident_description) ?? claim.accident_description ?? null;
+  const description = claim.accident_description ?? stringValue(details.accident_description) ?? null;
   return {
-    incident_at: stringValue(details.incident_at) ?? stringValue(details.accident_at) ?? claim.accident_at ?? null,
-    spot_intimation_at: stringValue(details.spot_intimation_at),
+    incident_at: claim.accident_at ?? stringValue(details.incident_at) ?? stringValue(details.accident_at) ?? null,
+    spot_intimation_at: claim.spot_intimation_at ?? stringValue(details.spot_intimation_at),
     driver_name: storedOrFallback(details, "driver_name", legacyDriverName(description)),
     driver_phone: storedOrFallback(details, "driver_phone", legacyDriverPhone(description)),
-    location: storedOrFallback(details, "location", storedOrFallback(details, "accident_location", claim.accident_location ?? null)),
+    location: claim.accident_location ?? storedOrFallback(details, "location", storedOrFallback(details, "accident_location", null)),
     accident_description: description
   } satisfies InternalSpotIntimationDetails;
 }
