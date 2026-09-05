@@ -34,7 +34,7 @@ export type DashboardBusinessMixRow = {
   key: string;
   label: string;
   policies: number;
-  netPremium: number | null;
+  grossPremium: number | null;
 };
 
 export type DashboardBusinessRankRow = {
@@ -42,7 +42,7 @@ export type DashboardBusinessRankRow = {
   label: string;
   detail: string | null;
   policies: number;
-  netPremium: number;
+  grossPremium: number;
 };
 
 export type DashboardBusinessData = {
@@ -63,7 +63,7 @@ export type DashboardBusinessData = {
   activeProducerCount: number;
   netPremium: number | null;
   grossPremium: number | null;
-  averageNetPremium: number | null;
+  averageGrossPremium: number | null;
   channelMix: DashboardBusinessMixRow[];
   vehicleClassMix: DashboardBusinessMixRow[];
   coverageMix: DashboardBusinessMixRow[];
@@ -161,10 +161,6 @@ export async function getDashboardBusinessData(
     ? admin.from("insurance_companies").select("id,name").in("id", insurerIds).returns<InsurerRow[]>()
     : Promise.resolve({ data: [] as InsurerRow[], error: null });
 
-  // Keep PostgREST query URLs bounded. A large policy book can contain hundreds
-  // of distinct vehicle UUIDs; sending them all through one .in("id", ids)
-  // request can exceed practical URL limits and make the dashboard show a
-  // false "Vehicle-class business mix could not be refreshed" warning.
   const vehicleRows: VehicleClassRow[] = [];
   let vehicleLookupError: string | null = null;
   for (const batch of chunkValues(vehicleIds, 120)) {
@@ -245,16 +241,16 @@ export async function getDashboardBusinessData(
   const groups = new Map<string, Accumulator & { detail: string | null }>();
 
   for (const policy of filteredPolicies) {
-    const netPremium = premiumByPolicy.get(policy.id)?.net ?? 0;
-    add(channel, clean(policy.intermediary_type) || "Direct", netPremium);
+    const grossPremium = premiumByPolicy.get(policy.id)?.gross ?? 0;
+    add(channel, clean(policy.intermediary_type) || "Direct", grossPremium);
     const classLabel = policy.vehicle_id
       ? vehicleClassById.get(policy.vehicle_id) ?? "Incomplete"
       : policy.business_line === "Non Motor" ? "Non-Motor" : "Incomplete";
-    add(vehicleClass, classLabel, netPremium);
-    add(coverage, clean(policy.policy_type) || "Incomplete", netPremium);
-    add(businessLine, clean(policy.business_line) || "Incomplete", netPremium);
+    add(vehicleClass, classLabel, grossPremium);
+    add(coverage, clean(policy.policy_type) || "Incomplete", grossPremium);
+    add(businessLine, clean(policy.business_line) || "Incomplete", grossPremium);
 
-    if (policy.insurance_company_id) add(insurers, policy.insurance_company_id, netPremium);
+    if (policy.insurance_company_id) add(insurers, policy.insurance_company_id, grossPremium);
 
     const producerKey = clean(policy.intermediary_code) || "direct";
     const producer = producers.get(producerKey) ?? {
@@ -264,7 +260,7 @@ export async function getDashboardBusinessData(
       amount: 0,
     };
     producer.policies += 1;
-    producer.amount += netPremium;
+    producer.amount += grossPremium;
     producers.set(producerKey, producer);
 
     if (policy.intermediary_group_id || clean(policy.intermediary_group_name)) {
@@ -276,7 +272,7 @@ export async function getDashboardBusinessData(
         amount: 0,
       };
       group.policies += 1;
-      group.amount += netPremium;
+      group.amount += grossPremium;
       groups.set(groupKey, group);
     }
   }
@@ -357,7 +353,7 @@ export async function getDashboardBusinessData(
     activeProducerCount: new Set(filteredPolicies.map((row) => clean(row.intermediary_code)).filter(Boolean)).size,
     netPremium,
     grossPremium,
-    averageNetPremium: netPremium !== null && filteredPolicies.length ? netPremium / filteredPolicies.length : null,
+    averageGrossPremium: grossPremium !== null && filteredPolicies.length ? grossPremium / filteredPolicies.length : null,
     channelMix: mix(channel, commercialAccess),
     vehicleClassMix: mix(vehicleClass, commercialAccess),
     coverageMix: mix(coverage, commercialAccess),
@@ -369,9 +365,9 @@ export async function getDashboardBusinessData(
             label: insurerById.get(key) || "Insurance company",
             detail: null,
             policies: value.policies,
-            netPremium: value.amount,
+            grossPremium: value.amount,
           }))
-          .sort(rankByNetPremium)
+          .sort(rankByGrossPremium)
           .slice(0, 5)
       : [],
     topProducers: commercialAccess
@@ -381,9 +377,9 @@ export async function getDashboardBusinessData(
             label: value.label,
             detail: value.detail,
             policies: value.policies,
-            netPremium: value.amount,
+            grossPremium: value.amount,
           }))
-          .sort(rankByNetPremium)
+          .sort(rankByGrossPremium)
           .slice(0, 6)
       : [],
     topGroups: commercialAccess
@@ -393,9 +389,9 @@ export async function getDashboardBusinessData(
             label: value.label,
             detail: value.detail,
             policies: value.policies,
-            netPremium: value.amount,
+            grossPremium: value.amount,
           }))
-          .sort(rankByNetPremium)
+          .sort(rankByGrossPremium)
           .slice(0, 5)
       : [],
     commercial,
@@ -454,7 +450,7 @@ function emptyBusiness(filters: DashboardBusinessFilters): DashboardBusinessData
     activeProducerCount: 0,
     netPremium: null,
     grossPremium: null,
-    averageNetPremium: null,
+    averageGrossPremium: null,
     channelMix: [],
     vehicleClassMix: [],
     coverageMix: [],
@@ -482,16 +478,16 @@ function mix(map: Map<string, Accumulator>, commercial: boolean): DashboardBusin
       key,
       label: value.label,
       policies: value.policies,
-      netPremium: commercial ? value.amount : null,
+      grossPremium: commercial ? value.amount : null,
     }))
     .sort((a, b) => commercial
-      ? (b.netPremium ?? 0) - (a.netPremium ?? 0) || b.policies - a.policies
+      ? (b.grossPremium ?? 0) - (a.grossPremium ?? 0) || b.policies - a.policies
       : b.policies - a.policies)
     .slice(0, 6);
 }
 
-function rankByNetPremium(a: DashboardBusinessRankRow, b: DashboardBusinessRankRow) {
-  return b.netPremium - a.netPremium || b.policies - a.policies || a.label.localeCompare(b.label);
+function rankByGrossPremium(a: DashboardBusinessRankRow, b: DashboardBusinessRankRow) {
+  return b.grossPremium - a.grossPremium || b.policies - a.policies || a.label.localeCompare(b.label);
 }
 
 function buildOptions(
