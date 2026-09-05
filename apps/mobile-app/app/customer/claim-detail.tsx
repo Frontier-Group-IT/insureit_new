@@ -93,6 +93,18 @@ export default function ClaimDetailScreen() {
     return () => { active = false; };
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`customer-claim-detail-${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'claims', filter: `id=eq.${id}` }, (payload) => {
+        const next = payload.new as Partial<ClaimWithOwnership>;
+        setClaim((current) => current ? { ...current, ...next } : current);
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [id]);
+
   const selfManaged = claim?.claim_service_mode === 'self_managed';
 
   useEffect(() => {
