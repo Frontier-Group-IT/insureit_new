@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
@@ -12,6 +11,7 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { listPartnerClaims, type PartnerClaimRow } from '@/lib/claims';
 import { listPartnerCustomers, type PartnerCustomerRow } from '@/lib/customers';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { listPartnerPolicies, type PartnerPolicyRow } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
@@ -95,13 +95,13 @@ export default function SearchScreen() {
       ) : null}
 
       {!ready ? (
-        <PartnerStateView state="empty" icon="search-outline" title="Search your authorized records" message="Enter at least 2 characters." />
+        <PartnerStateView state="empty" asset={PartnerAssets.navigation.search} title="Search your authorized records" message="Enter at least 2 characters." />
       ) : loading && !hasResults ? (
         <PartnerStateView state="loading" title="Searching your business" />
       ) : !hasResults ? (
         <PartnerStateView
           state="empty"
-          icon="search-outline"
+          asset={PartnerAssets.emptyStates.noSearchResults}
           title="No matching records"
           message="Try a customer name, mobile, policy number, vehicle number, claim number or insurer."
         />
@@ -112,7 +112,7 @@ export default function SearchScreen() {
               {results.customers.map((row) => (
                 <ResultRow
                   key={row.customer_id}
-                  icon="people-outline"
+                  asset={PartnerAssets.navigation.customers}
                   title={row.customer_name}
                   subtitle={[row.customer_code, row.phone, row.city].filter(Boolean).join(' · ') || 'Customer record'}
                   onPress={() => router.push(('/customer/' + row.customer_id) as never)}
@@ -126,7 +126,7 @@ export default function SearchScreen() {
               {results.policies.map((row) => (
                 <ResultRow
                   key={row.policy_id}
-                  icon="document-text-outline"
+                  asset={PartnerAssets.navigation.policies}
                   title={row.policy_no || row.policy_code || 'Policy'}
                   subtitle={[row.customer_name, row.vehicle_no || row.insurer_name].filter(Boolean).join(' · ')}
                   badge={<PartnerStatusBadge label={humanize(row.lifecycle_status)} tone={policyTone(row.lifecycle_status)} />}
@@ -141,7 +141,7 @@ export default function SearchScreen() {
               {results.claims.map((row) => (
                 <ResultRow
                   key={row.claim_id}
-                  icon="shield-outline"
+                  asset={row.claim_state === 'completed' ? PartnerAssets.status.verified : PartnerAssets.navigation.claims}
                   title={row.claim_no || row.insurer_claim_no || 'Claim'}
                   subtitle={[row.customer_name, row.vehicle_no || row.policy_no].filter(Boolean).join(' · ')}
                   badge={<PartnerStatusBadge label={humanize(row.current_status || row.claim_state)} tone={row.claim_state === 'completed' ? 'success' : 'warning'} />}
@@ -168,13 +168,13 @@ function SearchSection({ title, count, children }: { title: string; count: numbe
 }
 
 function ResultRow({
-  icon,
+  asset,
   title,
   subtitle,
   badge,
   onPress,
 }: {
-  icon: 'people-outline' | 'document-text-outline' | 'shield-outline';
+  asset: ImageSourcePropType;
   title: string;
   subtitle: string;
   badge?: ReactNode;
@@ -186,8 +186,8 @@ function ResultRow({
       subtitle={subtitle || 'Record'}
       status={badge}
       leading={
-        <View style={styles.icon}>
-          <Ionicons name={icon} size={16} color={partnerTheme.colors.brandStrong} />
+        <View style={styles.artwork}>
+          <Image source={asset} style={styles.artworkImage} resizeMode="contain" />
         </View>
       }
       onPress={onPress}
@@ -210,14 +210,13 @@ function humanize(value: string) {
 
 const styles = StyleSheet.create({
   feedback: { marginTop: 8 },
-  icon: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+  artwork: {
+    width: 34,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.brandSoft,
   },
+  artworkImage: { width: 32, height: 32 },
   refreshing: {
     marginTop: 8,
     color: partnerTheme.colors.inkMuted,
