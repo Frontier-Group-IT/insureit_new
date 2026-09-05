@@ -23,6 +23,7 @@ type ClaimDetail = SpotSurveyClaim & {
   assistance_notes: string | null;
   policy_service_source: "sibl" | "external" | null;
   accident_at: string | null;
+  spot_intimation_at: string | null;
   accident_description: string | null;
   estimated_loss: number | null;
   approved_amount: number | null;
@@ -57,7 +58,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const admin = createSupabaseAdminClient();
   const { data: claim, error } = await admin
     .from("claims")
-    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, claim_service_mode, assistance_status, assistance_notes, policy_service_source, accident_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date, premium_amount, insured_declared_value), insurance_companies(name, contact_email, contact_phone)")
+    .select("id, claim_no, insurer_claim_no, customer_id, vehicle_id, policy_id, external_policy_id, current_status, claim_service_mode, assistance_status, assistance_notes, policy_service_source, accident_at, spot_intimation_at, accident_location, accident_description, estimated_loss, approved_amount, settlement_amount, updated_at, created_at, customers(company_name, contact_name, phone, email), vehicles(vehicle_no, vehicle_type, make, model), policies(policy_no, policy_type, start_date, end_date, premium_amount, insured_declared_value), insurance_companies(name, contact_email, contact_phone)")
     .eq("id", id)
     .maybeSingle<ClaimDetail>();
 

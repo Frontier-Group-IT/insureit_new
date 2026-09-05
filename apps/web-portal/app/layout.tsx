@@ -4,6 +4,7 @@ import { Manrope, Space_Grotesk } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v15-appRouter";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
+import { ClaimRealtimeRefresh } from "@/components/claim-realtime-refresh";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { PolicyRouteEnhancements } from "@/components/policy-route-enhancements";
 import { PortalRouteEnhancements } from "@/components/portal-route-enhancements";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <Suspense fallback={null}>
             <AadhaarMaskNormalizer />
+            <ClaimRealtimeRefresh />
             <PortalRouteEnhancements />
             <ProfessionalFormValidation />
             <PolicyRouteEnhancements />
