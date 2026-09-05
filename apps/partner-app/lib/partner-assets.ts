@@ -16,6 +16,7 @@ export const PartnerAssets = {
   actions: {
     policies: require('../assets/partner/actions/policies.png'),
     support: require('../assets/partner/actions/support.png'),
+    supportVerified: require('../assets/partner/actions/support-verified.png'),
     businessInsights: require('../assets/partner/actions/business-insights.png'),
     payoutGrowth: require('../assets/partner/actions/payout-growth.png'),
     addCustomer: require('../assets/partner/actions/add-customer.png'),
@@ -27,6 +28,7 @@ export const PartnerAssets = {
     whatsapp: require('../assets/partner/actions/whatsapp.png'),
     addDocument: require('../assets/partner/actions/add-document.png'),
     customerRegister: require('../assets/partner/actions/customer-register.png'),
+    policyChecklist: require('../assets/partner/actions/policy-checklist.png'),
     policyRegister: require('../assets/partner/actions/policy-register.png'),
     renewals: require('../assets/partner/actions/renewals.png'),
     documentSearch: require('../assets/partner/actions/document-search.png'),
@@ -59,6 +61,8 @@ export const PartnerAssets = {
     motorRenewal: require('../assets/partner/status/motor-renewal.png'),
     announcement: require('../assets/partner/status/announcement.png'),
     renewalRefresh: require('../assets/partner/status/renewal-refresh.png'),
+    appsGrid: require('../assets/partner/status/apps-grid.png'),
+    settings: require('../assets/partner/status/settings.png'),
   },
   emptyStates: {
     noPolicies: require('../assets/partner/empty-states/no-policies.png'),

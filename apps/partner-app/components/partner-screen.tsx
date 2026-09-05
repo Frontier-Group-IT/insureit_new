@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from 'react';
-import { ScrollView, StyleSheet, type ScrollViewProps } from 'react-native';
+import { type ImageSourcePropType, ScrollView, StyleSheet, type ScrollViewProps } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
@@ -11,6 +11,7 @@ export function PartnerScreen({
   subtitle,
   onBack,
   backDisabled,
+  artwork,
   action,
   children,
   scrollProps,
@@ -20,6 +21,7 @@ export function PartnerScreen({
   subtitle?: string;
   onBack?: () => void;
   backDisabled?: boolean;
+  artwork?: ImageSourcePropType;
   action?: ReactNode;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
 }>) {
@@ -37,6 +39,7 @@ export function PartnerScreen({
           subtitle={subtitle}
           onBack={onBack}
           backDisabled={backDisabled}
+          artwork={artwork}
           action={action}
         />
         {children}

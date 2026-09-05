@@ -1,7 +1,8 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { resolvePartnerScreenArtwork } from '@/lib/partner-screen-artwork';
 import { partnerTheme } from '@/lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -12,6 +13,7 @@ export function PartnerTopBar({
   subtitle,
   onBack,
   backDisabled = false,
+  artwork,
   action,
   actionIcon,
   actionLabel = 'Action',
@@ -22,11 +24,14 @@ export function PartnerTopBar({
   subtitle?: string;
   onBack?: () => void;
   backDisabled?: boolean;
+  artwork?: ImageSourcePropType;
   action?: ReactNode;
   actionIcon?: IconName;
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const resolvedArtwork = artwork ?? resolvePartnerScreenArtwork({ title, eyebrow });
+
   return (
     <View style={styles.root}>
       {onBack ? (
@@ -41,6 +46,12 @@ export function PartnerTopBar({
         >
           <Ionicons name="arrow-back" size={20} color={backDisabled ? partnerTheme.colors.inkSubtle : partnerTheme.colors.ink} />
         </Pressable>
+      ) : null}
+
+      {resolvedArtwork ? (
+        <View style={styles.artworkWrap}>
+          <Image source={resolvedArtwork} style={styles.artwork} resizeMode="contain" />
+        </View>
       ) : null}
 
       <View style={styles.copy}>
@@ -71,6 +82,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: partnerTheme.spacing.sm,
+  },
+  artworkWrap: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  artwork: {
+    width: 38,
+    height: 38,
   },
   copy: { flex: 1, minWidth: 0 },
   eyebrow: {

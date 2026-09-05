@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from 'react';
 import {
+  type ImageSourcePropType,
   FlatList,
   StyleSheet,
   View,
@@ -15,6 +16,7 @@ export function PartnerListScreen<T>({
   title,
   eyebrow,
   onBack,
+  artwork,
   action,
   data,
   renderItem,
@@ -30,6 +32,7 @@ export function PartnerListScreen<T>({
   title: string;
   eyebrow?: string;
   onBack?: () => void;
+  artwork?: ImageSourcePropType;
   action?: ReactNode;
   data: readonly T[];
   renderItem: ListRenderItem<T>;
@@ -53,7 +56,7 @@ export function PartnerListScreen<T>({
         contentContainerStyle={[styles.content, !data.length && styles.contentEmpty]}
         ListHeaderComponent={
           <View>
-            <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} action={action} />
+            <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} artwork={artwork} action={action} />
             {header}
           </View>
         }
