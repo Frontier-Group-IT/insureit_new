@@ -330,7 +330,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             onClear={() => { setFromDate(""); setToDate(""); setPage(1); }}
           />
           <div className="min-w-0 max-w-full xl:min-w-[330px]">
-            <div className="flex w-full items-center gap-0.5 overflow-x-auto rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
+            <div className="flex w-full items-center gap-0.5 overflow-visible rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
               <PolicyPeriodFilter value={timeScope} mtdCount={mtdFiltered.length} allCount={controlFiltered.length} onChange={changeTimeScope} />
               <div className="min-w-0 flex-1 [&>div]:border-0 [&>div]:bg-transparent [&>div]:p-0 xl:[&_button]:px-2.5 xl:[&_button]:text-[10px]">
                 <RegisterViewTabs
