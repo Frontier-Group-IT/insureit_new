@@ -253,13 +253,13 @@ export default function SelfManagedMilestoneScreen() {
       {documentUploadStage ? <CompactDocumentStageHeader
         step={step}
         title={definition.label}
-        subtitle={subtitleFor(key)}
+        subtitle={externalClaimMilestoneSubtitle(key)}
         vehicleNo={vehicleNo}
         claimNo={displayClaimNo}
       /> : <ExternalClaimStageHeader
         step={step}
         title={definition.label}
-        subtitle={subtitleFor(key)}
+        subtitle={externalClaimMilestoneSubtitle(key)}
         vehicleNo={vehicleNo}
         claimNo={displayClaimNo}
         onBack={() => router.back()}
@@ -273,7 +273,7 @@ export default function SelfManagedMilestoneScreen() {
         vehicleMeta={vehicleMeta}
       />
 
-      {loading ? <Text style={styles.loading}>Loading saved details...</Text> : renderStage(key, values, set, milestones, claimId, customerId)}
+      {loading ? <Text style={styles.loading}>Loading saved details...</Text> : ExternalClaimMilestoneStageBody(key, values, set, milestones, claimId, customerId)}
 
       {documentUploadStage ? <CompactDocumentActionBar
         claimId={claimId}
@@ -346,7 +346,7 @@ export default function SelfManagedMilestoneScreen() {
   );
 }
 
-function renderStage(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void, milestones: ClaimMilestone[], claimId: string, customerId: string) {
+export function ExternalClaimMilestoneStageBody(key: ClaimMilestoneKey, values: Values, set: (field: FieldKey, value: string) => void, milestones: ClaimMilestone[], claimId: string, customerId: string) {
   if (key === 'claim_intimation') return <>
     <ClaimFormSection title="Stage Details" subtitle="Record claim intimation, workshop and estimate details" iconImage={require('../../assets/claims/claim-intimation.png')}>
       <DateField label="Claim Intimation Date *" value={values.claim_intimation_date ?? ''} onChange={(v) => set('claim_intimation_date', v)} />
@@ -1025,7 +1025,7 @@ function toFormValues(details: Record<string, unknown> | null | undefined): Valu
   return next;
 }
 
-function subtitleFor(key: ClaimMilestoneKey) {
+export function externalClaimMilestoneSubtitle(key: ClaimMilestoneKey) {
   if (key === 'claim_intimation') return 'Record dealership, gate-in and estimate details.';
   if (key === 'work_approval') return 'Record insurer approval and cashless status.';
   if (key === 'repair_ri') return 'Track repair completion and re-inspection.';
