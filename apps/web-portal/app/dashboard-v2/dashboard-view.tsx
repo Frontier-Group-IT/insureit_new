@@ -94,7 +94,6 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
         </div>
       ) : null}
 
-
       {rail.length ? (
         <section className={`mt-5 grid border-y border-[#D8E0EA] bg-white ${railGrid(rail.length)}`}>
           {rail.map((item, index) => (
@@ -296,19 +295,19 @@ function NeedsAttention({ items }: { items: AttentionSignal[] }) {
 }
 
 function BusinessPerformance({ business }: { business: DashboardBusinessData }) {
-  const commercial = business.netPremium !== null;
+  const commercial = business.grossPremium !== null;
   const motorPolicies = business.businessLineMix.find((row) => row.label === "Motor")?.policies ?? 0;
   const nonMotorPolicies = business.businessLineMix.find((row) => row.label === "Non Motor")?.policies ?? 0;
   const policyMixLabel = `${motorPolicies.toLocaleString("en-IN")} Motor · ${nonMotorPolicies.toLocaleString("en-IN")} Non-Motor`;
   const headline = [
     { label: `Policies · ${business.periodShortLabel} · ${policyMixLabel}`, value: business.policyCount.toLocaleString("en-IN") },
     ...(commercial ? [
-      { label: `Net premium · ${business.periodShortLabel}`, value: formatMoney(business.netPremium ?? 0) },
-      { label: "Avg. net / policy", value: formatMoney(business.averageNetPremium ?? 0) },
+      { label: `Gross premium · ${business.periodShortLabel}`, value: formatMoney(business.grossPremium ?? 0) },
+      { label: "Avg. gross / policy", value: formatMoney(business.averageGrossPremium ?? 0) },
     ] : []),
     { label: "Active producers", value: business.activeProducerCount.toLocaleString("en-IN") },
   ];
-  const totalAmount = business.netPremium ?? 0;
+  const totalAmount = business.grossPremium ?? 0;
 
   return (
     <section className="mt-6 border-y border-[#D5DEE9] bg-white">
@@ -610,18 +609,18 @@ function WorkMovement({ data, access }: { data: DashboardCurrentData; access: Da
 }
 
 function MixColumn({ title, rows, divided }: { title: string; rows: DashboardBusinessMixRow[]; divided: boolean }) {
-  const amountMode = rows.some((row) => row.netPremium !== null);
-  const total = Math.max(rows.reduce((sum, row) => sum + (amountMode ? row.netPremium ?? 0 : row.policies), 0), 1);
+  const amountMode = rows.some((row) => row.grossPremium !== null);
+  const total = Math.max(rows.reduce((sum, row) => sum + (amountMode ? row.grossPremium ?? 0 : row.policies), 0), 1);
 
   return (
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-[8px] font-black uppercase tracking-[.11em] text-[#7B899D]">{title}</h3>
-        <span className="text-[7px] font-semibold text-[#99A3B2]">{amountMode ? "By net premium" : "By policies"}</span>
+        <span className="text-[7px] font-semibold text-[#99A3B2]">{amountMode ? "By gross premium" : "By policies"}</span>
       </div>
       <div className="mt-3 space-y-3">
         {rows.slice(0, 5).map((row) => {
-          const value = amountMode ? row.netPremium ?? 0 : row.policies;
+          const value = amountMode ? row.grossPremium ?? 0 : row.policies;
           const share = Math.round((value / total) * 100);
           return (
             <div key={row.key}>
@@ -648,7 +647,7 @@ function TopColumn({ title, rows, totalAmount, divided }: { title: string; rows:
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-[8px] font-black uppercase tracking-[.11em] text-[#7B899D]">{title}</h3>
-        <span className="text-[7px] font-semibold text-[#99A3B2]">Ranked by net premium</span>
+        <span className="text-[7px] font-semibold text-[#99A3B2]">Ranked by gross premium</span>
       </div>
       <div className="mt-2 divide-y divide-[#EEF2F6]">
         {rows.slice(0, 5).map((row, index) => (
@@ -659,8 +658,8 @@ function TopColumn({ title, rows, totalAmount, divided }: { title: string; rows:
               <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{row.policies} policies</p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="whitespace-normal break-words text-[9px] font-bold leading-snug text-[#26354F]">{formatMoney(row.netPremium)}</p>
-              <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{amountShare(row.netPremium, totalAmount)}%</p>
+              <p className="whitespace-normal break-words text-[9px] font-bold leading-snug text-[#26354F]">{formatMoney(row.grossPremium)}</p>
+              <p className="mt-0.5 text-[7px] font-semibold text-[#96A1B1]">{amountShare(row.grossPremium, totalAmount)}%</p>
             </div>
           </div>
         ))}
@@ -674,7 +673,7 @@ function Leaderboard({ title, rows, totalAmount, href, divided = false, compact 
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#DDE4EC] px-4 py-4 sm:px-5`}>
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-[7.5px] font-black uppercase tracking-[.11em] text-[#8290A3]">Ranked by net premium</p>
+          <p className="text-[7.5px] font-black uppercase tracking-[.11em] text-[#8290A3]">Ranked by gross premium</p>
           <h3 className="mt-1 text-[11px] font-bold text-[#1A2A46]">{title}</h3>
         </div>
         <Link prefetch={false} href={href} className="text-[8px] font-bold text-[#65758B] hover:text-[#203A63]">View all ↗</Link>
@@ -690,8 +689,8 @@ function Leaderboard({ title, rows, totalAmount, href, divided = false, compact 
               </p>
             </div>
             <div className="min-w-0 text-right">
-              <p className="portal-display whitespace-normal break-words text-[14px] font-semibold leading-snug text-[#17365D]">{formatMoney(row.netPremium)}</p>
-              <p className="mt-0.5 text-[7px] font-semibold text-[#8D99AA]">{amountShare(row.netPremium, totalAmount)}% of period</p>
+              <p className="portal-display whitespace-normal break-words text-[14px] font-semibold leading-snug text-[#17365D]">{formatMoney(row.grossPremium)}</p>
+              <p className="mt-0.5 text-[7px] font-semibold text-[#8D99AA]">{amountShare(row.grossPremium, totalAmount)}% of period</p>
             </div>
           </Link>
         ))}
