@@ -1,5 +1,6 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { requestSpotSurveyDocumentReupload } from "@/app/claims/[id]/spot-survey-actions";
@@ -14,8 +15,15 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
 
   return (
     <>
-      <button type="button" onClick={() => { setResult(null); setOpen(true); }} className="h-8 rounded-md border border-[#D08700] bg-white px-2 text-[11px] font-semibold text-[#A35B00] transition hover:bg-[#FFF8E8]">
-        Reupload
+      <button
+        type="button"
+        onClick={() => { setResult(null); setOpen(true); }}
+        data-document-action="reupload"
+        aria-label="Request reupload"
+        title="Request reupload"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#D08700] bg-white text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30"
+      >
+        <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
       </button>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4">
