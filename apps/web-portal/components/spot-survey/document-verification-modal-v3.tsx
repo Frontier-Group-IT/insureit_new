@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { verifySpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
 
@@ -81,25 +82,27 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
     return `Calculation: (${grValues.gvw} - ${grValues.unladen}) - ${grValues.load} = ${grValues.difference} kg`;
   }, [modalType, spotComplete, rcComplete, rcValid, policyDatesAvailable, insuranceComplete, insuranceValid, dl.validUpto, dl.inbound, dl.validForLossVehicle, dlDateStatus, grComplete, grValid, grValues.gvw, grValues.unladen, grValues.load, grValues.difference]);
 
+  const modal = (
+    <div className="fixed inset-0 z-[100] grid min-h-screen place-items-center overflow-y-auto bg-black/55 p-4">
+      <form onSubmit={(event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); if (!canSave) return; if (modalType === "spot") { formData.set("spot_axle_status", spot.axleStatus); formData.set("spot_overturned", spot.overturned); } if (modalType === "gr") { formData.set("load_difference_kg", String(grValues.difference)); formData.set("gr_calculation", `(${grValues.gvw} - ${grValues.unladen}) - ${grValues.load} = ${grValues.difference} kg`); } if (modalType === "dl") { formData.set("dl_validity_status", dlDateStatus); } startTransition(async () => { formData.set("claimId", claimId); formData.set("documentId", documentId); const response = await verifySpotSurveyDocument(formData); setResult(response); if (response.ok) { setSaved(true); router.refresh(); } }); }} className={`w-full overflow-hidden rounded-xl bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)] ${modalType === "spot" ? "max-w-[520px]" : modalType === "gr" || modalType === "dl" ? "max-w-[560px]" : "max-w-[760px]"}`}>
+        <ModalHeader modalType={modalType} onClose={() => setOpen(false)} />
+        <div className="max-h-[68vh] overflow-y-auto">
+          {modalType === "spot" ? <SpotRows values={spot} setValues={setSpot} /> : null}
+          {modalType === "rc" ? <RcRows incidentDate={incident} values={rcDates} onChange={(key, value) => setRcDates((prev) => ({ ...prev, [key]: value }))} /> : null}
+          {modalType === "insurance" ? <InsuranceRows incidentDate={incident} values={insurance} setValues={setInsurance} /> : null}
+          {modalType === "dl" ? <DlRows values={dl} setValues={setDl} incidentDate={incident} /> : null}
+          {modalType === "gr" ? <GrRows values={gr} setValues={setGr} /> : null}
+          <div className="px-6 pb-4"><p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${canSave ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{message}</p>{result ? <p className={`mt-2 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? "Verification response received."}</p> : null}</div>
+        </div>
+        <div className="flex items-center justify-between border-t border-[#E6EEF7] px-6 py-4"><button type="button" onClick={() => setOpen(false)} className="h-10 rounded-md border border-[#B8C5D6] px-7 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button><button type="submit" disabled={pending || Boolean(result?.ok) || !canSave} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#A9B4C5] disabled:opacity-70">{pending ? "Saving..." : result?.ok ? "Saved" : modalType === "spot" ? "Submit" : "Save & Close"}</button></div>
+      </form>
+    </div>
+  );
+
   return (
     <div>
       <button type="button" onClick={() => { setResult(null); setOpen(true); }} className={`h-8 w-full rounded-md border text-[12px] font-semibold ${saved ? "border-green-300 bg-green-50 text-green-700" : "border-[#16A36A] bg-white text-[#16895C] hover:bg-[#F2FBF7]"}`}>{saved ? "Verified" : "Verify"}</button>
-      {open ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
-          <form onSubmit={(event) => { event.preventDefault(); const formData = new FormData(event.currentTarget); if (!canSave) return; if (modalType === "spot") { formData.set("spot_axle_status", spot.axleStatus); formData.set("spot_overturned", spot.overturned); } if (modalType === "gr") { formData.set("load_difference_kg", String(grValues.difference)); formData.set("gr_calculation", `(${grValues.gvw} - ${grValues.unladen}) - ${grValues.load} = ${grValues.difference} kg`); } if (modalType === "dl") { formData.set("dl_validity_status", dlDateStatus); } startTransition(async () => { formData.set("claimId", claimId); formData.set("documentId", documentId); const response = await verifySpotSurveyDocument(formData); setResult(response); if (response.ok) { setSaved(true); router.refresh(); } }); }} className={`w-full overflow-hidden rounded-xl bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)] ${modalType === "spot" ? "max-w-[520px]" : modalType === "gr" || modalType === "dl" ? "max-w-[560px]" : "max-w-[760px]"}`}>
-            <ModalHeader modalType={modalType} onClose={() => setOpen(false)} />
-            <div className="max-h-[68vh] overflow-y-auto">
-              {modalType === "spot" ? <SpotRows values={spot} setValues={setSpot} /> : null}
-              {modalType === "rc" ? <RcRows incidentDate={incident} values={rcDates} onChange={(key, value) => setRcDates((prev) => ({ ...prev, [key]: value }))} /> : null}
-              {modalType === "insurance" ? <InsuranceRows incidentDate={incident} values={insurance} setValues={setInsurance} /> : null}
-              {modalType === "dl" ? <DlRows values={dl} setValues={setDl} incidentDate={incident} /> : null}
-              {modalType === "gr" ? <GrRows values={gr} setValues={setGr} /> : null}
-              <div className="px-6 pb-4"><p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${canSave ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>{message}</p>{result ? <p className={`mt-2 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? "Verification response received."}</p> : null}</div>
-            </div>
-            <div className="flex items-center justify-between border-t border-[#E6EEF7] px-6 py-4"><button type="button" onClick={() => setOpen(false)} className="h-10 rounded-md border border-[#B8C5D6] px-7 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button><button type="submit" disabled={pending || Boolean(result?.ok) || !canSave} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-[#A9B4C5] disabled:opacity-70">{pending ? "Saving..." : result?.ok ? "Saved" : modalType === "spot" ? "Submit" : "Save & Close"}</button></div>
-          </form>
-        </div>
-      ) : null}
+      {open && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </div>
   );
 }
