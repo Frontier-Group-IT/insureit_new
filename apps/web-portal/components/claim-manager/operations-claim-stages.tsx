@@ -155,18 +155,20 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 disabled={!available}
                 aria-current={isSelected ? "step" : undefined}
                 onClick={() => setSelectedKey(stage.key)}
-                className={`flex min-h-[62px] w-full flex-col items-center justify-center gap-1.5 border-b-2 px-2 py-2 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isSelected ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
+                className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isSelected ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
               >
-                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_3px_8px_rgba(21,94,239,0.2)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
-                  {isCompleted ? (
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
-                  ) : isCurrent ? (
-                    <span className="text-[11px] font-semibold">{index + 1}</span>
-                  ) : (
-                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
-                  )}
+                <span className="flex items-center justify-center gap-2">
+                  <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
+                    {isCompleted ? (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-[2.4]"><path d="m6 12 4 4 8-9" /></svg>
+                    ) : isCurrent ? (
+                      <span className="text-[9px] font-semibold">{index + 1}</span>
+                    ) : (
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3 w-3 fill-none stroke-current stroke-[2]"><rect x="6.5" y="10.5" width="11" height="8" rx="1.5" /><path d="M9 10.5V8a3 3 0 0 1 6 0v2.5" /></svg>
+                    )}
+                  </span>
+                  <span className={`block text-[9px] font-semibold leading-none ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
                 </span>
-                <span className={`block text-[9px] font-semibold leading-3.5 ${isCurrent ? "text-[#155EEF]" : isCompleted ? "text-[#3E536F]" : "text-[#667A96]"}`}>{stage.label}</span>
               </button>
             </li>
           );
