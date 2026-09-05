@@ -21,13 +21,16 @@ import type { InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 type TimeTarget = 'incident' | 'intimation' | null;
 type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'accident_photo' | 'accident_video' | 'bulk';
 type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null };
+type UploadedDocument = PickedDocument & { documentId: string; storageBucket: string; storagePath: string };
 type DocumentTileState = 'idle' | 'ready';
 type DeleteTarget = { key: DocumentKey; title: string } | null;
 type LocationNotice = { tone: 'info' | 'error'; text: string } | null;
 type DocumentTileIconName = keyof typeof MaterialCommunityIcons.glyphMap;
+type DraftClaim = { id: string; customerId: string; controlNo: string };
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
+const DOCUMENT_UPLOAD_CONCURRENCY = 3;
 const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
   rc: 'RC Copy',
   insurance: 'Insurance Copy',
@@ -61,7 +64,7 @@ export default function InternalClaimStageOne() {
   const [location, setLocation] = useState('');
   const [locationNotice, setLocationNotice] = useState<LocationNotice>(null);
   const [locating, setLocating] = useState(false);
-  const [documents, setDocuments] = useState<Record<DocumentKey, PickedDocument[]>>({ rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] });
+  const [documents, setDocuments] = useState<Record<DocumentKey, UploadedDocument[]>>({ rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] });
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [videoProcessingStatus, setVideoProcessingStatus] = useState('');
   const [voiceNote, setVoiceNote] = useState<IncidentVoiceNoteFile | null>(null);
@@ -73,6 +76,7 @@ export default function InternalClaimStageOne() {
   const [saving, setSaving] = useState(false);
   const [timeTarget, setTimeTarget] = useState<TimeTarget>(null);
   const [createdClaimSuccess, setCreatedClaimSuccess] = useState<{ id: string; controlNo: string } | null>(null);
+  const [draftClaim, setDraftClaim] = useState<DraftClaim | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -116,7 +120,127 @@ export default function InternalClaimStageOne() {
   const selectedInsurer = useMemo(() => selectedPolicy ? insurers.find((item) => item.id === selectedPolicy.insurance_company_id) ?? null : null, [insurers, selectedPolicy]);
   const selectedContext = useMemo(() => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null, [contexts, selectedCustomerId]);
 
+  async function ensureDraftClaim(): Promise<DraftClaim | null> {
+    if (draftClaim) return draftClaim;
+    if (!selectedVehicle || !selectedPolicy || !selectedContext) {
+      setMessage('Vehicle and policy details must be available before uploading documents.');
+      return null;
+    }
+    const session = await getCurrentSession();
+    if (!session?.user) { router.replace('/login'); return null; }
+    const { data, error } = await supabase.from('claims').insert({
+      claim_no: makeClaimNumber(),
+      customer_id: selectedContext.customer_id,
+      vehicle_id: selectedVehicle.id,
+      policy_id: selectedPolicy.id,
+      insurance_company_id: selectedPolicy.insurance_company_id,
+      current_status: 'Draft',
+      created_by: session.user.id,
+    }).select('id, customer_id, claim_no').single();
+    if (error || !data) {
+      setMessage(mapSubmitError(error));
+      return null;
+    }
+    const next = { id: data.id, customerId: data.customer_id, controlNo: data.claim_no };
+    setDraftClaim(next);
+    return next;
+  }
+
+  async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument): Promise<UploadedDocument | null> {
+    const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
+    let storagePath = '';
+    try {
+      const session = await getCurrentSession();
+      if (!session?.user) return null;
+      let uploadUri = pickedFile.uri;
+      let uploadName = pickedFile.name;
+      let uploadMimeType = pickedFile.mimeType ?? 'application/octet-stream';
+      if (isAccidentVideo) {
+        setVideoProcessingStatus(pickedFile.size && pickedFile.size > 10 * 1024 * 1024 ? 'Preparing video for compression…' : 'Preparing video…');
+        const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`));
+        uploadUri = prepared.uri;
+        if (prepared.compressed) {
+          const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
+          uploadName = `${stem}.mp4`;
+          uploadMimeType = 'video/mp4';
+        }
+        setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
+      }
+      const extension = uploadName.includes('.') ? uploadName.split('.').pop() : 'bin';
+      storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+      const response = await fetch(uploadUri);
+      const body = await response.arrayBuffer();
+      const max = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
+      if (body.byteLength > max) return null;
+      const storageBucket = 'claim-documents';
+      const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, body, { contentType: uploadMimeType, upsert: false });
+      if (uploadResult.error) return null;
+      const { data: record, error } = await supabase.from('claim_documents').insert({ claim_id: targetClaimId, customer_id: customerId, document_type: documentType, file_name: uploadName, storage_bucket: storageBucket, storage_path: storagePath, mime_type: uploadMimeType, file_size: body.byteLength, uploaded_by: session.user.id }).select('id').single();
+      if (error || !record?.id) {
+        await supabase.storage.from(storageBucket).remove([storagePath]);
+        return null;
+      }
+      return { ...pickedFile, name: uploadName, mimeType: uploadMimeType, size: body.byteLength, documentId: record.id, storageBucket, storagePath };
+    } catch {
+      if (storagePath) await supabase.storage.from('claim-documents').remove([storagePath]);
+      return null;
+    } finally {
+      if (isAccidentVideo) setVideoProcessingStatus('');
+    }
+  }
+
+  async function uploadConcurrently(files: PickedDocument[], claim: DraftClaim, documentType: string) {
+    const results: Array<UploadedDocument | null> = new Array(files.length).fill(null);
+    let cursor = 0;
+    async function worker() {
+      while (true) {
+        const index = cursor++;
+        if (index >= files.length) return;
+        results[index] = await uploadClaimDocument(claim.id, claim.customerId, documentType, files[index]);
+      }
+    }
+    const workers = Math.min(DOCUMENT_UPLOAD_CONCURRENCY, files.length);
+    await Promise.all(Array.from({ length: workers }, () => worker()));
+    return results.filter((item): item is UploadedDocument => Boolean(item));
+  }
+
+  async function deleteUploadedDocuments(items: UploadedDocument[]) {
+    if (!items.length) return true;
+    const { error } = await supabase.from('claim_documents').delete().in('id', items.map((item) => item.documentId));
+    if (error) return false;
+    const byBucket = new Map<string, string[]>();
+    for (const item of items) byBucket.set(item.storageBucket, [...(byBucket.get(item.storageBucket) ?? []), item.storagePath]);
+    await Promise.all([...byBucket.entries()].map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths)));
+    return true;
+  }
+
+  async function uploadPickedFiles(key: DocumentKey, picked: PickedDocument[]) {
+    if (!picked.length || uploadingDocuments) return;
+    setUploadingDocuments(true);
+    setMessage('');
+    try {
+      const claim = await ensureDraftClaim();
+      if (!claim) return;
+      const documentType = key === 'bulk' ? BULK_DOCUMENT_TYPE : DOCUMENT_TYPE_BY_KEY[key];
+      const uploaded = await uploadConcurrently(picked, claim, documentType);
+      if (!uploaded.length) {
+        setMessage('The selected document could not be uploaded. Please try again.');
+        return;
+      }
+      const append = key === 'bulk' || key === 'accident_photo' || key === 'accident_video';
+      if (!append) {
+        const previous = documents[key];
+        if (previous.length) await deleteUploadedDocuments(previous);
+      }
+      setDocuments((current) => ({ ...current, [key]: append ? [...current[key], ...uploaded] : [uploaded[0]] }));
+      if (uploaded.length !== picked.length) setMessage(`${uploaded.length} of ${picked.length} selected files uploaded. Please retry the remaining file${picked.length - uploaded.length === 1 ? '' : 's'}.`);
+    } finally {
+      setUploadingDocuments(false);
+    }
+  }
+
   async function pickDocument(key: Exclude<DocumentKey, 'bulk'>) {
+    if (uploadingDocuments) return;
     setMessage('');
     const multiMedia = isMultiMediaKey(key);
     const pickerTypes = key === 'accident_video' ? ['video/*'] : key === 'accident_photo' ? ['image/*'] : ['application/pdf', 'image/*'];
@@ -127,24 +251,31 @@ export default function InternalClaimStageOne() {
     const label = key === 'accident_video' ? '50 MB' : '5 MB';
     const tooLarge = picked.find((file) => file.size != null && file.size > limit);
     if (tooLarge) return setMessage(`${tooLarge.name} is larger than ${label}. Please choose smaller files.`);
-    setDocuments((current) => ({ ...current, [key]: multiMedia ? [...current[key], ...picked] : [picked[0]] }));
+    await uploadPickedFiles(key, picked);
   }
 
   async function pickBulkDocuments() {
+    if (uploadingDocuments) return;
     setMessage('');
     const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.length) return;
-    const additions: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
-    const tooLarge = additions.find((file) => file.size != null && file.size > MAX_UPLOAD_SIZE_BYTES);
+    const picked: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const tooLarge = picked.find((file) => file.size != null && file.size > MAX_UPLOAD_SIZE_BYTES);
     if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
-    setDocuments((current) => ({ ...current, bulk: [...current.bulk, ...additions] }));
+    await uploadPickedFiles('bulk', picked);
   }
 
   function requestDelete(key: DocumentKey, title: string) { if (!uploadingDocuments) setDeleteTarget({ key, title }); }
-  function confirmDelete() {
-    if (!deleteTarget) return;
-    setDocuments((current) => ({ ...current, [deleteTarget.key]: [] }));
+  async function confirmDelete() {
+    if (!deleteTarget || uploadingDocuments) return;
+    const target = deleteTarget;
     setDeleteTarget(null);
+    setUploadingDocuments(true);
+    try {
+      const current = documents[target.key];
+      if (!(await deleteUploadedDocuments(current))) return setMessage('The document could not be deleted right now. Please try again.');
+      setDocuments((items) => ({ ...items, [target.key]: [] }));
+    } finally { setUploadingDocuments(false); }
   }
   function tileState(key: Exclude<DocumentKey, 'bulk'>): DocumentTileState { return documents[key].length ? 'ready' : 'idle'; }
   function mediaCount(key: 'accident_photo' | 'accident_video') { return documents[key].length; }
@@ -152,7 +283,7 @@ export default function InternalClaimStageOne() {
     const count = mediaCount(key);
     if (!count) return undefined;
     const noun = key === 'accident_photo' ? 'photo' : 'video';
-    return `${count} ${noun}${count === 1 ? '' : 's'} ready`;
+    return `${count} ${noun}${count === 1 ? '' : 's'} uploaded`;
   }
 
   async function captureCurrentLocation() {
@@ -183,56 +314,10 @@ export default function InternalClaimStageOne() {
     } finally { setLocating(false); }
   }
 
-  async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
-    const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
-    try {
-      const session = await getCurrentSession();
-      if (!session?.user) return false;
-      let uploadUri = pickedFile.uri;
-      let uploadName = pickedFile.name;
-      let uploadMimeType = pickedFile.mimeType ?? 'application/octet-stream';
-      if (isAccidentVideo) {
-        setVideoProcessingStatus(pickedFile.size && pickedFile.size > 10 * 1024 * 1024 ? 'Preparing video for compression…' : 'Preparing video…');
-        const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`));
-        uploadUri = prepared.uri;
-        if (prepared.compressed) {
-          const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
-          uploadName = `${stem}.mp4`;
-          uploadMimeType = 'video/mp4';
-        }
-        setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
-      }
-      const extension = uploadName.includes('.') ? uploadName.split('.').pop() : 'bin';
-      const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(uploadUri);
-      const body = await response.arrayBuffer();
-      const max = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
-      if (body.byteLength > max) return false;
-      const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: uploadMimeType, upsert: false });
-      if (uploadResult.error) return false;
-      const record = await supabase.from('claim_documents').insert({ claim_id: targetClaimId, customer_id: customerId, document_type: documentType, file_name: uploadName, storage_bucket: 'claim-documents', storage_path: storagePath, mime_type: uploadMimeType, file_size: body.byteLength, uploaded_by: session.user.id });
-      return !record.error;
-    } catch { return false; }
-    finally { if (isAccidentVideo) setVideoProcessingStatus(''); }
-  }
-
-  async function persistPendingDocuments(targetClaimId: string, customerId: string) {
-    const queued: Array<{ type: string; file: PickedDocument }> = [
-      ...documents.rc.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.rc, file })),
-      ...documents.insurance.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.insurance, file })),
-      ...documents.licence.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.licence, file })),
-      ...documents.gr.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.gr, file })),
-      ...documents.accident_photo.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.accident_photo, file })),
-      ...documents.accident_video.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.accident_video, file })),
-      ...documents.bulk.map((file) => ({ type: BULK_DOCUMENT_TYPE, file })),
-      ...(voiceNote ? [{ type: VOICE_NOTE_DOCUMENT_TYPE, file: voiceNote }] : []),
-    ];
-    if (!queued.length) return { total: 0, saved: 0 };
-    setUploadingDocuments(true);
-    let saved = 0;
-    for (const item of queued) if (await uploadClaimDocument(targetClaimId, customerId, item.type, item.file)) saved += 1;
-    setUploadingDocuments(false);
-    return { total: queued.length, saved };
+  async function uploadVoiceNote(targetClaimId: string, customerId: string) {
+    if (!voiceNote) return true;
+    const uploaded = await uploadClaimDocument(targetClaimId, customerId, VOICE_NOTE_DOCUMENT_TYPE, voiceNote);
+    return Boolean(uploaded);
   }
 
   async function submit() {
@@ -254,7 +339,6 @@ export default function InternalClaimStageOne() {
       const session = await getCurrentSession();
       if (!session?.user) { setSaving(false); return router.replace('/login'); }
       const payload = {
-        claim_no: makeClaimNumber(),
         customer_id: selectedContext.customer_id,
         vehicle_id: selectedVehicle.id,
         policy_id: selectedPolicy.id,
@@ -267,12 +351,21 @@ export default function InternalClaimStageOne() {
         estimated_loss: null,
         created_by: session.user.id,
       };
-      const { data: claim, error } = await supabase.from('claims').insert(payload).select('*').single();
+      let claim: any = null;
+      let error: any = null;
+      if (draftClaim) {
+        const result = await supabase.from('claims').update(payload).eq('id', draftClaim.id).select('*').single();
+        claim = result.data;
+        error = result.error;
+      } else {
+        const result = await supabase.from('claims').insert({ ...payload, claim_no: makeClaimNumber() }).select('*').single();
+        claim = result.data;
+        error = result.error;
+      }
       if (error || !claim) { setSaving(false); return setMessage(mapSubmitError(error)); }
-      const persisted = await persistPendingDocuments(claim.id, claim.customer_id);
-      if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved to the claim. The saved documents are available in Claim Tracker.`);
+      if (!(await uploadVoiceNote(claim.id, claim.customer_id))) setMessage('The claim was saved, but the voice note could not be uploaded. You can continue and add it again later.');
       try {
-        await recordClaimEvent({ claimId: claim.id, customerId: claim.customer_id, fromStatus: null, toStatus: claim.current_status, notes: 'New incident claim reported by customer.', changedBy: session.user.id, title: `New claim ${claim.claim_no}` });
+        await recordClaimEvent({ claimId: claim.id, customerId: claim.customer_id, fromStatus: draftClaim ? 'Draft' : null, toStatus: claim.current_status, notes: 'New incident claim reported by customer.', changedBy: session.user.id, title: `New claim ${claim.claim_no}` });
       } catch { /* creation must not fail because notification logging is unavailable */ }
       setSaving(false);
       setCreatedClaimSuccess({ id: claim.id, controlNo: claim.claim_no });
@@ -286,15 +379,7 @@ export default function InternalClaimStageOne() {
 
   return (
     <Screen title="Spot Intimation" showTitleHeader={false}>
-      {selectedPolicy && selectedVehicle ? (
-        <InternalSpotIntimationIdentityCard
-          claimNo="New claim"
-          insurerName={selectedInsurer?.name ?? 'Insurance company'}
-          vehicleNo={selectedVehicle.vehicle_no}
-          policyNo={selectedPolicy.policy_no}
-          vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')}
-        />
-      ) : null}
+      {selectedPolicy && selectedVehicle ? <InternalSpotIntimationIdentityCard claimNo="New claim" insurerName={selectedInsurer?.name ?? 'Insurance company'} vehicleNo={selectedVehicle.vehicle_no} policyNo={selectedPolicy.policy_no} vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')} /> : null}
       <ExternalClaimErrorPopup visible={Boolean(message)} message={message} title="Something went wrong" onClose={() => setMessage('')} />
 
       <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" iconImage={require('../assets/claims/claim-intimation.png')}>
@@ -310,16 +395,13 @@ export default function InternalClaimStageOne() {
         <View style={styles.gap} />
         <View style={styles.locationFieldWrap}>
           <TextField label="Location (Optional)" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(null); }} />
-          <Pressable accessibilityRole="button" accessibilityLabel={locating ? 'Locating current location' : 'Use current location'} accessibilityState={{ disabled: locating }} hitSlop={8} disabled={locating} onPress={() => void captureCurrentLocation()} style={({ pressed }) => [styles.gpsLocationInlineAction, locating && styles.gpsLocationButtonDisabled, pressed && !locating && styles.gpsLocationInlineActionPressed]}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#0A43A3" />
-            <Text style={styles.gpsLocationInlineText}>Use Current Location</Text>
-          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={locating ? 'Locating current location' : 'Use current location'} accessibilityState={{ disabled: locating }} hitSlop={8} disabled={locating} onPress={() => void captureCurrentLocation()} style={({ pressed }) => [styles.gpsLocationInlineAction, locating && styles.gpsLocationButtonDisabled, pressed && !locating && styles.gpsLocationInlineActionPressed]}><MaterialCommunityIcons name="crosshairs-gps" size={16} color="#0A43A3" /><Text style={styles.gpsLocationInlineText}>Use Current Location</Text></Pressable>
         </View>
         {locationNotice ? <View style={[styles.locationNotice, locationNotice.tone === 'error' && styles.locationNoticeError]}><MaterialCommunityIcons name={locationNotice.tone === 'error' ? 'alert-circle-outline' : 'check-circle-outline'} size={15} color={locationNotice.tone === 'error' ? '#B42318' : '#16764B'} /><Text style={[styles.locationNoticeText, locationNotice.tone === 'error' && styles.locationNoticeTextError]}>{locationNotice.text}</Text></View> : null}
       </ClaimFormSection>
 
       <View style={styles.documentReadyCard}>
-        <View style={styles.documentReadyHeader}><View style={styles.documentReadyHeaderCopy}><Text style={styles.documentReadyTitle}>Upload claim documents</Text></View><View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View></View>
+        <View style={styles.documentReadyHeader}><View style={styles.documentReadyHeaderCopy}><Text style={styles.documentReadyTitle}>Upload claim documents</Text></View><View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>{uploadingDocuments ? 'Uploading…' : 'Optional now'}</Text></View></View>
         <View style={styles.documentReadyGrid}>
           <DocumentReadyTile title="RC Copy" fileName={documents.rc[0]?.name ?? ''} source={require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} state={tileState('rc')} onPress={() => void pickDocument('rc')} onRemove={() => requestDelete('rc', documents.rc[0]?.name ?? 'RC Copy')} />
           <DocumentReadyTile title="Insurance Copy" fileName={documents.insurance[0]?.name ?? ''} source={require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} state={tileState('insurance')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', documents.insurance[0]?.name ?? 'Insurance Copy')} />
@@ -329,27 +411,16 @@ export default function InternalClaimStageOne() {
           <DocumentReadyTile title="Accident Video" statusText={videoProcessingStatus || mediaStatusLabel('accident_video')} artwork="accident-video" state={tileState('accident_video')} onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', `${mediaCount('accident_video')} accident video${mediaCount('accident_video') === 1 ? '' : 's'}`)} />
         </View>
         <View style={styles.bulkUploadShell}>
-          <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, documents.bulk.length > 0 && styles.bulkUploadSelected]}>
-            <Image source={require('../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />
-            <View style={styles.bulkUploadCopy}><Text style={styles.bulkUploadTitle}>Upload multiple documents</Text><Text style={styles.bulkUploadText}>{documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text></View>
-            {!documents.bulk.length ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}
-          </Pressable>
+          <Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, documents.bulk.length > 0 && styles.bulkUploadSelected]}><Image source={require('../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" /><View style={styles.bulkUploadCopy}><Text style={styles.bulkUploadTitle}>Upload multiple documents</Text><Text style={styles.bulkUploadText}>{documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} uploaded` : 'Select several files now, or tap again later to add more.'}</Text></View>{!documents.bulk.length ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}</Pressable>
           {documents.bulk.length > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="Remove all bulk documents" disabled={uploadingDocuments} onPress={() => requestDelete('bulk', 'uploaded documents')} style={styles.bulkRemoveButton}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
         </View>
       </View>
 
       <IncidentVoiceNote value={voiceNote} saved={false} busy={saving || uploadingDocuments} onChange={setVoiceNote} onRecordingChange={setVoiceRecording} />
+      <ClaimActionBar primaryDisabled={saving || uploadingDocuments || voiceRecording || !selectedPolicy} primaryIcon="arrow-right" primaryLabel={voiceRecording ? 'Stop recording first' : uploadingDocuments ? 'Uploading documents…' : saving ? 'Saving...' : 'Start Claim & Continue'} onPrimary={() => void submit()} onAssistance={() => router.push('/customer/support')} />
 
-      <ClaimActionBar primaryDisabled={saving || uploadingDocuments || voiceRecording || !selectedPolicy} primaryIcon="arrow-right" primaryLabel={voiceRecording ? 'Stop recording first' : saving || uploadingDocuments ? 'Saving...' : 'Start Claim & Continue'} onPrimary={() => void submit()} onAssistance={() => router.push('/customer/support')} />
-
-      <Modal visible={Boolean(createdClaimSuccess)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => undefined}>
-        <View style={styles.controlSuccessBackdrop}><View accessibilityRole="alert" style={styles.controlSuccessCard}><View style={styles.controlSuccessIcon}><MaterialCommunityIcons name="check" size={18} color="#FFFFFF" /></View><Text style={styles.controlSuccessTitle}>Control No. Created</Text><Pressable accessibilityRole="button" accessibilityLabel="Open claim using generated control number" onPress={() => { const target = createdClaimSuccess; if (!target) return; setCreatedClaimSuccess(null); router.replace({ pathname: '/customer/internal-spot-status', params: { id: target.id } }); }} style={({ pressed }) => [styles.controlSuccessNumber, pressed && styles.controlSuccessNumberPressed]}><View style={styles.controlSuccessNumberCopy}><Text style={styles.controlSuccessNumberLabel}>CONTROL NO.</Text><Text style={styles.controlSuccessNumberValue}>{createdClaimSuccess?.controlNo ?? ''}</Text></View><View style={styles.controlSuccessOk}><Text style={styles.controlSuccessOkText}>OK</Text></View></Pressable></View></View>
-      </Modal>
-
-      <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
-        <View style={styles.validationBackdrop}><View accessibilityRole="alert" style={styles.validationCard}><View style={styles.deleteConfirmIcon}><MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" /></View><Text style={styles.validationTitle}>Delete document?</Text><Text style={styles.validationBody}>{deleteTarget ? `Are you sure you want to delete ${deleteTarget.title}?` : ''}</Text><View style={styles.deleteConfirmActions}><Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.deleteCancelButton}><Text style={styles.deleteCancelText}>Cancel</Text></Pressable><Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={confirmDelete} style={styles.deleteConfirmButton}><Text style={styles.deleteConfirmText}>Delete</Text></Pressable></View></View></View>
-      </Modal>
-
+      <Modal visible={Boolean(createdClaimSuccess)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => undefined}><View style={styles.controlSuccessBackdrop}><View accessibilityRole="alert" style={styles.controlSuccessCard}><View style={styles.controlSuccessIcon}><MaterialCommunityIcons name="check" size={18} color="#FFFFFF" /></View><Text style={styles.controlSuccessTitle}>Control No. Created</Text><Pressable accessibilityRole="button" accessibilityLabel="Open claim using generated control number" onPress={() => { const target = createdClaimSuccess; if (!target) return; setCreatedClaimSuccess(null); router.replace({ pathname: '/customer/internal-spot-status', params: { id: target.id } }); }} style={({ pressed }) => [styles.controlSuccessNumber, pressed && styles.controlSuccessNumberPressed]}><View style={styles.controlSuccessNumberCopy}><Text style={styles.controlSuccessNumberLabel}>CONTROL NO.</Text><Text style={styles.controlSuccessNumberValue}>{createdClaimSuccess?.controlNo ?? ''}</Text></View><View style={styles.controlSuccessOk}><Text style={styles.controlSuccessOkText}>OK</Text></View></Pressable></View></View></Modal>
+      <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}><View style={styles.validationBackdrop}><View accessibilityRole="alert" style={styles.validationCard}><View style={styles.deleteConfirmIcon}><MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" /></View><Text style={styles.validationTitle}>Delete document?</Text><Text style={styles.validationBody}>{deleteTarget ? `Are you sure you want to delete ${deleteTarget.title}?` : ''}</Text><View style={styles.deleteConfirmActions}><Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.deleteCancelButton}><Text style={styles.deleteCancelText}>Cancel</Text></Pressable><Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void confirmDelete()} style={styles.deleteConfirmButton}><Text style={styles.deleteConfirmText}>Delete</Text></Pressable></View></View></View></Modal>
       <ExternalClaimErrorPopup visible={Boolean(validationMessage)} message={validationMessage} title="Alert" onClose={() => setValidationMessage('')} />
       <TimePickerModal value={timeTarget === 'intimation' ? intimationTime : incidentTime} visible={timeTarget !== null} title={timeTarget === 'intimation' ? 'Select spot intimation time' : 'Select incident time'} onClose={() => setTimeTarget(null)} onSelect={(value) => { if (timeTarget === 'intimation') setIntimationTime(value); else setIncidentTime(value); setTimeTarget(null); }} />
     </Screen>
@@ -357,75 +428,23 @@ export default function InternalClaimStageOne() {
 }
 
 function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: { claimNo?: string | null; insurerName?: string | null; vehicleNo?: string | null; policyNo?: string | null; vehicleMeta?: string | null }) {
-  return (
-    <View style={styles.spotStatusCard}>
-      <View style={styles.spotStatusGlowLarge} />
-      <View style={styles.spotStatusGlowSmall} />
-      <View style={styles.spotStatusHeaderRow}>
-        <View style={[styles.spotStatusIconBadge, styles.spotStatusStageBadge]}>
-          <Image source={require('../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-        </View>
-        <Text style={styles.spotStatusHeaderTitle} numberOfLines={1}>Spot Intimation</Text>
-        <Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text>
-      </View>
-      <View style={styles.spotStatusHeaderDivider} />
-      <View style={styles.spotStatusInfoGrid}>
-        <View style={styles.spotStatusInfoSection}>
-          <View style={styles.spotStatusMainInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}>
-              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
-              <Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text>
-              <Text style={styles.spotStatusMainInfoValue}>{vehicleNo || 'Vehicle'}</Text>
-            </Text>
-          </View>
-          <View style={styles.spotStatusSecondaryInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}>
-              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
-          </View>
-        </View>
-        <View style={styles.spotStatusSectionDivider} />
-        <View style={styles.spotStatusInfoSection}>
-          <View style={styles.spotStatusMainInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}>
-              <Image source={require('../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
-              <Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text>
-              <Text style={styles.spotStatusMainInfoValue}>{policyNo || '—'}</Text>
-            </Text>
-          </View>
-          <View style={styles.spotStatusSecondaryInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}>
-              <Image source={require('../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
+  return <View style={styles.spotStatusCard}><View style={styles.spotStatusGlowLarge} /><View style={styles.spotStatusGlowSmall} /><View style={styles.spotStatusHeaderRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusStageBadge]}><Image source={require('../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusHeaderTitle} numberOfLines={1}>Spot Intimation</Text><Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text></View><View style={styles.spotStatusHeaderDivider} /><View style={styles.spotStatusInfoGrid}><View style={styles.spotStatusInfoSection}><View style={styles.spotStatusMainInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}><Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusMainInfoLine} numberOfLines={1}><Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text><Text style={styles.spotStatusMainInfoValue}>{vehicleNo || 'Vehicle'}</Text></Text></View><View style={styles.spotStatusSecondaryInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}><Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text></View></View><View style={styles.spotStatusSectionDivider} /><View style={styles.spotStatusInfoSection}><View style={styles.spotStatusMainInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}><Image source={require('../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusMainInfoLine} numberOfLines={1}><Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text><Text style={styles.spotStatusMainInfoValue}>{policyNo || '—'}</Text></Text></View><View style={styles.spotStatusSecondaryInfoRow}><View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}><Image source={require('../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" /></View><Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text></View></View></View></View>;
 }
-
 
 function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, artwork, state, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: DocumentTileIconName; iconColor?: string; artwork?: 'accident-video'; state: DocumentTileState; onPress: () => void; onRemove: () => void }) {
   const ready = state === 'ready';
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady]}>{state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}<View style={styles.documentReadyArtworkWrap}>{artwork === 'accident-video' ? <AccidentVideoArtwork /> : source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}</View><Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>{fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}<Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady]}>{statusText ?? (ready ? 'Ready' : 'Tap to upload')}</Text></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected: state !== 'idle' }} onPress={onPress} style={[styles.documentReadyTile, ready && styles.documentReadyTileReady]}>{state !== 'idle' ? <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${title}`} onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemoveButton}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}<View style={styles.documentReadyArtworkWrap}>{artwork === 'accident-video' ? <AccidentVideoArtwork /> : source ? <Image source={source} style={styles.documentReadyArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}</View><Text style={styles.documentReadyTileText} numberOfLines={2}>{title}</Text>{fileName ? <Text style={styles.documentReadyFileName} numberOfLines={1}>{fileName}</Text> : null}<Text style={[styles.documentReadyStatus, ready && styles.documentReadyStatusReady]}>{statusText ?? (ready ? 'Uploaded' : 'Tap to upload')}</Text></Pressable>;
 }
 
 function AccidentVideoArtwork() { return <View style={styles.accidentVideoArtwork}><View style={styles.accidentVideoGloss} /><View style={styles.accidentVideoFold} /><MaterialCommunityIcons name="video" size={18} color="#FFFFFF" /><View style={styles.accidentVideoLineLong} /><View style={styles.accidentVideoLineShort} /></View>; }
 function TimePickerField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) { return <View style={styles.timeField}><Text style={styles.timeLabel}>{label}</Text><Pressable accessibilityRole="button" onPress={onPress} style={styles.timeButton}><MaterialCommunityIcons name="clock-outline" size={19} color="#0A43A3" /><Text style={[styles.timeValue, !value && styles.timePlaceholder]}>{value ? formatTime(value) : 'Select time'}</Text><MaterialCommunityIcons name="chevron-down" size={21} color={palette.navy} /></Pressable></View>; }
 function TimePickerModal({ value, visible, title, onClose, onSelect }: { value: string; visible: boolean; title: string; onClose: () => void; onSelect: (value: string) => void }) { const [hour, setHour] = useState(() => parseTime(value).hour); const [minute, setMinute] = useState(() => parseTime(value).minute); useEffect(() => { if (!visible) return; const parsed = parseTime(value); setHour(parsed.hour); setMinute(parsed.minute); }, [value, visible]); return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><View style={styles.timeModalBackdrop}><View style={styles.timeModalCard}><View style={styles.timeModalHeader}><View><Text style={styles.timeModalEyebrow}>CLAIM TIMELINE</Text><Text style={styles.timeModalTitle}>{title}</Text></View><Pressable accessibilityRole="button" onPress={onClose} style={styles.timeClose}><MaterialCommunityIcons name="close" size={21} color={palette.navy} /></Pressable></View><View style={styles.timeColumns}><TimeColumn label="Hour" value={hour} options={Array.from({ length: 24 }, (_, index) => index)} onSelect={setHour} /><Text style={styles.timeColon}>:</Text><TimeColumn label="Minute" value={minute} options={[0,5,10,15,20,25,30,35,40,45,50,55]} onSelect={setMinute} /></View><Pressable accessibilityRole="button" onPress={() => onSelect(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)} style={styles.timeDone}><Text style={styles.timeDoneText}>Use this time</Text><MaterialCommunityIcons name="check" size={19} color="#FFFFFF" /></Pressable></View></View></Modal>; }
 function TimeColumn({ label, value, options, onSelect }: { label: string; value: number; options: number[]; onSelect: (value: number) => void }) { return <View style={styles.timeColumn}><Text style={styles.timeColumnLabel}>{label}</Text><View style={styles.timeOptions}>{options.map((option) => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: option === value }} onPress={() => onSelect(option)} style={[styles.timeOption, option === value && styles.timeOptionSelected]}><Text style={[styles.timeOptionText, option === value && styles.timeOptionTextSelected]}>{String(option).padStart(2, '0')}</Text></Pressable>)}</View></View>; }
-
 function parseTime(value: string) { const match = /^(\d{2}):(\d{2})$/.exec(value); return match ? { hour: Number(match[1]), minute: Number(match[2]) } : { hour: new Date().getHours(), minute: Math.floor(new Date().getMinutes() / 5) * 5 }; }
 function parseDateTime(date: string, time: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time.trim())) return null; const [year, month, day] = date.split('-').map(Number); const [hour, minute] = time.trim().split(':').map(Number); const value = new Date(year, month - 1, day, hour, minute); return Number.isNaN(value.getTime()) ? null : value; }
 function todayIsoDate() { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 function formatTime(value: string) { const parsed = parseTime(value); const date = new Date(2000, 0, 1, parsed.hour, parsed.minute); return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); }
-function mapSubmitError(error: { message?: string; code?: string } | null) { const value = `${error?.code ?? ''} ${error?.message ?? ''}`.toLowerCase(); if (value.includes('duplicate') || value.includes('unique')) return 'A claim has already been started for this incident. Open My Claims to continue.'; return error?.message || 'We could not create this claim right now. Please try again.'; }
+function mapSubmitError(error: { message?: string; code?: string } | null) { const value = `${error?.code ?? ''} ${error?.message ?? ''}`.toLowerCase(); if (value.includes('claim already in progress') || value.includes('active claim already exists')) return 'Claim already in progress for this policy.'; if (value.includes('duplicate') || value.includes('unique')) return 'A claim has already been started for this incident. Open My Claims to continue.'; return error?.message || 'We could not create this claim right now. Please try again.'; }
 
 const styles = StyleSheet.create({
   spotStatusCard: { position: 'relative', overflow: 'hidden', width: '100%', borderRadius: 18, backgroundColor: '#062D70', paddingHorizontal: 12, paddingTop: 10, paddingBottom: 10, marginBottom: 10, shadowColor: '#062D70', shadowOpacity: 0.16, shadowRadius: 10, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
