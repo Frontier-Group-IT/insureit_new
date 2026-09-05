@@ -32,11 +32,10 @@ export default async function PolicyIntakesPage() {
 
   const rows = data ?? [];
   const rawPolicyNumbers = Array.from(new Set(rows.map((row) => intakeField(row, "policy_number")).filter(Boolean)));
-  const normalizedCounts = new Map<string, number>();
-  for (const policyNumber of rawPolicyNumbers) {
-    const normalized = normalizePolicyNumber(policyNumber);
-    if (!normalized) continue;
-    normalizedCounts.set(normalized, (normalizedCounts.get(normalized) ?? 0) + rows.filter((row) => normalizePolicyNumber(intakeField(row, "policy_number")) === normalized).length);
+  const firstIntakeByPolicyNumber = new Map<string, string>();
+  for (const row of [...rows].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())) {
+    const normalized = normalizePolicyNumber(intakeField(row, "policy_number"));
+    if (normalized && !firstIntakeByPolicyNumber.has(normalized)) firstIntakeByPolicyNumber.set(normalized, row.id);
   }
 
   let registeredPolicyNumbers = new Set<string>();
@@ -51,8 +50,9 @@ export default async function PolicyIntakesPage() {
 
   const workspaceRows = rows.map((row) => {
     const normalized = normalizePolicyNumber(intakeField(row, "policy_number"));
-    const duplicateInRegister = normalized ? registeredPolicyNumbers.has(normalized) : false;
-    const duplicateInIntake = normalized ? (normalizedCounts.get(normalized) ?? 0) > 1 : false;
+    if (!normalized || row.status === "completed") return row;
+    const duplicateInRegister = registeredPolicyNumbers.has(normalized);
+    const duplicateInIntake = firstIntakeByPolicyNumber.get(normalized) !== row.id;
     return duplicateInRegister || duplicateInIntake ? { ...row, status: "Duplicate" } : row;
   });
 
