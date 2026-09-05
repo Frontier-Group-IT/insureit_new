@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
 import { PartnerListScreen } from '@/components/partner-list-screen';
@@ -20,6 +19,7 @@ import {
   type PartnerClaimSummary,
 } from '@/lib/claims';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -149,7 +149,7 @@ export default function ClaimsScreen() {
   ) : (
     <PartnerStateView
       state="empty"
-      icon="shield-checkmark-outline"
+      asset={PartnerAssets.navigation.claims}
       title="No claims found"
       message="There are no claims matching this authorized scope and filter."
     />
@@ -203,8 +203,12 @@ function ClaimRow({ row, onPress }: { row: PartnerClaimRow; onPress: () => void 
       meta={formatDate(row.accident_at || row.created_at)}
       status={<PartnerStatusBadge label={status} tone={row.claim_state === 'completed' ? 'success' : 'warning'} />}
       leading={
-        <View style={styles.claimIcon}>
-          <Ionicons name="shield-outline" size={17} color={partnerTheme.colors.accent} />
+        <View style={styles.claimArtwork}>
+          <Image
+            source={row.claim_state === 'completed' ? PartnerAssets.status.verified : PartnerAssets.navigation.claims}
+            style={styles.claimArtworkImage}
+            resizeMode="contain"
+          />
         </View>
       }
       onPress={onPress}
@@ -240,14 +244,13 @@ const styles = StyleSheet.create({
   search: { marginTop: 10 },
   tabs: { marginTop: 5, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
-  claimIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  claimArtwork: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.accentSoft,
   },
+  claimArtworkImage: { width: 36, height: 36 },
   listFooter: { minHeight: 58, alignItems: 'center', justifyContent: 'center' },
   loadingMore: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingMoreText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
