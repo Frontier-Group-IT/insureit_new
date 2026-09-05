@@ -2,7 +2,7 @@
 
 > **Created:** 2026-09-05 (IST)  
 > **Scope:** `apps/partner-app` visual-system completion before the next native Partner build  
-> **Status:** USER-APPROVED OTA REFINEMENT CONTINUATION / FINAL SOURCE AUDIT IN PROGRESS
+> **Status:** OTA-SAFE VISUAL SOURCE COMPLETION MERGED + FINAL PREVIEW OTA PUBLISHED / INSTALLED-APP ACCEPTANCE PENDING
 
 Read this with `AGENTS.md` and `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MASTER_PLAN.md` before Partner refinement.
 
@@ -10,7 +10,7 @@ Read this with `AGENTS.md` and `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MASTER_PL
 
 The user's installed-screen audit showed that technical completion of Phases 0–5 did **not** equal app-wide visual completion. Shared primitives existed, but formatting and custom Partner artwork were not consistently propagated across all screens.
 
-**Do not advance to native Phase 6 merely because the older phase table says Phases 0–5 are complete.** Complete the OTA-safe visual migration, publish/verify the final merged source in the installed Partner preview, then re-evaluate the native batch.
+**Do not advance to native Phase 6 merely because the older phase table says Phases 0–5 are complete.** The OTA-safe visual migration is now merged and published to Partner preview, but installed-app visual acceptance is still required before native Phase 6 can be reconsidered.
 
 ## Asset and visual rules
 
@@ -74,7 +74,7 @@ Your Week, Recognition and Learn were normalized. Profile deliberately retains t
 
 Renewals, Claims and My Network use approved Partner artwork. Restricted payout lock remains a vector security symbol. Business calculations, payout values/statuses, payout authorization, Partner scope, network sorting and service calls were unchanged and regression-protected.
 
-## Preview OTA checkpoint — 2026-09-05
+## Intermediate preview OTA checkpoint — 2026-09-05
 
 The user explicitly requested a device-review OTA before continuing the next refinement stage.
 
@@ -86,7 +86,7 @@ The user explicitly requested a device-review OTA before continuing the next ref
 - Exact-current-main, Partner EAS identity and Expo access guards passed.
 - No APK/AAB or native build was created.
 
-**Boundary:** this checkpoint OTA contains merged visual work through the Business pass. Later Policy Intake/detail/final-audit work is not part of that device snapshot.
+**Boundary:** this checkpoint OTA contained merged visual work through the Business pass only.
 
 ### Policy Intake new/detail pass
 **MERGED:** PR #1347  
@@ -113,51 +113,66 @@ Delivered:
 - Chevrons and expand controls remain utility vectors.
 - Existing scoped detail services `getPartnerPolicyDetail(id)`, `getPartnerCustomerDetail(id)` and `getPartnerClaimDetail(id)` are regression-protected.
 
-## Final source audit
+### Final source audit / Pulse completion
+**MERGED:** PR #1349  
+**Merge:** `5d96093f4bb51d694ec4002c6a10f1e7286755d3`  
+**Final head:** `4d5ea6dcd13ecf4f86312e84f6d3d3dc640f9685`  
+**Partner Verify:** #198 / `33984765766` success  
+**Web Verify:** #3038 / `33984765773` success
 
-**IN PROGRESS:** branch `partner/visual-system-final-audit`  
-**Exact base:** detail-page merge `14356cd1177d55cef9424d1b59ca3dcedcb7f4f0`.
+Final audit decisions:
 
-### Audit decisions already resolved
+- **Banners:** generic growth banners are not forced into Policies, Claims, Renewals, Customers, Policy Intake, Search, Support or detail pages. `verify:visual` blocks `PartnerAssets.banners.*` on those operational/detail surfaces.
+- **Network:** real Partner families retain initials; group/layer/POSP/MISP structural symbols remain lightweight vectors because no exact prepared semantic asset exists. The screen already uses shared typography and centralized Business/Network header artwork.
+- **Stories:** Stories intentionally remains an immersive dark story viewer with its own progress/header/story-type icon language and is not forced into the ordinary white PartnerScreen/card treatment.
+- **Pulse:** the last concrete source outlier was completed:
+  - loading/error → shared branded `PartnerStateView`;
+  - Business momentum → `PartnerAssets.actions.businessPerformance`;
+  - Renewal readiness → `PartnerAssets.actions.renewals`;
+  - Customer service → `PartnerAssets.navigation.claims`;
+  - Operations actions → `PartnerAssets.navigation.policyIntake`;
+  - legacy 8–9.5px labels moved to shared typography;
+  - standard radius/touch tokens used;
+  - CTA arrow remains a utility vector;
+  - existing `getPartnerHome()` behavior is regression-protected.
 
-- **Banners:** no generic growth banner is being forced into Policies, Claims, Renewals, Customers, Policy Intake, Search, Support or detail pages. `verify:visual` now prevents `PartnerAssets.banners.*` from appearing on those operational/detail surfaces. A future banner can be added only when its artwork has exact semantic meaning for the target surface.
-- **Network:** real Partner families retain initials; group/layer/POSP/MISP structural symbols remain lightweight vectors because there is no exact prepared semantic asset for those entity types. The Network screen already uses shared typography and the centralized Business/Network header artwork. Do not replace structural symbols with arbitrary 3D art.
-- **Stories:** Stories remains an intentionally immersive dark story viewer with its own progress/header/story-type icon language. Its distinct presentation is intentional and should not be forced into the ordinary white PartnerScreen/card layout.
+## Final consolidated Partner preview OTA — 2026-09-05
 
-### Pulse — final concrete outlier found and fixed
+This is the OTA intended for installed-app acceptance of the completed OTA-safe visual source pass.
 
-Before this audit, `app/pulse.tsx` still used generic feature glyphs and multiple 8–9.5px local labels. It is now migrated:
+- Final visual-source merge: `5d96093f4bb51d694ec4002c6a10f1e7286755d3`
+- OTA trigger commit on `main`: `1a0e6921c4082390b435a36e93207a748fa61888`
+- Workflow: `Publish Partner preview OTA`
+- Run: #46 / `33984956718`
+- Channel: `preview`
+- Result: **success**
+- Exact-current-main guard: passed
+- Partner EAS/update linkage guard: passed
+- Expo project access: passed
+- Actual `Publish Partner preview OTA` step: passed
+- OTA summary: passed
+- No APK/AAB or native build was created.
 
-- loading/error → shared `PartnerStateView` branded states;
-- Business momentum → `PartnerAssets.actions.businessPerformance`;
-- Renewal readiness → `PartnerAssets.actions.renewals`;
-- Customer service → `PartnerAssets.navigation.claims`;
-- Operations actions → `PartnerAssets.navigation.policyIntake`;
-- feature rows render Partner artwork instead of `trending-up`, refresh, shield and document glyphs;
-- hero/row/next-action labels use shared typography and standard radius/touch tokens;
-- CTA forward arrow remains a utility vector;
-- `getPartnerHome()` data/service behavior is explicitly regression-protected.
+This final OTA includes the later Policy Intake, Customer/Policy/Claim detail, and Pulse/final-audit work that was not present in OTA checkpoint #45.
 
-`verify:visual` now also prevents the old Pulse feature glyphs/tiny typography from returning and enforces the no-fake-operational-banner rule.
+## Current acceptance state
 
-## Remaining before OTA visual acceptance
+**Source/CI/OTA status:** complete for the planned OTA-safe visual refinement.  
+**Installed-app visual acceptance:** pending user/device review.
 
-1. Final-audit PR must pass exact-head Partner and relevant Web CI and be merged.
-2. Publish one **final consolidated Partner preview OTA** from exact current `main` after the audit merge.
-3. Record the final OTA trigger SHA, run number/id and result in this handoff.
-4. On the installed Partner preview, cold-launch twice and visually check the changed screens against the user's screenshot/audit baseline.
-5. Only after that installed-app review can the OTA visual refinement be considered accepted and native Phase 6 be reconsidered.
+Required device acceptance step:
+
+1. Cold-launch the installed Partner preview twice so the new OTA is definitely active.
+2. Review the major changed surfaces, especially Home/More, Business, Pulse, Policies/Claims/Customers/Renewals, Policy Intake, Search/Support/Settings/Activity, Impact/Journey/Recognition/Learn/Your Week, and Customer/Policy/Claim details.
+3. Compare against the user's screenshot/audit baseline and report any visible regressions or remaining inconsistencies.
 
 ## Acceptance gate before native Phase 6
 
-Visual completion is not accepted until:
+Native Phase 6 remains blocked until installed-app visual review is accepted. Specifically:
 
-- every major Partner route follows the intended shared header/spacing/card/section system or has an explicitly documented intentional mode such as Stories;
-- feature artwork is intentional and consistent;
-- vector icons remain only for utilities/security/structural semantics or where no correct custom asset exists;
-- relevant empty/error/offline states are branded;
-- generic growth banners are not misused as operational semantics;
-- exact-head Partner CI and relevant web regression are green;
-- final merged OTA-safe source is published through the Partner preview OTA path;
-- installed Partner preview is cold-launched and changed screens are visually checked;
-- no new Partner APK/AAB is created without explicit approval for that exact native build.
+- every major Partner route must visually match the intended shared system or an explicitly documented intentional mode such as Stories;
+- feature artwork must look intentional and consistent on the real device;
+- generic growth banners must not appear as false operational semantics;
+- no navigation/session/claim-flow/vehicle-selector regression may appear during device testing;
+- the final preview OTA above must be visibly active;
+- no new Partner APK/AAB may be created without explicit user approval for that exact native build.
