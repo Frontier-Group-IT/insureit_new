@@ -1,5 +1,5 @@
 import "server-only";
-import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
+import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -138,15 +138,15 @@ export async function getDashboardBusinessData(
   const empty = emptyBusiness(filters);
   if (!profile?.id) return empty;
 
-  const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_policies");
-  if (customerIds !== null && customerIds.length === 0) return empty;
+  const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
+  if (rmEmployeeIds !== null && rmEmployeeIds.length === 0) return empty;
 
   const admin = createSupabaseAdminClient();
   let policyQuery = admin
     .from("policies")
     .select("id,vehicle_id,insurance_company_id,policy_type,business_line,issuance_date,created_at,intermediary_type,intermediary_code,lead_source,rm_employee_id,rm_name,intermediary_group_id,intermediary_group_name")
     .limit(15000);
-  if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
+  if (rmEmployeeIds !== null) policyQuery = policyQuery.in("rm_employee_id", rmEmployeeIds);
 
   const policyResult = await policyQuery.returns<PolicyRow[]>();
   if (policyResult.error) {
