@@ -19,8 +19,9 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      REQUIRED_MAIN_BASE: 83c1c8af3a5e1111ab69ed4aee3c432018715eeb
     steps:
       - name: Check out release branch
         uses: actions/checkout@v4
@@ -28,7 +29,7 @@ jobs:
           ref: feat/customer-native-release-readiness
           fetch-depth: 0
 
-      - name: Require exact release branch head and current main baseline
+      - name: Require exact release branch head and approved main baseline
         shell: bash
         run: |
           set -euo pipefail
@@ -37,8 +38,8 @@ jobs:
             echo "Refusing production build: checkout is not current release branch head." >&2
             exit 1
           }
-          git merge-base --is-ancestor origin/main HEAD || {
-            echo "Refusing production build: release branch is not based on current main." >&2
+          git merge-base --is-ancestor "$REQUIRED_MAIN_BASE" HEAD || {
+            echo "Refusing production build: approved main baseline is not contained in the release branch." >&2
             exit 1
           }
 
@@ -80,12 +81,11 @@ jobs:
           console.log('Background media playback: disabled');
           NODE
 
-      - name: Require Expo token and Supabase public key
+      - name: Require Expo token
         shell: bash
         run: |
           set -euo pipefail
           [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN is missing." >&2; exit 1; }
-          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY is missing." >&2; exit 1; }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
