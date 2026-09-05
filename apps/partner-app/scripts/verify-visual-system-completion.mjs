@@ -20,6 +20,7 @@ const stateView = read('components/ui/partner-state-view.tsx');
 const screen = read('components/partner-screen.tsx');
 const listScreen = read('components/partner-list-screen.tsx');
 const more = read('app/(tabs)/more.tsx');
+const business = read('app/(tabs)/business.tsx');
 const customers = read('app/customers.tsx');
 const policies = read('app/(tabs)/policies.tsx');
 const claims = read('app/(tabs)/claims.tsx');
@@ -57,6 +58,15 @@ requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthori
 
 if (more.includes('<MenuRow icon=')) throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
 for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) requireText(more, asset, `More screen is missing ${asset}.`);
+
+for (const businessAsset of ['actions.renewals', 'navigation.claims', 'actions.businessPerformance']) {
+  requireText(business, `PartnerAssets.${businessAsset}`, `Business is missing ${businessAsset} artwork.`);
+}
+if (business.includes('icon="refresh-outline"') || business.includes('icon="shield-outline"') || business.includes('git-network-outline')) {
+  throw new Error('Business feature cards/network must not regress to generic feature glyphs.');
+}
+requireText(business, 'if (!payout.available)', 'Business payout authorization gate must remain intact.');
+requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loading payout data through the existing service.');
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
 requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty state must use the prepared no-policies artwork.');
