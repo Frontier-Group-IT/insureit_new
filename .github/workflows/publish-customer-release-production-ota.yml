@@ -1,0 +1,73 @@
+name: Publish customer 0.3.0 production OTA
+
+on:
+  push:
+    branches:
+      - feat/customer-native-release-readiness
+    paths:
+      - 'apps/mobile-app/**'
+      - '.github/workflows/publish-customer-release-production-ota.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-0-3-0-production-ota
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+
+      - name: Verify release runtime and native baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/mobile-app/app.json').expo;
+          const audioPlugin = (app.plugins || []).find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-audio');
+          if (app.version !== '0.3.0') throw new Error(`Expected app version 0.3.0, found ${app.version}`);
+          if (app.android?.versionCode !== 9) throw new Error(`Expected Play baseline versionCode 9, found ${app.android?.versionCode}`);
+          if (!audioPlugin || audioPlugin[1]?.enableBackgroundPlayback !== false) throw new Error('Background playback must remain disabled.');
+          if (!app.android?.permissions?.includes('android.permission.RECORD_AUDIO')) throw new Error('RECORD_AUDIO must remain enabled.');
+          console.log('Verified runtime 0.3.0 / Play baseline 9 / production OTA compatibility.');
+          NODE
+
+      - name: Verify production bundle environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_PUBLIC_SUPABASE_URL:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_URL is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_PORTAL_URL:-}" ] || { echo "EXPO_PUBLIC_PORTAL_URL is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish production OTA
+        working-directory: apps/mobile-app
+        run: |
+          npx eas-cli update \
+            --channel production \
+            --message "Customer 0.3.0 startup blank-screen safeguard with production env ${GITHUB_SHA}" \
+            --non-interactive
+
+      - name: Verify production channel
+        working-directory: apps/mobile-app
+        run: npx eas-cli channel:view production --json --non-interactive

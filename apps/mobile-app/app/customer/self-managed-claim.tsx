@@ -7,6 +7,7 @@ import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
+import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/incident-voice-note';
 import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -47,6 +48,7 @@ const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
   accident_video: 'Accident Video',
 };
 const BULK_DOCUMENT_TYPE = 'Spot Intimation Attachment';
+const VOICE_NOTE_DOCUMENT_TYPE = 'Incident Voice Note';
 
 function isMultiMediaKey(key: Exclude<DocumentKey, 'bulk'>): key is 'accident_photo' | 'accident_video' {
   return key === 'accident_photo' || key === 'accident_video';
@@ -78,6 +80,8 @@ export default function SelfManagedClaimScreen() {
   const [savedBulkCount, setSavedBulkCount] = useState(0);
   const [uploadingDocuments, setUploadingDocuments] = useState(false);
   const [videoProcessingStatus, setVideoProcessingStatus] = useState('');
+  const [voiceNote, setVoiceNote] = useState<IncidentVoiceNoteFile | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
   const [message, setMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
@@ -372,17 +376,24 @@ export default function SelfManagedClaimScreen() {
     try {
       const session = await getCurrentSession();
       if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.', document: null };
-      const extension = pickedFile.name.includes('.') ? pickedFile.name.split('.').pop() : 'bin';
-      const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       let uploadUri = pickedFile.uri;
+      let uploadName = pickedFile.name;
+      let uploadMimeType = pickedFile.mimeType ?? 'application/octet-stream';
       if (isAccidentVideo) {
         setVideoProcessingStatus(pickedFile.size && pickedFile.size > 10 * 1024 * 1024 ? 'Preparing video for compression…' : 'Preparing video…');
         const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => {
           setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`);
         });
         uploadUri = prepared.uri;
+        if (prepared.compressed) {
+          const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
+          uploadName = `${stem}.mp4`;
+          uploadMimeType = 'video/mp4';
+        }
         setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
       }
+      const extension = uploadName.includes('.') ? uploadName.split('.').pop() : 'bin';
+      const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const response = await fetch(uploadUri);
       const body = await response.arrayBuffer();
       const maxUploadSizeBytes = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
@@ -390,7 +401,7 @@ export default function SelfManagedClaimScreen() {
       if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: `${pickedFile.name} is larger than ${maxUploadSizeLabel}. Please choose a smaller file.`, document: null };
 
       const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
-        contentType: pickedFile.mimeType ?? 'application/octet-stream',
+        contentType: uploadMimeType,
         upsert: false,
       });
       if (uploadResult.error) return { ok: false, message: `${pickedFile.name} could not be uploaded.`, document: null };
@@ -399,10 +410,10 @@ export default function SelfManagedClaimScreen() {
         claim_id: targetClaimId,
         customer_id: customerId,
         document_type: documentType,
-        file_name: pickedFile.name,
+        file_name: uploadName,
         storage_bucket: 'claim-documents',
         storage_path: storagePath,
-        mime_type: pickedFile.mimeType ?? null,
+        mime_type: uploadMimeType,
         file_size: body.byteLength,
         uploaded_by: session.user.id,
       }).select('*').single();
@@ -424,6 +435,7 @@ export default function SelfManagedClaimScreen() {
       ...documents.accident_photo.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.accident_photo, file })),
       ...documents.accident_video.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.accident_video, file })),
       ...documents.bulk.map((file) => ({ type: BULK_DOCUMENT_TYPE, file })),
+      ...(voiceNote ? [{ type: VOICE_NOTE_DOCUMENT_TYPE, file: voiceNote }] : []),
     ];
     if (!queued.length) return { total: 0, saved: 0 };
 
@@ -487,7 +499,7 @@ export default function SelfManagedClaimScreen() {
   }
 
   async function submit() {
-    if (!policy || !vehicle || saving || uploadingDocuments) return;
+    if (!policy || !vehicle || saving || uploadingDocuments || voiceRecording) return;
     setMessage('');
     setValidationMessage('');
     const missingMandatoryFields = [
@@ -679,28 +691,25 @@ export default function SelfManagedClaimScreen() {
         </View>
       </View>
 
-      <View style={styles.voicePlaceholder}>
-        <View style={styles.voiceHeadingRow}>
-          <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={25} color="#0A43A3" /></View>
-          <View style={styles.voiceCopy}>
-            <Text style={styles.voiceTitle}>Incident Voice Note</Text>
-            <Text style={styles.voiceText}>Describe what happened in your own words so the incident is easier to understand later.</Text>
-          </View>
-        </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Record Voice Note, feature coming soon" accessibilityState={{ disabled: true }} disabled style={styles.voiceButton}>
-          <MaterialCommunityIcons name="microphone" size={18} color="#FFFFFF" />
-          <Text style={styles.voiceButtonText}>Record Voice Note</Text>
-        </Pressable>
-        <View style={styles.voiceComingSoon}>
-          <MaterialCommunityIcons name="clock-outline" size={14} color="#60738B" />
-          <Text style={styles.voiceComingSoonText}>This feature will be added soon.</Text>
-        </View>
-      </View>
+      <IncidentVoiceNote
+        value={voiceNote}
+        saved={savedDocuments.some((item) => item.document_type === VOICE_NOTE_DOCUMENT_TYPE)}
+        busy={saving || uploadingDocuments}
+        onChange={setVoiceNote}
+        onRecordingChange={setVoiceRecording}
+        onRemoveSaved={async () => {
+          const removed = await removeSavedDocuments(VOICE_NOTE_DOCUMENT_TYPE);
+          if (!removed) return;
+          setSavedDocuments((current) => current.filter((item) => item.document_type !== VOICE_NOTE_DOCUMENT_TYPE));
+          setSavedDocumentTypes((current) => current.filter((item) => item !== VOICE_NOTE_DOCUMENT_TYPE));
+          setSuccessMessage('Voice note deleted successfully');
+        }}
+      />
 
       <ClaimActionBar
-        primaryDisabled={saving || uploadingDocuments || !policy}
+        primaryDisabled={saving || uploadingDocuments || voiceRecording || !policy}
         primaryIcon="arrow-right"
-        primaryLabel={saving || uploadingDocuments ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
+        primaryLabel={voiceRecording ? 'Stop recording first' : saving || uploadingDocuments ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
         onPrimary={() => void submit()}
         onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: 'spot_intimation' } }) : router.push('/customer/support')}
       />

@@ -7,6 +7,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
+import { lookupCustomerRc } from '@/lib/customer-rc-lookup';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany } from '@/lib/types';
@@ -23,6 +24,8 @@ const fuelOptions = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Bi-Fuel',
 const policyTypeOptions = ['Motor', 'Health', 'Life', 'Travel', 'Personal Accident', 'Fire', 'Marine', 'Engineering', 'Liability', 'Cyber', 'Property', 'Agriculture / Crop', 'Other / Miscellaneous'];
 const MAX_POLICY_COPY_SIZE_BYTES = 5 * 1024 * 1024;
 type PickedPolicyCopy = { uri: string; name: string; mimeType: string | null; size: number | null };
+
+type RcLookupState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function AddVehicleScreen() {
   const router = useRouter();
@@ -61,6 +64,8 @@ export default function AddVehicleScreen() {
   const [dateTarget, setDateTarget] = useState<{ label: string; value: string; onChange: (value: string) => void; autoEnd?: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [rcLookupState, setRcLookupState] = useState<RcLookupState>('idle');
+  const [rcLookupMessage, setRcLookupMessage] = useState('');
 
   const visibleDateFields = useMemo(() => [
     { key: 'registration', label: 'Registration date', value: registrationDate, onChange: setRegistrationDate },
@@ -111,6 +116,65 @@ export default function AddVehicleScreen() {
       active = false;
     };
   }, []);
+
+  function changeVehicleNo(value: string) {
+    setVehicleNo(value.replace(/\s/g, '').toUpperCase());
+    if (rcLookupState !== 'idle') {
+      setRcLookupState('idle');
+      setRcLookupMessage('');
+    }
+  }
+
+  async function fetchRcDetails() {
+    if (rcLookupState === 'loading') return;
+    setMessage('');
+    setRcLookupMessage('');
+
+    const normalized = vehicleNo.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (normalized.length < 6) {
+      setRcLookupState('error');
+      return setRcLookupMessage('Enter a valid RC number first.');
+    }
+
+    if (selectedCustomerId) {
+      const { data: existingVehicles } = await supabase.from('vehicles').select('id,vehicle_no').eq('customer_id', selectedCustomerId).limit(250);
+      const duplicate = (existingVehicles ?? []).find((item) => String(item.vehicle_no ?? '').replace(/[^A-Za-z0-9]/g, '').toUpperCase() === normalized);
+      if (duplicate) {
+        setRcLookupState('error');
+        return setRcLookupMessage('This vehicle is already added to this account.');
+      }
+    }
+
+    setRcLookupState('loading');
+    setRcLookupMessage('Fetching vehicle details…');
+    try {
+      const response = await lookupCustomerRc(normalized);
+      const details = response.details;
+      setVehicleNo(details.registrationNumber || normalized);
+      if (details.registrationDate) setRegistrationDate(details.registrationDate);
+      if (details.manufacturer) {
+        setMake(details.manufacturer);
+        setMakeQuery(details.manufacturer);
+      }
+      if (details.model) setModel(details.model);
+      if (details.manufacturingYear) setYear(details.manufacturingYear);
+      if (details.vehicleClass && vehicleClasses.some((item) => item.value === details.vehicleClass)) setVehicleType(details.vehicleClass);
+      if (details.chassisNumber) setChassisNo(details.chassisNumber);
+      if (details.engineNumber) setEngineNo(details.engineNumber);
+      if (details.fuelType && fuelOptions.includes(details.fuelType)) setFuelType(details.fuelType);
+      if (details.gvwKg) setGvwKg(details.gvwKg);
+      if (details.fitnessExpiryDate) setFitnessExpiryDate(details.fitnessExpiryDate);
+      if (details.pucExpiryDate) setPucExpiryDate(details.pucExpiryDate);
+      if (details.roadTaxExpiryDate) setRoadTaxExpiryDate(details.roadTaxExpiryDate);
+      if (details.nationalPermitExpiryDate) setNationalPermitExpiryDate(details.nationalPermitExpiryDate);
+      if (details.localPermitExpiryDate) setLocalPermitExpiryDate(details.localPermitExpiryDate);
+      setRcLookupState('success');
+      setRcLookupMessage('Vehicle details found. Please review the filled information.');
+    } catch (error) {
+      setRcLookupState('error');
+      setRcLookupMessage(error instanceof Error ? error.message : 'We could not fetch vehicle details. You can continue manually.');
+    }
+  }
 
   async function save() {
     setMessage('');
@@ -243,10 +307,21 @@ export default function AddVehicleScreen() {
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
         {message ? <Message type="error">{message}</Message> : null}
-        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); }} /> : null}
+        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); }} /> : null}
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
-          <InputField required icon="card-text-outline" label="RC number" value={vehicleNo} onChangeText={(value) => setVehicleNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
+          <RcLookupField
+            value={vehicleNo}
+            loading={rcLookupState === 'loading'}
+            onChangeText={changeVehicleNo}
+            onFetch={() => void fetchRcDetails()}
+          />
+          {rcLookupMessage ? (
+            <View style={[styles.rcStatus, rcLookupState === 'success' ? styles.rcStatusSuccess : rcLookupState === 'error' ? styles.rcStatusError : styles.rcStatusInfo]}>
+              {rcLookupState === 'loading' ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name={rcLookupState === 'success' ? 'check-circle-outline' : rcLookupState === 'error' ? 'alert-circle-outline' : 'information-outline'} size={17} color={rcLookupState === 'success' ? '#12805C' : rcLookupState === 'error' ? '#B54747' : '#0A43A3'} />}
+              <Text style={styles.rcStatusText}>{rcLookupMessage}</Text>
+            </View>
+          ) : null}
           <PremiumDateField label="Registration date" value={registrationDate} onPress={() => setDateTarget({ label: 'Registration date', value: registrationDate, onChange: setRegistrationDate })} />
           <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />
           <View style={styles.twoColumnRow}>
@@ -298,7 +373,7 @@ export default function AddVehicleScreen() {
           </Pressable>
         </FormSection>
 
-        <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving} />
+        <Button label={saving ? 'Saving vehicle...' : 'Save vehicle'} onPress={save} disabled={saving || rcLookupState === 'loading'} />
         {saving ? <ActivityIndicator color={palette.navy} /> : null}
       </Card>
       <PremiumCalendarModal
@@ -321,6 +396,24 @@ function FormSection({ title, icon, tone = 'default', children }: { title: strin
         <Text style={styles.sectionTitle}>{title}</Text>
       </View>
       <View style={styles.sectionBody}>{children}</View>
+    </View>
+  );
+}
+
+function RcLookupField({ value, loading, onChangeText, onFetch }: { value: string; loading: boolean; onChangeText: (value: string) => void; onFetch: () => void }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>RC number *</Text>
+      <View style={styles.rcRow}>
+        <View style={[styles.inputShell, styles.rcInputShell]}>
+          <MaterialCommunityIcons name="card-text-outline" size={17} color="#6A7A90" />
+          <TextInput value={value} onChangeText={onChangeText} autoCapitalize="characters" placeholder="MP20AB1234" placeholderTextColor="#9AA7B8" style={styles.input} />
+        </View>
+        <Pressable accessibilityRole="button" disabled={loading} onPress={onFetch} style={({ pressed }) => [styles.rcFetchButton, pressed && !loading && styles.rcFetchButtonPressed, loading && styles.rcFetchButtonDisabled]}>
+          {loading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <MaterialCommunityIcons name="database-search-outline" size={17} color="#FFFFFF" />}
+          <Text style={styles.rcFetchText}>{loading ? 'Fetching' : 'Fetch details'}</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -706,6 +799,17 @@ const styles = StyleSheet.create({
   fieldLabel: { color: '#3F4D63', fontSize: 10.5, fontWeight: '700', letterSpacing: 0 },
   inputShell: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FBFDFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
   input: { flex: 1, minHeight: 43, color: palette.navy, fontSize: 12.6, fontWeight: '600', letterSpacing: 0 },
+  rcRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
+  rcInputShell: { flex: 1, minWidth: 0 },
+  rcFetchButton: { minWidth: 112, minHeight: 45, borderRadius: 12, backgroundColor: '#0A43A3', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  rcFetchButtonPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
+  rcFetchButtonDisabled: { opacity: 0.66 },
+  rcFetchText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
+  rcStatus: { minHeight: 42, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  rcStatusSuccess: { backgroundColor: '#EFFAF5', borderColor: '#B9E6D0' },
+  rcStatusError: { backgroundColor: '#FFF4F2', borderColor: '#F0C3BC' },
+  rcStatusInfo: { backgroundColor: '#EEF6FF', borderColor: '#B8D4F7' },
+  rcStatusText: { flex: 1, color: '#526176', fontSize: 10.2, lineHeight: 14, fontWeight: '700' },
   twoColumnRow: { flexDirection: 'row', gap: 9 },
   column: { flex: 1, minWidth: 0 },
   columnWide: { flex: 1.12, minWidth: 0 },

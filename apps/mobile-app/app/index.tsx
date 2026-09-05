@@ -4,15 +4,20 @@ import { useEffect, useState } from 'react';
 import { getCurrentSession, getRestoredSession } from '@/lib/auth';
 import { logStartupDiagnostic } from '@/lib/startup-diagnostics';
 import { routeRestoredUser } from '@/lib/startup-routing';
-import { Screen, Button, Message } from '@/components/ui';
+import { Screen, Button, LoadingState, Message } from '@/components/ui';
 
 export default function IndexScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
+
     async function load() {
+      setLoading(true);
+      setError('');
       await logStartupDiagnostic('bootstrap_started');
       try {
         const restoredSession = await withTimeout(getRestoredSession(), 10000);
@@ -27,20 +32,30 @@ export default function IndexScreen() {
         }
       } catch {
         await logStartupDiagnostic('bootstrap_failed', { reason: 'startup_or_account_resolution_failed' });
-        setError('We could not open your account. Please try again.');
+        if (active) setError('We could not open your account. Please try again.');
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
-    void load();
-  }, [router]);
 
-  if (loading) return null;
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [attempt, router]);
+
+  if (loading) {
+    return (
+      <Screen title="InsureIT" subtitle="Opening your account." showTitleHeader={false} showBackNavigation={false}>
+        <LoadingState label="Opening InsureIT" />
+      </Screen>
+    );
+  }
 
   return (
-    <Screen title="InsureIT" subtitle="Policy support and claim access.">
+    <Screen title="InsureIT" subtitle="Policy support and claim access." showBackNavigation={false}>
       {error ? <Message type="error">{error}</Message> : null}
-      <Button label="Try again" onPress={() => router.replace('/')} />
+      <Button label="Try again" onPress={() => setAttempt((value) => value + 1)} />
       <Button label="Sign in" onPress={() => router.replace('/login')} />
     </Screen>
   );

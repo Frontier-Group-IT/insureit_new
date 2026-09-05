@@ -1,0 +1,145 @@
+name: Build Customer production AAB
+
+on:
+  push:
+    branches:
+      - feat/customer-native-release-readiness
+    paths:
+      - '.github/workflows/build-mobile-release-candidate.yml'
+      - 'apps/mobile-app/app.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      REQUIRED_MAIN_BASE: 83c1c8af3a5e1111ab69ed4aee3c432018715eeb
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/customer-native-release-readiness
+          fetch-depth: 0
+
+      - name: Require exact release branch head and approved main baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main feat/customer-native-release-readiness
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/feat/customer-native-release-readiness)" ] || {
+            echo "Refusing production build: checkout is not current release branch head." >&2
+            exit 1
+          }
+          git merge-base --is-ancestor "$REQUIRED_MAIN_BASE" HEAD || {
+            echo "Refusing production build: approved main baseline is not contained in the release branch." >&2
+            exit 1
+          }
+
+      - name: Validate customer native release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/mobile-app/app.json');
+          const pkg = require('./apps/mobile-app/package.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.3.0' || pkg.version !== '0.3.0') {
+            console.error(`Refusing production build: expected app/package version 0.3.0, found ${expo.version}/${pkg.version}.`);
+            process.exit(1);
+          }
+          if (expo.android?.package !== 'com.insureit.mobile') {
+            console.error('Refusing production build: unexpected Android package identity.');
+            process.exit(1);
+          }
+          if (!expo.android?.permissions?.includes('android.permission.RECORD_AUDIO')) {
+            console.error('Refusing production build: RECORD_AUDIO permission is missing.');
+            process.exit(1);
+          }
+          const plugins = expo.plugins || [];
+          const audioPlugin = plugins.find((plugin) => plugin === 'expo-audio' || (Array.isArray(plugin) && plugin[0] === 'expo-audio'));
+          if (!audioPlugin) {
+            console.error('Refusing production build: expo-audio plugin is missing.');
+            process.exit(1);
+          }
+          if (!Array.isArray(audioPlugin) || audioPlugin[1]?.recordAudioAndroid !== true) {
+            console.error('Refusing production build: expo-audio Android recording is not enabled.');
+            process.exit(1);
+          }
+          if (audioPlugin[1]?.enableBackgroundPlayback !== false) {
+            console.error('Refusing production build: expo-audio background playback must be explicitly disabled.');
+            process.exit(1);
+          }
+          console.log(`Customer production runtime: ${expo.version}`);
+          console.log('Background media playback: disabled');
+          NODE
+
+      - name: Require Expo token
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify customer mobile app
+        run: |
+          npm run typecheck:mobile
+          npm run lint:mobile
+
+      - name: Verify Expo project access
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Build Android production AAB
+        id: eas_build
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli build --platform android --profile production --non-interactive --wait --json > customer-production-build.json
+          cat customer-production-build.json
+
+      - name: Upload EAS build metadata
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-production-build-metadata
+          path: apps/mobile-app/customer-production-build.json
+          if-no-files-found: ignore
+
+      - name: Build summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## INSUREIT Customer 0.3.0 production AAB"
+            echo
+            echo "- Source branch: \`feat/customer-native-release-readiness\`"
+            echo "- Android package: \`com.insureit.mobile\`"
+            echo "- Runtime/app version: \`0.3.0\`"
+            echo "- EAS profile: \`production\`"
+            echo "- Background media playback: disabled"
+            echo "- Output: Google Play Android App Bundle (AAB)"
+            echo "- Intended first destination: Google Play Internal testing"
+            echo "- Public production rollout: only after device QA passes"
+          } >> "$GITHUB_STEP_SUMMARY"
