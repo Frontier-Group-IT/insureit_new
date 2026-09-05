@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   rcFetchButtonPressed: { opacity: 0.84, transform: [{ scale: 0.97 }] },
   rcFetchText: { color: '#FFFFFF', fontSize: 10.4, fontWeight: '900' },
   rcFetchTextDisabled: { color: '#7F8EA4' },
-  rcHint: { color: '#6E7C90', fontSize: 9.8, lineHeight: 13, fontWeight: '650' },
+  rcHint: { color: '#6E7C90', fontSize: 9.8, lineHeight: 13, fontWeight: '600' },
   rcStatus: { minHeight: 40, borderRadius: 11, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 7, flexDirection: 'row', alignItems: 'center', gap: 7 },
   rcStatusSuccess: { backgroundColor: '#EFFAF5', borderColor: '#B9E6D0' },
   rcStatusError: { backgroundColor: '#FFF4F2', borderColor: '#F0C3BC' },
