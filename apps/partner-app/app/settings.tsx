@@ -86,7 +86,7 @@ function SettingsLink({ icon, asset, title, onPress, last = false }: {
       onPress={onPress}
       style={({ pressed }) => [styles.linkRow, !last && styles.divider, pressed && styles.pressed]}
     >
-      <View style={[styles.linkIcon, asset && styles.linkArtwork]}>
+      <View style={[styles.linkIcon, asset ? styles.linkArtwork : undefined]}>
         {asset ? (
           <Image source={asset} style={styles.linkArtworkImage} resizeMode="contain" />
         ) : icon ? (
