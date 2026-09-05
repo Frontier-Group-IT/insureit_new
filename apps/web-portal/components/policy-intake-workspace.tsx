@@ -28,7 +28,7 @@ export type PolicyIntakeWorkspaceRow = {
   assigned_to_profile_id: string | null;
 };
 
-type ViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "rejected" | "all";
+type ViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
 const PAGE_SIZE = 15;
 
 const rowTones: Record<string, string> = {
@@ -42,6 +42,9 @@ const rowTones: Record<string, string> = {
 
 function field(row: PolicyIntakeWorkspaceRow, key: string) {
   return row.ocr_fields?.find((item) => item.key === key)?.value?.trim() ?? "";
+}
+function isDuplicate(row: PolicyIntakeWorkspaceRow) {
+  return row.status.toLowerCase() === "duplicate";
 }
 function statusLabel(row: PolicyIntakeWorkspaceRow) {
   if (row.status === "processing" && row.ocr_status === "failed") return "Manual review required";
@@ -117,6 +120,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length,
     processing: baseFiltered.filter((row) => row.status === "processing" && row.ocr_status !== "failed").length,
     completed: baseFiltered.filter((row) => row.status === "completed").length,
+    duplicate: baseFiltered.filter(isDuplicate).length,
     rejected: baseFiltered.filter((row) => row.status === "rejected").length,
   }), [baseFiltered, currentProfileId]);
 
@@ -126,6 +130,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     if (view === "in_review") return row.status === "in_review";
     if (view === "mine") return row.status === "in_review" && row.assigned_to_profile_id === currentProfileId;
     if (view === "processing") return row.status === "processing" && row.ocr_status !== "failed";
+    if (view === "duplicate") return isDuplicate(row);
     return row.status === view;
   }), [baseFiltered, view]);
 
@@ -176,6 +181,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           { value: "in_review", label: "In Review", count: stats.inReview },
           { value: "processing", label: "Processing", count: stats.processing },
           { value: "completed", label: "Completed", count: stats.completed },
+          { value: "duplicate", label: "Duplicate", count: stats.duplicate },
           { value: "rejected", label: "Rejected", count: stats.rejected },
           { value: "all", label: "All", count: stats.all },
         ] : [
@@ -183,6 +189,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           { value: "processing", label: "Processing", count: stats.processing },
           { value: "in_review", label: "In Review", count: stats.inReview },
           { value: "completed", label: "Completed", count: stats.completed },
+          { value: "duplicate", label: "Duplicate", count: stats.duplicate },
           { value: "rejected", label: "Rejected", count: stats.rejected },
         ]} />
         {reviewer ? <button
