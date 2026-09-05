@@ -8,6 +8,8 @@ export type CustomerRcLookupDetails = {
   manufacturingYear: string | null;
   vehicleClass: string | null;
   fuelType: string | null;
+  engineCapacityCc: string | null;
+  seatingCapacity: string | null;
   gvwKg: string | null;
   chassisNumber: string | null;
   engineNumber: string | null;
@@ -21,13 +23,14 @@ export type CustomerRcLookupDetails = {
 type CustomerRcLookupResponse = {
   status?: 'success';
   provider?: 'authbridge';
+  source?: 'local_cache' | 'authbridge';
+  isStale?: boolean;
   transactionId?: string | null;
   lookedUpAt?: string | null;
   details?: CustomerRcLookupDetails;
   error?: string;
 };
 
-// A successful lookup has already passed the response/details validation below.
 type CustomerRcLookupSuccessResponse = Omit<CustomerRcLookupResponse, 'status' | 'details'> & {
   status: 'success';
   details: CustomerRcLookupDetails;
