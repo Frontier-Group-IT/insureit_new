@@ -11,10 +11,11 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
+import { ExternalClaimMilestoneStageBody, externalClaimMilestoneSubtitle } from './self-managed-milestone';
 
 type ManagedClaim = {
   id: string;
@@ -450,46 +451,116 @@ export default function InternalClaimStageScreen() {
     );
   }
 
-  return (
-    <Screen title={definition.label} showTitleHeader={false}>
-      <ExternalClaimStageHeader
-        step={step}
-        title={definition.label}
-        subtitle={isCompleted ? 'Completed by the claims desk' : isCurrent ? projection.substage : 'Awaiting this operations stage'}
-        vehicleNo={vehicleNo}
-        claimNo={claim.insurer_claim_no || claim.claim_no}
-        serviceLabel="Sankalp Managed"
-        onBack={() => router.back()}
+  const rawFormValue = (keys: string[]) => firstValue(mergedDetails, keys);
+const formValue = (keys: string[]) => {
+  const value = rawFormValue(keys);
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  return String(value);
+};
+const yesNoValue = (keys: string[]) => {
+  const value = rawFormValue(keys);
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  const normalized = String(value).trim().toLowerCase();
+  if (['yes', 'true', 'received', 'submitted', 'completed', 'done'].includes(normalized)) return 'yes';
+  if (['no', 'false', 'not yet', 'pending'].includes(normalized)) return 'no';
+  return normalized;
+};
+const cashlessValue = (() => {
+  const value = rawFormValue(['cashless']);
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  const normalized = String(value).trim().toLowerCase();
+  return ['yes', 'true', 'cashless'].includes(normalized) ? 'true' : ['no', 'false', 'reimbursement'].includes(normalized) ? 'false' : normalized;
+})();
+const externalValues = {
+  approval_received_date: isoDateValue(rawFormValue(['approval_received_date', 'approved_at'])),
+  cashless: cashlessValue,
+  surveyor_name: formValue(['surveyor_name', 'name']),
+  surveyor_phone: formValue(['surveyor_phone', 'surveyor_mobile', 'mobile']),
+  surveyor_email: formValue(['surveyor_email', 'email']),
+  repair_complete_date: isoDateValue(rawFormValue(['repair_complete_date', 'repair_completed_date'])),
+  ri_required: yesNoValue(['ri_required', 'ri_status']),
+  ri_requested_date: isoDateValue(rawFormValue(['ri_requested_date', 'reinspection_requested_date'])),
+  ri_done_date: isoDateValue(rawFormValue(['ri_done_date', 'reinspection_done_date'])),
+  bill_date: isoDateValue(rawFormValue(['bill_date', 'final_bill_date'])),
+  bill_amount: formValue(['bill_amount', 'final_bill_amount']),
+  assessment_received: yesNoValue(['assessment_received', 'assessment_status']),
+  do_date: isoDateValue(rawFormValue(['do_date', 'delivery_order_date'])),
+  do_amount: formValue(['do_amount', 'delivery_order_amount']),
+  vehicle_received: yesNoValue(['vehicle_received', 'delivery_status', 'status']),
+  vehicle_received_date: isoDateValue(rawFormValue(['vehicle_received_date', 'vehicle_delivery_date'])),
+  depreciation_submitted: yesNoValue(['depreciation_submitted', 'depreciation_status']),
+  satisfaction_submitted: yesNoValue(['satisfaction_submitted', 'satisfaction_status']),
+  documents_submit_date: isoDateValue(rawFormValue(['documents_submit_date', 'documents_submitted_date'])),
+  payment_received_date: isoDateValue(rawFormValue(['payment_received_date', 'settlement_date'])),
+  payment_received_amount: formValue(['payment_received_amount', 'settlement_amount']),
+} as any;
+
+const stageSnapshot = (target: InternalJourneyStageKey) => {
+  const snapshot: Record<string, unknown> = {};
+  const statuses = STAGE_STATUSES[target];
+  for (const row of [...stageDetails].reverse()) {
+    if (statuses.has(row.stage)) Object.assign(snapshot, row.details ?? {});
+  }
+  return snapshot;
+};
+const billingSnapshot = stageSnapshot('billing');
+const deliveryOrderSnapshot = stageSnapshot('delivery_order');
+const externalMilestones = [
+  { milestone_key: 'billing', milestone_status: 'completed', details: billingSnapshot },
+  { milestone_key: 'delivery_order', milestone_status: 'completed', details: deliveryOrderSnapshot },
+] as any;
+const primaryLabel = stageKey === 'payment_encashment'
+  ? 'Complete Claim'
+  : stageKey === 'vehicle_delivery' && externalValues.vehicle_received !== 'yes'
+    ? 'Save Vehicle Status'
+    : 'Save & Continue';
+
+return (
+  <Screen title={definition.label} showTitleHeader={false}>
+    <ExternalClaimStageHeader
+      step={step}
+      title={definition.label}
+      subtitle={externalClaimMilestoneSubtitle(stageKey as any)}
+      vehicleNo={vehicleNo}
+      claimNo={claim.insurer_claim_no || claim.claim_no}
+      onBack={() => router.back()}
+    />
+
+    <ClaimIdentityCard
+      claimNo={claim.insurer_claim_no || claim.claim_no}
+      insurerName={insurerName || 'Insurance company'}
+      vehicleNo={vehicleNo || 'Vehicle'}
+      policyNo={policyNo || undefined}
+      vehicleMeta={vehicleMeta}
+    />
+
+    {message ? <Message type="error">{message}</Message> : null}
+
+    <View pointerEvents="none">
+      <ExternalClaimMilestoneStageBody
+        key={stageKey}
+        values={externalValues}
+        set={() => undefined}
+        milestones={externalMilestones}
+        claimId={claim.id}
+        customerId={claim.customer_id}
       />
+    </View>
 
-      <View style={styles.readOnlyNotice}>
-        <View style={styles.noticeIcon}><MaterialCommunityIcons name="shield-lock-outline" size={20} color="#0A43A3" /></View>
-        <View style={styles.noticeCopy}>
-          <Text style={styles.noticeTitle}>Claims desk controlled</Text>
-          <Text style={styles.noticeText}>You can review this stage and upload requested documents. Operational details stay read-only and are updated by the Claims Desk.</Text>
-        </View>
-      </View>
-
-      {message ? <Message type="error">{message}</Message> : null}
-
-      <View style={styles.fieldsCard}>
-        <View style={styles.fieldsHeader}>
-          <Text style={styles.fieldsTitle}>Stage details</Text>
-          <View style={styles.readOnlyBadge}><MaterialCommunityIcons name="eye-outline" size={13} color="#526178" /><Text style={styles.readOnlyBadgeText}>READ ONLY</Text></View>
-        </View>
-        <View style={styles.fieldGrid}>
-          {STAGE_FIELDS[stageKey].map((field) => (
-            <ReadOnlyValue
-              key={field.label}
-              label={field.label}
-              value={firstValue(mergedDetails, field.keys, field.fallback)}
-              money={field.money}
-            />
-          ))}
-        </View>
-      </View>
-    </Screen>
-  );
+    <View pointerEvents="none">
+      <ClaimActionBar
+        primaryDisabled={false}
+        primaryIcon={stageKey === 'payment_encashment' ? 'check' : 'arrow-right'}
+        primaryLabel={primaryLabel}
+        onAssistance={() => undefined}
+        onPrimary={() => undefined}
+      />
+    </View>
+  </Screen>
+);
 }
 
 function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: { claimNo?: string | null; insurerName?: string | null; vehicleNo?: string | null; policyNo?: string | null; vehicleMeta?: string | null }) {
