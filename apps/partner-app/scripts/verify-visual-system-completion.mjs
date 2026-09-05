@@ -28,6 +28,9 @@ const renewals = read('app/renewals.tsx');
 const policyIntakes = read('app/policy-intakes.tsx');
 const policyIntakeNew = read('app/policy-intake-new.tsx');
 const policyIntakeDetail = read('app/policy-intakes/[id].tsx');
+const customerDetail = read('app/customer/[id].tsx');
+const policyDetail = read('app/policy/[id].tsx');
+const claimDetail = read('app/claim/[id].tsx');
 const search = read('app/search.tsx');
 const support = read('app/support.tsx');
 const settings = read('app/settings.tsx');
@@ -80,21 +83,28 @@ requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows m
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
 for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
 
-for (const intakeAsset of ['status.documentUpload', 'status.verified']) {
-  requireText(policyIntakeNew, `PartnerAssets.${intakeAsset}`, `New Policy Intake is missing ${intakeAsset} artwork.`);
-}
+for (const intakeAsset of ['status.documentUpload', 'status.verified']) requireText(policyIntakeNew, `PartnerAssets.${intakeAsset}`, `New Policy Intake is missing ${intakeAsset} artwork.`);
 requireText(policyIntakeNew, 'submitPartnerPolicyIntake({', 'New Policy Intake must preserve the existing submit service path.');
 requireText(policyIntakeNew, 'savePartnerPolicyIntakeDraft({', 'New Policy Intake must preserve draft saving.');
 requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intake must preserve draft restore.');
-
-for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.pendingReview', 'status.policyAttention', 'status.verified', 'status.rejected']) {
-  requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
-}
+for (const intakeDetailAsset of ['emptyStates.policyUpload', 'status.documentUpload', 'status.pendingReview', 'status.policyAttention', 'status.verified', 'status.rejected']) requireText(policyIntakeDetail, `PartnerAssets.${intakeDetailAsset}`, `Policy Intake detail is missing ${intakeDetailAsset} artwork.`);
 requireText(policyIntakeDetail, 'function statusArtwork(row: PartnerPolicyIntake)', 'Policy Intake detail must keep centralized semantic status-artwork mapping.');
 requireText(policyIntakeDetail, 'submitPartnerPolicyIntakeReplacement({', 'Policy Intake detail must preserve the replacement upload service path.');
-if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.includes('alert-circle-outline')) {
-  throw new Error('Policy Intake status and attention surfaces must not regress to generic feature glyphs.');
-}
+if (policyIntakeDetail.includes('git-network-outline') || policyIntakeDetail.includes('alert-circle-outline')) throw new Error('Policy Intake status and attention surfaces must not regress to generic feature glyphs.');
+
+for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance', 'navigation.customers']) requireText(policyDetail, `PartnerAssets.${detailAsset}`, `Policy detail is missing ${detailAsset} artwork.`);
+requireText(policyDetail, 'getPartnerPolicyDetail(id)', 'Policy detail must preserve the existing scoped data service.');
+if (policyDetail.includes('name="person-outline"') || policyDetail.includes('name="car-outline"') || policyDetail.includes("category === 'Motor' ? 'car-outline'")) throw new Error('Policy detail feature/entity identity must not regress to generic person/car glyphs.');
+
+for (const detailAsset of ['products.motorInsurance', 'products.healthInsurance', 'products.familyInsurance', 'products.commercialInsurance', 'navigation.claims', 'status.claimAttention', 'status.verified']) requireText(customerDetail, `PartnerAssets.${detailAsset}`, `Customer detail is missing ${detailAsset} artwork.`);
+requireText(customerDetail, 'getPartnerCustomerDetail(id)', 'Customer detail must preserve the existing scoped data service.');
+requireText(customerDetail, 'initials(data.customer.customer_name)', 'Customer detail must retain real-customer initials for identity.');
+for (const oldGlyph of ['document-text-outline', 'car-outline', 'shield-outline']) if (customerDetail.includes(`name="${oldGlyph}"`)) throw new Error(`Customer detail feature rows must not regress to ${oldGlyph}.`);
+
+for (const detailAsset of ['navigation.customers', 'navigation.claims', 'status.journey', 'status.claimAttention', 'status.verified']) requireText(claimDetail, `PartnerAssets.${detailAsset}`, `Claim detail is missing ${detailAsset} artwork.`);
+requireText(claimDetail, 'getPartnerClaimDetail(id)', 'Claim detail must preserve the existing scoped data service.');
+requireText(claimDetail, 'function timelineArtwork(item: TimelineItem)', 'Claim detail must keep semantic journey artwork mapping.');
+if (claimDetail.includes('name="person-outline"') || claimDetail.includes('styles.dotLatest') || claimDetail.includes('styles.innerDot')) throw new Error('Claim detail must not regress to generic customer or dot-only journey identity.');
 
 requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
 for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
@@ -104,12 +114,10 @@ for (const featureAsset of ['navigation.profile', 'actions.support', 'status.set
 
 for (const activityAsset of ['status.policyActive', 'navigation.claims', 'navigation.policyIntake', 'actions.policyChecklist', 'status.announcement']) requireText(activity, `PartnerAssets.${activityAsset}`, `Activity is missing ${activityAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (activity.includes(tinySize)) throw new Error(`Activity must not regress to tiny timeline typography: ${tinySize}`);
-
 for (const impactAsset of ['products.motorInsurance', 'navigation.customers', 'navigation.policies', 'navigation.claims', 'status.verified', 'status.journey']) requireText(impact, `PartnerAssets.${impactAsset}`, `Impact is missing ${impactAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
 requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
 for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
-
 requireText(weeklyStory, 'PartnerAssets.actions.renewals', 'Your Week must keep renewal artwork for upcoming work.');
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5', 'fontSize:8,', 'fontSize:9,']) if (weeklyStory.includes(tinySize)) throw new Error(`Your Week must not regress to tiny typography: ${tinySize}`);
 for (const recognitionAsset of ['status.achievement', 'actions.policyChecklist', 'actions.renewals', 'status.journey']) requireText(recognition, `PartnerAssets.${recognitionAsset}`, `Recognition is missing ${recognitionAsset} artwork.`);
