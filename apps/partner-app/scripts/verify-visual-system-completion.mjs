@@ -40,6 +40,7 @@ const journey = read('app/journey.tsx');
 const weeklyStory = read('app/weekly-story.tsx');
 const recognition = read('app/recognition.tsx');
 const learn = read('app/learn.tsx');
+const pulse = read('app/pulse.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
@@ -124,5 +125,30 @@ for (const recognitionAsset of ['status.achievement', 'actions.policyChecklist',
 for (const tinySize of ['fontSize:7.5', 'fontSize:8.5']) if (recognition.includes(tinySize)) throw new Error(`Recognition must not regress to tiny typography: ${tinySize}`);
 for (const learnAsset of ['actions.policyChecklist', 'status.verified']) requireText(learn, `PartnerAssets.${learnAsset}`, `Learn is missing ${learnAsset} artwork.`);
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,', 'fontSize: 9,']) if (learn.includes(tinySize)) throw new Error(`Learn must not regress to tiny typography: ${tinySize}`);
+
+for (const pulseAsset of ['actions.businessPerformance', 'actions.renewals', 'navigation.claims', 'navigation.policyIntake']) {
+  requireText(pulse, `PartnerAssets.${pulseAsset}`, `Pulse is missing ${pulseAsset} artwork.`);
+}
+requireText(pulse, 'getPartnerHome()', 'Pulse must preserve the existing Partner Home data service.');
+requireText(pulse, '<PartnerStateView state="loading"', 'Pulse loading must use the shared Partner state system.');
+requireText(pulse, 'state="error"', 'Pulse errors must use the shared branded Partner state system.');
+for (const oldGlyph of ['trending-up-outline', 'refresh-outline', 'shield-checkmark-outline', 'document-text-outline']) {
+  if (pulse.includes(`icon="${oldGlyph}"`)) throw new Error(`Pulse feature identity must not regress to ${oldGlyph}.`);
+}
+for (const tinySize of ['fontSize: 8.5', 'fontSize: 9,', 'fontSize: 8,', 'fontSize: 9.5']) {
+  if (pulse.includes(tinySize)) throw new Error(`Pulse must not regress to tiny local typography: ${tinySize}`);
+}
+
+// Current exposed banners are generic business-growth artwork. Prevent semantic drift by keeping them out of
+// operational/detail surfaces unless a future asset batch provides an exact matching banner.
+for (const [name, source] of [
+  ['Policies', policies], ['Claims', claims], ['Renewals', renewals], ['Customers', customers],
+  ['Policy Intake history', policyIntakes], ['New Policy Intake', policyIntakeNew], ['Policy Intake detail', policyIntakeDetail],
+  ['Search', search], ['Support', support], ['Policy detail', policyDetail], ['Customer detail', customerDetail], ['Claim detail', claimDetail],
+]) {
+  if (source.includes('PartnerAssets.banners.')) {
+    throw new Error(`${name} must not use generic business-growth banners as operational semantics.`);
+  }
+}
 
 console.log('Partner visual-system completion contracts verified.');
