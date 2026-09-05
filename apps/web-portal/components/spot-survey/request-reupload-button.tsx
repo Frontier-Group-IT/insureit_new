@@ -33,6 +33,30 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
       actions.style.width = "auto";
       actions.style.gap = "4px";
       actions.style.marginTop = "0";
+
+      const iconTile = row.firstElementChild as HTMLElement | null;
+      if (iconTile) {
+        iconTile.style.background = "transparent";
+        iconTile.style.borderRadius = "0";
+      }
+
+      const filename = content.firstElementChild as HTMLElement | null;
+      const metaRow = Array.from(content.children).find((element) => element.querySelector?.('a[target="_blank"]')) as HTMLElement | undefined;
+      const previewLink = metaRow?.querySelector<HTMLAnchorElement>('a[target="_blank"]') ?? null;
+
+      if (filename && previewLink && filename.tagName !== "A") {
+        const filenameLink = document.createElement("a");
+        filenameLink.href = previewLink.href;
+        filenameLink.target = "_blank";
+        filenameLink.rel = "noreferrer";
+        filenameLink.textContent = filename.textContent;
+        filenameLink.className = `${filename.className} block cursor-pointer transition hover:text-[#174EA6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25`;
+        filenameLink.setAttribute("aria-label", `Open ${filename.textContent?.trim() || documentTitle}`);
+        filenameLink.title = "Open uploaded document";
+        filename.replaceWith(filenameLink);
+      }
+
+      if (metaRow) metaRow.style.display = "none";
     }
 
     const article = button.closest("article") as HTMLElement | null;
@@ -82,7 +106,7 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
         toggleFiles();
       }
     };
-  }, []);
+  }, [documentTitle]);
 
   return (
     <>
