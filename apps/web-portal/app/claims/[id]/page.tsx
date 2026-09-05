@@ -238,19 +238,23 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
-      <SpotClaimHeader claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
-      <OperationsClaimStages
-        claimId={claim.id}
-        currentStatus={claim.current_status}
-        insurerClaimNo={claim.insurer_claim_no}
-        details={stageRows ?? []}
-        accidentAt={claim.accident_at}
-        spotIntimationAt={claimWithSpotIntimation.spotIntimationAt}
-        spotDetails={spotDetails}
-        spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
-        claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
-        initialStageKey={requestedStage}
-      />
+      <div className="[&>section>div:first-child>div:nth-child(3)_img]:grayscale [&>section>div:first-child>div:nth-child(3)_img]:invert [&>section>div:first-child>div:nth-child(3)_img]:contrast-[4] [&>section>div:first-child>div:nth-child(3)_img]:mix-blend-screen">
+        <SpotClaimHeader claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
+      </div>
+      <div className="mt-0.5">
+        <OperationsClaimStages
+          claimId={claim.id}
+          currentStatus={claim.current_status}
+          insurerClaimNo={claim.insurer_claim_no}
+          details={stageRows ?? []}
+          accidentAt={claim.accident_at}
+          spotIntimationAt={claimWithSpotIntimation.spotIntimationAt}
+          spotDetails={spotDetails}
+          spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
+          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
+          initialStageKey={requestedStage}
+        />
+      </div>
     </ClaimManagerShell>
   );
 }
