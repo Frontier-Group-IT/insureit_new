@@ -24,8 +24,8 @@ type Props = {
 };
 
 const stages = [
-  { key: "spot_intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Initial Documents Verified", "Documents Pending", "Documents Submitted"] },
-  { key: "spot_status", label: "Spot Status", statuses: ["Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected", "Spot Survey Completed"] },
+  { key: "spot_intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Documents Pending"] },
+  { key: "spot_status", label: "Spot Status", statuses: ["Initial Documents Submitted", "Initial Documents Verification Pending", "Documents Submitted", "Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected", "Spot Survey Completed"] },
   { key: "claim_intimation", label: "Claim Intimation", statuses: ["Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation"] },
   { key: "work_approval", label: "Work Approval", statuses: ["Estimate Submitted", "Approval Pending", "Work Approval Status", "Work Approval Received"] },
   { key: "repair_ri", label: "Repair & RI", statuses: ["Final Surveyor Details", "Survey Status", "Survey Done", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation", "RA Intimation Done"] },
@@ -126,6 +126,10 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [showSpotSaved, setShowSpotSaved] = useState(false);
 
   useEffect(() => {
+    if (state.ok && active?.key === "spot_intimation" && next === "Initial Documents Submitted") {
+      router.push(`/claims/${claimId}?stage=spot_status`);
+      return;
+    }
     if (state.ok && active?.key === "claim_intimation" && next === "Final Documents Submitted") {
       router.push(`/claims/${claimId}?stage=claim_intimation`);
       return;
