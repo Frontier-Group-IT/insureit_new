@@ -96,6 +96,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const spotDetail = [...details].find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
   const next = managerTransitions[currentStatus];
   const editable = Boolean(active?.key === selected.key && next && fields[selected.key]);
+  const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [state, formAction] = useActionState(
     async (_previous: { ok: boolean; message: string }, formData: FormData) => {
       try {
@@ -103,6 +104,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         return { ok: true, message: "Claim stage updated." };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : "Unable to update the claim stage." };
+      } finally {
+        setSpotSubmitting(false);
       }
     },
     { ok: false, message: "" },
@@ -114,6 +117,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         return { ok: true, message: "Spot Intimation details saved." };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : "Unable to save Spot Intimation details." };
+      } finally {
+        setSpotSubmitting(false);
       }
     },
     { ok: false, message: "" },
@@ -144,8 +149,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           return <li key={stage.key} className="border-b border-[#E4ECF6] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"><button type="button" disabled={!available} aria-current={stage.key === selected.key ? "step" : undefined} onClick={() => setSelectedKey(stage.key)} className={`relative w-full px-2 py-3 text-left text-[10px] font-semibold transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${stage.key === selected.key ? "text-[#003A83] after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:bg-[#174EA6]" : available ? "text-[#526178] hover:bg-[#F8FBFF] hover:text-[#174EA6]" : "cursor-not-allowed text-[#A0ACBB]"}`}>{stage.label}<span className="mt-1 block text-[9px] font-medium uppercase tracking-[0.06em]">{isCurrent ? "Current" : index < activeIndex ? "Completed" : "Locked"}</span></button></li>;
         })}
       </ol>
-      {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} onSubmitStart={() => setShowSpotSaved(false)} /> : null}
-      {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Spot Intimation Details"} pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
+      {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }} /> : null}
+      {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Spot Intimation Details"} pendingLabel="Saving..." forcePending={spotSubmitting} className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
       {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
       {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
         <input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
