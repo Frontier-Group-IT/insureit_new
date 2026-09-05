@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
 import {
@@ -11,10 +10,9 @@ import {
   ClaimChoice,
   ClaimFinancialSummary,
   ClaimFormSection,
-  ClaimIdentityCard,
   ClaimInlineNote,
-  ExternalClaimStageHeader,
 } from '@/components/external-claim-ui';
+import { InternalManagedClaimHeader } from '@/components/internal-managed-claim-header';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 
@@ -160,7 +158,6 @@ export default function InternalClaimStageParity() {
 
   const activeClaimId = claim.id;
   const claimNo = claim.insurer_claim_no || claim.claim_no;
-  const subtitle = subtitleFor(stageKey);
 
   function openAssistance() {
     router.push({ pathname: '/customer/request-claim-assistance', params: { id: activeClaimId, returnStage: stageKey } });
@@ -178,27 +175,8 @@ export default function InternalClaimStageParity() {
 
   return (
     <Screen title={definition.label} showTitleHeader={false}>
-      {stageKey === 'claim_intimation' ? (
-        <CompactDocumentStageHeader
-          step={3}
-          title="Claim Intimation"
-          subtitle="Record dealership, gate-in and estimate details."
-          vehicleNo={vehicleNo}
-          claimNo={claimNo}
-        />
-      ) : (
-        <ExternalClaimStageHeader
-          step={step}
-          title={definition.label}
-          subtitle={subtitle}
-          vehicleNo={vehicleNo}
-          claimNo={claimNo}
-          serviceLabel="Sankalp Managed"
-          onBack={() => router.back()}
-        />
-      )}
-
-      <ClaimIdentityCard
+      <InternalManagedClaimHeader
+        title={definition.label}
         claimNo={claimNo}
         insurerName={insurerName}
         vehicleNo={vehicleNo || 'Vehicle'}
@@ -425,15 +403,4 @@ function displayDate(value: string) {
   if (!value) return '';
   const [y, m, d] = value.split('-');
   return `${d}-${m}-${y}`;
-}
-
-function subtitleFor(key: InternalJourneyStageKey) {
-  if (key === 'claim_intimation') return 'Record dealership, gate-in and estimate details.';
-  if (key === 'work_approval') return 'Record approval and surveyor details';
-  if (key === 'repair_ri') return 'Repair completion and re-inspection details';
-  if (key === 'billing') return 'Record the final workshop bill';
-  if (key === 'delivery_order') return 'Record assessment and delivery order details';
-  if (key === 'vehicle_delivery') return 'Confirm whether the repaired vehicle has been received';
-  if (key === 'payment_encashment') return 'Record final documents and settlement payment';
-  return '';
 }
