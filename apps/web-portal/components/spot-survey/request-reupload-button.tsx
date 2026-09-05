@@ -3,6 +3,7 @@
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { requestSpotSurveyDocumentReupload } from "@/app/claims/[id]/spot-survey-actions";
 
 type Result = { ok: boolean; message?: string };
@@ -108,21 +109,9 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
     };
   }, [documentTitle]);
 
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => { setResult(null); setOpen(true); }}
-        data-document-action="reupload"
-        aria-label="Request reupload"
-        title="Request reupload"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30"
-      >
-        <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
-      </button>
-      {open ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4">
+  const modal = open && typeof document !== "undefined"
+    ? createPortal(
+        <div className="fixed inset-0 z-[100] grid place-items-center bg-[#071D49]/45 px-4 py-5">
           <form
             onSubmit={(event) => {
               event.preventDefault();
@@ -140,7 +129,7 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
                 }
               })();
             }}
-            className="w-full max-w-[520px] rounded-2xl bg-white shadow-xl"
+            className="w-[min(520px,calc(100vw-32px))] max-w-[520px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(7,29,73,0.26)]"
           >
             <div className="border-b border-[#E6EEF7] px-5 py-4">
               <h2 className="text-[18px] font-semibold text-[#071D49]">Reupload Request</h2>
@@ -153,13 +142,30 @@ export function RequestReuploadButton({ claimId, documentId, documentTitle }: { 
               </label>
               {result ? <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? (result.ok ? "Reupload requested." : "Request failed.")}</p> : null}
             </div>
-            <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">
+            <div className="flex items-center justify-between gap-3 border-t border-[#E6EEF7] px-5 py-4">
               <button type="button" onClick={() => setOpen(false)} className="h-10 rounded-lg border border-[#B8C5D6] px-6 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button>
               <button type="submit" disabled={pending || Boolean(result?.ok)} className="h-10 rounded-lg bg-[#D08700] px-7 text-[13px] font-semibold text-white disabled:opacity-60">{pending ? "Sending..." : result?.ok ? "Requested" : "Send Reupload Request"}</button>
             </div>
           </form>
-        </div>
-      ) : null}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => { setResult(null); setOpen(true); }}
+        data-document-action="reupload"
+        aria-label="Request reupload"
+        title="Request reupload"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30"
+      >
+        <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
+      </button>
+      {modal}
     </>
   );
 }
