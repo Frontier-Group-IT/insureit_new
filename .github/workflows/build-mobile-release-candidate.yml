@@ -6,6 +6,7 @@ on:
       - feat/customer-native-release-readiness
     paths:
       - '.github/workflows/build-mobile-release-candidate.yml'
+      - 'apps/mobile-app/app.json'
   workflow_dispatch:
 
 permissions:
@@ -18,7 +19,7 @@ jobs:
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
     steps:
       - name: Check out release branch
@@ -62,19 +63,29 @@ jobs:
             process.exit(1);
           }
           const plugins = expo.plugins || [];
-          const hasAudio = plugins.some((plugin) => plugin === 'expo-audio' || (Array.isArray(plugin) && plugin[0] === 'expo-audio'));
-          if (!hasAudio) {
+          const audioPlugin = plugins.find((plugin) => plugin === 'expo-audio' || (Array.isArray(plugin) && plugin[0] === 'expo-audio'));
+          if (!audioPlugin) {
             console.error('Refusing production build: expo-audio plugin is missing.');
             process.exit(1);
           }
+          if (!Array.isArray(audioPlugin) || audioPlugin[1]?.recordAudioAndroid !== true) {
+            console.error('Refusing production build: expo-audio Android recording is not enabled.');
+            process.exit(1);
+          }
+          if (audioPlugin[1]?.enableBackgroundPlayback !== false) {
+            console.error('Refusing production build: expo-audio background playback must be explicitly disabled.');
+            process.exit(1);
+          }
           console.log(`Customer production runtime: ${expo.version}`);
+          console.log('Background media playback: disabled');
           NODE
 
-      - name: Require Expo token
+      - name: Require Expo token and Supabase public key
         shell: bash
         run: |
           set -euo pipefail
           [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY is missing." >&2; exit 1; }
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -127,6 +138,7 @@ jobs:
             echo "- Android package: \`com.insureit.mobile\`"
             echo "- Runtime/app version: \`0.3.0\`"
             echo "- EAS profile: \`production\`"
+            echo "- Background media playback: disabled"
             echo "- Output: Google Play Android App Bundle (AAB)"
             echo "- Intended first destination: Google Play Internal testing"
             echo "- Public production rollout: only after device QA passes"
