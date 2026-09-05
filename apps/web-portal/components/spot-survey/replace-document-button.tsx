@@ -22,7 +22,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
         onClick={() => { setResult(null); setOpen(true); }}
         {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : {})}
         className={isReplaceAction
-          ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#D15B5B] bg-white text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30"
+          ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30"
           : "h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]"}
       >
         {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : actionLabel}

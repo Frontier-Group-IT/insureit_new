@@ -36,7 +36,7 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
         data-document-action="view"
         aria-label="View details"
         title="View details"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#174EA6] bg-white text-[#174EA6] transition hover:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#174EA6] transition hover:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30"
       >
         <Eye aria-hidden="true" size={17} strokeWidth={2} />
       </button>
