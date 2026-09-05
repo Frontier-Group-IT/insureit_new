@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, type ImageSourcePropType, StyleSheet, Text, V
 import { Ionicons } from '@expo/vector-icons';
 
 import { PartnerButton } from '@/components/ui/partner-button';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -34,6 +35,7 @@ export function PartnerStateView({
     );
   }
 
+  const resolvedAsset = asset ?? defaultAsset(state);
   const resolvedIcon = icon
     ?? (state === 'offline'
       ? 'cloud-offline-outline'
@@ -44,11 +46,11 @@ export function PartnerStateView({
           : 'file-tray-outline');
 
   return (
-    <View style={[styles.base, asset ? styles.assetBase : null]} accessibilityLiveRegion="polite">
-      {asset ? (
+    <View style={[styles.base, resolvedAsset ? styles.assetBase : null]} accessibilityLiveRegion="polite">
+      {resolvedAsset ? (
         <View style={styles.assetTitleRow}>
           <View style={[styles.icon, styles.assetIcon]}>
-            <Image source={asset} style={styles.assetImage} resizeMode="contain" />
+            <Image source={resolvedAsset} style={styles.assetImage} resizeMode="contain" />
           </View>
           <Text style={[styles.title, styles.assetTitle]}>{title || defaultTitle(state)}</Text>
         </View>
@@ -60,7 +62,7 @@ export function PartnerStateView({
           <Text style={styles.title}>{title || defaultTitle(state)}</Text>
         </>
       )}
-      {message ? <Text style={[styles.message, asset ? styles.assetMessage : null]}>{message}</Text> : null}
+      {message ? <Text style={[styles.message, resolvedAsset ? styles.assetMessage : null]}>{message}</Text> : null}
       {actionLabel && onAction ? (
         <View style={styles.action}>
           <PartnerButton label={actionLabel} onPress={onAction} variant="secondary" fullWidth={false} />
@@ -68,6 +70,13 @@ export function PartnerStateView({
       ) : null}
     </View>
   );
+}
+
+function defaultAsset(state: Exclude<Parameters<typeof PartnerStateView>[0]['state'], 'loading'>) {
+  if (state === 'offline') return PartnerAssets.emptyStates.offline;
+  if (state === 'error') return PartnerAssets.emptyStates.validationError;
+  if (state === 'unauthorized') return PartnerAssets.emptyStates.incompleteDetails;
+  return undefined;
 }
 
 function defaultTitle(state: Exclude<Parameters<typeof PartnerStateView>[0]['state'], 'loading'>) {
