@@ -2,6 +2,7 @@
 
 import { Eye } from "lucide-react";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import type { SpotSurveyDocument, SpotSurveyVerification } from "./spot-survey-workspace-v2";
 
 type DetailRow = { label: string; dateKey?: string; statusKey?: string; valueKey?: string };
@@ -27,6 +28,27 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
   const [open, setOpen] = useState(false);
   const details = verification.details ?? {};
   const verificationType = verification.verification_type;
+  const modal = open && typeof window !== "undefined" ? createPortal(
+    <div className="fixed inset-0 z-[100] grid place-items-center bg-[#071D49]/45 px-4 py-5">
+      <div className="flex max-h-[92vh] w-[min(760px,calc(100vw-32px))] min-w-0 flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(7,29,73,0.26)]">
+        <div className="flex items-start justify-between gap-4 border-b border-[#E6EEF7] px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="text-[20px] font-semibold text-[#071D49]">{title} - Verification Details</h2>
+            <p className="mt-1 truncate text-[12px] text-[#526178]">{document.file_name}</p>
+          </div>
+          <button type="button" onClick={() => setOpen(false)} className="shrink-0 text-[28px] leading-none text-[#071D49]">×</button>
+        </div>
+        <div className="min-w-0 overflow-y-auto px-5 py-4">
+          <VerificationSummary verification={verification} />
+          {verificationType === "rc" ? <VerificationTable title="Documents Validity Check" rows={rcRows} details={details} /> : null}
+          {verificationType === "insurance" ? <VerificationTable title="Insurance Verification" rows={insuranceRows} details={details} /> : null}
+          {verificationType !== "rc" && verificationType !== "insurance" ? <GenericDetails details={details} /> : null}
+          <Remarks details={details} />
+        </div>
+      </div>
+    </div>,
+    globalThis.document.body,
+  ) : null;
 
   return (
     <>
@@ -40,26 +62,7 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
       >
         <Eye aria-hidden="true" size={17} strokeWidth={2} />
       </button>
-      {open ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4 py-5">
-          <div className="flex max-h-[92vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(7,29,73,0.26)]">
-            <div className="flex items-start justify-between gap-4 border-b border-[#E6EEF7] px-5 py-4">
-              <div>
-                <h2 className="text-[20px] font-semibold text-[#071D49]">{title} - Verification Details</h2>
-                <p className="mt-1 text-[12px] text-[#526178]">{document.file_name}</p>
-              </div>
-              <button type="button" onClick={() => setOpen(false)} className="text-[28px] leading-none text-[#071D49]">×</button>
-            </div>
-            <div className="overflow-y-auto px-5 py-4">
-              <VerificationSummary verification={verification} />
-              {verificationType === "rc" ? <VerificationTable title="Documents Validity Check" rows={rcRows} details={details} /> : null}
-              {verificationType === "insurance" ? <VerificationTable title="Insurance Verification" rows={insuranceRows} details={details} /> : null}
-              {verificationType !== "rc" && verificationType !== "insurance" ? <GenericDetails details={details} /> : null}
-              <Remarks details={details} />
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {modal}
     </>
   );
 }
