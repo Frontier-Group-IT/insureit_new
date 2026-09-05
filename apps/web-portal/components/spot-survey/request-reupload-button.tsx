@@ -2,26 +2,98 @@
 
 import { RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { requestSpotSurveyDocumentReupload } from "@/app/claims/[id]/spot-survey-actions";
 
 type Result = { ok: boolean; message?: string };
 
 export function RequestReuploadButton({ claimId, documentId, documentTitle }: { claimId: string; documentId: string; documentTitle: string }) {
   const router = useRouter();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
 
+  useEffect(() => {
+    const button = triggerRef.current;
+    if (!button) return;
+
+    const actions = button.parentElement as HTMLElement | null;
+    const content = actions?.parentElement as HTMLElement | null;
+    const row = content?.parentElement as HTMLElement | null;
+
+    if (actions && content && row) {
+      row.style.position = "relative";
+      content.style.paddingRight = "112px";
+      actions.style.position = "absolute";
+      actions.style.right = "8px";
+      actions.style.top = "50%";
+      actions.style.transform = "translateY(-50%)";
+      actions.style.display = "flex";
+      actions.style.width = "auto";
+      actions.style.gap = "4px";
+      actions.style.marginTop = "0";
+    }
+
+    const article = button.closest("article") as HTMLElement | null;
+    if (!article) return;
+
+    const details = Array.from(article.children).find((element) => element.tagName === "DETAILS") as HTMLDetailsElement | undefined;
+    if (!details) return;
+
+    const header = article.firstElementChild as HTMLElement | null;
+    const titleGroup = header?.firstElementChild as HTMLElement | null;
+    if (!header || !titleGroup) return;
+
+    let badge = article.querySelector<HTMLElement>("[data-multi-file-count]");
+    if (!badge) {
+      badge = header.lastElementChild as HTMLElement | null;
+      if (!badge || badge === titleGroup) return;
+      badge.dataset.multiFileCount = "true";
+      titleGroup.appendChild(badge);
+    }
+
+    const summary = details.querySelector<HTMLElement>(":scope > summary");
+    if (!summary) return;
+
+    badge.className = "inline-flex shrink-0 cursor-pointer items-center rounded-full border border-[#B9D2FF] bg-[#EEF5FF] px-2 py-0.5 text-[9px] font-semibold text-[#174EA6] transition hover:bg-[#E4EFFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25";
+    badge.setAttribute("role", "button");
+    badge.setAttribute("tabindex", "0");
+    badge.setAttribute("aria-expanded", String(details.open));
+    badge.setAttribute("aria-label", `Show ${badge.textContent?.trim() || "uploaded files"}`);
+    badge.setAttribute("title", "Show uploaded files");
+
+    summary.style.display = "none";
+    details.style.marginTop = details.open ? "8px" : "0";
+
+    const toggleFiles = () => {
+      details.open = !details.open;
+      details.style.marginTop = details.open ? "8px" : "0";
+      badge?.setAttribute("aria-expanded", String(details.open));
+    };
+
+    badge.onclick = (event) => {
+      event.preventDefault();
+      toggleFiles();
+    };
+    badge.onkeydown = (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleFiles();
+      }
+    };
+  }, []);
+
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => { setResult(null); setOpen(true); }}
         data-document-action="reupload"
         aria-label="Request reupload"
         title="Request reupload"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#D08700] bg-white text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30"
       >
         <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
       </button>
