@@ -1,17 +1,37 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppDatePicker } from '@/components/design-system';
-import { Message, Screen, TextField } from '@/components/ui';
+import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
+import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { Screen, TextField } from '@/components/ui';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { recordClaimEvent } from '@/lib/claim-notifications';
 import { customerAccountTitle, getOperationalCustomerContexts, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
-import { palette, roleTheme } from '@/lib/theme';
-import type { IndiaLocation, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+import { palette } from '@/lib/theme';
+import type { InsuranceCompany, Policy, Vehicle } from '@/lib/types';
+
+type TimeTarget = 'incident' | 'intimation' | null;
+type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'accident_photo' | 'accident_video' | 'bulk';
+type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null };
+type DeleteTarget = { key: DocumentKey; title: string } | null;
+
+const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
+const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
+  rc: 'RC Copy',
+  insurance: 'Insurance Copy',
+  licence: 'Driver Licence',
+  gr: 'GR / Load Bill',
+  accident_photo: 'Accident Photo',
+  accident_video: 'Accident Video',
+};
+const BULK_DOCUMENT_TYPE = 'Spot Intimation Attachment';
 
 export default function ReportAccidentScreen() {
   const router = useRouter();
@@ -25,23 +45,24 @@ export default function ReportAccidentScreen() {
   const [selectedVehicleId, setSelectedVehicleId] = useState(vehicleId ?? '');
 
   const [incidentDate, setIncidentDate] = useState('');
+  const [incidentTime, setIncidentTime] = useState('');
+  const [intimationDate, setIntimationDate] = useState('');
+  const [intimationTime, setIntimationTime] = useState('');
   const [driverName, setDriverName] = useState('');
   const [driverPhone, setDriverPhone] = useState('');
+  const [location, setLocation] = useState('');
+  const [locationNotice, setLocationNotice] = useState('');
+  const [loadingLocation, setLoadingLocation] = useState(false);
 
-  const [address1, setAddress1] = useState('');
-  const [street, setStreet] = useState('');
-  const [city, setCity] = useState('');
-  const [stateName, setStateName] = useState('');
-  const [pinCode, setPinCode] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<IndiaLocation[]>([]);
-  const [selectedLocation, setSelectedLocation] = useState<IndiaLocation | null>(null);
-  const [searchingLocations, setSearchingLocations] = useState(false);
-  const [coordinates, setCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [documents, setDocuments] = useState<Record<DocumentKey, PickedDocument[]>>({
+    rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [],
+  });
+  const [uploadingDocuments, setUploadingDocuments] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
 
   const [message, setMessage] = useState('');
-  const [locationMessage, setLocationMessage] = useState('');
-  const [loadingLocation, setLoadingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [timeTarget, setTimeTarget] = useState<TimeTarget>(null);
   const [expiryWarningOpen, setExpiryWarningOpen] = useState(false);
   const [expiryWarningAcknowledged, setExpiryWarningAcknowledged] = useState(false);
 
@@ -54,90 +75,57 @@ export default function ReportAccidentScreen() {
       const ids = nextContexts.map((context) => context.customer_id);
       setContexts(nextContexts);
       setSelectedCustomerId(nextContexts[0]?.customer_id ?? '');
-      if (ids.length) {
-        const [vehicleResult, policyResult, insurerResult] = await Promise.all([
-          supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no'),
-          supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: false }),
-          supabase.from('insurance_companies').select('*'),
-        ]);
+      if (!ids.length) return;
 
-        const nextVehicles = vehicleResult.data ?? [];
-        setVehicles(nextVehicles);
-        setPolicies(policyResult.data ?? []);
-        setInsurers(insurerResult.data ?? []);
+      const [vehicleResult, policyResult, insurerResult] = await Promise.all([
+        supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no'),
+        supabase.from('policies').select('*').in('customer_id', ids).order('end_date', { ascending: false }),
+        supabase.from('insurance_companies').select('*'),
+      ]);
 
-        if (vehicleId && nextVehicles.some((vehicle) => vehicle.id === vehicleId)) {
-          const routeVehicle = nextVehicles.find((vehicle) => vehicle.id === vehicleId);
-          setSelectedCustomerId(routeVehicle?.customer_id ?? nextContexts[0]?.customer_id ?? '');
-          setSelectedVehicleId(vehicleId);
-        } else if (!vehicleId && nextVehicles.length === 1) {
-          setSelectedVehicleId(nextVehicles[0].id);
-          setSelectedCustomerId(nextVehicles[0].customer_id);
-        }
+      const nextVehicles = vehicleResult.data ?? [];
+      setVehicles(nextVehicles);
+      setPolicies(policyResult.data ?? []);
+      setInsurers(insurerResult.data ?? []);
+
+      if (vehicleId && nextVehicles.some((vehicle) => vehicle.id === vehicleId)) {
+        const routeVehicle = nextVehicles.find((vehicle) => vehicle.id === vehicleId);
+        setSelectedCustomerId(routeVehicle?.customer_id ?? nextContexts[0]?.customer_id ?? '');
+        setSelectedVehicleId(vehicleId);
+      } else if (nextVehicles.length === 1) {
+        setSelectedVehicleId(nextVehicles[0].id);
+        setSelectedCustomerId(nextVehicles[0].customer_id);
       }
     }
 
     void load();
   }, [router, vehicleId]);
 
-  useEffect(() => {
-    const query = city.trim();
-
-    if (query.length < 2 || (selectedLocation && selectedLocation.city_name === city)) {
-      setLocationSuggestions([]);
-      setSearchingLocations(false);
-      return;
-    }
-
-    let active = true;
-    setSearchingLocations(true);
-
-    const timer = setTimeout(async () => {
-      const { data, error } = await supabase
-        .from('india_locations')
-        .select('id, pincode, city_name, district, state_name, created_at, updated_at')
-        .or(`city_name.ilike.${query}%,district.ilike.${query}%`)
-        .order('city_name', { ascending: true })
-        .order('pincode', { ascending: true })
-        .limit(8);
-
-      if (!active) return;
-      if (error) {
-        console.warn('Incident city autocomplete failed', error);
-        setLocationSuggestions([]);
-      } else {
-        setLocationSuggestions((data ?? []) as IndiaLocation[]);
-      }
-      setSearchingLocations(false);
-    }, 260);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [city, selectedLocation]);
-
-  const accountVehicles = useMemo(() => vehicles.filter((item) => item.customer_id === selectedCustomerId), [selectedCustomerId, vehicles]);
-  const selectedVehicle = useMemo(() => accountVehicles.find((item) => item.id === selectedVehicleId) ?? null, [accountVehicles, selectedVehicleId]);
-
+  const accountVehicles = useMemo(
+    () => vehicles.filter((item) => item.customer_id === selectedCustomerId),
+    [selectedCustomerId, vehicles],
+  );
+  const selectedVehicle = useMemo(
+    () => accountVehicles.find((item) => item.id === selectedVehicleId) ?? null,
+    [accountVehicles, selectedVehicleId],
+  );
   const selectedPolicy = useMemo(() => {
     if (!selectedVehicle) return null;
-    const routedPolicy = policyId ? policies.find((item) => item.id === policyId && item.vehicle_id === selectedVehicle.id) : null;
-    return routedPolicy ?? policies.find((item) => item.vehicle_id === selectedVehicle.id) ?? null;
+    const routed = policyId ? policies.find((item) => item.id === policyId && item.vehicle_id === selectedVehicle.id) : null;
+    return routed ?? policies.find((item) => item.vehicle_id === selectedVehicle.id) ?? null;
   }, [policies, policyId, selectedVehicle]);
-
-  useEffect(() => {
-    setExpiryWarningAcknowledged(false);
-  }, [incidentDate, selectedPolicy?.id]);
-
   const selectedInsurer = useMemo(() => {
     if (!selectedPolicy) return null;
     return insurers.find((item) => item.id === selectedPolicy.insurance_company_id) ?? null;
   }, [insurers, selectedPolicy]);
+  const selectedContext = useMemo(
+    () => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null,
+    [contexts, selectedCustomerId],
+  );
 
-  const showLocationSuggestions = city.trim().length >= 2 && !(selectedLocation && selectedLocation.city_name === city);
-  const addressText = buildAddress({ address1, street, city, stateName, pinCode });
-  const selectedContext = useMemo(() => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null, [contexts, selectedCustomerId]);
+  useEffect(() => {
+    setExpiryWarningAcknowledged(false);
+  }, [incidentDate, selectedPolicy?.id]);
 
   function selectAccount(customerId: string) {
     setSelectedCustomerId(customerId);
@@ -145,40 +133,146 @@ export default function ReportAccidentScreen() {
     setSelectedVehicleId(firstVehicle?.id ?? '');
   }
 
-  function selectVehicle(vehicleIdValue: string) {
-    setSelectedVehicleId(vehicleIdValue);
-    const vehicle = vehicles.find((item) => item.id === vehicleIdValue);
+  function selectVehicle(nextVehicleId: string) {
+    setSelectedVehicleId(nextVehicleId);
+    const vehicle = vehicles.find((item) => item.id === nextVehicleId);
     if (vehicle) setSelectedCustomerId(vehicle.customer_id);
+  }
+
+  async function pickDocument(key: Exclude<DocumentKey, 'bulk'>) {
+    setMessage('');
+    const isMedia = key === 'accident_photo' || key === 'accident_video';
+    const type = key === 'accident_video' ? ['video/*'] : key === 'accident_photo' ? ['image/*'] : ['application/pdf', 'image/*'];
+    const result = await DocumentPicker.getDocumentAsync({ type, multiple: isMedia, copyToCacheDirectory: true });
+    if (result.canceled || !result.assets?.length) return;
+
+    const picked = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const limit = key === 'accident_video' ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
+    const label = key === 'accident_video' ? '50 MB' : '5 MB';
+    const tooLarge = picked.find((file) => file.size != null && file.size > limit);
+    if (tooLarge) return setMessage(`${tooLarge.name} is larger than ${label}. Please choose a smaller file.`);
+
+    setDocuments((current) => ({ ...current, [key]: isMedia ? [...current[key], ...picked] : [picked[0]] }));
+  }
+
+  async function pickBulkDocuments() {
+    setMessage('');
+    const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
+    if (result.canceled || !result.assets?.length) return;
+    const picked = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const tooLarge = picked.find((file) => file.size != null && file.size > MAX_UPLOAD_SIZE_BYTES);
+    if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose a smaller file.`);
+    setDocuments((current) => ({ ...current, bulk: [...current.bulk, ...picked] }));
+  }
+
+  function requestDelete(key: DocumentKey, title: string) {
+    setDeleteTarget({ key, title });
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    setDocuments((current) => ({ ...current, [deleteTarget.key]: [] }));
+    setDeleteTarget(null);
+  }
+
+  async function captureCurrentLocation() {
+    if (loadingLocation) return;
+    setLocationNotice('');
+    setLoadingLocation(true);
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (permission.status !== Location.PermissionStatus.GRANTED) {
+        setLocationNotice('Location permission is not available. You can still enter the location manually.');
+        return;
+      }
+      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      let resolved = `${current.coords.latitude.toFixed(6)}, ${current.coords.longitude.toFixed(6)}`;
+      try {
+        const [address] = await Location.reverseGeocodeAsync({ latitude: current.coords.latitude, longitude: current.coords.longitude });
+        if (address) {
+          const parts = [address.name, address.street, address.district, address.city || address.subregion, address.region, address.postalCode]
+            .map((part) => part?.trim())
+            .filter((part): part is string => Boolean(part));
+          if (parts.length) resolved = Array.from(new Set(parts)).join(', ');
+        }
+      } catch {
+        // Keep coordinates when reverse geocoding is unavailable.
+      }
+      setLocation(resolved);
+      setLocationNotice('Current location added. You can edit it if needed.');
+    } catch {
+      setLocationNotice('Could not fetch your current location. Please try again or enter it manually.');
+    } finally {
+      setLoadingLocation(false);
+    }
+  }
+
+  async function uploadPendingDocuments(claimId: string, customerId: string) {
+    const queued = [
+      ...documents.rc.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.rc, file })),
+      ...documents.insurance.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.insurance, file })),
+      ...documents.licence.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.licence, file })),
+      ...documents.gr.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.gr, file })),
+      ...documents.accident_photo.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.accident_photo, file })),
+      ...documents.accident_video.map((file) => ({ type: DOCUMENT_TYPE_BY_KEY.accident_video, file })),
+      ...documents.bulk.map((file) => ({ type: BULK_DOCUMENT_TYPE, file })),
+    ];
+    if (!queued.length) return { saved: 0, total: 0 };
+
+    const session = await getCurrentSession();
+    if (!session?.user) return { saved: 0, total: queued.length };
+    setUploadingDocuments(true);
+    let saved = 0;
+    try {
+      for (const item of queued) {
+        const extension = item.file.name.includes('.') ? item.file.name.split('.').pop() : 'bin';
+        const storagePath = `${customerId}/${claimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+        try {
+          const response = await fetch(item.file.uri);
+          const body = await response.arrayBuffer();
+          const limit = item.type === DOCUMENT_TYPE_BY_KEY.accident_video ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
+          if (body.byteLength > limit) continue;
+          const uploaded = await supabase.storage.from('claim-documents').upload(storagePath, body, {
+            contentType: item.file.mimeType ?? 'application/octet-stream',
+            upsert: false,
+          });
+          if (uploaded.error) continue;
+          const record = await supabase.from('claim_documents').insert({
+            claim_id: claimId,
+            customer_id: customerId,
+            document_type: item.type,
+            file_name: item.file.name,
+            storage_bucket: 'claim-documents',
+            storage_path: storagePath,
+            mime_type: item.file.mimeType ?? null,
+            file_size: body.byteLength,
+            uploaded_by: session.user.id,
+          });
+          if (!record.error) saved += 1;
+        } catch {
+          // Continue with the remaining selected documents.
+        }
+      }
+    } finally {
+      setUploadingDocuments(false);
+    }
+    return { saved, total: queued.length };
   }
 
   async function submit(options?: { allowExpiredPolicy?: boolean }) {
     setMessage('');
+    if (!selectedVehicle || !selectedPolicy) return setMessage('Vehicle and active policy details are required.');
+    if (!driverName.trim() || !driverPhone.trim()) return setMessage('Enter driver name and mobile number.');
+    if (!selectedContext) return setMessage('Select the customer account for this claim.');
 
-    if (!selectedVehicle || !selectedPolicy) {
-      setMessage('Vehicle and active policy details are required.');
-      return;
-    }
-
-    if (!driverName.trim() || !driverPhone.trim()) {
-      setMessage('Enter driver name and mobile number.');
-      return;
-    }
-
-    const incidentAt = buildIncidentDate(incidentDate);
-    if (!incidentAt) {
-      setMessage('Select the incident date.');
-      return;
-    }
-
-    if (isFutureIncidentDate(incidentAt)) {
-      setMessage('Loss date cannot be in the future. Select today or a past date.');
-      return;
-    }
-
-    if (!addressText) {
-      setMessage('Enter the complete incident address.');
-      return;
-    }
+    const incidentAt = parseDateTime(incidentDate, incidentTime);
+    const spotIntimationAt = parseDateTime(intimationDate, intimationTime);
+    if (!incidentAt) return setMessage('Select the accident date and time.');
+    if (!spotIntimationAt) return setMessage('Select the spot intimation date and time.');
+    if (incidentAt.getTime() > Date.now()) return setMessage('Accident Date / Time cannot be in the future.');
+    if (spotIntimationAt.getTime() > Date.now()) return setMessage('Spot Intimation Date / Time cannot be in the future.');
+    if (spotIntimationAt.getTime() < incidentAt.getTime()) return setMessage('Spot Intimation Date / Time cannot be earlier than Accident Date / Time.');
+    if (!location.trim()) return setMessage('Enter the incident location.');
 
     const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(selectedPolicy, incidentAt);
     if (policyExpiredBeforeIncident && !options?.allowExpiredPolicy && !expiryWarningAcknowledged) {
@@ -186,13 +280,7 @@ export default function ReportAccidentScreen() {
       return;
     }
 
-    if (!selectedContext) {
-      setMessage('Select the customer account for this claim.');
-      return;
-    }
-
     setSubmitting(true);
-
     try {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
@@ -205,24 +293,19 @@ export default function ReportAccidentScreen() {
         insurance_company_id: selectedPolicy.insurance_company_id,
         current_status: 'Initial Documents Pending' as const,
         accident_at: incidentAt.toISOString(),
-        accident_location: addressText || coordinatesToText(coordinates),
-        accident_description: buildIncidentDescription({
-          driverName,
-          driverPhone,
-          coordinates,
-          policyExpiredBeforeIncident,
-          policyEndDate: selectedPolicy.end_date,
-          incidentAt,
-        }),
+        spot_intimation_at: spotIntimationAt.toISOString(),
+        accident_location: location.trim(),
+        accident_description: `Driver: ${driverName.trim()}\nDriver phone: ${driverPhone.trim()}${policyExpiredBeforeIncident ? `\nPolicy expiry warning: Policy expired on ${formatDate(selectedPolicy.end_date)} before incident date ${formatDate(incidentAt.toISOString())}.` : ''}`,
         estimated_loss: null,
         created_by: session.user.id,
       };
 
       const { data: claim, error } = await supabase.from('claims').insert(payload).select('*').single();
+      if (error || !claim) return setMessage(mapSubmitError(error));
 
-      if (error || !claim) {
-        setMessage(mapSubmitError(error));
-        return;
+      const persisted = await uploadPendingDocuments(claim.id, claim.customer_id);
+      if (persisted.saved !== persisted.total) {
+        setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved. You can add the remaining documents on the next screen.`);
       }
 
       try {
@@ -235,88 +318,43 @@ export default function ReportAccidentScreen() {
           changedBy: session.user.id,
           title: `New claim ${claim.claim_no}`,
         });
-      } catch (eventError) {
-        console.warn('Claim event logging skipped after customer claim creation', eventError);
+      } catch {
+        // Claim creation must not fail if notification logging is unavailable.
       }
 
       router.replace({ pathname: '/customer/upload-documents', params: { claimId: claim.id } });
-    } catch (error) {
-      console.error('Report incident submit failed', { error, selectedContext });
+    } catch {
       setMessage('We could not submit the incident report right now. Please try again.');
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function captureLocation() {
-    setLocationMessage('');
-    setLoadingLocation(true);
-
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-
-      if (permission.status !== Location.PermissionStatus.GRANTED) {
-        setLocationMessage('Location permission not available. Please enter address manually.');
-        return;
-      }
-
-      const current = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const nextCoordinates = { latitude: current.coords.latitude, longitude: current.coords.longitude };
-      setCoordinates(nextCoordinates);
-
-      const address = await reverseGeocode(nextCoordinates.latitude, nextCoordinates.longitude);
-      if (address) {
-        setAddress1(address.address1);
-        setStreet(address.street);
-        setCity(address.city);
-        setStateName(address.state);
-        setPinCode(address.pinCode);
-        setSelectedLocation(null);
-        setLocationSuggestions([]);
-        setLocationMessage('GPS location fetched. Please verify the address before submitting.');
-      } else {
-        setAddress1(coordinatesToText(nextCoordinates));
-        setLocationMessage('GPS coordinates fetched. Please complete the address manually.');
-      }
-    } catch (error) {
-      console.error('Report incident location capture failed', { error });
-      setLocationMessage('Could not fetch GPS location. Please enter address manually.');
-    } finally {
-      setLoadingLocation(false);
-    }
-  }
-
-  function handleCityChange(value: string) {
-    setCity(value);
-    setSelectedLocation(null);
-  }
-
-  function selectLocation(location: IndiaLocation) {
-    setSelectedLocation(location);
-    setCity(location.city_name);
-    setStateName(location.state_name);
-    setPinCode(location.pincode);
-    setLocationSuggestions([]);
-  }
+  const mediaStatus = (key: 'accident_photo' | 'accident_video') => {
+    const count = documents[key].length;
+    if (!count) return undefined;
+    return `${count} ${key === 'accident_photo' ? 'photo' : 'video'}${count === 1 ? '' : 's'} ready`;
+  };
 
   return (
-    <Screen title="Report Incident" showTitleHeader={false}>
-      <View style={styles.pageIndicator}>
-        <Text style={styles.pageTitle}>Report Incident</Text>
-        <Text style={styles.pageSub}>Vehicle, driver and incident address details</Text>
-      </View>
-
-      {message ? <Message type="error">{message}</Message> : null}
+    <Screen title="Spot Intimation" showTitleHeader={false}>
+      <ExternalClaimStageHeader
+        step={1}
+        title="Spot Intimation"
+        subtitle="Start tracking an incident."
+        vehicleNo={selectedVehicle?.vehicle_no ?? undefined}
+        onBack={() => router.back()}
+      />
 
       {contexts.length > 1 ? <AccountSelector contexts={contexts} selectedCustomerId={selectedCustomerId} onSelect={selectAccount} /> : null}
 
       {accountVehicles.length > 1 ? (
         <View style={styles.vehiclePicker}>
-          <Text style={styles.pickerLabel}>Vehicle</Text>
+          <Text style={styles.selectorLabel}>Vehicle</Text>
           {accountVehicles.map((vehicle) => {
             const active = vehicle.id === selectedVehicleId;
             return (
-              <Pressable key={vehicle.id} accessibilityRole="button" onPress={() => selectVehicle(vehicle.id)} style={[styles.vehicleOption, active && styles.vehicleOptionActive]}>
+              <Pressable key={vehicle.id} onPress={() => selectVehicle(vehicle.id)} style={[styles.vehicleOption, active && styles.vehicleOptionActive]}>
                 <Text style={[styles.vehicleOptionText, active && styles.vehicleOptionTextActive]}>{vehicle.vehicle_no}</Text>
               </Pressable>
             );
@@ -324,382 +362,284 @@ export default function ReportAccidentScreen() {
         </View>
       ) : null}
 
-      {selectedVehicle ? (
-        <View style={styles.vehicleSummary}>
-          <View style={styles.summaryAccent} />
+      {selectedPolicy && selectedVehicle ? (
+        <ClaimIdentityCard
+          claimNo="New claim"
+          insurerName={selectedInsurer?.name ?? 'Insurance company'}
+          vehicleNo={selectedVehicle.vehicle_no}
+          policyNo={selectedPolicy.policy_no}
+          vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')}
+        />
+      ) : null}
 
-          <View style={styles.summaryTop}>
-            <View>
-              <Text style={styles.vehicleNo}>{selectedVehicle.vehicle_no}</Text>
-              <Text style={styles.vehicleMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model, selectedVehicle.vehicle_type].filter(Boolean).join(' • ') || 'Vehicle'}</Text>
-            </View>
+      <ExternalClaimErrorPopup visible={Boolean(message)} message={message} title="Alert" onClose={() => setMessage('')} />
 
-            <View style={[styles.policyStatus, selectedPolicy ? styles.policyStatusGood : styles.policyStatusBad]}>
-              <Text style={[styles.policyStatusText, selectedPolicy ? styles.policyStatusTextGood : styles.policyStatusTextBad]}>{selectedPolicy ? 'Policy Active' : 'Policy Missing'}</Text>
-            </View>
-          </View>
-
-          <View style={styles.summaryInfo}>
-            <InfoPair leftLabel="Policy" leftValue={selectedPolicy?.policy_no ?? '-'} rightLabel="Expiry" rightValue={selectedPolicy ? formatDate(selectedPolicy.end_date) : '-'} />
-            <InfoPair leftLabel="Insurer" leftValue={selectedInsurer?.name ?? '-'} rightLabel="Type" rightValue={selectedPolicy?.policy_type ?? '-'} />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.vehicleMissing}>
-          <MaterialCommunityIcons name="truck-alert-outline" size={28} color="#C83272" />
-          <Text style={styles.vehicleMissingText}>Vehicle details are not available. Please go back and select a vehicle.</Text>
-        </View>
-      )}
-
-      <View style={styles.formCard}>
-        <SectionHeader icon="account-tie-outline" title="Driver Details" subtitle="Who was driving the vehicle?" />
-
-        <View style={styles.fieldStack}>
-          <TextField label="Driver Name" value={driverName} onChangeText={setDriverName} />
-          <TextField label="Driver Mobile No." keyboardType="phone-pad" value={driverPhone} onChangeText={setDriverPhone} />
-          <AppDatePicker label="Incident Date" value={incidentDate} onChange={setIncidentDate} formatDisplay={formatDisplayDate} maxDate={todayIsoDate()} />
-        </View>
-      </View>
-
-      <View style={styles.formCard}>
-        <SectionHeader icon="map-marker-radius-outline" title="Incident Address" subtitle="Enter complete address manually. GPS is optional." />
-
-        {locationMessage ? <Message type="info">{locationMessage}</Message> : null}
-
-        <View style={styles.addressMode}>
-          <View style={styles.manualBadge}>
-            <MaterialCommunityIcons name="pencil-outline" size={16} color={palette.navy} />
-            <Text style={styles.manualBadgeText}>Manual Entry</Text>
-          </View>
-
-          <Pressable accessibilityRole="button" onPress={() => void captureLocation()} disabled={loadingLocation} style={styles.gpsButton}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={16} color={roleTheme.customer.accent} />
-            <Text style={styles.gpsButtonText}>{loadingLocation ? 'Fetching...' : 'Fetch GPS Location'}</Text>
+      <ClaimFormSection title="Incident Details" subtitle="Accident date, time and first insurer intimation" iconImage={require('../../assets/claims/claim-intimation.png')}>
+        <AppDatePicker label="Accident Date *" value={incidentDate} onChange={setIncidentDate} maxDate={todayIsoDate()} />
+        <TimePickerField label="Accident Time *" value={incidentTime} onPress={() => setTimeTarget('incident')} />
+        <View style={styles.subsection}><Text style={styles.subsectionTitle}>Spot Intimation</Text></View>
+        <AppDatePicker label="Spot Intimation Date *" value={intimationDate} onChange={setIntimationDate} maxDate={todayIsoDate()} />
+        <TimePickerField label="Spot Intimation Time *" value={intimationTime} onPress={() => setTimeTarget('intimation')} />
+        <View style={styles.gap} />
+        <TextField label="Driver Name *" value={driverName} onChangeText={setDriverName} />
+        <View style={styles.gap} />
+        <TextField label="Driver Number *" value={driverPhone} onChangeText={setDriverPhone} keyboardType="phone-pad" />
+        <View style={styles.gap} />
+        <View style={styles.locationFieldWrap}>
+          <TextField label="Location *" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(''); }} />
+          <Pressable disabled={loadingLocation} onPress={() => void captureCurrentLocation()} style={styles.gpsInlineAction}>
+            <MaterialCommunityIcons name="crosshairs-gps" size={16} color="#0A43A3" />
+            <Text style={styles.gpsInlineText}>{loadingLocation ? 'Locating...' : 'Use Current Location'}</Text>
           </Pressable>
         </View>
+        {locationNotice ? <Text style={styles.locationNotice}>{locationNotice}</Text> : null}
+      </ClaimFormSection>
 
-        <View style={styles.fieldStack}>
-          <TextField label="Address Line 1" value={address1} onChangeText={setAddress1} />
-          <TextField label="Street / Area / Landmark" value={street} onChangeText={setStreet} />
-          <View style={styles.twoColumn}>
-            <View style={styles.halfField}>
-              <TextField label="City" value={city} onChangeText={handleCityChange} autoCapitalize="words" />
-            </View>
-            <View style={styles.halfField}>
-              <TextField label="State" value={stateName} onChangeText={setStateName} />
-            </View>
-          </View>
-          {showLocationSuggestions ? (
-            <View style={styles.locationSuggestCard}>
-              <View style={styles.locationSuggestHeader}>
-                <MaterialCommunityIcons name="map-search-outline" size={16} color={palette.navy} />
-                <Text style={styles.locationSuggestTitle}>{searchingLocations ? 'Searching matching cities...' : locationSuggestions.length ? 'Select matching city' : 'No matching city found'}</Text>
-              </View>
-              {locationSuggestions.map((location) => (
-                <Pressable key={location.id} accessibilityRole="button" onPress={() => selectLocation(location)} style={styles.locationSuggestion}>
-                  <View style={styles.locationPinIcon}>
-                    <MaterialCommunityIcons name="map-marker-outline" size={16} color={roleTheme.customer.accent} />
-                  </View>
-                  <View style={styles.locationSuggestionCopy}>
-                    <Text style={styles.locationCity}>{location.city_name}</Text>
-                    <Text style={styles.locationMeta}>{location.district}, {location.state_name} • {location.pincode}</Text>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={18} color={palette.slate} />
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
-          <TextField label="PIN Code" keyboardType="number-pad" value={pinCode} onChangeText={setPinCode} />
+      <View style={styles.documentReadyCard}>
+        <View style={styles.documentReadyHeader}>
+          <Text style={styles.documentReadyTitle}>Upload claim documents</Text>
+          <View style={styles.documentReadyBadge}><Text style={styles.documentReadyBadgeText}>Optional now</Text></View>
         </View>
-
-        {addressText ? (
-          <View style={styles.previewBox}>
-            <Text style={styles.previewLabel}>Formatted Address</Text>
-            <Text style={styles.previewText}>{addressText}</Text>
-          </View>
-        ) : null}
+        <View style={styles.documentReadyGrid}>
+          <DocumentReadyTile title="RC Copy" fileName={documents.rc[0]?.name} source={require('../../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} onPress={() => void pickDocument('rc')} onRemove={() => requestDelete('rc', documents.rc[0]?.name ?? 'RC Copy')} />
+          <DocumentReadyTile title="Insurance Copy" fileName={documents.insurance[0]?.name} source={require('../../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} onPress={() => void pickDocument('insurance')} onRemove={() => requestDelete('insurance', documents.insurance[0]?.name ?? 'Insurance Copy')} />
+          <DocumentReadyTile title="Driver Licence" fileName={documents.licence[0]?.name} source={require('../../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} onPress={() => void pickDocument('licence')} onRemove={() => requestDelete('licence', documents.licence[0]?.name ?? 'Driver Licence')} />
+          <DocumentReadyTile title="GR / Load Bill" fileName={documents.gr[0]?.name} source={require('../../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} onPress={() => void pickDocument('gr')} onRemove={() => requestDelete('gr', documents.gr[0]?.name ?? 'GR / Load Bill')} />
+          <DocumentReadyTile title="Accident Photo" statusText={mediaStatus('accident_photo')} source={require('../../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} onPress={() => void pickDocument('accident_photo')} onRemove={() => requestDelete('accident_photo', 'accident photos')} />
+          <DocumentReadyTile title="Accident Video" statusText={mediaStatus('accident_video')} iconName="video-outline" iconColor="#E12C48" onPress={() => void pickDocument('accident_video')} onRemove={() => requestDelete('accident_video', 'accident videos')} />
+        </View>
+        <View style={styles.bulkUploadShell}>
+          <Pressable onPress={() => void pickBulkDocuments()} style={[styles.bulkUpload, documents.bulk.length > 0 && styles.bulkUploadSelected]}>
+            <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIcon} resizeMode="contain" />
+            <View style={styles.bulkUploadCopy}>
+              <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
+              <Text style={styles.bulkUploadText}>{documents.bulk.length ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready` : 'Select several files now, or add them on the next screen.'}</Text>
+            </View>
+            <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" />
+          </Pressable>
+          {documents.bulk.length ? <Pressable onPress={() => requestDelete('bulk', 'uploaded documents')} style={styles.bulkRemove}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
+        </View>
       </View>
 
-      <Pressable accessibilityRole="button" onPress={() => void submit()} disabled={submitting} style={[styles.submitButton, submitting && styles.submitDisabled]}>
-        <MaterialCommunityIcons name="file-send-outline" size={19} color="#FFFFFF" />
-        <Text style={styles.submitText}>{submitting ? 'Submitting...' : 'Submit Loss Report'}</Text>
-      </Pressable>
+      <View style={styles.voicePlaceholder}>
+        <View style={styles.voiceHeadingRow}>
+          <View style={styles.voiceIcon}><MaterialCommunityIcons name="microphone-outline" size={25} color="#0A43A3" /></View>
+          <View style={styles.voiceCopy}>
+            <Text style={styles.voiceTitle}>Incident Voice Note</Text>
+            <Text style={styles.voiceText}>Describe what happened in your own words so the incident is easier to understand later.</Text>
+          </View>
+        </View>
+        <Pressable disabled style={styles.voiceButton}>
+          <MaterialCommunityIcons name="microphone" size={18} color="#FFFFFF" />
+          <Text style={styles.voiceButtonText}>Record Voice Note</Text>
+        </Pressable>
+        <View style={styles.voiceComingSoon}><MaterialCommunityIcons name="clock-outline" size={14} color="#60738B" /><Text style={styles.voiceComingSoonText}>This feature will be added soon.</Text></View>
+      </View>
 
-      <Modal visible={expiryWarningOpen} transparent animationType="fade" onRequestClose={() => setExpiryWarningOpen(false)}>
-        <View style={styles.expiryOverlay}>
-          <View style={styles.expiryCard}>
-            <View style={styles.expiryIcon}>
-              <MaterialCommunityIcons name="shield-alert-outline" size={30} color="#FFFFFF" />
-            </View>
-            <Text style={styles.expiryTitle}>Policy expired before incident date</Text>
-            <Text style={styles.expiryBody}>
-              The selected policy expired on {formatDate(selectedPolicy?.end_date)} while the incident date is {formatDisplayDate(incidentDate)}. You can still submit the loss report, but it may need extra insurer review.
-            </Text>
-            <View style={styles.expiryStrip}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={17} color="#B42318" />
-              <Text style={styles.expiryStripText}>This warning will remain visible on this claim for your reference.</Text>
-            </View>
-            <View style={styles.expiryActions}>
-              <Pressable accessibilityRole="button" onPress={() => setExpiryWarningOpen(false)} style={styles.expirySecondaryButton}>
-                <Text style={styles.expirySecondaryText}>Review Date</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  setExpiryWarningOpen(false);
-                  setExpiryWarningAcknowledged(true);
-                  void submit({ allowExpiredPolicy: true });
-                }}
-                style={styles.expiryPrimaryButton}
-              >
-                <Text style={styles.expiryPrimaryText}>Continue Submission</Text>
-              </Pressable>
+      <ClaimActionBar
+        primaryDisabled={submitting || uploadingDocuments || !selectedPolicy}
+        primaryIcon="arrow-right"
+        primaryLabel={submitting || uploadingDocuments ? 'Saving...' : 'Save & Continue'}
+        onPrimary={() => void submit()}
+        onAssistance={() => router.push('/customer/support')}
+      />
+
+      <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <MaterialCommunityIcons name="trash-can-outline" size={22} color="#C43232" />
+            <Text style={styles.modalTitle}>Delete document?</Text>
+            <Text style={styles.modalBody}>{deleteTarget ? `Are you sure you want to delete ${deleteTarget.title}?` : ''}</Text>
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setDeleteTarget(null)} style={styles.modalSecondary}><Text style={styles.modalSecondaryText}>Cancel</Text></Pressable>
+              <Pressable onPress={confirmDelete} style={styles.modalPrimary}><Text style={styles.modalPrimaryText}>Delete</Text></Pressable>
             </View>
           </View>
         </View>
       </Modal>
+
+      <Modal visible={expiryWarningOpen} transparent animationType="fade" onRequestClose={() => setExpiryWarningOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <MaterialCommunityIcons name="shield-alert-outline" size={28} color="#B42318" />
+            <Text style={styles.modalTitle}>Policy expired before incident date</Text>
+            <Text style={styles.modalBody}>The selected policy expired on {formatDate(selectedPolicy?.end_date)}. You can still continue, but this claim may need extra insurer review.</Text>
+            <View style={styles.modalActions}>
+              <Pressable onPress={() => setExpiryWarningOpen(false)} style={styles.modalSecondary}><Text style={styles.modalSecondaryText}>Review Date</Text></Pressable>
+              <Pressable onPress={() => { setExpiryWarningOpen(false); setExpiryWarningAcknowledged(true); void submit({ allowExpiredPolicy: true }); }} style={styles.modalPrimary}><Text style={styles.modalPrimaryText}>Continue</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <TimePickerModal
+        value={timeTarget === 'intimation' ? intimationTime : incidentTime}
+        visible={timeTarget !== null}
+        title={timeTarget === 'intimation' ? 'Select spot intimation time' : 'Select incident time'}
+        onClose={() => setTimeTarget(null)}
+        onSelect={(value) => { if (timeTarget === 'intimation') setIntimationTime(value); else setIncidentTime(value); setTimeTarget(null); }}
+      />
     </Screen>
   );
 }
 
-function SectionHeader({ icon, title, subtitle }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; title: string; subtitle: string }) {
-  return (
-    <View style={styles.sectionHeader}>
-      <View style={styles.sectionIcon}>
-        <MaterialCommunityIcons name={icon} size={21} color={palette.navy} />
-      </View>
-      <View style={styles.sectionCopy}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionSub}>{subtitle}</Text>
-      </View>
-    </View>
-  );
-}
-
 function AccountSelector({ contexts, selectedCustomerId, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; onSelect: (customerId: string) => void }) {
-  return (
-    <View style={styles.accountBlock}>
-      <Text style={styles.pickerLabel}>Report for</Text>
-      {contexts.map((context) => {
-        const active = context.customer_id === selectedCustomerId;
-        return (
-          <Pressable key={context.customer_id} accessibilityRole="button" onPress={() => onSelect(context.customer_id)} style={[styles.accountOption, active && styles.accountOptionActive]}>
-            <View style={styles.accountCopy}>
-              <Text style={[styles.accountTitle, active && styles.accountTitleActive]} numberOfLines={1}>{customerAccountTitle(context)}</Text>
-              <Text style={[styles.accountMeta, active && styles.accountMetaActive]}>{context.access_source === 'group_child' ? 'Associated account' : 'Parent account'} - {partnerTypeLabel(context.partner_type)}</Text>
-            </View>
-            <View style={[styles.radio, active && styles.radioActive]} />
-          </Pressable>
-        );
-      })}
-    </View>
-  );
+  return <View style={styles.selectorCard}>
+    <Text style={styles.selectorLabel}>Report for</Text>
+    {contexts.map((context) => {
+      const active = context.customer_id === selectedCustomerId;
+      return <Pressable key={context.customer_id} onPress={() => onSelect(context.customer_id)} style={[styles.accountOption, active && styles.accountOptionActive]}>
+        <View><Text style={styles.accountTitle}>{customerAccountTitle(context)}</Text><Text style={styles.accountMeta}>{context.access_source === 'group_child' ? 'Associated account' : 'Parent account'} · {partnerTypeLabel(context.partner_type)}</Text></View>
+        <MaterialCommunityIcons name={active ? 'radiobox-marked' : 'radiobox-blank'} size={20} color={active ? '#0A43A3' : '#8EA0B6'} />
+      </Pressable>;
+    })}
+  </View>;
 }
 
-function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel: string; leftValue: string; rightLabel: string; rightValue: string }) {
-  return (
-    <View style={styles.infoPairRow}>
-      <View style={styles.infoPairHalf}>
-        <Text style={styles.infoPairText} numberOfLines={1}><Text style={styles.infoPairLabel}>{leftLabel}: </Text>{leftValue}</Text>
-      </View>
-      <View style={styles.infoPairHalf}>
-        <Text style={styles.infoPairText} numberOfLines={1}><Text style={styles.infoPairLabel}>{rightLabel}: </Text>{rightValue}</Text>
-      </View>
-    </View>
-  );
+function DocumentReadyTile({ title, fileName, statusText, source, iconName, iconColor, onPress, onRemove }: { title: string; fileName?: string; statusText?: string; source?: any; iconName?: keyof typeof MaterialCommunityIcons.glyphMap; iconColor?: string; onPress: () => void; onRemove: () => void }) {
+  const selected = Boolean(fileName || statusText);
+  return <Pressable onPress={onPress} style={[styles.documentTile, selected && styles.documentTileSelected]}>
+    {selected ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.documentRemove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}
+    <View style={styles.documentArtworkWrap}>{source ? <Image source={source} style={styles.documentArtwork} resizeMode="contain" /> : iconName ? <MaterialCommunityIcons name={iconName} size={32} color={iconColor ?? '#0A43A3'} /> : null}</View>
+    <Text style={styles.documentTileTitle}>{title}</Text>
+    {fileName ? <Text style={styles.documentFileName} numberOfLines={1}>{fileName}</Text> : null}
+    <Text style={[styles.documentStatus, selected && styles.documentStatusSelected]}>{statusText ?? (selected ? 'Ready' : 'Tap to upload')}</Text>
+  </Pressable>;
 }
 
-async function reverseGeocode(latitude: number, longitude: number) {
-  try {
-    const [address] = await Location.reverseGeocodeAsync({ latitude, longitude });
-    if (!address) return null;
-
-    return {
-      address1: [address.name, address.streetNumber].filter(Boolean).join(', ') || address.street || '',
-      street: [address.street, address.district].filter(Boolean).join(', '),
-      city: address.city || address.subregion || '',
-      state: address.region || '',
-      pinCode: address.postalCode || '',
-    };
-  } catch (error) {
-    console.error('Report incident reverse geocode failed', { error, latitude, longitude });
-    return null;
-  }
+function TimePickerField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
+  return <View style={styles.timeField}><Text style={styles.timeLabel}>{label}</Text><Pressable onPress={onPress} style={styles.timeButton}><MaterialCommunityIcons name="clock-outline" size={19} color="#0A43A3" /><Text style={[styles.timeValue, !value && styles.timePlaceholder]}>{value ? formatTime(value) : 'Select time'}</Text><MaterialCommunityIcons name="chevron-down" size={21} color={palette.navy} /></Pressable></View>;
 }
 
-function buildAddress({ address1, street, city, stateName, pinCode }: { address1: string; street: string; city: string; stateName: string; pinCode: string }) {
-  const firstPart = [address1.trim(), street.trim()].filter(Boolean).join(', ');
-  const secondPart = [city.trim(), stateName.trim()].filter(Boolean).join(', ');
-  const pinPart = pinCode.trim() ? `PIN ${pinCode.trim()}` : '';
-
-  return [firstPart, secondPart, pinPart].filter(Boolean).join(', ');
+function TimePickerModal({ value, visible, title, onClose, onSelect }: { value: string; visible: boolean; title: string; onClose: () => void; onSelect: (value: string) => void }) {
+  const parsed = parseTime(value);
+  const [hour, setHour] = useState(parsed.hour);
+  const [minute, setMinute] = useState(parsed.minute);
+  useEffect(() => { if (visible) { const next = parseTime(value); setHour(next.hour); setMinute(next.minute); } }, [value, visible]);
+  return <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}><View style={styles.modalBackdrop}><View style={styles.timeModalCard}><Text style={styles.modalTitle}>{title}</Text><View style={styles.timeAdjustRow}><TimeAdjust label="Hour" value={hour} max={23} onChange={setHour} /><Text style={styles.timeColon}>:</Text><TimeAdjust label="Minute" value={minute} max={59} step={5} onChange={setMinute} /></View><View style={styles.modalActions}><Pressable onPress={onClose} style={styles.modalSecondary}><Text style={styles.modalSecondaryText}>Cancel</Text></Pressable><Pressable onPress={() => onSelect(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`)} style={styles.modalPrimary}><Text style={styles.modalPrimaryText}>Done</Text></Pressable></View></View></View></Modal>;
 }
 
-function coordinatesToText(coordinates: { latitude: number; longitude: number } | null) {
-  if (!coordinates) return '';
-  return `${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`;
+function TimeAdjust({ label, value, max, step = 1, onChange }: { label: string; value: number; max: number; step?: number; onChange: (value: number) => void }) {
+  const move = (delta: number) => onChange((value + delta + max + 1) % (max + 1));
+  return <View style={styles.timeAdjust}><Text style={styles.timeAdjustLabel}>{label}</Text><Pressable onPress={() => move(step)} style={styles.timeAdjustButton}><MaterialCommunityIcons name="chevron-up" size={22} color="#0A43A3" /></Pressable><Text style={styles.timeAdjustValue}>{String(value).padStart(2, '0')}</Text><Pressable onPress={() => move(-step)} style={styles.timeAdjustButton}><MaterialCommunityIcons name="chevron-down" size={22} color="#0A43A3" /></Pressable></View>;
 }
 
-function buildIncidentDescription({
-  driverName,
-  driverPhone,
-  coordinates,
-  policyExpiredBeforeIncident,
-  policyEndDate,
-  incidentAt,
-}: {
-  driverName: string;
-  driverPhone: string;
-  coordinates: { latitude: number; longitude: number } | null;
-  policyExpiredBeforeIncident?: boolean;
-  policyEndDate?: string | null;
-  incidentAt?: Date | null;
-}) {
-  return [
-    `Driver: ${driverName.trim()}`,
-    `Driver phone: ${driverPhone.trim()}`,
-    coordinates ? `GPS: ${coordinatesToText(coordinates)}` : '',
-    policyExpiredBeforeIncident && policyEndDate && incidentAt ? `Policy expiry warning: Policy expired on ${formatDate(policyEndDate)} before incident date ${formatDate(incidentAt.toISOString())}.` : '',
-  ].filter(Boolean).join('\n');
+function parseDateTime(date: string, time: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return null;
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseTime(value: string) {
+  if (!/^\d{2}:\d{2}$/.test(value)) return { hour: 12, minute: 0 };
+  const [hour, minute] = value.split(':').map(Number);
+  return { hour: Math.min(23, Math.max(0, hour)), minute: Math.min(59, Math.max(0, minute)) };
+}
+
+function formatTime(value: string) {
+  const parsed = parseTime(value);
+  const date = new Date(2000, 0, 1, parsed.hour, parsed.minute);
+  return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
 function isIncidentAfterPolicyExpiry(policy: Policy | null, incidentAt: Date | null) {
-  const expiry = policyExpiryEndOfDay(policy?.end_date);
-  if (!expiry || !incidentAt) return false;
-  return incidentAt.getTime() > expiry.getTime();
-}
-
-function policyExpiryEndOfDay(value?: string | null) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return null;
-  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-  const parsed = new Date(year, month - 1, day, 23, 59, 59, 999);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
-}
-
-function buildIncidentDate(date: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  const [year, month, day] = date.split('-').map(Number);
-  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
-}
-
-function isFutureIncidentDate(date: Date) {
-  const todayEnd = new Date();
-  todayEnd.setHours(23, 59, 59, 999);
-  return date.getTime() > todayEnd.getTime();
+  if (!policy?.end_date || !incidentAt) return false;
+  const expiry = new Date(`${policy.end_date.slice(0, 10)}T23:59:59`);
+  return !Number.isNaN(expiry.getTime()) && incidentAt.getTime() > expiry.getTime();
 }
 
 function todayIsoDate() {
   const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatDisplayDate(value: string) {
-  const parsed = buildIncidentDate(value);
-  if (!parsed) return '';
-  return parsed.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-function mapSubmitError(error: unknown) {
-  const message = typeof error === 'object' && error && 'message' in error ? String(error.message) : '';
-  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
-  if (message.toLowerCase().includes('violates row-level security') || code === '42501') return 'Your customer profile is not ready yet. Please contact support.';
-  if (message.toLowerCase().includes('foreign key') || code === '23503') return 'Policy details are not available for this vehicle.';
-  return 'We could not submit the incident report right now. Please try again.';
+function mapSubmitError(error: any) {
+  const message = String(error?.message ?? '').toLowerCase();
+  if (message.includes('duplicate')) return 'A claim already exists for these details. Please check My Claims.';
+  if (message.includes('policy')) return 'The selected policy could not be used for this claim.';
+  return error?.message || 'We could not submit the incident report right now. Please try again.';
 }
 
 const styles = StyleSheet.create({
-  pageIndicator: { marginTop: 0, marginBottom: 8 },
-  pageTitle: { color: palette.navy, fontSize: 18, fontWeight: '900' },
-  pageSub: { color: palette.slate, fontSize: 11.5, fontWeight: '800', marginTop: 2 },
-
-  accountBlock: { gap: 8, marginBottom: 10 },
-  pickerLabel: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
-  accountOption: { minHeight: 58, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 11, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  accountOptionActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
-  accountCopy: { flex: 1, minWidth: 0 },
-  accountTitle: { color: palette.ink, fontSize: 13, fontWeight: '900' },
-  accountTitleActive: { color: palette.navy },
-  accountMeta: { color: palette.slate, fontSize: 10.5, fontWeight: '700', marginTop: 2 },
-  accountMetaActive: { color: '#315C99' },
-  radio: { width: 17, height: 17, borderRadius: 9, borderWidth: 2, borderColor: '#B7C5D8' },
-  radioActive: { borderColor: palette.navy, backgroundColor: palette.navy },
-  vehiclePicker: { borderRadius: 16, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', padding: 11, marginBottom: 10, gap: 8 },
-  vehicleOption: { minHeight: 38, borderRadius: 12, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', paddingHorizontal: 11, justifyContent: 'center' },
-  vehicleOptionActive: { borderColor: palette.navy, backgroundColor: '#EEF5FF' },
-  vehicleOptionText: { color: palette.ink, fontSize: 12, fontWeight: '900' },
+  selectorCard: { marginHorizontal: 16, marginTop: 10, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: '#D9E2EE', backgroundColor: '#FFFFFF', gap: 9 },
+  selectorLabel: { color: '#40536D', fontSize: 12, fontWeight: '700' },
+  accountOption: { minHeight: 54, borderRadius: 14, borderWidth: 1, borderColor: '#DFE6EF', paddingHorizontal: 13, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  accountOptionActive: { borderColor: '#0A43A3', backgroundColor: '#F3F7FF' },
+  accountTitle: { color: palette.navy, fontSize: 14, fontWeight: '800' },
+  accountMeta: { color: '#65758A', fontSize: 11, marginTop: 2 },
+  vehiclePicker: { marginHorizontal: 16, marginTop: 10, padding: 14, borderRadius: 18, borderWidth: 1, borderColor: '#D9E2EE', backgroundColor: '#FFFFFF', gap: 8 },
+  vehicleOption: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: '#DCE5EF', paddingHorizontal: 14, justifyContent: 'center', backgroundColor: '#F9FBFD' },
+  vehicleOptionActive: { borderColor: palette.navy, backgroundColor: '#EDF4FF' },
+  vehicleOptionText: { color: palette.navy, fontSize: 14, fontWeight: '800' },
   vehicleOptionTextActive: { color: palette.navy },
-
-  vehicleSummary: { backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#CFE0FF', borderRadius: 16, padding: 12, paddingLeft: 16, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
-  summaryAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 5, backgroundColor: palette.navy },
-  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900' },
-  vehicleMeta: { color: palette.slate, fontSize: 11.5, fontWeight: '800', marginTop: 2 },
-  policyStatus: { borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6 },
-  policyStatusGood: { backgroundColor: '#E8F8F0' },
-  policyStatusBad: { backgroundColor: '#FFF0F6' },
-  policyStatusText: { fontSize: 9.7, fontWeight: '900' },
-  policyStatusTextGood: { color: '#12805C' },
-  policyStatusTextBad: { color: '#C83272' },
-  summaryInfo: { marginTop: 9, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E5ECF5', gap: 4 },
-  infoPairRow: { flexDirection: 'row', gap: 8 },
-  infoPairHalf: { flex: 1, minWidth: 0 },
-  infoPairText: { color: palette.ink, fontSize: 10.9, lineHeight: 15, fontWeight: '800' },
-  infoPairLabel: { color: palette.slate, fontSize: 10.1, fontWeight: '900' },
-  vehicleMissing: { borderRadius: 16, borderWidth: 1, borderColor: '#F8BFD7', backgroundColor: '#FFF8FB', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  vehicleMissingText: { flex: 1, color: palette.navy, fontSize: 12, lineHeight: 16, fontWeight: '800' },
-
-  formCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, padding: 13, marginBottom: 10, shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 11 },
-  sectionIcon: { width: 39, height: 39, borderRadius: 13, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
-  sectionCopy: { flex: 1, minWidth: 0 },
-  sectionTitle: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
-  sectionSub: { color: palette.slate, fontSize: 11, fontWeight: '700', marginTop: 2 },
-  fieldStack: { gap: 8 },
-
-  addressMode: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  manualBadge: { flex: 1, height: 38, borderRadius: 12, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#C7DAFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  manualBadgeText: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
-  gpsButton: { flex: 1, height: 38, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#C7DAFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  gpsButtonText: { color: roleTheme.customer.accent, fontSize: 11.5, fontWeight: '900' },
-
-  twoColumn: { flexDirection: 'row', gap: 8 },
-  halfField: { flex: 1 },
-  locationSuggestCard: { marginTop: -2, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FBFDFF', overflow: 'hidden' },
-  locationSuggestHeader: { minHeight: 38, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: '#EEF5FF', borderBottomWidth: 1, borderBottomColor: '#DCE8F4' },
-  locationSuggestTitle: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
-  locationSuggestion: { minHeight: 53, paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 9, borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
-  locationPinIcon: { width: 31, height: 31, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' },
-  locationSuggestionCopy: { flex: 1, minWidth: 0 },
-  locationCity: { color: palette.ink, fontSize: 12.5, fontWeight: '900' },
-  locationMeta: { color: palette.slate, fontSize: 10.5, lineHeight: 14, fontWeight: '700', marginTop: 2 },
-  previewBox: { marginTop: 10, borderRadius: 13, borderWidth: 1, borderColor: '#C7DAFF', backgroundColor: '#F8FBFF', padding: 10 },
-  previewLabel: { color: palette.slate, fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.35 },
-  previewText: { color: palette.ink, fontSize: 12, lineHeight: 17, fontWeight: '800', marginTop: 3 },
-
-  submitButton: { height: 48, borderRadius: 15, backgroundColor: palette.navy, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, marginBottom: 12 },
-  submitDisabled: { opacity: 0.6 },
-  submitText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
-  expiryOverlay: { flex: 1, backgroundColor: 'rgba(7, 18, 36, 0.48)', paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center' },
-  expiryCard: { width: '100%', maxWidth: 380, borderRadius: 24, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#F4B8B2', padding: 19, alignItems: 'center', shadowColor: '#7A271A', shadowOpacity: 0.22, shadowRadius: 22, elevation: 10 },
-  expiryIcon: { width: 62, height: 62, borderRadius: 22, backgroundColor: '#D92D20', alignItems: 'center', justifyContent: 'center', shadowColor: '#D92D20', shadowOpacity: 0.25, shadowRadius: 12, elevation: 4 },
-  expiryTitle: { color: '#7A271A', fontSize: 18, lineHeight: 23, fontWeight: '900', textAlign: 'center', marginTop: 13 },
-  expiryBody: { color: palette.slate, fontSize: 12.4, lineHeight: 18, fontWeight: '700', textAlign: 'center', marginTop: 7 },
-  expiryStrip: { alignSelf: 'stretch', marginTop: 14, borderRadius: 14, borderWidth: 1, borderColor: '#FDA29B', backgroundColor: '#FEF3F2', padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  expiryStripText: { color: '#B42318', fontSize: 11.2, lineHeight: 15, fontWeight: '800', flex: 1 },
-  expiryActions: { alignSelf: 'stretch', flexDirection: 'row', gap: 9, marginTop: 15 },
-  expirySecondaryButton: { flex: 1, minHeight: 44, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  expirySecondaryText: { color: palette.navy, fontSize: 12, fontWeight: '900' },
-  expiryPrimaryButton: { flex: 1.25, minHeight: 44, borderRadius: 14, backgroundColor: '#D92D20', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-  expiryPrimaryText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900', textAlign: 'center' },
+  subsection: { marginTop: 6, marginBottom: 2 },
+  subsectionTitle: { color: palette.navy, fontSize: 13, fontWeight: '800' },
+  gap: { height: 8 },
+  locationFieldWrap: { position: 'relative' },
+  gpsInlineAction: { marginTop: 8, alignSelf: 'flex-end', minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: '#C9D9F3', backgroundColor: '#F7FAFF' },
+  gpsInlineText: { color: '#0A43A3', fontSize: 12, fontWeight: '700' },
+  locationNotice: { marginTop: 8, color: '#60738B', fontSize: 12, lineHeight: 17 },
+  timeField: { gap: 7 },
+  timeLabel: { color: palette.navy, fontSize: 13, fontWeight: '700' },
+  timeButton: { minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: '#D8E1EC', backgroundColor: '#FFFFFF', paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  timeValue: { flex: 1, color: palette.navy, fontSize: 14, fontWeight: '700' },
+  timePlaceholder: { color: '#8C98A9', fontWeight: '600' },
+  documentReadyCard: { marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 20, borderWidth: 1, borderColor: '#D9E2EE', backgroundColor: '#FFFFFF' },
+  documentReadyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  documentReadyTitle: { color: palette.navy, fontSize: 17, fontWeight: '900' },
+  documentReadyBadge: { borderRadius: 99, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#F3F7FF' },
+  documentReadyBadgeText: { color: '#0A43A3', fontSize: 10, fontWeight: '800' },
+  documentReadyGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
+  documentTile: { width: '48.5%', minHeight: 142, borderRadius: 17, borderWidth: 1, borderColor: '#DCE5EF', backgroundColor: '#FBFCFE', alignItems: 'center', padding: 12 },
+  documentTileSelected: { borderColor: '#AFC7EE', backgroundColor: '#F6F9FF' },
+  documentRemove: { position: 'absolute', right: 7, top: 7, zIndex: 2, width: 25, height: 25, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF2F2' },
+  documentArtworkWrap: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginBottom: 7 },
+  documentArtwork: { width: 44, height: 44 },
+  documentTileTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '800', textAlign: 'center' },
+  documentFileName: { marginTop: 4, color: '#617188', fontSize: 10.5, maxWidth: '100%' },
+  documentStatus: { marginTop: 7, color: '#7A8798', fontSize: 10, fontWeight: '700' },
+  documentStatusSelected: { color: '#18864B' },
+  bulkUploadShell: { marginTop: 12, position: 'relative' },
+  bulkUpload: { minHeight: 72, borderRadius: 16, borderWidth: 1, borderStyle: 'dashed', borderColor: '#BFD0E8', backgroundColor: '#F8FBFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bulkUploadSelected: { borderColor: '#79A3DD', backgroundColor: '#F2F7FF' },
+  bulkUploadIcon: { width: 34, height: 34 },
+  bulkUploadCopy: { flex: 1 },
+  bulkUploadTitle: { color: palette.navy, fontSize: 13, fontWeight: '800' },
+  bulkUploadText: { color: '#66768B', fontSize: 11, marginTop: 2, lineHeight: 15 },
+  bulkRemove: { position: 'absolute', right: -4, top: -7, width: 26, height: 26, borderRadius: 13, backgroundColor: '#FFF2F2', alignItems: 'center', justifyContent: 'center' },
+  voicePlaceholder: { marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 20, borderWidth: 1, borderColor: '#D9E2EE', backgroundColor: '#FFFFFF' },
+  voiceHeadingRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  voiceIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0F5FF', alignItems: 'center', justifyContent: 'center' },
+  voiceCopy: { flex: 1 },
+  voiceTitle: { color: palette.navy, fontSize: 15, fontWeight: '900' },
+  voiceText: { color: '#65758A', fontSize: 11.5, lineHeight: 16, marginTop: 2 },
+  voiceButton: { marginTop: 12, minHeight: 46, borderRadius: 14, backgroundColor: '#0A43A3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, opacity: 0.6 },
+  voiceButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  voiceComingSoon: { marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  voiceComingSoonText: { color: '#60738B', fontSize: 10.5 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(8,24,52,0.46)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCard: { width: '100%', maxWidth: 390, borderRadius: 22, backgroundColor: '#FFFFFF', padding: 20, alignItems: 'center' },
+  modalTitle: { marginTop: 8, color: palette.navy, fontSize: 18, fontWeight: '900', textAlign: 'center' },
+  modalBody: { marginTop: 8, color: '#607087', fontSize: 13, lineHeight: 19, textAlign: 'center' },
+  modalActions: { marginTop: 18, width: '100%', flexDirection: 'row', gap: 10 },
+  modalSecondary: { flex: 1, minHeight: 44, borderRadius: 13, borderWidth: 1, borderColor: '#D4DEEA', alignItems: 'center', justifyContent: 'center' },
+  modalSecondaryText: { color: palette.navy, fontSize: 13, fontWeight: '800' },
+  modalPrimary: { flex: 1, minHeight: 44, borderRadius: 13, backgroundColor: '#0A43A3', alignItems: 'center', justifyContent: 'center' },
+  modalPrimaryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  timeModalCard: { width: '100%', maxWidth: 360, borderRadius: 22, backgroundColor: '#FFFFFF', padding: 20 },
+  timeAdjustRow: { marginTop: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
+  timeColon: { color: palette.navy, fontSize: 30, fontWeight: '800' },
+  timeAdjust: { alignItems: 'center' },
+  timeAdjustLabel: { color: '#6B7A90', fontSize: 11, fontWeight: '700' },
+  timeAdjustButton: { width: 42, height: 35, alignItems: 'center', justifyContent: 'center' },
+  timeAdjustValue: { minWidth: 52, color: palette.navy, fontSize: 28, fontWeight: '900', textAlign: 'center' },
 });
