@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSourcePropType, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { getPartnerImpact, type PartnerImpactData } from '@/lib/impact';
 import { formatIndianCurrency } from '@/lib/format';
+import { getPartnerImpact, type PartnerImpactData } from '@/lib/impact';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function ImpactScreen() {
@@ -32,46 +33,30 @@ export default function ImpactScreen() {
   }, [load]);
 
   return (
-    <PartnerScreen
-      eyebrow="MY IMPACT"
-      title="Protection delivered"
-      onBack={() => router.back()}
-    >
+    <PartnerScreen eyebrow="MY IMPACT" title="Protection delivered" onBack={() => router.back()}>
       {loading ? (
         <PartnerStateView state="loading" title="Loading your impact" />
       ) : error || !data ? (
-        <PartnerStateView
-          state="error"
-          title="Your impact is temporarily unavailable"
-          message={error || 'Your impact could not be loaded.'}
-          actionLabel="Try again"
-          onAction={() => void load()}
-        />
+        <PartnerStateView state="error" title="Your impact is temporarily unavailable" message={error || 'Your impact could not be loaded.'} actionLabel="Try again" onAction={() => void load()} />
       ) : (
         <>
           <View style={styles.hero}>
             <Text style={styles.heroEyebrow}>ACTIVE MOTOR PROTECTION</Text>
             <Text style={styles.heroValue}>{formatIndianCurrency(data.active_motor_idv)}</Text>
-            <Text style={styles.heroLabel}>insured declared value currently covered in your authorized Motor book</Text>
+            <Text style={styles.heroLabel}>Insured value currently protected in your Motor book.</Text>
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Protection footprint</Text>
-          </View>
-
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Protection footprint</Text></View>
           <View style={styles.grid}>
-            <ImpactCard icon="car-outline" value={data.active_vehicles} label="Vehicles currently covered" />
-            <ImpactCard icon="people-outline" value={data.customers_served} label="Customers served" />
+            <ImpactCard asset={PartnerAssets.products.motorInsurance} value={data.active_vehicles} label="Vehicles covered" />
+            <ImpactCard asset={PartnerAssets.navigation.customers} value={data.customers_served} label="Customers served" />
           </View>
           <View style={styles.grid}>
-            <ImpactCard icon="document-text-outline" value={data.lifetime_policies} label="Policies in your book" />
-            <ImpactCard icon="shield-checkmark-outline" value={data.claims_assisted} label="Claims assisted" />
+            <ImpactCard asset={PartnerAssets.navigation.policies} value={data.lifetime_policies} label="Policies in your book" />
+            <ImpactCard asset={PartnerAssets.navigation.claims} value={data.claims_assisted} label="Claims assisted" />
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>This month</Text>
-          </View>
-
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>This month</Text></View>
           <View style={styles.monthCard}>
             <MonthStat label="Gross premium" value={formatIndianCurrency(data.gross_premium_this_month)} />
             <MonthStat label="Policies" value={String(data.policies_this_month)} />
@@ -80,20 +65,18 @@ export default function ImpactScreen() {
 
           {Number(data.claim_settlement_value || 0) > 0 ? (
             <View style={styles.settlementCard}>
-              <View style={styles.settlementIcon}><Ionicons name="heart-circle-outline" size={21} color={partnerTheme.colors.accent} /></View>
+              <View style={styles.settlementArtwork}><Image source={PartnerAssets.status.verified} style={styles.settlementArtworkImage} resizeMode="contain" /></View>
               <View style={styles.settlementBody}>
-                <Text style={styles.settlementEyebrow}>CLAIM OUTCOMES RECORDED</Text>
+                <Text style={styles.settlementEyebrow}>CLAIM OUTCOMES</Text>
                 <Text style={styles.settlementValue}>{formatIndianCurrency(data.claim_settlement_value)}</Text>
-                <Text style={styles.settlementText}>settlement value recorded across completed/assisted claims in this authorized book</Text>
+                <Text style={styles.settlementText}>Settlement value recorded across completed or assisted claims.</Text>
               </View>
             </View>
           ) : null}
 
-          <Pressable onPress={() => router.push('/journey')} style={styles.journeyLink}>
-            <View style={styles.journeyIcon}><Ionicons name="trail-sign-outline" size={20} color={partnerTheme.colors.brand} /></View>
-            <View style={styles.journeyBody}>
-              <Text style={styles.journeyTitle}>See your journey</Text>
-            </View>
+          <Pressable onPress={() => router.push('/journey')} style={styles.journeyLink} accessibilityRole="button" accessibilityLabel="See your journey">
+            <View style={styles.journeyArtwork}><Image source={PartnerAssets.status.journey} style={styles.journeyArtworkImage} resizeMode="contain" /></View>
+            <View style={styles.journeyBody}><Text style={styles.journeyTitle}>See your journey</Text></View>
             <Ionicons name="chevron-forward" size={17} color="#9AA3B2" />
           </Pressable>
         </>
@@ -102,14 +85,10 @@ export default function ImpactScreen() {
   );
 }
 
-function ImpactCard({ icon, value, label }: {
-  icon: 'car-outline' | 'people-outline' | 'document-text-outline' | 'shield-checkmark-outline';
-  value: number;
-  label: string;
-}) {
+function ImpactCard({ asset, value, label }: { asset: ImageSourcePropType; value: number; label: string }) {
   return (
     <View style={styles.impactCard}>
-      <View style={styles.impactIcon}><Ionicons name={icon} size={18} color={partnerTheme.colors.brand} /></View>
+      <View style={styles.impactArtwork}><Image source={asset} style={styles.impactArtworkImage} resizeMode="contain" /></View>
       <Text style={styles.impactValue}>{value}</Text>
       <Text style={styles.impactLabel}>{label}</Text>
     </View>
@@ -117,42 +96,36 @@ function ImpactCard({ icon, value, label }: {
 }
 
 function MonthStat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.monthStat}>
-      <Text style={styles.monthValue}>{value}</Text>
-      <Text style={styles.monthLabel}>{label}</Text>
-    </View>
-  );
+  return <View style={styles.monthStat}><Text style={styles.monthValue}>{value}</Text><Text style={styles.monthLabel}>{label}</Text></View>;
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 12, backgroundColor: partnerTheme.colors.nav },
-  heroEyebrow: { color: '#8FD1CE', fontSize: 8, fontWeight: '800', letterSpacing: 1.25 },
-  heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 29, fontWeight: '800' },
-  heroLabel: { marginTop: 4, maxWidth: 310, color: '#C9D0DE', fontSize: 10, lineHeight: 15 },
-
+  hero: { borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
+  heroEyebrow: { color: '#8FD1CE', letterSpacing: 1.1, ...partnerTheme.typography.meta },
+  heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 28, lineHeight: 34, fontWeight: '800' },
+  heroLabel: { marginTop: 4, maxWidth: 310, color: '#C9D0DE', ...partnerTheme.typography.caption },
   sectionHeader: { marginTop: 15, marginBottom: 7 },
-  sectionTitle: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '800' },
+  sectionTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.sectionTitle },
   grid: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  impactCard: { flex: 1, minHeight: 96, borderRadius: 18, padding: 15, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  impactIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  impactValue: { marginTop: 8, color: partnerTheme.colors.ink, fontSize: 21, fontWeight: '800' },
-  impactLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, fontSize: 8.5, lineHeight: 13 },
-
-  monthCard: { flexDirection: 'row', borderRadius: 18, paddingVertical: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  impactCard: { flex: 1, minHeight: 110, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  impactArtwork: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  impactArtworkImage: { width: 40, height: 40 },
+  impactValue: { marginTop: 7, color: partnerTheme.colors.ink, fontSize: 20, lineHeight: 25, fontWeight: '800' },
+  impactLabel: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
+  monthCard: { flexDirection: 'row', borderRadius: partnerTheme.radius.lg, paddingVertical: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   monthStat: { flex: 1, alignItems: 'center', paddingHorizontal: 6 },
-  monthValue: { color: partnerTheme.colors.ink, fontSize: 14, fontWeight: '800' },
-  monthLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, fontSize: 7.5, textAlign: 'center' },
-
-  settlementCard: { marginTop: 9, flexDirection: 'row', gap: 12, borderRadius: 18, padding: 15, backgroundColor: partnerTheme.colors.accentSoft },
-  settlementIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  monthValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
+  monthLabel: { marginTop: 4, color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.meta },
+  settlementCard: { marginTop: 9, flexDirection: 'row', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.accentSoft },
+  settlementArtwork: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  settlementArtworkImage: { width: 42, height: 42 },
   settlementBody: { flex: 1 },
-  settlementEyebrow: { color: '#3C7B78', fontSize: 7.5, fontWeight: '800', letterSpacing: 0.9 },
-  settlementValue: { marginTop: 4, color: partnerTheme.colors.ink, fontSize: 17, fontWeight: '800' },
-  settlementText: { marginTop: 3, color: '#56716F', fontSize: 8.5, lineHeight: 13 },
-
-  journeyLink: { marginTop: 10, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 17, paddingHorizontal: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  journeyIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  settlementEyebrow: { color: '#3C7B78', letterSpacing: 0.8, ...partnerTheme.typography.meta },
+  settlementValue: { marginTop: 3, color: partnerTheme.colors.ink, fontSize: 17, lineHeight: 22, fontWeight: '800' },
+  settlementText: { marginTop: 3, color: '#56716F', ...partnerTheme.typography.caption },
+  journeyLink: { marginTop: 10, minHeight: 60, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  journeyArtwork: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  journeyArtworkImage: { width: 38, height: 38 },
   journeyBody: { flex: 1 },
-  journeyTitle: { color: partnerTheme.colors.ink, fontSize: 10.5, fontWeight: '800' },
+  journeyTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
 });

@@ -29,6 +29,8 @@ const search = read('app/search.tsx');
 const support = read('app/support.tsx');
 const settings = read('app/settings.tsx');
 const activity = read('app/activity.tsx');
+const impact = read('app/impact.tsx');
+const journey = read('app/journey.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
@@ -104,6 +106,17 @@ for (const activityAsset of ['status.policyActive', 'navigation.claims', 'naviga
 }
 for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) {
   if (activity.includes(tinySize)) throw new Error(`Activity must not regress to tiny timeline typography: ${tinySize}`);
+}
+
+for (const impactAsset of ['products.motorInsurance', 'navigation.customers', 'navigation.policies', 'navigation.claims', 'status.verified', 'status.journey']) {
+  requireText(impact, `PartnerAssets.${impactAsset}`, `Impact is missing ${impactAsset} artwork.`);
+}
+for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) {
+  if (impact.includes(tinySize)) throw new Error(`Impact must not regress to tiny typography: ${tinySize}`);
+}
+requireText(journey, 'PartnerAssets.status.journey', 'Journey timeline and empty state must use journey artwork.');
+for (const tinySize of ['fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) {
+  if (journey.includes(tinySize)) throw new Error(`Journey must not regress to tiny typography: ${tinySize}`);
 }
 
 console.log('Partner visual-system completion contracts verified.');
