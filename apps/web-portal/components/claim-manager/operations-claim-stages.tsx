@@ -155,7 +155,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 disabled={!available}
                 aria-current={isSelected ? "step" : undefined}
                 onClick={() => setSelectedKey(stage.key)}
-                className={`flex min-h-[62px] w-full flex-col items-center justify-center gap-1.5 px-2 py-2 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
+                className={`flex min-h-[62px] w-full flex-col items-center justify-center gap-1.5 border-b-2 px-2 py-2 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isSelected ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
               >
                 <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_3px_8px_rgba(21,94,239,0.2)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
                   {isCompleted ? (
