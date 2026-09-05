@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,6 +8,7 @@ import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { getPartnerSupport, type PartnerSupport } from '@/lib/engagement';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 
 export default function SupportScreen() {
@@ -44,6 +45,7 @@ export default function SupportScreen() {
       ) : error || !data ? (
         <PartnerStateView
           state="error"
+          asset={PartnerAssets.emptyStates.supportResolved}
           title="Support is temporarily unavailable"
           message={error || 'Support information could not be loaded.'}
           actionLabel="Try again"
@@ -66,7 +68,9 @@ export default function SupportScreen() {
             </View>
           ) : (
             <View style={styles.teamCard}>
-              <View style={styles.teamIcon}><Ionicons name="people-outline" size={21} color={partnerTheme.colors.brand} /></View>
+              <View style={styles.teamArtwork}>
+                <Image source={PartnerAssets.actions.supportVerified} style={styles.teamArtworkImage} resizeMode="contain" />
+              </View>
               <View style={styles.personBody}>
                 <Text style={styles.teamName}>INSUREIT Operations Desk</Text>
               </View>
@@ -96,7 +100,6 @@ export default function SupportScreen() {
             <OpsStat value={data.operations.intakes_in_progress} label="Policy Intakes in progress" onPress={() => router.push('/policy-intakes')} />
             <OpsStat value={data.operations.active_claims} label="Active claims" onPress={() => router.push('/(tabs)/claims')} last />
           </View>
-
         </>
       )}
     </PartnerScreen>
@@ -172,16 +175,16 @@ const styles = StyleSheet.create({
   freshness: { minHeight: 22, marginTop: -8, marginBottom: 8, alignItems: 'flex-end', justifyContent: 'center' },
   updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
   personCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.nav },
-  teamCard: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 17, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
+  teamCard: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.xl, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   avatar: { width: 42, height: 42, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#383F52' },
   avatarText: { color: '#FFFFFF', ...partnerTheme.typography.bodyStrong },
-  teamIcon: { width: 40, height: 40, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
+  teamArtwork: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  teamArtworkImage: { width: 42, height: 42 },
   personBody: { flex: 1 },
   eyebrow: { color: '#AAA5FF', letterSpacing: 1, ...partnerTheme.typography.meta },
   name: { marginTop: 4, color: '#FFFFFF', ...partnerTheme.typography.sectionTitle },
   meta: { marginTop: 3, color: '#C5CCDA', ...partnerTheme.typography.caption },
   teamName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.cardTitle },
-  teamMeta: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
   contactRow: { marginTop: 7, flexDirection: 'row', gap: 8 },
   contactAction: { flex: 1, minHeight: partnerTheme.control.minTouchTarget, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, borderRadius: partnerTheme.radius.md, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
   contactText: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
