@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -20,6 +20,7 @@ import {
   type PartnerRenewalSummary,
 } from '@/lib/policies';
 import { formatIndianCurrency } from '@/lib/format';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -187,7 +188,7 @@ export default function RenewalsScreen() {
   ) : (
     <PartnerStateView
       state="empty"
-      icon="checkmark-circle-outline"
+      asset={PartnerAssets.emptyStates.noRenewals}
       title={mode === 'expiring' ? 'No policies in this renewal window' : 'No overdue policies found'}
       message="The queue is derived from your authorized policy book and policy expiry dates."
     />
@@ -252,8 +253,12 @@ function RenewalCard({
       meta={`Ends ${formatDate(row.end_date)}`}
       status={<PartnerStatusBadge label={renewalLabel(row.end_date)} tone={mode === 'expired' ? 'danger' : renewalTone(row.end_date)} />}
       leading={
-        <View style={styles.renewalMarker}>
-          <Ionicons name={row.vehicle_no ? 'car-outline' : 'document-text-outline'} size={17} color={partnerTheme.colors.brandStrong} />
+        <View style={styles.renewalArtwork}>
+          <Image
+            source={mode === 'expired' ? PartnerAssets.status.warning : PartnerAssets.actions.renewals}
+            style={styles.renewalArtworkImage}
+            resizeMode="contain"
+          />
         </View>
       }
       trailing={onOpenCustomer ? (
@@ -333,14 +338,13 @@ const styles = StyleSheet.create({
   windowRow: { marginTop: 7, flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   search: { marginTop: 9 },
   separator: { height: StyleSheet.hairlineWidth, backgroundColor: partnerTheme.colors.line },
-  renewalMarker: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  renewalArtwork: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.brandSoft,
   },
+  renewalArtworkImage: { width: 36, height: 36 },
   customerAction: {
     width: partnerTheme.control.minTouchTarget,
     height: partnerTheme.control.minTouchTarget,
