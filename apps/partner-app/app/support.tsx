@@ -45,7 +45,6 @@ export default function SupportScreen() {
       ) : error || !data ? (
         <PartnerStateView
           state="error"
-          asset={PartnerAssets.emptyStates.supportResolved}
           title="Support is temporarily unavailable"
           message={error || 'Support information could not be loaded.'}
           actionLabel="Try again"
