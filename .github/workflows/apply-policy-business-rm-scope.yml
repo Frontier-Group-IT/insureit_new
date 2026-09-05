@@ -1,0 +1,59 @@
+name: Apply Policy Business RM scope schema
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260905225000_policy_business_report_rm_scope_v4.sql'
+      - '.github/workflows/apply-policy-business-rm-scope.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Policy Business RM scope schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply Policy Business RM scope migration
+        run: supabase db query --linked --file supabase/migrations/20260905225000_policy_business_report_rm_scope_v4.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260905225000
+
+      - name: Verify schema
+        run: |
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.get_policy_business_report_v4(uuid[],date,date,uuid,uuid,text,text,text,integer,integer)') is not null as function_ready,
+              has_function_privilege('service_role','public.get_policy_business_report_v4(uuid[],date,date,uuid,uuid,text,text,text,integer,integer)','execute') as service_role_execute
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"service_role_execute"[[:space:]]*:[[:space:]]*true'
