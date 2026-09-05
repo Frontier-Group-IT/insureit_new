@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye } from "lucide-react";
 import { useState } from "react";
 import type { SpotSurveyDocument, SpotSurveyVerification } from "./spot-survey-workspace-v2";
 
@@ -29,7 +30,16 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="h-8 rounded-md border border-[#174EA6] bg-white px-2 text-[11px] font-semibold text-[#174EA6] transition hover:bg-[#F4F8FF]">View Details</button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        data-document-action="view"
+        aria-label="View details"
+        title="View details"
+        className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#174EA6] bg-white text-[#174EA6] transition hover:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30"
+      >
+        <Eye aria-hidden="true" size={17} strokeWidth={2} />
+      </button>
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/45 px-4 py-5">
           <div className="flex max-h-[92vh] w-full max-w-[760px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_80px_rgba(7,29,73,0.26)]">
