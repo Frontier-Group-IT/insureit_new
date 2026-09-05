@@ -27,14 +27,7 @@ The user's installed-screen audit showed that technical completion of Phases 0�
 **Partner Verify:** #186 / `33979348613` success  
 **Web Verify:** #3014 / `33979348649` success
 
-Delivered:
-
-- shared feature-artwork support in `PartnerTopBar`, `PartnerScreen` and `PartnerListScreen`;
-- centralized `partner-screen-artwork.ts` mapping for major Partner routes;
-- registration of prepared Learn, Support Verified, Apps Grid and Settings artwork;
-- branded Offline/Error/Unauthorized defaults in `PartnerStateView`;
-- complete feature-art coverage in More;
-- `verify:visual` CI regression.
+Delivered shared feature artwork in the common screen shells, centralized feature-art mapping, branded common failure states, complete More feature-art coverage and the initial `verify:visual` CI contract.
 
 **Release state:** merged only; no Partner OTA, APK or AAB.
 
@@ -45,14 +38,7 @@ Delivered:
 **Partner Verify:** #187 / `33979804980` success  
 **Web Verify:** #3015 / `33979804906` success
 
-Delivered:
-
-- Customers: branded no-customer state; initials intentionally retained for real customer identity.
-- Policies: branded empty state plus Motor/Health/Life-family/Commercial row artwork.
-- Claims: Partner claim artwork for active/empty states and Verified artwork for completed claims.
-- Renewals: branded empty state plus Renewal/Warning artwork by queue state.
-- Policy Intake history: Upload/Processing, Pending Review, Needs Attention, Completed and Rejected artwork mapped to existing states.
-- `verify:visual` expanded to protect the core screen mappings.
+Delivered branded Customers/Policies/Claims/Renewals/Policy Intake list and empty/status artwork while preserving identity initials and all business/data behavior.
 
 **Release state:** merged only; no Partner OTA, APK or AAB.
 
@@ -70,44 +56,53 @@ Important CI lesson:
 - fixed by using `asset ? styles.linkArtwork : undefined`;
 - exact final head then passed Partner and Web verification before merge.
 
-Delivered:
-
-- Search: branded Search/no-results states and Customer/Policy/Claim result artwork.
-- Support: verified Support artwork for Operations Desk fallback; real relationship-contact initials retained.
-- Settings: Partner Profile, Support and Settings/update artwork for feature rows while privacy/chevron utilities stay vector-based.
-- Activity: event-specific Policy/Claim/Policy Intake/Learn artwork replaced generic colored timeline dots; empty timeline uses Announcement artwork.
-- Activity tiny 7–8.5px timeline text was raised to the shared readable mobile scale.
-- `verify:visual` protects Search, Support, Settings and Activity semantics and typography.
+Delivered Search, Support and Settings branded feature artwork plus event-specific Activity artwork and readable Activity timeline typography.
 
 **Release state:** merged only; no Partner OTA, APK or AAB.
 
 ## Slice 4 — Impact and Journey body normalization
 
-**IN PROGRESS:** branch `partner/visual-system-completion-slice4`  
-**Base:** Slice 3 merge `bb16602adae63f43b6b9e5595d42abea909ffa84`.
+**MERGED:** PR #1338  
+**Merge:** `62ea263c7bcd958efbc7748da366feb93cf5277b`  
+**Final head:** `9cce862884f462bade399608f7136c497219592a`  
+**Partner Verify:** #193 / `33981084342` success  
+**Web Verify:** #3023 / `33981084184` success
+
+Delivered:
+
+- Impact feature cards use approved Motor, Customers, Policies and Claims artwork;
+- claim outcome uses Verified artwork and journey action uses Journey artwork;
+- Impact legacy 7.5–8.5px labels moved to shared readable typography;
+- Journey timeline dots replaced with Journey artwork;
+- Journey legacy tiny timeline/summary text moved to shared readable typography;
+- `verify:visual` protects these choices.
+
+**Release state:** merged only; no Partner OTA, APK or AAB.
+
+## Slice 5 — Your Week, Recognition, Learn and Profile audit
+
+**IN PROGRESS:** branch `partner/visual-system-completion-slice5`  
+**Base:** Slice 4 merge `62ea263c7bcd958efbc7748da366feb93cf5277b`.
 
 Implemented:
 
-- **Impact:** generic car/people/document/shield feature glyphs replaced with approved Motor, Customers, Policies and Claims Partner artwork.
-- **Impact:** claim outcome card now uses Verified artwork and journey link uses Journey artwork.
-- **Impact:** legacy 7.5–8.5px labels were replaced with the shared theme typography scale; copy was shortened without changing data meaning.
-- **Journey:** timeline dots replaced with Journey artwork; empty state continues using Journey artwork.
-- **Journey:** legacy 7.5–8.5px labels/timeline text were raised to the shared readable mobile scale.
-- `verify:visual` now blocks regressions in Impact/Journey artwork and tiny typography.
+- **Your Week:** retained the correct Renewal artwork for upcoming renewal work and replaced the remaining 7.5–9px local labels with shared `meta`, `caption`, `bodyStrong` and `sectionTitle` typography. No weekly calculations/routes changed.
+- **Recognition:** milestone cards now use approved Learn, Renewal and Journey artwork instead of generic feature Ionicons; tiny item/date/next-milestone typography moved to the shared readable scale; Achievement artwork remains the hero and empty-state identity.
+- **Learn:** no-card state now uses Learn/Policy Checklist artwork; correct answers use Verified artwork and explanation/learning feedback uses Learn artwork; remaining 7.2–9px labels/footnote/options/stats text moved to shared readable typography. Quiz load, answer submission, scoring and answer semantics are unchanged.
+- **Profile audit:** no code change is currently justified. The real signed-in person's initials are intentionally retained because arbitrary generated avatar variants could misrepresent identity. Registration rows already use shared typography, and the centralized screen header supplies Profile artwork.
+- `verify:visual` now protects Your Week, Recognition and Learn artwork and prevents tiny typography from returning.
 
-No API, data calculation, scope, routes, backend, schema/RLS, runtime or native configuration changed.
+No API, data calculation, auth/scope, quiz logic, backend, schema/RLS, runtime or native configuration changed.
 
 ## Remaining visual-completion work
 
-Priority order after Slice 4:
+Priority order after Slice 5:
 
-1. **Business body** — replace locally generic renewal/claim/network/payout feature imagery where a correct Partner asset exists and normalize dense local styling without changing commercial calculations or authorization.
-2. **Profile body** — keep identity initials unless an avatar is definitely semantically correct; normalize remaining spacing/details only.
-3. **Your Week / Recognition / Learn** — finish body typography and feature-art consistency.
-4. **Policy Intake new/detail** — apply correct Upload/Review/Attention/Completed/Failed artwork to upload/retry/detail states.
-5. **Customer / Policy / Claim detail pages** — check body spacing, section/card hierarchy and meaningful feature/status artwork.
-6. **Banner review** — current approved banner set is generic business-growth artwork only; use it only on genuinely business/growth surfaces and never mislabel it.
-7. Final installed-app screen-by-screen QA, then one consolidated Partner preview OTA publication when explicitly intended.
+1. **Business body** — isolate this pass because it contains commercial/network/payout UI. Replace generic renewal/claim/network feature imagery where a correct Partner asset exists and normalize local styling without altering calculations or authorization.
+2. **Policy Intake new/detail** — map Upload/Review/Attention/Completed/Failed artwork into upload/retry/detail states without changing processing behavior.
+3. **Customer / Policy / Claim detail pages** — audit body spacing, section/card hierarchy and meaningful status/product artwork.
+4. **Banner review** — current approved banner set is generic business-growth artwork only; use it only on genuinely business/growth surfaces and never mislabel it.
+5. Final source audit + one consolidated installed-app screen-by-screen QA and Partner preview OTA publication when explicitly intended.
 
 ## Acceptance gate before native Phase 6
 
