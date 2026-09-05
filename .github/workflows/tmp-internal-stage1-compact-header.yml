@@ -1,0 +1,81 @@
+name: Temporary internal Stage 1 compact header patch
+
+on:
+  push:
+    branches:
+      - ui/internal-stage1-compact-header
+    paths:
+      - .github/workflows/tmp-internal-stage1-compact-header.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/internal-stage1-compact-header
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Apply exact compact Spot Intimation header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          target_path = Path('apps/mobile-app/components/internal-claim-stage-one.tsx')
+          source_path = Path('apps/mobile-app/app/customer/internal-claim-stage.tsx')
+          target = target_path.read_text()
+          source = source_path.read_text()
+
+          old_import = "import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';"
+          new_import = "import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui';"
+          if old_import not in target:
+              raise SystemExit('Expected external claim UI import not found')
+          target = target.replace(old_import, new_import, 1)
+
+          old_header = '''      <ExternalClaimStageHeader step={1} title="Spot Intimation" subtitle="Start tracking an incident." vehicleNo={selectedVehicle?.vehicle_no ?? undefined} onBack={() => router.back()} />\n      {selectedPolicy && selectedVehicle ? <ClaimIdentityCard claimNo="New claim" insurerName={selectedInsurer?.name ?? 'Insurance company'} vehicleNo={selectedVehicle.vehicle_no} policyNo={selectedPolicy.policy_no} vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')} /> : null}'''
+          new_header = '''      {selectedPolicy && selectedVehicle ? (\n        <InternalSpotIntimationIdentityCard\n          claimNo="New claim"\n          insurerName={selectedInsurer?.name ?? 'Insurance company'}\n          vehicleNo={selectedVehicle.vehicle_no}\n          policyNo={selectedPolicy.policy_no}\n          vehicleMeta={[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ')}\n        />\n      ) : null}'''
+          if old_header not in target:
+              raise SystemExit('Expected Stage 1 hero/header block not found')
+          target = target.replace(old_header, new_header, 1)
+
+          fn_start = source.index('function InternalSpotIntimationIdentityCard(')
+          fn_end = source.index('\nfunction InternalSpotStatusIdentityCard(', fn_start)
+          compact_fn = source[fn_start:fn_end].replace("../../assets/", "../assets/")
+          insert_before = '\nfunction DocumentReadyTile('
+          if insert_before not in target:
+              raise SystemExit('DocumentReadyTile insertion point not found')
+          target = target.replace(insert_before, '\n' + compact_fn + '\n' + insert_before, 1)
+
+          style_lines = []
+          inside_styles = False
+          for line in source.splitlines():
+              if line.startswith('const styles = StyleSheet.create({'):
+                  inside_styles = True
+                  continue
+              if inside_styles and line == '});':
+                  break
+              if inside_styles and line.startswith('  spotStatus'):
+                  style_lines.append(line)
+          if not style_lines:
+              raise SystemExit('Compact header styles were not found in source stage screen')
+          style_anchor = 'const styles = StyleSheet.create({\n'
+          if style_anchor not in target:
+              raise SystemExit('Target StyleSheet anchor not found')
+          target = target.replace(style_anchor, style_anchor + '\n'.join(style_lines) + '\n', 1)
+
+          target_path.write_text(target)
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/components/internal-claim-stage-one.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Match internal Stage 1 compact Spot Intimation header"
+          git push origin HEAD:ui/internal-stage1-compact-header
