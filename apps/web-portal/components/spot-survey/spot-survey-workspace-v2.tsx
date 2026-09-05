@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Camera, ContactRound, FileText, ShieldCheck, Truck, Video } from "lucide-react";
 import type { ReactNode } from "react";
 import { DocumentVerificationDetailsButton } from "./document-verification-details-button";
 import { ReplaceDocumentButton } from "./replace-document-button";
@@ -210,6 +211,17 @@ function UnclassifiedAttachments({ claimId, documents }: { claimId: string; docu
   );
 }
 
+function DocumentTypeHeaderIcon({ itemKey }: { itemKey: string }) {
+  const baseClassName = "h-5 w-5 shrink-0";
+  if (itemKey === "spot") return <Camera aria-hidden="true" className={`${baseClassName} text-[#F037A5]`} strokeWidth={2.2} />;
+  if (itemKey === "rc") return <FileText aria-hidden="true" className={`${baseClassName} text-[#16A36A]`} strokeWidth={2.2} />;
+  if (itemKey === "insurance") return <ShieldCheck aria-hidden="true" className={`${baseClassName} text-[#2563EB]`} strokeWidth={2.2} />;
+  if (itemKey === "dl") return <ContactRound aria-hidden="true" className={`${baseClassName} text-[#9333EA]`} strokeWidth={2.2} />;
+  if (itemKey === "gr") return <Truck aria-hidden="true" className={`${baseClassName} text-[#EA7A16]`} strokeWidth={2.2} />;
+  if (itemKey === "video") return <Video aria-hidden="true" className={`${baseClassName} text-[#EF233C]`} strokeWidth={2.2} />;
+  return <FileText aria-hidden="true" className={`${baseClassName} text-[#071D49]`} strokeWidth={2.2} />;
+}
+
 function DocumentCard({ item, claim, verification, verifications }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification; verifications: SpotSurveyVerification[] }) {
   const status = item.document?.verification_status ?? "pending";
   const persistedVerified = Boolean(verification?.is_valid) || status === "verified";
@@ -220,7 +232,7 @@ function DocumentCard({ item, claim, verification, verifications }: { item: Item
   const remainingDocuments = item.documents.slice(1);
   return (
     <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${persistedVerified ? "border-green-200" : reuploadRequested || invalidAttempt ? "border-amber-200" : "border-[#E2EAF4]"}`}>
-      <div className="mb-2 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[11px] font-semibold text-[#071D49]">{item.number}</span><h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><StatusBadge tone={statusTone} label={item.documents.length > 1 ? `${item.documents.length} files` : persistedVerified ? "Verified" : reuploadRequested ? "Reupload Needed" : invalidAttempt ? "Invalid" : statusLabel(status)} /></div>
+      <div className="mb-2 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><DocumentTypeHeaderIcon itemKey={item.key} /><h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><StatusBadge tone={statusTone} label={item.documents.length > 1 ? `${item.documents.length} files` : persistedVerified ? "Verified" : reuploadRequested ? "Reupload Needed" : invalidAttempt ? "Invalid" : statusLabel(status)} /></div>
       {firstDocument ? <DocumentFileRow item={item} claim={claim} document={firstDocument} verifications={verifications} /> : <div className="grid grid-cols-[44px_1fr] gap-2"><div className={`grid h-11 w-11 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div><p className="self-center text-[11px] font-semibold text-[#071D49]">Document not uploaded</p></div>}
       {remainingDocuments.length ? <details className="mt-2 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF]"><summary className="cursor-pointer px-3 py-2 text-[11px] font-semibold text-[#174EA6]">Show all {item.documents.length} files</summary><div className="space-y-2 border-t border-[#DCE7F5] p-2">{remainingDocuments.map((document) => <DocumentFileRow key={document.id} item={item} claim={claim} document={document} verifications={verifications} />)}</div></details> : null}
       {!item.documents.length ? <div className="mt-2 flex justify-end"><ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" /></div> : null}
