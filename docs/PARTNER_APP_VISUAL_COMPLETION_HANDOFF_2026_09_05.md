@@ -72,42 +72,78 @@ Impact now uses Motor/Customers/Policies/Claims artwork, Verified claim-outcome 
 
 Delivered:
 
-- **Your Week:** retained correct Renewal artwork and replaced remaining 7.5–9px local labels with shared typography.
-- **Recognition:** milestone cards use Learn, Renewal and Journey artwork instead of generic feature glyphs; tiny text removed.
-- **Learn:** no-card and learning-feedback states use Learn artwork, correct-answer feedback uses Verified artwork, and tiny option/stats/explanation/footnote typography was normalized. Quiz loading/submission/scoring semantics were not changed.
-- **Profile audit:** no body code change was justified. Real signed-in-user initials are intentionally retained because arbitrary avatar artwork could misrepresent identity; registration rows already use shared typography and the common header supplies branded Profile identity.
+- Your Week: retained correct Renewal artwork and replaced remaining 7.5–9px local labels with shared typography.
+- Recognition: milestone cards use Learn, Renewal and Journey artwork instead of generic feature glyphs; tiny text removed.
+- Learn: no-card and learning-feedback states use Learn artwork, correct-answer feedback uses Verified artwork, and tiny option/stats/explanation/footnote typography was normalized. Quiz loading/submission/scoring semantics were not changed.
+- Profile audit: no body code change was justified. Real signed-in-user initials are intentionally retained because arbitrary avatar artwork could misrepresent identity; registration rows already use shared typography and the common header supplies branded Profile identity.
 - `verify:visual` protects these engagement decisions.
 
-**Release state for Slices 1–5:** source merged only. No Partner OTA, APK or AAB was created by this visual-completion stream.
+### Business body pass
 
-## Business body pass
+**MERGED:** PR #1344  
+**Merge:** `4a017d294b6f726a9f5f3c29897217e2fd131128`  
+**Partner Verify:** #195 / `33981793956` success  
+**Web Verify:** #3030 / `33981794112` success
 
-**IN PROGRESS:** branch `partner/visual-system-completion-business`  
-**Base:** Slice 5 merge `e03f392ea47d5e642951ebe9ee880c5db6cd232d`.
+Delivered:
 
-The Business screen was deliberately isolated because it contains commercial/network/payout visibility and should not be broadly redesigned.
+- Today → Renewals uses `PartnerAssets.actions.renewals` instead of a generic refresh glyph.
+- Today → Active Claims uses `PartnerAssets.navigation.claims` instead of a generic shield glyph.
+- My Network uses `PartnerAssets.actions.businessPerformance` instead of a locally drawn network symbol/tree.
+- Touched action/network/card radii use the shared Partner radius.
+- Restricted payout lock intentionally remains a vector security/authorization symbol.
+- `verify:visual` protects the artwork and explicitly preserves the existing payout authorization gate and `getPartnerPayoutSummary()` service path.
+
+**Explicitly unchanged:** business calculations, trend/mix calculations, payout amounts/status semantics, payout authorization, Partner scope, network sorting, routes, API/RPC/service calls, backend/schema/RLS, runtime/native configuration.
+
+## Preview OTA checkpoint — 2026-09-05
+
+The user explicitly requested a device-review OTA before the next refinement stage.
+
+- Trigger commit on `main`: `1f215486f8f337f389dd75eb13fc6b5fbc984743`
+- Workflow: `Publish Partner preview OTA`
+- Workflow run: #45 / `33983382784`
+- Channel: `preview`
+- Result: **success**
+- Exact-current-main guard: passed
+- Partner EAS/update identity guard: passed
+- Expo project access: passed
+- OTA publish step: passed
+- No APK/AAB or native build was created.
+
+Important boundary: this checkpoint OTA contains the merged visual work through the Business pass. The Policy Intake new/detail branch described below was intentionally **not** included in that OTA.
+
+## Policy Intake new/detail pass
+
+**IN PROGRESS:** branch `partner/visual-system-completion-intake-details`
 
 Implemented:
 
-- Today → Renewals now uses `PartnerAssets.actions.renewals` instead of the generic refresh glyph.
-- Today → Active claims now uses `PartnerAssets.navigation.claims` instead of the generic shield glyph.
-- My network now uses `PartnerAssets.actions.businessPerformance` instead of a locally drawn generic network glyph/tree.
-- Action/network/card radii use the shared Partner radius where touched.
-- The restricted payout lock intentionally remains a vector security/authorization symbol.
-- `verify:visual` now protects the Business feature artwork and explicitly checks that the existing payout authorization gate and `getPartnerPayoutSummary()` service call remain in place.
+- **New Policy Intake:** policy-file selection uses Upload artwork before selection and Verified artwork after selection; Ready to submit uses Verified artwork.
+- Existing radio controls, chevrons and send button icons remain vectors because they are interaction utilities rather than feature identity.
+- **Policy Intake detail:** status artwork is centralized in `statusArtwork(row)` and maps:
+  - processing → Document Upload
+  - ready/in review → Pending Review
+  - needs attention / manual review → Policy Attention
+  - completed → Verified
+  - rejected → Rejected
+- Missing/unavailable intake uses prepared Policy Upload artwork.
+- Operations-attention card uses Policy Attention artwork instead of the generic alert feature glyph.
+- Replacement upload progress uses Document Upload artwork.
+- Disclosure chevrons and Open final policy / Upload replacement button glyphs remain utility/action vectors.
+- `verify:visual` protects all Intake artwork mappings and explicitly checks that draft restore/save, initial submit service, and replacement-submit service paths remain intact.
 
-**Explicitly unchanged:** business-performance calculations, trend/mix calculations, payout amounts/status mapping, payout authorization, Partner scope, network sorting, routes, API/RPC/service calls, backend/schema/RLS, runtime/native configuration.
+**Explicitly unchanged:** DocumentPicker types/size rules, draft save/restore timing, customer-mobile validation, lead-source behavior, upload progress calculation, submit locking, submit/replacement API calls, routing, OCR/status semantics, backend/schema/RLS, runtime/native configuration.
 
 ## Remaining visual-completion work
 
-After the Business pass:
+After the Policy Intake pass:
 
-1. **Policy Intake new/detail** — map Upload/Review/Attention/Completed/Failed artwork into upload/retry/detail states without changing draft, upload or submission processing.
-2. **Customer / Policy / Claim detail pages** — audit body spacing, section/card hierarchy and meaningful status/product artwork.
-3. **Banner review** — current approved banner set is generic business-growth artwork only. Use only where genuinely business/growth oriented; do not force banners into operational screens.
-4. **Final source audit** — verify all major Partner routes against the visual system and remaining generic feature-level glyphs.
-5. **One consolidated Partner preview OTA** after all OTA-safe visual work is merged and intended for device review.
-6. **Installed-app screen-by-screen QA** including two cold launches, then decide whether OTA visual refinement is accepted and native Phase 6 may be reconsidered.
+1. **Customer / Policy / Claim detail pages** — audit body spacing, section/card hierarchy and meaningful status/product artwork while preserving identity initials and all business/data behavior.
+2. **Banner review** — current approved banner set is generic business-growth artwork only. Use only where genuinely business/growth oriented; do not force banners into operational screens.
+3. **Final source audit** — verify all major Partner routes against the visual system and remaining generic feature-level glyphs.
+4. **Final consolidated Partner preview OTA** after all remaining OTA-safe visual work is merged and intended for device review.
+5. **Installed-app screen-by-screen QA** including two cold launches, then decide whether OTA visual refinement is accepted and native Phase 6 may be reconsidered.
 
 ## Acceptance gate before native Phase 6
 
