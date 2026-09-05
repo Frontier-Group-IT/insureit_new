@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   RegisterEmpty,
   RegisterPagination,
@@ -48,7 +48,20 @@ type SourceOption = { value: string; label: string };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
 type BusinessFilter = "all" | "Motor" | "Non Motor";
 type TimeScope = "mtd" | "all";
+type PolicyRegisterReturnState = {
+  query: string;
+  view: ViewKey;
+  timeScope: TimeScope;
+  business: BusinessFilter;
+  category: string;
+  source: string;
+  rm: string;
+  fromDate: string;
+  toDate: string;
+  page: number;
+};
 const PAGE_SIZE = 10;
+const POLICY_REGISTER_RETURN_STATE_KEY = "insureit:policy-register:return-state:v1";
 
 function policySourceDatabaseType(value: string | null) {
   const normalized = value?.trim().toLowerCase();
@@ -177,6 +190,27 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const [openingDocumentId, setOpeningDocumentId] = useState<string | null>(null);
   const { from: mtdStart, to: mtdEnd } = monthToDateBounds();
 
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(POLICY_REGISTER_RETURN_STATE_KEY);
+      if (!raw) return;
+      window.sessionStorage.removeItem(POLICY_REGISTER_RETURN_STATE_KEY);
+      const saved = JSON.parse(raw) as Partial<PolicyRegisterReturnState>;
+      if (typeof saved.query === "string") setQuery(saved.query);
+      if (["all", "active", "expiring", "expired", "claims"].includes(saved.view ?? "")) setView(saved.view as ViewKey);
+      if (saved.timeScope === "mtd" || saved.timeScope === "all") setTimeScope(saved.timeScope);
+      if (saved.business === "all" || saved.business === "Motor" || saved.business === "Non Motor") setBusiness(saved.business);
+      if (typeof saved.category === "string") setCategory(saved.category);
+      if (typeof saved.source === "string") setSource(saved.source);
+      if (typeof saved.rm === "string") setRm(saved.rm);
+      if (typeof saved.fromDate === "string") setFromDate(saved.fromDate);
+      if (typeof saved.toDate === "string") setToDate(saved.toDate);
+      if (typeof saved.page === "number" && Number.isFinite(saved.page) && saved.page > 0) setPage(Math.floor(saved.page));
+    } catch {
+      window.sessionStorage.removeItem(POLICY_REGISTER_RETURN_STATE_KEY);
+    }
+  }, []);
+
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
   const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
@@ -260,6 +294,15 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     setPage(1);
   }
 
+  function rememberReturnState() {
+    const snapshot: PolicyRegisterReturnState = { query, view, timeScope, business, category, source, rm, fromDate, toDate, page: safePage };
+    try {
+      window.sessionStorage.setItem(POLICY_REGISTER_RETURN_STATE_KEY, JSON.stringify(snapshot));
+    } catch {
+      // A failed browser storage write should never block policy navigation.
+    }
+  }
+
   function openDocument(document: PolicyDocument) {
     if (openingDocumentId) return;
     setOpeningDocumentId(document.id);
@@ -268,7 +311,13 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   }
 
   return (
-    <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
+    <section
+      className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]"
+      onClickCapture={(event) => {
+        const target = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('a[href^="/policies/"][href$="/edit"]') : null;
+        if (target) rememberReturnState();
+      }}
+    >
       <div className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3 sm:px-5">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
