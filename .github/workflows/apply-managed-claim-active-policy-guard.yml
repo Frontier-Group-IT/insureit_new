@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260905195000_prevent_duplicate_active_managed_claims.sql'
+      - 'supabase/migrations/20260905213000_fix_managed_claim_guard_enum_cast.sql'
       - '.github/workflows/apply-managed-claim-active-policy-guard.yml'
 
 permissions:
@@ -34,7 +35,7 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
-          test -f supabase/migrations/20260905195000_prevent_duplicate_active_managed_claims.sql
+          test -f supabase/migrations/20260905213000_fix_managed_claim_guard_enum_cast.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -44,11 +45,11 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply active-claim guard migration
-        run: supabase db query --linked --file supabase/migrations/20260905195000_prevent_duplicate_active_managed_claims.sql
+      - name: Apply active-claim enum guard correction
+        run: supabase db query --linked --file supabase/migrations/20260905213000_fix_managed_claim_guard_enum_cast.sql
 
-      - name: Record migration as applied
-        run: supabase migration repair --linked --status applied 20260905195000
+      - name: Record correction migration as applied
+        run: supabase migration repair --linked --status applied 20260905213000
 
       - name: Verify active-claim guard
         shell: bash
@@ -60,7 +61,9 @@ jobs:
                 select 1
                 from pg_proc
                 where proname = 'prevent_duplicate_active_managed_claim_insert'
-              ) as function_ready,
+                  and pg_get_functiondef(oid) like '%new.current_status::text%'
+                  and pg_get_functiondef(oid) like '%existing.current_status::text%'
+              ) as enum_cast_fixed,
               exists (
                 select 1
                 from pg_trigger
@@ -69,5 +72,5 @@ jobs:
               ) as trigger_ready
           ")
           echo "$result"
-          echo "$result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"enum_cast_fixed"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
