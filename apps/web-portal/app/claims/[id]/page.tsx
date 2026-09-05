@@ -241,7 +241,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
       <div className="[&>section>div:first-child>div:nth-child(3)_img]:grayscale [&>section>div:first-child>div:nth-child(3)_img]:invert [&>section>div:first-child>div:nth-child(3)_img]:contrast-[4] [&>section>div:first-child>div:nth-child(3)_img]:mix-blend-screen">
         <SpotClaimHeader claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       </div>
-      <div className="mt-1">
+      <div className="mt-[6px]">
         <OperationsClaimStages
           claimId={claim.id}
           currentStatus={claim.current_status}
