@@ -1,0 +1,28 @@
+name: Temporary cherry-pick internal stage UI
+
+on:
+  push:
+    branches:
+      - ui/internal-stages-match-external-main
+    paths:
+      - .github/workflows/tmp-cherry-pick-internal-stage-ui.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/internal-stages-match-external-main
+          fetch-depth: 0
+      - name: Apply approved internal stage UI commits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git cherry-pick 6b878443e8f3163e4c01c836d803fbb199c8fcf2
+          git cherry-pick d66d48566109b211140f1583146e13f12c1f09f7
+          git push origin HEAD:ui/internal-stages-match-external-main
