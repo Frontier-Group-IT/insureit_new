@@ -17,6 +17,7 @@ import {
   type PartnerCustomerRow,
   type PartnerCustomerSummary,
 } from '@/lib/customers';
+import { PartnerAssets } from '@/lib/partner-assets';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
@@ -127,7 +128,7 @@ export default function CustomersScreen() {
   ) : (
     <PartnerStateView
       state="empty"
-      icon="people-outline"
+      asset={PartnerAssets.emptyStates.noCustomers}
       title="No customers found"
       message={debouncedSearch ? 'Try a different name, code, phone, email or city.' : 'Customers in your authorized business scope will appear here.'}
     />
