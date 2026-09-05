@@ -32,22 +32,6 @@ type PolicyRow = {
   claims: { count: number }[];
 };
 
-type ExternalPolicySearchRow = {
-  id: string;
-  policy_no: string;
-  policy_type: string;
-  start_date: string;
-  end_date: string;
-  insured_declared_value: number | null;
-  premium_amount: number | null;
-  added_via: string | null;
-  created_at: string;
-  customers: PolicyRow["customers"];
-  vehicles: PolicyRow["vehicles"];
-  insurance_companies: PolicyRow["insurance_companies"];
-};
-type ExternalPolicyClaimRow = { external_policy_id: string | null };
-
 type BackofficePolicyRow = {
   id: string;
   policy_no: string;
@@ -139,31 +123,11 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   }
 
   let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, rm_name, rm_employee_id, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
-  let externalQuery = admin.from("external_policies").select("id, policy_no, policy_type, start_date, end_date, insured_declared_value, premium_amount, added_via, created_at, customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name)").order("created_at", { ascending: false });
-  if (accessibleCustomerIds !== null) {
-    query = query.in("customer_id", accessibleCustomerIds);
-    externalQuery = externalQuery.in("customer_id", accessibleCustomerIds);
-  }
-  const [sourceResult, policyResult, externalPolicyResult] = await Promise.all([
+  if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
+  const [sourceResult, policyResult] = await Promise.all([
     activeSourcesPromise,
     query.returns<PolicyRow[]>(),
-    externalQuery.returns<ExternalPolicySearchRow[]>(),
   ]);
-
-  const externalRows = externalPolicyResult.error ? [] : (externalPolicyResult.data ?? []);
-  const externalClaimCounts = new Map<string, number>();
-  const externalPolicyIds = externalRows.map((row) => row.id);
-  if (externalPolicyIds.length) {
-    const { data: externalClaims } = await admin
-      .from("claims")
-      .select("external_policy_id")
-      .in("external_policy_id", externalPolicyIds)
-      .returns<ExternalPolicyClaimRow[]>();
-    for (const claim of externalClaims ?? []) {
-      if (!claim.external_policy_id) continue;
-      externalClaimCounts.set(claim.external_policy_id, (externalClaimCounts.get(claim.external_policy_id) ?? 0) + 1);
-    }
-  }
 
   const finishedAt = performance.now();
   logPortalRoutePerformance("/policies", {
@@ -175,7 +139,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   const { sourceNameByKey, sourceOptions } = buildPolicySourceOptions(sourceResult.error ? [] : (sourceResult.data ?? []));
   const { data, error } = policyResult;
   const rows = data ?? [];
-  const internalWorkspaceRows = rows.map((policy) => {
+  const workspaceRows = rows.map((policy) => {
     const sourceType = policySourceDatabaseType(policy.intermediary_type);
     const sourceCode = policy.intermediary_code?.trim() ?? "";
     return {
@@ -185,35 +149,8 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       source_name: sourceType && sourceCode ? sourceNameByKey.get(sourceLookupKey(sourceType, sourceCode)) ?? null : null,
     };
   });
-  const externalWorkspaceRows = externalRows.map((policy) => ({
-    id: `external/${policy.id}`,
-    policy_no: policy.policy_no,
-    policy_type: policy.policy_type,
-    policy_product: "External",
-    business_line: policy.vehicles ? "Motor" : "Non Motor",
-    issuance_date: null,
-    created_at: policy.created_at,
-    start_date: policy.start_date,
-    end_date: policy.end_date,
-    insured_declared_value: policy.insured_declared_value,
-    intermediary_type: "external",
-    intermediary_code: policy.added_via,
-    rm_name: null,
-    rm_employee_id: null,
-    policy_premium_details: { gross_premium: policy.premium_amount },
-    policy_documents: [],
-    customers: policy.customers,
-    vehicles: policy.vehicles,
-    insurance_companies: policy.insurance_companies,
-    non_motor_policy_details: null,
-    claims: [{ count: externalClaimCounts.get(policy.id) ?? 0 }],
-    gross_premium: policy.premium_amount,
-    source_name: "External",
-  }));
-  const workspaceRows = [...internalWorkspaceRows, ...externalWorkspaceRows];
 
   return <AppShell title="Policies">
-    
     {profile.role === "it_super_user" && !error ? <ItSuperUserDeletePanel entity="policy" title="Delete policy master record" records={rows.map((policy) => ({ id: policy.id, label: policy.policy_no, detail: [policy.vehicles?.vehicle_no, policy.customers?.contact_name, policy.insurance_companies?.name].filter(Boolean).join(" • ") }))} /> : null}
     {error ? <RegisterError /> : <PolicyWorkspace rows={workspaceRows} sourceOptions={sourceOptions} />}
   </AppShell>;
