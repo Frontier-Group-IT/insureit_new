@@ -540,15 +540,8 @@ return (
     {message ? <Message type="error">{message}</Message> : null}
 
     <View pointerEvents="none">
-      <ExternalClaimMilestoneStageBody
-        key={stageKey}
-        values={externalValues}
-        set={() => undefined}
-        milestones={externalMilestones}
-        claimId={claim.id}
-        customerId={claim.customer_id}
-      />
-    </View>
+        {ExternalClaimMilestoneStageBody(stageKey as any, externalValues, () => undefined, externalMilestones, claim.id, claim.customer_id)}
+      </View>
 
     <View pointerEvents="none">
       <ClaimActionBar
