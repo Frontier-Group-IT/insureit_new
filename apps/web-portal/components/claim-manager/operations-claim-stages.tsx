@@ -192,18 +192,29 @@ function StageForm({ stage, active, detail, spotDetails, fields, next, insurerCl
       () => setLocationError("Unable to access your location. Enter it manually."),
     );
   };
-  return <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+  return <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-[linear-gradient(180deg,#F8FBFF_0%,#F3F8FF_100%)] shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
     {!standalone ? <><input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} /></> : null}
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">{fields[stage.key].map((field) => {
-      const storedValue = detail?.details?.[field.name];
-      const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? "" : field.name === "incident_at" ? spotDetails?.incident_at ?? accidentAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "spot_intimation_at" ? spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_name" ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_phone" ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
-      const required = requiredFields[stage.key]?.includes(field.name);
-      return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
-        {field.type === "select" ? <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select> : <input name={field.name} type={field.type ?? "text"} value={spot && field.name === "location" ? location : undefined} defaultValue={spot && field.name !== "location" ? toDateTimeLocal(value, field.type) : undefined} onChange={spot && field.name === "location" ? (event) => setLocation(event.target.value) : undefined} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]" />}
-        {spot && field.name === "location" ? <><button type="button" onClick={captureLocation} className="mt-1 text-[10px] font-semibold normal-case tracking-normal text-[#174EA6] hover:underline">Use current location</button>{locationError ? <span role="alert" className="mt-1 block text-[10px] font-medium normal-case tracking-normal text-rose-700">{locationError}</span> : null}</> : null}
-      </label>;
-    })}</div>
-    {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
+    {spot ? <div className="flex items-center gap-3 border-b border-[#DCE9F8] px-4 py-3">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#E8F2FF] text-[#2F80ED]">
+        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z"/><circle cx="12" cy="10" r="2.2"/></svg>
+      </span>
+      <div className="min-w-0">
+        <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
+        <p className="mt-0.5 text-[11px] font-medium text-[#68758A]">Capture the key details of the accident and spot intimation.</p>
+      </div>
+    </div> : null}
+    <div className="p-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">{fields[stage.key].map((field) => {
+        const storedValue = detail?.details?.[field.name];
+        const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? "" : field.name === "incident_at" ? spotDetails?.incident_at ?? accidentAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "spot_intimation_at" ? spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_name" ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "driver_phone" ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "") : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
+        const required = requiredFields[stage.key]?.includes(field.name);
+        return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
+          {field.type === "select" ? <select name={field.name} defaultValue={value} required={required} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] shadow-[0_2px_6px_rgba(7,29,73,0.03)] outline-none transition focus:border-[#2F80ED] focus:ring-2 focus:ring-[#2F80ED]/10"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select> : <input name={field.name} type={field.type ?? "text"} value={spot && field.name === "location" ? location : undefined} defaultValue={spot && field.name !== "location" ? toDateTimeLocal(value, field.type) : undefined} onChange={spot && field.name === "location" ? (event) => setLocation(event.target.value) : undefined} required={required} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] shadow-[0_2px_6px_rgba(7,29,73,0.03)] outline-none transition focus:border-[#2F80ED] focus:ring-2 focus:ring-[#2F80ED]/10" />}
+          {spot && field.name === "location" ? <><button type="button" onClick={captureLocation} className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold normal-case tracking-normal text-[#174EA6] hover:underline"><svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5 fill-none stroke-current stroke-2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Use current location</button>{locationError ? <span role="alert" className="mt-1 block text-[10px] font-medium normal-case tracking-normal text-rose-700">{locationError}</span> : null}</> : null}
+        </label>;
+      })}</div>
+      {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
+    </div>
   </form>;
 }
 
