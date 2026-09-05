@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { AlertCircle, ArrowRight, BriefcaseBusiness, ClipboardList, FileInput, RefreshCw, ShieldCheck, UsersRound } from "lucide-react";
+import { AlertCircle, ArrowRight, BriefcaseBusiness, CalendarClock, ClipboardList, FileInput, RefreshCw, ShieldCheck, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerDivider, PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebHome, getPartnerWebSession } from "@/lib/partner-web";
+import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,7 +24,11 @@ function todayHref(kind: "intake_attention" | "renewal" | "claim") {
 }
 
 export default async function PartnerHomePage() {
-  const [{ identity }, home] = await Promise.all([getPartnerWebSession(), getPartnerWebHome()]);
+  const [{ identity }, home, externalRenewals] = await Promise.all([
+    getPartnerWebSession(),
+    getPartnerWebHome(),
+    getPartnerExternalRenewalSummary(),
+  ]);
   const name = identity.display_name?.trim() || "Partner";
 
   return (
@@ -48,6 +53,16 @@ export default async function PartnerHomePage() {
             { label: "Renewals", value: home.business.renewals_30_days, meta: "Due in 30 days" },
           ]}
         />
+
+        <Link href="/partner/renewals/external" prefetch={false} className="group flex items-center gap-3 border-y border-[#DCE4ED] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[11px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
+            <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74839A]">External policies expiring within 30 days</span>
+          </span>
+          <span className="text-[20px] font-extrabold tracking-[-0.03em] text-[#162746]">{externalRenewals.due_30_count}</span>
+          <ArrowRight className="h-4 w-4 text-[#8794A7] transition group-hover:translate-x-0.5" />
+        </Link>
 
         <section className="grid gap-8 xl:grid-cols-[1.18fr_.82fr]">
           <div>
