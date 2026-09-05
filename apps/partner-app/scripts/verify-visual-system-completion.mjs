@@ -20,6 +20,11 @@ const stateView = read('components/ui/partner-state-view.tsx');
 const screen = read('components/partner-screen.tsx');
 const listScreen = read('components/partner-list-screen.tsx');
 const more = read('app/(tabs)/more.tsx');
+const customers = read('app/customers.tsx');
+const policies = read('app/(tabs)/policies.tsx');
+const claims = read('app/(tabs)/claims.tsx');
+const renewals = read('app/renewals.tsx');
+const policyIntakes = read('app/policy-intakes.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
@@ -67,6 +72,20 @@ for (const asset of [
   'PartnerAssets.status.settings',
 ]) {
   requireText(more, asset, `More screen is missing ${asset}.`);
+}
+
+requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
+requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty state must use the prepared no-policies artwork.');
+for (const product of ['motorInsurance', 'healthInsurance', 'familyInsurance', 'commercialInsurance']) {
+  requireText(policies, `PartnerAssets.products.${product}`, `Policies must map ${product} artwork into policy rows.`);
+}
+requireText(claims, 'PartnerAssets.navigation.claims', 'Claims rows/empty state must use Partner claim artwork.');
+requireText(claims, 'PartnerAssets.status.verified', 'Completed claims must use verified artwork.');
+requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');
+requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows must use Partner renewal artwork.');
+requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
+for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) {
+  requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
 }
 
 console.log('Partner visual-system completion contracts verified.');
