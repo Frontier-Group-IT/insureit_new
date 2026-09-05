@@ -25,6 +25,10 @@ const policies = read('app/(tabs)/policies.tsx');
 const claims = read('app/(tabs)/claims.tsx');
 const renewals = read('app/renewals.tsx');
 const policyIntakes = read('app/policy-intakes.tsx');
+const search = read('app/search.tsx');
+const support = read('app/support.tsx');
+const settings = read('app/settings.tsx');
+const activity = read('app/activity.tsx');
 
 for (const asset of ['policyChecklist', 'appsGrid', 'settings', 'supportVerified']) {
   requireText(assets, `${asset}: require(`, `Partner asset registry must expose ${asset}.`);
@@ -65,12 +69,7 @@ requireText(stateView, 'PartnerAssets.emptyStates.incompleteDetails', 'Unauthori
 if (more.includes('<MenuRow icon=')) {
   throw new Error('Feature rows in More must use Partner artwork instead of generic vector icons.');
 }
-
-for (const asset of [
-  'PartnerAssets.actions.policyChecklist',
-  'PartnerAssets.status.businessGrowth',
-  'PartnerAssets.status.settings',
-]) {
+for (const asset of ['PartnerAssets.actions.policyChecklist', 'PartnerAssets.status.businessGrowth', 'PartnerAssets.status.settings']) {
   requireText(more, asset, `More screen is missing ${asset}.`);
 }
 
@@ -86,6 +85,25 @@ requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows m
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
 for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) {
   requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
+}
+
+requireText(search, 'PartnerAssets.emptyStates.noSearchResults', 'Universal Search must use the prepared no-results artwork.');
+for (const featureAsset of ['navigation.customers', 'navigation.policies', 'navigation.claims']) {
+  requireText(search, `PartnerAssets.${featureAsset}`, `Universal Search is missing ${featureAsset} result artwork.`);
+}
+requireText(support, 'PartnerAssets.actions.supportVerified', 'Support fallback must use the prepared verified-support artwork.');
+if (support.includes('asset={PartnerAssets.emptyStates.supportResolved}')) {
+  throw new Error('Support-unavailable errors must not misuse the support-resolved artwork.');
+}
+for (const featureAsset of ['navigation.profile', 'actions.support', 'status.settings']) {
+  requireText(settings, `PartnerAssets.${featureAsset}`, `Settings is missing ${featureAsset} feature artwork.`);
+}
+
+for (const activityAsset of ['status.policyActive', 'navigation.claims', 'navigation.policyIntake', 'actions.policyChecklist', 'status.announcement']) {
+  requireText(activity, `PartnerAssets.${activityAsset}`, `Activity is missing ${activityAsset} artwork.`);
+}
+for (const tinySize of ['fontSize: 7.2', 'fontSize: 7.5', 'fontSize: 8.5', 'fontSize: 8,']) {
+  if (activity.includes(tinySize)) throw new Error(`Activity must not regress to tiny timeline typography: ${tinySize}`);
 }
 
 console.log('Partner visual-system completion contracts verified.');
