@@ -8,14 +8,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { CompactDocumentStageHeader } from '@/components/compact-document-upload-navigation';
 import { AppDatePicker } from '@/components/design-system';
 import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-tabs';
-import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
+import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
-import { ExternalClaimMilestoneStageBody, externalClaimMilestoneSubtitle } from './self-managed-milestone';
+import { ExternalClaimMilestoneStageBody } from './self-managed-milestone';
 
 type ManagedClaim = {
   id: string;
@@ -397,15 +396,8 @@ export default function InternalClaimStageScreen() {
 
     return (
       <Screen title="Claim Intimation" showTitleHeader={false}>
-        <CompactDocumentStageHeader
-          step={3}
+        <InternalManagedStageIdentityCard
           title="Claim Intimation"
-          subtitle="Record dealership, gate-in and estimate details."
-          vehicleNo={vehicleNo}
-          claimNo={claim.insurer_claim_no || claim.claim_no}
-        />
-
-        <ClaimIdentityCard
           claimNo={claim.insurer_claim_no || claim.claim_no}
           insurerName={insurerName || 'Insurance company'}
           vehicleNo={vehicleNo || 'Vehicle'}
@@ -452,108 +444,154 @@ export default function InternalClaimStageScreen() {
   }
 
   const rawFormValue = (keys: string[]) => firstValue(mergedDetails, keys);
-const formValue = (keys: string[]) => {
-  const value = rawFormValue(keys);
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return String(value);
-};
-const yesNoValue = (keys: string[]) => {
-  const value = rawFormValue(keys);
-  if (value === null || value === undefined || value === '') return '';
-  if (typeof value === 'boolean') return value ? 'yes' : 'no';
-  const normalized = String(value).trim().toLowerCase();
-  if (['yes', 'true', 'received', 'submitted', 'completed', 'done'].includes(normalized)) return 'yes';
-  if (['no', 'false', 'not yet', 'pending'].includes(normalized)) return 'no';
-  return normalized;
-};
-const cashlessValue = (() => {
-  const value = rawFormValue(['cashless']);
-  if (value === null || value === undefined || value === '') return '';
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  const normalized = String(value).trim().toLowerCase();
-  return ['yes', 'true', 'cashless'].includes(normalized) ? 'true' : ['no', 'false', 'reimbursement'].includes(normalized) ? 'false' : normalized;
-})();
-const externalValues = {
-  approval_received_date: isoDateValue(rawFormValue(['approval_received_date', 'approved_at'])),
-  cashless: cashlessValue,
-  surveyor_name: formValue(['surveyor_name', 'name']),
-  surveyor_phone: formValue(['surveyor_phone', 'surveyor_mobile', 'mobile']),
-  surveyor_email: formValue(['surveyor_email', 'email']),
-  repair_complete_date: isoDateValue(rawFormValue(['repair_complete_date', 'repair_completed_date'])),
-  ri_required: yesNoValue(['ri_required', 'ri_status']),
-  ri_requested_date: isoDateValue(rawFormValue(['ri_requested_date', 'reinspection_requested_date'])),
-  ri_done_date: isoDateValue(rawFormValue(['ri_done_date', 'reinspection_done_date'])),
-  bill_date: isoDateValue(rawFormValue(['bill_date', 'final_bill_date'])),
-  bill_amount: formValue(['bill_amount', 'final_bill_amount']),
-  assessment_received: yesNoValue(['assessment_received', 'assessment_status']),
-  do_date: isoDateValue(rawFormValue(['do_date', 'delivery_order_date'])),
-  do_amount: formValue(['do_amount', 'delivery_order_amount']),
-  vehicle_received: yesNoValue(['vehicle_received', 'delivery_status', 'status']),
-  vehicle_received_date: isoDateValue(rawFormValue(['vehicle_received_date', 'vehicle_delivery_date'])),
-  depreciation_submitted: yesNoValue(['depreciation_submitted', 'depreciation_status']),
-  satisfaction_submitted: yesNoValue(['satisfaction_submitted', 'satisfaction_status']),
-  documents_submit_date: isoDateValue(rawFormValue(['documents_submit_date', 'documents_submitted_date'])),
-  payment_received_date: isoDateValue(rawFormValue(['payment_received_date', 'settlement_date'])),
-  payment_received_amount: formValue(['payment_received_amount', 'settlement_amount']),
-} as any;
+  const formValue = (keys: string[]) => {
+    const value = rawFormValue(keys);
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    return String(value);
+  };
+  const yesNoValue = (keys: string[]) => {
+    const value = rawFormValue(keys);
+    if (value === null || value === undefined || value === '') return '';
+    if (typeof value === 'boolean') return value ? 'yes' : 'no';
+    const normalized = String(value).trim().toLowerCase();
+    if (['yes', 'true', 'received', 'submitted', 'completed', 'done'].includes(normalized)) return 'yes';
+    if (['no', 'false', 'not yet', 'pending'].includes(normalized)) return 'no';
+    return normalized;
+  };
+  const cashlessValue = (() => {
+    const value = rawFormValue(['cashless']);
+    if (value === null || value === undefined || value === '') return '';
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    const normalized = String(value).trim().toLowerCase();
+    return ['yes', 'true', 'cashless'].includes(normalized) ? 'true' : ['no', 'false', 'reimbursement'].includes(normalized) ? 'false' : normalized;
+  })();
+  const externalValues = {
+    approval_received_date: isoDateValue(rawFormValue(['approval_received_date', 'approved_at'])),
+    cashless: cashlessValue,
+    surveyor_name: formValue(['surveyor_name', 'name']),
+    surveyor_phone: formValue(['surveyor_phone', 'surveyor_mobile', 'mobile']),
+    surveyor_email: formValue(['surveyor_email', 'email']),
+    repair_complete_date: isoDateValue(rawFormValue(['repair_complete_date', 'repair_completed_date'])),
+    ri_required: yesNoValue(['ri_required', 'ri_status']),
+    ri_requested_date: isoDateValue(rawFormValue(['ri_requested_date', 'reinspection_requested_date'])),
+    ri_done_date: isoDateValue(rawFormValue(['ri_done_date', 'reinspection_done_date'])),
+    bill_date: isoDateValue(rawFormValue(['bill_date', 'final_bill_date'])),
+    bill_amount: formValue(['bill_amount', 'final_bill_amount']),
+    assessment_received: yesNoValue(['assessment_received', 'assessment_status']),
+    do_date: isoDateValue(rawFormValue(['do_date', 'delivery_order_date'])),
+    do_amount: formValue(['do_amount', 'delivery_order_amount']),
+    vehicle_received: yesNoValue(['vehicle_received', 'delivery_status', 'status']),
+    vehicle_received_date: isoDateValue(rawFormValue(['vehicle_received_date', 'vehicle_delivery_date'])),
+    depreciation_submitted: yesNoValue(['depreciation_submitted', 'depreciation_status']),
+    satisfaction_submitted: yesNoValue(['satisfaction_submitted', 'satisfaction_status']),
+    documents_submit_date: isoDateValue(rawFormValue(['documents_submit_date', 'documents_submitted_date'])),
+    payment_received_date: isoDateValue(rawFormValue(['payment_received_date', 'settlement_date'])),
+    payment_received_amount: formValue(['payment_received_amount', 'settlement_amount']),
+  } as any;
 
-const stageSnapshot = (target: InternalJourneyStageKey) => {
-  const snapshot: Record<string, unknown> = {};
-  const statuses = STAGE_STATUSES[target];
-  for (const row of [...stageDetails].reverse()) {
-    if (statuses.has(row.stage)) Object.assign(snapshot, row.details ?? {});
-  }
-  return snapshot;
-};
-const billingSnapshot = stageSnapshot('billing');
-const deliveryOrderSnapshot = stageSnapshot('delivery_order');
-const externalMilestones = [
-  { milestone_key: 'billing', milestone_status: 'completed', details: billingSnapshot },
-  { milestone_key: 'delivery_order', milestone_status: 'completed', details: deliveryOrderSnapshot },
-] as any;
-const primaryLabel = stageKey === 'payment_encashment'
-  ? 'Complete Claim'
-  : stageKey === 'vehicle_delivery' && externalValues.vehicle_received !== 'yes'
-    ? 'Save Vehicle Status'
-    : 'Save & Continue';
+  const stageSnapshot = (target: InternalJourneyStageKey) => {
+    const snapshot: Record<string, unknown> = {};
+    const statuses = STAGE_STATUSES[target];
+    for (const row of [...stageDetails].reverse()) {
+      if (statuses.has(row.stage)) Object.assign(snapshot, row.details ?? {});
+    }
+    return snapshot;
+  };
+  const billingSnapshot = stageSnapshot('billing');
+  const deliveryOrderSnapshot = stageSnapshot('delivery_order');
+  const externalMilestones = [
+    { milestone_key: 'billing', milestone_status: 'completed', details: billingSnapshot },
+    { milestone_key: 'delivery_order', milestone_status: 'completed', details: deliveryOrderSnapshot },
+  ] as any;
+  const primaryLabel = stageKey === 'payment_encashment'
+    ? 'Complete Claim'
+    : stageKey === 'vehicle_delivery' && externalValues.vehicle_received !== 'yes'
+      ? 'Save Vehicle Status'
+      : 'Save & Continue';
 
-return (
-  <Screen title={definition.label} showTitleHeader={false}>
-    <ExternalClaimStageHeader
-      step={step}
-      title={definition.label}
-      subtitle={externalClaimMilestoneSubtitle(stageKey as any)}
-      vehicleNo={vehicleNo}
-      claimNo={claim.insurer_claim_no || claim.claim_no}
-      onBack={() => router.back()}
-    />
+  return (
+    <Screen title={definition.label} showTitleHeader={false}>
+      <InternalManagedStageIdentityCard
+        title={definition.label}
+        claimNo={claim.insurer_claim_no || claim.claim_no}
+        insurerName={insurerName || 'Insurance company'}
+        vehicleNo={vehicleNo || 'Vehicle'}
+        policyNo={policyNo || undefined}
+        vehicleMeta={vehicleMeta}
+      />
 
-    <ClaimIdentityCard
-      claimNo={claim.insurer_claim_no || claim.claim_no}
-      insurerName={insurerName || 'Insurance company'}
-      vehicleNo={vehicleNo || 'Vehicle'}
-      policyNo={policyNo || undefined}
-      vehicleMeta={vehicleMeta}
-    />
+      {message ? <Message type="error">{message}</Message> : null}
 
-    {message ? <Message type="error">{message}</Message> : null}
-
-    <View pointerEvents="none">
+      <View pointerEvents="none">
         {ExternalClaimMilestoneStageBody(stageKey as any, externalValues, () => undefined, externalMilestones, claim.id, claim.customer_id)}
       </View>
 
-    <View pointerEvents="none">
-      <ClaimActionBar
-        primaryDisabled={false}
-        primaryIcon={stageKey === 'payment_encashment' ? 'check' : 'arrow-right'}
-        primaryLabel={primaryLabel}
-        onAssistance={() => undefined}
-        onPrimary={() => undefined}
-      />
+      <View pointerEvents="none">
+        <ClaimActionBar
+          primaryDisabled={false}
+          primaryIcon={stageKey === 'payment_encashment' ? 'check' : 'arrow-right'}
+          primaryLabel={primaryLabel}
+          onAssistance={() => undefined}
+          onPrimary={() => undefined}
+        />
+      </View>
+    </Screen>
+  );
+}
+
+function InternalManagedStageIdentityCard({ title, claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: { title: string; claimNo?: string | null; insurerName?: string | null; vehicleNo?: string | null; policyNo?: string | null; vehicleMeta?: string | null }) {
+  return (
+    <View style={styles.spotStatusCard}>
+      <View style={styles.spotStatusGlowLarge} />
+      <View style={styles.spotStatusGlowSmall} />
+      <View style={styles.spotStatusHeaderRow}>
+        <View style={[styles.spotStatusIconBadge, styles.spotStatusStageBadge]}>
+          <Image source={require('../../assets/claims/claim-intimation.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+        </View>
+        <Text style={styles.spotStatusHeaderTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text>
+      </View>
+      <View style={styles.spotStatusHeaderDivider} />
+      <View style={styles.spotStatusInfoGrid}>
+        <View style={styles.spotStatusInfoSection}>
+          <View style={styles.spotStatusMainInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}>
+              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
+              <Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text>
+              <Text style={styles.spotStatusMainInfoValue}>{vehicleNo || 'Vehicle'}</Text>
+            </Text>
+          </View>
+          <View style={styles.spotStatusSecondaryInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}>
+              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
+          </View>
+        </View>
+        <View style={styles.spotStatusSectionDivider} />
+        <View style={styles.spotStatusInfoSection}>
+          <View style={styles.spotStatusMainInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}>
+              <Image source={require('../../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
+              <Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text>
+              <Text style={styles.spotStatusMainInfoValue}>{policyNo || '—'}</Text>
+            </Text>
+          </View>
+          <View style={styles.spotStatusSecondaryInfoRow}>
+            <View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}>
+              <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
+            </View>
+            <Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+          </View>
+        </View>
+      </View>
     </View>
-  </Screen>
-);
+  );
 }
 
 function InternalSpotIntimationIdentityCard({ claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: { claimNo?: string | null; insurerName?: string | null; vehicleNo?: string | null; policyNo?: string | null; vehicleMeta?: string | null }) {
