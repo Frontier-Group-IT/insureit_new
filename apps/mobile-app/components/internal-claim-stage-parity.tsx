@@ -158,21 +158,22 @@ export default function InternalClaimStageParity() {
     return <Screen title="Claim Stage"><EmptyState title="Stage unavailable" body={message || 'Return to the claim tracker and choose another stage.'} /></Screen>;
   }
 
+  const activeClaimId = claim.id;
   const claimNo = claim.insurer_claim_no || claim.claim_no;
   const subtitle = subtitleFor(stageKey);
 
   function openAssistance() {
-    router.push({ pathname: '/customer/request-claim-assistance', params: { id: claim.id, returnStage: stageKey } });
+    router.push({ pathname: '/customer/request-claim-assistance', params: { id: activeClaimId, returnStage: stageKey } });
   }
 
   function continueStage() {
     const current = INTERNAL_JOURNEY_STAGES.findIndex((item) => item.key === stageKey);
     const next = INTERNAL_JOURNEY_STAGES[current + 1];
     if (!next) {
-      router.replace({ pathname: '/customer/claim-detail', params: { id: claim.id } });
+      router.replace({ pathname: '/customer/claim-detail', params: { id: activeClaimId } });
       return;
     }
-    router.replace({ pathname: '/customer/internal-claim-stage', params: { id: claim.id, key: next.key } });
+    router.replace({ pathname: '/customer/internal-claim-stage', params: { id: activeClaimId, key: next.key } });
   }
 
   return (
@@ -346,7 +347,10 @@ function ReadOnlyMoney({ label, value }: { label: string; value: unknown }) {
 
 function ReadOnlyChoice({ label, value, yesValue, noValue, noLabel = 'No' }: { label: string; value: unknown; yesValue: string; noValue: string; noLabel?: string }) {
   const normalized = normalizedChoice(value);
-  return <ClaimChoice label={label} value={normalized} options={[{ value: yesValue, label: 'Yes' }, { value: noValue, label: noLabel }]} onChange={() => undefined} />;
+  const selected = yesValue === 'true'
+    ? (normalized === 'yes' || normalized === 'true' ? 'true' : normalized === 'no' || normalized === 'false' ? 'false' : normalized)
+    : normalized;
+  return <ClaimChoice label={label} value={selected} options={[{ value: yesValue, label: 'Yes' }, { value: noValue, label: noLabel }]} onChange={() => undefined} />;
 }
 
 function Gap() { return <View style={{ height: 10 }} />; }
