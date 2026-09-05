@@ -1,0 +1,59 @@
+name: Apply Vehicle RC cache schema
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260905180000_vehicle_rc_lookup_cache.sql'
+      - '.github/workflows/apply-vehicle-rc-cache.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Vehicle RC cache schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply Vehicle RC cache migration
+        run: supabase db query --linked --file supabase/migrations/20260905180000_vehicle_rc_lookup_cache.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260905180000
+
+      - name: Verify schema
+        run: |
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.vehicle_rc_lookup_cache') is not null as cache_table_ready,
+              to_regprocedure('public.create_customer_vehicle_v2(uuid,text,text,text,text,integer,text,text,text,numeric,date,date,date,date,date,date,text,numeric,integer)') is not null as vehicle_v2_rpc_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"cache_table_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"vehicle_v2_rpc_ready"[[:space:]]*:[[:space:]]*true'
