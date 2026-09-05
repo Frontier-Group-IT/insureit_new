@@ -73,7 +73,8 @@
         "expo-audio",
         {
           "microphonePermission": "Allow InsureIt to use your microphone when you choose to record an incident voice note.",
-          "recordAudioAndroid": true
+          "recordAudioAndroid": true,
+          "enableBackgroundPlayback": false
         }
       ],
       "expo-secure-store",
