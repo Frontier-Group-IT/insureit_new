@@ -7,8 +7,8 @@ import Link from "next/link";
 import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table";
 import { claimStatuses, isCustomerActionAwaited, isDocumentVerificationPending, isManagerActionRequired, isOpenClaimStatus, operationsQueueForKey, operationsQueueForStatus, terminalClaimStatuses, type ClaimStatus } from "@/lib/claim-workflow";
 
-type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; pageSize?: string; mode?: string };
-const allowedPageSizes = [5, 10, 20, 50, 100];
+type SearchParams = { queue?: string; journey?: string; status?: string; q?: string; page?: string; mode?: string };
+const CLAIMS_PAGE_SIZE = 10;
 const workflowStages = INTERNAL_JOURNEY_STAGES.map((stage) => ({
   key: stage.key.replaceAll("_", "-"),
   label: stage.label,
@@ -21,8 +21,6 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
   const [selectedStage, setSelectedStage] = useState(initialParams.journey ?? "");
   const [page, setPage] = useState(Math.max(1, Number(initialParams.page ?? "1") || 1));
   const [activeMode, setActiveMode] = useState<"internal" | "external">(initialParams.mode === "external" ? "external" : "internal");
-  const requestedPageSize = Number(initialParams.pageSize ?? "10") || 10;
-  const [pageSize, setPageSize] = useState(allowedPageSizes.includes(requestedPageSize) ? requestedPageSize : 10);
   const selectedJourney = workflowStages.find((stage) => stage.key === selectedStage);
   const normalized = query.trim().toLowerCase();
   const visibleRows = useMemo(() => rows.filter((claim) => {
@@ -30,7 +28,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, process, claim.customers?.company_name, claim.customers?.contact_name, claim.customers?.phone, claim.vehicles?.vehicle_no, claim.vehicles?.make, claim.vehicles?.model, claim.policies?.policy_no, claim.insurance_companies?.name, claim.assignee?.full_name].filter(Boolean).join(" ").toLowerCase();
     return matchesQueue(claim.current_status, initialParams.queue) && (!selectedJourney || selectedJourney.statuses.includes(claim.current_status)) && (!selectedStatus || claim.current_status === selectedStatus) && (!normalized || haystack.includes(normalized));
   }), [initialParams.queue, normalized, rows, selectedJourney, selectedStatus]);
-  useEffect(() => { setPage(1); }, [query, selectedStage, selectedStatus, pageSize, activeMode]);
+  useEffect(() => { setPage(1); }, [query, selectedStage, selectedStatus, activeMode]);
   useEffect(() => {
     const params = new URLSearchParams();
     if (initialParams.queue) params.set("queue", initialParams.queue);
@@ -39,10 +37,9 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     if (query.trim()) params.set("q", query.trim());
     if (selectedStatus) params.set("status", selectedStatus);
     if (page > 1) params.set("page", String(page));
-    if (pageSize !== 10) params.set("pageSize", String(pageSize));
     const nextUrl = `/claims${params.size ? `?${params.toString()}` : ""}`;
     if (`${window.location.pathname}${window.location.search}` !== nextUrl) window.history.replaceState(null, "", nextUrl);
-  }, [activeMode, initialParams.journey, initialParams.queue, page, pageSize, query, selectedStage, selectedStatus]);
+  }, [activeMode, initialParams.journey, initialParams.queue, page, query, selectedStage, selectedStatus]);
 
   const internalRows = visibleRows.filter((claim) => !isExternalClaim(claim));
   const externalRows = visibleRows.filter(isExternalClaim).sort((left, right) => Number(right.assistance_status === "requested") - Number(left.assistance_status === "requested"));
@@ -66,7 +63,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError }: { rows: Queu
     </nav>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
     <ClaimSection title={activeMode === "external" ? "External claims" : "Internal claims"} count={activeRows.length} tone={activeMode === "external" ? "secondary" : "primary"} assistanceRequested={activeMode === "external" ? assistanceRequested : 0}>
-      <LocalClaimQueueTable rows={activeRows} page={page} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      <LocalClaimQueueTable rows={activeRows} page={page} onPageChange={setPage} />
     </ClaimSection>
   </>;
 }
@@ -76,11 +73,11 @@ function ClaimSection({ title, count, tone, assistanceRequested = 0, children }:
   return <section className={`mt-4 overflow-hidden rounded-xl border ${sectionClass}`}><div className="flex flex-wrap items-center justify-between gap-2 border-b border-inherit px-3 py-2.5"><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
 }
 
-function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeChange }: { rows: QueueClaimRow[]; page: number; pageSize: number; onPageChange: (page: number) => void; onPageSizeChange: (pageSize: number) => void }) {
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+function LocalClaimQueueTable({ rows, page, onPageChange }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void }) {
+  const totalPages = Math.max(1, Math.ceil(rows.length / CLAIMS_PAGE_SIZE));
   const safePage = Math.min(Math.max(page, 1), totalPages);
-  const start = (safePage - 1) * pageSize;
-  const visibleRows = rows.slice(start, start + pageSize);
+  const start = (safePage - 1) * CLAIMS_PAGE_SIZE;
+  const visibleRows = rows.slice(start, start + CLAIMS_PAGE_SIZE);
   return <>
     <div className="overflow-hidden rounded-lg border border-[#E1E7F0] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.045)]">
       <div className="overflow-x-auto">
@@ -95,10 +92,13 @@ function LocalClaimQueueTable({ rows, page, pageSize, onPageChange, onPageSizeCh
         </table>
       </div>
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E4EAF2] bg-white px-3 py-2 text-[11px] font-normal text-[#344256] shadow-[0_6px_18px_rgba(7,29,73,0.03)]">
-      <p>Showing {rows.length ? start + 1 : 0} to {Math.min(rows.length, safePage * pageSize)} of {rows.length} claims</p>
-      <div className="flex items-center gap-1.5"><button type="button" disabled={safePage <= 1} onClick={() => onPageChange(safePage - 1)} className="h-7 rounded-md border border-[#DCE4EF] bg-white px-3 font-medium disabled:opacity-40">Previous</button><span className="font-semibold">{safePage} / {totalPages}</span><button type="button" disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)} className="h-7 rounded-md border border-[#DCE4EF] bg-white px-3 font-medium disabled:opacity-40">Next</button></div>
-      <div className="flex items-center gap-2"><span>Items per page:</span><select value={pageSize} onChange={(event) => onPageSizeChange(Number(event.target.value))} className="h-7 rounded-md border border-[#DCE4EF] bg-white px-2 text-[11px] font-medium text-[#071D49]">{allowedPageSizes.map((option) => <option key={option} value={option}>{option}</option>)}</select></div>
+    <div className="flex items-center justify-between gap-4 border-t border-[#E4EAF2] bg-white px-5 py-4 text-[11px] font-normal text-[#344256]">
+      <p>Showing {rows.length ? start + 1 : 0}–{Math.min(rows.length, safePage * CLAIMS_PAGE_SIZE)} of {rows.length}</p>
+      <div className="flex items-center gap-5">
+        <button type="button" disabled={safePage <= 1} onClick={() => onPageChange(safePage - 1)} className="h-9 rounded-lg border border-[#DCE4EF] bg-white px-4 font-medium text-[#52647C] disabled:text-[#AAB4C2] disabled:opacity-60">Previous</button>
+        <span className="min-w-[32px] text-center font-semibold text-[#344256]">{safePage} / {totalPages}</span>
+        <button type="button" disabled={safePage >= totalPages} onClick={() => onPageChange(safePage + 1)} className="h-9 rounded-lg border border-[#DCE4EF] bg-white px-4 font-medium text-[#52647C] disabled:text-[#AAB4C2] disabled:opacity-60">Next</button>
+      </div>
     </div>
   </>;
 }
