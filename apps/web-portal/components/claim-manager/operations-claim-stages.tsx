@@ -24,8 +24,8 @@ type Props = {
 };
 
 const stages = [
-  { key: "spot_intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Initial Documents Verified", "Documents Pending", "Documents Submitted"] },
-  { key: "spot_status", label: "Spot Status", statuses: ["Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected", "Spot Survey Completed"] },
+  { key: "spot_intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Documents Pending"] },
+  { key: "spot_status", label: "Spot Status", statuses: ["Initial Documents Submitted", "Initial Documents Verification Pending", "Documents Submitted", "Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected", "Spot Survey Completed"] },
   { key: "claim_intimation", label: "Claim Intimation", statuses: ["Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation"] },
   { key: "work_approval", label: "Work Approval", statuses: ["Estimate Submitted", "Approval Pending", "Work Approval Status", "Work Approval Received"] },
   { key: "repair_ri", label: "Repair & RI", statuses: ["Final Surveyor Details", "Survey Status", "Survey Done", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation", "RA Intimation Done"] },
@@ -95,7 +95,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const detail = [...details].find((row) => row.details?.milestone_key === selected.key || (selected.statuses as readonly string[]).includes(row.stage ?? ""));
   const spotDetail = [...details].find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
   const next = managerTransitions[currentStatus];
-  const editable = Boolean(active?.key === selected.key && next && fields[selected.key]);
+  const initialVerificationInProgress = ["Initial Documents Submitted", "Initial Documents Verification Pending", "Documents Submitted"].includes(currentStatus);
+  const editable = Boolean(active?.key === selected.key && next && fields[selected.key] && !(selected.key === "spot_status" && initialVerificationInProgress));
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [state, formAction] = useActionState(
     async (_previous: { ok: boolean; message: string }, formData: FormData) => {
@@ -126,6 +127,10 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [showSpotSaved, setShowSpotSaved] = useState(false);
 
   useEffect(() => {
+    if (state.ok && (next === "Initial Documents Submitted" || next === "Documents Submitted")) {
+      router.push(`/claims/${claimId}?stage=spot_status`);
+      return;
+    }
     if (state.ok && active?.key === "claim_intimation" && next === "Final Documents Submitted") {
       router.push(`/claims/${claimId}?stage=claim_intimation`);
       return;
@@ -195,7 +200,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           })}</div>
           {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
           <FormSubmitButton label={`Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
-        </form> : selected.key !== "spot_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
+        </form> : selected.key !== "spot_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selected.key === "spot_status" && initialVerificationInProgress ? "Spot Status is unlocked. Initial document verification is still in progress; surveyor details will become editable once verification is complete." : selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
       </div>
     </section>
   );
