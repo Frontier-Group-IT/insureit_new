@@ -4,8 +4,19 @@ alter table public.external_renewal_opportunities
   add column if not exists last_interaction_at timestamptz,
   add column if not exists next_follow_up_at timestamptz;
 
-alter table public.external_renewal_opportunities
-  add constraint external_renewal_opportunity_id_partner_key unique (id, partner_id);
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'external_renewal_opportunity_id_partner_key'
+      and conrelid = 'public.external_renewal_opportunities'::regclass
+  ) then
+    alter table public.external_renewal_opportunities
+      add constraint external_renewal_opportunity_id_partner_key unique (id, partner_id);
+  end if;
+end;
+$$;
 
 create table if not exists public.external_renewal_interactions (
   id uuid primary key default gen_random_uuid(),
@@ -206,11 +217,7 @@ begin
   update public.external_renewal_opportunities
   set opportunity_status=v_status,
       last_interaction_at=now(),
-      next_follow_up_at=case
-        when p_outcome in ('renewed_elsewhere','invalid_contact','do_not_contact','lost') then null
-        when p_follow_up_at is not null then p_follow_up_at
-        else next_follow_up_at
-      end,
+      next_follow_up_at=p_follow_up_at,
       updated_at=now()
   where id=p_opportunity_id and partner_id=v_partner_id;
 
