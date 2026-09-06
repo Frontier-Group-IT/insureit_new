@@ -83,10 +83,9 @@ const fields: StageFields = {
     { name: "surveyor_email", label: "Surveyor Email (Optional)", type: "email" },
   ],
   repair_ri: [
-    { name: "repair_status", label: "Repair status" },
-    { name: "repair_started_date", label: "Repair start date", type: "date" },
-    { name: "repair_complete_date", label: "Repair completion date", type: "date" },
-    { name: "ri_status", label: "Re-inspection status" },
+    { name: "repair_complete_date", label: "Repair Complete Date", type: "date" },
+    { name: "ri_requested_date", label: "RI Requested Date (Optional)", type: "date" },
+    { name: "ri_done_date", label: "RI Done Date", type: "date" },
   ],
   billing: [
     { name: "bill_date", label: "Bill date", type: "date" },
@@ -115,7 +114,7 @@ const requiredFields: Record<string, string[]> = {
   spot_status: ["spot_survey_done_date"],
   claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
-  repair_ri: ["repair_complete_date"],
+  repair_ri: ["repair_complete_date", "ri_done_date"],
   billing: ["bill_date", "bill_amount"],
   delivery_order: ["do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
@@ -135,6 +134,8 @@ const fieldAliases: Record<string, string[]> = {
   approval_received_date: ["approval_received_date", "approved_at"],
   repair_started_date: ["repair_started_date", "repair_start_date"],
   repair_complete_date: ["repair_complete_date", "repair_completed_date"],
+  ri_requested_date: ["ri_requested_date", "reinspection_requested_date", "re_inspection_requested_date"],
+  ri_done_date: ["ri_done_date", "reinspection_done_date", "re_inspection_done_date"],
   ri_status: ["ri_status", "ri_required"],
   bill_date: ["bill_date", "final_bill_date"],
   bill_amount: ["bill_amount", "final_bill_amount"],
@@ -304,7 +305,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);

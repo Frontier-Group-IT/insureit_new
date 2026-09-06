@@ -69,7 +69,7 @@ const requiredFields: Record<OperationsStageKey, readonly string[]> = {
   spot_status: ["spot_survey_done_date"],
   claim_intimation: ["claim_intimation_date", "dealership_name", "dealership_location", "gate_in_date", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
-  repair_ri: ["repair_complete_date"],
+  repair_ri: ["repair_complete_date", "ri_done_date"],
   billing: ["bill_date", "bill_amount"],
   delivery_order: ["do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
