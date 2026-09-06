@@ -55,8 +55,8 @@ const completionTargets: Record<OperationsStageKey, ClaimStatus> = {
 };
 
 const requiredFields: Record<OperationsStageKey, readonly string[]> = {
-  spot_status: ["spot_survey_done_date"],
-  claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "claim_intimation_date", "gate_in_date", "estimate_amount"],
+  spot_status: ["inspection_date"],
+  claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date", "ri_done_date"],
   billing: ["bill_date", "bill_amount"],
