@@ -84,7 +84,11 @@ requireText(renewals, 'PartnerAssets.actions.renewals', 'Upcoming renewal rows m
 requireText(policyIntakes, 'PartnerAssets.emptyStates.policyUpload', 'Empty Policy Intake history must use the prepared upload artwork.');
 for (const statusAsset of ['verified', 'rejected', 'policyAttention', 'pendingReview', 'documentUpload']) requireText(policyIntakes, `PartnerAssets.status.${statusAsset}`, `Policy Intake status mapping is missing ${statusAsset} artwork.`);
 
-for (const intakeAsset of ['status.documentUpload', 'status.verified']) requireText(policyIntakeNew, `PartnerAssets.${intakeAsset}`, `New Policy Intake is missing ${intakeAsset} artwork.`);
+requireText(policyIntakeNew, "'cloud-upload-outline'", 'New Policy Intake must keep the stable vector upload control.');
+requireText(policyIntakeNew, "'checkmark-circle-outline'", 'New Policy Intake must keep the stable vector selected/ready control.');
+if (policyIntakeNew.includes('PartnerAssets.status.documentUpload') || policyIntakeNew.includes('PartnerAssets.status.verified')) {
+  throw new Error('New Policy Intake must not reintroduce the route-opening artwork render path that caused the installed-app crash.');
+}
 requireText(policyIntakeNew, 'submitPartnerPolicyIntake({', 'New Policy Intake must preserve the existing submit service path.');
 requireText(policyIntakeNew, 'savePartnerPolicyIntakeDraft({', 'New Policy Intake must preserve draft saving.');
 requireText(policyIntakeNew, 'loadPartnerPolicyIntakeDraft()', 'New Policy Intake must preserve draft restore.');
