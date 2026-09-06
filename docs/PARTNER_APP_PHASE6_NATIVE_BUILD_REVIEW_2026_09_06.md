@@ -1,8 +1,8 @@
-# INSUREIT Partner — Phase 6 native build review
+# INSUREIT Partner — Phase 6 native build review and implementation handoff
 
 > Date: 2026-09-06 IST
-> Scope: pre-build dependency / runtime / permission review only
-> Status: REVIEW COMPLETE / NATIVE IMPLEMENTATION NOT YET AUTHORIZED
+> Scope: Phase 6 dependency / runtime / permission review + approved native-foundation implementation
+> Status: FOUNDATION MERGED / NATIVE APK NOT YET AUTHORIZED OR BUILT
 
 Read this with:
 
@@ -11,23 +11,58 @@ Read this with:
 - `docs/PARTNER_APP_VISUAL_COMPLETION_HANDOFF_2026_09_05.md`
 - `docs/PARTNER_APP_POLICY_INTAKE_CRASH_HOTFIX_2026_09_06.md`
 
-## Current accepted OTA baseline
+## Accepted pre-Phase-6 installed baseline
 
-The latest installed Partner preview baseline that was device-confirmed for the New Policy Intake regression is:
+The last installed Partner preview binary/runtime confirmed on-device before the native transition remains 0.1.0 with corrective OTA #48:
 
-- root-cause fix PR: #1375
-- root-cause merge: `27a7dd42c96c05e34a0fec8ad86a4470e040a269`
-- Partner Verify: #200 / `34046543932` — success
-- Web Verify: #3065 / `34046543931` — success
-- corrective Partner preview OTA: #48 / `34046755723` — success
+- Policy Intake root-cause PR: #1375
+- merge: `27a7dd42c96c05e34a0fec8ad86a4470e040a269`
+- Partner Verify #200 / `34046543932` — success
+- Web Verify #3065 / `34046543931` — success
+- corrective Partner preview OTA #48 / `34046755723` — success
 - OTA trigger: `774ba2932c52678a8851f9eb5ed054e1545017d0`
 - device result: user confirmed New Policy Intake is fixed
 
-A compare from OTA #48 trigger to later `main` showed no changes under `apps/partner-app`; later commits were web/schema/docs only. Therefore OTA #48 remains the current Partner mobile source baseline until a later Partner OTA/native change is intentionally published.
+The existing installed 0.1.0 binary remains on runtime 0.1.0. Do not publish 0.2.0 OTA work as a substitute for the required 0.2.0 native build.
 
-## Current Partner native identity
+## Phase 6 implementation authorization and foundation merge
 
-Current config:
+The user explicitly approved continuing Phase 6 implementation on 2026-09-06, while the actual EAS native APK build remained separately gated.
+
+Foundation branch:
+
+`partner/phase6-native-foundation`
+
+Foundation PR:
+
+**#1383 — Prepare Partner 0.2.0 Phase 6 native foundation**
+
+Final PR head:
+
+`1f8c592de255651692f11343bf80dcbbcd444454`
+
+Merge:
+
+`4b814396c3d0a23f8f2391c9be9a2de49df06eeb`
+
+Final exact-head gates:
+
+- Partner Verify #204 / `34050214704` — success
+- Customer mobile Verify #664 / `34050214734` — success
+- Web Verify #3078 / `34050214683` — success
+- Phase 6 native-manifest/foundation contract — success
+- pre-APK UAT/security contract — success
+- Partner typecheck — success
+- Partner lint — success
+- Expo web review export — success
+
+One earlier validation run found only a TypeScript narrowing issue in the NetInfo status helper. It was corrected before merge. The canonical runner also generated the exact dependency lockfile once; temporary write-enabled bootstrap permission was removed before the final green head. Final CI is read-only again.
+
+No Partner OTA, APK or AAB was triggered by the foundation merge.
+
+## Partner 0.2.0 native identity now in source
+
+Merged source baseline:
 
 - app name: `INSUREIT Partner`
 - Android package: `com.insureit.partner`
@@ -35,192 +70,178 @@ Current config:
 - Expo owner: `insureitapp`
 - slug: `insureit`
 - EAS project: `8ade82c1-4c96-4f09-b90b-802270fb406d`
-- app version: `0.1.0`
-- Android version code: `1`
-- iOS build number: `1`
-- runtime policy: `appVersion`
-- preview channel: `preview`
-- production channel: `production`
-
-The pre-APK guard intentionally blocks native dependency drift and requires 0.1.0 during the OTA-only phase.
-
-## Recommended Phase 6 native bundle
-
-The objective is one deliberately batched preview binary, not one build per feature.
-
-### Include in the batch
-
-1. **Native date picker**
-   - package: `@react-native-community/datetimepicker`
-   - SDK 54 recommended line: `8.4.4`
-   - purpose: replace deferred manual/date-input UX with native date selection where the Partner app already has date-filter/date-entry requirements.
-
-2. **Push notifications**
-   - package: `expo-notifications`
-   - SDK 54 recommended line: `~0.32.17`
-   - purpose: renewal due, claim updates, Policy Intake attention/approval/rejection, missing document, payout events.
-   - requires new native binary and notification credentials/config.
-   - Android remote push cannot be validated in Expo Go; installed build testing is required.
-
-3. **Network-state awareness**
-   - package: `expo-network`
-   - SDK 54 recommended line: `~8.0.8`
-   - purpose: distinguish offline / reconnect from server failures and drive the existing Partner stale/offline UI.
-   - Android network/Wi-Fi state permissions are added by the module.
-
-4. **Biometric local re-entry**
-   - package: `expo-local-authentication`
-   - SDK 54 recommended line: `~17.0.9`
-   - purpose: optional local privacy gate after a defined background interval.
-   - this must never replace Supabase/server authentication.
-   - iOS Face ID requires an explicit usage description in native config.
-
-5. **Selective screen privacy**
-   - package: `expo-screen-capture`
-   - SDK 54 recommended line: `~8.0.10`
-   - purpose: protect only approved PII/document-heavy routes.
-   - do not globally disable screenshots.
-   - avoid screenshot-listener permissions on older Android unless there is a real product requirement; blocking capture itself does not require adding broad photo permissions.
-
-6. **Haptics**
-   - package: `expo-haptics`
-   - SDK 54 recommended line: `~15.0.8`
-   - purpose: lightweight success/error/selection feedback on a small number of high-value actions.
-   - Android vibration permission is handled automatically by the library.
-
-### Crash telemetry — conditional, not automatically bundled
-
-Recommended platform: Sentry via `@sentry/react-native` / Expo-supported setup.
-
-Do **not** install it blindly in the same commit until the project has:
-
-- a Sentry organization/project;
-- DSN;
-- source-map upload auth token stored as a secret;
-- privacy/redaction rules agreed;
-- OTA source-map upload integrated into the Partner update workflow.
-
-If those prerequisites are ready before the one native build, include Sentry in the same Phase 6 binary. Otherwise do not delay the native bundle merely to add an unconfigured crash SDK; the current app-level recovery boundary remains in place and Sentry can be handled as a separately approved native change later.
-
-## Notification configuration requirement
-
-Phase 6 push configuration should use the `expo-notifications` config plugin and define:
-
-- Android notification icon;
-- brand-safe notification tint color;
-- default notification channel;
-- deep-link handling through the existing `insureit-partner` scheme / Expo Router paths;
-- credentials through EAS / platform push configuration.
-
-### Missing asset — blocker before the native build
-
-No dedicated notification tray icon was found in the repository during this review.
-
-Do **not** use the full-color JPG app icon as the Android notification small icon. Prepare a brand-approved monochrome notification glyph as a transparent PNG suitable for Android notification rendering before the Phase 6 binary is built.
-
-This asset should be derived from official INSUREIT brand artwork, not invented or AI-redesigned.
-
-## Runtime/version strategy for the one Phase 6 preview build
-
-Because runtime policy is `appVersion`, the native-capability build should move the Partner app off 0.1.0 so old 0.1.0 OTA updates cannot target the new native binary accidentally.
-
-Recommended preview-native identity:
-
 - app version: **0.2.0**
 - Android versionCode: **2**
 - iOS buildNumber: **2**
-- runtime policy: keep **`appVersion`** for this controlled build
-- EAS preview channel: keep **`preview`**
+- runtime policy: **appVersion**
+- preview channel: `preview`
+- production channel: `production`
 
-Do not change package/bundle IDs, Expo owner, slug or EAS project ID.
+Because runtime policy is `appVersion`, future 0.2.0 OTA updates target only a compatible 0.2.0 binary. The current installed 0.1.0 binary cannot consume them.
 
-After the 0.2.0 native preview is installed, all later JS/TS updates for that binary must be published against runtime 0.2.0. The 0.1.0 installed binary remains on its own compatible OTA runtime.
+## Approved and merged native dependency set
 
-## Pre-APK guard transition
+Exact merged SDK 54 dependency versions:
 
-`verify-pre-apk-freeze.mjs` currently correctly blocks:
+1. `@react-native-community/datetimepicker` — `8.4.4`
+2. `@react-native-community/netinfo` — `11.4.1`
+3. `expo-notifications` — `~0.32.17`
+4. `expo-local-authentication` — `~17.0.9`
+5. `expo-screen-capture` — `~8.0.9`
+6. `expo-haptics` — `~15.0.8`
 
-- `@react-native-community/datetimepicker`
-- `expo-notifications`
-- `expo-local-authentication`
-- `expo-screen-capture`
-- `expo-haptics`
+Sentry was intentionally not added because a configured Sentry project, DSN, upload token and redaction/source-map policy were not established. Do not add it blindly later.
 
-When Phase 6 implementation is explicitly approved, do not simply delete the guard.
+## Foundation behavior now merged
 
-Replace it with a **Phase 6 native manifest contract** that requires the exact approved dependency set, exact app/runtime version, package identity, notification plugin configuration and EAS channel mapping. This prevents silent native scope growth after approval.
+### Network awareness
 
-## Implementation order after explicit approval
+`providers/partner-network-provider.tsx`
 
-1. Create one dedicated Phase 6 branch from exact current `main`.
-2. Bump Partner app/runtime identity to 0.2.0 / versionCode 2 / buildNumber 2.
-3. Install only the approved native packages with `npx expo install` so SDK-compatible versions are selected.
-4. Add notification plugin/config + approved notification icon asset.
-5. Implement native date-picker integration on the already-deferred Partner date flows.
-6. Add shared network-state provider and connect it to existing offline/stale UI.
-7. Add optional biometric re-entry setting + background-duration policy.
-8. Apply screen-capture prevention only to approved sensitive routes.
-9. Add restrained haptics to selected success/error/selection actions.
-10. If Sentry prerequisites are ready, add Sentry with PII redaction and EAS Update source-map upload.
-11. Replace pre-APK freeze with exact Phase 6 native-manifest CI.
-12. Run Partner typecheck/lint/route/security/native-manifest checks.
-13. Review generated native config (`expo config` / prebuild inspection) before consuming an EAS build.
-14. Create **one** preview APK only after explicit user authorization for that exact build.
-15. Install and complete the Phase 6 device matrix.
-16. Publish a small 0.2.0 preview OTA afterward to prove OTA compatibility with the new binary.
+- listens to NetInfo;
+- distinguishes unknown / online / offline;
+- `PartnerScreen` and `PartnerListScreen` show a shared warning banner when offline;
+- no business/data query authorization logic was changed.
 
-## Device acceptance matrix for the one native preview build
+### Optional biometric re-entry
+
+`providers/partner-biometric-lock-provider.tsx`
+
+- disabled by default;
+- user enables it explicitly from Settings;
+- enablement itself requires successful local authentication;
+- uses SecureStore only for the local setting;
+- re-entry is requested after two minutes away from a ready authenticated Partner session;
+- device credential fallback remains available;
+- local biometric lock never replaces Supabase/server authentication;
+- lock overlay offers Unlock or Sign out.
+
+### Notifications foundation
+
+`lib/partner-notifications.ts` and `providers/partner-native-runtime-provider.tsx`
+
+- no permission prompt occurs on install/startup;
+- Settings contains the user-triggered notification permission action;
+- Android channel ID is `partner-updates`;
+- notification response navigation is constrained by an internal Partner-route allowlist;
+- no arbitrary/external notification URL is accepted;
+- push-token persistence/server delivery pipeline is not yet implemented.
+
+### Selective privacy helpers
+
+`lib/partner-native-security.ts`
+
+- screen-capture and app-switcher helpers exist;
+- no global screenshot ban was introduced;
+- route-level application is still a later Phase 6 slice and must remain selective.
+
+### Haptics
+
+`lib/partner-haptics.ts`
+
+- safe best-effort selection/success/warning/error helpers;
+- haptic failure can never block a business action;
+- currently used only in selected native settings/biometric interactions.
+
+### Native date picker
+
+`components/ui/partner-date-picker.tsx`
+
+- reusable native date control exists with Android/iOS handling, en-IN display and min/max support;
+- it has not been forced into an unrelated screen merely to consume the dependency;
+- wire it only where a real existing Partner date input/filter is identified.
+
+## Native APK build safety — hardened
+
+`.github/workflows/build-partner-preview.yml` is now manual-only.
+
+The build requires the exact workflow input:
+
+`BUILD_PARTNER_0_2_0`
+
+It also verifies:
+
+- exact current `main`;
+- Partner EAS identity is separate from Customer;
+- version/runtime is 0.2.0 / code 2 / build 2 / appVersion;
+- official notification icon exists at `apps/partner-app/assets/notification-icon.png`;
+- Phase 6 verification/typecheck/lint pass before EAS build.
+
+A committed `.trigger-preview-build` file cannot auto-trigger the Partner native build anymore.
+
+**Do not dispatch this workflow until the user explicitly approves that exact 0.2.0 preview APK build.**
+
+## Notification small-icon blocker
+
+No suitable Android monochrome notification small icon exists yet at the required Partner path.
+
+Do not use the full-color JPG app icon as the Android notification tray icon and do not invent an AI/redesigned mark.
+
+Repository audit found official web brand artwork at:
+
+`apps/web-portal/public/assets/brand/insureit-mark.webp`
+
+This may be used as the source for a brand-approved monochrome transparent notification glyph, but the derivative must still satisfy Android notification-icon requirements and should preserve the official INSUREIT mark. Until `apps/partner-app/assets/notification-icon.png` is intentionally prepared and reviewed, the native build workflow remains blocked by design.
+
+## Remaining Phase 6 work before requesting native-build approval
+
+1. Apply screen-capture protection only to clearly approved sensitive Partner routes; ordinary screens must remain screenshot-capable.
+2. Design/implement secure Partner push-token registration and revocation without exposing service-role credentials or weakening Partner scope.
+3. Define which server-side events actually produce Partner notifications and preserve scope/deep-link authorization.
+4. Wire the native date picker only into genuine existing date fields/filters if present.
+5. Prepare/review the official monochrome Android notification icon.
+6. Decide whether Sentry prerequisites are ready; otherwise keep Sentry out of 0.2.0.
+7. Run final native-config/source checks.
+8. Obtain separate explicit user approval for the exact 0.2.0 preview APK build.
+9. Build one internal preview APK.
+10. Complete installed-device Phase 6 matrix.
+11. Only after the 0.2.0 binary is installed and accepted, publish a small 0.2.0 preview OTA to prove post-build OTA compatibility.
+
+## Device acceptance matrix for the future native preview build
 
 ### Startup / auth
-
 - cold start
 - warm start
-- background > configured biometric interval
+- background > two-minute biometric interval
 - biometric success
-- biometric cancel/failure/passcode fallback policy
+- biometric cancel/failure/device-credential fallback
 - sign out / sign in
 - no cross-user protected cache
 
 ### Network
-
 - normal Wi-Fi/mobile data
 - airplane mode
-- network lost while viewing list/detail
+- network loss while viewing list/detail
 - reconnect
-- network lost during Policy Intake preparation/upload/submission
-- stale/offline state must be distinguishable from server error
+- network loss during Policy Intake preparation/upload/submission
+- offline state distinguishable from server error
 
 ### Push
-
 - foreground notification
 - background notification
 - killed-app notification open
-- notification permission denied
-- notification permission later enabled
+- permission denied
+- permission later enabled
 - deep link to authorized Policy Intake / Claim / Renewal destination
-- unauthorized/stale deep link must fail safely
+- unauthorized/stale deep link fails safely
 
 ### Privacy
-
-- screenshot allowed on ordinary screens
-- screenshot blocked only on approved sensitive screens
-- app switcher/background appearance reviewed
+- screenshots allowed on ordinary screens
+- blocked only on approved sensitive screens
+- app-switcher/background appearance reviewed
 
 ### Date picker
-
 - open/cancel/select
-- minimum/maximum date constraints where applicable
+- min/max date constraints where relevant
 - Android back gesture
 - selected date survives navigation as designed
 
 ### Haptics
-
 - no continuous/noisy feedback
-- success/error feedback only at defined actions
-- app remains fully understandable with haptics disabled/unavailable
+- feedback only at defined high-value actions
+- app understandable when haptics unavailable
 
 ### Regression smoke
-
 - Home
 - Business
 - Policies
@@ -236,29 +257,8 @@ Replace it with a **Phase 6 native manifest contract** that requires the exact a
 - session/OTA refresh behavior
 - historical vehicle-selector and claim-number popup regressions remain protected
 
-## Explicitly not authorized by this document
+## Explicit build boundary
 
-This review does **not** authorize:
+Phase 6 implementation is authorized and foundation code is merged.
 
-- package installation;
-- app.json native plugin changes;
-- version/runtime bump;
-- Sentry setup;
-- push credentials;
-- APK/AAB creation;
-- production-channel build;
-- Play Store release.
-
-The master-plan build gate remains unchanged: a new Partner native binary requires explicit user approval for that exact build.
-
-## Current decision
-
-Recommended native Phase 6 preview bundle:
-
-**Date picker + Notifications + Network + Biometrics + Selective Screen Privacy + Haptics**, with Sentry included only if its external project/secret prerequisites are ready before the build.
-
-Before implementation/build, obtain:
-
-1. explicit user approval to start Phase 6 native implementation;
-2. explicit approval for the exact first 0.2.0 preview APK build before triggering EAS Build;
-3. official monochrome Android notification small-icon asset.
+The **actual Partner 0.2.0 native APK/AAB build is still NOT authorized** by this handoff or the prior user message. It requires a separate explicit approval before the manual build workflow is dispatched.
