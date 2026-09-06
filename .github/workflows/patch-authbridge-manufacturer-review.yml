@@ -1,0 +1,130 @@
+name: Patch AuthBridge manufacturer review
+
+on:
+  push:
+    branches:
+      - fix/authbridge-manufacturer-review
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/authbridge-manufacturer-review
+          fetch-depth: 0
+
+      - name: Apply focused AuthBridge manufacturer patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          component = "apps/web-portal/components/policy-unified-form.tsx"
+          replace_once(
+              component,
+              'import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";\n',
+              'import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";\nimport { resolveVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";\n',
+          )
+          replace_once(
+              component,
+              '  const [rcReview,setRcReview]=useState<PolicyRcReview|null>(null);\n  const [appliedRc,setAppliedRc]=useState<PolicyRcReview|null>(null);',
+              '  const [rcReview,setRcReview]=useState<PolicyRcReview|null>(null);\n  const [rcReviewMake,setRcReviewMake]=useState("");\n  const [appliedRc,setAppliedRc]=useState<PolicyRcReview|null>(null);',
+          )
+          replace_once(
+              component,
+              '  function changeRegistrationMode(mode:VehicleRegistrationMode){ if(isEdit)return; setSelectedExistingVehicleId(null); setVehicleRegistrationMode(mode); setLookupError(null); setRegistrationTouched(false); setRcReview(null); setAppliedRc(null); if(mode==="unregistered")setForm(current=>({...current,registrationNo:""})); }',
+              '  function changeRegistrationMode(mode:VehicleRegistrationMode){ if(isEdit)return; setSelectedExistingVehicleId(null); setVehicleRegistrationMode(mode); setLookupError(null); setRegistrationTouched(false); setRcReview(null); setRcReviewMake(""); setAppliedRc(null); if(mode==="unregistered")setForm(current=>({...current,registrationNo:""})); }',
+          )
+          replace_once(
+              component,
+              '  function fetchRcDetails(){ if(isEdit||vehicleRegistrationMode==="unregistered")return; setRegistrationTouched(true); if(!isValidRegisteredVehicleNumber(form.registrationNo)){setLookupError(null);setRcReview(null);return;} setLookupError(null);setRcReview(null);startLookup(async()=>{const result=await lookupPolicyRegistrationRc(form.registrationNo);if(!result.ok){setLookupError(result.error);return;}setApplyGroups(defaultGroups);setRcReview(result.review);}); }',
+              '  function fetchRcDetails(){ if(isEdit||vehicleRegistrationMode==="unregistered")return; setRegistrationTouched(true); if(!isValidRegisteredVehicleNumber(form.registrationNo)){setLookupError(null);setRcReview(null);setRcReviewMake("");return;} setLookupError(null);setRcReview(null);setRcReviewMake("");startLookup(async()=>{const result=await lookupPolicyRegistrationRc(form.registrationNo);if(!result.ok){setLookupError(result.error);return;}const resolvedMake=resolveVehicleManufacturer(result.review.make,manufacturers);setApplyGroups(defaultGroups);setRcReviewMake(resolvedMake?.value??"");setRcReview(result.review);}); }',
+          )
+          replace_once(
+              component,
+              '  function useRcDetails(){ if(!rcReview||isEdit)return; const mappedClass=classifyVehicle(rcReview.vehicleClass); setForm(current=>({...current,registrationNo:normalizeRegistrationInput(rcReview.registrationNumber||current.registrationNo),insuredName:applyGroups.ownerIdentity?(current.insuredName||rcReview.ownerName||""):current.insuredName,phoneNo:applyGroups.ownerIdentity?(current.phoneNo||(rcReview.mobileNumber??"").replace(/\\D/g,"").slice(-10)):current.phoneNo,vehicleClass:applyGroups.vehicleIdentity?(current.vehicleClass||mappedClass):current.vehicleClass,make:applyGroups.vehicleIdentity?(current.make||rcReview.make||""):current.make,model:applyGroups.vehicleIdentity?(current.model||rcReview.model||""):current.model,fuelType:applyGroups.vehicleIdentity?(current.fuelType||normalizeFuel(rcReview.fuelType)):current.fuelType,capacity:applyGroups.technical?(current.capacity||capacityFor(rcReview,current.vehicleClass||mappedClass)):current.capacity,manufacturingYear:applyGroups.vehicleIdentity?(current.manufacturingYear||rcReview.manufacturingYear||""):current.manufacturingYear,chassisNo:applyGroups.technical?(current.chassisNo||rcReview.chassisNumber||""):current.chassisNo,engineNo:applyGroups.technical?(current.engineNo||rcReview.engineNumber||""):current.engineNo,rtoState:applyGroups.compliance?(current.rtoState||titleCase(rcReview.rtoState)):current.rtoState,rtoName:applyGroups.compliance?(current.rtoName||rcReview.rtoName||""):current.rtoName})); setAppliedRc(rcReview);setRcReview(null); }',
+              '  function useRcDetails(){ if(!rcReview||isEdit)return; const mappedClass=classifyVehicle(rcReview.vehicleClass); const reviewedRc={...rcReview,make:rcReviewMake||rcReview.make}; setForm(current=>({...current,registrationNo:normalizeRegistrationInput(rcReview.registrationNumber||current.registrationNo),insuredName:applyGroups.ownerIdentity?(current.insuredName||rcReview.ownerName||""):current.insuredName,phoneNo:applyGroups.ownerIdentity?(current.phoneNo||(rcReview.mobileNumber??"").replace(/\\D/g,"").slice(-10)):current.phoneNo,vehicleClass:applyGroups.vehicleIdentity?(current.vehicleClass||mappedClass):current.vehicleClass,make:applyGroups.vehicleIdentity?(current.make||rcReviewMake||""):current.make,model:applyGroups.vehicleIdentity?(current.model||rcReview.model||""):current.model,fuelType:applyGroups.vehicleIdentity?(current.fuelType||normalizeFuel(rcReview.fuelType)):current.fuelType,capacity:applyGroups.technical?(current.capacity||capacityFor(rcReview,current.vehicleClass||mappedClass)):current.capacity,manufacturingYear:applyGroups.vehicleIdentity?(current.manufacturingYear||rcReview.manufacturingYear||""):current.manufacturingYear,chassisNo:applyGroups.technical?(current.chassisNo||rcReview.chassisNumber||""):current.chassisNo,engineNo:applyGroups.technical?(current.engineNo||rcReview.engineNumber||""):current.engineNo,rtoState:applyGroups.compliance?(current.rtoState||titleCase(rcReview.rtoState)):current.rtoState,rtoName:applyGroups.compliance?(current.rtoName||rcReview.rtoName||""):current.rtoName})); setAppliedRc(reviewedRc);setRcReview(null);setRcReviewMake(""); }',
+          )
+          replace_once(
+              component,
+              '    setRcReview(null);\n    setAppliedRc(null);',
+              '    setRcReview(null);\n    setRcReviewMake("");\n    setAppliedRc(null);',
+          )
+          replace_once(
+              component,
+              '    {!isEdit&&rcReview?<RcModal review={rcReview} groups={applyGroups} setGroups={setApplyGroups} onCancel={()=>setRcReview(null)} onUse={useRcDetails}/>:null}',
+              '    {!isEdit&&rcReview?<RcModal review={rcReview} groups={applyGroups} setGroups={setApplyGroups} manufacturers={manufacturers} selectedMake={rcReviewMake} setSelectedMake={setRcReviewMake} onCancel={()=>{setRcReview(null);setRcReviewMake("");}} onUse={useRcDetails}/>:null}',
+          )
+          old_modal = '''function RcModal({review,groups,setGroups,onCancel,onUse}:{review:PolicyRcReview;groups:ApplyGroups;setGroups:(value:ApplyGroups)=>void;onCancel:()=>void;onUse:()=>void}){const toggles:Array<[keyof ApplyGroups,string,string]>=[["ownerIdentity","Owner identity","Name and available mobile"],["ownerAddress","Owner address","Address and location"],["vehicleIdentity","Vehicle identity","Class, make, model, fuel and year"],["technical","Technical details","Capacity, chassis and engine"],["compliance","Registration & compliance","RTO, fitness, tax, permit and PUC"],["finance","Hypothecation","Financed status and financer"]];return <ModalShell size="wide" title="AuthBridge RC Verification" subtitle={`${review.registrationNumber} · Review before applying`} onClose={onCancel} footer={<div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-xl border px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" onClick={onUse} className="rounded-xl bg-emerald-700 px-5 py-2.5 text-[10px] font-bold text-white">Use These Details</button></div>}><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{toggles.map(([key,title,text])=><label key={key} className="flex cursor-pointer gap-3 rounded-xl border p-3"><input type="checkbox" checked={groups[key]} onChange={e=>setGroups({...groups,[key]:e.target.checked})}/><span><span className="block text-[10px] font-bold">{title}</span><span className="text-[8px] text-[#667085]">{text}</span></span></label>)}</div><RcGroup title="Vehicle summary" items={[["Registration",review.registrationNumber],["Owner / insured",review.ownerName],["Vehicle class",review.vehicleClass],["Manufacturer",review.make],["Model",review.model],["Fuel",review.fuelType],["Chassis number",review.chassisNumber],["Engine number",review.engineNumber],["RTO",review.rtoName]]}/></ModalShell>;}'''
+          new_modal = '''function RcModal({\n  review,\n  groups,\n  setGroups,\n  manufacturers,\n  selectedMake,\n  setSelectedMake,\n  onCancel,\n  onUse,\n}:{\n  review:PolicyRcReview;\n  groups:ApplyGroups;\n  setGroups:(value:ApplyGroups)=>void;\n  manufacturers:string[];\n  selectedMake:string;\n  setSelectedMake:(value:string)=>void;\n  onCancel:()=>void;\n  onUse:()=>void;\n}){\n  const toggles:Array<[keyof ApplyGroups,string,string]>=[["ownerIdentity","Owner identity","Name and available mobile"],["ownerAddress","Owner address","Address and location"],["vehicleIdentity","Vehicle identity","Class, make, model, fuel and year"],["technical","Technical details","Capacity, chassis and engine"],["compliance","Registration & compliance","RTO, fitness, tax, permit and PUC"],["finance","Hypothecation","Financed status and financer"]];\n  const autoResolved=resolveVehicleManufacturer(review.make,manufacturers)?.value??"";\n  const makeRequired=groups.vehicleIdentity;\n  const makeUnresolved=Boolean(review.make)&&!autoResolved;\n  const canUse=!makeRequired||Boolean(selectedMake);\n  const masterOptions=Array.from(new Set(manufacturers.filter(Boolean)));\n  return <ModalShell size="wide" title="AuthBridge RC Verification" subtitle={`${review.registrationNumber} · Review before applying`} onClose={onCancel} footer={<div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className="rounded-xl border px-4 py-2.5 text-[10px] font-semibold">Cancel</button><button type="button" onClick={onUse} disabled={!canUse} className="rounded-xl bg-emerald-700 px-5 py-2.5 text-[10px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">Use These Details</button></div>}>\n    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{toggles.map(([key,title,text])=><label key={key} className="flex cursor-pointer gap-3 rounded-xl border p-3"><input type="checkbox" checked={groups[key]} onChange={e=>setGroups({...groups,[key]:e.target.checked})}/><span><span className="block text-[10px] font-bold">{title}</span><span className="text-[8px] text-[#667085]">{text}</span></span></label>)}</div>\n    <div className="mt-5 rounded-xl border border-[#DCE6F1] bg-[#F8FAFD] p-3.5">\n      <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-[9px] font-bold uppercase tracking-[.12em] text-[#315B9A]">Manufacturer review</p><p className="mt-1 text-[8.5px] leading-4 text-[#667085]">Use the INSUREIT manufacturer master value before applying vehicle details.</p></div>{autoResolved?<span className="rounded-full bg-[#EAF7F2] px-2 py-1 text-[7.5px] font-bold text-[#18794E]">Matched to master</span>:makeUnresolved?<span className="rounded-full bg-[#FFF3CD] px-2 py-1 text-[7.5px] font-bold text-[#9A6700]">Review required</span>:null}</div>\n      <div className="mt-3 grid gap-3 md:grid-cols-2"><div><label className={labelClass}>Make {makeRequired?<Required/>:null}</label><select className={inputClass} value={selectedMake} onChange={e=>setSelectedMake(e.target.value)} disabled={!groups.vehicleIdentity} required={makeRequired}><option value="">Select manufacturer</option>{masterOptions.map(make=><option key={make} value={make}>{make}</option>)}</select></div><div className="rounded-xl border border-[#E1E7EF] bg-white px-3 py-2.5"><p className="text-[7px] font-bold uppercase text-[#52749E]">AuthBridge value</p><p className="mt-1 text-[9.5px] font-semibold text-[#17203A]">{review.make||"Not provided"}</p></div></div>\n      {makeUnresolved&&groups.vehicleIdentity?<p className="mt-2 text-[8.5px] font-semibold text-[#9A6700]">Could not match this AuthBridge manufacturer to the INSUREIT master. Select the correct manufacturer before applying vehicle identity.</p>:null}\n    </div>\n    <RcGroup title="Vehicle summary" items={[["Registration",review.registrationNumber],["Owner / insured",review.ownerName],["Vehicle class",review.vehicleClass],["Model",review.model],["Fuel",review.fuelType],["Chassis number",review.chassisNumber],["Engine number",review.engineNumber],["RTO",review.rtoName]]}/>\n  </ModalShell>;\n}'''
+          replace_once(component, old_modal, new_modal)
+
+          resolver = Path("apps/web-portal/lib/vehicle-manufacturer-resolution.ts")
+          resolver_text = resolver.read_text()
+          resolver_text = resolver_text.replace('  "MOTORS",\n  "MOTOR",\n', '')
+          resolver.write_text(resolver_text)
+
+          regression = "apps/web-portal/scripts/authbridge-manufacturer-regression.ts"
+          replace_once(
+              regression,
+              'import { resolveVehicleManufacturer } from "../lib/vehicle-manufacturer-resolution";\n',
+              '// @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.\nimport { resolveVehicleManufacturer } from "../lib/vehicle-manufacturer-resolution.ts";\n',
+          )
+
+          package = "apps/web-portal/package.json"
+          replace_once(
+              package,
+              '    "vehicle-registration:regression": "node --experimental-strip-types scripts/vehicle-registration-regression.mjs",\n',
+              '    "vehicle-registration:regression": "node --experimental-strip-types scripts/vehicle-registration-regression.mjs",\n    "authbridge:manufacturer-regression": "node --experimental-strip-types scripts/authbridge-manufacturer-regression.ts",\n',
+          )
+
+          workflow = ".github/workflows/verify-web-portal.yml"
+          replace_once(
+              workflow,
+              '      - name: Vehicle registration regression\n        run: npm run vehicle-registration:regression\n',
+              '      - name: Vehicle registration regression\n        run: npm run vehicle-registration:regression\n      - name: AuthBridge manufacturer resolution regression\n        run: npm run authbridge:manufacturer-regression\n',
+          )
+          replace_once(
+              workflow,
+              '            echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"\n',
+              '            echo "- Vehicle regressions: canonical NEW prefix, standard/BH-series registration validation and AuthBridge manufacturer master resolution"\n',
+          )
+
+          handoff = Path("docs/AUTHBRIDGE_RC_HANDOFF.md")
+          handoff_text = handoff.read_text()
+          marker = "\n## 10. Deployment state\n"
+          if marker not in handoff_text:
+              raise SystemExit("AuthBridge handoff insertion marker not found")
+          addition = '''\n## 9.1 Manufacturer master resolution rule\n\nPolicy Onboarding must never push a raw AuthBridge `Maker/Manufacturer` string directly into the constrained Section 02 Make dropdown. Resolve the provider value against the active INSUREIT Vehicle Manufacturer Master first. Exact and safe normalized matches may preselect the canonical master value. If there is no unique match, keep the raw AuthBridge value as review evidence and require the user to select the correct master manufacturer in the RC review before applying the Vehicle identity group. Do not auto-create a master manufacturer and do not silently store the unresolved provider string. The user may uncheck Vehicle identity and continue without applying Make.\n\n'''
+          handoff.write_text(handoff_text.replace(marker, addition + marker, 1))
+          PY
+
+      - name: Commit focused patch and remove helper workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/patch-authbridge-manufacturer-review.yml
+          git add apps/web-portal/components/policy-unified-form.tsx \
+                  apps/web-portal/lib/vehicle-manufacturer-resolution.ts \
+                  apps/web-portal/scripts/authbridge-manufacturer-regression.ts \
+                  apps/web-portal/package.json \
+                  .github/workflows/verify-web-portal.yml \
+                  docs/AUTHBRIDGE_RC_HANDOFF.md
+          git diff --cached --check
+          git commit -m "Fix AuthBridge manufacturer review mapping"
+          git push origin HEAD:fix/authbridge-manufacturer-review
