@@ -2,6 +2,7 @@ import type { PropsWithChildren } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { unregisterPartnerPushDevice } from '@/lib/partner-notifications';
 import { clearPartnerQueryCache } from '@/lib/partner-query-cache';
 import {
   getCurrentSession,
@@ -94,6 +95,7 @@ export function PartnerSessionProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(async () => {
     try {
+      await unregisterPartnerPushDevice();
       await signOutFromSupabase();
     } finally {
       clear();
