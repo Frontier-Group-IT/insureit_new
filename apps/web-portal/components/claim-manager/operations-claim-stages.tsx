@@ -92,9 +92,9 @@ const fields: StageFields = {
     { name: "bill_amount", label: "Bill Amount", type: "number" },
   ],
   delivery_order: [
-    { name: "do_status", label: "Delivery order status" },
-    { name: "do_date", label: "Delivery order date", type: "date" },
-    { name: "do_amount", label: "Delivery order amount", type: "number" },
+    { name: "assessment_received", label: "Assessment Received?", type: "yesno" },
+    { name: "do_date", label: "DO Date", type: "date" },
+    { name: "do_amount", label: "DO Amount", type: "number" },
   ],
   vehicle_delivery: [
     { name: "vehicle_received", label: "Vehicle Received?", type: "yesno" },
@@ -113,7 +113,7 @@ const requiredFields: Record<string, string[]> = {
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date", "ri_done_date"],
   billing: ["bill_date", "bill_amount"],
-  delivery_order: ["do_date", "do_amount"],
+  delivery_order: ["assessment_received", "do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
   payment_encashment: ["payment_received_date", "payment_received_amount"],
 };
@@ -300,7 +300,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-1" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-1" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
@@ -326,7 +326,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 return (
                   <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {field.label}{required && !field.label.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
-                    {selected.key === "billing" && field.name === "bill_date" ? (
+                    {(selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} />
                     ) : field.type === "select" ? (
                       <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]">
@@ -348,7 +348,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 );
               })}
             </div>
-            {selected.key === "vehicle_delivery" ? <p className="mt-3 max-w-xl rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">This stage stays in progress until the vehicle is received.</p> : null}
             {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
             <div className="mt-3 flex justify-end"><FormSubmitButton label="Save Details" pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>
           </form>
