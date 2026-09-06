@@ -184,7 +184,7 @@ function StripDetail({ icon, label, value, href, isLocation = false }: { icon: s
 function UnclassifiedAttachments({ claimId, documents }: { claimId: string; documents: SpotSurveyDocument[] }) {
   const categories = ["Accident Photo", "Accident Video", "RC Copy", "Insurance Copy", "Driver Licence", "GR / Load Bill"];
   return (
-    <section className="rounded-2xl border border-amber-200 bg-amber-50/50 px-4 py-3">
+    <section className="rounded-2xl border border-amber-200 bg-white px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-[16px] font-semibold text-[#071D49]">Unclassified Spot Attachments</h2>
