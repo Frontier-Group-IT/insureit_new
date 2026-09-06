@@ -68,17 +68,18 @@ const fields: StageFields = {
     { name: "location", label: "Location" }
   ],
   spot_status: [
-    { name: "spot_survey_done_date", label: "Spot Survey Done Date *", type: "date" },
-    { name: "surveyor_name", label: "Surveyor Name (Optional)" },
-    { name: "surveyor_email", label: "Surveyor Email (Optional)", type: "email" },
-    { name: "surveyor_phone", label: "Surveyor Number (Optional)", type: "tel" }
+    { name: "surveyor_name", label: "Surveyor name" },
+    { name: "surveyor_phone", label: "Surveyor mobile", type: "tel" },
+    { name: "survey_status", label: "Survey status" },
+    { name: "inspection_date", label: "Inspection date", type: "date" }
   ],
   claim_intimation: [
     { name: "insurer_claim_no", label: "Insurer claim number" },
-    { name: "dealership_name", label: "Dealership" }, { name: "dealership_location", label: "Dealership location" },
-    { name: "contact_person_name", label: "Contact person" }, { name: "contact_number", label: "Contact number" },
-    { name: "claim_intimation_date", label: "Claim intimation date", type: "date" }, { name: "gate_in_date", label: "Gate-in date", type: "date" },
-    { name: "estimate_amount", label: "Estimate amount", type: "number" }
+    { name: "dealership_name", label: "Dealership / workshop" },
+    { name: "dealership_location", label: "Workshop address" },
+    { name: "contact_person_name", label: "Contact person" },
+    { name: "contact_number", label: "Contact number" },
+    { name: "estimate_amount", label: "Estimated loss", type: "number" }
   ],
   work_approval: [
     { name: "approval_received_date", label: "Approval received date", type: "date" },
@@ -103,8 +104,8 @@ const fields: StageFields = {
 
 const requiredFields: Record<string, string[]> = {
   spot_intimation: ["incident_at", "spot_intimation_at"],
-  spot_status: ["spot_survey_done_date"],
-  claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "claim_intimation_date", "gate_in_date", "estimate_amount"],
+  spot_status: ["inspection_date"],
+  claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date", "ri_done_date"],
   billing: ["bill_date", "bill_amount"],
@@ -114,10 +115,10 @@ const requiredFields: Record<string, string[]> = {
 };
 
 const spotStatusAliases: Record<string, string[]> = {
-  spot_survey_done_date: ["spot_survey_done_date", "inspection_date", "survey_date", "completed_at"],
   surveyor_name: ["surveyor_name", "name"],
-  surveyor_email: ["surveyor_email", "email"],
-  surveyor_phone: ["surveyor_phone", "surveyor_mobile", "surveyor_number", "mobile"]
+  surveyor_phone: ["surveyor_phone", "surveyor_mobile", "surveyor_number", "mobile"],
+  survey_status: ["survey_status", "status"],
+  inspection_date: ["inspection_date", "spot_survey_done_date", "survey_date", "completed_at"]
 };
 
 export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails }: Props) {
@@ -296,7 +297,7 @@ function spotStatusFieldValue(details: StageDetail[], detail: StageDetail | unde
   for (const row of candidates) {
     for (const alias of aliases) {
       const value = row.details?.[alias];
-      if (typeof value === "string" && value.trim()) return fieldName === "spot_survey_done_date" ? toDateValue(value) : value;
+      if (typeof value === "string" && value.trim()) return fieldName === "inspection_date" ? toDateValue(value) : value;
       if (typeof value === "number") return String(value);
     }
   }
