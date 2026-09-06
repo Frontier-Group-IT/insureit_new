@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, submitFinalDocumentsDraft, uploadFinalDocument, verifyFinalDocument } from "./final-documents-actions";
 
@@ -62,6 +63,16 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
     return formData;
   }
 
+  function stageDetailsForm() {
+    const formData = baseForm();
+    formData.set("claim_intimation_date", details.claim_intimation_date);
+    formData.set("dealership_name", details.dealership_name);
+    formData.set("dealership_location", details.dealership_location);
+    formData.set("gate_in_date", details.gate_in_date);
+    formData.set("estimate_amount", details.estimate_amount);
+    return formData;
+  }
+
   function run(label: string, action: () => Promise<ActionResult>) {
     setResult(null);
     setPendingAction(label);
@@ -74,14 +85,45 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
   }
 
   function saveStageDetails() {
-    run("stage-details", () => {
-      const formData = baseForm();
+    run("stage-details", () => saveFinalDealershipDetails(stageDetailsForm()));
+  }
+
+  function saveAndContinue() {
+    setResult(null);
+    setPendingAction("save-continue");
+    startTransition(async () => {
+      const saved = await saveFinalDealershipDetails(stageDetailsForm());
+      if (!saved.ok) {
+        setResult(saved);
+        setPendingAction(null);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.set("milestone_key", "claim_intimation");
+      formData.set("save_only", "false");
+      formData.set("notes", "Operations completed Claim Intimation and opened Work Approval.");
       formData.set("claim_intimation_date", details.claim_intimation_date);
       formData.set("dealership_name", details.dealership_name);
       formData.set("dealership_location", details.dealership_location);
       formData.set("gate_in_date", details.gate_in_date);
       formData.set("estimate_amount", details.estimate_amount);
-      return saveFinalDealershipDetails(formData);
+
+      try {
+        const response = await completeClaimJourneyStage(claimId, formData);
+        setPendingAction(null);
+        if (response.advanced) {
+          setResult({ ok: true, message: "Claim Intimation completed. Work Approval is now open." });
+          router.replace(`/claims/${claimId}?stage=work_approval`);
+          router.refresh();
+          return;
+        }
+        setResult({ ok: true, message: "Stage details saved." });
+        router.refresh();
+      } catch (error) {
+        setPendingAction(null);
+        setResult({ ok: false, message: error instanceof Error ? error.message : "Unable to complete Claim Intimation." });
+      }
     });
   }
 
@@ -109,7 +151,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
         <div className="grid overflow-hidden rounded-xl border border-[#D9E3F0] md:grid-cols-5">{finalDocumentTabs.map((tab, index) => <button key={tab} type="button" onClick={() => setActiveTab(index)} className={`flex items-center gap-2 px-4 py-3 text-left text-[12px] font-semibold ${activeTab === index ? "bg-[#071D49] text-white" : "bg-[#FBFCFE] text-[#071D49] border-l border-[#D9E3F0]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ${activeTab === index ? "bg-white text-[#071D49]" : "bg-[#EEF4FF] text-[#071D49]"}`}>{index + 1}</span>{tab}</button>)}</div>
         <div className="mt-3 overflow-hidden rounded-xl border border-[#D9E3F0]"><table className="w-full min-w-[900px] border-collapse text-left text-[12px]"><thead className="bg-[#071D49] text-white"><tr><th className="px-3 py-2">Sr. No.</th><th className="px-3 py-2">Document Name</th><th className="px-3 py-2 text-center">Upload Document</th><th className="px-3 py-2 text-center">Status</th><th className="px-3 py-2 text-center">Actions</th></tr></thead><tbody className="divide-y divide-[#E6EEF7] bg-white">{visibleRows.map((row) => <DocumentRow key={row.type} claimId={claimId} row={row} isPending={isPending} pendingAction={pendingAction} run={run} refresh={() => router.refresh()} />)}</tbody></table></div>
         {result ? <p className={`mt-3 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message}</p> : null}
-        <div className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={activeTab === 0} onClick={() => setActiveTab((value) => Math.max(0, value - 1))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] disabled:bg-[#F4F7FC] disabled:text-[#9AA7BA]">Previous</button><div className="flex items-center gap-3"><button type="button" onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49]">Save as Draft</button><span className="hidden text-[11px] text-[#68758A] sm:inline">Complete the stage form above to move the claim forward.</span><button type="button" disabled={activeTab === finalDocumentTabs.length - 1} onClick={() => setActiveTab((value) => Math.min(finalDocumentTabs.length - 1, value + 1))} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">Next</button></div></div>
+        <div className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={activeTab === 0} onClick={() => setActiveTab((value) => Math.max(0, value - 1))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] disabled:bg-[#F4F7FC] disabled:text-[#9AA7BA]">Previous</button><div className="flex items-center gap-3"><button type="button" onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49]">Save as Draft</button><span className="hidden text-[11px] text-[#68758A] sm:inline">Complete all mandatory stage fields, then save to continue.</span><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button><button type="button" disabled={activeTab === finalDocumentTabs.length - 1 || isPending} onClick={() => setActiveTab((value) => Math.min(finalDocumentTabs.length - 1, value + 1))} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">Next</button></div></div>
       </section>
     </div>
   );
