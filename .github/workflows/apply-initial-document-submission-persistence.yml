@@ -1,0 +1,67 @@
+name: Apply initial document submission persistence
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260906143000_persist_initial_document_submission.sql'
+      - '.github/workflows/apply-initial-document-submission-persistence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply initial document submission persistence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260906143000_persist_initial_document_submission.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply persistence migration
+        run: supabase db query --linked --file supabase/migrations/20260906143000_persist_initial_document_submission.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260906143000
+
+      - name: Verify persistence trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.persist_initial_document_submission_from_stage_details()') is not null as function_ready,
+              exists (
+                select 1 from pg_trigger
+                where tgrelid = 'public.claim_stage_details'::regclass
+                  and tgname = 'trg_persist_initial_document_submission'
+                  and not tgisinternal
+              ) as trigger_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
