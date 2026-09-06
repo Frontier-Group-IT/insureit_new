@@ -469,6 +469,11 @@ Test at minimum:
 13. Server logs contain no decrypted owner response
 14. Saved policy record contains only approved normalized fields
 
+## 9.1 Manufacturer master resolution rule
+
+Policy Onboarding must never push a raw AuthBridge `Maker/Manufacturer` string directly into the constrained Section 02 Make dropdown. Resolve the provider value against the active INSUREIT Vehicle Manufacturer Master first. Exact and safe normalized matches may preselect the canonical master value. If there is no unique match, keep the raw AuthBridge value as review evidence and require the user to select the correct master manufacturer in the RC review before applying the Vehicle identity group. Do not auto-create a master manufacturer and do not silently store the unresolved provider string. The user may uncheck Vehicle identity and continue without applying Make.
+
+
 ## 10. Deployment state
 
 - Gateway code: **IMPLEMENTED IN REPOSITORY**

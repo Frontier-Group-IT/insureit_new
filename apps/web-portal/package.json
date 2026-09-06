@@ -17,6 +17,7 @@
     "vehicle-policy-intake:resume-regression": "node scripts/vehicle-policy-intake-resume-regression.mjs",
     "vehicle-prefix:new-regression": "node scripts/new-vehicle-prefix-regression.mjs",
     "vehicle-registration:regression": "node --experimental-strip-types scripts/vehicle-registration-regression.mjs",
+    "authbridge:manufacturer-regression": "node --experimental-strip-types scripts/authbridge-manufacturer-regression.ts",
     "register-prefetch:regression": "node scripts/register-workflow-prefetch-regression.mjs",
     "commercial-reports-prefetch:regression": "node scripts/commercial-reports-prefetch-regression.mjs",
     "register-performance-observability:regression": "node scripts/register-performance-observability-regression.mjs",
