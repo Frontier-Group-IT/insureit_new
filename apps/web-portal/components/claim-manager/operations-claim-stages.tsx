@@ -167,7 +167,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const managerNext = managerTransitions[currentStatus];
   const stageTarget = stageCompletionTargets[selected.key];
   const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
-  const stageEditable = Boolean(selected.key !== "spot_intimation" && selectedAvailable && stageTarget);
+  const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [showSpotSaved, setShowSpotSaved] = useState(false);
 
@@ -333,7 +333,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
             <div className="mt-3 flex justify-end"><FormSubmitButton label="Save Details" pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>
           </form>
-        ) : selected.key !== "spot_intimation" ? (
+        ) : selected.key !== "spot_intimation" && selected.key !== "claim_intimation" ? (
           <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">This stage will open when the previous stage is completed.</p>
         ) : null}
       </div>
