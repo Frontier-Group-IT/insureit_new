@@ -12,7 +12,6 @@ import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimati
 type StageDetail = { stage?: string | null; details: Record<string, unknown> | null; created_at: string };
 type StageField = { name: string; label: string; type?: string };
 type StageFields = Record<string, StageField[]>;
-type ActionState = { ok: boolean; message: string; advanced: boolean };
 
 type Props = {
   claimId: string;
@@ -40,6 +39,7 @@ const stages = [
 ] as const;
 
 type StageKey = (typeof stages)[number]["key"];
+type ActionState = { ok: boolean; message: string; advanced: boolean; nextStageKey: StageKey | null };
 
 const stageCompletionTargets: Partial<Record<StageKey, ClaimStatus>> = {
   spot_status: "Final Documents Awaited",
@@ -147,6 +147,11 @@ const fieldAliases: Record<string, string[]> = {
   payment_received_amount: ["payment_received_amount", "settlement_amount"],
 };
 
+function nextStageKeyFor(stageKey: string | null): StageKey | null {
+  const index = stages.findIndex((stage) => stage.key === stageKey);
+  return index >= 0 && index < stages.length - 1 ? stages[index + 1].key : null;
+}
+
 export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
@@ -172,17 +177,22 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         const milestoneKey = formData.get("milestone_key");
         if (typeof milestoneKey === "string" && milestoneKey && milestoneKey !== "spot_intimation") {
           const result = await completeClaimJourneyStage(claimId, formData);
-          return { ok: true, message: result.advanced ? "Claim stage updated." : "Stage details saved.", advanced: result.advanced };
+          return {
+            ok: true,
+            message: result.advanced ? "Claim stage updated." : "Stage details saved.",
+            advanced: result.advanced,
+            nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
+          };
         }
         await advanceClaimWorkflow(claimId, formData);
-        return { ok: true, message: "Claim stage updated.", advanced: true };
+        return { ok: true, message: "Claim stage updated.", advanced: true, nextStageKey: "spot_status" };
       } catch (error) {
-        return { ok: false, message: error instanceof Error ? error.message : "Unable to update the claim stage.", advanced: false };
+        return { ok: false, message: error instanceof Error ? error.message : "Unable to update the claim stage.", advanced: false, nextStageKey: null };
       } finally {
         setSpotSubmitting(false);
       }
     },
-    { ok: false, message: "", advanced: false },
+    { ok: false, message: "", advanced: false, nextStageKey: null },
   );
 
   const [spotState, spotFormAction] = useActionState(
@@ -201,12 +211,18 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!state.ok) return;
-    if (state.advanced && activeIndex < stages.length - 1) {
-      router.push(`/claims/${claimId}?stage=${stages[activeIndex + 1].key}`);
+    if (state.advanced && state.nextStageKey) {
+      setSelectedKey(state.nextStageKey);
+      router.replace(`/claims/${claimId}?stage=${state.nextStageKey}`);
       return;
     }
     router.refresh();
-  }, [activeIndex, claimId, router, state.advanced, state.ok]);
+  }, [claimId, router, state.advanced, state.nextStageKey, state.ok]);
+
+  useEffect(() => {
+    if (!initialStageKey || !stages.some((stage) => stage.key === initialStageKey)) return;
+    setSelectedKey(initialStageKey);
+  }, [initialStageKey]);
 
   useEffect(() => {
     if (spotState.ok) setShowSpotSaved(true);
@@ -262,7 +278,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               accidentAt={accidentAt}
               spotIntimationAt={spotIntimationAt}
               formAction={spotCurrentEditable ? formAction : spotFormAction}
-              state={spotCurrentEditable ? state : { ok: spotState.ok, message: spotState.message, advanced: false }}
+              state={spotCurrentEditable ? state : { ok: spotState.ok, message: spotState.message, advanced: false, nextStageKey: null }}
               standalone={!spotCurrentEditable}
               onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }}
             />
