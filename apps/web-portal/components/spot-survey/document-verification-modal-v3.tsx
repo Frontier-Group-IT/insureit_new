@@ -29,9 +29,11 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const [result, setResult] = useState<Result | null>(null);
   const [saved, setSaved] = useState(false);
   const [spot, setSpot] = useState<SpotState>({ axleStatus: "", overturned: "" });
-  const [rcDates, setRcDates] = useState<Record<string, string>>({});
   const policyStart = toDateOnly(policyStartDate) ?? "";
   const policyEnd = toDateOnly(policyEndDate) ?? "";
+  const [rcDates, setRcDates] = useState<Record<string, string>>({
+    insurance_valid_upto: policyEnd
+  });
   const [insurance, setInsurance] = useState<InsuranceState>({ start: policyStart, end: policyEnd, ncb: "", policy: "", gvw: "" });
   const [dl, setDl] = useState<DlState>({ validUpto: "", inbound: "", validForLossVehicle: "" });
   const [gr, setGr] = useState<GrState>({ gvw: "", unladen: "", load: "" });
