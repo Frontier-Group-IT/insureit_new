@@ -76,10 +76,11 @@ const fields: StageFields = {
     { name: "estimate_amount", label: "Estimated loss", type: "number" },
   ],
   work_approval: [
-    { name: "approval_status", label: "Approval status" },
-    { name: "approval_received_date", label: "Approval received date", type: "date" },
-    { name: "approved_amount", label: "Approved amount", type: "number" },
-    { name: "cashless", label: "Cashless", type: "select" },
+    { name: "approval_received_date", label: "Approval Received Date", type: "date" },
+    { name: "cashless", label: "Cashless Claim", type: "yesno" },
+    { name: "surveyor_name", label: "Surveyor Name (Optional)" },
+    { name: "surveyor_phone", label: "Surveyor Phone (Optional)", type: "tel" },
+    { name: "surveyor_email", label: "Surveyor Email (Optional)", type: "email" },
   ],
   repair_ri: [
     { name: "repair_status", label: "Repair status" },
@@ -303,10 +304,29 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
+                if (field.type === "yesno") {
+                  const yesChecked = value === "true" || value === "yes";
+                  const noChecked = value === "false" || value === "no";
+                  return (
+                    <fieldset key={field.name} className="min-w-0">
+                      <legend className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
+                        {field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
+                      </legend>
+                      <div className="mt-1 grid grid-cols-2 gap-2">
+                        <label className="flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]">
+                          <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
+                        </label>
+                        <label className="flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]">
+                          <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />No
+                        </label>
+                      </div>
+                    </fieldset>
+                  );
+                }
                 return (
                   <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {field.label}{required && !field.label.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
