@@ -1,15 +1,22 @@
 "use server";
 
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
-import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effective-permissions";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
-import { canVerifyClaimDocuments } from "@/lib/roles";
 
 const bucketName = "claim-documents";
 type ActionResult = { ok: boolean; message?: string };
 type ClaimRow = { id: string; customer_id: string | null; current_status: string | null };
+
+type ClaimIntimationDetails = {
+  claim_intimation_date: string;
+  dealership_name: string;
+  dealership_location: string;
+  gate_in_date: string;
+  estimate_amount: string;
+};
 
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
@@ -33,37 +40,91 @@ function clean(value: FormDataEntryValue | null) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function isDateValue(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00`));
+}
+
+export async function loadFinalClaimIntimationDetails(claimId: string): Promise<{ ok: boolean; details?: ClaimIntimationDetails; message?: string }> {
+  try {
+    if (!claimId) throw new Error("Missing claim id.");
+    await currentProfile();
+    await loadClaim(claimId);
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("claim_stage_details")
+      .select("details")
+      .eq("claim_id", claimId)
+      .filter("details->>verification_type", "eq", "final_documents_dealership_details")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ details: Record<string, unknown> | null }>();
+    if (error) throw new Error(error.message);
+    const details = data?.details ?? {};
+    return {
+      ok: true,
+      details: {
+        claim_intimation_date: typeof details.claim_intimation_date === "string" ? details.claim_intimation_date : typeof details.contact_person_name === "string" ? details.contact_person_name : "",
+        dealership_name: typeof details.dealership_name === "string" ? details.dealership_name : "",
+        dealership_location: typeof details.dealership_location === "string" ? details.dealership_location : typeof details.dealership_address === "string" ? details.dealership_address : "",
+        gate_in_date: typeof details.gate_in_date === "string" ? details.gate_in_date : typeof details.contact_number === "string" ? details.contact_number : "",
+        estimate_amount: typeof details.estimate_amount === "number" ? String(details.estimate_amount) : typeof details.estimate_amount === "string" ? details.estimate_amount : ""
+      }
+    };
+  } catch (error) {
+    console.error("loadFinalClaimIntimationDetails failed", error);
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to load claim intimation details." };
+  }
+}
+
 export async function saveFinalDealershipDetails(formData: FormData): Promise<ActionResult> {
   try {
     const claimId = clean(formData.get("claimId"));
     if (!claimId) throw new Error("Missing claim id.");
     const profile = await currentProfile();
     const claim = await loadClaim(claimId);
+    const claimIntimationDate = clean(formData.get("claim_intimation_date"));
+    const dealershipName = clean(formData.get("dealership_name"));
+    const dealershipLocation = clean(formData.get("dealership_location"));
+    const gateInDate = clean(formData.get("gate_in_date"));
+    const estimateAmountText = clean(formData.get("estimate_amount"));
+    const estimateAmount = Number(estimateAmountText);
+
+    const missing = [
+      ["Claim Intimation Date", claimIntimationDate],
+      ["Dealership Name", dealershipName],
+      ["Dealership Location", dealershipLocation],
+      ["Gate-in Date", gateInDate],
+      ["Estimate Amount", estimateAmountText]
+    ].filter(([, value]) => !value).map(([label]) => label);
+    if (missing.length) throw new Error(`Please fill: ${missing.join(", ")}.`);
+    if (!isDateValue(claimIntimationDate)) throw new Error("Please select a valid Claim Intimation Date.");
+    if (!isDateValue(gateInDate)) throw new Error("Please select a valid Gate-in Date.");
+    if (!Number.isFinite(estimateAmount) || estimateAmount < 0) throw new Error("Please enter a valid Estimate Amount.");
+
     const details = {
       verification_type: "final_documents_dealership_details",
-      dealership_name: clean(formData.get("dealership_name")),
-      dealership_address: clean(formData.get("dealership_address")),
-      contact_person_name: clean(formData.get("contact_person_name")),
-      contact_number: clean(formData.get("contact_number")),
+      claim_intimation_date: claimIntimationDate,
+      dealership_name: dealershipName,
+      dealership_location: dealershipLocation,
+      gate_in_date: gateInDate,
+      estimate_amount: estimateAmount,
+      // Backward-compatible aliases for existing operations reads.
+      dealership_address: dealershipLocation,
+      contact_person_name: claimIntimationDate,
+      contact_number: gateInDate,
       saved_at: new Date().toISOString(),
       saved_by: profile?.id ?? null
     };
-    const missing = [
-      ["Dealership Name", details.dealership_name],
-      ["Dealership Address", details.dealership_address],
-      ["Contact Person Name", details.contact_person_name],
-      ["Contact Number", details.contact_number]
-    ].filter(([, value]) => !value).map(([label]) => label);
-    if (missing.length) throw new Error(`Please fill: ${missing.join(", ")}.`);
 
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details, created_by: profile?.id ?? null });
     if (error) throw new Error(error.message);
+    revalidatePath(`/claims/${claimId}`);
     revalidatePath(`/claims/${claimId}/final-documents`);
-    return { ok: true, message: "Dealership details saved." };
+    return { ok: true, message: "Stage details saved." };
   } catch (error) {
     console.error("saveFinalDealershipDetails failed", error);
-    return { ok: false, message: error instanceof Error ? error.message : "Unable to save dealership details." };
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to save stage details." };
   }
 }
 
