@@ -14,7 +14,7 @@ create table if not exists public.partner_push_devices (
   constraint partner_push_devices_intermediary_shape_check check (
     (actor_kind = 'intermediary' and intermediary_id is not null)
     or
-    (actor_kind = 'employee')
+    (actor_kind = 'employee' and intermediary_id is null)
   )
 );
 
