@@ -106,7 +106,11 @@ export default function StartClaimScreen() {
   const selectedVehicle = useMemo(() => vehicles.find((item) => item.id === selectedVehicleId) ?? null, [selectedVehicleId, vehicles]);
   const activePolicy = useMemo(() => {
     const currentDate = formatIsoDate(new Date());
-    return vehiclePolicies.find((policy) => policy.start_date <= currentDate && policy.end_date >= currentDate) ?? null;
+    return vehiclePolicies.find((policy) => {
+      const startDate = policyDateOnly(policy.start_date);
+      const endDate = policyDateOnly(policy.end_date);
+      return Boolean(startDate && endDate && startDate <= currentDate && endDate >= currentDate);
+    }) ?? null;
   }, [vehiclePolicies]);
   const selectedPolicy = activePolicy ?? vehiclePolicies[0] ?? null;
   const selectedInsurer = selectedPolicy ? insurers.find((item) => item.id === selectedPolicy.insurance_company_id) ?? null : null;
@@ -471,8 +475,20 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
 
 function formatDate(value: string) { return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function formatIsoDate(date: Date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
-function daysUntil(value: string) { return Math.ceil((new Date(value).getTime() - Date.now()) / 86400000); }
-function policyCondition(endDate: string): PolicyCondition { const days = daysUntil(endDate); return days < 0 ? 'expired' : days <= 30 ? 'due' : 'active'; }
+function policyDateOnly(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? '' : formatIsoDate(parsed);
+}
+function policyCondition(endDate: string): PolicyCondition {
+  const expiryDate = policyDateOnly(endDate);
+  if (!expiryDate) return 'active';
+  const today = new Date();
+  const currentDate = formatIsoDate(today);
+  if (expiryDate < currentDate) return 'expired';
+  const dueThrough = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
+  return expiryDate <= formatIsoDate(dueThrough) ? 'due' : 'active';
+}
 
 const styles = StyleSheet.create({
   hero: { minHeight: 126, marginHorizontal: 0, marginBottom: 2, flexDirection: 'row', alignItems: 'flex-start' },
