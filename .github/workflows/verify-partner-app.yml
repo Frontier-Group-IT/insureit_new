@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: verify-partner-app-${{ github.event.pull_request.number || github.ref }}
@@ -31,8 +31,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -43,21 +41,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-
-      - name: Synchronize Phase 6 dependency lockfile once
-        if: github.event_name == 'pull_request' && github.head_ref == 'partner/phase6-native-foundation'
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- package-lock.json; then
-            echo "package-lock.json already synchronized."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git commit -m "Sync Partner Phase 6 dependency lockfile"
-          git push origin "HEAD:${GITHUB_HEAD_REF}"
 
       - name: Require synchronized dependency lockfile
         shell: bash
