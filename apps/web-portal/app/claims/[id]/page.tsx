@@ -243,6 +243,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
       </div>
       <div className="mt-[6px]">
         <OperationsClaimStages
+          key={`${claim.current_status}:${requestedStage ?? ""}`}
           claimId={claim.id}
           currentStatus={claim.current_status}
           insurerClaimNo={claim.insurer_claim_no}
