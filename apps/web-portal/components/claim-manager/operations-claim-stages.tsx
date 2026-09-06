@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { advanceClaimWorkflow, saveSpotIntimationDetails } from "@/app/actions";
+import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
@@ -25,15 +26,39 @@ type Props = {
 
 const stages = [
   { key: "spot_intimation", label: "Spot Intimation", statuses: ["Draft", "Accident Reported", "Initial Documents Pending", "Documents Pending"] },
-  { key: "spot_status", label: "Spot Status", statuses: ["Initial Documents Submitted", "Initial Documents Verification Pending", "Documents Submitted", "Initial Documents Verified", "Claim Intimated", "Surveyor Appointed", "Vehicle Inspected", "Spot Survey Completed"] },
-  { key: "claim_intimation", label: "Claim Intimation", statuses: ["Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation"] },
-  { key: "work_approval", label: "Work Approval", statuses: ["Estimate Submitted", "Approval Pending", "Work Approval Status", "Work Approval Received"] },
-  { key: "repair_ri", label: "Repair & RI", statuses: ["Final Surveyor Details", "Survey Status", "Survey Done", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation", "RA Intimation Done"] },
-  { key: "billing", label: "Billing", statuses: ["Final Bill Submitted"] },
-  { key: "delivery_order", label: "Delivery Order", statuses: ["DO Status", "DO Submitted"] },
-  { key: "vehicle_delivery", label: "Vehicle Delivery", statuses: ["Claim Complete"] },
-  { key: "payment_encashment", label: "Payment Encashment", statuses: ["Payment Stage", "Claim Completion In Progress", "Settlement Under Process", "Settled", "Closed"] }
+  { key: "spot_status", label: "Spot Status", statuses: ["Initial Documents Submitted", "Initial Documents Verification Pending", "Documents Submitted", "Initial Documents Verified", "Claim Intimated", "Surveyor Appointed"] },
+  { key: "claim_intimation", label: "Claim Intimation", statuses: ["Vehicle Inspected", "Spot Survey Completed", "Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation", "Final Surveyor Details", "Survey Status"] },
+  { key: "work_approval", label: "Work Approval", statuses: ["Survey Done", "Estimate Submitted", "Approval Pending", "Work Approval Status"] },
+  { key: "repair_ri", label: "Repair & RI", statuses: ["Work Approval Received", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation"] },
+  { key: "billing", label: "Billing", statuses: ["RA Intimation Done"] },
+  { key: "delivery_order", label: "Delivery Order", statuses: ["Final Bill Submitted", "DO Status"] },
+  { key: "vehicle_delivery", label: "Vehicle Delivery", statuses: ["DO Submitted"] },
+  { key: "payment_encashment", label: "Payment Encashment", statuses: ["Payment Stage", "Claim Completion In Progress", "Settlement Under Process", "Claim Complete", "Settled", "Closed"] }
 ] as const;
+
+type StageKey = (typeof stages)[number]["key"];
+
+const stageCompletionTargets: Partial<Record<StageKey, ClaimStatus>> = {
+  spot_status: "Final Documents Awaited",
+  claim_intimation: "Survey Done",
+  work_approval: "Work Approval Received",
+  repair_ri: "RA Intimation Done",
+  billing: "Final Bill Submitted",
+  delivery_order: "DO Submitted",
+  vehicle_delivery: "Payment Stage",
+  payment_encashment: "Claim Complete",
+};
+
+const stageCompletionReadyStatuses: Partial<Record<StageKey, readonly ClaimStatus[]>> = {
+  spot_status: ["Initial Documents Verified", "Claim Intimated", "Surveyor Appointed"],
+  claim_intimation: ["Final Documents Verified", "Claim Intimation", "Final Surveyor Details", "Survey Status"],
+  work_approval: ["Survey Done", "Estimate Submitted", "Approval Pending", "Work Approval Status"],
+  repair_ri: ["Work Approval Received", "Under Repair", "Repair Started", "Repair Done", "Repair Completed", "RA Intimation"],
+  billing: ["RA Intimation Done"],
+  delivery_order: ["Final Bill Submitted", "DO Status"],
+  vehicle_delivery: ["DO Submitted"],
+  payment_encashment: ["Payment Stage", "Claim Completion In Progress", "Settlement Under Process"],
+};
 
 const fields: StageFields = {
   spot_intimation: [
@@ -78,6 +103,7 @@ const fields: StageFields = {
 
 const requiredFields: Record<string, string[]> = {
   spot_intimation: ["incident_at", "spot_intimation_at"],
+  spot_status: ["spot_survey_done_date"],
   claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "claim_intimation_date", "gate_in_date", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date", "ri_done_date"],
@@ -98,19 +124,31 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
+  const journeyComplete = ["Claim Complete", "Settled", "Closed"].includes(currentStatus);
   const [selectedKey, setSelectedKey] = useState(() => stages.some((stage) => stage.key === initialStageKey) ? initialStageKey! : active?.key ?? stages[0].key);
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
   const detail = [...details].find((row) => row.details?.milestone_key === selected.key || (selected.statuses as readonly string[]).includes(row.stage ?? ""));
   const spotDetail = [...details].find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
-  const next = managerTransitions[currentStatus];
+  const managerNext = managerTransitions[currentStatus];
+  const stageTarget = stageCompletionTargets[selected.key];
+  const readyStatuses = stageCompletionReadyStatuses[selected.key] ?? [];
+  const stageReady = Boolean(active?.key === selected.key && readyStatuses.includes(currentStatus));
   const initialVerificationInProgress = ["Initial Documents Submitted", "Initial Documents Verification Pending", "Documents Submitted"].includes(currentStatus);
-  const editable = Boolean(active?.key === selected.key && next && fields[selected.key] && !(selected.key === "spot_status" && initialVerificationInProgress));
+  const finalVerificationInProgress = ["Vehicle Inspected", "Spot Survey Completed", "Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted"].includes(currentStatus);
+  const editable = selected.key === "spot_intimation"
+    ? Boolean(active?.key === selected.key && managerNext && fields[selected.key])
+    : Boolean(stageReady && stageTarget && fields[selected.key]);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [state, formAction] = useActionState(
     async (_previous: { ok: boolean; message: string }, formData: FormData) => {
       try {
-        await advanceClaimWorkflow(claimId, formData);
+        const milestoneKey = formData.get("milestone_key");
+        if (typeof milestoneKey === "string" && milestoneKey && milestoneKey !== "spot_intimation") {
+          await completeClaimJourneyStage(claimId, formData);
+        } else {
+          await advanceClaimWorkflow(claimId, formData);
+        }
         return { ok: true, message: "Claim stage updated." };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : "Unable to update the claim stage." };
@@ -136,19 +174,23 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [showSpotSaved, setShowSpotSaved] = useState(false);
 
   useEffect(() => {
-    if (state.ok && (next === "Initial Documents Submitted" || next === "Documents Submitted")) {
-      router.push(`/claims/${claimId}?stage=spot_status`);
+    if (!state.ok) return;
+    if (activeIndex < stages.length - 1) {
+      router.push(`/claims/${claimId}?stage=${stages[activeIndex + 1].key}`);
       return;
     }
-    if (state.ok && active?.key === "claim_intimation" && next === "Final Documents Submitted") {
-      router.push(`/claims/${claimId}?stage=claim_intimation`);
-      return;
-    }
-    if (state.ok) router.refresh();
-  }, [active?.key, claimId, next, router, state.ok]);
+    router.refresh();
+  }, [activeIndex, claimId, router, state.ok]);
   useEffect(() => {
     if (spotState.ok) setShowSpotSaved(true);
   }, [spotState.ok]);
+
+  const blockedCurrentStage = Boolean(active?.key === selected.key && selected.key !== "spot_intimation" && !editable && !journeyComplete);
+  const blockedMessage = selected.key === "spot_status" && initialVerificationInProgress
+    ? "Initial document verification is in progress. Save Details will unlock when verification is complete."
+    : selected.key === "claim_intimation" && finalVerificationInProgress
+      ? "Required Claim Intimation documents must be completed and verified before Save Details is enabled."
+      : "Complete the required workflow checks before saving this stage.";
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
@@ -158,9 +200,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       </div>
       <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
         {stages.map((stage, index) => {
-          const available = index <= activeIndex;
-          const isCurrent = stage.key === active?.key;
-          const isCompleted = index < activeIndex;
+          const available = journeyComplete || index <= activeIndex;
+          const isCurrent = !journeyComplete && stage.key === active?.key;
+          const isCompleted = journeyComplete || index < activeIndex;
           const isSelected = stage.key === selected.key;
           return (
             <li key={stage.key} className="border-b border-[#D9E3F0] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
@@ -189,12 +231,14 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         })}
       </ol>
       <div className="p-4">
-        {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }} /> : null}
-        {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Details"} pendingLabel="Saving..." forcePending={spotSubmitting} className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
+        {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={managerNext} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && managerNext ? formAction : spotFormAction} state={active?.key === "spot_intimation" && managerNext ? state : spotState} standalone={!editable} onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }} /> : null}
+        {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${managerNext}` : "Save Details"} pendingLabel="Saving..." forcePending={spotSubmitting} className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
         {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
         {selected.key === "spot_status" && !editable ? <SpotStatusReadOnly details={details} detail={detail} verificationInProgress={initialVerificationInProgress} /> : null}
         {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
-          <input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
+          <input type="hidden" name="milestone_key" value={selected.key} />
+          <input type="hidden" name="next_status" value={stageTarget} />
+          <input type="hidden" name="notes" value={`Operations completed ${active.label} and opened ${stages[Math.min(activeIndex + 1, stages.length - 1)].label}.`} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[selected.key].map((field) => {
             const value = field.name === "insurer_claim_no"
               ? insurerClaimNo ?? ""
@@ -203,7 +247,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 : typeof detail?.details?.[field.name] === "string" || typeof detail?.details?.[field.name] === "number"
                   ? String(detail.details[field.name])
                   : "";
-            const required = requiredFields[active.key]?.includes(field.name);
+            const required = requiredFields[selected.key]?.includes(field.name);
             return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
               {field.type === "select"
                 ? <select name={field.name} defaultValue={value ?? ""} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]"><option value="" disabled>Select</option><option value={field.name === "cashless" ? "true" : "yes"}>Yes</option><option value={field.name === "cashless" ? "false" : "no"}>{field.name === "vehicle_received" ? "Not yet" : "No"}</option></select>
@@ -211,8 +255,13 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             </label>;
           })}</div>
           {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
-          <FormSubmitButton label={`Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
-        </form> : selected.key !== "spot_intimation" && selected.key !== "spot_status" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
+          <div className="mt-3 flex justify-end"><FormSubmitButton label="Save Details" pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>
+        </form> : null}
+        {blockedCurrentStage ? <div className="mt-3">
+          {selected.key !== "spot_status" ? <p className="rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{blockedMessage}</p> : null}
+          <div className="mt-3 flex justify-end"><button type="button" disabled className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white opacity-45">Save Details</button></div>
+        </div> : null}
+        {!editable && !blockedCurrentStage && selected.key !== "spot_intimation" && selected.key !== "spot_status" && selected.key !== "claim_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex || journeyComplete ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
       </div>
     </section>
   );
