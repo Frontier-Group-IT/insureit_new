@@ -3,7 +3,7 @@
 > Date: 2026-09-06 IST
 > Scope: `apps/partner-app/app/policy-intake-new.tsx` + `apps/partner-app/lib/policy-intakes.ts`
 > Severity: release-blocking installed-app regression
-> Status: CONFIRMED ROOT-CAUSE FIX MERGED / CORRECTIVE PREVIEW OTA #48 PUBLISHED / DEVICE RE-TEST PENDING
+> Status: CONFIRMED ROOT-CAUSE FIX MERGED / CORRECTIVE PREVIEW OTA #48 PUBLISHED / DEVICE ACCEPTED
 
 Read this with `AGENTS.md`, `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MASTER_PLAN.md`, and `docs/PARTNER_APP_VISUAL_COMPLETION_HANDOFF_2026_09_05.md`.
 
@@ -95,15 +95,18 @@ It verifies:
 - Result: **SUCCESS**
 - No APK/AAB/native build was created.
 
-## Device acceptance still required
+## Device acceptance — completed
 
-1. Cold-launch the installed Partner app twice so OTA #48 is definitely active.
-2. Open **Policy Intake → New** and confirm the route loads normally instead of showing the recovery screen.
-3. Verify the authorized lead source is visible/selectable.
-4. Enter a valid customer mobile number.
-5. Choose a policy PDF/image and confirm the selected-file state.
-6. Tap **Submit to Operations** and verify upload/progress completes.
-7. Confirm successful redirect to the submitted Policy Intake detail page.
-8. Only after this device path is green should the remaining installed-app visual acceptance continue.
+The user subsequently confirmed that **Policy Intake is fixed** on the installed Partner app after OTA #48.
 
-Native Phase 6 remains blocked until installed-app acceptance is completed. No new Partner APK/AAB is authorized by this hotfix.
+Therefore the release-blocking New Policy Intake open-crash is closed and the API/client source-contract fix is live-verified on device.
+
+A later compare from OTA #48 trigger `774ba2932c52678a8851f9eb5ed054e1545017d0` to then-current `main` showed no changes under `apps/partner-app`; later commits were web/schema/docs only. OTA #48 therefore remained the valid Partner mobile baseline at this acceptance point.
+
+## Next boundary
+
+Do not reopen the artwork diagnosis unless new direct evidence proves a separate render issue.
+
+The next planned Partner step is the Phase 6 native dependency/build-impact review documented in `docs/PARTNER_APP_PHASE6_NATIVE_BUILD_REVIEW_2026_09_06.md`.
+
+No native package installation, runtime/version bump, APK/AAB or production build is authorized merely by completion of this hotfix. The Phase 6 build gate still requires explicit user approval for the exact native build.
