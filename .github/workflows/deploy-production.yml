@@ -45,14 +45,22 @@ jobs:
 
           PR_NUMBER=$(jq -r '.number // empty' <<<"$pr_json")
           VERIFIED_COMMIT=$(jq -r '.head.sha // empty' <<<"$pr_json")
+          PR_MERGE_COMMIT=$(jq -r '.merge_commit_sha // empty' <<<"$pr_json")
 
           if [[ -z "$PR_NUMBER" || -z "$VERIFIED_COMMIT" ]]; then
             echo "::notice::Current main commit is not a merged pull request. Skipping automatic production deployment."
             exit 0
           fi
 
-          if ! git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
-            echo "::error::Merged PR head $VERIFIED_COMMIT is not contained in current main $GITHUB_SHA."
+          if git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
+            PROVENANCE_MODE="verified-head-ancestor"
+          elif [[ -n "$PR_MERGE_COMMIT" && "$PR_MERGE_COMMIT" == "$GITHUB_SHA" ]]; then
+            # Squash merges create a new main commit, so the verified PR head is
+            # intentionally not an ancestor. GitHub's exact merged-PR association
+            # plus merge_commit_sha binds this main commit back to that verified PR.
+            PROVENANCE_MODE="verified-squash-merge"
+          else
+            echo "::error::Merged PR head $VERIFIED_COMMIT is neither contained in current main $GITHUB_SHA nor bound to it as the PR merge commit ($PR_MERGE_COMMIT)."
             exit 1
           fi
 
@@ -69,7 +77,8 @@ jobs:
           echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
           echo "VERIFIED_COMMIT=$VERIFIED_COMMIT" >> "$GITHUB_ENV"
           echo "VERIFICATION_RUN_ID=$VERIFICATION_RUN_ID" >> "$GITHUB_ENV"
-          echo "Verified release provenance: PR #$PR_NUMBER -> run $VERIFICATION_RUN_ID -> commit $VERIFIED_COMMIT -> current main $GITHUB_SHA"
+          echo "PROVENANCE_MODE=$PROVENANCE_MODE" >> "$GITHUB_ENV"
+          echo "Verified release provenance: PR #$PR_NUMBER -> run $VERIFICATION_RUN_ID -> commit $VERIFIED_COMMIT -> current main $GITHUB_SHA ($PROVENANCE_MODE)"
 
       - name: Wait for required schema deployment
         if: env.VERIFIED_COMMIT != ''
@@ -203,6 +212,7 @@ jobs:
             echo "- Merged PR: `#${PR_NUMBER}`"
             echo "- Verified PR head: `${VERIFIED_COMMIT}`"
             echo "- Verify web portal run: `${VERIFICATION_RUN_ID}`"
+            echo "- Provenance mode: `${PROVENANCE_MODE}`"
             echo "- Trigger: `${GITHUB_EVENT_NAME}`"
             echo
             echo "The production deploy hook was invoked automatically only after the merged PR's canonical verification was confirmed."
