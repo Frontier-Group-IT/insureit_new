@@ -43,8 +43,10 @@ const fields: StageFields = {
     { name: "location", label: "Location" }
   ],
   spot_status: [
-    { name: "surveyor_name", label: "Surveyor name" }, { name: "surveyor_phone", label: "Surveyor mobile" },
-    { name: "survey_status", label: "Survey status" }, { name: "inspection_date", label: "Inspection date", type: "date" }
+    { name: "spot_survey_done_date", label: "Spot Survey Done Date *", type: "date" },
+    { name: "surveyor_name", label: "Surveyor Name (Optional)" },
+    { name: "surveyor_email", label: "Surveyor Email (Optional)", type: "email" },
+    { name: "surveyor_phone", label: "Surveyor Number (Optional)", type: "tel" }
   ],
   claim_intimation: [
     { name: "insurer_claim_no", label: "Insurer claim number" },
@@ -83,6 +85,13 @@ const requiredFields: Record<string, string[]> = {
   delivery_order: ["assessment_received", "do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
   payment_encashment: ["depreciation_submitted", "satisfaction_submitted", "payment_received_date", "payment_received_amount"]
+};
+
+const spotStatusAliases: Record<string, string[]> = {
+  spot_survey_done_date: ["spot_survey_done_date", "inspection_date", "survey_date", "completed_at"],
+  surveyor_name: ["surveyor_name", "name"],
+  surveyor_email: ["surveyor_email", "email"],
+  surveyor_phone: ["surveyor_phone", "surveyor_mobile", "surveyor_number", "mobile"]
 };
 
 export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails }: Props) {
@@ -183,14 +192,17 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {selected.key === "spot_intimation" ? <StageForm stage={selected} active={active ?? stages[0]} detail={spotDetail ?? detail} spotDetails={spotDetails} fields={fields} next={next} accidentAt={accidentAt} spotIntimationAt={spotIntimationAt} formAction={active?.key === "spot_intimation" && next ? formAction : spotFormAction} state={active?.key === "spot_intimation" && next ? state : spotState} standalone={!editable} onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }} /> : null}
         {selected.key === "spot_intimation" ? <><div className="mt-3">{spotContent}</div><div className="mt-3 flex justify-end"><FormSubmitButton form="spot-intimation-form" label={editable ? `Save & move to ${next}` : "Save Details"} pendingLabel="Saving..." forcePending={spotSubmitting} className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50" /></div>{showSpotSaved ? <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation"><div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]"><h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2><button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button></div></div> : null}</> : null}
         {selected.key === "claim_intimation" ? <div className="mt-3">{claimIntimationContent}</div> : null}
+        {selected.key === "spot_status" && !editable ? <SpotStatusReadOnly details={details} detail={detail} verificationInProgress={initialVerificationInProgress} /> : null}
         {editable && active && selected.key !== "spot_intimation" ? <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
           <input type="hidden" name="next_status" value={next} /><input type="hidden" name="notes" value={`Operations updated ${active.label} and moved the claim to ${next}.`} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{fields[selected.key].map((field) => {
             const value = field.name === "insurer_claim_no"
               ? insurerClaimNo ?? ""
-              : typeof detail?.details?.[field.name] === "string" || typeof detail?.details?.[field.name] === "number"
-                ? String(detail.details[field.name])
-                : "";
+              : selected.key === "spot_status"
+                ? spotStatusFieldValue(details, detail, field.name)
+                : typeof detail?.details?.[field.name] === "string" || typeof detail?.details?.[field.name] === "number"
+                  ? String(detail.details[field.name])
+                  : "";
             const required = requiredFields[active.key]?.includes(field.name);
             return <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
               {field.type === "select"
@@ -200,7 +212,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           })}</div>
           {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
           <FormSubmitButton label={`Save & move to ${next}`} pendingLabel="Saving..." className="mt-3 rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" />
-        </form> : selected.key !== "spot_intimation" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selected.key === "spot_status" && initialVerificationInProgress ? "Spot Status is unlocked. Initial document verification is still in progress; surveyor details will become editable once verification is complete." : selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
+        </form> : selected.key !== "spot_intimation" && selected.key !== "spot_status" ? <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">{selectedIndex < activeIndex ? "Completed stage. Details are shown above." : "This stage will open when the previous stage is cleared."}</p> : null}
       </div>
     </section>
   );
@@ -208,6 +220,49 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
 type StageField = { name: string; label: string; type?: string };
 type StageFields = Record<string, StageField[]>;
+
+function SpotStatusReadOnly({ details, detail, verificationInProgress }: { details: StageDetail[]; detail?: StageDetail; verificationInProgress: boolean }) {
+  return <div className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {fields.spot_status.map((field) => (
+        <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
+          {field.label}
+          <input
+            type={field.type ?? "text"}
+            value={spotStatusFieldValue(details, detail, field.name)}
+            readOnly
+            aria-readonly="true"
+            className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#526178] outline-none"
+          />
+        </label>
+      ))}
+    </div>
+    {verificationInProgress ? <p className="mt-3 text-[11px] font-medium text-[#526178]">Initial document verification is in progress. These Spot Status fields will become editable once verification is complete.</p> : null}
+  </div>;
+}
+
+function spotStatusFieldValue(details: StageDetail[], detail: StageDetail | undefined, fieldName: string) {
+  const aliases = spotStatusAliases[fieldName] ?? [fieldName];
+  const candidates = detail ? [detail, ...details.filter((row) => row !== detail)] : details;
+  for (const row of candidates) {
+    for (const alias of aliases) {
+      const value = row.details?.[alias];
+      if (typeof value === "string" && value.trim()) return fieldName === "spot_survey_done_date" ? toDateValue(value) : value;
+      if (typeof value === "number") return String(value);
+    }
+  }
+  return "";
+}
+
+function toDateValue(value: string) {
+  if (!value) return "";
+  const dateOnly = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (dateOnly) return dateOnly;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 
 function StageForm({ stage, active, detail, spotDetails, fields, next, insurerClaimNo, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; fields: StageFields; next?: ClaimStatus; insurerClaimNo?: string | null; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: { ok: boolean; message: string }; standalone?: boolean; onSubmitStart?: () => void }) {
   const spot = stage.key === "spot_intimation";
