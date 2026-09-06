@@ -59,6 +59,7 @@ for (const required of [
 
 const requiredFoundationFiles = [
   'providers/partner-network-provider.tsx',
+  'providers/partner-sensitive-privacy-provider.tsx',
   'lib/partner-haptics.ts',
   'lib/partner-native-security.ts',
   'lib/partner-notifications.ts',
@@ -68,4 +69,31 @@ for (const relative of requiredFoundationFiles) {
   if (!fs.existsSync(path.join(root, relative))) throw new Error(`Missing Phase 6 foundation file: ${relative}`);
 }
 
-console.log('Partner Phase 6 native foundation guard OK: 0.2.0 dependencies/config are reviewed and APK build remains explicit/manual-only.');
+const privacy = fs.readFileSync(path.join(root, 'providers/partner-sensitive-privacy-provider.tsx'), 'utf8');
+for (const required of [
+  "^\\/customer\\/[^/]+$",
+  "^\\/claim\\/[^/]+$",
+  "^\\/policy-intake-new$",
+  "^\\/policy-intakes\\/[^/]+$",
+  'protectPartnerSensitiveScreen()',
+  'releasePartnerSensitiveScreen()',
+]) {
+  if (!privacy.includes(required)) throw new Error(`Selective privacy contract missing: ${required}`);
+}
+for (const forbidden of [
+  "^\\/$",
+  "^\\/home$",
+  "^\\/settings$",
+  "^\\/policy-intakes$",
+  "^\\/\\(tabs\\)",
+]) {
+  if (privacy.includes(forbidden)) throw new Error(`Ordinary Partner route must remain screenshot-capable: ${forbidden}`);
+}
+
+const layout = fs.readFileSync(path.join(root, 'app/_layout.tsx'), 'utf8');
+if (!layout.includes('<PartnerSensitivePrivacyProvider>')) throw new Error('Selective Partner privacy provider must wrap the route stack.');
+if (layout.includes('protectPartnerSensitiveScreen(') || layout.includes('preventScreenCaptureAsync(')) {
+  throw new Error('Root layout must not globally block Partner screenshots.');
+}
+
+console.log('Partner Phase 6 native foundation guard OK: 0.2.0 dependencies/config and selective privacy scope are reviewed; APK build remains explicit/manual-only.');
