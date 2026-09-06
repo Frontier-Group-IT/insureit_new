@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const INTAKE_READY_STATUSES = new Set(["connected", "interested", "quote_requested", "quote_shared", "follow_up"]);
+const TERMINAL_STATUSES = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost"]);
 
 function dateLabel(value: string | null | undefined, withTime = false) {
   if (!value) return "—";
@@ -38,7 +39,8 @@ export default async function PartnerExternalRenewalDetailPage({
     getPartnerExternalRenewalIntakeLink(id),
   ]);
   const opportunity = detail.opportunity;
-  const canStartIntake = !intakeLink?.linked && INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
+  const isClosed = TERMINAL_STATUSES.has(opportunity.opportunity_status);
+  const canStartIntake = !isClosed && !intakeLink?.linked && INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
 
   return (
     <PartnerPortalShell title="External Renewal Opportunity">
@@ -96,6 +98,8 @@ export default async function PartnerExternalRenewalDetailPage({
                     <FileUp className="h-3.5 w-3.5" /> Already Started
                   </span>
                 </div>
+              ) : isClosed ? (
+                <p className="text-[9.5px] leading-5 text-[#728198]">This renewal opportunity is closed. No new Policy Intake can be started from it.</p>
               ) : canStartIntake ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -113,49 +117,61 @@ export default async function PartnerExternalRenewalDetailPage({
           </div>
 
           <div>
-            <PartnerSectionHeading eyebrow="CRM Update" title="Record an interaction" />
-            <form method="post" action={"/api/partner/external-renewals/" + encodeURIComponent(id) + "/interactions"} className="mt-3 space-y-3 border-y border-[#DCE4ED] py-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
-                  Interaction
-                  <select name="interaction_type" defaultValue="call" className="mt-1.5 h-10 w-full rounded-lg border border-[#CBD6E3] bg-white px-3 text-[10.5px] font-semibold text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10">
-                    <option value="call">Call</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="note">Note</option>
-                    <option value="follow_up">Follow-up</option>
-                  </select>
-                </label>
-                <label className="text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
-                  Outcome
-                  <select name="outcome" defaultValue="contact_attempted" className="mt-1.5 h-10 w-full rounded-lg border border-[#CBD6E3] bg-white px-3 text-[10.5px] font-semibold text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10">
-                    <option value="contact_attempted">Contact Attempted</option>
-                    <option value="connected">Connected</option>
-                    <option value="interested">Interested</option>
-                    <option value="quote_requested">Quote Requested</option>
-                    <option value="quote_shared">Quote Shared</option>
-                    <option value="follow_up">Follow-up</option>
-                    <option value="renewed_elsewhere">Renewed Elsewhere</option>
-                    <option value="invalid_contact">Invalid Contact</option>
-                    <option value="do_not_contact">Do Not Contact</option>
-                    <option value="lost">Lost</option>
-                  </select>
-                </label>
+            <PartnerSectionHeading eyebrow="CRM Update" title={isClosed ? "Opportunity closed" : "Record an interaction"} />
+            {isClosed ? (
+              <div className="mt-3 border-y border-[#DCE4ED] py-6">
+                <div className="flex items-start gap-3 rounded-lg bg-[#F6F8FB] px-3.5 py-3">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#65758B]" />
+                  <div>
+                    <p className="text-[10.5px] font-bold text-[#263D5E]">No further CRM updates are allowed.</p>
+                    <p className="mt-1 text-[9.5px] leading-5 text-[#728198]">This opportunity is closed as {titleCase(opportunity.opportunity_status)}. Its interaction history remains available below.</p>
+                  </div>
+                </div>
               </div>
+            ) : (
+              <form method="post" action={"/api/partner/external-renewals/" + encodeURIComponent(id) + "/interactions"} className="mt-3 space-y-3 border-y border-[#DCE4ED] py-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
+                    Interaction
+                    <select name="interaction_type" defaultValue="call" className="mt-1.5 h-10 w-full rounded-lg border border-[#CBD6E3] bg-white px-3 text-[10.5px] font-semibold text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10">
+                      <option value="call">Call</option>
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="note">Note</option>
+                      <option value="follow_up">Follow-up</option>
+                    </select>
+                  </label>
+                  <label className="text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
+                    Outcome
+                    <select name="outcome" defaultValue="contact_attempted" className="mt-1.5 h-10 w-full rounded-lg border border-[#CBD6E3] bg-white px-3 text-[10.5px] font-semibold text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10">
+                      <option value="contact_attempted">Contact Attempted</option>
+                      <option value="connected">Connected</option>
+                      <option value="interested">Interested</option>
+                      <option value="quote_requested">Quote Requested</option>
+                      <option value="quote_shared">Quote Shared</option>
+                      <option value="follow_up">Follow-up</option>
+                      <option value="renewed_elsewhere">Renewed Elsewhere</option>
+                      <option value="invalid_contact">Invalid Contact</option>
+                      <option value="do_not_contact">Do Not Contact</option>
+                      <option value="lost">Lost</option>
+                    </select>
+                  </label>
+                </div>
 
-              <label className="block text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
-                Next follow-up
-                <input type="datetime-local" name="follow_up_at" className="mt-1.5 h-10 w-full rounded-lg border border-[#CBD6E3] bg-white px-3 text-[10.5px] font-semibold text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-              </label>
+                <label className="block text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
+                  Next follow-up
+                  <input type="datetime-local" name="follow_up_at" className="mt-1.5 h-10 w-full rounded-lg border border-[#CBD6E3] bg-white px-3 text-[10.5px] font-semibold text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+                </label>
 
-              <label className="block text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
-                Notes
-                <textarea name="note" maxLength={4000} rows={4} placeholder="Add a short interaction note" className="mt-1.5 w-full resize-y rounded-lg border border-[#CBD6E3] bg-white px-3 py-2.5 text-[10.5px] font-medium leading-5 text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-              </label>
+                <label className="block text-[9px] font-black uppercase tracking-[0.08em] text-[#6D7D94]">
+                  Notes
+                  <textarea name="note" maxLength={4000} rows={4} placeholder="Add a short interaction note" className="mt-1.5 w-full resize-y rounded-lg border border-[#CBD6E3] bg-white px-3 py-2.5 text-[10.5px] font-medium leading-5 text-[#213653] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+                </label>
 
-              <button type="submit" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
-                <Send className="h-3.5 w-3.5" /> Save Interaction
-              </button>
-            </form>
+                <button type="submit" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
+                  <Send className="h-3.5 w-3.5" /> Save Interaction
+                </button>
+              </form>
+            )}
           </div>
         </section>
 
