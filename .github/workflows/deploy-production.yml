@@ -133,6 +133,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260906223000_external_renewal_followup_worklist.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-followup-worklist.yml"
             echo "External renewal follow-up worklist migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260906233000_external_renewal_policy_intake_link.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-external-renewal-policy-intake-link.yml"
+            echo "External renewal Policy Intake link migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-initial-document-submission-persistence.yml"
             echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."
