@@ -64,6 +64,7 @@ jobs:
           if (expo.android?.package === customer?.expo?.android?.package || expo.ios?.bundleIdentifier === customer?.expo?.ios?.bundleIdentifier) throw new Error('Partner native identity overlaps the Customer app.');
           if (expo.scheme === customer?.expo?.scheme) throw new Error('Partner URL scheme overlaps Customer app.');
           if (expo.runtimeVersion?.policy !== 'appVersion') throw new Error('Partner runtimeVersion must use appVersion policy.');
+          if (expo.version !== '0.2.0' || expo.android?.versionCode !== 2 || expo.ios?.buildNumber !== '2') throw new Error('Partner Phase 6 baseline must be 0.2.0 / versionCode 2 / buildNumber 2.');
           if (eas?.build?.preview?.distribution !== 'internal' || eas?.build?.preview?.android?.buildType !== 'apk') throw new Error('Partner preview profile must produce an internal APK.');
           if (eas?.build?.preview?.channel !== 'preview' || eas?.build?.production?.channel !== 'production') throw new Error('Partner EAS channels are misconfigured.');
           const projectId = expo?.extra?.eas?.projectId;
@@ -82,8 +83,11 @@ jobs:
       - name: Verify Policy Intake source API contract
         run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
 
-      - name: Verify pre-APK OTA freeze
+      - name: Verify pre-APK native transition guard
         run: npm --workspace apps/partner-app run verify:pre-apk
+
+      - name: Verify Phase 6 native foundation
+        run: npm --workspace apps/partner-app run verify:phase6
 
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
@@ -118,9 +122,9 @@ jobs:
             echo "- Phase 5 resilience/accessibility contracts: verified"
             echo "- Partner visual-system completion contracts: verified"
             echo "- Policy Intake source API contract: verified"
-            echo "- Pre-APK OTA runtime freeze: verified"
+            echo "- Phase 6 native foundation and manual build guard: verified"
             echo "- Pre-APK UAT/security contracts: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Review build: Expo web export"
-            echo "- Production deployment: not triggered by this workflow"
+            echo "- Native APK build: NOT triggered by this workflow"
           } >> "$GITHUB_STEP_SUMMARY"

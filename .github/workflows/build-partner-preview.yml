@@ -2,11 +2,11 @@ name: Build Partner preview APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/partner-app/.trigger-preview-build'
+    inputs:
+      approval:
+        description: 'Type BUILD_PARTNER_0_2_0 after explicit user approval for this exact native build'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,6 +21,15 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
     steps:
+      - name: Require explicit Phase 6 build approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ inputs.approval }}" = "BUILD_PARTNER_0_2_0" ] || {
+            echo "Refusing Partner native build: explicit BUILD_PARTNER_0_2_0 approval token was not supplied." >&2
+            exit 1
+          }
+
       - name: Check out current main
         uses: actions/checkout@v4
         with:
@@ -37,31 +46,23 @@ jobs:
             exit 1
           }
 
-      - name: Validate Partner EAS linkage and native identity
+      - name: Validate Partner 0.2.0 EAS linkage and native identity
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
+          const fs = require('fs');
           const app = require('./apps/partner-app/app.json');
           const customer = require('./apps/mobile-app/app.json');
           const expo = app.expo || {};
           const projectId = expo?.extra?.eas?.projectId;
-          if (!projectId) {
-            console.error('Refusing Partner preview build: apps/partner-app is not linked to a dedicated EAS project yet.');
-            process.exit(1);
-          }
-          if (projectId === customer?.expo?.extra?.eas?.projectId) {
-            console.error('Refusing Partner preview build: Partner app cannot share the Customer EAS project ID.');
-            process.exit(1);
-          }
-          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') {
-            console.error('Refusing Partner preview build: unexpected native package identity.');
-            process.exit(1);
-          }
-          if (expo.android?.package === customer?.expo?.android?.package || expo.ios?.bundleIdentifier === customer?.expo?.ios?.bundleIdentifier) {
-            console.error('Refusing Partner preview build: native identity overlaps Customer app.');
-            process.exit(1);
-          }
+          if (!projectId) throw new Error('Partner app is not linked to a dedicated EAS project.');
+          if (projectId === customer?.expo?.extra?.eas?.projectId) throw new Error('Partner app cannot share the Customer EAS project ID.');
+          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') throw new Error('Unexpected Partner native package identity.');
+          if (expo.android?.package === customer?.expo?.android?.package || expo.ios?.bundleIdentifier === customer?.expo?.ios?.bundleIdentifier) throw new Error('Partner native identity overlaps Customer app.');
+          if (expo.version !== '0.2.0' || expo.android?.versionCode !== 2 || expo.ios?.buildNumber !== '2') throw new Error('Partner native build must use the reviewed 0.2.0 / versionCode 2 / buildNumber 2 baseline.');
+          if (expo.runtimeVersion?.policy !== 'appVersion') throw new Error('Partner runtime policy must remain appVersion for this build.');
+          if (!fs.existsSync('./apps/partner-app/assets/notification-icon.png')) throw new Error('Official Android notification icon asset is missing; native build remains blocked.');
           console.log(`Partner EAS project: ${projectId}`);
           NODE
 
@@ -83,6 +84,7 @@ jobs:
 
       - name: Verify Partner app
         run: |
+          npm --workspace apps/partner-app run verify:phase6
           npm run typecheck:partner
           npm run lint:partner
 
@@ -107,11 +109,14 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## INSUREIT Partner preview build"
+            echo "## INSUREIT Partner 0.2.0 preview build"
             echo
             echo "- Source: current \`main\` only"
+            echo "- Explicit approval token: required"
             echo "- Android package: \`com.insureit.partner\`"
+            echo "- Version/runtime: \`0.2.0\` / appVersion"
             echo "- EAS profile: \`preview\`"
             echo "- Distribution: internal APK"
+            echo "- Official notification icon: required before build"
             echo "- Customer app identity reuse: blocked"
           } >> "$GITHUB_STEP_SUMMARY"

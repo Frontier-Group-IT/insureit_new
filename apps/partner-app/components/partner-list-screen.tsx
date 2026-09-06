@@ -9,8 +9,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerTopBar } from '@/components/ui/partner-top-bar';
 import { partnerTheme } from '@/lib/theme';
+import { usePartnerNetwork } from '@/providers/partner-network-provider';
 
 export function PartnerListScreen<T>({
   title,
@@ -45,6 +47,8 @@ export function PartnerListScreen<T>({
   onEndReached?: FlatListProps<T>['onEndReached'];
   ItemSeparatorComponent?: FlatListProps<T>['ItemSeparatorComponent'];
 }) {
+  const { isOffline } = usePartnerNetwork();
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <FlatList
@@ -57,6 +61,15 @@ export function PartnerListScreen<T>({
         ListHeaderComponent={
           <View>
             <PartnerTopBar title={title} eyebrow={eyebrow} onBack={onBack} artwork={artwork} action={action} />
+            {isOffline ? (
+              <View style={styles.networkBanner}>
+                <PartnerBanner
+                  tone="warning"
+                  title="You're offline"
+                  message="Available cached information remains visible. Reconnect to refresh or submit changes."
+                />
+              </View>
+            ) : null}
             {header}
           </View>
         }
@@ -83,4 +96,5 @@ const styles = StyleSheet.create({
     paddingBottom: 104,
   },
   contentEmpty: { flexGrow: 1 },
+  networkBanner: { marginBottom: partnerTheme.spacing.sm },
 });
