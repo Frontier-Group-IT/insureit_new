@@ -71,7 +71,7 @@ const requiredFields: Record<OperationsStageKey, readonly string[]> = {
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date", "ri_done_date"],
   billing: ["bill_date", "bill_amount"],
-  delivery_order: ["do_date", "do_amount"],
+  delivery_order: ["assessment_received", "do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
   payment_encashment: ["payment_received_date", "payment_received_amount"],
 };
