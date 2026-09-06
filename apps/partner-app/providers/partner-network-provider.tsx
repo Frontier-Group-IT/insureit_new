@@ -13,7 +13,7 @@ const PartnerNetworkContext = createContext<PartnerNetworkValue | null>(null);
 
 function resolveStatus(state: NetInfoState): PartnerNetworkStatus {
   if (state.isConnected === false || state.isInternetReachable === false) return 'offline';
-  if (state.isConnected === true && state.isInternetReachable !== false) return 'online';
+  if (state.isConnected === true) return 'online';
   return 'unknown';
 }
 
