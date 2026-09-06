@@ -321,7 +321,7 @@ export function PolicySaveConfirmation() {
           <div role="dialog" aria-modal="true" aria-labelledby="policy-save-title" className="w-full max-w-[440px] overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)]">
             <div className="border-b border-[#E7ECF3] px-5 py-4">
               <h2 id="policy-save-title" className="text-[15px] font-extrabold text-[#12203B]">Save Active Policy</h2>
-              <p className="mt-1 text-[11px] leading-4 text-[#66748A]">Choose whether you want to attach the policy copy before saving.</p>
+              <p className="mt-1 text-[11px] leading-4 text-[#66748A]">Attach the policy copy before saving.</p>
             </div>
 
             <div className="space-y-2.5 p-4">
@@ -349,18 +349,6 @@ export function PolicySaveConfirmation() {
                   {file ? <p className="mt-1 truncate text-[9px] font-semibold leading-4 text-[#315B9A]">Ready to upload: {file.name}</p> : null}
                 </div>
               ) : null}
-
-              <button type="button" onClick={() => { setChoice("without"); setFile(null); setFileError(null); }} className={`w-full rounded-xl border px-4 py-3 text-left transition ${choice === "without" ? "border-[#315B9A] bg-[#F5F8FD] ring-2 ring-[#DCE8FA]" : "border-[#D9E2F0] bg-white hover:border-[#B8C7DA]"}`}>
-                <div className="flex items-start gap-3">
-                  <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${choice === "without" ? "border-[#315B9A]" : "border-[#AEB9C8]"}`}>
-                    {choice === "without" ? <span className="h-2 w-2 rounded-full bg-[#315B9A]" /> : null}
-                  </span>
-                  <span>
-                    <span className="block text-[12px] font-bold text-[#17203A]">Save Without Policy Copy</span>
-                    <span className="mt-0.5 block text-[10px] leading-4 text-[#66748A]">Continue without attaching a document.</span>
-                  </span>
-                </div>
-              </button>
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-[#E7ECF3] bg-[#FBFCFE] px-4 py-3">
