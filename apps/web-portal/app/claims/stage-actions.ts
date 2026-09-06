@@ -122,6 +122,9 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   for (const field of requiredFields[stageKey]) {
     if (!textValue(formData, field)) throw new Error("Complete all mandatory stage fields before saving details.");
   }
+  if (stageKey === "vehicle_delivery" && booleanValue(formData, "vehicle_received") && !textValue(formData, "vehicle_received_date")) {
+    throw new Error("Vehicle Received Date is mandatory when the vehicle is received.");
+  }
 
   const supabase = await createServerSupabaseClient();
   const { data: claim, error: claimError } = await supabase
