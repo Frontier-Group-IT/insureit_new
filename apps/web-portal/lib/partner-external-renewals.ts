@@ -81,9 +81,11 @@ export type PartnerExternalRenewalDetail = {
 };
 
 export type PartnerExternalRenewalIntakeLink = {
-  intake_id: string;
-  intake_number: string;
-  status: string;
+  linked: true;
+  owned: boolean;
+  intake_id: string | null;
+  intake_number: string | null;
+  status: string | null;
   final_policy_id: string | null;
 };
 
