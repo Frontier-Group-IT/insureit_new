@@ -88,9 +88,8 @@ const fields: StageFields = {
     { name: "ri_done_date", label: "RI Done Date", type: "date" },
   ],
   billing: [
-    { name: "bill_date", label: "Bill date", type: "date" },
-    { name: "bill_amount", label: "Final bill amount", type: "number" },
-    { name: "assessment_received", label: "Assessment received", type: "select" },
+    { name: "bill_date", label: "Bill Date", type: "date" },
+    { name: "bill_amount", label: "Bill Amount", type: "number" },
   ],
   delivery_order: [
     { name: "do_status", label: "Delivery order status" },
@@ -305,7 +304,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
@@ -331,7 +330,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 return (
                   <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {field.label}{required && !field.label.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
-                    {field.type === "select" ? (
+                    {selected.key === "billing" && field.name === "bill_date" ? (
+                      <AppStyleDateInput name={field.name} value={value} required={required} />
+                    ) : field.type === "select" ? (
                       <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]">
                         <option value="" disabled>Select</option>
                         <option value={field.name === "cashless" ? "true" : "yes"}>Yes</option>
@@ -393,6 +394,31 @@ function toDateValue(value: string) {
   if (Number.isNaN(date.getTime())) return value;
   const pad = (part: number) => String(part).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function AppStyleDateInput({ name, value, required }: { name: string; value: string; required?: boolean }) {
+  const [dateValue, setDateValue] = useState(() => toDateValue(value));
+  return (
+    <span className="relative mt-1 flex h-10 w-full items-center justify-between rounded-md border border-[#D9E3F0] bg-white px-3 normal-case tracking-normal text-[#071D49] focus-within:border-[#174EA6]">
+      <span className={`text-[12px] font-medium ${dateValue ? "text-[#071D49]" : "text-[#7B8BA3]"}`}>{dateValue ? formatDisplayDate(dateValue) : "Select date"}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-[#526178] stroke-[1.8]"><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M8 3v6M16 3v6M4 10h16" /></svg>
+      <input
+        aria-label="Select date"
+        name={name}
+        type="date"
+        value={dateValue}
+        onChange={(event) => setDateValue(event.target.value)}
+        required={required}
+        onClick={(event) => event.currentTarget.showPicker?.()}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      />
+    </span>
+  );
+}
+
+function formatDisplayDate(value: string) {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
 
 function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
