@@ -144,7 +144,8 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   }
 
   const details = stageDetailsFromForm(formData, stageKey);
-  const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey;
+  const vehicleDeliveryReady = stageKey !== "vehicle_delivery" || booleanValue(formData, "vehicle_received");
+  const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey && vehicleDeliveryReady;
   const nextStatus = completionTargets[stageKey];
 
   const { error: detailError } = await supabase.from("claim_stage_details").insert({
