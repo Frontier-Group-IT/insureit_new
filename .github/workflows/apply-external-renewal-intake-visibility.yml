@@ -1,0 +1,76 @@
+name: Apply external renewal intake visibility migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260906235500_external_renewal_intake_visibility.sql'
+      - '.github/workflows/apply-external-renewal-intake-visibility.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply external renewal intake visibility migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260906235500_external_renewal_intake_visibility.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply external renewal intake visibility migration
+        run: supabase db query --linked --file supabase/migrations/20260906235500_external_renewal_intake_visibility.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260906235500
+
+      - name: Verify visibility contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.partner_app_external_renewal_summary()') is not null as summary_ready,
+              to_regprocedure('public.partner_app_list_external_renewals(integer,integer,text,text,text,text,text,text)') is not null as list_ready,
+              not has_table_privilege('authenticated','public.external_renewal_policy_intake_links','SELECT') as link_table_still_private
+          ")
+          echo "$result"
+          for key in summary_ready list_ready link_table_still_private; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done
