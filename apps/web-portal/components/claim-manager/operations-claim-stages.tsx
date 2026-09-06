@@ -98,6 +98,7 @@ const fields: StageFields = {
   ],
   vehicle_delivery: [
     { name: "vehicle_received", label: "Vehicle Received?", type: "yesno" },
+    { name: "vehicle_received_date", label: "Vehicle Received Date *", type: "date" },
   ],
   payment_encashment: [
     { name: "depreciation_slip_submitted", label: "Depreciation Slip Submitted?", type: "yesno" },
@@ -142,6 +143,7 @@ const fieldAliases: Record<string, string[]> = {
   do_date: ["do_date", "delivery_order_date"],
   do_amount: ["do_amount", "delivery_order_amount"],
   vehicle_received: ["vehicle_received", "delivery_status", "status"],
+  vehicle_received_date: ["vehicle_received_date", "vehicle_delivery_date"],
   depreciation_slip_submitted: ["depreciation_slip_submitted", "depreciation_submitted"],
   satisfaction_voucher_submitted: ["satisfaction_voucher_submitted", "satisfaction_submitted", "satisfaction_status"],
   documents_submit_date: ["documents_submit_date", "document_submit_date", "documents_submitted_date"],
@@ -305,7 +307,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-1" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
@@ -328,7 +330,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                     </fieldset>
                   );
                 }
-                const useAppDatePicker = field.type === "date" && ((selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") || selected.key === "payment_encashment");
+                const useAppDatePicker = field.type === "date" && ((selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") || selected.key === "vehicle_delivery" || selected.key === "payment_encashment");
                 return (
                   <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {field.label}{required && !field.label.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
