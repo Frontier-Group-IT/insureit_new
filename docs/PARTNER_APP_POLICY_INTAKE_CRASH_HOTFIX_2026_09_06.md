@@ -3,7 +3,7 @@
 > Date: 2026-09-06 IST
 > Scope: `apps/partner-app/app/policy-intake-new.tsx` + `apps/partner-app/lib/policy-intakes.ts`
 > Severity: release-blocking installed-app regression
-> Status: SECOND ROOT-CAUSE FIX IN VALIDATION
+> Status: CONFIRMED ROOT-CAUSE FIX MERGED / CORRECTIVE PREVIEW OTA #48 PUBLISHED / DEVICE RE-TEST PENDING
 
 Read this with `AGENTS.md`, `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MASTER_PLAN.md`, and `docs/PARTNER_APP_VISUAL_COMPLETION_HANDOFF_2026_09_05.md`.
 
@@ -15,7 +15,7 @@ After the final consolidated Partner preview OTA, opening **New Policy Intake** 
 
 PR #1361 reverted the two New Policy Intake artwork render points to the proven vector controls. CI was green and corrective preview OTA #47 published successfully, but the user confirmed the route still crashed.
 
-Therefore the artwork render path was **not** the root cause. Keep this fact durable so future agents do not repeat that diagnosis.
+Therefore the artwork render path was **not** the root cause. Future agents must not repeat that diagnosis.
 
 First-attempt release evidence:
 
@@ -36,15 +36,17 @@ The current portal API intentionally splits Policy Intake data into two GET mode
 
 The Partner mobile client had not been updated for that split.
 
-`listPartnerPolicyIntakes()` still declared the ordinary list response as containing `sources`, and New Policy Intake called the list endpoint and then immediately executed array operations such as `result.sources.some(...)` and `result.sources.length`.
+`listPartnerPolicyIntakes()` still declared the ordinary list response as containing `sources`, and New Policy Intake called the list endpoint and immediately executed array operations such as `result.sources.some(...)` and `result.sources.length`.
 
-Because the ordinary list response no longer contains `sources`, the installed app dereferenced `undefined`, causing a synchronous JavaScript render/initialization failure that was caught by the app-level recovery boundary.
+Because the ordinary list response no longer contains `sources`, the installed app dereferenced `undefined`, causing a synchronous JavaScript initialization failure caught by the app-level recovery boundary.
 
 Why Policy Intake history continued to work: it consumes only `result.intakes`, so the stale `sources` declaration did not affect that screen.
 
-## Correct fix — branch `fix/partner-policy-intake-sources-contract`
+## Correct fix
 
-Exact base: current `main` at branch creation `5e70b028718c735e5d711ea454bc2307e3708e93`.
+Branch: `fix/partner-policy-intake-sources-contract`  
+Branch creation base: `5e70b028718c735e5d711ea454bc2307e3708e93`  
+PR base after preserving concurrent main work: `0fe12c6aed85f8712f507c87d64aae5553a4ecbc`
 
 Implementation:
 
@@ -73,11 +75,35 @@ It verifies:
 
 `.github/workflows/verify-partner-app.yml` now runs this contract in canonical Partner CI.
 
-## Required release sequence
+## Completed correct-fix release evidence
 
-1. Open PR from `fix/partner-policy-intake-sources-contract` to latest `main`.
-2. Require exact-head Partner Verify and Web Verify success.
-3. Merge only after both are green and current-main drift is checked.
-4. Publish a fresh Partner preview OTA from exact current `main`.
-5. Cold-launch twice and re-test the complete New Policy Intake path.
-6. No APK/AAB/native build is required or authorized for this fix.
+- PR: **#1375 — Fix Partner Policy Intake source API contract**
+- Final PR head: `6273a28d5a235595687d7d860e34762a1946b5a4`
+- Merge commit: `27a7dd42c96c05e34a0fec8ad86a4470e040a269`
+- Partner Verify: **#200** / run `34046543932` — success
+- Web Verify: **#3065** / run `34046543931` — success
+- New Policy Intake source-contract CI step: success
+- Corrective OTA trigger commit: `774ba2932c52678a8851f9eb5ed054e1545017d0`
+- Workflow: `Publish Partner preview OTA`
+- Partner OTA run: **#48** / `34046755723`
+- Channel: `preview`
+- Exact-current-main guard: success
+- Partner OTA linkage: success
+- Expo project access: success
+- Actual Expo publish step: success
+- OTA summary: success
+- Result: **SUCCESS**
+- No APK/AAB/native build was created.
+
+## Device acceptance still required
+
+1. Cold-launch the installed Partner app twice so OTA #48 is definitely active.
+2. Open **Policy Intake → New** and confirm the route loads normally instead of showing the recovery screen.
+3. Verify the authorized lead source is visible/selectable.
+4. Enter a valid customer mobile number.
+5. Choose a policy PDF/image and confirm the selected-file state.
+6. Tap **Submit to Operations** and verify upload/progress completes.
+7. Confirm successful redirect to the submitted Policy Intake detail page.
+8. Only after this device path is green should the remaining installed-app visual acceptance continue.
+
+Native Phase 6 remains blocked until installed-app acceptance is completed. No new Partner APK/AAB is authorized by this hotfix.
