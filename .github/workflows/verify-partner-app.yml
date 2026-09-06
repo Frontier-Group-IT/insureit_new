@@ -79,6 +79,9 @@ jobs:
       - name: Verify Partner visual-system completion contracts
         run: npm --workspace apps/partner-app run verify:visual
 
+      - name: Verify Policy Intake source API contract
+        run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+
       - name: Verify pre-APK OTA freeze
         run: npm --workspace apps/partner-app run verify:pre-apk
 
@@ -114,6 +117,7 @@ jobs:
             echo "- Route/deep-link integrity: verified"
             echo "- Phase 5 resilience/accessibility contracts: verified"
             echo "- Partner visual-system completion contracts: verified"
+            echo "- Policy Intake source API contract: verified"
             echo "- Pre-APK OTA runtime freeze: verified"
             echo "- Pre-APK UAT/security contracts: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"

@@ -33,6 +33,17 @@ export type PartnerPolicyIntake = {
 type IntakeListResponse = {
   ok: true;
   intakes: PartnerPolicyIntake[];
+  total?: number;
+  counts?: {
+    active: number;
+    attention: number;
+    progress: number;
+    completed: number;
+  };
+};
+
+type IntakeSourcesResponse = {
+  ok: true;
   sources: PartnerPolicyIntakeSource[];
 };
 
@@ -50,7 +61,16 @@ export type PartnerPolicyIntakeUploadProgress = {
 };
 
 export async function listPartnerPolicyIntakes(): Promise<IntakeListResponse> {
-  return apiRequest<IntakeListResponse>('/api/partner/policy-intakes');
+  const result = await apiRequest<IntakeListResponse>('/api/partner/policy-intakes');
+  return {
+    ...result,
+    intakes: Array.isArray(result.intakes) ? result.intakes : [],
+  };
+}
+
+export async function listPartnerPolicyIntakeSources(): Promise<PartnerPolicyIntakeSource[]> {
+  const result = await apiRequest<IntakeSourcesResponse>('/api/partner/policy-intakes?view=sources');
+  return Array.isArray(result.sources) ? result.sources : [];
 }
 
 export async function submitPartnerPolicyIntake(input: {
