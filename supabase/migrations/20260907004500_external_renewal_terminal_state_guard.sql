@@ -40,6 +40,10 @@ begin
     raise exception 'Follow-up date is required';
   end if;
 
+  if p_outcome in ('renewed_elsewhere','invalid_contact','do_not_contact','lost') and p_follow_up_at is not null then
+    raise exception 'A closed outcome cannot schedule a follow-up';
+  end if;
+
   if p_follow_up_at is not null and p_follow_up_at < now() - interval '5 minutes' then
     raise exception 'Follow-up date cannot be in the past';
   end if;
@@ -94,7 +98,10 @@ begin
   update public.external_renewal_opportunities
   set opportunity_status=v_status,
       last_interaction_at=now(),
-      next_follow_up_at=p_follow_up_at,
+      next_follow_up_at=case
+        when v_status in ('renewed_elsewhere','invalid_contact','do_not_contact','lost') then null
+        else p_follow_up_at
+      end,
       updated_at=now()
   where id=p_opportunity_id and partner_id=v_partner_id;
 
