@@ -118,6 +118,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260905195000_prevent_duplicate_active_managed_claims.sql' <<<"$changed_migrations" || grep -qx 'supabase/migrations/20260905213000_fix_managed_claim_guard_enum_cast.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-managed-claim-active-policy-guard.yml"
             echo "Managed claim active-policy guard migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-initial-document-submission-persistence.yml"
+            echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
