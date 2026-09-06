@@ -96,4 +96,38 @@ if (layout.includes('protectPartnerSensitiveScreen(') || layout.includes('preven
   throw new Error('Root layout must not globally block Partner screenshots.');
 }
 
-console.log('Partner Phase 6 native foundation guard OK: 0.2.0 dependencies/config and selective privacy scope are reviewed; APK build remains explicit/manual-only.');
+const notifications = fs.readFileSync(path.join(root, 'lib/partner-notifications.ts'), 'utf8');
+for (const required of [
+  "PARTNER_PROJECT_ID = '8ade82c1-4c96-4f09-b90b-802270fb406d'",
+  "PARTNER_APP_VERSION = '0.2.0'",
+  'Notifications.getPermissionsAsync()',
+  'Notifications.getExpoPushTokenAsync({ projectId: PARTNER_PROJECT_ID })',
+  '/api/partner/push-devices',
+  "action: 'register'",
+  "action: 'unregister'",
+  'Authorization: `Bearer ${session.access_token}`',
+]) {
+  if (!notifications.includes(required)) throw new Error(`Partner push registration client contract missing: ${required}`);
+}
+if (notifications.includes('from("partner_push_devices")') || notifications.includes("from('partner_push_devices')")) {
+  throw new Error('Partner mobile must never access the push-device table directly.');
+}
+
+const runtimeProvider = fs.readFileSync(path.join(root, 'providers/partner-native-runtime-provider.tsx'), 'utf8');
+if (!runtimeProvider.includes("session.status !== 'ready'")) throw new Error('Push token refresh must wait for an authenticated Partner session.');
+if (!runtimeProvider.includes('registerPartnerPushDevice()')) throw new Error('Granted push registrations must refresh after authenticated startup.');
+if (runtimeProvider.includes('requestPartnerNotificationPermission')) throw new Error('Startup must never prompt for notification permission automatically.');
+
+const settings = fs.readFileSync(path.join(root, 'app/settings.tsx'), 'utf8');
+for (const required of ['requestPartnerNotificationPermission()', 'registerPartnerPushDevice()', 'this device is registered']) {
+  if (!settings.includes(required)) throw new Error(`Partner notification opt-in contract missing: ${required}`);
+}
+
+const sessionProvider = fs.readFileSync(path.join(root, 'providers/partner-session-provider.tsx'), 'utf8');
+const unregisterIndex = sessionProvider.indexOf('await unregisterPartnerPushDevice()');
+const signOutIndex = sessionProvider.indexOf('await signOutFromSupabase()');
+if (unregisterIndex < 0 || signOutIndex < 0 || unregisterIndex > signOutIndex) {
+  throw new Error('Partner push device must be deactivated best-effort before Supabase sign-out invalidates the bearer token.');
+}
+
+console.log('Partner Phase 6 native foundation guard OK: 0.2.0 dependencies/config, selective privacy and server-mediated push registration lifecycle are reviewed; APK build remains explicit/manual-only.');
