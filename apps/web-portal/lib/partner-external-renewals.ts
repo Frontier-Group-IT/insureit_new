@@ -141,6 +141,23 @@ export async function getPartnerExternalRenewalIntakeLink(opportunityId: string)
   return (data ?? null) as PartnerExternalRenewalIntakeLink | null;
 }
 
+export async function linkPartnerExternalRenewalPolicyIntake({
+  opportunityId,
+  intakeId,
+}: {
+  opportunityId: string;
+  intakeId: string;
+}) {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_link_external_renewal_policy_intake", {
+    p_opportunity_id: opportunityId,
+    p_intake_id: intakeId,
+  });
+  if (error || !data) throw new Error(error?.message ?? "Could not link the Policy Intake.");
+  return data as { opportunity_id: string; intake_id: string; linked: boolean };
+}
+
 export async function recordPartnerExternalRenewalInteraction({
   opportunityId,
   interactionType,
