@@ -6,6 +6,7 @@ import { ArrowLeft, FileUp, Loader2, ShieldCheck } from "lucide-react";
 import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import {
   getPartnerPolicyIntakeSourcesWeb,
+  linkExternalRenewalPolicyIntakeWeb,
   POLICY_INTAKE_ACCEPT,
   submitPartnerPolicyIntakeWeb,
   validatePolicyIntakeFile,
@@ -13,11 +14,19 @@ import {
   type PartnerPolicyIntakeSource,
 } from "@/lib/partner-policy-intakes-client";
 
-export function PartnerPolicyIntakeNewClient() {
+type ExternalRenewalPrefill = {
+  opportunityId: string;
+  mobile: string;
+  customerLabel: string;
+  vehicleLabel: string;
+  policyLabel: string;
+};
+
+export function PartnerPolicyIntakeNewClient({ externalRenewal }: { externalRenewal?: ExternalRenewalPrefill | null }) {
   const router = useRouter();
   const [sources, setSources] = useState<PartnerPolicyIntakeSource[]>([]);
   const [sourceId, setSourceId] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [mobile, setMobile] = useState(externalRenewal?.mobile ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -73,7 +82,11 @@ export function PartnerPolicyIntakeNewClient() {
         file,
         onProgress: setProgress,
       });
-      router.replace("/partner/policy-intakes/" + encodeURIComponent(result.id) + "?submitted=1");
+      if (externalRenewal) {
+        await linkExternalRenewalPolicyIntakeWeb({ opportunityId: externalRenewal.opportunityId, intakeId: result.id });
+      }
+      const suffix = externalRenewal ? "?submitted=1&external_renewal=1" : "?submitted=1";
+      router.replace("/partner/policy-intakes/" + encodeURIComponent(result.id) + suffix);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intake could not be submitted.");
       setProgress(null);
@@ -98,8 +111,16 @@ export function PartnerPolicyIntakeNewClient() {
         description="Add the customer mobile and policy copy, then submit the intake."
       />
 
-      <section className="py-1">
+      {externalRenewal ? (
+        <div className="border-y border-[#DCE4ED] bg-[#F8FAFD] px-3 py-3.5 sm:px-4">
+          <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#3156B8]">External renewal opportunity</p>
+          <p className="mt-1 text-[11px] font-extrabold text-[#1B2F4E]">{externalRenewal.customerLabel}</p>
+          <p className="mt-1 break-words text-[9.5px] leading-5 text-[#667993]">{externalRenewal.vehicleLabel} · {externalRenewal.policyLabel}</p>
+          <p className="mt-1 text-[9px] font-semibold text-[#7B899C]">The normal Policy Intake workflow remains unchanged. This opportunity is only linked after a successful intake submission.</p>
+        </div>
+      ) : null}
 
+      <section className="py-1">
         {error ? <div className="mt-4 rounded-2xl border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</div> : null}
 
         {loading ? (
