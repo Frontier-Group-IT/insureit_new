@@ -74,6 +74,13 @@ export type PartnerExternalRenewalDetail = {
   interactions: PartnerExternalRenewalInteraction[];
 };
 
+export type PartnerExternalRenewalIntakeLink = {
+  intake_id: string;
+  intake_number: string;
+  status: string;
+  final_policy_id: string | null;
+};
+
 export async function getPartnerExternalRenewalSummary(): Promise<PartnerExternalRenewalSummary> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
@@ -122,6 +129,33 @@ export async function getPartnerExternalRenewalDetail(opportunityId: string): Pr
   });
   if (error || !data) throw new Error(error?.message ?? "External renewal opportunity is unavailable.");
   return data as PartnerExternalRenewalDetail;
+}
+
+export async function getPartnerExternalRenewalIntakeLink(opportunityId: string): Promise<PartnerExternalRenewalIntakeLink | null> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_external_renewal_intake_link", {
+    p_opportunity_id: opportunityId,
+  });
+  if (error) throw new Error(error.message || "Policy Intake link is unavailable.");
+  return (data ?? null) as PartnerExternalRenewalIntakeLink | null;
+}
+
+export async function linkPartnerExternalRenewalPolicyIntake({
+  opportunityId,
+  intakeId,
+}: {
+  opportunityId: string;
+  intakeId: string;
+}) {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_link_external_renewal_policy_intake", {
+    p_opportunity_id: opportunityId,
+    p_intake_id: intakeId,
+  });
+  if (error || !data) throw new Error(error?.message ?? "Could not link the Policy Intake.");
+  return data as { opportunity_id: string; intake_id: string; linked: boolean };
 }
 
 export async function recordPartnerExternalRenewalInteraction({

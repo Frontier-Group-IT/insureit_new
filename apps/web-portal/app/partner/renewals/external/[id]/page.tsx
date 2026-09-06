@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarClock, CheckCircle2, Clock3, MessageSquareText, Phone, Send, UserRound } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, Clock3, FileUp, MessageSquareText, Phone, Send, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
-import { getPartnerExternalRenewalDetail } from "@/lib/partner-external-renewals";
+import { getPartnerExternalRenewalDetail, getPartnerExternalRenewalIntakeLink } from "@/lib/partner-external-renewals";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const INTAKE_READY_STATUSES = new Set(["connected", "interested", "quote_requested", "quote_shared", "follow_up"]);
 
 function dateLabel(value: string | null | undefined, withTime = false) {
   if (!value) return "—";
@@ -31,8 +33,12 @@ export default async function PartnerExternalRenewalDetailPage({
   searchParams: Promise<{ saved?: string; error?: string }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const detail = await getPartnerExternalRenewalDetail(id);
+  const [detail, intakeLink] = await Promise.all([
+    getPartnerExternalRenewalDetail(id),
+    getPartnerExternalRenewalIntakeLink(id),
+  ]);
   const opportunity = detail.opportunity;
+  const canStartIntake = INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
 
   return (
     <PartnerPortalShell title="External Renewal Opportunity">
@@ -67,6 +73,32 @@ export default async function PartnerExternalRenewalDetailPage({
               <InfoRow label="Coverage" value={dateLabel(opportunity.policy_start_date) + " → " + dateLabel(opportunity.policy_end_date)} icon={Clock3} />
               <InfoRow label="Status" value={titleCase(opportunity.opportunity_status)} icon={CheckCircle2} />
               <InfoRow label="Next follow-up" value={dateLabel(opportunity.next_follow_up_at, true)} icon={Clock3} last />
+            </div>
+
+            <div className="mt-4 border-y border-[#DCE4ED] py-3.5">
+              {intakeLink ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#728198]">Policy Intake</p>
+                    <p className="mt-1 text-[10.5px] font-bold text-[#263D5E]">{intakeLink.intake_number} · {titleCase(intakeLink.status)}</p>
+                  </div>
+                  <Link href={"/partner/policy-intakes/" + encodeURIComponent(intakeLink.intake_id)} prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#C7D4E5] bg-white px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+                    <FileUp className="h-3.5 w-3.5" /> Open Policy Intake
+                  </Link>
+                </div>
+              ) : canStartIntake ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#3156B8]">Ready for Policy Intake</p>
+                    <p className="mt-1 max-w-xl text-[9.5px] leading-5 text-[#667993]">Customer interest is recorded. Start the normal Policy Intake workflow; no verified Customer, Vehicle or Policy record is created from this opportunity directly.</p>
+                  </div>
+                  <Link href={"/partner/policy-intakes/new?external_opportunity=" + encodeURIComponent(id)} prefetch={false} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
+                    <FileUp className="h-3.5 w-3.5" /> Start Policy Intake
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[9.5px] leading-5 text-[#728198]">Record a connected, interested, quote or follow-up outcome before starting Policy Intake.</p>
+              )}
             </div>
           </div>
 

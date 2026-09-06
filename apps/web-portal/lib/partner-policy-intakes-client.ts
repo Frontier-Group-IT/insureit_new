@@ -132,6 +132,19 @@ export async function submitPartnerPolicyIntakeWeb(input: {
   });
 }
 
+export async function linkExternalRenewalPolicyIntakeWeb(input: {
+  opportunityId: string;
+  intakeId: string;
+}) {
+  return apiRequest<{ ok: true; link: { opportunity_id: string; intake_id: string; linked: boolean } }>(
+    "/api/partner/external-renewals/" + encodeURIComponent(input.opportunityId) + "/policy-intake",
+    {
+      method: "POST",
+      body: JSON.stringify({ intake_id: input.intakeId }),
+    },
+  );
+}
+
 export async function submitPartnerPolicyIntakeReplacementWeb(input: {
   intakeId: string;
   file: File;
