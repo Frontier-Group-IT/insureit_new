@@ -140,7 +140,7 @@ export default async function PartnerExternalRenewalsPage({
             {rows.length ? (
               <div className="divide-y divide-[#E8EDF4]">
                 {rows.map((row) => (
-                  <div key={row.opportunity_id} className="grid gap-3 px-1 py-3.5 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(150px,.7fr)_minmax(110px,.55fr)] xl:items-center">
+                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(150px,.7fr)_minmax(110px,.55fr)_auto] xl:items-center">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
                       <div className="min-w-0">
@@ -157,7 +157,8 @@ export default async function PartnerExternalRenewalsPage({
                       <p className="mt-0.5 text-[9px] text-[#8190A5]">Started {dateLabel(row.policy_start_date)} · {row.source_name}</p>
                     </div>
                     <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{expiryLabel(row.days_to_expiry)}</span>
-                  </div>
+                    <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
+                  </Link>
                 ))}
               </div>
             ) : (
