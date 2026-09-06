@@ -34,6 +34,7 @@ const requiredRoutes = [
   "app/partner/policies/page.tsx",
   "app/partner/policies/[id]/page.tsx",
   "app/partner/renewals/page.tsx",
+  "app/partner/renewals/external/page.tsx",
   "app/partner/claims/page.tsx",
   "app/partner/claims/[id]/page.tsx",
   "app/partner/policy-intakes/page.tsx",
@@ -57,6 +58,7 @@ const guardedSurface = [
   ...walk("app/partner"),
   ...walk("components/partner-portal"),
   "lib/partner-web.ts",
+  "lib/partner-external-renewals.ts",
 ].filter((file, index, files) => files.indexOf(file) === index);
 
 for (const file of guardedSurface) {
@@ -85,9 +87,19 @@ const renewalsPage = read("app/partner/renewals/page.tsx");
 assert(renewalsPage.includes("listPartnerWebRenewals"), "renewals page must use backend-filtered renewal pagination");
 assert(!renewalsPage.includes("listPartnerWebPolicies"), "renewals page must not paginate generic policies then filter renewal windows locally");
 assert(!renewalsPage.includes("visibleRows"), "renewal window filtering must not happen after pagination");
+assert(renewalsPage.includes('href="/partner/renewals/external"'), "renewals page must expose the isolated external opportunity workspace");
 
 const partnerWeb = read("lib/partner-web.ts");
 assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
+
+const externalRenewalPage = read("app/partner/renewals/external/page.tsx");
+assert(externalRenewalPage.includes("listPartnerExternalRenewals"), "external renewal page must use the isolated external renewal adapter");
+assert(!externalRenewalPage.includes("listPartnerWebPolicies"), "external renewal page must not use verified INSUREIT policy rows");
+assert(!externalRenewalPage.includes("listPartnerWebCustomers"), "external renewal page must not use verified INSUREIT customer rows");
+
+const externalRenewalAdapter = read("lib/partner-external-renewals.ts");
+assert(externalRenewalAdapter.includes('supabase.rpc("partner_app_external_renewal_summary"'), "external renewal summary must use its scoped RPC");
+assert(externalRenewalAdapter.includes('supabase.rpc("partner_app_list_external_renewals"'), "external renewal list must use its scoped RPC");
 
 const intakeListClient = read("components/partner-portal/partner-policy-intake-list-client.tsx");
 assert(intakeListClient.includes("PAGE_SIZE = 25"), "Policy Intake register must use bounded server pagination");
@@ -127,6 +139,22 @@ if (fs.existsSync(renewalMigrationPath)) {
   assert(renewalMigration.includes("partner_app_list_renewals"), "Partner renewal list RPC migration missing");
   assert(renewalMigration.includes("partner_app_commercial_scope"), "Partner renewal RPC must derive authorization from commercial scope");
   assert(renewalMigration.includes("count(*) over() as total_count"), "Partner renewal RPC must count after renewal-window filtering");
+}
+
+const externalRenewalMigrationPath = path.resolve(root, "../../supabase/migrations/20260905223000_external_renewal_opportunities.sql");
+assert(fs.existsSync(externalRenewalMigrationPath), "external renewal opportunity migration is missing");
+if (fs.existsSync(externalRenewalMigrationPath)) {
+  const externalMigration = fs.readFileSync(externalRenewalMigrationPath, "utf8");
+  assert(externalMigration.includes("external_renewal_import_batches"), "external renewal import batch table is missing");
+  assert(externalMigration.includes("external_renewal_opportunities"), "external renewal opportunity table is missing");
+  assert(externalMigration.includes("policy_start_date date generated always as (invoice_date) stored"), "external renewal start date must derive from invoice date");
+  assert(externalMigration.includes("invoice_date + interval '1 year'"), "external renewal end date must derive by one calendar year");
+  assert(externalMigration.includes("foreign key (batch_id, partner_id)"), "external renewal batch/Partner ownership must be database-enforced");
+  assert(externalMigration.includes("partner_app_commercial_scope"), "external renewal reads must derive Partner scope from authenticated commercial scope");
+  assert(!externalMigration.includes("references public.customers"), "external renewal opportunities must not reference verified customers");
+  assert(!externalMigration.includes("references public.vehicles"), "external renewal opportunities must not reference verified vehicles");
+  assert(!externalMigration.includes("references public.policies"), "external renewal opportunities must not reference verified policies");
+  assert(externalMigration.includes("revoke all on public.external_renewal_opportunities from public, anon, authenticated"), "external renewal tables must not expose direct authenticated reads");
 }
 
 const migrationPath = path.resolve(root, "../../supabase/migrations/20260903123000_partner_app_registration_training.sql");

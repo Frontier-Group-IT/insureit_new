@@ -55,9 +55,6 @@ jobs:
           if git merge-base --is-ancestor "$VERIFIED_COMMIT" "$GITHUB_SHA"; then
             PROVENANCE_MODE="verified-head-ancestor"
           elif [[ -n "$PR_MERGE_COMMIT" && "$PR_MERGE_COMMIT" == "$GITHUB_SHA" ]]; then
-            # Squash merges create a new main commit, so the verified PR head is
-            # intentionally not an ancestor. GitHub's exact merged-PR association
-            # plus merge_commit_sha binds this main commit back to that verified PR.
             PROVENANCE_MODE="verified-squash-merge"
           else
             echo "::error::Merged PR head $VERIFIED_COMMIT is neither contained in current main $GITHUB_SHA nor bound to it as the PR merge commit ($PR_MERGE_COMMIT)."
@@ -127,6 +124,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260905195000_prevent_duplicate_active_managed_claims.sql' <<<"$changed_migrations" || grep -qx 'supabase/migrations/20260905213000_fix_managed_claim_guard_enum_cast.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-managed-claim-active-policy-guard.yml"
             echo "Managed claim active-policy guard migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260905223000_external_renewal_opportunities.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-external-renewal-opportunities.yml"
+            echo "External renewal opportunity migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-initial-document-submission-persistence.yml"
             echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."
