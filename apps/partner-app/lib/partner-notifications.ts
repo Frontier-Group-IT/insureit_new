@@ -1,7 +1,13 @@
+import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { getCurrentSession } from '@/lib/partner-session';
+
 const PARTNER_CHANNEL_ID = 'partner-updates';
+const PARTNER_PROJECT_ID = '8ade82c1-4c96-4f09-b90b-802270fb406d';
+const PARTNER_APP_VERSION = '0.2.0';
+const portalUrl = (process.env.EXPO_PUBLIC_PORTAL_URL || 'https://portal.insureit.in').replace(/\/$/, '');
 const ALLOWED_NOTIFICATION_PREFIXES = [
   '/(tabs)/claims',
   '/(tabs)/policies',
@@ -57,6 +63,46 @@ export async function requestPartnerNotificationPermission() {
   }
 }
 
+export async function registerPartnerPushDevice() {
+  if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
+    return { registered: false as const, reason: 'unsupported' as const };
+  }
+
+  const permission = await Notifications.getPermissionsAsync();
+  if (!permission.granted) return { registered: false as const, reason: 'permission' as const };
+
+  const configuredProjectId = Constants.expoConfig?.extra?.eas?.projectId;
+  const configuredVersion = Constants.expoConfig?.version;
+  if (configuredProjectId !== PARTNER_PROJECT_ID || configuredVersion !== PARTNER_APP_VERSION) {
+    return { registered: false as const, reason: 'build_identity' as const };
+  }
+
+  const pushToken = await Notifications.getExpoPushTokenAsync({ projectId: PARTNER_PROJECT_ID });
+  await partnerPushDeviceRequest({
+    action: 'register',
+    expo_push_token: pushToken.data,
+    platform: Platform.OS,
+    project_id: PARTNER_PROJECT_ID,
+    app_version: PARTNER_APP_VERSION,
+  });
+
+  return { registered: true as const };
+}
+
+export async function unregisterPartnerPushDevice() {
+  if (Platform.OS !== 'android' && Platform.OS !== 'ios') return;
+  try {
+    const permission = await Notifications.getPermissionsAsync();
+    if (!permission.granted) return;
+    const configuredProjectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (configuredProjectId !== PARTNER_PROJECT_ID) return;
+    const pushToken = await Notifications.getExpoPushTokenAsync({ projectId: PARTNER_PROJECT_ID });
+    await partnerPushDeviceRequest({ action: 'unregister', expo_push_token: pushToken.data }, 1500);
+  } catch {
+    // Sign-out must continue even when push cleanup is unavailable.
+  }
+}
+
 export function normalizePartnerNotificationPath(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const path = value.trim();
@@ -82,4 +128,29 @@ export function observePartnerNotificationResponses(onPath: (path: string) => vo
     const path = responsePath(response);
     if (path) onPath(path);
   });
+}
+
+async function partnerPushDeviceRequest(body: Record<string, unknown>, timeoutMs = 10000) {
+  const session = await getCurrentSession();
+  if (!session?.access_token) throw new Error('Your session has expired. Sign in again.');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${portalUrl}/api/partner/push-devices`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || 'Partner notification registration failed.');
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
 }

@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { partnerSelectionHaptic, partnerSuccessHaptic, partnerWarningHaptic } from '@/lib/partner-haptics';
-import { getPartnerNotificationPermission, requestPartnerNotificationPermission } from '@/lib/partner-notifications';
+import { getPartnerNotificationPermission, registerPartnerPushDevice, requestPartnerNotificationPermission } from '@/lib/partner-notifications';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { checkForPartnerUpdate } from '@/lib/partner-updates';
 import { partnerTheme } from '@/lib/theme';
@@ -65,8 +65,19 @@ export default function SettingsScreen() {
       const result = await requestPartnerNotificationPermission();
       setNotificationStatus(result.granted ? 'granted' : result.status === 'denied' ? 'denied' : 'undetermined');
       if (result.granted) {
-        setSecurityMessage('Partner notifications are enabled on this device.');
-        void partnerSuccessHaptic();
+        try {
+          const registration = await registerPartnerPushDevice();
+          if (registration.registered) {
+            setSecurityMessage('Partner notifications are enabled and this device is registered.');
+            void partnerSuccessHaptic();
+          } else {
+            setSecurityMessage('Notification permission is enabled, but this device is not registered for Partner alerts yet.');
+            void partnerWarningHaptic();
+          }
+        } catch {
+          setSecurityMessage('Notification permission is enabled, but this device could not be registered yet. Try again later.');
+          void partnerWarningHaptic();
+        }
       } else {
         setSecurityMessage('Notifications are not enabled. You can allow them from your device settings.');
         void partnerWarningHaptic();
