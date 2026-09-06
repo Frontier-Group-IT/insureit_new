@@ -96,7 +96,7 @@ function currentStageKey(status: ClaimStatus) {
 function stageDetailsFromForm(formData: FormData, stageKey: OperationsStageKey) {
   const details: Record<string, string | number> = { milestone_key: stageKey };
   for (const [key, value] of formData.entries()) {
-    if (["notes", "next_status", "current_status", "milestone_key", "insurer_claim_no", "save_only"].includes(key)) continue;
+    if (["notes", "next_status", "current_status", "milestone_key", "save_only"].includes(key)) continue;
     if (typeof value !== "string" || !value.trim()) continue;
     const numericValue = Number(value.replace(/,/g, ""));
     details[key] = Number.isFinite(numericValue) && /amount|tds|gst|labour|parts|bill|received|estimate/i.test(key)
@@ -105,17 +105,6 @@ function stageDetailsFromForm(formData: FormData, stageKey: OperationsStageKey) 
   }
   details.updated_at = new Date().toISOString();
   return details;
-}
-
-function claimFieldUpdates(formData: FormData) {
-  const insurerClaimNo = textValue(formData, "insurer_claim_no");
-  const approvedAmount = textValue(formData, "approved_amount");
-  const settlementAmount = textValue(formData, "payment_received_amount");
-  return {
-    ...(insurerClaimNo ? { insurer_claim_no: insurerClaimNo } : {}),
-    ...(approvedAmount ? { approved_amount: Number(approvedAmount.replace(/,/g, "")) } : {}),
-    ...(settlementAmount ? { settlement_amount: Number(settlementAmount.replace(/,/g, "")) } : {}),
-  };
 }
 
 export async function completeClaimJourneyStage(claimId: string, formData: FormData) {
@@ -155,49 +144,34 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   }
 
   const details = stageDetailsFromForm(formData, stageKey);
-  const claimUpdates = claimFieldUpdates(formData);
+  const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey;
+  const nextStatus = completionTargets[stageKey];
 
-  if (saveOnly || terminal || stageKey !== activeKey) {
-    if (Object.keys(claimUpdates).length) {
-      const { error: claimUpdateError } = await supabase.from("claims").update(claimUpdates).eq("id", claimId);
-      if (claimUpdateError) throw new Error(claimUpdateError.message);
-    }
+  const { error: detailError } = await supabase.from("claim_stage_details").insert({
+    claim_id: claimId,
+    stage: detailStageStatus[stageKey],
+    details: shouldAdvance ? { ...details, completed_at: new Date().toISOString() } : details,
+    created_by: profile?.id ?? null,
+  });
+  if (detailError) throw new Error(detailError.message);
 
-    const { error: detailError } = await supabase.from("claim_stage_details").insert({
-      claim_id: claimId,
-      stage: detailStageStatus[stageKey],
-      details,
-      created_by: profile?.id ?? null,
-    });
-    if (detailError) throw new Error(detailError.message);
-
+  if (!shouldAdvance) {
     revalidatePath(`/claims/${claimId}`);
     revalidatePath("/claims");
     revalidatePath("/dashboard");
     return { ok: true, nextStatus: claim.current_status, advanced: false };
   }
 
-  const nextStatus = completionTargets[stageKey];
-  const { data: updated, error: updateError } = await supabase
+  const { data: persisted, error: persistedError } = await supabase
     .from("claims")
-    .update({ current_status: nextStatus, ...claimUpdates })
-    .eq("id", claimId)
-    .eq("current_status", claim.current_status)
     .select("id,current_status")
+    .eq("id", claimId)
     .maybeSingle<{ id: string; current_status: ClaimStatus }>();
 
-  if (updateError) throw new Error(updateError.message);
-  if (!updated || updated.current_status !== nextStatus) {
+  if (persistedError) throw new Error(persistedError.message);
+  if (!persisted || persisted.current_status !== nextStatus) {
     throw new Error("The claim stage could not be persisted. Refresh the claim and try again.");
   }
-
-  const { error: detailError } = await supabase.from("claim_stage_details").insert({
-    claim_id: claimId,
-    stage: detailStageStatus[stageKey],
-    details: { ...details, completed_at: new Date().toISOString() },
-    created_by: profile?.id ?? null,
-  });
-  if (detailError) throw new Error(detailError.message);
 
   const { error: historyError } = await supabase.from("claim_status_history").insert({
     claim_id: claimId,

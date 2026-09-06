@@ -121,6 +121,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-initial-document-submission-persistence.yml"
             echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260906190000_persist_managed_claim_stage_transitions.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-managed-claim-stage-persistence.yml"
+            echo "Managed claim stage persistence migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
