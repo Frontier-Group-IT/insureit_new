@@ -73,7 +73,7 @@ const requiredFields: Record<OperationsStageKey, readonly string[]> = {
   billing: ["bill_date", "bill_amount"],
   delivery_order: ["do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
-  payment_encashment: ["payment_received_date", "payment_received_amount"],
+  payment_encashment: ["depreciation_slip_submitted", "satisfaction_voucher_submitted", "payment_received_date", "payment_received_amount"],
 };
 
 function textValue(formData: FormData, name: string) {
