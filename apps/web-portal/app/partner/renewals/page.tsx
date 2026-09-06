@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock, RefreshCw, Search } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarClock, RefreshCw, Search } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebRenewalSummary, listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
@@ -86,15 +86,26 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
           ]}
         />
 
-        <Link href="/partner/renewals/external" prefetch={false} className="group flex items-center gap-3 border-y border-[#DCE4ED] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
-            <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74839A]">Retarget customers with policies held outside INSUREIT.</span>
-          </span>
-          <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#3156B8]">Open</span>
-          <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
-        </Link>
+        <div className="grid gap-3 xl:grid-cols-2">
+          <Link href="/partner/renewals/external" prefetch={false} className="group flex items-center gap-3 border-y border-[#DCE4ED] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
+              <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74839A]">Retarget customers with policies held outside INSUREIT.</span>
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#3156B8]">Open</span>
+            <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
+          </Link>
+          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex items-center gap-3 border-y border-[#DCE4ED] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><BarChart3 className="h-4 w-4" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[11px] font-extrabold text-[#1B2F4E]">External Renewal Reporting</span>
+              <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74839A]">Review contact, quote, conversion and verified premium results.</span>
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#3156B8]">View</span>
+            <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
+          </Link>
+        </div>
 
         <section>
           <div className="border-y border-[#DCE4ED] py-3">
