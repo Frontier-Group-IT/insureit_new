@@ -10,6 +10,7 @@ export type PartnerExternalRenewalSummary = {
   uncontacted_count: number;
   follow_up_due_count: number;
   follow_up_scheduled_count: number;
+  in_policy_intake_count: number;
   total_active_count: number;
 };
 
@@ -17,6 +18,7 @@ export type PartnerExternalRenewalMode = "due" | "expired" | "future" | "follow_
 export type PartnerExternalRenewalWindow = "all" | "0_7" | "8_15" | "16_30";
 export type PartnerExternalRenewalStatusFilter = "all" | "new" | "contacted" | "interested" | "quote" | "follow_up" | "closed";
 export type PartnerExternalRenewalFollowUpFilter = "all" | "due" | "scheduled";
+export type PartnerExternalRenewalIntakeFilter = "all" | "not_started" | "in_progress";
 export type PartnerExternalRenewalInteractionType = "call" | "whatsapp" | "note" | "follow_up";
 export type PartnerExternalRenewalOutcome =
   | "contact_attempted"
@@ -52,12 +54,16 @@ export type PartnerExternalRenewalRow = {
   last_interaction_at: string | null;
   next_follow_up_at: string | null;
   days_to_expiry: number;
+  intake_state: "not_started" | "in_progress";
+  intake_id: string | null;
+  intake_number: string | null;
+  intake_status: string | null;
   total_count: number;
 };
 
 export type PartnerExternalRenewalDetailOpportunity = Omit<
   PartnerExternalRenewalRow,
-  "batch_id" | "days_to_expiry" | "total_count"
+  "batch_id" | "days_to_expiry" | "intake_state" | "intake_id" | "intake_number" | "intake_status" | "total_count"
 >;
 
 export type PartnerExternalRenewalInteraction = {
@@ -97,6 +103,7 @@ export async function listPartnerExternalRenewals({
   window = "all",
   status = "all",
   followUp = "all",
+  intake = "all",
 }: {
   limit?: number;
   offset?: number;
@@ -105,6 +112,7 @@ export async function listPartnerExternalRenewals({
   window?: PartnerExternalRenewalWindow;
   status?: PartnerExternalRenewalStatusFilter;
   followUp?: PartnerExternalRenewalFollowUpFilter;
+  intake?: PartnerExternalRenewalIntakeFilter;
 } = {}): Promise<PartnerExternalRenewalRow[]> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
@@ -116,6 +124,7 @@ export async function listPartnerExternalRenewals({
     p_window: window,
     p_status: status,
     p_follow_up: followUp,
+    p_intake_state: intake,
   });
   if (error) throw error;
   return (data ?? []) as PartnerExternalRenewalRow[];
