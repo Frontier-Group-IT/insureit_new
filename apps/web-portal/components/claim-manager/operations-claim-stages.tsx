@@ -98,9 +98,7 @@ const fields: StageFields = {
     { name: "do_amount", label: "Delivery order amount", type: "number" },
   ],
   vehicle_delivery: [
-    { name: "vehicle_received", label: "Vehicle delivery status", type: "select" },
-    { name: "vehicle_received_date", label: "Vehicle delivery date", type: "date" },
-    { name: "satisfaction_submitted", label: "Satisfaction voucher", type: "select" },
+    { name: "vehicle_received", label: "Vehicle Received?", type: "yesno" },
   ],
   payment_encashment: [
     { name: "payment_status", label: "Payment status" },
@@ -143,8 +141,6 @@ const fieldAliases: Record<string, string[]> = {
   do_date: ["do_date", "delivery_order_date"],
   do_amount: ["do_amount", "delivery_order_amount"],
   vehicle_received: ["vehicle_received", "delivery_status", "status"],
-  vehicle_received_date: ["vehicle_received_date", "vehicle_delivery_date"],
-  satisfaction_submitted: ["satisfaction_submitted", "satisfaction_status"],
   payment_received_date: ["payment_received_date", "settlement_date"],
   payment_received_amount: ["payment_received_amount", "settlement_amount"],
 };
@@ -305,7 +301,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" ? "lg:grid-cols-3" : selected.key === "vehicle_delivery" ? "lg:grid-cols-1" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
@@ -313,7 +309,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
-                    <fieldset key={field.name} className="min-w-0">
+                    <fieldset key={field.name} className="min-w-0 max-w-xl">
                       <legend className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                         {field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
@@ -322,7 +318,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                           <input className="sr-only" type="radio" name={field.name} value="true" defaultChecked={yesChecked} required={required} />Yes
                         </label>
                         <label className="flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]">
-                          <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />No
+                          <input className="sr-only" type="radio" name={field.name} value="false" defaultChecked={noChecked} required={required} />{field.name === "vehicle_received" ? "Not Yet" : "No"}
                         </label>
                       </div>
                     </fieldset>
@@ -351,6 +347,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 );
               })}
             </div>
+            {selected.key === "vehicle_delivery" ? <p className="mt-3 max-w-xl rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-800">This stage stays in progress until the vehicle is received.</p> : null}
             {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
             <div className="mt-3 flex justify-end"><FormSubmitButton label="Save Details" pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>
           </form>
