@@ -6,9 +6,13 @@ const repoRoot = path.resolve(root, "../..");
 const migrationPath = path.join(repoRoot, "supabase/migrations/20260906235500_external_renewal_intake_visibility.sql");
 const detailStateMigrationPath = path.join(repoRoot, "supabase/migrations/20260907001500_external_renewal_intake_detail_state.sql");
 const terminalStateMigrationPath = path.join(repoRoot, "supabase/migrations/20260907004500_external_renewal_terminal_state_guard.sql");
+const reportingMigrationPath = path.join(repoRoot, "supabase/migrations/20260907010000_external_renewal_reporting.sql");
 const pagePath = path.join(root, "app/partner/renewals/external/page.tsx");
 const detailPagePath = path.join(root, "app/partner/renewals/external/[id]/page.tsx");
+const reportingPagePath = path.join(root, "app/partner/renewals/external/reporting/page.tsx");
+const renewalsPagePath = path.join(root, "app/partner/renewals/page.tsx");
 const libPath = path.join(root, "lib/partner-external-renewals.ts");
+const reportingLibPath = path.join(root, "lib/partner-external-renewal-reporting.ts");
 
 function assert(condition, message) {
   if (!condition) {
@@ -17,7 +21,7 @@ function assert(condition, message) {
   }
 }
 
-for (const file of [migrationPath, detailStateMigrationPath, terminalStateMigrationPath, pagePath, detailPagePath, libPath]) assert(fs.existsSync(file), path.basename(file) + " is missing");
+for (const file of [migrationPath, detailStateMigrationPath, terminalStateMigrationPath, reportingMigrationPath, pagePath, detailPagePath, reportingPagePath, renewalsPagePath, libPath, reportingLibPath]) assert(fs.existsSync(file), path.basename(file) + " is missing");
 
 if (fs.existsSync(migrationPath)) {
   const migration = fs.readFileSync(migrationPath, "utf8");
@@ -48,6 +52,18 @@ if (fs.existsSync(terminalStateMigrationPath)) {
   assert(!/\b(update|insert into|delete from)\s+public\.(customers|vehicles|policies)\b/i.test(migration), "terminal-state migration must not mutate verified business tables");
 }
 
+if (fs.existsSync(reportingMigrationPath)) {
+  const migration = fs.readFileSync(reportingMigrationPath, "utf8");
+  assert(migration.includes("create or replace function public.partner_app_external_renewal_reporting()"), "reporting RPC is missing");
+  assert(migration.includes("public.partner_app_commercial_scope()"), "reporting RPC must use Partner commercial scope");
+  assert(migration.includes("public.external_renewal_interactions"), "reporting funnel must use CRM interaction history");
+  assert(migration.includes("r.final_policy_id is not null"), "conversion must require a real final policy");
+  assert(migration.includes("join public.policies p on p.id=cp.final_policy_id"), "premium must come from the converted verified policy");
+  assert(migration.includes("sum(coalesce(p.premium_amount,0))"), "premium generated must use verified policy premium");
+  assert(!migration.includes("o.premium"), "reporting must not infer premium from external opportunities");
+  assert(!/\b(update|insert into|delete from)\s+public\.(customers|vehicles|policies)\b/i.test(migration), "reporting migration must not mutate verified business tables");
+}
+
 if (fs.existsSync(pagePath)) {
   const page = fs.readFileSync(pagePath, "utf8");
   assert(page.includes("In Policy Intake"), "worklist must visibly label linked opportunities");
@@ -67,6 +83,20 @@ if (fs.existsSync(detailPagePath)) {
   assert(page.includes("No new Policy Intake can be started from it."), "closed unlinked opportunities must not offer Policy Intake start");
 }
 
+if (fs.existsSync(reportingPagePath)) {
+  const page = fs.readFileSync(reportingPagePath, "utf8");
+  assert(page.includes("Retargeting performance"), "reporting page title is missing");
+  assert(page.includes("Premium Generated"), "reporting page must show generated premium");
+  assert(page.includes("Verified converted policies only"), "reporting UI must explain premium source");
+  assert(page.includes("interaction history"), "reporting UI must explain funnel history semantics");
+}
+
+if (fs.existsSync(renewalsPagePath)) {
+  const page = fs.readFileSync(renewalsPagePath, "utf8");
+  assert(page.includes('href="/partner/renewals/external/reporting"'), "Renewals page must expose external renewal reporting");
+  assert(page.includes("External Renewal Reporting"), "Renewals page reporting label is missing");
+}
+
 if (fs.existsSync(libPath)) {
   const lib = fs.readFileSync(libPath, "utf8");
   assert(lib.includes('PartnerExternalRenewalIntakeFilter = "all" | "not_started" | "in_progress"'), "typed intake filter is missing");
@@ -74,6 +104,12 @@ if (fs.existsSync(libPath)) {
   assert(lib.includes("linked: true"), "typed detail link state must expose linked");
   assert(lib.includes("owned: boolean"), "typed detail link state must expose ownership");
   assert(lib.includes("intake_id: string | null"), "cross-actor intake ID must be nullable");
+}
+
+if (fs.existsSync(reportingLibPath)) {
+  const lib = fs.readFileSync(reportingLibPath, "utf8");
+  assert(lib.includes("partner_app_external_renewal_reporting"), "reporting helper must call the scoped reporting RPC");
+  assert(lib.includes("premium_generated: number"), "reporting helper must type verified premium output");
 }
 
 if (!process.exitCode) console.log("External renewal intake visibility regression passed.");
