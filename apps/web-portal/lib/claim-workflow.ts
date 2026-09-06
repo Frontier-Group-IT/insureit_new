@@ -177,7 +177,11 @@ export function submittedStatusFor(status: ClaimStatus) {
 }
 
 export function verifiedStatusFor(status: ClaimStatus) {
-  if (["Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Pending", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
+  // Verifying the final Stage 1 document must not skip the explicit
+  // "Save & move to Initial Documents Submitted" transition. Only claims
+  // that have already entered the Stage 2 document-review states may be
+  // auto-finalized as Initial Documents Verified.
+  if (["Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
   if (["Final Documents Verification Pending", "Final Documents Submitted"].includes(status)) return "Final Documents Verified" as ClaimStatus;
   return status;
 }
