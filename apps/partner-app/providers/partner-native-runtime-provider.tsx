@@ -5,10 +5,13 @@ import {
   configurePartnerNotificationChannel,
   getInitialPartnerNotificationPath,
   observePartnerNotificationResponses,
+  registerPartnerPushDevice,
 } from '@/lib/partner-notifications';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 export function PartnerNativeRuntimeProvider({ children }: PropsWithChildren) {
   const router = useRouter();
+  const session = usePartnerSession();
 
   useEffect(() => {
     void configurePartnerNotificationChannel().catch(() => undefined);
@@ -27,6 +30,11 @@ export function PartnerNativeRuntimeProvider({ children }: PropsWithChildren) {
       subscription.remove();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (session.status !== 'ready') return;
+    void registerPartnerPushDevice().catch(() => undefined);
+  }, [session.status]);
 
   return children;
 }
