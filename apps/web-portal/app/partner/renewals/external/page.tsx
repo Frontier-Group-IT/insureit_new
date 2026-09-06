@@ -6,6 +6,7 @@ import {
   getPartnerExternalRenewalSummary,
   listPartnerExternalRenewals,
   type PartnerExternalRenewalFollowUpFilter,
+  type PartnerExternalRenewalIntakeFilter,
   type PartnerExternalRenewalMode,
   type PartnerExternalRenewalStatusFilter,
   type PartnerExternalRenewalWindow,
@@ -30,6 +31,10 @@ function validStatus(value?: string): PartnerExternalRenewalStatusFilter {
 
 function validFollowUp(value?: string): PartnerExternalRenewalFollowUpFilter {
   return value === "due" || value === "scheduled" ? value : "all";
+}
+
+function validIntake(value?: string): PartnerExternalRenewalIntakeFilter {
+  return value === "not_started" || value === "in_progress" ? value : "all";
 }
 
 function pageNumber(value?: string) {
@@ -77,10 +82,15 @@ function statusLabel(value: string) {
   return labels[value] ?? value.replaceAll("_", " ");
 }
 
+function intakeStatusLabel(value: string | null) {
+  if (!value) return "In Policy Intake";
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export default async function PartnerExternalRenewalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; mode?: string; window?: string; status?: string; follow_up?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; mode?: string; window?: string; status?: string; follow_up?: string; intake?: string; page?: string }>;
 }) {
   const query = await searchParams;
   const q = query.q?.trim() ?? "";
@@ -88,12 +98,13 @@ export default async function PartnerExternalRenewalsPage({
   const window = validWindow(query.window);
   const status = validStatus(query.status);
   const followUp = validFollowUp(query.follow_up);
+  const intake = validIntake(query.intake);
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
   const [summary, rows] = await Promise.all([
     getPartnerExternalRenewalSummary(),
-    listPartnerExternalRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window, status, followUp }),
+    listPartnerExternalRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window, status, followUp, intake }),
   ]);
 
   const total = rows[0]?.total_count ?? 0;
@@ -105,6 +116,7 @@ export default async function PartnerExternalRenewalsPage({
     window?: PartnerExternalRenewalWindow;
     status?: PartnerExternalRenewalStatusFilter;
     followUp?: PartnerExternalRenewalFollowUpFilter;
+    intake?: PartnerExternalRenewalIntakeFilter;
     page?: number;
   }) => {
     const params = new URLSearchParams();
@@ -112,12 +124,14 @@ export default async function PartnerExternalRenewalsPage({
     const nextWindow = next.window ?? window;
     const nextStatus = next.status ?? status;
     const nextFollowUp = next.followUp ?? followUp;
+    const nextIntake = next.intake ?? intake;
     const nextPage = next.page ?? 1;
     if (q) params.set("q", q);
     if (nextMode !== "due") params.set("mode", nextMode);
     if (nextMode === "due" && nextWindow !== "all") params.set("window", nextWindow);
     if (nextStatus !== "all") params.set("status", nextStatus);
     if (nextMode === "follow_up" && nextFollowUp !== "all") params.set("follow_up", nextFollowUp);
+    if (nextIntake !== "all") params.set("intake", nextIntake);
     if (nextPage > 1) params.set("page", String(nextPage));
     const search = params.toString();
     return search ? "/partner/renewals/external?" + search : "/partner/renewals/external";
@@ -150,7 +164,7 @@ export default async function PartnerExternalRenewalsPage({
             { label: "Due in 30 Days", value: summary.due_30_count, meta: "External opportunities" },
             { label: "Not Contacted", value: summary.uncontacted_count, meta: "Start outreach" },
             { label: "Follow-ups Due", value: summary.follow_up_due_count, meta: "Needs attention" },
-            { label: "Scheduled", value: summary.follow_up_scheduled_count, meta: "Upcoming follow-ups" },
+            { label: "In Policy Intake", value: summary.in_policy_intake_count, meta: "Conversion in progress" },
           ]}
         />
 
@@ -169,6 +183,7 @@ export default async function PartnerExternalRenewalsPage({
                 {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
                 {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
                 {followUp !== "all" && mode === "follow_up" ? <input type="hidden" name="follow_up" value={followUp} /> : null}
+                {intake !== "all" ? <input type="hidden" name="intake" value={intake} /> : null}
                 <div className="relative min-w-0 flex-1">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
                   <input name="q" defaultValue={q} placeholder="Search customer, mobile, vehicle or chassis" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
@@ -204,6 +219,14 @@ export default async function PartnerExternalRenewalsPage({
                 </Link>
               ))}
             </div>
+
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-[#E7ECF2] pt-3">
+              {(["all", "not_started", "in_progress"] as PartnerExternalRenewalIntakeFilter[]).map((value) => (
+                <Link key={value} href={hrefFor({ intake: value, page: 1 })} className={"rounded-lg px-2.5 py-1.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (intake === value ? "bg-[#E9F0FF] text-[#3156B8]" : "bg-[#F4F6F9] text-[#657792]")}>
+                  {value === "all" ? "All Policy Intake" : value === "not_started" ? "Not Started" : "In Policy Intake"}
+                </Link>
+              ))}
+            </div>
           </div>
 
           <div className="mt-5">
@@ -214,7 +237,7 @@ export default async function PartnerExternalRenewalsPage({
             {rows.length ? (
               <div className="divide-y divide-[#E8EDF4]">
                 {rows.map((row) => (
-                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(170px,.8fr)_minmax(145px,.7fr)_auto] xl:items-center">
+                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(170px,.8fr)_minmax(170px,.8fr)_auto] xl:items-center">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
                       <div className="min-w-0">
@@ -232,7 +255,14 @@ export default async function PartnerExternalRenewalsPage({
                     </div>
                     <div>
                       <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.opportunity_status)}</span>
-                      <p className="mt-1 text-[9px] leading-4 text-[#7D8CA2]">{row.next_follow_up_at ? "Follow-up " + dateTimeLabel(row.next_follow_up_at) : row.last_interaction_at ? "Last contact " + dateTimeLabel(row.last_interaction_at) : "No interaction yet"}</p>
+                      {row.intake_state === "in_progress" ? (
+                        <div className="mt-1.5">
+                          <span className="inline-flex w-fit rounded-lg bg-[#E9F0FF] px-2 py-1 text-[9px] font-bold text-[#3156B8]">In Policy Intake</span>
+                          <p className="mt-1 break-words text-[9px] leading-4 text-[#6E7F98]">{row.intake_number ? row.intake_number + " · " + intakeStatusLabel(row.intake_status) : "Policy Intake already started"}</p>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-[9px] leading-4 text-[#7D8CA2]">{row.next_follow_up_at ? "Follow-up " + dateTimeLabel(row.next_follow_up_at) : row.last_interaction_at ? "Last contact " + dateTimeLabel(row.last_interaction_at) : "No interaction yet"}</p>
+                      )}
                     </div>
                     <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
                   </Link>
