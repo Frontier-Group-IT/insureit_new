@@ -16,7 +16,7 @@ import {
   savePartnerPolicyIntakeDraft,
 } from '@/lib/policy-intake-draft';
 import {
-  listPartnerPolicyIntakes,
+  listPartnerPolicyIntakeSources,
   submitPartnerPolicyIntake,
   type PartnerPolicyIntakeSource,
   type PartnerPolicyIntakeUploadProgress,
@@ -45,18 +45,19 @@ export default function NewPolicyIntakeScreen() {
     async function load() {
       try {
         const [result, draft] = await Promise.all([
-          listPartnerPolicyIntakes(),
+          listPartnerPolicyIntakeSources(),
           loadPartnerPolicyIntakeDraft(),
         ]);
         if (cancelled) return;
 
-        setSources(result.sources);
+        const nextSources = Array.isArray(result) ? result : [];
+        setSources(nextSources);
 
-        const draftSourceValid = Boolean(draft?.leadSourceId && result.sources.some((source) => source.id === draft.leadSourceId));
+        const draftSourceValid = Boolean(draft?.leadSourceId && nextSources.some((source) => source.id === draft.leadSourceId));
         const nextSourceId = draftSourceValid
           ? draft!.leadSourceId
-          : result.sources.length === 1
-            ? result.sources[0].id
+          : nextSources.length === 1
+            ? nextSources[0].id
             : '';
 
         setSourceId(nextSourceId);
