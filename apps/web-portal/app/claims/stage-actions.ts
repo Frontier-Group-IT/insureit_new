@@ -67,7 +67,7 @@ const detailStageStatus: Record<OperationsStageKey, ClaimStatus> = {
 
 const requiredFields: Record<OperationsStageKey, readonly string[]> = {
   spot_status: ["spot_survey_done_date"],
-  claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "estimate_amount"],
+  claim_intimation: ["claim_intimation_date", "dealership_name", "dealership_location", "gate_in_date", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
   repair_ri: ["repair_complete_date"],
   billing: ["bill_date", "bill_amount"],
