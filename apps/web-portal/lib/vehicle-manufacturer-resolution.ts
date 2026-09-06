@@ -12,8 +12,6 @@ const LEGAL_SUFFIXES = new Set([
   "LLP",
   "LTD",
   "LIMITED",
-  "MOTORS",
-  "MOTOR",
   "PVT",
   "PRIVATE",
 ]);

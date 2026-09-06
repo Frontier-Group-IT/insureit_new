@@ -1,5 +1,6 @@
 import { strict as assert } from "node:assert";
-import { resolveVehicleManufacturer } from "../lib/vehicle-manufacturer-resolution";
+// @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
+import { resolveVehicleManufacturer } from "../lib/vehicle-manufacturer-resolution.ts";
 
 const manufacturers = [
   "Ashok Leyland",
