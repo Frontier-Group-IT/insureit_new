@@ -7,11 +7,16 @@ export type PartnerExternalRenewalSummary = {
   due_16_30_count: number;
   due_30_count: number;
   expired_30_count: number;
+  uncontacted_count: number;
+  follow_up_due_count: number;
+  follow_up_scheduled_count: number;
   total_active_count: number;
 };
 
-export type PartnerExternalRenewalMode = "due" | "expired" | "future";
+export type PartnerExternalRenewalMode = "due" | "expired" | "future" | "follow_up";
 export type PartnerExternalRenewalWindow = "all" | "0_7" | "8_15" | "16_30";
+export type PartnerExternalRenewalStatusFilter = "all" | "new" | "contacted" | "interested" | "quote" | "follow_up" | "closed";
+export type PartnerExternalRenewalFollowUpFilter = "all" | "due" | "scheduled";
 export type PartnerExternalRenewalInteractionType = "call" | "whatsapp" | "note" | "follow_up";
 export type PartnerExternalRenewalOutcome =
   | "contact_attempted"
@@ -44,6 +49,8 @@ export type PartnerExternalRenewalRow = {
   current_insurer: string | null;
   current_policy_no: string | null;
   opportunity_status: string;
+  last_interaction_at: string | null;
+  next_follow_up_at: string | null;
   days_to_expiry: number;
   total_count: number;
 };
@@ -51,10 +58,7 @@ export type PartnerExternalRenewalRow = {
 export type PartnerExternalRenewalDetailOpportunity = Omit<
   PartnerExternalRenewalRow,
   "batch_id" | "days_to_expiry" | "total_count"
-> & {
-  last_interaction_at: string | null;
-  next_follow_up_at: string | null;
-};
+>;
 
 export type PartnerExternalRenewalInteraction = {
   interaction_id: string;
@@ -84,12 +88,16 @@ export async function listPartnerExternalRenewals({
   search,
   mode = "due",
   window = "all",
+  status = "all",
+  followUp = "all",
 }: {
   limit?: number;
   offset?: number;
   search?: string;
   mode?: PartnerExternalRenewalMode;
   window?: PartnerExternalRenewalWindow;
+  status?: PartnerExternalRenewalStatusFilter;
+  followUp?: PartnerExternalRenewalFollowUpFilter;
 } = {}): Promise<PartnerExternalRenewalRow[]> {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
@@ -99,6 +107,8 @@ export async function listPartnerExternalRenewals({
     p_search: search?.trim() || null,
     p_mode: mode,
     p_window: window,
+    p_status: status,
+    p_follow_up: followUp,
   });
   if (error) throw error;
   return (data ?? []) as PartnerExternalRenewalRow[];
