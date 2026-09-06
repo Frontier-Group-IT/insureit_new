@@ -38,7 +38,7 @@ export default async function PartnerExternalRenewalDetailPage({
     getPartnerExternalRenewalIntakeLink(id),
   ]);
   const opportunity = detail.opportunity;
-  const canStartIntake = INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
+  const canStartIntake = !intakeLink?.linked && INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
 
   return (
     <PartnerPortalShell title="External Renewal Opportunity">
@@ -76,15 +76,25 @@ export default async function PartnerExternalRenewalDetailPage({
             </div>
 
             <div className="mt-4 border-y border-[#DCE4ED] py-3.5">
-              {intakeLink ? (
+              {intakeLink?.linked && intakeLink.owned && intakeLink.intake_id ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#728198]">Policy Intake</p>
-                    <p className="mt-1 text-[10.5px] font-bold text-[#263D5E]">{intakeLink.intake_number} · {titleCase(intakeLink.status)}</p>
+                    <p className="mt-1 text-[10.5px] font-bold text-[#263D5E]">{intakeLink.intake_number || "Policy Intake"}{intakeLink.status ? " · " + titleCase(intakeLink.status) : ""}</p>
                   </div>
                   <Link href={"/partner/policy-intakes/" + encodeURIComponent(intakeLink.intake_id)} prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#C7D4E5] bg-white px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
                     <FileUp className="h-3.5 w-3.5" /> Open Policy Intake
                   </Link>
+                </div>
+              ) : intakeLink?.linked ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#3156B8]">In Policy Intake</p>
+                    <p className="mt-1 max-w-xl text-[9.5px] leading-5 text-[#667993]">Policy Intake has already been started for this opportunity. Its details remain with the Partner user who started it.</p>
+                  </div>
+                  <span className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#E9F0FF] px-3.5 text-[10px] font-bold text-[#3156B8]">
+                    <FileUp className="h-3.5 w-3.5" /> Already Started
+                  </span>
                 </div>
               ) : canStartIntake ? (
                 <div className="flex flex-wrap items-center justify-between gap-3">
