@@ -9,6 +9,7 @@ on:
       - '.github/workflows/verify-partner-app.yml'
       - '.github/workflows/build-partner-preview.yml'
       - '.github/workflows/publish-partner-preview-ota.yml'
+      - '.github/workflows/rollback-partner-preview-ota.yml'
   workflow_dispatch:
 
 permissions:
@@ -85,6 +86,9 @@ jobs:
       - name: Verify pre-APK UAT and security contracts
         run: npm --workspace apps/partner-app run verify:uat
 
+      - name: Verify Partner OTA publish and rollback contracts
+        run: npm --workspace apps/partner-app run verify:ota-release
+
       - name: Partner app typecheck
         run: npm run typecheck:partner
 
@@ -116,6 +120,7 @@ jobs:
             echo "- Partner visual-system completion contracts: verified"
             echo "- Pre-APK OTA runtime freeze: verified"
             echo "- Pre-APK UAT/security contracts: verified"
+            echo "- Partner OTA publish/rollback contracts: verified"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Review build: Expo web export"
             echo "- Production deployment: not triggered by this workflow"
