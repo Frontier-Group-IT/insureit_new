@@ -100,9 +100,11 @@ const fields: StageFields = {
     { name: "vehicle_received", label: "Vehicle Received?", type: "yesno" },
   ],
   payment_encashment: [
-    { name: "payment_status", label: "Payment status" },
-    { name: "payment_received_date", label: "Payment received date", type: "date" },
-    { name: "payment_received_amount", label: "Settlement amount", type: "number" },
+    { name: "depreciation_slip_submitted", label: "Depreciation Slip Submitted?", type: "yesno" },
+    { name: "satisfaction_voucher_submitted", label: "Satisfaction Voucher Submitted?", type: "yesno" },
+    { name: "documents_submit_date", label: "Documents Submit Date", type: "date" },
+    { name: "payment_received_date", label: "Payment Received Date", type: "date" },
+    { name: "payment_received_amount", label: "Amount Received", type: "number" },
   ],
 };
 
@@ -115,7 +117,7 @@ const requiredFields: Record<string, string[]> = {
   billing: ["bill_date", "bill_amount"],
   delivery_order: ["assessment_received", "do_date", "do_amount"],
   vehicle_delivery: ["vehicle_received"],
-  payment_encashment: ["payment_received_date", "payment_received_amount"],
+  payment_encashment: ["depreciation_slip_submitted", "satisfaction_voucher_submitted", "payment_received_date", "payment_received_amount"],
 };
 
 const fieldAliases: Record<string, string[]> = {
@@ -140,6 +142,9 @@ const fieldAliases: Record<string, string[]> = {
   do_date: ["do_date", "delivery_order_date"],
   do_amount: ["do_amount", "delivery_order_amount"],
   vehicle_received: ["vehicle_received", "delivery_status", "status"],
+  depreciation_slip_submitted: ["depreciation_slip_submitted", "depreciation_submitted"],
+  satisfaction_voucher_submitted: ["satisfaction_voucher_submitted", "satisfaction_submitted", "satisfaction_status"],
+  documents_submit_date: ["documents_submit_date", "document_submit_date", "documents_submitted_date"],
   payment_received_date: ["payment_received_date", "settlement_date"],
   payment_received_amount: ["payment_received_amount", "settlement_amount"],
 };
@@ -300,7 +305,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
             <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
-            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-1" : "lg:grid-cols-4"}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-1" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
@@ -323,10 +328,11 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                     </fieldset>
                   );
                 }
+                const useAppDatePicker = field.type === "date" && ((selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") || selected.key === "payment_encashment");
                 return (
                   <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
                     {field.label}{required && !field.label.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
-                    {(selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") ? (
+                    {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} />
                     ) : field.type === "select" ? (
                       <select name={field.name} defaultValue={value} required={required} className="mt-1 h-9 w-full rounded-md border border-[#D9E3F0] bg-white px-2 text-[12px] font-medium normal-case tracking-normal text-[#071D49] outline-none focus:border-[#174EA6]">
