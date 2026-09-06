@@ -97,7 +97,7 @@ export async function unregisterPartnerPushDevice() {
     const configuredProjectId = Constants.expoConfig?.extra?.eas?.projectId;
     if (configuredProjectId !== PARTNER_PROJECT_ID) return;
     const pushToken = await Notifications.getExpoPushTokenAsync({ projectId: PARTNER_PROJECT_ID });
-    await partnerPushDeviceRequest({ action: 'unregister', expo_push_token: pushToken.data });
+    await partnerPushDeviceRequest({ action: 'unregister', expo_push_token: pushToken.data }, 1500);
   } catch {
     // Sign-out must continue even when push cleanup is unavailable.
   }
@@ -130,20 +130,27 @@ export function observePartnerNotificationResponses(onPath: (path: string) => vo
   });
 }
 
-async function partnerPushDeviceRequest(body: Record<string, unknown>) {
+async function partnerPushDeviceRequest(body: Record<string, unknown>, timeoutMs = 10000) {
   const session = await getCurrentSession();
   if (!session?.access_token) throw new Error('Your session has expired. Sign in again.');
 
-  const response = await fetch(`${portalUrl}/api/partner/push-devices`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-  const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
-  if (!response.ok || !payload?.ok) {
-    throw new Error(payload?.error || 'Partner notification registration failed.');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(`${portalUrl}/api/partner/push-devices`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    const payload = await response.json().catch(() => null) as { ok?: boolean; error?: string } | null;
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.error || 'Partner notification registration failed.');
+    }
+  } finally {
+    clearTimeout(timeout);
   }
 }
