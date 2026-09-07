@@ -4,8 +4,9 @@ import { Camera, FileText, ShieldCheck, Truck } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
-import { finalDocumentTabs } from "./final-document-groups";
+import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, submitFinalDocumentsDraft, uploadFinalDocument, verifyFinalDocument } from "./final-documents-actions";
+import { classifyStage3BulkAttachment, loadStage3UnclassifiedAttachments, type Stage3UnclassifiedAttachment } from "./stage3-bulk-classify-actions";
 
 export type FinalDocumentRowV2 = {
   groupIndex: number;
@@ -47,6 +48,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [unclassifiedAttachments, setUnclassifiedAttachments] = useState<Stage3UnclassifiedAttachment[]>([]);
+  const [classifications, setClassifications] = useState<Record<string, string>>({});
   const [details, setDetails] = useState<ClaimIntimationDetails>({
     claim_intimation_date: dealershipDetails?.contact_person_name ?? "",
     dealership_name: dealershipDetails?.dealership_name ?? "",
@@ -59,8 +62,10 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
 
   useEffect(() => {
     let cancelled = false;
-    loadFinalClaimIntimationDetails(claimId).then((response) => {
-      if (!cancelled && response.ok && response.details) setDetails(response.details);
+    Promise.all([loadFinalClaimIntimationDetails(claimId), loadStage3UnclassifiedAttachments(claimId)]).then(([detailsResponse, attachmentResponse]) => {
+      if (cancelled) return;
+      if (detailsResponse.ok && detailsResponse.details) setDetails(detailsResponse.details);
+      if (attachmentResponse.ok) setUnclassifiedAttachments(attachmentResponse.attachments ?? []);
     });
     return () => { cancelled = true; };
   }, [claimId]);
@@ -81,14 +86,37 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
     return formData;
   }
 
-  function run(label: string, action: () => Promise<ActionResult>) {
+  function run(label: string, action: () => Promise<ActionResult>, onSuccess?: () => void) {
     setResult(null);
     setPendingAction(label);
     startTransition(async () => {
       const response = await action();
       setResult(response);
       setPendingAction(null);
-      if (response.ok) setTimeout(() => router.refresh(), 0);
+      if (response.ok) {
+        onSuccess?.();
+        setTimeout(() => router.refresh(), 0);
+      }
+    });
+  }
+
+  function classifyAttachment(documentId: string) {
+    const documentType = classifications[documentId] ?? "";
+    if (!documentType) {
+      setResult({ ok: false, message: "Choose a document category before classifying." });
+      return;
+    }
+    const formData = new FormData();
+    formData.set("claimId", claimId);
+    formData.set("documentId", documentId);
+    formData.set("documentType", documentType);
+    run(`classify-${documentId}`, () => classifyStage3BulkAttachment(formData), () => {
+      setUnclassifiedAttachments((current) => current.filter((item) => item.id !== documentId));
+      setClassifications((current) => {
+        const next = { ...current };
+        delete next[documentId];
+        return next;
+      });
     });
   }
 
@@ -154,6 +182,31 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
         </div>
       </section>
 
+      {unclassifiedAttachments.length ? (
+        <section className="rounded-2xl border border-amber-200 bg-white px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-[16px] font-semibold text-[#071D49]">Unclassified Claim Attachments</h2>
+              <p className="text-[12px] text-[#6E5A2B]">Assign each bulk-uploaded file to the correct verification category before verifying it.</p>
+            </div>
+            <span className="rounded-full border border-amber-200 bg-white px-2 py-1 text-[11px] font-semibold text-amber-800">{unclassifiedAttachments.length} pending</span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {unclassifiedAttachments.map((document) => (
+              <div key={document.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-100 bg-white px-3 py-2">
+                <span className="min-w-0 flex-1 truncate text-[12px] font-semibold text-[#071D49]">{document.fileName}</span>
+                <a href={document.viewUrl} target="_blank" rel="noreferrer" className="text-[11px] font-semibold text-[#174EA6]">Preview</a>
+                <select value={classifications[document.id] ?? ""} onChange={(event) => setClassifications((current) => ({ ...current, [document.id]: event.target.value }))} className="h-8 rounded-md border border-[#B8C5D6] bg-white px-2 text-[11px] font-medium text-[#071D49]">
+                  <option value="" disabled>Assign category</option>
+                  {finalDocumentDefinitions.map((definition) => <option key={definition.type} value={definition.type}>{definition.name}</option>)}
+                </select>
+                <button type="button" disabled={isPending && pendingAction === `classify-${document.id}`} onClick={() => classifyAttachment(document.id)} className="h-8 rounded-md bg-[#071D49] px-3 text-[11px] font-semibold text-white disabled:opacity-60">{isPending && pendingAction === `classify-${document.id}` ? "Classifying..." : "Classify"}</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-[#DFE8F4] bg-white px-4 py-3 shadow-[0_10px_24px_rgba(7,29,73,0.04)]">
         <div className="mb-3 flex items-center justify-between gap-4">
           <h1 className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[#071D49]">Document Verification</h1>
@@ -171,7 +224,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
   );
 }
 
-function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: { claimId: string; row: FinalDocumentRowV2; isPending: boolean; pendingAction: string | null; run: (label: string, action: () => Promise<ActionResult>) => void; refresh: () => void }) {
+function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: { claimId: string; row: FinalDocumentRowV2; isPending: boolean; pendingAction: string | null; run: (label: string, action: () => Promise<ActionResult>, onSuccess?: () => void) => void; refresh: () => void }) {
   function upload(file: File) {
     run(`upload-${row.type}`, () => {
       const formData = new FormData();
