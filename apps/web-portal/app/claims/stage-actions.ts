@@ -21,6 +21,11 @@ type ManagedClaim = {
   claim_service_mode: "broker_managed" | "self_managed";
 };
 
+type StageDetailsRow = {
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
+
 const orderedStageKeys: readonly OperationsStageKey[] = [
   "spot_status",
   "claim_intimation",
@@ -118,6 +123,27 @@ function stageHistoryNote(formData: FormData, stageKey: OperationsStageKey) {
   return `Surveyor details — Name: ${surveyorName} | Email: ${surveyorEmail} | Number: ${surveyorPhone}`;
 }
 
+function spotSurveyorUpdateNote(formData: FormData) {
+  const surveyorName = textValue(formData, "surveyor_name") ?? "Not provided";
+  const surveyorEmail = textValue(formData, "surveyor_email") ?? "Not provided";
+  const surveyorPhone = textValue(formData, "surveyor_phone") ?? "Not provided";
+  return `Spot surveyor details updated — Name: ${surveyorName} | Email: ${surveyorEmail} | Number: ${surveyorPhone}`;
+}
+
+function detailText(details: Record<string, unknown> | null | undefined, key: string) {
+  const value = details?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function spotSurveyorDetailsChanged(previousDetails: Record<string, unknown> | null | undefined, formData: FormData) {
+  const nextName = textValue(formData, "surveyor_name") ?? "";
+  const nextEmail = textValue(formData, "surveyor_email") ?? "";
+  const nextPhone = textValue(formData, "surveyor_phone") ?? "";
+  return detailText(previousDetails, "surveyor_name") !== nextName
+    || detailText(previousDetails, "surveyor_email") !== nextEmail
+    || detailText(previousDetails, "surveyor_phone") !== nextPhone;
+}
+
 export async function completeClaimJourneyStage(claimId: string, formData: FormData) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -161,6 +187,22 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   const vehicleDeliveryReady = stageKey !== "vehicle_delivery" || booleanValue(formData, "vehicle_received");
   const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey && vehicleDeliveryReady;
   const nextStatus = completionTargets[stageKey];
+  const completedSpotStatusEdit = stageKey === "spot_status" && (terminal || targetIndex < activeIndex);
+  let notifySpotStatusEdit = false;
+
+  if (completedSpotStatusEdit) {
+    const { data: previousSpotStatus, error: previousSpotStatusError } = await supabase
+      .from("claim_stage_details")
+      .select("details,created_at")
+      .eq("claim_id", claimId)
+      .eq("stage", detailStageStatus.spot_status)
+      .eq("details->>milestone_key", "spot_status")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<StageDetailsRow>();
+    if (previousSpotStatusError) throw new Error(previousSpotStatusError.message);
+    notifySpotStatusEdit = spotSurveyorDetailsChanged(previousSpotStatus?.details, formData);
+  }
 
   const { error: detailError } = await supabase.from("claim_stage_details").insert({
     claim_id: claimId,
@@ -171,6 +213,17 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   if (detailError) throw new Error(detailError.message);
 
   if (!shouldAdvance) {
+    if (notifySpotStatusEdit) {
+      const { error: historyError } = await supabase.from("claim_status_history").insert({
+        claim_id: claimId,
+        from_status: claim.current_status,
+        to_status: claim.current_status,
+        notes: spotSurveyorUpdateNote(formData),
+        changed_by: profile?.id ?? null,
+      });
+      if (historyError) throw new Error(historyError.message);
+    }
+
     revalidatePath(`/claims/${claimId}`);
     revalidatePath("/claims");
     revalidatePath("/dashboard");
