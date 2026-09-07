@@ -154,6 +154,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-policy-ocr-reviewer-tasks.yml"
             echo "Policy OCR reviewer task migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-policy-ocr-reviewer-tasks.yml"
+            echo "Policy OCR training orchestrator migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-initial-document-submission-persistence.yml"
             echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."

@@ -8,6 +8,7 @@ on:
     paths:
       - 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql'
       - 'supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql'
+      - 'supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql'
       - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
 
 permissions:
@@ -80,3 +81,25 @@ jobs:
 
       - name: Record worker assignment compatibility migration
         run: supabase migration repair --linked --status applied 20260907150000
+
+      - name: Apply bounded OCR training orchestrator migration
+        run: supabase db query --linked --file supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql
+
+      - name: Record bounded OCR training orchestrator migration
+        run: supabase migration repair --linked --status applied 20260907170000
+
+      - name: Verify bounded OCR orchestrator schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.policy_ocr_training_orchestrators') is not null as orchestrators_ready,
+              to_regclass('public.policy_ocr_training_samples') is not null as samples_ready,
+              to_regclass('public.policy_ocr_training_change_proposals') is not null as proposals_ready,
+              not has_table_privilege('authenticated','public.policy_ocr_training_orchestrators','SELECT') as orchestrators_private
+          ")
+          echo "$result"
+          for key in orchestrators_ready samples_ready proposals_ready orchestrators_private; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done

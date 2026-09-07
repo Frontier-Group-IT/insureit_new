@@ -170,7 +170,8 @@ begin
       status, attempt_count, lease_token, lease_expires_at
     )
     select p_orchestrator_id, r.label_id, r.insurer_name, r.product_family, r.layout_family,
-           case when r.family_rank <= 3 then 'fresh_sibling' else 'train' end,
+           case when right(r.label_id::text, 1) = '0' then 'holdout'
+                when r.family_rank <= 3 then 'fresh_sibling' else 'train' end,
            'processing', 1, gen_random_uuid(),
            now() + make_interval(mins => greatest(2, least(coalesce(p_lease_minutes, 4), 10)))
     from ranked r
@@ -213,7 +214,7 @@ begin
     from policy_ocr_training_samples
    where orchestrator_id = p_orchestrator_id;
 
-  select coalesce(bool_and(accepted_count >= 3), false)
+  select coalesce(bool_and(accepted_count >= (select min_fresh_siblings from policy_ocr_training_orchestrators where id = p_orchestrator_id)), false)
     into v_fresh_ready
     from (
       select insurer_name, layout_family,
@@ -233,6 +234,12 @@ begin
             and v_comparable > 0
             and v_matched::numeric / v_comparable >= min_field_accuracy
             and v_wrong_financial = 0
+            and not exists (
+              select 1 from policy_ocr_training_samples h
+               where h.orchestrator_id = p_orchestrator_id
+                 and h.sample_kind = 'holdout'
+                 and h.status in ('rejected','withheld','review_required','exhausted')
+            )
             and v_fresh_ready
            then 'awaiting_satisfaction'
            else status
