@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql'
+      - 'supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql'
       - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
 
 permissions:
@@ -73,3 +74,9 @@ jobs:
           for key in tasks_ready notifications_ready tasks_private notifications_private; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
           done
+
+      - name: Apply worker assignment compatibility migration
+        run: supabase db query --linked --file supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql
+
+      - name: Record worker assignment compatibility migration
+        run: supabase migration repair --linked --status applied 202609071500

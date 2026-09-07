@@ -1,0 +1,30 @@
+name: Run policy OCR worker
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  process:
+    name: Process queued policy copies
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Call protected Vercel worker
+        env:
+          WORKER_URL: https://portal.insureit.in/api/internal/policy-ocr/worker
+          WORKER_SECRET: ${{ secrets.POLICY_OCR_WORKER_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$WORKER_SECRET"
+          curl --fail-with-body --silent --show-error \
+            --retry 2 --retry-delay 5 \
+            -X POST "$WORKER_URL" \
+            -H "content-type: application/json" \
+            -H "x-insureit-policy-ocr-worker-secret: $WORKER_SECRET" \
+            --data '{"limit":2}'
