@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql'
       - 'supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql'
       - 'supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql'
+      - 'supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql'
       - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
 
 permissions:
@@ -110,3 +111,9 @@ jobs:
 
       - name: Record OCR orchestrator claim fix
         run: supabase migration repair --linked --status applied 20260907180000
+
+      - name: Apply simplified OCR orchestrator claim
+        run: supabase db query --linked --file supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql
+
+      - name: Record simplified OCR orchestrator claim
+        run: supabase migration repair --linked --status applied 20260907190000
