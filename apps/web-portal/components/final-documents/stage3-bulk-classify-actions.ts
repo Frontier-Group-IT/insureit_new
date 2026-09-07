@@ -6,7 +6,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 
 const BULK_DOCUMENT_TYPE = "Additional Claim Document";
-const allowedTypes = new Set(CLAIM_INTIMATION_DOCUMENT_GROUPS.flatMap((group) => group.documents.map((document) => document.type)));
+const allowedTypes = new Set<string>(CLAIM_INTIMATION_DOCUMENT_GROUPS.flatMap((group) => group.documents.map((document) => document.type)));
 
 type ActionResult = { ok: boolean; message?: string };
 export type Stage3UnclassifiedAttachment = { id: string; fileName: string; viewUrl: string };
