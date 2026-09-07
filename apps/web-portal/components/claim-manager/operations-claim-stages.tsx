@@ -166,7 +166,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
   const selectedAvailable = journeyComplete || selectedIndex <= activeIndex;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
-  const detail = details.find((row) => row.details?.milestone_key === selected.key || (selected.statuses as readonly string[]).includes(row.stage ?? ""));
+  const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
+  const detail = selectedDetails[0];
   const spotDetail = details.find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
   const managerNext = managerTransitions[currentStatus];
   const stageTarget = stageCompletionTargets[selected.key];
@@ -312,7 +313,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
             <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
-                const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(details, detail, field.name) : fieldValue(details, detail, field.name);
+                const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
                 const required = requiredFields[selected.key]?.includes(field.name);
                 if (field.type === "yesno") {
                   const yesChecked = value === "true" || value === "yes";
@@ -379,9 +380,21 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   );
 }
 
-function fieldValue(details: StageDetail[], detail: StageDetail | undefined, fieldName: string) {
+function stageOwnedDetails(details: StageDetail[], stageKey: StageKey, statuses: readonly string[]) {
+  const explicit = details.filter((row) => row.details?.milestone_key === stageKey);
+  if (explicit.length) return explicit;
+
+  return details.filter((row) => {
+    const milestoneKey = row.details?.milestone_key;
+    if (typeof milestoneKey === "string" && milestoneKey.trim()) return false;
+    const verificationType = row.details?.verification_type;
+    if (typeof verificationType === "string" && verificationType.trim()) return false;
+    return statuses.includes(row.stage ?? "");
+  });
+}
+
+function fieldValue(candidates: StageDetail[], fieldName: string) {
   const aliases = fieldAliases[fieldName] ?? [fieldName];
-  const candidates = detail ? [detail, ...details.filter((row) => row !== detail)] : details;
   for (const row of candidates) {
     for (const alias of aliases) {
       const value = row.details?.[alias];
