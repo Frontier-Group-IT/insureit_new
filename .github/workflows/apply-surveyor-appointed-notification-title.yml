@@ -53,16 +53,26 @@ jobs:
         run: |
           set -euo pipefail
           function_result=$(supabase db query --linked --output-format json "
-            select pg_get_functiondef('public.create_claim_status_notifications'::regproc) like '%Surveyor Appointed%' as function_ready
+            select
+              pg_get_functiondef('public.create_claim_status_notifications'::regproc) like '%Surveyor Appointed%' as appointed_ready,
+              pg_get_functiondef('public.create_claim_status_notifications'::regproc) like '%Surveyor Updated%' as updated_ready
           ")
           echo "$function_result"
-          echo "$function_result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$function_result" | grep -Eq '"appointed_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$function_result" | grep -Eq '"updated_ready"[[:space:]]*:[[:space:]]*true'
 
           stale_result=$(supabase db query --linked --output-format json "
-            select count(*)::int as stale_count
+            select
+              count(*) filter (
+                where message ~* '^Surveyor details[[:space:]]*[—-]'
+                  and title ~* 'Initial Documents Submitted[[:space:]]+to[[:space:]]+Final Documents Awaited$'
+              )::int as stale_appointments,
+              count(*) filter (
+                where message ~* '^Spot surveyor details updated[[:space:]]*[—-]'
+                  and title ~* 'Final Documents Awaited$'
+              )::int as stale_updates
             from public.notifications
-            where message ~* '^Surveyor details[[:space:]]*[—-]'
-              and title ~* 'Initial Documents Submitted[[:space:]]+to[[:space:]]+Final Documents Awaited$'
           ")
           echo "$stale_result"
-          echo "$stale_result" | grep -Eq '"stale_count"[[:space:]]*:[[:space:]]*0'
+          echo "$stale_result" | grep -Eq '"stale_appointments"[[:space:]]*:[[:space:]]*0'
+          echo "$stale_result" | grep -Eq '"stale_updates"[[:space:]]*:[[:space:]]*0'
