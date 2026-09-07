@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   process:
-    name: Process queued policy copies
+    name: Process bounded OCR training sample
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -18,13 +18,15 @@ jobs:
         env:
           WORKER_URL: https://portal.insureit.in/api/internal/policy-ocr/worker
           WORKER_SECRET: ${{ secrets.POLICY_OCR_WORKER_SECRET }}
+          ORCHESTRATOR_ID: ${{ secrets.POLICY_OCR_ORCHESTRATOR_ID }}
         shell: bash
         run: |
           set -euo pipefail
           test -n "$WORKER_SECRET"
+          test -n "$ORCHESTRATOR_ID"
           curl --fail-with-body --silent --show-error \
             --retry 2 --retry-delay 5 \
             -X POST "$WORKER_URL" \
             -H "content-type: application/json" \
             -H "x-insureit-policy-ocr-worker-secret: $WORKER_SECRET" \
-            --data '{"limit":2}'
+            --data "{\"limit\":25,\"orchestrator_id\":\"$ORCHESTRATOR_ID\"}"

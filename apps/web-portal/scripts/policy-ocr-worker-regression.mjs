@@ -11,11 +11,15 @@ const workflow = fs.readFileSync(path.join(root, "../../.github/workflows/policy
 assert.match(route, /POLICY_OCR_WORKER_SECRET/);
 assert.match(route, /timingSafeEqual/);
 assert.match(route, /x-vercel-oidc-token/);
-assert.match(route, /processPolicyOcrTrainingWorkerBatch/);
+assert.match(route, /processPolicyOcrTrainingOrchestratorBatch/);
+assert.match(route, /POLICY_OCR_ORCHESTRATOR_ENABLED/);
+assert.match(route, /POLICY_OCR_ORCHESTRATOR_ID/);
 assert.match(workflow, /schedule:/);
 assert.match(workflow, /POLICY_OCR_WORKER_SECRET/);
+assert.match(workflow, /POLICY_OCR_ORCHESTRATOR_ID/);
 assert.match(actions, /claim_policy_ocr_training_jobs/);
 assert.match(actions, /ensureAutomaticPolicyOcrReview/);
+assert.match(actions, /claim_policy_ocr_orchestrator_samples/);
 assert.match(automation, /comparison\.exactMatch && !hasAmbiguity/);
 assert.match(automation, /anju@insureit\.in/);
 assert.match(automation, /it@insureit\.in/);

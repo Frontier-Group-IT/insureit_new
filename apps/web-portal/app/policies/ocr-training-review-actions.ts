@@ -29,6 +29,7 @@ type ReviewTask = {
   assigned_reviewer_profile_id: string;
   assignment_version: number;
   status: "assigned" | "in_review" | "completed" | "rejected" | "cancelled";
+  field_questions?: Array<{ key: string; issue: string; prompt: string; allowedAnswers: string[] }>;
 };
 
 function formText(formData: FormData, key: string) {
@@ -239,18 +240,39 @@ export async function completePolicyOcrReviewTask(
     const task = await loadAssignedTask(formText(formData, "review_task_id"), viewer.profile.id);
     if (["completed", "rejected", "cancelled"].includes(task.status)) throw new Error("This reviewer task is no longer open.");
     const checklist = Object.fromEntries(REVIEW_CHECKLIST.map((key) => [key, formData.get(`check_${key}`) === "on"]));
-    if (REVIEW_CHECKLIST.some((key) => !checklist[key])) {
+    if (!task.field_questions?.length && REVIEW_CHECKLIST.some((key) => !checklist[key])) {
       throw new Error("Complete every checklist item after verifying the private policy copy.");
+    }
+    const structuredAnswers = Object.fromEntries((task.field_questions ?? []).map((question) => {
+      const answer = formText(formData, `answer_${question.key}`);
+      if (!answer || !question.allowedAnswers.includes(answer)) throw new Error(`Choose an answer for ${question.key}.`);
+      const correctValue = answer === "provide_correct_value"
+        ? sanitizeTrainingFeedbackValue(formText(formData, `correct_value_${question.key}`))
+        : null;
+      if (answer === "provide_correct_value" && !correctValue) throw new Error(`Enter a sanitized value for ${question.key}, or choose withhold.`);
+      return [question.key, { answer, correctValue }];
+    }));
+    if (task.field_questions?.length && Object.keys(structuredAnswers).length !== task.field_questions.length) {
+      throw new Error("Complete every field-level OCR question.");
     }
     const note = sanitizeReviewerNote(formText(formData, "reviewer_note"));
     const { data: updated, error } = await createSupabaseAdminClient()
       .from("policy_ocr_training_review_tasks")
-      .update({ status: "completed", checklist, reviewer_note: note, started_at: task.status === "assigned" ? new Date().toISOString() : undefined, completed_at: new Date().toISOString() })
+      .update({ status: "completed", checklist, reviewer_note: note, structured_feedback: Object.keys(structuredAnswers).length ? structuredAnswers : null, started_at: task.status === "assigned" ? new Date().toISOString() : undefined, completed_at: new Date().toISOString() })
       .eq("id", task.id)
       .eq("assigned_reviewer_profile_id", viewer.profile.id)
       .select("id")
       .maybeSingle<{ id: string }>();
     if (error || !updated) throw new Error("The reviewer checklist could not be saved.");
+    if (Object.keys(structuredAnswers).length) {
+      const feedback = Object.fromEntries(Object.entries(structuredAnswers).map(([key, value]) => [key, value.correctValue ? { answer: value.answer, value: value.correctValue } : { answer: value.answer }]));
+      await createSupabaseAdminClient().from("policy_ocr_training_feedback").upsert({
+        review_task_id: task.id,
+        reviewer_profile_id: viewer.profile.id,
+        answers: structuredAnswers,
+        sanitized_evidence: feedback,
+      }, { onConflict: "review_task_id" });
+    }
     revalidatePath(QUEUE_PATH);
     return { status: "success", message: "Checklist completed. The sanitized training approval remains with the authorized operator." };
   } catch (error) {
@@ -262,12 +284,26 @@ async function loadAssignedTask(taskId: string | null, profileId: string): Promi
   if (!taskId) throw new Error("Reviewer task reference is missing.");
   const { data, error } = await createSupabaseAdminClient()
     .from("policy_ocr_training_review_tasks")
-    .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status")
+    .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,field_questions")
     .eq("id", taskId)
     .eq("assigned_reviewer_profile_id", profileId)
     .maybeSingle<ReviewTask>();
   if (error || !data) throw new Error("This reviewer task is not assigned to your portal user.");
   return data;
+}
+
+function sanitizeTrainingFeedbackValue(value: string | null) {
+  if (!value) return null;
+  const sanitized = value
+    .replace(/\b[\w.+-]+@[\w.-]+\.[A-Z]{2,}\b/gi, "[redacted]")
+    .replace(/\b(?:\+?91[-\s]?)?[6-9]\d{9}\b/g, "[redacted]")
+    .replace(/\b[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}\b/gi, "[redacted]")
+    .replace(/\b[A-Z0-9]{16,}\b/gi, "[redacted]")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120);
+  return sanitized || null;
 }
 
 async function resolveExistingPortalReviewer(admin: ReturnType<typeof createSupabaseAdminClient>, email: string) {

@@ -1502,3 +1502,11 @@ No implementation beyond documentation was performed in this decision-lock step.
 **DEPLOYED:** The production deployment workflow completed successfully in run `33730265587`; `https://portal.insureit.in` returned HTTP 200 afterward. PR #1134 (`b312239d92c4b056b9ca19f72b67895b8b15375d`) fixed the deploy gate to recognize manually dispatched schema workflow runs before deployment.
 
 Remaining operator verification: refresh the affected Spot Survey claim, click **Finalize verification**, confirm `Initial Documents Verified`, then verify surveyor deputation can be opened and saved.
+
+## Controlled policy OCR training orchestrator — 2026-09-07
+
+**IMPLEMENTED / NOT APPLIED / NOT DEPLOYED:** the prior broad worker path is now guarded by `POLICY_OCR_ORCHESTRATOR_ENABLED` and the protected endpoint requires a configured `POLICY_OCR_ORCHESTRATOR_ID`. The scheduled workflow submits a bounded batch (maximum 25) only for a durable running orchestrator iteration; it does not process the entire OCR backlog.
+
+Migration `20260907170000_policy_ocr_training_orchestrator.sql` adds durable iteration state, top-ten insurer-volume sampling, product/layout strata, train/holdout/fresh-sibling sample kinds, leases, retry counters, structured reviewer questions/feedback, sanitized change proposals, satisfaction task fields and service-role claim RPC `claim_policy_ocr_orchestrator_samples`. Fresh-sibling and acceptance rules are represented in `apps/web-portal/lib/policy-ocr-orchestrator.ts`; no parser source is modified, merged or deployed by the worker.
+
+Automated non-exact comparisons create/reuse Anju tasks with field-level questions; notification text remains metadata-only and BCCs `it@insureit.in`. Reviewer answers are sanitized before feedback persistence. Candidate proposal and IT Super User approval actions are explicit and separate from training approval. The workflow remains **BLOCKED** until the migration is applied, a running orchestrator UUID is created, `POLICY_OCR_WORKER_SECRET`, `POLICY_OCR_ORCHESTRATOR_ID`, `POLICY_OCR_ORCHESTRATOR_ENABLED=true`, Google OIDC/WIF configuration and Resend configuration are intentionally configured. No production deployment or real email was performed.

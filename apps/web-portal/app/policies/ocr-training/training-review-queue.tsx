@@ -16,6 +16,7 @@ type ReviewTask = {
   reviewer_note: string | null;
   assigned_at: string;
   completed_at: string | null;
+  field_questions: Array<{ key: string; issue: string; prompt: string; allowedAnswers: string[] }>;
   policy_ocr_training_review_notifications: Array<{ status: "pending" | "sent" | "failed"; attempts: number; sent_at: string | null }> | null;
 };
 
@@ -282,6 +283,21 @@ function ReviewerChecklistForm({ task }: { task: ReviewTask }) {
               </label>
             ))}
           </div>
+          {task.field_questions?.length ? (
+            <div className="space-y-3 rounded-xl border border-violet-200 bg-white p-3">
+              <p className="text-xs font-black uppercase tracking-wide text-violet-900">Field-level questions</p>
+              {task.field_questions.map((question) => (
+                <div key={question.key} className="rounded-lg border border-slate-200 p-2">
+                  <p className="text-xs font-semibold text-slate-800">{question.prompt}</p>
+                  <select name={`answer_${question.key}`} required defaultValue="" className="mt-2 h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900">
+                    <option value="" disabled>Select an answer</option>
+                    {question.allowedAnswers.map((answer) => <option key={answer} value={answer}>{answer.replaceAll("_", " ")}</option>)}
+                  </select>
+                  <input name={`correct_value_${question.key}`} maxLength={120} className="mt-2 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs text-slate-900" placeholder="Only if providing a corrected sanitized value (no identifiers)" />
+                </div>
+              ))}
+            </div>
+          ) : null}
           <label className="block text-xs font-semibold text-violet-950">
             Optional safe review note
             <textarea name="reviewer_note" defaultValue={task.reviewer_note ?? ""} maxLength={500} className="mt-1 min-h-16 w-full rounded-lg border border-violet-200 bg-white p-2 text-sm font-normal text-slate-900" placeholder="Do not include policy, vehicle or customer identifiers." />

@@ -141,6 +141,8 @@ jobs:
         run: npm run policy-ocr:training-workflow-regression
       - name: Protected policy OCR worker regression
         run: npm run policy-ocr:worker-regression
+      - name: Controlled OCR orchestrator regression
+        run: npm run policy-ocr:orchestrator-regression
       - name: Typecheck
         run: npm run typecheck
       - name: Lint

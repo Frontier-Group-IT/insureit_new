@@ -3,6 +3,7 @@ import { requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access
 import type { TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
+import { recordPolicyOcrSatisfaction } from "../ocr-training-orchestrator-actions";
 
 type TrainingDocumentRow = {
   id: string;
@@ -77,6 +78,7 @@ type ReviewTaskRow = {
   reviewer_note: string | null;
   assigned_at: string;
   completed_at: string | null;
+  field_questions: Array<{ key: string; issue: string; prompt: string; allowedAnswers: string[] }>;
   policy_ocr_training_review_notifications: Array<{
     status: "pending" | "sent" | "failed";
     attempts: number;
@@ -108,7 +110,7 @@ export default async function PolicyOcrTrainingPage() {
   if (labelIds.length) {
     let taskQuery = admin
       .from("policy_ocr_training_review_tasks")
-      .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,checklist,reviewer_note,assigned_at,completed_at,policy_ocr_training_review_notifications(status,attempts,sent_at)")
+      .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,checklist,reviewer_note,assigned_at,completed_at,field_questions,policy_ocr_training_review_notifications(status,attempts,sent_at)")
       .in("training_label_id", labelIds);
     taskQuery = taskQuery.neq("status", "cancelled");
     if (!viewer.isOperator) taskQuery = taskQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
@@ -116,6 +118,14 @@ export default async function PolicyOcrTrainingPage() {
     reviewTasks = tasks ?? [];
   }
   const taskByLabelId = new Map(reviewTasks.map((task) => [task.training_label_id, task]));
+  const { data: satisfactionTasks } = !viewer.isOperator
+    ? await admin.from("policy_ocr_training_review_tasks")
+      .select("id,status")
+      .eq("assigned_reviewer_profile_id", viewer.profile.id)
+      .eq("task_type", "satisfaction")
+      .eq("status", "assigned")
+      .returns<Array<{ id: string; status: string }>>()
+    : { data: [] as Array<{ id: string; status: string }> };
 
   const rows = (data ?? []).flatMap<TrainingQueueRow>((document) => {
     const label = Array.isArray(document.policy_ocr_training_labels)
@@ -200,7 +210,21 @@ export default async function PolicyOcrTrainingPage() {
           The premium OCR reviewer queue is temporarily unavailable.
         </div>
       ) : (
-        <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} />
+        <>
+          {satisfactionTasks?.length ? <form action={recordPolicyOcrSatisfaction} className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <input type="hidden" name="review_task_id" value={satisfactionTasks[0].id} />
+            <p className="text-sm font-bold text-emerald-900">Fresh-policy satisfaction check</p>
+            <p className="mt-1 text-xs text-emerald-800">Upload/check a fresh policy copy in the protected workflow, then record whether the result meets your expectations.</p>
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold text-emerald-950">Result
+                <select name="satisfied" defaultValue="" required className="mt-1 block h-9 rounded-lg border border-emerald-300 bg-white px-2 text-xs"><option value="" disabled>Select</option><option value="yes">Satisfied</option><option value="no">Not satisfied</option></select>
+              </label>
+              <input name="note" maxLength={500} placeholder="Safe note; no identifiers" className="h-9 min-w-64 rounded-lg border border-emerald-300 bg-white px-2 text-xs" />
+              <button className="h-9 rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white">Record satisfaction</button>
+            </div>
+          </form> : null}
+          <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} />
+        </>
       )}
     </AppShell>
   );
