@@ -148,6 +148,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907004500_external_renewal_terminal_state_guard.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-terminal-state-guard.yml"
             echo "External renewal terminal-state guard migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260907010000_external_renewal_reporting.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-external-renewal-reporting.yml"
+            echo "External renewal reporting migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-initial-document-submission-persistence.yml"
             echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."
