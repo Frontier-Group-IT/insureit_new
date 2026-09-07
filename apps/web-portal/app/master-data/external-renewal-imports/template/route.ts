@@ -71,7 +71,7 @@ export async function GET() {
   XLSX.utils.book_append_sheet(workbook, renewalSheet, "External Renewals");
 
   const output = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
-  return new Response(output, {
+  return new Response(new Uint8Array(output), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": 'attachment; filename="INSUREIT_External_Renewal_Import_Template.xlsx"',
