@@ -4,6 +4,7 @@ import { type QueueClaimRow } from "@/components/claim-manager/claim-queue-table
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { operationsQueueForKey } from "@/lib/claim-workflow";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
@@ -36,7 +37,10 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   const afterAuth = performance.now();
   if (!profile?.id) redirect("/access-denied");
 
-  const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_claims");
+  const [accessibleCustomerIds, canAddClaim] = await Promise.all([
+    getAccessibleCustomerIds(profile.id, profile.role, "view_claims"),
+    hasEffectiveCapability(profile, "manage_claims", "edit"),
+  ]);
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
 
@@ -83,7 +87,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
           }))}
         />
       ) : null}
-      <ClaimsWorkspace rows={rows} initialParams={params} loadError={error ? "The claims register is temporarily unavailable. Please refresh the page or try again shortly." : null} />
+      <ClaimsWorkspace rows={rows} initialParams={params} loadError={error ? "The claims register is temporarily unavailable. Please refresh the page or try again shortly." : null} canAddClaim={canAddClaim} />
     </ClaimManagerShell>
   );
 }
