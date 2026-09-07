@@ -89,7 +89,7 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
         </Link>
       </div>
 
-      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} row={row} canTrain={canTrain} /> : null}
+      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} canTrain={canTrain} /> : null}
 
       {!ready ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -120,36 +120,7 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
 
       {comparison ? <div className={`mt-4 rounded-xl border p-3 text-sm ${comparison.exactMatch ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>{comparison.exactMatch ? `Automatic comparison matched all ${comparison.comparableFields} stored Section 02 and Section 03 fields.` : `Automatic comparison found ${comparison.mismatchedFields} mismatches and ${comparison.missingOcrFields} OCR-missing fields across ${comparison.comparableFields} stored values.`}</div> : null}
 
-      <ComparisonSection title="Section 02 · Vehicle details">
-        {comparisonField("vehicle_registration_status", "Registration status", row.databaseReference.vehicle_registration_status, proposal.vehicle_registration_status)}
-        {comparisonField("vehicle_registration_number", "Registration number", row.databaseReference.vehicle_registration_number, proposal.vehicle_registration_number)}
-        {comparisonField("vehicle_class", "Vehicle class", row.databaseReference.vehicle_class, proposal.vehicle_class)}
-        {comparisonField("vehicle_make", "Make", row.databaseReference.vehicle_make, proposal.vehicle_make)}
-        {comparisonField("vehicle_model", "Model", row.databaseReference.vehicle_model, proposal.vehicle_model)}
-        {comparisonField("vehicle_fuel_type", "Fuel type", row.databaseReference.vehicle_fuel_type, proposal.vehicle_fuel_type)}
-        {comparisonField("vehicle_manufacturing_year", "Manufacturing year", row.databaseReference.vehicle_manufacturing_year, proposal.vehicle_manufacturing_year)}
-        {comparisonField("vehicle_capacity", "Class-aware capacity", row.databaseReference.vehicle_capacity, proposal.vehicle_capacity)}
-        {comparisonField("vehicle_chassis_number", "Chassis number", row.databaseReference.vehicle_chassis_number, proposal.vehicle_chassis_number)}
-        {comparisonField("vehicle_engine_number", "Engine number", row.databaseReference.vehicle_engine_number, proposal.vehicle_engine_number)}
-        {comparisonField("vehicle_rto_name", "RTO name", row.databaseReference.vehicle_rto_name, proposal.vehicle_rto_name)}
-        {comparisonField("vehicle_rto_state", "RTO state", row.databaseReference.vehicle_rto_state, proposal.vehicle_rto_state)}
-      </ComparisonSection>
-
-      <ComparisonSection title="Section 03 · Policy and premium">
-        {comparisonField("insurer_name", "Insurer", row.databaseReference.insurer_name, proposal.insurer_name)}
-        {comparisonField("policy_product", "Policy product", row.databaseReference.policy_product, proposal.policy_product)}
-        {comparisonField("policy_number", "Policy number", row.databaseReference.policy_number, proposal.policy_number)}
-        {comparisonField("valid_from", "Valid from", row.databaseReference.valid_from, proposal.policy_start_date, true)}
-        {comparisonField("valid_upto", "Valid upto", row.databaseReference.valid_upto, proposal.policy_end_date, true)}
-        {comparisonField("idv", "IDV", row.databaseReference.idv, proposal.idv)}
-        {comparisonField("od_premium", "OD premium", row.databaseReference.od_premium, proposal.od_premium)}
-        {comparisonField("tp_premium", "TP premium", row.databaseReference.tp_premium, proposal.tp_premium)}
-        {comparisonField("cpa_opted", "CPA opted", row.databaseReference.cpa_opted, proposal.cpa_opted)}
-        {comparisonField("cpa_premium", "CPA amount", row.databaseReference.cpa_premium, proposal.cpa_premium)}
-        {comparisonField("printed_net_premium", "Printed net", row.databaseReference.printed_net_premium, proposal.total_premium)}
-        {comparisonField("printed_gst", "Printed GST", row.databaseReference.printed_gst, proposal.tax_amount)}
-        {comparisonField("printed_gross_premium", "Printed gross", row.databaseReference.printed_gross_premium, proposal.gross_premium)}
-      </ComparisonSection>
+      <ReviewerComparisonTables row={row} proposal={proposal} comparison={comparison} />
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-slate-500">Existing Section 02 and Section 03 values are the reference. Google OCR is compared against them; confirming creates one sanitized training candidate and does not overwrite the policy.</p>
@@ -157,6 +128,60 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
       </div>
     </section>
   );
+}
+
+function ReviewerComparisonTables({ row, proposal, comparison }: { row: TrainingQueueRow; proposal: TrainingProposal["fields"]; comparison: ReturnType<typeof compareTrainingProposalToReference> | null }) {
+  const task = row.reviewTask;
+  const [state, formAction, pending] = useActionState(completePolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
+  const reviewOpen = task?.status === "in_review";
+  const content = (
+    <>
+      <ComparisonSection title="Section 02 · Vehicle details">
+        {comparisonField("vehicle_registration_status", "Registration status", row.databaseReference.vehicle_registration_status, proposal.vehicle_registration_status, false, task, comparison)}
+        {comparisonField("vehicle_registration_number", "Registration number", row.databaseReference.vehicle_registration_number, proposal.vehicle_registration_number, false, task, comparison)}
+        {comparisonField("vehicle_class", "Vehicle class", row.databaseReference.vehicle_class, proposal.vehicle_class, false, task, comparison)}
+        {comparisonField("vehicle_make", "Make", row.databaseReference.vehicle_make, proposal.vehicle_make, false, task, comparison)}
+        {comparisonField("vehicle_model", "Model", row.databaseReference.vehicle_model, proposal.vehicle_model, false, task, comparison)}
+        {comparisonField("vehicle_fuel_type", "Fuel type", row.databaseReference.vehicle_fuel_type, proposal.vehicle_fuel_type, false, task, comparison)}
+        {comparisonField("vehicle_manufacturing_year", "Manufacturing year", row.databaseReference.vehicle_manufacturing_year, proposal.vehicle_manufacturing_year, false, task, comparison)}
+        {comparisonField("vehicle_capacity", "Class-aware capacity", row.databaseReference.vehicle_capacity, proposal.vehicle_capacity, false, task, comparison)}
+        {comparisonField("vehicle_chassis_number", "Chassis number", row.databaseReference.vehicle_chassis_number, proposal.vehicle_chassis_number, false, task, comparison)}
+        {comparisonField("vehicle_engine_number", "Engine number", row.databaseReference.vehicle_engine_number, proposal.vehicle_engine_number, false, task, comparison)}
+        {comparisonField("vehicle_rto_name", "RTO name", row.databaseReference.vehicle_rto_name, proposal.vehicle_rto_name, false, task, comparison)}
+        {comparisonField("vehicle_rto_state", "RTO state", row.databaseReference.vehicle_rto_state, proposal.vehicle_rto_state, false, task, comparison)}
+      </ComparisonSection>
+
+      <ComparisonSection title="Section 03 · Policy and premium">
+        {comparisonField("insurer_name", "Insurer", row.databaseReference.insurer_name, proposal.insurer_name, false, task, comparison)}
+        {comparisonField("policy_product", "Policy product", row.databaseReference.policy_product, proposal.policy_product, false, task, comparison)}
+        {comparisonField("policy_number", "Policy number", row.databaseReference.policy_number, proposal.policy_number, false, task, comparison)}
+        {comparisonField("valid_from", "Valid from", row.databaseReference.valid_from, proposal.policy_start_date, true, task, comparison)}
+        {comparisonField("valid_upto", "Valid upto", row.databaseReference.valid_upto, proposal.policy_end_date, true, task, comparison)}
+        {comparisonField("idv", "IDV", row.databaseReference.idv, proposal.idv, false, task, comparison)}
+        {comparisonField("od_premium", "OD premium", row.databaseReference.od_premium, proposal.od_premium, false, task, comparison)}
+        {comparisonField("tp_premium", "TP premium", row.databaseReference.tp_premium, proposal.tp_premium, false, task, comparison)}
+        {comparisonField("cpa_opted", "CPA opted", row.databaseReference.cpa_opted, proposal.cpa_opted, false, task, comparison)}
+        {comparisonField("cpa_premium", "CPA amount", row.databaseReference.cpa_premium, proposal.cpa_premium, false, task, comparison)}
+        {comparisonField("printed_net_premium", "Printed net", row.databaseReference.printed_net_premium, proposal.total_premium, false, task, comparison)}
+        {comparisonField("printed_gst", "Printed GST", row.databaseReference.printed_gst, proposal.tax_amount, false, task, comparison)}
+        {comparisonField("printed_gross_premium", "Printed gross", row.databaseReference.printed_gross_premium, proposal.gross_premium, false, task, comparison)}
+      </ComparisonSection>
+      {reviewOpen ? (
+        <>
+          <label className="mt-3 block text-xs font-semibold text-violet-950">
+            Optional safe review note
+            <textarea name="reviewer_note" maxLength={500} className="mt-1 min-h-16 w-full rounded-lg border border-violet-200 bg-white p-2 text-sm font-normal text-slate-900" placeholder="Do not include policy, vehicle or customer identifiers." />
+          </label>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <p className="text-xs text-violet-900">Choose one answer for every row marked Review, OCR missing, or Not stored.</p>
+            <button disabled={pending} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{pending ? "Saving answers…" : "Submit answers"}</button>
+          </div>
+          {state.message ? <p className={`mt-2 text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">{state.message}</p> : null}
+        </>
+      ) : null}
+    </>
+  );
+  return reviewOpen && task ? <form action={formAction}><input type="hidden" name="review_task_id" value={task.id} />{content}</form> : content;
 }
 
 function ComparisonSection({ title, children }: { title: string; children: ReactNode }) {
@@ -241,9 +266,8 @@ function ReviewerAssignmentForm({ labelId, task }: { labelId: string; task: Revi
 
 const INITIAL_CHECKLIST_STATE: ReviewerChecklistState = { status: "idle", message: null };
 
-function ReviewerChecklistForm({ task, row, canTrain }: { task: ReviewTask; row: TrainingQueueRow; canTrain: boolean }) {
+function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain: boolean }) {
   const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
-  const [state, formAction, pending] = useActionState(completePolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const isStarted = task.status !== "assigned" || startState.status === "success";
   if (task.status === "completed") {
     return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer questions completed. The authorized operator still controls sanitized training approval.
@@ -261,32 +285,7 @@ function ReviewerChecklistForm({ task, row, canTrain }: { task: ReviewTask; row:
           </form>
         ) : null}
       </div>
-      {isStarted ? (
-        <form action={formAction} className="mt-3 space-y-2">
-          <input type="hidden" name="review_task_id" value={task.id} />
-          {task.field_questions?.length ? (
-            <div className="space-y-3 rounded-xl border border-violet-200 bg-white p-3">
-              <p className="text-xs font-black uppercase tracking-wide text-violet-900">Field-level questions</p>
-              {task.field_questions.map((question) => (
-                <div key={question.key} className="rounded-lg border border-slate-200 p-2">
-                  <p className="text-xs font-semibold leading-5 text-slate-800">{reviewQuestionPrompt(question, row)}</p>
-                  <select name={`answer_${question.key}`} required defaultValue="" className="mt-2 h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900">
-                    <option value="" disabled>Select an answer</option>
-                    {question.allowedAnswers.map((answer) => <option key={answer} value={answer}>{answerLabel(answer)}</option>)}
-                  </select>
-                  <input name={`correct_value_${question.key}`} maxLength={120} className="mt-2 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs text-slate-900" placeholder="Only if providing a corrected sanitized value (no identifiers)" />
-                </div>
-              ))}
-            </div>
-          ) : null}
-          <label className="block text-xs font-semibold text-violet-950">
-            Optional safe review note
-            <textarea name="reviewer_note" defaultValue={task.reviewer_note ?? ""} maxLength={500} className="mt-1 min-h-16 w-full rounded-lg border border-violet-200 bg-white p-2 text-sm font-normal text-slate-900" placeholder="Do not include policy, vehicle or customer identifiers." />
-          </label>
-          <button disabled={pending} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{pending ? "Saving answers…" : "Submit answers"}</button>
-          {state.message ? <p className={`text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">{state.message}</p> : null}
-        </form>
-      ) : null}
+      {isStarted ? <p className="mt-3 text-xs text-violet-900">Choose the correct entry directly in the Section 02 and Section 03 tables below.</p> : null}
       {startState.message ? <p className="mt-2 text-xs font-semibold text-red-700" role="status">{startState.message}</p> : null}
     </div>
   );
@@ -299,38 +298,32 @@ function answerLabel(answer: string) {
         : "Withhold this value";
 }
 
-function reviewQuestionPrompt(question: ReviewTask["field_questions"][number], row: TrainingQueueRow) {
-  const key = question.key as TrainingComparisonKey;
-  const databaseValue = row.databaseReference[key];
-  const proposalKey = key === "valid_from" ? "policy_start_date" : key === "valid_upto" ? "policy_end_date" : key;
-  const ocrValue = row.proposal?.fields[proposalKey as keyof TrainingProposal["fields"]]?.value ?? null;
-  const label = question.prompt.replace(/^For (.*?):.*$/, "$1");
-
-  if (question.issue === "reference_missing") {
-    return `For ${label}: the database reference is blank, but OCR proposed "${formatQuestionValue(ocrValue)}". Is ${label} visible on the policy copy, and what is the correct value?`;
-  }
-  if (question.issue === "ocr_missing") {
-    return `For ${label}: the database reference is "${formatQuestionValue(databaseValue)}", but OCR did not produce a value. Is ${label} visible on the policy copy, and what should be extracted?`;
-  }
-  return `For ${label}: the database reference is "${formatQuestionValue(databaseValue)}", while OCR proposed "${formatQuestionValue(ocrValue)}". Which value is correct according to the policy copy?`;
-}
-
-function formatQuestionValue(value: string | number | boolean | null) {
-  if (value === null || value === "") return "blank";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  return String(value).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
-}
-
-function comparisonField(key: TrainingComparisonKey, label: string, databaseValue: string | number | boolean | null, proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]], date = false) {
+function comparisonField(key: TrainingComparisonKey, label: string, databaseValue: string | number | boolean | null, proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]], date = false, task: ReviewTask | null = null, summary: ReturnType<typeof compareTrainingProposalToReference> | null = null) {
   const ocrValue = proposal?.value ?? null;
-  const comparison = compareTrainingValue(key, databaseValue, ocrValue);
+  const result = compareTrainingValue(key, databaseValue, ocrValue);
   return (
     <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] items-center border-t border-slate-100 px-3 py-2">
       <span className="text-xs font-bold text-slate-600">{label}</span>
       <span className="text-sm font-semibold text-navy-900">{formatValue(databaseValue, date)}</span>
       <ProposalValue field={proposal} />
-      <span className={`text-xs font-black uppercase ${comparison === "match" ? "text-emerald-700" : comparison === "mismatch" ? "text-amber-700" : "text-slate-400"}`}>{comparison === "match" ? "Match" : comparison === "mismatch" ? "Review" : comparison === "ocr_missing" ? "OCR missing" : "Not stored"}</span>
+      <span className={`text-xs font-black uppercase ${result === "match" ? "text-emerald-700" : result === "mismatch" ? "text-amber-700" : "text-slate-400"}`}>{result === "match" ? "Match" : result === "mismatch" ? "Review" : result === "ocr_missing" ? "OCR missing" : "Not stored"}</span>
+      {task && summary && summary.fields[key] !== "match" && task.status === "in_review" ? (
+        <ReviewDecisionControls
+          keyName={key}
+          answers={task.field_questions?.find((question) => question.key === key)?.allowedAnswers ?? []}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function ReviewDecisionControls({ keyName, answers }: { keyName: string; answers: string[] }) {
+  return (
+    <fieldset className="col-span-full mt-2 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-2 py-2 text-[11px] text-amber-950">
+      <legend className="sr-only">Decision for {keyName}</legend>
+      {answers.map((answer) => <label key={answer} className="inline-flex items-center gap-1"><input type="radio" name={`answer_${keyName}`} value={answer} required />{answerLabel(answer)}</label>)}
+      <input name={`correct_value_${keyName}`} maxLength={120} className="h-7 min-w-56 flex-1 rounded border border-amber-200 bg-white px-2 text-[11px] text-slate-900" placeholder="Correct sanitized value if editing" />
+    </fieldset>
   );
 }
 
