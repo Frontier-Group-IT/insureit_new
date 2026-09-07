@@ -4,14 +4,25 @@ import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { runPolicyOcrTrainingLabel, submitPolicyOcrDatabaseComparison, type ConfirmPolicyOcrTrainingState, type RunPolicyOcrTrainingState } from "../ocr-training-actions";
+import { assignPolicyOcrReviewTask, completePolicyOcrReviewTask, type AssignPolicyOcrReviewState, type ReviewerChecklistState, startPolicyOcrReviewTask } from "../ocr-training-review-actions";
 import { compareTrainingProposalToReference, compareTrainingValue, formatReviewerDate, type TrainingComparisonKey, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
 
-export type TrainingQueueRow = { documentId: string; labelId: string; fileName: string; uploadedAt: string; policyReference: string; linkedInsurer: string; status: "needs_review" | "reviewed" | "approved" | "rejected"; processingStatus: "pending" | "processing" | "ready" | "failed" | "exhausted"; processingAttempts: number; failureCode: string | null; proposal: TrainingProposal | null; databaseReference: TrainingDatabaseReference; parserId: string | null; parserVersion: string | null; proposedAt: string | null; reviewedBy: string | null; reviewedAt: string | null; approvedBy: string | null; approvedAt: string | null };
+export type TrainingQueueRow = { documentId: string; labelId: string; fileName: string; uploadedAt: string; policyReference: string; linkedInsurer: string; status: "needs_review" | "reviewed" | "approved" | "rejected"; processingStatus: "pending" | "processing" | "ready" | "failed" | "exhausted"; processingAttempts: number; failureCode: string | null; proposal: TrainingProposal | null; databaseReference: TrainingDatabaseReference; parserId: string | null; parserVersion: string | null; proposedAt: string | null; reviewedBy: string | null; reviewedAt: string | null; approvedBy: string | null; approvedAt: string | null; reviewTask: ReviewTask | null };
+
+type ReviewTask = {
+  id: string;
+  status: "assigned" | "in_review" | "completed" | "rejected" | "cancelled";
+  checklist: Record<string, boolean>;
+  reviewer_note: string | null;
+  assigned_at: string;
+  completed_at: string | null;
+  policy_ocr_training_review_notifications: Array<{ status: "pending" | "sent" | "failed"; attempts: number; sent_at: string | null }> | null;
+};
 
 const FILTERS = ["all", "needs_review", "exact_match", "reviewed", "approved", "failed"] as const;
 type Filter = (typeof FILTERS)[number];
 
-export function TrainingReviewQueue({ rows, canTrain }: { rows: TrainingQueueRow[]; canTrain: boolean }) {
+export function TrainingReviewQueue({ rows, canTrain, canAssign }: { rows: TrainingQueueRow[]; canTrain: boolean; canAssign: boolean }) {
   const [filter, setFilter] = useState<Filter>("needs_review");
   const [query, setQuery] = useState("");
 
@@ -42,7 +53,7 @@ export function TrainingReviewQueue({ rows, canTrain }: { rows: TrainingQueueRow
 
       <div className="space-y-4">
         {visibleRows.map((row) => (
-          <TrainingReviewCard key={row.labelId} row={row} canTrain={canTrain} />
+          <TrainingReviewCard key={row.labelId} row={row} canTrain={canTrain} canAssign={canAssign} />
         ))}
         {!visibleRows.length ? <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">No policy copies match this queue filter.</div> : null}
       </div>
@@ -50,7 +61,7 @@ export function TrainingReviewQueue({ rows, canTrain }: { rows: TrainingQueueRow
   );
 }
 
-function TrainingReviewCard({ row, canTrain }: { row: TrainingQueueRow; canTrain: boolean }) {
+function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRow; canTrain: boolean; canAssign: boolean }) {
   const proposal = row.proposal?.fields ?? {};
   const ready = row.processingStatus === "ready";
   const comparison = ready && row.proposal ? compareTrainingProposalToReference(row.proposal, row.databaseReference) : null;
@@ -75,6 +86,8 @@ function TrainingReviewCard({ row, canTrain }: { row: TrainingQueueRow; canTrain
           Open private copy ↗
         </Link>
       </div>
+
+      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} /> : null}
 
       {!ready ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -195,6 +208,93 @@ function OcrRunForm({ labelId, rerun = false }: { labelId: string; rerun?: boole
   );
 }
 
+const INITIAL_ASSIGN_STATE: AssignPolicyOcrReviewState = { status: "idle", message: null };
+
+function ReviewerAssignmentForm({ labelId, task }: { labelId: string; task: ReviewTask | null }) {
+  const [state, formAction, pending] = useActionState(assignPolicyOcrReviewTask, INITIAL_ASSIGN_STATE);
+  const notification = task?.policy_ocr_training_review_notifications?.[0] ?? null;
+  return (
+    <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-xs text-blue-950">
+          <strong>Human PDF review:</strong>{" "}
+          {task ? `${task.status.replaceAll("_", " ")} · notification ${notification?.status ?? "pending"}` : "not assigned"}
+        </div>
+        {notification?.status === "failed" ? <span className="text-[11px] font-semibold text-red-700">Notification failed; retry after checking Resend.</span> : null}
+      </div>
+      <form action={formAction} className="mt-3 flex flex-wrap items-end gap-2">
+        <input type="hidden" name="training_label_id" value={labelId} />
+        <label className="text-xs font-semibold text-blue-950">
+          Existing portal-user email
+          <input name="reviewer_email" type="email" defaultValue="anju@insureit.in" required className="mt-1 h-9 w-64 rounded-lg border border-blue-200 bg-white px-2 text-sm font-normal text-slate-900" />
+        </label>
+        <button disabled={pending} className="h-9 rounded-lg bg-blue-700 px-3 text-xs font-bold text-white disabled:opacity-60">
+          {pending ? "Assigning…" : task ? "Assign / notify" : "Assign reviewer"}
+        </button>
+      </form>
+      {state.message ? <p className={`mt-2 text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">{state.message}</p> : null}
+    </div>
+  );
+}
+
+const INITIAL_CHECKLIST_STATE: ReviewerChecklistState = { status: "idle", message: null };
+const REVIEW_CHECKLIST: Array<[string, string]> = [
+  ["insurer", "Insurer"],
+  ["package_product", "Package product"],
+  ["current_policy_number", "Current policy number"],
+  ["dates", "Current policy dates"],
+  ["idv", "IDV"],
+  ["od_4814", "OD = 4814"],
+  ["portal_tp_net_b_7367", "Portal TP / Net B = 7367"],
+  ["cpa_opted_no", "CPA opted = No"],
+  ["cpa_zero", "CPA = 0"],
+  ["registration_status", "Section 02 registration status is pending/unregistered"],
+  ["class_misd", "Section 02 class is MISD when supported by this layout"],
+  ["chassis_engine", "Section 02 chassis and engine"],
+];
+
+function ReviewerChecklistForm({ task }: { task: ReviewTask }) {
+  const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
+  const [state, formAction, pending] = useActionState(completePolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
+  const isStarted = task.status !== "assigned" || startState.status === "success";
+  if (task.status === "completed") {
+    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer checklist completed. The authorized operator still controls sanitized training approval.</div>;
+  }
+  return (
+    <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-black uppercase tracking-wide text-violet-900">Assigned PDF verification checklist</p>
+        {!isStarted ? (
+          <form action={startAction}>
+            <input type="hidden" name="review_task_id" value={task.id} />
+            <button disabled={startPending} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{startPending ? "Starting…" : "Start review"}</button>
+          </form>
+        ) : null}
+      </div>
+      {isStarted ? (
+        <form action={formAction} className="mt-3 space-y-2">
+          <input type="hidden" name="review_task_id" value={task.id} />
+          <div className="grid gap-2 sm:grid-cols-2">
+            {REVIEW_CHECKLIST.map(([key, label]) => (
+              <label key={key} className="flex items-start gap-2 text-xs text-violet-950">
+                <input type="checkbox" name={`check_${key}`} defaultChecked={task.checklist[key] === true} className="mt-0.5" />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <label className="block text-xs font-semibold text-violet-950">
+            Optional safe review note
+            <textarea name="reviewer_note" defaultValue={task.reviewer_note ?? ""} maxLength={500} className="mt-1 min-h-16 w-full rounded-lg border border-violet-200 bg-white p-2 text-sm font-normal text-slate-900" placeholder="Do not include policy, vehicle or customer identifiers." />
+          </label>
+          <button disabled={pending} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{pending ? "Saving checklist…" : "Complete checklist"}</button>
+          {state.message ? <p className={`text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">{state.message}</p> : null}
+        </form>
+      ) : null}
+      {startState.message ? <p className="mt-2 text-xs font-semibold text-red-700" role="status">{startState.message}</p> : null}
+    </div>
+  );
+}
+
 function comparisonField(key: TrainingComparisonKey, label: string, databaseValue: string | number | boolean | null, proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]], date = false) {
   const ocrValue = proposal?.value ?? null;
   const comparison = compareTrainingValue(key, databaseValue, ocrValue);
@@ -250,6 +350,10 @@ function statusTone(row: TrainingQueueRow) {
 function isExactDatabaseMatch(row: TrainingQueueRow) {
   if (row.processingStatus !== "ready" || !row.proposal) return false;
   return compareTrainingProposalToReference(row.proposal, row.databaseReference).exactMatch;
+}
+
+function isIffcoPackage(row: TrainingQueueRow) {
+  return /iffco/i.test(row.linkedInsurer) && /^package$/i.test(row.databaseReference.policy_product ?? "");
 }
 
 function StatusBadge({ label, tone }: { label: string; tone: string }) {

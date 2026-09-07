@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/shell";
-import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
+import { requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access";
 import type { TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
@@ -67,11 +67,28 @@ type TrainingLabel = {
   owner_approved_at: string | null;
 };
 
+type ReviewTaskRow = {
+  id: string;
+  training_label_id: string;
+  assigned_reviewer_profile_id: string;
+  assignment_version: number;
+  status: "assigned" | "in_review" | "completed" | "rejected" | "cancelled";
+  checklist: Record<string, boolean>;
+  reviewer_note: string | null;
+  assigned_at: string;
+  completed_at: string | null;
+  policy_ocr_training_review_notifications: Array<{
+    status: "pending" | "sent" | "failed";
+    attempts: number;
+    sent_at: string | null;
+  }> | null;
+};
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 export default async function PolicyOcrTrainingPage() {
-  await requirePolicyOcrTrainingOperator();
+  const viewer = await requirePolicyOcrTrainingViewer();
   const admin = createSupabaseAdminClient();
   const { data, error, count } = await admin
     .from("policy_documents")
@@ -80,6 +97,25 @@ export default async function PolicyOcrTrainingPage() {
     .order("created_at", { ascending: false })
     .range(0, 999)
     .returns<TrainingDocumentRow[]>();
+
+  const labelIds = (data ?? []).flatMap((document) => {
+    const label = Array.isArray(document.policy_ocr_training_labels)
+      ? document.policy_ocr_training_labels[0] ?? null
+      : document.policy_ocr_training_labels;
+    return label?.id ? [label.id] : [];
+  });
+  let reviewTasks: ReviewTaskRow[] = [];
+  if (labelIds.length) {
+    let taskQuery = admin
+      .from("policy_ocr_training_review_tasks")
+      .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,checklist,reviewer_note,assigned_at,completed_at,policy_ocr_training_review_notifications(status,attempts,sent_at)")
+      .in("training_label_id", labelIds);
+    taskQuery = taskQuery.neq("status", "cancelled");
+    if (!viewer.isOperator) taskQuery = taskQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
+    const { data: tasks } = await taskQuery.returns<ReviewTaskRow[]>();
+    reviewTasks = tasks ?? [];
+  }
+  const taskByLabelId = new Map(reviewTasks.map((task) => [task.training_label_id, task]));
 
   const rows = (data ?? []).flatMap<TrainingQueueRow>((document) => {
     const label = Array.isArray(document.policy_ocr_training_labels)
@@ -93,6 +129,8 @@ export default async function PolicyOcrTrainingPage() {
     const vehicle = document.policies?.vehicles ?? null;
     const pendingRegistration = isRegistrationPending(snapshot?.registration_number, vehicle?.registration_status, vehicle?.vehicle_no);
     const vehicleClass = vehicle?.vehicle_class_code || snapshot?.vehicle_class || vehicle?.vehicle_class_description || vehicle?.vehicle_type || null;
+    const reviewTask = taskByLabelId.get(label.id) ?? null;
+    if (!viewer.isOperator && !reviewTask) return [];
     return [{
       documentId: document.id,
       labelId: label.id,
@@ -139,6 +177,7 @@ export default async function PolicyOcrTrainingPage() {
       reviewedAt: label.reviewed_at,
       approvedBy: label.owner_approved_by,
       approvedAt: label.owner_approved_at,
+      reviewTask,
     }];
   });
 
@@ -148,10 +187,12 @@ export default async function PolicyOcrTrainingPage() {
         <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Policy OCR training queue</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-navy-900">Proposal and correction review</h1>
         <p className="mt-2 max-w-4xl text-sm text-slate-500">
-           Choose a policy copy and run it through Google server-side. INSUREIT compares Section 02 vehicle details and Section 03 policy/premium details with the values already saved; no policy copy runs automatically.
+           {viewer.isOperator
+             ? "Choose a policy copy and run it through Google server-side. Assign a private-copy review task when a human PDF check is needed; no policy copy runs automatically."
+             : "Review only the policy-copy tasks assigned to your portal user. Keep the PDF and raw OCR inside the protected portal and complete every checklist item from the uploaded copy."}
         </p>
         <p className="mt-2 text-xs font-semibold text-slate-500">
-          Showing {count ?? rows.length} policy copies linked to policy records. Legacy customer-uploaded copies are included only after an unambiguous policy match.
+          Showing {viewer.isOperator ? count ?? rows.length : rows.length} {viewer.isOperator ? "policy copies linked to policy records." : "assigned policy-copy review tasks."} Legacy customer-uploaded copies are included only after an unambiguous policy match.
         </p>
       </div>
       {error ? (
@@ -159,7 +200,7 @@ export default async function PolicyOcrTrainingPage() {
           The premium OCR reviewer queue is temporarily unavailable.
         </div>
       ) : (
-        <TrainingReviewQueue rows={rows} canTrain />
+        <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} />
       )}
     </AppShell>
   );

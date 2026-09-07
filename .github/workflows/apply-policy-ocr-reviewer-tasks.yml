@@ -1,0 +1,75 @@
+name: Apply policy OCR reviewer task migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql'
+      - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply policy OCR reviewer task migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply reviewer task migration
+        run: supabase db query --linked --file supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260907130000
+
+      - name: Verify reviewer task tables
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.policy_ocr_training_review_tasks') is not null as tasks_ready,
+              to_regclass('public.policy_ocr_training_review_notifications') is not null as notifications_ready,
+              not has_table_privilege('authenticated','public.policy_ocr_training_review_tasks','SELECT') as tasks_private,
+              not has_table_privilege('authenticated','public.policy_ocr_training_review_notifications','SELECT') as notifications_private
+          ")
+          echo "$result"
+          for key in tasks_ready notifications_ready tasks_private notifications_private; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSanitizedTrainingCandidate, type TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
+import { requirePolicyOcrTrainingOperator, requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 import { processPolicyOcrTrainingDocument } from "./policy-ocr-actions";
 
@@ -16,16 +16,28 @@ function text(formData: FormData, key: string) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-async function requireTrainingViewer() {
-  return requirePolicyOcrTrainingOperator();
-}
-
 export async function openPolicyOcrTrainingCopy(documentId: string) {
-  await requireTrainingViewer();
+  const viewer = await requirePolicyOcrTrainingViewer();
   const normalizedDocumentId = documentId.trim();
   if (!normalizedDocumentId) return { ok: false as const, error: "Policy document reference is missing." };
 
   const admin = createSupabaseAdminClient();
+  if (!viewer.isOperator) {
+    const { data: label, error: labelError } = await admin
+      .from("policy_ocr_training_labels")
+      .select("id")
+      .eq("policy_document_id", normalizedDocumentId)
+      .maybeSingle<{ id: string }>();
+    const { data: assignedTask, error: taskError } = await admin
+      .from("policy_ocr_training_review_tasks")
+      .select("id")
+      .eq("assigned_reviewer_profile_id", viewer.profile.id)
+      .eq("training_label_id", label?.id ?? "")
+      .neq("status", "cancelled")
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    if (labelError || taskError || !assignedTask) return { ok: false as const, error: "This policy copy is not assigned to your portal user." };
+  }
   const { data: document, error } = await admin.from("policy_documents").select("storage_bucket,storage_path").eq("id", normalizedDocumentId).eq("document_type", "policy_copy").maybeSingle<{ storage_bucket: string; storage_path: string }>();
   if (error || !document) return { ok: false as const, error: "The private policy copy is unavailable." };
 

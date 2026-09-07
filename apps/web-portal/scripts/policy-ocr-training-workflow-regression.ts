@@ -184,7 +184,8 @@ const uploadActions = [
 for (const source of uploadActions) assert.doesNotMatch(source, /schedulePolicyOcrTraining|processPolicyOcrTraining/);
 
 const queuePage = readFileSync("app/policies/ocr-training/page.tsx", "utf8");
-assert.match(queuePage, /requirePolicyOcrTrainingOperator/);
+assert.match(queuePage, /requirePolicyOcrTrainingViewer/);
+assert.match(queuePage, /assigned policy-copy review tasks/);
 assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
 assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
@@ -194,6 +195,24 @@ assert.match(queueComponent, /Re-run with Google Cloud/);
 assert.match(queueComponent, /useActionState/);
 assert.match(queueComponent, /Confirm comparison & approve training/);
 assert.doesNotMatch(queueComponent, /different training owner|No self-approval|Awaiting owner/);
+assert.match(queueComponent, /Assigned PDF verification checklist/);
+assert.match(queueComponent, /anju@insureit\.in/);
+
+const reviewerActions = readFileSync("app/policies/ocr-training-review-actions.ts", "utf8");
+assert.match(reviewerActions, /RESEND_API_KEY|sendResendEmail/);
+assert.match(reviewerActions, /Current policy number/);
+assert.match(reviewerActions, /policy content, identifiers, PII/);
+assert.match(reviewerActions, /completePolicyOcrReviewTask/);
+const reviewerMigration = readFileSync("../../supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql", "utf8");
+assert.match(reviewerMigration, /policy_ocr_training_review_tasks/);
+assert.match(reviewerMigration, /policy_ocr_training_review_notifications/);
+assert.match(reviewerMigration, /idempotency_key/);
+const resend = readFileSync("lib/resend-email.ts", "utf8");
+assert.match(resend, /RESEND_API_KEY/);
+assert.match(resend, /RESEND_FROM_EMAIL/);
+assert.doesNotMatch(resend, /attachments/);
+const deployWorkflow = readFileSync("../../.github/workflows/deploy-production.yml", "utf8");
+assert.match(deployWorkflow, /20260907130000_policy_ocr_reviewer_tasks\.sql/);
 
 const appNavigation = readFileSync("components/claim-manager/app-navigation.tsx", "utf8");
 assert.match(appNavigation, /href:"\/policies\/ocr-training",label:"OCR Training"/);
