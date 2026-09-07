@@ -57,6 +57,8 @@ jobs:
         run: node scripts/partner-external-renewal-intake-visibility-regression.mjs
       - name: Partner push-device registration security regression
         run: node scripts/partner-push-device-registration-regression.mjs
+      - name: Partner push notification template regression
+        run: node scripts/partner-push-template-regression.mjs
       - name: Vehicle and policy intake resume regression
         run: npm run vehicle-policy-intake:resume-regression
       - name: Canonical NEW vehicle prefix regression
@@ -152,7 +154,7 @@ jobs:
             echo "## Web portal verification gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Partner web core, external renewal intake visibility and Partner push-device registration regressions"
+            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Partner web core, external renewal intake visibility, Partner push-device registration and Partner push-template regressions"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Performance regressions: expensive register create/edit workflow links do not auto-prefetch"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard, 8 fresh20 precision and 9 fresh20 Digit recovery, post-training replay safety, onboarding Section 02/03 import, premium training workflow"

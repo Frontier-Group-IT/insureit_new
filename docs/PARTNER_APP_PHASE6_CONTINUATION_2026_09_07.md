@@ -2,7 +2,7 @@
 
 > Date: 2026-09-07 IST
 > Scope: post-foundation Phase 6 native-ready implementation
-> Status: SELECTIVE PRIVACY MERGED / PUSH DEVICE REGISTRATION IN REVIEW / NO 0.2.0 APK OR OTA
+> Status: SELECTIVE PRIVACY + PUSH REGISTRATION MERGED / SAFE PUSH TEMPLATE CONTRACT IN REVIEW / NO 0.2.0 APK OR OTA
 
 Read with:
 
@@ -27,7 +27,7 @@ The existing installed 0.1.0 preview remains on runtime 0.1.0. No 0.2.0 OTA has 
 
 The Partner preview APK workflow is manual-only and requires exact input `BUILD_PARTNER_0_2_0`. It also blocks until `apps/partner-app/assets/notification-icon.png` exists. Do not dispatch it without explicit user approval for that exact build.
 
-## Phase 6 foundation checkpoint
+## Phase 6 foundation — merged
 
 PR #1383 — `Prepare Partner 0.2.0 Phase 6 native foundation`
 
@@ -56,103 +56,104 @@ Protected route patterns only:
 
 Ordinary Partner routes remain screenshot-capable. Protection is centralized in `providers/partner-sensitive-privacy-provider.tsx`; the Phase 6 regression fails if global/root-level screenshot blocking or unapproved route expansion is introduced.
 
-No OTA or native build was triggered by this merge.
+## Secure push-device registration — merged, production migration NOT APPLIED
 
-## Secure push-device registration — current review slice
+PR #1388 — `Add secure Partner push device registration`
 
-Branch:
-
-`partner/phase6-push-device-registration`
-
-Purpose: prepare authenticated Expo push-device registration without exposing any push-device table directly to Partner mobile clients.
-
-### Database migration prepared — NOT APPLIED
+- final head: `6659f97b6ffad6a7d87c5d852352accedbb0236b`
+- merge: `9ca581b5138b276b72564faca86dc7180a1b985f`
+- Partner Verify #206 — success
+- Web Verify #3083 — success
+- concurrent AuthBridge work on `main` was preserved
 
 Migration:
 
 `supabase/migrations/20260907002000_partner_push_devices.sql`
 
-It creates `partner_push_devices` with:
+It creates a server-mediated `partner_push_devices` registry with unique Expo token, Android/iOS platform, actor ownership, optional intermediary ownership, EAS project/app identity, active lifecycle and timestamps. RLS is enabled; direct privileges are revoked from `anon` and `authenticated`; only `service_role` receives table access.
 
-- unique Expo push token;
-- Android/iOS platform;
-- exact actor kind + actor ID;
-- intermediary ID only for intermediary actors;
-- EAS project ID and app version;
-- active lifecycle + last-seen timestamps;
-- RLS enabled;
-- all direct privileges revoked from `anon` and `authenticated`;
-- table access granted only to `service_role`.
+**The migration file is merged but has NOT been applied to production Supabase. Production application still requires separate explicit user approval.**
 
-**This migration is committed for review only. It has NOT been applied to production Supabase. Production migration application still requires separate explicit approval.**
-
-### Authenticated API boundary
-
-Route:
+Authenticated API:
 
 `apps/web-portal/app/api/partner/push-devices/route.ts`
 
-The route mirrors the established Partner API security pattern:
+The route validates the user, resolves `partner_app_current_identity()` and `partner_app_commercial_scope()`, then uses the server-side admin client. Registration is restricted to Partner EAS project `8ade82c1-4c96-4f09-b90b-802270fb406d`, app version `0.2.0`, Android/iOS and valid Expo push-token shape. A reused token is rebound to the currently authenticated actor. Unregister only deactivates a token belonging to that actor.
 
-1. accept bearer token or authenticated same-origin session;
-2. validate the Supabase user;
-3. resolve `partner_app_current_identity()`;
-4. resolve `partner_app_commercial_scope()`;
-5. only then use the server-side admin client.
+Mobile lifecycle:
 
-Registration is restricted to:
+- permission remains user-triggered from Settings;
+- startup never requests permission;
+- after permission is granted, Settings registers through `/api/partner/push-devices`;
+- later authenticated startup refreshes registration only when permission is already granted;
+- mobile never accesses `partner_push_devices` directly;
+- sign-out best-effort deactivates the current device before Supabase logout with a bounded timeout.
 
-- EAS project `8ade82c1-4c96-4f09-b90b-802270fb406d`;
-- app version `0.2.0`;
-- Android/iOS;
-- valid Expo push-token shape.
+This does **not** make production push live. Push credentials, production migration application, sender/event pipeline, receipts/retries, installed-device testing and the official Android monochrome small icon are still missing.
 
-A token upsert rebinds the token to the currently authenticated Partner actor, preventing stale prior-account ownership on a reused device. Unregister only deactivates a token when it belongs to the current resolved actor.
+## Safe notification template/sender contract — current review slice
 
-### Mobile lifecycle
+Branch:
 
-`apps/partner-app/lib/partner-notifications.ts`
+`partner/phase6-push-sender-contract`
 
-- notification permission remains user-triggered only;
-- startup never calls the permission request;
-- after the user grants permission, Settings registers the device through `/api/partner/push-devices`;
-- on later authenticated startups, registration refreshes only if permission is already granted;
-- the mobile app never reads/writes `partner_push_devices` directly;
-- registration validates the exact Partner EAS project and 0.2.0 app identity;
-- sign-out best-effort deactivates the current device before Supabase sign-out, with a short timeout so notification cleanup cannot trap the user in the app.
+This slice is deliberately **pure/non-active**. It does not query recipients, query `partner_push_devices`, call Expo/APNs/FCM, use credentials, enqueue jobs or send notifications.
 
-### Regression coverage
+File:
 
-- `apps/web-portal/scripts/partner-push-device-registration-regression.mjs` protects the server-auth/table-access boundary.
-- `.github/workflows/verify-web-portal.yml` runs that regression.
-- `apps/partner-app/scripts/verify-phase6-native-foundation.mjs` protects permission timing, project/runtime identity, server-mediated token registration, authenticated-start refresh and pre-sign-out deactivation.
+`apps/web-portal/lib/partner-push-notification-templates.ts`
 
-### Explicitly not implemented yet
+Approved initial event vocabulary:
 
-This slice does **not** make production push notifications operational by itself. Still missing:
+- `renewal_due`
+- `claim_update`
+- `intake_attention`
+- `intake_approved`
+- `intake_rejected`
 
-- production application of the push-device migration;
-- EAS/platform push credentials validation;
-- server-side event-to-notification sender pipeline;
-- notification delivery retry/receipt cleanup policy;
-- installed 0.2.0 device testing;
-- official Android monochrome notification small icon.
+Privacy/minimization rules:
 
-Do not claim production push is live until those pieces are completed and verified.
+- notification copy is generic and contains no customer name, mobile number, policy number, claim number, vehicle registration or other business identifiers;
+- routes intentionally land on scope-checked list surfaces (`/renewals`, `/(tabs)/claims`, `/policy-intakes`) instead of embedding record IDs in notification data;
+- notification channel is `partner-updates`;
+- unknown event types fail closed.
+
+Regression:
+
+`apps/web-portal/scripts/partner-push-template-regression.mjs`
+
+It fails if the template layer gains active delivery calls, push-token/table references, server admin access, raw service-role usage or common PII identifier fields. `.github/workflows/verify-web-portal.yml` runs this contract.
+
+Do not add recipient resolution or active delivery until the existing domain relationships are audited and production push activation is separately approved.
+
+## Date picker discovery
+
+There is a genuine scoped custom-range backend:
+
+`partner_app_business_range(p_from_date date, p_to_date date)`
+
+and mobile helper:
+
+`getPartnerBusinessRange(fromDate, toDate)`.
+
+The RPC has a 366-day safety limit. `PartnerDatePicker` already exists as a reusable native component.
+
+Do **not** apply a custom range indiscriminately to the whole Business screen: the current six-month trend and current-month business-mix sections have different semantics. A safe future integration should expose a compact custom-range summary (Premium / Policies / Customers / Claims), while keeping existing trend/mix sections explicitly tied to their own periods.
 
 ## Remaining Phase 6 sequence
 
-1. Get the push-device PR green and merge the code only.
+1. Get the pure push-template contract PR green and merge it; it must remain non-active.
 2. Obtain explicit approval before applying `20260907002000_partner_push_devices.sql` to production.
-3. Design the notification sender/event pipeline for authorized Renewal, Claim and Policy Intake events; keep message content minimal and scope-safe.
-4. Prepare/review the official monochrome Android notification icon from official INSUREIT artwork; do not invent a replacement mark.
-5. Wire the native date picker only into genuine Partner date inputs/filters.
-6. Review restrained haptic placement; no noisy/global haptics.
-7. Keep Sentry out unless project/DSN/source-map upload secret and privacy/redaction policy are actually ready.
-8. Run final source/native-config checks.
-9. Ask for explicit approval for the exact 0.2.0 preview APK build.
-10. Build one preview APK and complete the installed-device Phase 6 matrix.
-11. Only after the 0.2.0 binary is installed and accepted, publish a small 0.2.0 preview OTA to prove runtime-compatible OTA delivery.
+3. Audit exact domain relationships and design recipient resolution for Renewal, Claim and Policy Intake events before any sender implementation.
+4. Validate EAS/platform push credentials and define receipt/retry/token-cleanup behavior before production delivery.
+5. Prepare/review the official monochrome Android notification icon from official INSUREIT artwork; do not invent a replacement mark.
+6. Wire the native date picker into the genuine Business custom-range summary without changing existing trend/current-month semantics.
+7. Review restrained haptic placement; no noisy/global haptics.
+8. Keep Sentry out unless project/DSN/source-map upload secret and privacy/redaction policy are actually ready.
+9. Run final source/native-config checks.
+10. Ask for explicit approval for the exact 0.2.0 preview APK build.
+11. Build one preview APK and complete the installed-device Phase 6 matrix.
+12. Only after the 0.2.0 binary is installed and accepted, publish a small 0.2.0 preview OTA to prove runtime-compatible OTA delivery.
 
 ## Non-negotiable safety reminders
 
@@ -162,4 +163,5 @@ Do not claim production push is live until those pieces are completed and verifi
 - Never automatically prompt for notification permission on startup.
 - Never give Partner mobile direct table access to the push-device registry.
 - Never globally block screenshots; keep privacy route-scoped.
+- Never include business/customer identifiers in lock-screen notification copy unless a separately reviewed requirement explicitly calls for it.
 - Preserve historical vehicle-selector, claim-number-popup, session refresh and OTA compatibility regressions.
