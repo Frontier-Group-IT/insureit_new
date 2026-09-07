@@ -486,4 +486,10 @@ The six production labels have **not** been rerun with the new parser because th
 
 ## 15. IT Super User-only training workspace — 2026-08-22
 
-**IMPLEMENTED / DEPLOYMENT PENDING:** OCR Training is a Development workspace available only to the protected `it_super_user` role. The desktop and mobile navigation expose `/policies/ocr-training` under **Development** only when the authenticated role is `it_super_user` and effective `manage_system` access is approve-level. The route and all training Server Actions independently enforce the same role restriction before retaining the existing OCR review/approval capability checks. Direct navigation by another role redirects to access denied.
+**IMPLEMENTED / DEPLOYMENT PENDING:** OCR training operations and sanitized approval remain restricted to the protected `it_super_user` role. The `/policies/ocr-training` queue has a narrow assigned-reviewer exception: an active portal user may view only explicitly assigned tasks, open the private copy and complete the checklist. Reviewers cannot run Google OCR or approve training candidates, and direct navigation without an assignment redirects to access denied.
+
+## 16. Assigned human reviewer workflow — 2026-09-07
+
+**IMPLEMENTED / NOT DEPLOYED:** an authorized training operator can assign a queue item to an existing active portal user by normalized email. Assignment state, checklist completion and assignment-scoped Resend notification audit are persisted in `policy_ocr_training_review_tasks` and `policy_ocr_training_review_notifications`. Assigned reviewers see only their tasks, open the private policy copy through the authenticated portal, and complete the exact IFFCO verification checklist; sanitized training approval remains with the existing authorized operator.
+
+The server-only notification uses `RESEND_API_KEY` and `RESEND_FROM_EMAIL`. It contains no attachment, raw OCR, policy/vehicle/customer identifiers or PII. Missing Resend configuration records a failed notification attempt and never marks it sent. This branch does not send a real email, apply the migration, deploy, or change production data.
