@@ -54,3 +54,5 @@ if (!source.includes('Unsupported Partner push event type.')) {
 }
 
 console.log('Partner push notification template contract verified: generic copy, safe destinations, no delivery side effects.');
+
+await import('./partner-push-recipient-resolver-regression.mjs');
