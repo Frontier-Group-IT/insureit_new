@@ -76,6 +76,15 @@ assert.match(operationsActions, /claim\.claim_service_mode !== "broker_managed"/
 assert.match(operationsActions, /driver_name: driverName/);
 assert.match(operationsActions, /driver_phone: driverPhone/);
 assert.match(operationsActions, /location,/);
+assert.match(operationsActions, /mergeCustomerDriverDescription/);
+assert.match(operationsActions, /spot_intimation_at: normalizedSpotIntimationAt/);
+assert.match(operationsActions, /accident_description: customerDescription/);
+assert.match(operationsActions, /select\("id, accident_at, spot_intimation_at, accident_location, accident_description"\)/);
+
+const internalStageOneTracker = await readFile(path.join(repoRoot, "apps/mobile-app/components/internal-claim-stage-one-tracker.tsx"), "utf8");
+assert.match(internalStageOneTracker, /claim\.spot_intimation_at/);
+assert.match(internalStageOneTracker, /parseDriver\(claim\.accident_description\)/);
+assert.match(internalStageOneTracker, /claim\.accident_location/);
 
 const claimDetail = await readFile(path.join(repoRoot, "apps/mobile-app/app/customer/claim-detail.tsx"), "utf8");
 assert.match(claimDetail, /\/customer\/internal-claim-stage/);
