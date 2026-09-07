@@ -79,4 +79,4 @@ jobs:
         run: supabase db query --linked --file supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql
 
       - name: Record worker assignment compatibility migration
-        run: supabase migration repair --linked --status applied 202609071500
+        run: supabase migration repair --linked --status applied 20260907150000
