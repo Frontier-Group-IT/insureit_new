@@ -15,6 +15,7 @@ import {
 
 type VehicleRow = {
   id: string;
+  customer_id: string;
   vehicle_no: string;
   vehicle_type: string;
   make: string | null;
@@ -162,7 +163,7 @@ function VehicleMobileCard({ vehicle }: { vehicle: VehicleRow }) {
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#111A35] px-3 text-[12px] font-bold text-white">Open vehicle</Link>
-        <Link prefetch={false} href="/policies/new" className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Add policy</Link>
+        <Link prefetch={false} href={policyHandoffHref(vehicle)} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#BFD3F7] bg-[#F0F6FF] px-3 text-[12px] font-bold text-[#174EA6]">Add policy</Link>
       </div>
     </article>
   );
@@ -175,10 +176,13 @@ function RegistrationPill({ vehicle }: { vehicle: VehicleRow }) {
 
 function NextAction({ vehicle }: { vehicle: VehicleRow }) {
   if (isRegistrationPending(vehicle)) return <span className="inline-flex items-center gap-1 font-bold text-amber-700"><ShieldAlert className="h-3.5 w-3.5" />Update RC</span>;
-  if (policyCount(vehicle) === 0) return <Link prefetch={false} href="/policies/new" className="inline-flex items-center gap-1 font-bold text-[#174EA6] hover:underline"><FileText className="h-3.5 w-3.5" />Add policy</Link>;
+  if (policyCount(vehicle) === 0) return <Link prefetch={false} href={policyHandoffHref(vehicle)} className="inline-flex items-center gap-1 font-bold text-[#174EA6] hover:underline"><FileText className="h-3.5 w-3.5" />Add policy</Link>;
   return <span className="inline-flex items-center gap-1 font-semibold text-emerald-700"><Wrench className="h-3.5 w-3.5" />Maintained</span>;
 }
 
+function policyHandoffHref(vehicle: VehicleRow) {
+  return `/policies/new?customer_id=${encodeURIComponent(vehicle.customer_id)}&vehicle_id=${encodeURIComponent(vehicle.id)}`;
+}
 function displayVehicleNo(vehicle: VehicleRow) {
   const vehicleNo = vehicle.vehicle_no.toUpperCase();
   return /^(?:NEW|PENDING)-/.test(vehicleNo) ? "Registration pending" : vehicle.vehicle_no;

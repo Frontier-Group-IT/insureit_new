@@ -37,6 +37,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
   let preselectedCustomerId: string | null = null;
   let sourceIntakeId: string | null = null;
   let initialDraftRevision: number | null = null;
+  let vehicleHandoff = false;
 
   if (params.intake_id) {
     const intakeDraft = await loadPolicyIntakeOnboardingDraft(params.intake_id);
@@ -52,7 +53,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     if (!customer || !vehicle || vehicle.customer_id !== customer.id) return <SetupError message="The saved vehicle/customer handoff is no longer available." />;
     const pending = vehicle.registration_status === "registration_pending" || /^(?:NEW|PENDING)-/i.test(vehicle.vehicle_no);
     const capacity = vehicle.vehicle_type === "PCV" ? vehicle.seating_capacity : vehicle.vehicle_type === "GCV" || vehicle.vehicle_type === "CPM" ? vehicle.gvw_kg : vehicle.engine_capacity_cc;
-    workflowRegistrationMode = pending ? "unregistered" : "registered"; preselectedCustomerId = customer.id;
+    workflowRegistrationMode = pending ? "unregistered" : "registered"; preselectedCustomerId = customer.id; vehicleHandoff = true;
     workflowInitialValues = { insuredName:customer.company_name?.trim()||customer.contact_name,phoneNo:customer.phone,registrationNo:pending?"":vehicle.vehicle_no,vehicleClass:vehicle.vehicle_type??"",make:vehicle.make??"",model:vehicle.model??"",fuelType:vehicle.fuel_type??"",manufacturingYear:vehicle.year?.toString()??"",capacity:capacity?.toString()??"",chassisNo:vehicle.chassis_no??"",engineNo:vehicle.engine_no??"",rtoState:vehicle.rto_state??"",rtoName:vehicle.rto_name??"",businessLine:"Motor" };
   }
 
@@ -151,6 +152,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
 
   return (
     <AppShell title="Add Policy">
+      {vehicleHandoff ? <script dangerouslySetInnerHTML={{ __html: 'try{sessionStorage.removeItem("insureit:policy-onboarding:draft:v2")}catch{}' }} /> : null}
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard />
       <PolicyCommercialShell
