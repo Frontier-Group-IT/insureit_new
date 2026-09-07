@@ -258,7 +258,7 @@ export default function StartClaimScreen() {
 
       <ClaimActionBar
         primaryDisabled={!selectedPolicy || checkingActiveClaim}
-        primaryLabel={checkingActiveClaim ? 'Checking...' : selectedPolicy?.source === 'external' ? 'Start Claim' : 'Continue to Incident Report'}
+        primaryLabel={checkingActiveClaim ? 'Checking...' : 'Start Claim'}
         primaryIcon="arrow-right"
         onPrimary={() => void continueClaim()}
         onAssistance={() => router.push('/customer/support')}
