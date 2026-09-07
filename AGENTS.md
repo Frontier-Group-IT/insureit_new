@@ -805,6 +805,21 @@ When a new request touches any area above, first fetch the current `main` implem
 - JS/assets-only OTA publishing must not create an APK. Native/runtime/build-profile changes require separate explicit approval.
 - Do not change Expo app version, runtimeVersion, EAS channel/build configuration, project ID, owner, package/bundle IDs, or other protected mobile configuration merely to solve OTA ordering.
 
+### Customer production OTA canonical-baseline and branch-drift prevention
+
+**MANDATORY / LEARNING (2026-09-07):** the Customer 0.3.0 release line was continuously refined on a long-lived branch without continuously reconciling that branch with `main`. It eventually became heavily diverged. Publishing a compatible OTA from that stale snapshot made newer approved Customer work appear reverted because Expo publishes a complete bundle snapshot, not an incremental patch.
+
+- `main` is the canonical source for Customer 0.3.0 production OTA unless the user explicitly establishes a different canonical production baseline.
+- Never publish the Customer production channel from `feat/customer-native-release-readiness`, another historical release branch, a feature branch, recovery branch, temporary branch, or local worktree merely because it contains recent Customer commits.
+- Before every Customer production OTA merge or publish, compare the proposed source against current `main`. If the source is behind `main`, stop. Reconcile on a fresh branch from current `main`; do not "catch up" by blindly taking an old branch snapshot.
+- For high-churn Customer files—especially `apps/mobile-app/app/customer/add-vehicle.tsx`, `start-claim.tsx`, `report-accident.tsx`, and internal-claim stage components—resolve overlaps semantically. Preserve all approved current-main behavior plus the intended Customer change. Never solve a conflict by wholesale replacing a newer file with an older branch copy.
+- **Protected Customer Add Vehicle behavior:** preserve the approved RC/AuthBridge implementation, duplicate vehicle checking, manufacturer resolution, vehicle-class-dependent fields, engine/seating/GVW handling, registration/compliance dates, and current save payload unless the user explicitly asks to change them.
+- Before merge, require the Customer branch to be **0 commits behind current `main`** (or prove an equivalent exact-current-main ancestry), require Mobile/Web/Partner verification as applicable, and inspect the final changed-file diff for unintended Customer regressions.
+- The Customer production OTA workflow must check out the exact current `main` source, verify it still equals remote `main`, verify the installed production baseline contract (`0.3.0`, Android versionCode `9`, compatible runtime/native baseline), and only then publish the Expo `production` channel.
+- A successful OTA publish does not prove the installed app has the intended behavior. Verify the exact update group/channel and perform installed-app smoke verification on the affected Customer screens before closing a risky reconciliation.
+- If a reconciliation PR introduces or reintroduces any `supabase/migrations/**` file that is not already part of current `main`, treat it as a release blocker until two things are directly verified: (1) the migration is already **APPLIED** or is safely applied by its dedicated schema workflow, and (2) `.github/workflows/deploy-production.yml` contains the matching schema-deployment gate. Do not wait until after merge to discover a missing schema gate.
+- Customer JS/assets-only work must remain OTA-first. Do not create a new Customer APK/AAB unless the user explicitly authorizes that exact native build.
+
 ## Customer Start Claim vehicle selector interaction rule
 
 **USER-APPROVED REQUIREMENT / LEARNING (2026-09-03):** in `apps/mobile-app/app/customer/start-claim.tsx`, keep the Vehicle number label and selected-vehicle card inert. Only the small trailing selector icon on the far right may open the vehicle dropdown.
