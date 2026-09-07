@@ -21,6 +21,7 @@ import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-struc
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
+import { ensureAutomaticPolicyOcrReview } from "@/lib/policy-ocr-review-automation";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -213,6 +214,39 @@ type ClaimedTrainingJob = {
   attempt_count: number;
 };
 
+export async function processPolicyOcrTrainingWorkerBatch(
+    subjectTokenOverride: string | null,
+    limit = 2,
+  ) {
+    if (!getGoogleConfig()) return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0, succeeded: 0, needsReview: 0 };
+    const subjectToken = subjectTokenOverride?.trim()
+      || process.env.VERCEL_OIDC_TOKEN?.trim()
+      || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN?.trim()
+      || null;
+    if (!subjectToken) return { ok: false as const, error: "google_oidc_subject_token_missing", processed: 0, succeeded: 0, needsReview: 0 };
+
+    const admin = createSupabaseAdminClient();
+    const { data: jobs, error } = await admin.rpc("claim_policy_ocr_training_jobs", {
+      p_limit: Math.max(1, Math.min(limit, 3)),
+      p_lease_minutes: 4,
+    });
+    if (error) {
+      console.error("Policy OCR worker claim failed", error.code);
+      return { ok: false as const, error: "claim_failed", processed: 0, succeeded: 0, needsReview: 0 };
+    }
+
+    let succeeded = 0;
+    let needsReview = 0;
+    for (const row of (Array.isArray(jobs) ? jobs : []) as ClaimedTrainingJob[]) {
+      const outcome = await processTrainingJob(row, subjectToken);
+      if (outcome.ok) {
+        succeeded += 1;
+        if (!outcome.exactMatch) needsReview += 1;
+      }
+    }
+    return { ok: true as const, processed: Array.isArray(jobs) ? jobs.length : 0, succeeded, needsReview };
+  }
+
 export async function processPolicyOcrTrainingDocument(
   labelId: string,
 ) {
@@ -404,6 +438,20 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
       return { ok: false as const };
     }
     const comparison = compareTrainingProposalToReference(proposal, reference);
+    if (!comparison.exactMatch || proposal.warnings.length > 0) {
+      try {
+        await ensureAutomaticPolicyOcrReview({
+          labelId: job.label_id,
+          policyDocumentId: job.policy_document_id,
+          proposal,
+          reference,
+        });
+      } catch (error) {
+        // OCR remains ready for review even if the durable notification path
+        // is temporarily unavailable; the next worker run can retry it.
+        console.error("Policy OCR automatic review handoff failed", safeErrorName(error));
+      }
+    }
     return { ok: true as const, exactMatch: comparison.exactMatch };
   } catch (error) {
     console.error("Policy OCR training processing failed", safeErrorName(error));
