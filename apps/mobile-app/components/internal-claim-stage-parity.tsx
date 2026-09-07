@@ -337,6 +337,14 @@ function mergeStageDetails(rows: StageDetail[], key: InternalJourneyStageKey, cl
   const merged: Record<string, unknown> = {};
   const statuses = STAGE_STATUSES[key];
   for (const row of [...rows].reverse()) {
+    const milestoneKey = typeof row.details?.milestone_key === 'string' ? row.details.milestone_key.trim() : '';
+    if (milestoneKey) {
+      if (milestoneKey === key) Object.assign(merged, row.details ?? {});
+      continue;
+    }
+
+    const verificationType = typeof row.details?.verification_type === 'string' ? row.details.verification_type.trim() : '';
+    if (verificationType) continue;
     if (statuses.has(row.stage)) Object.assign(merged, row.details ?? {});
   }
   if (claim) {
