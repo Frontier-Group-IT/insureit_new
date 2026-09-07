@@ -2,6 +2,7 @@ import "server-only";
 
 type ResendEmailInput = {
   to: string;
+  bcc?: string[];
   subject: string;
   text: string;
   idempotencyKey: string;
@@ -28,6 +29,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<ResendEm
     body: JSON.stringify({
       from,
       to: [input.to],
+      ...(input.bcc?.length ? { bcc: input.bcc } : {}),
       subject: input.subject,
       text: input.text,
     }),

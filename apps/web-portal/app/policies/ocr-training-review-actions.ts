@@ -7,6 +7,7 @@ import { sanitizeEvidenceNote } from "@/lib/policy-ocr-training";
 import { sendResendEmail } from "@/lib/resend-email";
 
 const QUEUE_PATH = "/policies/ocr-training";
+const REVIEW_NOTIFICATION_BCC = "it@insureit.in";
 const REVIEW_CHECKLIST = [
   "insurer",
   "package_product",
@@ -163,6 +164,7 @@ export async function assignPolicyOcrReviewTask(
     try {
       const result = await sendResendEmail({
         to: email,
+        bcc: [REVIEW_NOTIFICATION_BCC],
         subject,
         text,
         idempotencyKey: notification.idempotency_key,
