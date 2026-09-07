@@ -240,34 +240,20 @@ function ReviewerAssignmentForm({ labelId, task }: { labelId: string; task: Revi
 }
 
 const INITIAL_CHECKLIST_STATE: ReviewerChecklistState = { status: "idle", message: null };
-const REVIEW_CHECKLIST: Array<[string, string]> = [
-  ["insurer", "Insurer"],
-  ["package_product", "Package product"],
-  ["current_policy_number", "Current policy number"],
-  ["dates", "Current policy dates"],
-  ["idv", "IDV"],
-  ["od_4814", "OD = 4814"],
-  ["portal_tp_net_b_7367", "Portal TP / Net B = 7367"],
-  ["cpa_opted_no", "CPA opted = No"],
-  ["cpa_zero", "CPA = 0"],
-  ["registration_status", "Section 02 registration status is pending/unregistered"],
-  ["class_misd", "Section 02 class is MISD when supported by this layout"],
-  ["chassis_engine", "Section 02 chassis and engine"],
-];
 
 function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain: boolean }) {
   const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const [state, formAction, pending] = useActionState(completePolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const isStarted = task.status !== "assigned" || startState.status === "success";
   if (task.status === "completed") {
-    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer checklist completed. The authorized operator still controls sanitized training approval.
+    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer questions completed. The authorized operator still controls sanitized training approval.
       {canTrain && task.field_questions?.length ? <form action={createPolicyOcrProposalFromFeedback} className="mt-2"><input type="hidden" name="review_task_id" value={task.id} /><button className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Generate sanitized candidate proposal</button></form> : null}
     </div>;
   }
   return (
     <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-black uppercase tracking-wide text-violet-900">Assigned PDF verification checklist</p>
+        <p className="text-xs font-black uppercase tracking-wide text-violet-900">Review questions</p>
         {!isStarted ? (
           <form action={startAction}>
             <input type="hidden" name="review_task_id" value={task.id} />
@@ -278,23 +264,15 @@ function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain:
       {isStarted ? (
         <form action={formAction} className="mt-3 space-y-2">
           <input type="hidden" name="review_task_id" value={task.id} />
-          <div className="grid gap-2 sm:grid-cols-2">
-            {REVIEW_CHECKLIST.map(([key, label]) => (
-              <label key={key} className="flex items-start gap-2 text-xs text-violet-950">
-                <input type="checkbox" name={`check_${key}`} defaultChecked={task.checklist[key] === true} className="mt-0.5" />
-                <span>{label}</span>
-              </label>
-            ))}
-          </div>
           {task.field_questions?.length ? (
             <div className="space-y-3 rounded-xl border border-violet-200 bg-white p-3">
               <p className="text-xs font-black uppercase tracking-wide text-violet-900">Field-level questions</p>
               {task.field_questions.map((question) => (
                 <div key={question.key} className="rounded-lg border border-slate-200 p-2">
-                  <p className="text-xs font-semibold text-slate-800">{question.prompt}</p>
+                  <p className="text-xs font-semibold leading-5 text-slate-800">{question.prompt}</p>
                   <select name={`answer_${question.key}`} required defaultValue="" className="mt-2 h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900">
                     <option value="" disabled>Select an answer</option>
-                    {question.allowedAnswers.map((answer) => <option key={answer} value={answer}>{answer.replaceAll("_", " ")}</option>)}
+                    {question.allowedAnswers.map((answer) => <option key={answer} value={answer}>{answerLabel(answer)}</option>)}
                   </select>
                   <input name={`correct_value_${question.key}`} maxLength={120} className="mt-2 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs text-slate-900" placeholder="Only if providing a corrected sanitized value (no identifiers)" />
                 </div>
@@ -305,13 +283,20 @@ function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain:
             Optional safe review note
             <textarea name="reviewer_note" defaultValue={task.reviewer_note ?? ""} maxLength={500} className="mt-1 min-h-16 w-full rounded-lg border border-violet-200 bg-white p-2 text-sm font-normal text-slate-900" placeholder="Do not include policy, vehicle or customer identifiers." />
           </label>
-          <button disabled={pending} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{pending ? "Saving checklist…" : "Complete checklist"}</button>
+          <button disabled={pending} className="rounded-lg bg-violet-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60">{pending ? "Saving answers…" : "Submit answers"}</button>
           {state.message ? <p className={`text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">{state.message}</p> : null}
         </form>
       ) : null}
       {startState.message ? <p className="mt-2 text-xs font-semibold text-red-700" role="status">{startState.message}</p> : null}
     </div>
   );
+}
+
+function answerLabel(answer: string) {
+  return answer === "ocr_correct" ? "The OCR value is correct"
+    : answer === "database_correct" ? "The database reference is correct"
+      : answer === "provide_correct_value" ? "Provide the correct value"
+        : "Withhold this value";
 }
 
 function comparisonField(key: TrainingComparisonKey, label: string, databaseValue: string | number | boolean | null, proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]], date = false) {
