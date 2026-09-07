@@ -943,6 +943,12 @@ This is parser training through reviewed code and regression evidence, not an au
 
 **IMPLEMENTED / NOT YET MERGED OR DEPLOYED:** `/policies/ocr-training` is now listed under the Development menu, and that section remains visible only to `it_super_user` with approve-level `manage_system` access. The route and training Server Actions also reject every non-`it_super_user` role, so hiding the menu is not the only protection. The OCR workflow and database behavior are unchanged.
 
+### Compact OCR review status refinement — 2026-09-07
+
+**MERGED / DEPLOYMENT TRIGGERED:** the OCR training queue now maps a completed reviewer task on a `needs_review` policy to an effective `Reviewed` state. Queue filters, counts and the status badge use that effective state; approved, rejected, failed, exhausted and exact-match handling remain unchanged. The queue and single-policy review headers were reduced to compact status-oriented copy, parser warnings use a disclosure, and redundant reviewer instructions/footer text was removed. No schema, OCR parser, training-candidate or business-rule changes were made.
+
+PR `#1453` merged as `3e046bf3922e1a4ce2279e8a82ebb02dfe0b8d59`. Canonical verification run `34123830811` passed regressions, typecheck, lint and build for verified head `7d80d252686d7974db5042ce9e90849f21208b2c`. Protected production workflow `34124169592` validated the merged provenance and accepted the Vercel deploy hook with HTTP 201. Final Vercel `READY` state and live browser verification remain **UNVERIFIED**.
+
 
 ## 2026-08-25 phased mobile merge and main-only Expo preview plan
 
