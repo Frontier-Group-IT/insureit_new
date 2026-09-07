@@ -24,7 +24,7 @@ type ReviewTask = {
 const FILTERS = ["all", "needs_review", "exact_match", "reviewed", "approved", "failed"] as const;
 type Filter = (typeof FILTERS)[number];
 
-export function TrainingReviewQueue({ rows, canTrain, canAssign }: { rows: TrainingQueueRow[]; canTrain: boolean; canAssign: boolean }) {
+export function TrainingReviewQueue({ rows, canTrain, canAssign, selectedDocumentId }: { rows: TrainingQueueRow[]; canTrain: boolean; canAssign: boolean; selectedDocumentId?: string }) {
   const [filter, setFilter] = useState<Filter>("needs_review");
   const [query, setQuery] = useState("");
 
@@ -36,6 +36,16 @@ export function TrainingReviewQueue({ rows, canTrain, canAssign }: { rows: Train
       return matchesFilter && matchesQuery;
     });
   }, [filter, query, rows]);
+
+  const selectedRow = selectedDocumentId ? rows.find((row) => row.documentId === selectedDocumentId) : null;
+  if (selectedDocumentId) {
+    return selectedRow ? (
+      <div>
+        <Link href="/policies/ocr-training" className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-blue-700">← Back to policy queue</Link>
+        <TrainingReviewCard row={selectedRow} canTrain={canTrain} canAssign={canAssign} />
+      </div>
+    ) : <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-800">This policy copy is not available in your training queue.</div>;
+  }
 
   return (
     <div>
@@ -53,10 +63,25 @@ export function TrainingReviewQueue({ rows, canTrain, canAssign }: { rows: Train
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search file, policy or insurer" className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm md:w-80" />
       </div>
 
-      <div className="space-y-4">
-        {visibleRows.map((row) => (
-          <TrainingReviewCard key={row.labelId} row={row} canTrain={canTrain} canAssign={canAssign} />
-        ))}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft">
+        <div className="hidden grid-cols-[minmax(220px,1.7fr)_minmax(150px,1fr)_minmax(130px,1fr)_120px_110px] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-wide text-slate-500 md:grid">
+          <span>Policy copy</span><span>Insurer</span><span>OCR status</span><span>Review</span><span>Updated</span>
+        </div>
+        {visibleRows.map((row) => {
+          const comparison = row.processingStatus === "ready" && row.proposal ? compareTrainingProposalToReference(row.proposal, row.databaseReference) : null;
+          return (
+            <Link key={row.labelId} href={`/policies/ocr-training?document=${encodeURIComponent(row.documentId)}`} className="grid gap-2 border-t border-slate-100 px-4 py-3 transition hover:bg-blue-50/50 md:grid-cols-[minmax(220px,1.7fr)_minmax(150px,1fr)_minmax(130px,1fr)_120px_110px] md:items-center">
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-bold text-navy-900">{row.fileName}</span>
+                <span className="mt-1 block truncate text-xs text-slate-500">Policy {row.policyReference} · {new Date(row.uploadedAt).toLocaleDateString("en-IN")}</span>
+              </span>
+              <span className="text-xs font-semibold text-slate-700">{row.linkedInsurer}</span>
+              <span><StatusBadge label={statusLabel(row)} tone={statusTone(row)} /></span>
+              <span className="text-xs text-slate-600">{comparison ? comparison.exactMatch ? "Exact match" : `${comparison.mismatchedFields} review · ${comparison.missingOcrFields} missing` : processingLabel(row.processingStatus)}</span>
+              <span className="text-xs font-bold text-blue-700">Open review →</span>
+            </Link>
+          );
+        })}
         {!visibleRows.length ? <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">No policy copies match this queue filter.</div> : null}
       </div>
     </div>
@@ -301,28 +326,30 @@ function answerLabel(answer: string) {
 function comparisonField(key: TrainingComparisonKey, label: string, databaseValue: string | number | boolean | null, proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]], date = false, task: ReviewTask | null = null, summary: ReturnType<typeof compareTrainingProposalToReference> | null = null) {
   const ocrValue = proposal?.value ?? null;
   const result = compareTrainingValue(key, databaseValue, ocrValue);
+  const question = task?.field_questions?.find((item) => item.key === key);
+  const showDecision = Boolean(question && summary && summary.fields[key] !== "match" && task?.status === "in_review");
   return (
     <div className="grid min-w-[820px] grid-cols-[170px_1fr_1fr_120px] items-center border-t border-slate-100 px-3 py-2">
       <span className="text-xs font-bold text-slate-600">{label}</span>
-      <span className="text-sm font-semibold text-navy-900">{formatValue(databaseValue, date)}</span>
-      <ProposalValue field={proposal} />
-      <span className={`text-xs font-black uppercase ${result === "match" ? "text-emerald-700" : result === "mismatch" ? "text-amber-700" : "text-slate-400"}`}>{result === "match" ? "Match" : result === "mismatch" ? "Review" : result === "ocr_missing" ? "OCR missing" : "Not stored"}</span>
-      {task && summary && summary.fields[key] !== "match" && task.status === "in_review" ? (
-        <ReviewDecisionControls
-          keyName={key}
-          answers={task.field_questions?.find((question) => question.key === key)?.allowedAnswers ?? []}
-        />
-      ) : null}
+      <ValueChoice keyName={key} value={formatValue(databaseValue, date)} answer="database_correct" enabled={Boolean(showDecision && question?.allowedAnswers.includes("database_correct"))} />
+      <ValueChoice keyName={key} value={<ProposalValue field={proposal} />} answer="ocr_correct" enabled={Boolean(showDecision && question?.allowedAnswers.includes("ocr_correct"))} />
+      <span className="text-xs font-black uppercase text-slate-400">{result === "match" ? "Match" : result === "mismatch" ? "Review" : result === "ocr_missing" ? "OCR missing" : "Not stored"}</span>
+      {showDecision ? <ReviewDecisionControls keyName={key} answers={question?.allowedAnswers ?? []} /> : null}
     </div>
   );
 }
 
+function ValueChoice({ keyName, value, answer, enabled }: { keyName: string; value: ReactNode; answer: string; enabled: boolean }) {
+  return <span className="relative pr-2 text-sm font-semibold text-navy-900">{enabled ? <label className="mr-1 inline-flex cursor-pointer items-center align-middle" title={answerLabel(answer)}><input type="radio" name={`answer_${keyName}`} value={answer} required className="peer sr-only" /><span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-300 text-transparent peer-checked:border-emerald-600 peer-checked:bg-emerald-600 peer-checked:text-white">✓</span><span className="sr-only">{answerLabel(answer)}</span></label> : null}{value}</span>;
+}
+
 function ReviewDecisionControls({ keyName, answers }: { keyName: string; answers: string[] }) {
+  const alternateAnswers = answers.filter((answer) => !["database_correct", "ocr_correct"].includes(answer));
   return (
-    <fieldset className="col-span-full mt-2 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 px-2 py-2 text-[11px] text-amber-950">
+    <fieldset className="col-span-full mt-1 flex flex-wrap items-center gap-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-950">
       <legend className="sr-only">Decision for {keyName}</legend>
-      {answers.map((answer) => <label key={answer} className="inline-flex items-center gap-1"><input type="radio" name={`answer_${keyName}`} value={answer} required />{answerLabel(answer)}</label>)}
-      <input name={`correct_value_${keyName}`} maxLength={120} className="h-7 min-w-56 flex-1 rounded border border-amber-200 bg-white px-2 text-[11px] text-slate-900" placeholder="Correct sanitized value if editing" />
+      {alternateAnswers.map((answer) => <label key={answer} className="inline-flex items-center gap-1"><input type="radio" name={`answer_${keyName}`} value={answer} required />{answerLabel(answer)}</label>)}
+      {answers.includes("provide_correct_value") ? <input name={`correct_value_${keyName}`} maxLength={120} className="h-7 min-w-48 flex-1 rounded border border-amber-200 bg-white px-2 text-[11px] text-slate-900" placeholder="Correct sanitized value" /> : null}
     </fieldset>
   );
 }

@@ -90,8 +90,9 @@ type ReviewTaskRow = {
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-export default async function PolicyOcrTrainingPage() {
+export default async function PolicyOcrTrainingPage({ searchParams }: { searchParams?: Promise<{ document?: string }> }) {
   const viewer = await requirePolicyOcrTrainingViewer();
+  const selectedDocumentId = (await searchParams)?.document;
   const admin = createSupabaseAdminClient();
   const { data, error, count } = await admin
     .from("policy_documents")
@@ -206,7 +207,7 @@ export default async function PolicyOcrTrainingPage() {
         <p className="mt-2 max-w-4xl text-sm text-slate-500">
            {viewer.isOperator
              ? "Choose a policy copy and run it through Google server-side. Assign a private-copy review task when a human PDF check is needed; no policy copy runs automatically."
-             : "Review only the policy-copy tasks assigned to your portal user. Keep the PDF and raw OCR inside the protected portal and complete every checklist item from the uploaded copy."}
+             : "Review only the policy-copy tasks assigned to your portal user. Keep the PDF and raw OCR inside the protected portal and complete every review answer from the uploaded copy."}
         </p>
         <p className="mt-2 text-xs font-semibold text-slate-500">
           Showing {viewer.isOperator ? count ?? rows.length : rows.length} {viewer.isOperator ? "policy copies linked to policy records." : "assigned policy-copy review tasks."} Legacy customer-uploaded copies are included only after an unambiguous policy match.
@@ -241,7 +242,7 @@ export default async function PolicyOcrTrainingPage() {
               <button className="h-9 rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white">Record satisfaction</button>
             </div>
           </form> : null}
-          <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} />
+          <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} selectedDocumentId={selectedDocumentId} />
         </>
       )}
     </AppShell>
