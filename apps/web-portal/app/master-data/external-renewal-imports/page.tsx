@@ -31,7 +31,7 @@ export default async function ExternalRenewalImportsPage() {
   await requireCapability("manage_master_data", "edit");
   const admin = createSupabaseAdminClient();
   const [{ data: partners }, { data: batches }] = await Promise.all([
-    admin.from("partners").select("id,partner_code,display_name").eq("partner_status", "active").order("display_name").returns<PartnerOption[]>(),
+    admin.from("partners").select("id,partner_code,display_name").eq("partner_status", "active_partner").order("display_name").returns<PartnerOption[]>(),
     admin.from("external_renewal_import_batches").select("id,partner_id,source_name,source_file_name,source_period,status,total_rows,accepted_rows,rejected_rows,duplicate_rows,published_at,created_at").order("created_at", { ascending: false }).limit(12).returns<BatchRow[]>(),
   ]);
   const partnerMap = new Map((partners ?? []).map((partner) => [partner.id, partner.display_name || partner.partner_code || "Partner"]));
