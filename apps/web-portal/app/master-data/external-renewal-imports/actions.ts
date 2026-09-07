@@ -14,6 +14,7 @@ export type ExternalRenewalImportState = {
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_ROWS = 5000;
 const DAY_MS = 86_400_000;
+const INDIA_OFFSET_MS = 330 * 60 * 1000;
 
 const HEADER_ALIASES: Record<string, string[]> = {
   invoiceDate: ["invoice date"],
@@ -91,9 +92,9 @@ function normalizeVehicleKey(chassis: string, registration: string) {
   return normalizedChassis || (normalizedRegistration ? `REG:${normalizedRegistration}` : "");
 }
 
-function startOfTodayUtc() {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+function startOfTodayIndia() {
+  const indiaNow = new Date(Date.now() + INDIA_OFFSET_MS);
+  return new Date(Date.UTC(indiaNow.getUTCFullYear(), indiaNow.getUTCMonth(), indiaNow.getUTCDate()));
 }
 
 export async function uploadExternalRenewalWorkbook(
@@ -130,7 +131,7 @@ export async function uploadExternalRenewalWorkbook(
   if (!rows.length) return { ok: false, message: "The workbook has no data rows." };
   if (rows.length > MAX_ROWS) return { ok: false, message: `Workbook has ${rows.length} rows. Maximum supported per import is ${MAX_ROWS}.` };
 
-  const today = startOfTodayUtc();
+  const today = startOfTodayIndia();
   const oldestAllowedEnd = new Date(today.getTime() - 30 * DAY_MS);
   const parsed: Array<Record<string, unknown> & { _businessKey: string; _invoiceDate: string }> = [];
   let rejected = 0;
