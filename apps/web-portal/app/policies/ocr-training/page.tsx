@@ -94,7 +94,7 @@ export default async function PolicyOcrTrainingPage({ searchParams }: { searchPa
   const viewer = await requirePolicyOcrTrainingViewer();
   const selectedDocumentId = (await searchParams)?.document;
   const admin = createSupabaseAdminClient();
-  const { data, error, count } = await admin
+  const { data, error } = await admin
     .from("policy_documents")
     .select("id,policy_id,file_name,created_at,policies(policy_no,policy_type,start_date,end_date,insured_declared_value,policy_code,insurance_companies(name),vehicles(vehicle_no,registration_status,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,fuel_type,year,engine_capacity_cc,seating_capacity,gvw_kg,chassis_no,engine_no,rto_name,rto_state),policy_party_snapshots(registration_number,vehicle_class,make,model,fuel_type,manufacturing_year,capacity_value,chassis_no,engine_no,rto_name,rto_state,created_at),policy_premium_details(od_premium,tp_premium,cpa_opted,cpa_amount,net_premium,gst_amount,gross_premium)),policy_ocr_training_labels(*)", { count: "exact" })
     .eq("document_type", "policy_copy")
@@ -202,16 +202,10 @@ export default async function PolicyOcrTrainingPage({ searchParams }: { searchPa
   return (
     <AppShell title="Policy OCR training">
       <div className="mb-5">
-        <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Policy OCR training queue</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-navy-900">Proposal and correction review</h1>
-        <p className="mt-2 max-w-4xl text-sm text-slate-500">
-           {viewer.isOperator
-             ? "Choose a policy copy and run it through Google server-side. Assign a private-copy review task when a human PDF check is needed; no policy copy runs automatically."
-             : "Review only the policy-copy tasks assigned to your portal user. Keep the PDF and raw OCR inside the protected portal and complete every review answer from the uploaded copy."}
-        </p>
-        <p className="mt-2 text-xs font-semibold text-slate-500">
-          Showing {viewer.isOperator ? count ?? rows.length : rows.length} {viewer.isOperator ? "policy copies linked to policy records." : "assigned policy-copy review tasks."} Legacy customer-uploaded copies are included only after an unambiguous policy match.
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-lg font-black tracking-tight text-navy-900">Policy OCR training</h1>
+          <span className="text-[11px] font-semibold text-slate-500">{rows.length} policy copies · queue status</span>
+        </div>
       </div>
       {viewer.isOperator ? <section className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
