@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, FileText, ShieldCheck, Truck } from "lucide-react";
+import { Camera, ContactRound, Eye, FilePenLine, FileText, RefreshCw, ShieldCheck, Truck, Video } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
@@ -36,7 +36,7 @@ type ClaimIntimationDetails = {
 };
 
 type DocumentVisual = {
-  key: "spot" | "rc" | "insurance" | "gr" | "document";
+  key: "spot" | "rc" | "insurance" | "dl" | "gr" | "video" | "document";
   accent: string;
   fallbackIcon: string;
 };
@@ -181,6 +181,7 @@ function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: 
       return uploadFinalDocument(formData);
     });
   }
+
   function verify() {
     run(`verify-${row.type}`, () => {
       const formData = new FormData();
@@ -206,24 +207,29 @@ function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: 
       </div>
 
       {row.documentId ? (
-        <div className="grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2">
-          <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon visual={visual} /></div>
+        <div className="relative grid grid-cols-[32px_1fr] items-center gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2 pr-[142px]">
+          <div className="grid h-8 w-8 place-items-center bg-transparent"><DocumentTypeHeaderIcon visual={visual} /></div>
           <div className="min-w-0">
-            <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{row.fileName ?? "Document uploaded"}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-1">
-              <span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{row.name}</span>
-              {row.viewUrl ? <a href={row.viewUrl} target="_blank" rel="noreferrer" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</a> : null}
-              <span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{row.status}</span>
-            </div>
-            {verified ? (
-              <div className="mt-2 grid grid-cols-1 gap-1.5"><span className="h-8 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-center text-[11px] font-semibold text-green-700">Verified</span></div>
-            ) : (
-              <div className="mt-2 grid grid-cols-3 gap-1.5">
-                <button type="button" disabled={isPending} onClick={verify} className="h-8 rounded-md border border-[#BFD3F7] bg-white px-2 text-[11px] font-semibold text-[#174EA6] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "Verifying..." : "Verify"}</button>
-                <label className="grid h-8 cursor-pointer place-items-center rounded-md border border-[#D9E3F0] bg-white px-2 text-[11px] font-semibold text-[#071D49]"><input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />Replace</label>
-                <button type="button" onClick={refresh} className="h-8 rounded-md border border-[#D9E3F0] bg-white px-2 text-[11px] font-semibold text-[#071D49]">Reload</button>
-              </div>
-            )}
+            {row.viewUrl ? (
+              <a href={row.viewUrl} target="_blank" rel="noreferrer" title="Open uploaded document" className="block truncate text-[11px] font-semibold text-[#071D49] transition hover:text-[#174EA6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25">{row.fileName ?? "Document uploaded"}</a>
+            ) : <p className="truncate text-[11px] font-semibold text-[#071D49]">{row.fileName ?? "Document uploaded"}</p>}
+          </div>
+          <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+            {row.viewUrl ? (
+              <a href={row.viewUrl} target="_blank" rel="noreferrer" aria-label="Preview document" title="Preview document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#174EA6] transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25">
+                <Eye aria-hidden="true" size={16} strokeWidth={2} />
+              </a>
+            ) : null}
+            {!verified ? (
+              <button type="button" disabled={isPending} onClick={verify} className="h-8 rounded-md border border-[#21A366] bg-white px-2 text-[11px] font-semibold text-[#12844F] transition hover:bg-[#F1FBF6] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "..." : "Verify"}</button>
+            ) : null}
+            <button type="button" onClick={refresh} aria-label="Reload document" title="Reload document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30">
+              <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
+            </button>
+            <label aria-label="Replace document" title="Replace document" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-within:ring-2 focus-within:ring-[#D15B5B]/30">
+              <input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />
+              <FilePenLine aria-hidden="true" size={16} strokeWidth={2} />
+            </label>
           </div>
         </div>
       ) : (
@@ -244,7 +250,9 @@ function documentVisual(row: FinalDocumentRowV2): DocumentVisual {
   if (value.includes("spot") || value.includes("photo")) return { key: "spot", accent: "bg-[#EAF4FF]", fallbackIcon: "📷" };
   if (value.includes("rc") || value.includes("registration") || value.includes("fitness")) return { key: "rc", accent: "bg-[#F1ECFF]", fallbackIcon: "📄" };
   if (value.includes("insurance") || value.includes("policy")) return { key: "insurance", accent: "bg-[#FFF3D9]", fallbackIcon: "📃" };
+  if (value.includes("driver") || value.includes("licence") || value.includes("license")) return { key: "dl", accent: "bg-[#EAF8EF]", fallbackIcon: "🪪" };
   if (value.includes("gr") || value.includes("load bill") || value.includes("challan")) return { key: "gr", accent: "bg-[#FFF1E6]", fallbackIcon: "🚚" };
+  if (value.includes("video")) return { key: "video", accent: "bg-[#F2EEFF]", fallbackIcon: "🎥" };
   return { key: "document", accent: "bg-[#EEF4FF]", fallbackIcon: "📄" };
 }
 
@@ -253,7 +261,9 @@ function DocumentTypeHeaderIcon({ visual }: { visual: DocumentVisual }) {
   if (visual.key === "spot") return <Camera aria-hidden="true" className={`${baseClassName} text-[#F037A5]`} strokeWidth={2.2} />;
   if (visual.key === "rc") return <FileText aria-hidden="true" className={`${baseClassName} text-[#16A36A]`} strokeWidth={2.2} />;
   if (visual.key === "insurance") return <ShieldCheck aria-hidden="true" className={`${baseClassName} text-[#2563EB]`} strokeWidth={2.2} />;
+  if (visual.key === "dl") return <ContactRound aria-hidden="true" className={`${baseClassName} text-[#9333EA]`} strokeWidth={2.2} />;
   if (visual.key === "gr") return <Truck aria-hidden="true" className={`${baseClassName} text-[#EA7A16]`} strokeWidth={2.2} />;
+  if (visual.key === "video") return <Video aria-hidden="true" className={`${baseClassName} text-[#EF233C]`} strokeWidth={2.2} />;
   return <FileText aria-hidden="true" className={`${baseClassName} text-[#071D49]`} strokeWidth={2.2} />;
 }
 
