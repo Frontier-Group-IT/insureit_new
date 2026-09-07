@@ -9,6 +9,7 @@ on:
       - 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql'
       - 'supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql'
       - 'supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql'
+      - 'supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql'
       - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
 
 permissions:
@@ -103,3 +104,9 @@ jobs:
           for key in orchestrators_ready samples_ready proposals_ready orchestrators_private; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
           done
+
+      - name: Apply OCR orchestrator claim fix
+        run: supabase db query --linked --file supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql
+
+      - name: Record OCR orchestrator claim fix
+        run: supabase migration repair --linked --status applied 20260907180000
