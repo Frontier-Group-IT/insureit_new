@@ -107,6 +107,17 @@ function stageDetailsFromForm(formData: FormData, stageKey: OperationsStageKey) 
   return details;
 }
 
+function stageHistoryNote(formData: FormData, stageKey: OperationsStageKey) {
+  if (stageKey !== "spot_status") {
+    return textValue(formData, "notes") ?? `Operations completed ${stageKey.replaceAll("_", " ")} and opened the next journey stage.`;
+  }
+
+  const surveyorName = textValue(formData, "surveyor_name") ?? "Not provided";
+  const surveyorEmail = textValue(formData, "surveyor_email") ?? "Not provided";
+  const surveyorPhone = textValue(formData, "surveyor_phone") ?? "Not provided";
+  return `Surveyor details — Name: ${surveyorName} | Email: ${surveyorEmail} | Number: ${surveyorPhone}`;
+}
+
 export async function completeClaimJourneyStage(claimId: string, formData: FormData) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -181,7 +192,7 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
     claim_id: claimId,
     from_status: claim.current_status,
     to_status: nextStatus,
-    notes: textValue(formData, "notes") ?? `Operations completed ${stageKey.replaceAll("_", " ")} and opened the next journey stage.`,
+    notes: stageHistoryNote(formData, stageKey),
     changed_by: profile?.id ?? null,
   });
   if (historyError) throw new Error(historyError.message);
