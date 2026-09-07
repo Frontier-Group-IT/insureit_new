@@ -39,6 +39,29 @@ const cases: Case[] = [
     pages: [page1("N9000005", "04/08/2026", "03/08/2027", 3410730, 4715, 7367, 0, 12082, 2174.76, 14256.76)],
     expected: expected("N9000005", "3410730", "4715", "7367", "0", "No", "2026-08-04", "2027-08-03", "12082", "2174.76", "14256.76"),
   },
+  {
+    name: "commercial vehicle explicit no-valid-licence opt-out with legal driver liability",
+    pages: [
+      `IFFCO-TOKIO GENERAL INSURANCE CO.LTD
+COMMERCIAL VEHICLE CERTIFICATE OF INSURANCE cum SCHEDULE & TAX INVOICE
+P400 Policy # N9000006
+Period of Insurance From: 04/08/2026 00:00:00
+To: Midnight On 03/08/2027 23:59:59
+Insured Motor Vehicle Details & Premium Calculation
+Coverage IDV in Rs.
+Package 1200000 Non Electrical Accessories are not covered as its value is 0
+A. Own Damage (Rs.) B. Third Party (Rs.)
+PA Owner Driver CSI Rs 0.00
+Basic TP Premium 7267.00
+Legal Liability to Driver (IMT 28) 100.00
+Net (A) 4814.00 Net (B) 7367.00
+Premium/Taxable Value RS. 12181.00
+Gross Premium Payable Rs. 14373.58
+GST Details 997134 12181.00 18.00 2192.58 14373.58
+Since you, as insured, have declared that you do not have a valid driving license, the PA coverage for Owner-Driver will not be applicable.`,
+    ],
+    expected: expected("N9000006", "1200000", "4814", "7367", "0", "No", "2026-08-04", "2027-08-03", "12181", "2192.58", "14373.58"),
+  },
 
   // Real-layout fixtures below are sanitized reconstructions of the supplied IFFCO schedules.
   {
