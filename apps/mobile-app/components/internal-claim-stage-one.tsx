@@ -48,7 +48,7 @@ function isMultiMediaKey(key: Exclude<DocumentKey, 'bulk'>): key is 'accident_ph
 
 export default function InternalClaimStageOne() {
   const router = useRouter();
-  const { vehicleId, policyId } = useLocalSearchParams<{ vehicleId?: string; policyId?: string }>();
+  const { vehicleId, policyId, draftClaimId } = useLocalSearchParams<{ vehicleId?: string; policyId?: string; draftClaimId?: string }>();
   const [contexts, setContexts] = useState<CustomerAccountContext[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [policies, setPolicies] = useState<Policy[]>([]);
@@ -77,10 +77,13 @@ export default function InternalClaimStageOne() {
   const [timeTarget, setTimeTarget] = useState<TimeTarget>(null);
   const [createdClaimSuccess, setCreatedClaimSuccess] = useState<{ id: string; controlNo: string } | null>(null);
   const [draftClaim, setDraftClaim] = useState<DraftClaim | null>(null);
+  const [expiryWarningOpen, setExpiryWarningOpen] = useState(false);
+  const [expiryWarningAcknowledged, setExpiryWarningAcknowledged] = useState(false);
 
   useEffect(() => {
     let active = true;
     void (async () => {
+      if (!vehicleId && !policyId && !draftClaimId) { router.replace('/customer/start-claim'); return; }
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
       const nextContexts = await getOperationalCustomerContexts();
@@ -100,6 +103,30 @@ export default function InternalClaimStageOne() {
       setPolicies(nextPolicies);
       setInsurers(insurerResult.data ?? []);
 
+      if (draftClaimId) {
+        const draftResult = await supabase.from('claims').select('id,customer_id,claim_no,vehicle_id,policy_id,current_status').eq('id', draftClaimId).eq('current_status', 'Draft').maybeSingle();
+        const row = draftResult.data as any;
+        if (row && ids.includes(row.customer_id)) {
+          const draftVehicle = nextVehicles.find((item) => item.id === row.vehicle_id) ?? null;
+          const draftPolicy = nextPolicies.find((item) => item.id === row.policy_id) ?? null;
+          if (draftVehicle && draftPolicy && draftPolicy.vehicle_id === draftVehicle.id) {
+            setDraftClaim({ id: row.id, customerId: row.customer_id, controlNo: row.claim_no });
+            setSelectedCustomerId(row.customer_id);
+            setSelectedVehicleId(row.vehicle_id);
+            const docResult = await supabase.from('claim_documents').select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size').eq('claim_id', row.id).order('created_at', { ascending: true });
+            const restored: Record<DocumentKey, UploadedDocument[]> = { rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] };
+            for (const raw of (docResult.data ?? []) as any[]) {
+              const key = raw.document_type === BULK_DOCUMENT_TYPE ? 'bulk' : (Object.entries(DOCUMENT_TYPE_BY_KEY).find(([, value]) => value === raw.document_type)?.[0] as DocumentKey | undefined);
+              if (!key) continue;
+              restored[key].push({ name: raw.file_name ?? 'Document', uri: '', mimeType: raw.mime_type, size: raw.file_size, documentId: raw.id, storageBucket: raw.storage_bucket || 'claim-documents', storagePath: raw.storage_path });
+            }
+            setDocuments(restored);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       const routedPolicy = policyId ? nextPolicies.find((item) => item.id === policyId) : null;
       const routedVehicle = vehicleId ? nextVehicles.find((item) => item.id === vehicleId) : null;
       const fallbackPolicy = routedPolicy ?? (routedVehicle ? nextPolicies.find((item) => item.vehicle_id === routedVehicle.id) : nextPolicies[0]) ?? null;
@@ -109,7 +136,7 @@ export default function InternalClaimStageOne() {
       setLoading(false);
     })();
     return () => { active = false; };
-  }, [policyId, router, vehicleId]);
+  }, [draftClaimId, policyId, router, vehicleId]);
 
   const selectedVehicle = useMemo(() => vehicles.find((item) => item.id === selectedVehicleId) ?? null, [selectedVehicleId, vehicles]);
   const selectedPolicy = useMemo(() => {
@@ -119,6 +146,8 @@ export default function InternalClaimStageOne() {
   }, [policies, policyId, selectedVehicle]);
   const selectedInsurer = useMemo(() => selectedPolicy ? insurers.find((item) => item.id === selectedPolicy.insurance_company_id) ?? null : null, [insurers, selectedPolicy]);
   const selectedContext = useMemo(() => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null, [contexts, selectedCustomerId]);
+
+  useEffect(() => { setExpiryWarningAcknowledged(false); }, [incidentDate, selectedPolicy?.id]);
 
   async function ensureDraftClaim(): Promise<DraftClaim | null> {
     if (draftClaim) return draftClaim;
@@ -320,7 +349,7 @@ export default function InternalClaimStageOne() {
     return Boolean(uploaded);
   }
 
-  async function submit() {
+  async function submit(options?: { allowExpiredPolicy?: boolean }) {
     if (!selectedVehicle || !selectedPolicy || !selectedContext || saving || uploadingDocuments || voiceRecording) return;
     setMessage('');
     setValidationMessage('');
@@ -333,6 +362,8 @@ export default function InternalClaimStageOne() {
     if (incidentAt.getTime() > Date.now()) return setValidationMessage('Accident Date / Time cannot be in the future.');
     if (spotIntimationAt.getTime() > Date.now()) return setValidationMessage('Spot Intimation Date / Time cannot be in the future.');
     if (spotIntimationAt.getTime() < incidentAt.getTime()) return setValidationMessage('Spot Intimation Date / Time cannot be earlier than Accident Date / Time.');
+    const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(selectedPolicy, incidentAt);
+    if (policyExpiredBeforeIncident && !options?.allowExpiredPolicy && !expiryWarningAcknowledged) { setExpiryWarningOpen(true); return; }
 
     setSaving(true);
     try {
@@ -347,7 +378,7 @@ export default function InternalClaimStageOne() {
         accident_at: incidentAt.toISOString(),
         spot_intimation_at: spotIntimationAt.toISOString(),
         accident_location: location.trim() || null,
-        accident_description: [driver.trim() ? `Driver: ${driver.trim()}` : '', phone.trim() ? `Driver phone: ${phone.trim()}` : ''].filter(Boolean).join('\n') || null,
+        accident_description: [driver.trim() ? `Driver: ${driver.trim()}` : '', phone.trim() ? `Driver phone: ${phone.trim()}` : '', policyExpiredBeforeIncident ? `Policy expiry warning: Policy expired on ${formatDate(selectedPolicy.end_date)} before incident date ${formatDate(incidentAt.toISOString())}.` : ''].filter(Boolean).join('\n') || null,
         estimated_loss: null,
         created_by: session.user.id,
       };
@@ -420,6 +451,7 @@ export default function InternalClaimStageOne() {
       <ClaimActionBar primaryDisabled={saving || uploadingDocuments || voiceRecording || !selectedPolicy} primaryIcon="arrow-right" primaryLabel={voiceRecording ? 'Stop recording first' : uploadingDocuments ? 'Uploading documents…' : saving ? 'Saving...' : 'Save Details'} onPrimary={() => void submit()} onAssistance={() => router.push('/customer/support')} />
 
       <Modal visible={Boolean(createdClaimSuccess)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => undefined}><View style={styles.controlSuccessBackdrop}><View accessibilityRole="alert" style={styles.controlSuccessCard}><View style={styles.controlSuccessIcon}><MaterialCommunityIcons name="check" size={18} color="#FFFFFF" /></View><Text style={styles.controlSuccessTitle}>Control No. Created</Text><Pressable accessibilityRole="button" accessibilityLabel="Open claim using generated control number" onPress={() => { const target = createdClaimSuccess; if (!target) return; setCreatedClaimSuccess(null); router.replace({ pathname: '/customer/internal-spot-status', params: { id: target.id } }); }} style={({ pressed }) => [styles.controlSuccessNumber, pressed && styles.controlSuccessNumberPressed]}><View style={styles.controlSuccessNumberCopy}><Text style={styles.controlSuccessNumberLabel}>CONTROL NO.</Text><Text style={styles.controlSuccessNumberValue}>{createdClaimSuccess?.controlNo ?? ''}</Text></View><View style={styles.controlSuccessOk}><Text style={styles.controlSuccessOkText}>OK</Text></View></Pressable></View></View></Modal>
+      <Modal visible={expiryWarningOpen} transparent animationType="fade" onRequestClose={() => setExpiryWarningOpen(false)}><View style={styles.validationBackdrop}><View accessibilityRole="alert" style={styles.validationCard}><View style={styles.deleteConfirmIcon}><MaterialCommunityIcons name="shield-alert-outline" size={20} color="#B42318" /></View><Text style={styles.validationTitle}>Policy expired before incident date</Text><Text style={styles.validationBody}>The selected policy expired on {formatDate(selectedPolicy?.end_date)}. You can still continue, but this claim may need extra insurer review.</Text><View style={styles.deleteConfirmActions}><Pressable accessibilityRole="button" onPress={() => setExpiryWarningOpen(false)} style={styles.deleteCancelButton}><Text style={styles.deleteCancelText}>Review Date</Text></Pressable><Pressable accessibilityRole="button" onPress={() => { setExpiryWarningOpen(false); setExpiryWarningAcknowledged(true); void submit({ allowExpiredPolicy: true }); }} style={styles.deleteConfirmButton}><Text style={styles.deleteConfirmText}>Continue</Text></Pressable></View></View></View></Modal>
       <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}><View style={styles.validationBackdrop}><View accessibilityRole="alert" style={styles.validationCard}><View style={styles.deleteConfirmIcon}><MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" /></View><Text style={styles.validationTitle}>Delete document?</Text><Text style={styles.validationBody}>{deleteTarget ? `Are you sure you want to delete ${deleteTarget.title}?` : ''}</Text><View style={styles.deleteConfirmActions}><Pressable accessibilityRole="button" onPress={() => setDeleteTarget(null)} style={styles.deleteCancelButton}><Text style={styles.deleteCancelText}>Cancel</Text></Pressable><Pressable accessibilityRole="button" disabled={uploadingDocuments} onPress={() => void confirmDelete()} style={styles.deleteConfirmButton}><Text style={styles.deleteConfirmText}>Delete</Text></Pressable></View></View></View></Modal>
       <ExternalClaimErrorPopup visible={Boolean(validationMessage)} message={validationMessage} title="Alert" onClose={() => setValidationMessage('')} />
       <TimePickerModal value={timeTarget === 'intimation' ? intimationTime : incidentTime} visible={timeTarget !== null} title={timeTarget === 'intimation' ? 'Select spot intimation time' : 'Select incident time'} onClose={() => setTimeTarget(null)} onSelect={(value) => { if (timeTarget === 'intimation') setIntimationTime(value); else setIncidentTime(value); setTimeTarget(null); }} />
@@ -443,6 +475,8 @@ function TimeColumn({ label, value, options, onSelect }: { label: string; value:
 function parseTime(value: string) { const match = /^(\d{2}):(\d{2})$/.exec(value); return match ? { hour: Number(match[1]), minute: Number(match[2]) } : { hour: new Date().getHours(), minute: Math.floor(new Date().getMinutes() / 5) * 5 }; }
 function parseDateTime(date: string, time: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time.trim())) return null; const [year, month, day] = date.split('-').map(Number); const [hour, minute] = time.trim().split(':').map(Number); const value = new Date(year, month - 1, day, hour, minute); return Number.isNaN(value.getTime()) ? null : value; }
 function todayIsoDate() { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
+function isIncidentAfterPolicyExpiry(policy: Policy | null, incidentAt: Date | null) { if (!policy?.end_date || !incidentAt) return false; const expiry = new Date(`${policy.end_date.slice(0, 10)}T23:59:59`); return !Number.isNaN(expiry.getTime()) && incidentAt.getTime() > expiry.getTime(); }
+function formatDate(value?: string | null) { if (!value) return '-'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function formatTime(value: string) { const parsed = parseTime(value); const date = new Date(2000, 0, 1, parsed.hour, parsed.minute); return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); }
 function mapSubmitError(error: { message?: string; code?: string } | null) { const value = `${error?.code ?? ''} ${error?.message ?? ''}`.toLowerCase(); if (value.includes('claim already in progress') || value.includes('active claim already exists')) return 'Claim already in progress for this policy.'; if (value.includes('duplicate') || value.includes('unique')) return 'A claim has already been started for this incident. Open My Claims to continue.'; return error?.message || 'We could not create this claim right now. Please try again.'; }
 

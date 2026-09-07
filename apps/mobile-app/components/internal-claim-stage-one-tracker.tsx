@@ -102,6 +102,7 @@ export default function InternalClaimStageOneTracker() {
   }, [claimId]);
 
   const savedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status !== 'rejected').map((item) => item.document_type)), [documents]);
+  const verifiedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status === 'verified').map((item) => item.document_type)), [documents]);
   const bulkCount = useMemo(() => documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected').length, [documents]);
   const voiceDocument = useMemo(() => documents.find((item) => item.document_type === VOICE_NOTE_DOCUMENT_TYPE && item.verification_status !== 'rejected') ?? null, [documents]);
   const voiceVerified = voiceDocument?.verification_status === 'verified';
@@ -130,6 +131,7 @@ export default function InternalClaimStageOneTracker() {
 
   async function pickDocument(key: DocumentKey) {
     if (!claim || uploadingKey) return;
+    if (verifiedTypes.has(DOCUMENT_TYPE_BY_KEY[key])) { setMessage('This document is verified by Claims Desk and can no longer be replaced.'); return; }
     setMessage('');
     const multi = key === 'accident_photo' || key === 'accident_video';
     const pickerTypes = key === 'accident_video' ? ['video/*'] : key === 'accident_photo' ? ['image/*'] : ['application/pdf', 'image/*'];
@@ -325,12 +327,12 @@ export default function InternalClaimStageOneTracker() {
       <View style={styles.documentCard}>
         <View style={styles.documentHeader}><Text style={styles.documentTitle}>Upload claim documents</Text><View style={styles.optionalBadge}><Text style={styles.optionalBadgeText}>Optional now</Text></View></View>
         <View style={styles.grid}>
-          <DocumentTile title="RC Copy" source={require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.rc)} busy={uploadingKey === 'rc'} onPress={() => void pickDocument('rc')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.rc)} />
-          <DocumentTile title="Insurance Copy" source={require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.insurance)} busy={uploadingKey === 'insurance'} onPress={() => void pickDocument('insurance')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.insurance)} />
-          <DocumentTile title="Driver Licence" source={require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.licence)} busy={uploadingKey === 'licence'} onPress={() => void pickDocument('licence')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.licence)} />
-          <DocumentTile title="GR / Load Bill" source={require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.gr)} busy={uploadingKey === 'gr'} onPress={() => void pickDocument('gr')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.gr)} />
-          <DocumentTile title="Accident Photo" source={require('../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_photo)} busy={uploadingKey === 'accident_photo'} onPress={() => void pickDocument('accident_photo')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_photo)} />
-          <DocumentTile title="Accident Video" icon="video" saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} busy={uploadingKey === 'accident_video'} status={videoStatus} onPress={() => void pickDocument('accident_video')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_video)} />
+          <DocumentTile title="RC Copy" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.rc)} source={require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.rc)} busy={uploadingKey === 'rc'} onPress={() => void pickDocument('rc')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.rc)} />
+          <DocumentTile title="Insurance Copy" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.insurance)} source={require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.insurance)} busy={uploadingKey === 'insurance'} onPress={() => void pickDocument('insurance')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.insurance)} />
+          <DocumentTile title="Driver Licence" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.licence)} source={require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.licence)} busy={uploadingKey === 'licence'} onPress={() => void pickDocument('licence')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.licence)} />
+          <DocumentTile title="GR / Load Bill" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.gr)} source={require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.gr)} busy={uploadingKey === 'gr'} onPress={() => void pickDocument('gr')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.gr)} />
+          <DocumentTile title="Accident Photo" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_photo)} source={require('../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_photo)} busy={uploadingKey === 'accident_photo'} onPress={() => void pickDocument('accident_photo')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_photo)} />
+          <DocumentTile title="Accident Video" icon="video" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} busy={uploadingKey === 'accident_video'} status={videoStatus} onPress={() => void pickDocument('accident_video')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_video)} />
         </View>
         <View style={styles.bulkShell}>
           <Pressable disabled={Boolean(uploadingKey)} onPress={() => void pickBulkDocuments()} style={[styles.bulk, bulkCount > 0 && styles.bulkSaved]}>
@@ -357,8 +359,8 @@ export default function InternalClaimStageOneTracker() {
   );
 }
 
-function DocumentTile({ title, source, icon, saved, busy, status, onPress, onRemove }: { title: string; source?: any; icon?: keyof typeof MaterialCommunityIcons.glyphMap; saved: boolean; busy: boolean; status?: string; onPress: () => void; onRemove: () => void }) {
-  return <Pressable disabled={busy} onPress={onPress} style={[styles.tile, saved && styles.tileSaved]}>{saved ? <View style={styles.check}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}{saved ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.remove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}<View style={styles.artwork}>{source ? <Image source={source} style={styles.artworkImage} resizeMode="contain" /> : icon ? <View style={styles.videoArtwork}><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></View> : null}</View><Text style={styles.tileTitle} numberOfLines={2}>{title}</Text><Text style={[styles.tileStatus, saved && styles.tileStatusSaved]}>{busy ? (status || 'Uploading…') : saved ? 'Saved' : 'Tap to upload'}</Text></Pressable>;
+function DocumentTile({ title, source, icon, saved, locked, busy, status, onPress, onRemove }: { title: string; source?: any; icon?: keyof typeof MaterialCommunityIcons.glyphMap; saved: boolean; locked: boolean; busy: boolean; status?: string; onPress: () => void; onRemove: () => void }) {
+  return <Pressable disabled={busy || locked} onPress={onPress} style={[styles.tile, saved && styles.tileSaved]}>{locked ? <View style={styles.check}><MaterialCommunityIcons name="lock-check-outline" size={15} color="#18864B" /></View> : saved ? <View style={styles.check}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}{saved && !locked ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.remove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}<View style={styles.artwork}>{source ? <Image source={source} style={styles.artworkImage} resizeMode="contain" /> : icon ? <View style={styles.videoArtwork}><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></View> : null}</View><Text style={styles.tileTitle} numberOfLines={2}>{title}</Text><Text style={[styles.tileStatus, saved && styles.tileStatusSaved]}>{busy ? (status || 'Uploading…') : locked ? 'Verified · Locked' : saved ? 'Saved' : 'Tap to upload'}</Text></Pressable>;
 }
 
 function ReadOnlyField({ label, value, icon }: { label: string; value: string; icon?: keyof typeof MaterialCommunityIcons.glyphMap }) {

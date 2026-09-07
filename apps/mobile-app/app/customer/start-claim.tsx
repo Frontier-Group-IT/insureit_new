@@ -141,6 +141,10 @@ export default function StartClaimScreen() {
 
       const existingClaim = await findActiveManagedClaim(selectedPolicy.id);
       if (existingClaim) {
+        if (existingClaim.current_status === 'Draft') {
+          router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id, draftClaimId: existingClaim.id } } as any);
+          return;
+        }
         setExistingActiveClaimId(existingClaim.id);
         return;
       }

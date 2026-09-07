@@ -34,9 +34,9 @@ export default function InternalSpotStatusScreen() {
     }
     let active = true;
     void (async () => {
-      const [claimResult, milestoneResult] = await Promise.all([
+      const [claimResult, stageDetailResult] = await Promise.all([
         supabase.from('claims').select('id,claim_no,claim_service_mode,vehicle_id,policy_id').eq('id', id).maybeSingle(),
-        (supabase as any).from('claim_milestones').select('*').eq('claim_id', id).eq('milestone_key', 'spot_status').maybeSingle(),
+        (supabase as any).from('claim_stage_details').select('stage,details,created_at').eq('claim_id', id).order('created_at', { ascending: false }),
       ]);
       if (!active) return;
       if (claimResult.error || !claimResult.data) {
@@ -69,7 +69,8 @@ export default function InternalSpotStatusScreen() {
           }
         }
       }
-      const details = (milestoneResult.data as any)?.details;
+      const stageRow = ((stageDetailResult.data ?? []) as any[]).find((row) => row?.details?.milestone_key === 'spot_status' || row?.stage === 'Surveyor Appointed');
+      const details = stageRow?.details;
       if (details && typeof details === 'object' && !Array.isArray(details)) {
         setSurveyDate(stringValue(details.spot_survey_done_date));
         setSurveyorName(stringValue(details.surveyor_name));
@@ -93,29 +94,7 @@ export default function InternalSpotStatusScreen() {
     try {
       const session = await getCurrentSession();
       if (!session?.user) return router.replace('/login');
-      const { error } = await (supabase as any).from('claim_milestones').upsert({
-        claim_id: id,
-        milestone_key: 'spot_status',
-        milestone_status: 'completed',
-        details: {
-          spot_survey_done_date: surveyDate,
-          surveyor_name: surveyorName.trim() || null,
-          surveyor_email: surveyorEmail.trim() || null,
-          surveyor_phone: surveyorPhone.trim() || null,
-        },
-        completed_at: new Date().toISOString(),
-        recorded_by: session.user.id,
-        recorded_by_actor: 'customer',
-      }, { onConflict: 'claim_id,milestone_key' });
-      if (error) {
-        console.warn('Internal Spot Status save failed', error);
-        setMessage('We could not save Spot Status right now. Please try again.');
-        return;
-      }
       router.replace({ pathname: '/customer/internal-claim-stage', params: { id, key: 'claim_intimation' } });
-    } catch (error) {
-      console.error('Internal Spot Status submit failed', error);
-      setMessage('We could not save Spot Status right now. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -128,23 +107,23 @@ export default function InternalSpotStatusScreen() {
       <CompactSpotStatusHeader claimNo={claimNo} vehicleNo={vehicleNo} vehicleMeta={vehicleMeta} policyNo={policyNo} insurerName={insurerName} />
 
       <ClaimFormSection title="Spot Survey" iconImage={require('../../assets/claims/claim-survey.png')}>
-        <AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />
+        <TextField label="Spot Survey Done Date *" value={surveyDate ? formatDisplayDate(surveyDate) : 'Awaiting Claims Desk'} editable={false} />
       </ClaimFormSection>
 
       <ClaimFormSection title="Surveyor Details" optional iconImage={require('../../assets/claims/claim-assessment.png')}>
-        <TextField label="Surveyor Name (Optional)" value={surveyorName} onChangeText={setSurveyorName} />
+        <TextField label="Surveyor Name (Optional)" value={surveyorName || 'Awaiting Claims Desk'} editable={false} />
         <View style={styles.gap} />
-        <TextField label="Surveyor Email (Optional)" value={surveyorEmail} onChangeText={setSurveyorEmail} keyboardType="email-address" autoCapitalize="none" />
+        <TextField label="Surveyor Email (Optional)" value={surveyorEmail || 'Awaiting Claims Desk'} editable={false} />
         <View style={styles.gap} />
-        <TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />
+        <TextField label="Surveyor Number (Optional)" value={surveyorPhone || 'Awaiting Claims Desk'} editable={false} />
       </ClaimFormSection>
 
       <View style={styles.stageFooterActions}>
         <Pressable accessibilityRole="button" disabled={submitting} onPress={() => id && router.replace({ pathname: '/customer/internal-claim-stage', params: { id, key: 'spot_intimation' } })} style={styles.footerSecondary}>
           <Text style={styles.footerSecondaryArrow}>←</Text><Text style={styles.footerSecondaryText}>Previous</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" disabled={submitting} onPress={() => void submit()} style={[styles.footerPrimary, submitting && styles.footerDisabled]}>
-          <Text style={styles.footerPrimaryText}>{submitting ? 'Saving...' : 'Save & Continue'}</Text><Text style={styles.footerPrimaryArrow}>→</Text>
+        <Pressable accessibilityRole="button" disabled={submitting || !surveyDate} onPress={() => void submit()} style={[styles.footerPrimary, (submitting || !surveyDate) && styles.footerDisabled]}>
+          <Text style={styles.footerPrimaryText}>{submitting ? 'Opening...' : surveyDate ? 'Continue' : 'Awaiting Claims Desk'}</Text><Text style={styles.footerPrimaryArrow}>→</Text>
         </Pressable>
       </View>
 
