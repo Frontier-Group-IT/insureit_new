@@ -229,8 +229,11 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   }, [initialStageKey]);
 
   useEffect(() => {
-    if (spotState.ok) setShowSpotSaved(true);
-  }, [spotState.ok]);
+    if (!spotState.ok) return;
+    setShowSpotSaved(false);
+    setSelectedKey("spot_status");
+    router.replace(`/claims/${claimId}?stage=spot_status`);
+  }, [claimId, router, spotState.ok]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
