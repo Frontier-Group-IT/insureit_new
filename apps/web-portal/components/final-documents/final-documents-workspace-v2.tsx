@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, FileText, ShieldCheck, Truck } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
@@ -32,6 +33,12 @@ type ClaimIntimationDetails = {
   dealership_location: string;
   gate_in_date: string;
   estimate_amount: string;
+};
+
+type DocumentVisual = {
+  key: "spot" | "rc" | "insurance" | "gr" | "document";
+  accent: string;
+  fallbackIcon: string;
 };
 
 export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null }) {
@@ -165,30 +172,91 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
 }
 
 function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: { claimId: string; row: FinalDocumentRowV2; isPending: boolean; pendingAction: string | null; run: (label: string, action: () => Promise<ActionResult>) => void; refresh: () => void }) {
-  function upload(file: File) { run(`upload-${row.type}`, () => { const formData = new FormData(); formData.set("claimId", claimId); formData.set("documentType", row.type); formData.set("file", file); return uploadFinalDocument(formData); }); }
-  function verify() { run(`verify-${row.type}`, () => { const formData = new FormData(); formData.set("claimId", claimId); formData.set("documentId", row.documentId ?? ""); formData.set("documentType", row.type); return verifyFinalDocument(formData); }); }
+  function upload(file: File) {
+    run(`upload-${row.type}`, () => {
+      const formData = new FormData();
+      formData.set("claimId", claimId);
+      formData.set("documentType", row.type);
+      formData.set("file", file);
+      return uploadFinalDocument(formData);
+    });
+  }
+  function verify() {
+    run(`verify-${row.type}`, () => {
+      const formData = new FormData();
+      formData.set("claimId", claimId);
+      formData.set("documentId", row.documentId ?? "");
+      formData.set("documentType", row.type);
+      return verifyFinalDocument(formData);
+    });
+  }
+
   const verified = row.status === "Verified";
-  const uploaded = row.status === "Uploaded";
+  const visual = documentVisual(row);
   const borderTone = verified ? "border-green-200" : "border-[#E2EAF4]";
+
   return (
     <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${borderTone}`}>
       <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2"><span className="grid h-5 w-5 shrink-0 place-items-center text-[17px] leading-none">📄</span><h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{row.name}</h2></div>
-        <StatusPill status={row.status} />
-      </div>
-      <div className="grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2">
-        <div className="grid h-8 w-8 place-items-center text-[18px]">📄</div>
-        <div className="min-w-0">
-          <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{row.fileName ?? "Document not uploaded"}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1"><span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{row.name}</span>{row.viewUrl ? <a href={row.viewUrl} target="_blank" rel="noreferrer" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</a> : null}<span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{row.status}</span></div>
-          {verified ? <div className="mt-2 grid grid-cols-1"><span className="h-8 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-center text-[11px] font-semibold text-green-700">Verified</span></div> : <div className="mt-2 grid grid-cols-3 gap-1.5"><button type="button" disabled={!row.documentId || isPending} onClick={verify} className="h-8 rounded-md border border-[#BFD3F7] bg-white px-2 text-[11px] font-semibold text-[#174EA6] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "Verifying..." : "Verify"}</button><label className="grid h-8 cursor-pointer place-items-center rounded-md border border-[#D9E3F0] bg-white px-2 text-[11px] font-semibold text-[#071D49]"><input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />{row.documentId ? "Replace" : isPending && pendingAction === `upload-${row.type}` ? "Uploading..." : "Upload"}</label><button type="button" onClick={refresh} className="h-8 rounded-md border border-[#D9E3F0] bg-white px-2 text-[11px] font-semibold text-[#071D49]">Reload</button></div>}
-          {!row.documentId && !uploaded ? <p className="mt-1.5 text-[9px] font-semibold text-[#68758A]">Upload the document to enable verification.</p> : null}
+        <div className="flex min-w-0 items-center gap-2">
+          <DocumentTypeHeaderIcon visual={visual} />
+          <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{row.name}</h2>
         </div>
+        <StatusBadge status={row.status} />
       </div>
+
+      {row.documentId ? (
+        <div className="grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2">
+          <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon visual={visual} /></div>
+          <div className="min-w-0">
+            <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{row.fileName ?? "Document uploaded"}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{row.name}</span>
+              {row.viewUrl ? <a href={row.viewUrl} target="_blank" rel="noreferrer" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</a> : null}
+              <span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{row.status}</span>
+            </div>
+            {verified ? (
+              <div className="mt-2 grid grid-cols-1 gap-1.5"><span className="h-8 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-center text-[11px] font-semibold text-green-700">Verified</span></div>
+            ) : (
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                <button type="button" disabled={isPending} onClick={verify} className="h-8 rounded-md border border-[#BFD3F7] bg-white px-2 text-[11px] font-semibold text-[#174EA6] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "Verifying..." : "Verify"}</button>
+                <label className="grid h-8 cursor-pointer place-items-center rounded-md border border-[#D9E3F0] bg-white px-2 text-[11px] font-semibold text-[#071D49]"><input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />Replace</label>
+                <button type="button" onClick={refresh} className="h-8 rounded-md border border-[#D9E3F0] bg-white px-2 text-[11px] font-semibold text-[#071D49]">Reload</button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="flex min-h-11 items-center gap-2">
+          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${visual.accent}`}><div className="text-[22px] leading-none">{visual.fallbackIcon}</div></div>
+          <p className="min-w-0 flex-1 text-[11px] font-semibold text-[#071D49]">Document not uploaded</p>
+          <div className="shrink-0">
+            <label className="grid h-8 cursor-pointer place-items-center rounded-md border border-[#EF4444] bg-white px-3 text-[11px] font-semibold text-[#EF4444]"><input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />{isPending && pendingAction === `upload-${row.type}` ? "Uploading..." : "Upload"}</label>
+          </div>
+        </div>
+      )}
     </article>
   );
 }
 
+function documentVisual(row: FinalDocumentRowV2): DocumentVisual {
+  const value = `${row.type} ${row.name}`.toLowerCase();
+  if (value.includes("spot") || value.includes("photo")) return { key: "spot", accent: "bg-[#EAF4FF]", fallbackIcon: "📷" };
+  if (value.includes("rc") || value.includes("registration") || value.includes("fitness")) return { key: "rc", accent: "bg-[#F1ECFF]", fallbackIcon: "📄" };
+  if (value.includes("insurance") || value.includes("policy")) return { key: "insurance", accent: "bg-[#FFF3D9]", fallbackIcon: "📃" };
+  if (value.includes("gr") || value.includes("load bill") || value.includes("challan")) return { key: "gr", accent: "bg-[#FFF1E6]", fallbackIcon: "🚚" };
+  return { key: "document", accent: "bg-[#EEF4FF]", fallbackIcon: "📄" };
+}
+
+function DocumentTypeHeaderIcon({ visual }: { visual: DocumentVisual }) {
+  const baseClassName = "h-5 w-5 shrink-0";
+  if (visual.key === "spot") return <Camera aria-hidden="true" className={`${baseClassName} text-[#F037A5]`} strokeWidth={2.2} />;
+  if (visual.key === "rc") return <FileText aria-hidden="true" className={`${baseClassName} text-[#16A36A]`} strokeWidth={2.2} />;
+  if (visual.key === "insurance") return <ShieldCheck aria-hidden="true" className={`${baseClassName} text-[#2563EB]`} strokeWidth={2.2} />;
+  if (visual.key === "gr") return <Truck aria-hidden="true" className={`${baseClassName} text-[#EA7A16]`} strokeWidth={2.2} />;
+  return <FileText aria-hidden="true" className={`${baseClassName} text-[#071D49]`} strokeWidth={2.2} />;
+}
+
 function Field({ label, value, onChange, inputMode }: { label: string; value: string; onChange: (value: string) => void; inputMode?: "decimal" | "numeric" }) { return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input value={value} inputMode={inputMode} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label><span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">{label} <span className="text-red-600">*</span></span><input type="date" value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-[#D9E3F0] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#174EA6]" /></label>; }
-function StatusPill({ status }: { status: FinalDocumentRowV2["status"] }) { const tone = status === "Verified" ? "border-green-200 bg-green-100 text-green-700" : status === "Uploaded" ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-100 text-slate-600"; return <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${tone}`}>{status}</span>; }
+function StatusBadge({ status }: { status: FinalDocumentRowV2["status"] }) { const tone = status === "Verified" ? "border-green-200 bg-green-100 text-green-700" : status === "Uploaded" ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 bg-slate-100 text-slate-600"; return <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${tone}`}>{status}</span>; }
