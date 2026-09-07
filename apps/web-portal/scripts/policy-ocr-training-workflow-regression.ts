@@ -185,7 +185,7 @@ for (const source of uploadActions) assert.doesNotMatch(source, /schedulePolicyO
 
 const queuePage = readFileSync("app/policies/ocr-training/page.tsx", "utf8");
 assert.match(queuePage, /requirePolicyOcrTrainingViewer/);
-assert.match(queuePage, /assigned policy-copy review tasks/);
+assert.match(queuePage, /Policy OCR training/);
 assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
 assert.match(queuePage, /searchParams/);
@@ -199,7 +199,9 @@ assert.match(queueComponent, /Confirm comparison & approve training/);
 assert.doesNotMatch(queueComponent, /different training owner|No self-approval|Awaiting owner/);
 assert.doesNotMatch(queueComponent, /Assigned PDF verification checklist/);
 assert.doesNotMatch(queueComponent, /check_\$\{key\}/);
-assert.match(queueComponent, /Review questions/);
+assert.match(queueComponent, /Review status/);
+assert.match(queueComponent, /effectiveStatus/);
+assert.match(queueComponent, /status === "completed"/);
 assert.match(queueComponent, /ReviewDecisionControls/);
 assert.match(queueComponent, /answer_\$\{keyName\}/);
 assert.match(queueComponent, /provide_correct_value/);
