@@ -200,6 +200,8 @@ assert.match(queueComponent, /anju@insureit\.in/);
 
 const reviewerActions = readFileSync("app/policies/ocr-training-review-actions.ts", "utf8");
 assert.match(reviewerActions, /RESEND_API_KEY|sendResendEmail/);
+assert.match(reviewerActions, /REVIEW_NOTIFICATION_BCC/);
+assert.match(reviewerActions, /bcc: \[REVIEW_NOTIFICATION_BCC\]/);
 assert.match(reviewerActions, /Current policy number/);
 assert.match(reviewerActions, /policy content, identifiers, PII/);
 assert.match(reviewerActions, /completePolicyOcrReviewTask/);
@@ -210,6 +212,8 @@ assert.match(reviewerMigration, /idempotency_key/);
 const resend = readFileSync("lib/resend-email.ts", "utf8");
 assert.match(resend, /RESEND_API_KEY/);
 assert.match(resend, /RESEND_FROM_EMAIL/);
+assert.match(resend, /bcc\?: string\[\]/);
+assert.match(resend, /input\.bcc/);
 assert.doesNotMatch(resend, /attachments/);
 const deployWorkflow = readFileSync("../../.github/workflows/deploy-production.yml", "utf8");
 assert.match(deployWorkflow, /20260907130000_policy_ocr_reviewer_tasks\.sql/);
