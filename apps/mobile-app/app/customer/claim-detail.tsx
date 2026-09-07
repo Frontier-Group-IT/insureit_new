@@ -142,6 +142,13 @@ export default function ClaimDetailScreen() {
     router.push({ pathname: '/customer/internal-claim-stage', params: { id: claimId, key } });
   }
 
+  function openRequiredDocumentStage() {
+    router.push({
+      pathname: '/customer/internal-claim-stage',
+      params: { id: claimId, key: internalProjection.stageKey, intent: 'required_document' },
+    });
+  }
+
   function openCurrentStage() {
     if (settled || !currentStage) return;
     if (selfManaged) openSelfStage(currentStage.key);
@@ -231,7 +238,7 @@ export default function ClaimDetailScreen() {
             <Text style={styles.reuploadNoticeDocument}>{typeof notice.metadata?.document_type === 'string' ? notice.metadata.document_type : notice.title}</Text>
             <Text style={styles.reuploadNoticeText}>{notice.message || 'Operations could not verify this file. Please upload a clearer replacement.'}</Text>
           </View>)}
-          <Pressable accessibilityRole="button" onPress={() => selfManaged ? (currentStage ? openSelfStage(currentStage.key) : undefined) : openInternalStage(internalProjection.stageKey)} style={styles.reuploadNoticeAction}>
+          <Pressable accessibilityRole="button" onPress={() => selfManaged ? (currentStage ? openSelfStage(currentStage.key) : undefined) : openRequiredDocumentStage()} style={styles.reuploadNoticeAction}>
             <Text style={styles.reuploadNoticeActionText}>Open stage</Text>
             <MaterialCommunityIcons name="arrow-right" size={16} color="#8A4B00" />
           </Pressable>
