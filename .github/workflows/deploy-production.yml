@@ -163,6 +163,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907060000_align_claim_update_rls_with_effective_permissions.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-claim-edit-effective-permission-rls.yml"
             echo "Claim edit effective-permission RLS migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260907200000_surveyor_appointed_notification_title.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-surveyor-appointed-notification-title.yml"
+            echo "Surveyor appointed notification title migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
