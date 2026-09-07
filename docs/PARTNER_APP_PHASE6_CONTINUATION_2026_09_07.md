@@ -2,7 +2,7 @@
 
 > Date: 2026-09-07 IST
 > Scope: post-foundation Phase 6 native-ready implementation
-> Status: PUSH CONTRACT + RECIPIENT AUDIT + BUSINESS RANGE MERGED / PUSH MIGRATION NOT PRODUCTION-APPLIED / NO 0.2.0 APK OR OTA
+> Status: PUSH CONTRACT + RECIPIENT AUDIT + FAIL-CLOSED RECIPIENT RESOLVER + BUSINESS RANGE MERGED / PUSH MIGRATION NOT PRODUCTION-APPLIED / PUSH DELIVERY NOT OPERATIONAL / NO 0.2.0 APK OR OTA
 
 Read with:
 
@@ -140,6 +140,35 @@ Recipient rule:
 
 A device row is a delivery endpoint only and never creates business authorization. Missing/out-of-scope/unknown events must resolve to zero recipients. No sender may be activated until this boundary is preserved in server-only code and regression coverage.
 
+## Server-only push recipient resolver — MERGED, deliberately non-operational
+
+PR #1416 — `Add fail-closed Partner push recipient resolver`
+
+- verified head: `65dbfeb382851bfe41f282cfe1dcbebf8e19df70`
+- merge: `2453f27bb44f55df37fc587be40025da04c070c7`
+- Web Verify #3113 — success
+- superseded conflict-chasing PRs #1411 and #1413 were closed unmerged
+
+Implementation:
+
+- `apps/web-portal/lib/partner-push-recipient-resolver.ts`
+- `apps/web-portal/scripts/partner-push-recipient-resolver-regression.mjs`
+- the existing canonical `partner-push-template-regression.mjs` chains the resolver regression, avoiding a fragile edit to the heavily shared Web Verify workflow file
+
+Contract now enforced in source:
+
+1. business authorization is resolved before any device lookup;
+2. Renewal/Policy scope remains tied to the canonical policy RM + intermediary + permanent Intermediary Group/current employee commercial-scope relationships;
+3. Claim scope remains tied to the current customer relationship, including `customers.lead_source_intermediary_id`;
+4. Policy Intake remains exact-submitter/owner only rather than broad Partner-family delivery;
+5. unknown, invalid, missing, out-of-scope and dependency-error cases fail closed to zero recipients;
+6. only active endpoints belonging to already-authorized actors are eligible;
+7. Partner EAS project `8ade82c1-4c96-4f09-b90b-802270fb406d` and app version `0.2.0` must match;
+8. the resolver output is privacy-minimized to Expo token + platform;
+9. the resolver contains no sender, network delivery, Expo/APNs/FCM call, queue, cron, webhook or service-role implementation.
+
+This is an authorization/device-filtering **boundary contract**, not a complete database-backed production sender. The concrete server adapters, sender/event trigger, credentials, receipt/retry handling and stale-token cleanup are not operational. The push-device migration remains MERGED but NOT PRODUCTION-APPLIED, so do not describe push delivery or recipient resolution as production operational.
+
 ## Business custom range — MERGED in source, not operational on installed 0.2.0 binary yet
 
 PR #1397 — `Add Partner Business custom-range summary`
@@ -169,32 +198,37 @@ Behavior:
 
 No schema, RLS, migration, native dependency/config/runtime, APK/AAB or OTA change was introduced by #1397. Because the native date picker belongs to the 0.2.0 native foundation and no 0.2.0 binary has been built/installed, this source feature is **MERGED but not yet installed-device OPERATIONAL**.
 
+## Restrained haptics review — completed, no expansion required
+
+Current haptic usage remains intentionally limited to native date selection and meaningful Settings outcomes such as biometric/notification enable success or warning. The helper is non-blocking and haptic failure cannot block business actions. Do not add global tap/navigation vibration merely to increase haptic usage.
+
 ## Remaining Phase 6 sequence
 
 Completed safely in source:
 
 1. pure push-template contract — MERGED (#1390), deliberately non-active;
 2. recipient/domain scope audit — MERGED (#1396), design only;
-3. Business custom-range wiring — MERGED (#1397), CI green, installed-device verification deferred to approved 0.2.0 build.
+3. Business custom-range wiring — MERGED (#1397), CI green, installed-device verification deferred to approved 0.2.0 build;
+4. server-only fail-closed recipient resolver boundary — MERGED (#1416), CI green, deliberately non-operational;
+5. restrained haptic placement review — COMPLETE; no noisy/global expansion required.
 
 Still gated / next:
 
 1. **Do not apply** `20260907002000_partner_push_devices.sql` until explicit production-migration approval is given.
-2. Implement a server-only, fail-closed recipient resolver with regression coverage, but keep Expo/APNs/FCM delivery inactive unless separately approved.
-3. Validate EAS/platform push credentials and define receipt/retry/stale-token cleanup before production delivery; never record credentials in repo docs.
+2. Validate EAS/platform push credential readiness and define the sender/event-trigger + receipt/retry/stale-token lifecycle in source/design without recording secrets or activating delivery prematurely.
+3. Keep the recipient resolver fail-closed and authorization-first when concrete server adapters are eventually implemented; do not let device registration create business authorization.
 4. Prepare/review the official monochrome Android notification icon from official INSUREIT artwork; do not invent a replacement mark.
-5. Review restrained haptic placement; no noisy/global haptics.
-6. Keep Sentry out unless project/DSN/source-map upload secret and privacy/redaction policy are actually ready.
-7. Run final source/native-config checks.
-8. Ask for explicit approval for the exact 0.2.0 preview APK build.
-9. Build one preview APK and complete the installed-device Phase 6 matrix.
-10. Only after the 0.2.0 binary is installed and accepted, publish a small 0.2.0 preview OTA to prove runtime-compatible OTA delivery.
+5. Keep Sentry out unless project/DSN/source-map upload secret and privacy/redaction policy are actually ready.
+6. Run final source/native-config checks.
+7. Ask for explicit approval for the exact 0.2.0 preview APK build.
+8. Build one preview APK and complete the installed-device Phase 6 matrix.
+9. Only after the 0.2.0 binary is installed and accepted, publish a small 0.2.0 preview OTA to prove runtime-compatible OTA delivery.
 
 ## Non-negotiable safety reminders
 
 - Never build Partner APK/AAB without explicit approval for that exact build.
 - Never apply a Supabase migration to production merely because the migration file was merged.
-- Never call a merged push schema or sender **production-applied** or **operational** without direct evidence.
+- Never call a merged push schema, recipient resolver or sender **production-applied** or **operational** without direct evidence.
 - Never reuse Customer app EAS identity/update project for Partner.
 - Never automatically prompt for notification permission on startup.
 - Never give Partner mobile direct table access to the push-device registry.
