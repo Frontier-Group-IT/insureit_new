@@ -3,6 +3,7 @@ import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet,
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
+import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
 import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
@@ -141,6 +142,9 @@ export default function BusinessScreen() {
               <HeroStat value={network.total_partners} label={network.total_partners === 1 ? 'Partner family' : 'Partner families'} />
             </View>
           </View>
+
+          <PartnerSectionHeader title="Custom range" meta="Up to 366 days" />
+          <PartnerBusinessRangeSummaryCard />
 
           <PartnerSectionHeader title="Today" />
           <View style={styles.actionGrid}>
