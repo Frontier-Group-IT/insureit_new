@@ -415,6 +415,9 @@ type ClaimForWorkflow = {
   customer_id: string;
   current_status: ClaimStatus;
   claim_service_mode: "broker_managed" | "self_managed";
+  spot_intimation_at: string | null;
+  accident_location: string | null;
+  accident_description: string | null;
 };
 
 type ClaimDocumentForWorkflow = {
@@ -462,7 +465,7 @@ async function loadClaimForWorkflow(claimId: string) {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("claims")
-    .select("id, claim_no, customer_id, current_status, claim_service_mode")
+    .select("id, claim_no, customer_id, current_status, claim_service_mode, spot_intimation_at, accident_location, accident_description")
     .eq("id", claimId)
     .maybeSingle<ClaimForWorkflow>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
@@ -566,6 +569,16 @@ function stageDetailsFromForm(formData: FormData) {
   return details;
 }
 
+function mergeCustomerDriverDescription(existing: string | null, driverName: string | null, driverPhone: string | null) {
+  const preserved = (existing ?? "")
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*Driver:\s*/i.test(line) && !/^\s*Driver phone:\s*/i.test(line))
+    .join("\n")
+    .trim();
+  const driverLines = [driverName ? `Driver: ${driverName}` : null, driverPhone ? `Driver phone: ${driverPhone}` : null].filter(Boolean);
+  return [preserved, ...driverLines].filter(Boolean).join("\n") || null;
+}
+
 export async function advanceClaimWorkflow(claimId: string, formData: FormData) {
   const profile = await requireClaimStagePermission();
   const supabase = await createServerSupabaseClient();
@@ -585,14 +598,17 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
   const insurerClaimNo = textValue(formData, "insurer_claim_no");
   const incidentAt = textValue(formData, "incident_at") ?? textValue(formData, "accident_at");
   const spotIntimationAt = textValue(formData, "spot_intimation_at");
+  const driverName = textValue(formData, "driver_name");
+  const driverPhone = textValue(formData, "driver_phone");
   const location = textValue(formData, "location") ?? textValue(formData, "accident_location");
   const isSpotStage = ["Draft", "Accident Reported", "Initial Documents Pending", "Initial Documents Verification Pending", "Initial Documents Submitted", "Initial Documents Verified", "Documents Pending", "Documents Submitted"].includes(claim.current_status);
   const normalizedSpot = isSpotStage ? validateInternalSpotIntimation(incidentAt, spotIntimationAt) : null;
+  const customerDescription = isSpotStage ? mergeCustomerDriverDescription(claim.accident_description, driverName, driverPhone) : claim.accident_description;
   const { error } = await supabase.from("claims").update({
     current_status: nextStatus,
     ...(insurerClaimNo ? { insurer_claim_no: insurerClaimNo } : {}),
-    ...(normalizedSpot ? { accident_at: normalizedSpot.incidentAt } : {}),
-    ...(isSpotStage ? { accident_location: location } : {})
+    ...(normalizedSpot ? { accident_at: normalizedSpot.incidentAt, spot_intimation_at: normalizedSpot.spotIntimationAt } : {}),
+    ...(isSpotStage ? { accident_location: location, accident_description: customerDescription } : {})
   }).eq("id", claimId);
   if (error) throw new Error(error.message);
 
@@ -602,6 +618,11 @@ export async function advanceClaimWorkflow(claimId: string, formData: FormData) 
     details.incident_at = normalizedSpot.incidentAt;
     details.accident_at = normalizedSpot.incidentAt;
     details.spot_intimation_at = normalizedSpot.spotIntimationAt;
+    details.driver_name = driverName ?? "";
+    details.driver_phone = driverPhone ?? "";
+    details.location = location ?? "";
+    details.accident_location = location ?? "";
+    details.accident_description = customerDescription ?? "";
   }
   if (Object.keys(details).length) {
     const { error: detailError } = await supabase.from("claim_stage_details").insert({
@@ -632,7 +653,7 @@ export async function saveSpotIntimationDetails(claimId: string, formData: FormD
   const driverName = textValue(formData, "driver_name");
   const driverPhone = textValue(formData, "driver_phone");
   const location = textValue(formData, "location") ?? textValue(formData, "accident_location");
-  const accidentDescription = textValue(formData, "accident_description");
+  const customerDescription = mergeCustomerDriverDescription(claim.accident_description, driverName, driverPhone);
   const details = {
     milestone_key: "spot_intimation",
     incident_at: normalizedIncidentAt,
@@ -642,15 +663,23 @@ export async function saveSpotIntimationDetails(claimId: string, formData: FormD
     driver_phone: driverPhone,
     location,
     accident_location: location,
-    accident_description: accidentDescription
+    accident_description: customerDescription
   };
 
-  const { error: claimError } = await supabase.from("claims").update({
+  const { data: persistedClaim, error: claimError } = await supabase.from("claims").update({
     accident_at: normalizedIncidentAt,
+    spot_intimation_at: normalizedSpotIntimationAt,
     accident_location: location,
-    accident_description: accidentDescription
-  }).eq("id", claimId);
+    accident_description: customerDescription
+  }).eq("id", claimId).select("id, accident_at, spot_intimation_at, accident_location, accident_description").maybeSingle<{
+    id: string;
+    accident_at: string | null;
+    spot_intimation_at: string | null;
+    accident_location: string | null;
+    accident_description: string | null;
+  }>();
   if (claimError) throw new Error(claimError.message);
+  if (!persistedClaim) throw new Error("The Spot Intimation changes could not be persisted. Refresh the claim and try again.");
 
   const { error: detailError } = await supabase.from("claim_stage_details").insert({
     claim_id: claimId,
