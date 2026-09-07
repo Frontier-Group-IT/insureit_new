@@ -89,7 +89,7 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
         </Link>
       </div>
 
-      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} canTrain={canTrain} /> : null}
+      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} row={row} canTrain={canTrain} /> : null}
 
       {!ready ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -241,7 +241,7 @@ function ReviewerAssignmentForm({ labelId, task }: { labelId: string; task: Revi
 
 const INITIAL_CHECKLIST_STATE: ReviewerChecklistState = { status: "idle", message: null };
 
-function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain: boolean }) {
+function ReviewerChecklistForm({ task, row, canTrain }: { task: ReviewTask; row: TrainingQueueRow; canTrain: boolean }) {
   const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const [state, formAction, pending] = useActionState(completePolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const isStarted = task.status !== "assigned" || startState.status === "success";
@@ -269,7 +269,7 @@ function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain:
               <p className="text-xs font-black uppercase tracking-wide text-violet-900">Field-level questions</p>
               {task.field_questions.map((question) => (
                 <div key={question.key} className="rounded-lg border border-slate-200 p-2">
-                  <p className="text-xs font-semibold leading-5 text-slate-800">{question.prompt}</p>
+                  <p className="text-xs font-semibold leading-5 text-slate-800">{reviewQuestionPrompt(question, row)}</p>
                   <select name={`answer_${question.key}`} required defaultValue="" className="mt-2 h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900">
                     <option value="" disabled>Select an answer</option>
                     {question.allowedAnswers.map((answer) => <option key={answer} value={answer}>{answerLabel(answer)}</option>)}
@@ -297,6 +297,28 @@ function answerLabel(answer: string) {
     : answer === "database_correct" ? "The database reference is correct"
       : answer === "provide_correct_value" ? "Provide the correct value"
         : "Withhold this value";
+}
+
+function reviewQuestionPrompt(question: ReviewTask["field_questions"][number], row: TrainingQueueRow) {
+  const key = question.key as TrainingComparisonKey;
+  const databaseValue = row.databaseReference[key];
+  const proposalKey = key === "valid_from" ? "policy_start_date" : key === "valid_upto" ? "policy_end_date" : key;
+  const ocrValue = row.proposal?.fields[proposalKey as keyof TrainingProposal["fields"]]?.value ?? null;
+  const label = question.prompt.replace(/^For (.*?):.*$/, "$1");
+
+  if (question.issue === "reference_missing") {
+    return `For ${label}: the database reference is blank, but OCR proposed "${formatQuestionValue(ocrValue)}". Is ${label} visible on the policy copy, and what is the correct value?`;
+  }
+  if (question.issue === "ocr_missing") {
+    return `For ${label}: the database reference is "${formatQuestionValue(databaseValue)}", but OCR did not produce a value. Is ${label} visible on the policy copy, and what should be extracted?`;
+  }
+  return `For ${label}: the database reference is "${formatQuestionValue(databaseValue)}", while OCR proposed "${formatQuestionValue(ocrValue)}". Which value is correct according to the policy copy?`;
+}
+
+function formatQuestionValue(value: string | number | boolean | null) {
+  if (value === null || value === "") return "blank";
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  return String(value).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
 }
 
 function comparisonField(key: TrainingComparisonKey, label: string, databaseValue: string | number | boolean | null, proposal: TrainingProposal["fields"][keyof TrainingProposal["fields"]], date = false) {

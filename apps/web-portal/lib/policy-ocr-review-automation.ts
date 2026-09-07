@@ -53,7 +53,7 @@ export async function ensureAutomaticPolicyOcrReview(input: {
     ? await admin.from("policies").select("policy_type,insurance_companies(name)").eq("id", document.policy_id).maybeSingle<{ policy_type: string | null; insurance_companies: { name: string } | null }>()
     : { data: null };
 
-  const fieldQuestions = buildFieldQuestions(comparison, input.proposal, input.reference);
+  const fieldQuestions = buildFieldQuestions(comparison);
   const { data: existing, error: existingError } = await admin
     .from("policy_ocr_training_review_tasks")
     .select("id,assigned_reviewer_profile_id,assignment_version,status")
@@ -236,45 +236,12 @@ const FIELD_LABELS: Record<keyof TrainingDatabaseReference, string> = {
 
 function buildFieldQuestions(
   comparison: ReturnType<typeof compareTrainingProposalToReference>,
-  proposal: TrainingProposal,
-  reference: TrainingDatabaseReference,
 ) {
   return Object.entries(comparison.fields).filter(([, result]) => result !== "match").map(([key, result]) => ({
     key, issue: result,
-    prompt: buildFieldQuestionPrompt(
-      key as keyof TrainingDatabaseReference,
-      result,
-      proposal,
-      reference,
-    ),
+    prompt: `For ${FIELD_LABELS[key as keyof TrainingDatabaseReference]}: review the database reference and OCR proposal against the policy copy.`,
     allowedAnswers: result === "reference_missing" ? ["provide_correct_value", "withhold"] : ["ocr_correct", "database_correct", "provide_correct_value", "withhold"],
   }));
-}
-
-function buildFieldQuestionPrompt(
-  key: keyof TrainingDatabaseReference,
-  result: string,
-  proposal: TrainingProposal,
-  reference: TrainingDatabaseReference,
-) {
-  const label = FIELD_LABELS[key];
-  const proposalKey = (key === "valid_from" ? "policy_start_date" : key === "valid_upto" ? "policy_end_date" : key) as keyof TrainingProposal["fields"];
-  const ocrValue = proposal.fields[proposalKey]?.value ?? null;
-  const databaseValue = reference[key];
-
-  if (result === "reference_missing") {
-    return `For ${label}: the database reference is blank, but OCR proposed "${formatQuestionValue(ocrValue)}". Is ${label} visible on the policy copy, and what is the correct value?`;
-  }
-  if (result === "ocr_missing") {
-    return `For ${label}: the database reference is "${formatQuestionValue(databaseValue)}", but OCR did not produce a value. Is ${label} visible on the policy copy, and what should be extracted?`;
-  }
-  return `For ${label}: the database reference is "${formatQuestionValue(databaseValue)}", while OCR proposed "${formatQuestionValue(ocrValue)}". Which value is correct according to the policy copy?`;
-}
-
-function formatQuestionValue(value: string | number | boolean | null) {
-  if (value === null || value === "") return "blank";
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  return String(value).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 160);
 }
 
 async function resolveExistingPortalReviewer(admin: ReturnType<typeof createSupabaseAdminClient>, email: string) {

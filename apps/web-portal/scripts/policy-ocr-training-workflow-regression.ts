@@ -199,9 +199,10 @@ assert.doesNotMatch(queueComponent, /different training owner|No self-approval|A
 assert.doesNotMatch(queueComponent, /Assigned PDF verification checklist/);
 assert.doesNotMatch(queueComponent, /check_\$\{key\}/);
 assert.match(queueComponent, /Review questions/);
-assert.match(reviewAutomation, /For \$\{label\}/);
-assert.match(reviewAutomation, /database reference is/);
-assert.match(reviewAutomation, /OCR proposed/);
+assert.match(reviewAutomation, /FIELD_LABELS/);
+assert.match(queueComponent, /For \$\{label\}/);
+assert.match(queueComponent, /database reference is/);
+assert.match(queueComponent, /OCR proposed/);
 assert.match(queueComponent, /anju@insureit\.in/);
 
 const reviewerActions = readFileSync("app/policies/ocr-training-review-actions.ts", "utf8");
