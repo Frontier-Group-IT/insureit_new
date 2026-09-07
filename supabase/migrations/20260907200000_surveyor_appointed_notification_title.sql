@@ -1,5 +1,5 @@
--- Present surveyor assignment as a customer-facing event instead of exposing
--- the underlying claim-status transition in notification subjects.
+-- Present surveyor appointment/update events as customer-facing subjects instead
+-- of exposing the underlying claim-status transition in notifications.
 
 create or replace function public.create_claim_status_notifications()
 returns trigger
@@ -38,15 +38,15 @@ begin
     when new.from_status is null then
       'New claim: ' || claim_record.claim_no
 
-    -- Surveyor assignment is a customer-facing event. Keep the existing
-    -- detailed message/body, but do not expose the internal stage transition
-    -- in the notification subject.
+    -- Editing an already-appointed surveyor is distinct from first appointment.
+    when notification_message ~* '^Spot surveyor details updated[[:space:]]*[—-]' then
+      claim_record.claim_no || ': Surveyor Updated'
+
+    -- Initial surveyor appointment remains its own customer-facing event.
     when notification_message ~* '^Surveyor details[[:space:]]*[—-]' then
       claim_record.claim_no || ': Surveyor Appointed'
 
     -- Same-status document verification is an event, not a status transition.
-    -- Use the actual verification event as the title while keeping the full
-    -- message unchanged.
     when new.from_status = new.to_status
       and notification_message ~* '\s+during spot survey\.\s*$'
       and notification_message ~* '\s+verified during spot survey\.\s*$'
@@ -111,11 +111,18 @@ begin
 end;
 $function$;
 
--- Bring already-created surveyor assignment notifications into parity so the
--- existing inbox entry also shows the corrected customer-facing subject.
+-- Bring already-created initial appointment notifications into parity.
 update public.notifications as notification
 set title = claim.claim_no || ': Surveyor Appointed'
 from public.claims as claim
 where notification.claim_id = claim.id
   and notification.message ~* '^Surveyor details[[:space:]]*[—-]'
   and notification.title ~* 'Initial Documents Submitted[[:space:]]+to[[:space:]]+Final Documents Awaited$';
+
+-- Bring already-created surveyor-update notifications into parity.
+update public.notifications as notification
+set title = claim.claim_no || ': Surveyor Updated'
+from public.claims as claim
+where notification.claim_id = claim.id
+  and notification.message ~* '^Spot surveyor details updated[[:space:]]*[—-]'
+  and notification.title ~* 'Final Documents Awaited$';
