@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, ContactRound, Eye, FilePenLine, FileText, RefreshCw, ShieldCheck, Truck, Video } from "lucide-react";
+import { Camera, ContactRound, FilePenLine, FileText, RefreshCw, ShieldCheck, Truck, Video } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
@@ -260,29 +260,24 @@ function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: 
       </div>
 
       {row.documentId ? (
-        <div className="relative grid grid-cols-[32px_1fr] items-center gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2 pr-[142px]">
-          <div className="grid h-8 w-8 place-items-center bg-transparent"><DocumentTypeHeaderIcon visual={visual} /></div>
+        <div className="grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2">
+          <div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon visual={visual} /></div>
           <div className="min-w-0">
             {row.viewUrl ? (
-              <a href={row.viewUrl} target="_blank" rel="noreferrer" title="Open uploaded document" className="block truncate text-[11px] font-semibold text-[#071D49] transition hover:text-[#174EA6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25">{row.fileName ?? "Document uploaded"}</a>
-            ) : <p className="truncate text-[11px] font-semibold text-[#071D49]">{row.fileName ?? "Document uploaded"}</p>}
-          </div>
-          <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
-            {row.viewUrl ? (
-              <a href={row.viewUrl} target="_blank" rel="noreferrer" aria-label="Preview document" title="Preview document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#174EA6] transition hover:bg-[#EEF5FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25">
-                <Eye aria-hidden="true" size={16} strokeWidth={2} />
-              </a>
-            ) : null}
-            {!verified ? (
-              <button type="button" disabled={isPending} onClick={verify} className="h-8 rounded-md border border-[#21A366] bg-white px-2 text-[11px] font-semibold text-[#12844F] transition hover:bg-[#F1FBF6] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "..." : "Verify"}</button>
-            ) : null}
-            <button type="button" onClick={refresh} aria-label="Reload document" title="Reload document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30">
-              <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
-            </button>
-            <label aria-label="Replace document" title="Replace document" className="grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-within:ring-2 focus-within:ring-[#D15B5B]/30">
-              <input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />
-              <FilePenLine aria-hidden="true" size={16} strokeWidth={2} />
-            </label>
+              <a href={row.viewUrl} target="_blank" rel="noreferrer" title="Open uploaded document" className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49] transition hover:text-[#174EA6] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25">{row.fileName ?? "Document uploaded"}</a>
+            ) : <p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{row.fileName ?? "Document uploaded"}</p>}
+            <div className="mt-2 grid grid-cols-3 gap-1.5">
+              {!verified ? (
+                <button type="button" disabled={isPending} onClick={verify} className="h-8 rounded-md border border-[#21A366] bg-white px-2 text-[11px] font-semibold text-[#12844F] transition hover:bg-[#F1FBF6] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "..." : "Verify"}</button>
+              ) : <div className="grid h-8 place-items-center rounded-md border border-green-200 bg-green-50 text-[11px] font-semibold text-green-700">Verified</div>}
+              <button type="button" onClick={refresh} aria-label="Reload document" title="Reload document" className="grid h-8 place-items-center rounded-md border border-[#D9E3F0] bg-white text-[#A35B00] transition hover:bg-[#FFF8E8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D08700]/30">
+                <RefreshCw aria-hidden="true" size={16} strokeWidth={2} />
+              </button>
+              <label aria-label="Replace document" title="Replace document" className="grid h-8 cursor-pointer place-items-center rounded-md border border-[#D9E3F0] bg-white text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-within:ring-2 focus-within:ring-[#D15B5B]/30">
+                <input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />
+                <FilePenLine aria-hidden="true" size={16} strokeWidth={2} />
+              </label>
+            </div>
           </div>
         </div>
       ) : (
