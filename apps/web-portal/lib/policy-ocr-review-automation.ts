@@ -206,12 +206,40 @@ export async function ensurePolicyOcrSatisfactionTask(orchestratorId: string) {
   }
 }
 
-function buildFieldQuestions(comparison: ReturnType<typeof compareTrainingProposalToReference>) {
+const FIELD_LABELS: Record<keyof TrainingDatabaseReference, string> = {
+  vehicle_registration_status: "Vehicle registration status",
+  vehicle_registration_number: "Vehicle registration number",
+  vehicle_class: "Vehicle class",
+  vehicle_make: "Vehicle make",
+  vehicle_model: "Vehicle model",
+  vehicle_fuel_type: "Fuel type",
+  vehicle_manufacturing_year: "Manufacturing year",
+  vehicle_capacity: "Vehicle capacity",
+  vehicle_chassis_number: "Chassis number",
+  vehicle_engine_number: "Engine number",
+  vehicle_rto_name: "RTO name",
+  vehicle_rto_state: "RTO state",
+  insurer_name: "Insurer",
+  policy_product: "Policy product",
+  policy_number: "Current policy number",
+  valid_from: "Policy start date",
+  valid_upto: "Policy end date",
+  idv: "IDV",
+  od_premium: "OD premium",
+  tp_premium: "TP premium",
+  cpa_opted: "CPA opted",
+  cpa_premium: "CPA amount",
+  printed_net_premium: "Printed net premium",
+  printed_gst: "Printed GST",
+  printed_gross_premium: "Printed gross premium",
+};
+
+function buildFieldQuestions(
+  comparison: ReturnType<typeof compareTrainingProposalToReference>,
+) {
   return Object.entries(comparison.fields).filter(([, result]) => result !== "match").map(([key, result]) => ({
     key, issue: result,
-    prompt: result === "reference_missing" ? "The saved reference is blank. What is the correct value shown on the policy copy?"
-      : result === "ocr_missing" ? "OCR did not produce this field. Is the field visible on the policy copy, and what should be extracted?"
-        : "Which value is correct: the OCR proposal or the saved database reference?",
+    prompt: `For ${FIELD_LABELS[key as keyof TrainingDatabaseReference]}: review the database reference and OCR proposal against the policy copy.`,
     allowedAnswers: result === "reference_missing" ? ["provide_correct_value", "withhold"] : ["ocr_correct", "database_correct", "provide_correct_value", "withhold"],
   }));
 }
