@@ -1,0 +1,189 @@
+name: Publish customer 0.3.0 production OTA
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile-app/**'
+      - '.github/workflows/publish-customer-release-production-ota.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: customer-0-3-0-production-ota
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+    steps:
+      - name: Check out exact main source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify OTA source is exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          current_head="$(git rev-parse HEAD)"
+          remote_main="$(git rev-parse origin/main)"
+          if [ "$current_head" != "$remote_main" ]; then
+            echo "Refusing production OTA: checked-out source is not current origin/main." >&2
+            echo "HEAD=$current_head" >&2
+            echo "origin/main=$remote_main" >&2
+            exit 1
+          fi
+
+      - name: Verify production runtime baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/mobile-app/app.json').expo;
+          if (app.version !== '0.3.0') throw new Error(`Expected app/runtime 0.3.0, found ${app.version}`);
+          if (app.android?.versionCode !== 9) throw new Error(`Expected production Android versionCode 9, found ${app.android?.versionCode}`);
+          if (!app.android?.permissions?.includes('android.permission.RECORD_AUDIO')) throw new Error('Production native baseline must retain RECORD_AUDIO permission.');
+          if (app.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected runtimeVersion policy appVersion.');
+          console.log('Verified Customer production runtime 0.3.0 / Android versionCode 9.');
+          NODE
+
+      - name: Verify production bundle environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_PUBLIC_SUPABASE_URL:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_URL is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY is missing." >&2; exit 1; }
+          [ -n "${EXPO_PUBLIC_PORTAL_URL:-}" ] || { echo "EXPO_PUBLIC_PORTAL_URL is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Publish production OTA
+        id: publish
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          set +e
+          npx eas-cli update \
+            --channel production \
+            --environment production \
+            --message "Customer production 0.3.0 from main ${GITHUB_SHA}" \
+            --non-interactive \
+            --json \
+            > expo-update.json \
+            2> expo-update.stderr.log
+          exit_code=$?
+          set -e
+
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          if [ "$exit_code" -eq 0 ]; then
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=failed" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ -s expo-update.json ]; then
+            echo "Expo publish JSON:"
+            cat expo-update.json
+          fi
+          if [ -s expo-update.stderr.log ]; then
+            echo "Expo CLI messages:" >&2
+            cat expo-update.stderr.log >&2
+          fi
+
+      - name: Verify production channel
+        if: steps.publish.outputs.result == 'success'
+        working-directory: apps/mobile-app
+        shell: bash
+        run: |
+          npx eas-cli channel:view production --json --non-interactive > expo-channel-production.json
+          echo "Production channel mapping JSON:"
+          cat expo-channel-production.json
+
+      - name: Write OTA publication summary
+        if: always()
+        working-directory: apps/mobile-app
+        env:
+          PUBLISH_RESULT: ${{ steps.publish.outputs.result }}
+          PUBLISH_EXIT_CODE: ${{ steps.publish.outputs.exit_code }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const readJson = (path) => { try { return JSON.parse(fs.readFileSync(path, 'utf8')); } catch { return null; } };
+          const collectObjects = (value, output = []) => {
+            if (!value || typeof value !== 'object') return output;
+            if (Array.isArray(value)) { for (const item of value) collectObjects(item, output); return output; }
+            output.push(value);
+            for (const item of Object.values(value)) collectObjects(item, output);
+            return output;
+          };
+          const firstValue = (objects, keys) => {
+            for (const object of objects) for (const key of keys) {
+              const value = object?.[key];
+              if (value !== undefined && value !== null && value !== '') return String(value);
+            }
+            return null;
+          };
+          const uniqueValues = (objects, keys) => {
+            const values = [];
+            for (const object of objects) for (const key of keys) {
+              const value = object?.[key];
+              if (value !== undefined && value !== null && value !== '') values.push(String(value));
+            }
+            return [...new Set(values)];
+          };
+          const publish = readJson('expo-update.json');
+          const channel = readJson('expo-channel-production.json');
+          const objects = [...collectObjects(channel), ...collectObjects(publish)];
+          const groupId = firstValue(objects, ['group', 'groupId', 'updateGroupId']);
+          const runtimeVersion = firstValue(objects, ['runtimeVersion']);
+          const branch = firstValue(objects, ['branchName', 'branch']);
+          const updateIds = uniqueValues(objects, ['id', 'updateId']).filter((value) => value !== groupId).slice(0, 4);
+          const result = process.env.PUBLISH_RESULT || 'unknown';
+          const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
+          const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
+          const lines = [
+            '## Customer production OTA publication', '',
+            '| Field | Value |', '| --- | --- |',
+            `| Publish result | ${icon} ${result} |`,
+            '| Expo channel | `production` |',
+            '| Required runtime | `0.3.0` |',
+            '| Android production versionCode | `9` |',
+            `| Channel mapped branch | ${branch ? `\`${branch}\`` : 'Not returned by Expo'} |`,
+            `| Runtime version | ${runtimeVersion ? `\`${runtimeVersion}\`` : 'Not returned by Expo'} |`,
+            `| Update group ID | ${groupId ? `\`${groupId}\`` : 'Not returned by Expo'} |`,
+            `| Update ID(s) | ${updateIds.length ? updateIds.map((id) => `\`${id}\``).join('<br>') : 'Not returned by Expo'} |`,
+            `| CLI exit code | \`${exitCode}\` |`,
+            `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`, '',
+            'This workflow publishes JavaScript/assets only to the existing Customer production channel. It does not build an APK/AAB.', ''
+          ];
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+
+      - name: Fail workflow when Expo publication fails
+        if: always() && steps.publish.outputs.result != 'success'
+        shell: bash
+        run: |
+          echo "Customer production OTA publication failed with exit code ${{ steps.publish.outputs.exit_code }}." >&2
+          exit 1
