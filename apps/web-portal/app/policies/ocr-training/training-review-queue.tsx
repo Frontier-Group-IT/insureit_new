@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { runPolicyOcrTrainingLabel, submitPolicyOcrDatabaseComparison, type ConfirmPolicyOcrTrainingState, type RunPolicyOcrTrainingState } from "../ocr-training-actions";
 import { assignPolicyOcrReviewTask, completePolicyOcrReviewTask, type AssignPolicyOcrReviewState, type ReviewerChecklistState, startPolicyOcrReviewTask } from "../ocr-training-review-actions";
 import { compareTrainingProposalToReference, compareTrainingValue, formatReviewerDate, type TrainingComparisonKey, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
+import { createPolicyOcrProposalFromFeedback } from "../ocr-training-orchestrator-actions";
 
 export type TrainingQueueRow = { documentId: string; labelId: string; fileName: string; uploadedAt: string; policyReference: string; linkedInsurer: string; status: "needs_review" | "reviewed" | "approved" | "rejected"; processingStatus: "pending" | "processing" | "ready" | "failed" | "exhausted"; processingAttempts: number; failureCode: string | null; proposal: TrainingProposal | null; databaseReference: TrainingDatabaseReference; parserId: string | null; parserVersion: string | null; proposedAt: string | null; reviewedBy: string | null; reviewedAt: string | null; approvedBy: string | null; approvedAt: string | null; reviewTask: ReviewTask | null };
 
@@ -16,6 +17,7 @@ type ReviewTask = {
   reviewer_note: string | null;
   assigned_at: string;
   completed_at: string | null;
+  field_questions: Array<{ key: string; issue: string; prompt: string; allowedAnswers: string[] }>;
   policy_ocr_training_review_notifications: Array<{ status: "pending" | "sent" | "failed"; attempts: number; sent_at: string | null }> | null;
 };
 
@@ -87,7 +89,7 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
         </Link>
       </div>
 
-      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} /> : null}
+      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} canTrain={canTrain} /> : null}
 
       {!ready ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -253,12 +255,14 @@ const REVIEW_CHECKLIST: Array<[string, string]> = [
   ["chassis_engine", "Section 02 chassis and engine"],
 ];
 
-function ReviewerChecklistForm({ task }: { task: ReviewTask }) {
+function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain: boolean }) {
   const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const [state, formAction, pending] = useActionState(completePolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const isStarted = task.status !== "assigned" || startState.status === "success";
   if (task.status === "completed") {
-    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer checklist completed. The authorized operator still controls sanitized training approval.</div>;
+    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer checklist completed. The authorized operator still controls sanitized training approval.
+      {canTrain && task.field_questions?.length ? <form action={createPolicyOcrProposalFromFeedback} className="mt-2"><input type="hidden" name="review_task_id" value={task.id} /><button className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Generate sanitized candidate proposal</button></form> : null}
+    </div>;
   }
   return (
     <div className="mt-4 rounded-xl border border-violet-100 bg-violet-50/60 p-3">
@@ -282,6 +286,21 @@ function ReviewerChecklistForm({ task }: { task: ReviewTask }) {
               </label>
             ))}
           </div>
+          {task.field_questions?.length ? (
+            <div className="space-y-3 rounded-xl border border-violet-200 bg-white p-3">
+              <p className="text-xs font-black uppercase tracking-wide text-violet-900">Field-level questions</p>
+              {task.field_questions.map((question) => (
+                <div key={question.key} className="rounded-lg border border-slate-200 p-2">
+                  <p className="text-xs font-semibold text-slate-800">{question.prompt}</p>
+                  <select name={`answer_${question.key}`} required defaultValue="" className="mt-2 h-9 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs text-slate-900">
+                    <option value="" disabled>Select an answer</option>
+                    {question.allowedAnswers.map((answer) => <option key={answer} value={answer}>{answer.replaceAll("_", " ")}</option>)}
+                  </select>
+                  <input name={`correct_value_${question.key}`} maxLength={120} className="mt-2 h-9 w-full rounded-lg border border-slate-300 px-2 text-xs text-slate-900" placeholder="Only if providing a corrected sanitized value (no identifiers)" />
+                </div>
+              ))}
+            </div>
+          ) : null}
           <label className="block text-xs font-semibold text-violet-950">
             Optional safe review note
             <textarea name="reviewer_note" defaultValue={task.reviewer_note ?? ""} maxLength={500} className="mt-1 min-h-16 w-full rounded-lg border border-violet-200 bg-white p-2 text-sm font-normal text-slate-900" placeholder="Do not include policy, vehicle or customer identifiers." />

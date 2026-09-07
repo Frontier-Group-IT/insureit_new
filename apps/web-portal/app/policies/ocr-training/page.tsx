@@ -3,6 +3,8 @@ import { requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access
 import type { TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
+import { recordPolicyOcrSatisfaction } from "../ocr-training-orchestrator-actions";
+import { approvePolicyOcrChangeProposal, createPolicyOcrTrainingRun, startPolicyOcrTrainingRun, stopPolicyOcrTrainingRun } from "../ocr-training-orchestrator-actions";
 
 type TrainingDocumentRow = {
   id: string;
@@ -77,6 +79,7 @@ type ReviewTaskRow = {
   reviewer_note: string | null;
   assigned_at: string;
   completed_at: string | null;
+  field_questions: Array<{ key: string; issue: string; prompt: string; allowedAnswers: string[] }>;
   policy_ocr_training_review_notifications: Array<{
     status: "pending" | "sent" | "failed";
     attempts: number;
@@ -108,7 +111,7 @@ export default async function PolicyOcrTrainingPage() {
   if (labelIds.length) {
     let taskQuery = admin
       .from("policy_ocr_training_review_tasks")
-      .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,checklist,reviewer_note,assigned_at,completed_at,policy_ocr_training_review_notifications(status,attempts,sent_at)")
+      .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,checklist,reviewer_note,assigned_at,completed_at,field_questions,policy_ocr_training_review_notifications(status,attempts,sent_at)")
       .in("training_label_id", labelIds);
     taskQuery = taskQuery.neq("status", "cancelled");
     if (!viewer.isOperator) taskQuery = taskQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
@@ -116,6 +119,20 @@ export default async function PolicyOcrTrainingPage() {
     reviewTasks = tasks ?? [];
   }
   const taskByLabelId = new Map(reviewTasks.map((task) => [task.training_label_id, task]));
+  const { data: satisfactionTasks } = !viewer.isOperator
+    ? await admin.from("policy_ocr_training_review_tasks")
+      .select("id,status")
+      .eq("assigned_reviewer_profile_id", viewer.profile.id)
+      .eq("task_type", "satisfaction")
+      .in("status", ["assigned", "in_review"])
+      .returns<Array<{ id: string; status: string }>>()
+    : { data: [] as Array<{ id: string; status: string }> };
+  const { data: orchestratorRuns } = viewer.isOperator
+    ? await admin.from("policy_ocr_training_orchestrators").select("id,status,processed_count,sample_budget,field_accuracy").order("created_at", { ascending: false }).limit(3)
+    : { data: [] as Array<{ id: string; status: string; processed_count: number; sample_budget: number; field_accuracy: number | null }> };
+  const { data: pendingProposals } = viewer.isOperator
+    ? await admin.from("policy_ocr_training_change_proposals").select("id,insurer_name,product_family,layout_family,status").eq("status", "pending_it_approval").order("created_at", { ascending: false }).limit(20)
+    : { data: [] as Array<{ id: string; insurer_name: string | null; product_family: string | null; layout_family: string | null; status: string }> };
 
   const rows = (data ?? []).flatMap<TrainingQueueRow>((document) => {
     const label = Array.isArray(document.policy_ocr_training_labels)
@@ -195,12 +212,37 @@ export default async function PolicyOcrTrainingPage() {
           Showing {viewer.isOperator ? count ?? rows.length : rows.length} {viewer.isOperator ? "policy copies linked to policy records." : "assigned policy-copy review tasks."} Legacy customer-uploaded copies are included only after an unambiguous policy match.
         </p>
       </div>
+      {viewer.isOperator ? <section className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div><p className="text-sm font-bold text-navy-900">Controlled training iterations</p><p className="text-xs text-slate-500">Create a planned run, then explicitly start or stop it. Nothing is enabled automatically.</p></div>
+          <form action={createPolicyOcrTrainingRun}><button className="rounded-lg bg-navy-900 px-3 py-2 text-xs font-bold text-white">Create planned run</button></form>
+        </div>
+        <div className="mt-3 space-y-2">{(orchestratorRuns ?? []).map((run) => <div key={run.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 text-xs">
+          <span><strong>{run.status}</strong> · {run.processed_count}/{run.sample_budget} samples · {run.field_accuracy == null ? "accuracy pending" : `${Math.round(run.field_accuracy * 100)}%`} · <code>{run.id.slice(0, 8)}</code></span>
+          <div className="flex gap-2">{run.status === "planned" ? <form action={startPolicyOcrTrainingRun}><input type="hidden" name="orchestrator_id" value={run.id} /><button className="rounded border border-emerald-200 px-2 py-1 font-bold text-emerald-700">Start</button></form> : null}{["planned", "running", "paused"].includes(run.status) ? <form action={stopPolicyOcrTrainingRun}><input type="hidden" name="orchestrator_id" value={run.id} /><button className="rounded border border-red-200 px-2 py-1 font-bold text-red-700">Stop</button></form> : null}</div>
+        </div>)}</div>
+        {pendingProposals?.length ? <div className="mt-4 border-t border-slate-100 pt-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Pending IT candidate approvals</p>{pendingProposals.map((proposal) => <div key={proposal.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs"><span>{proposal.insurer_name} · {proposal.product_family} · {proposal.layout_family} · <code>{proposal.id.slice(0, 8)}</code></span><form action={approvePolicyOcrChangeProposal}><input type="hidden" name="proposal_id" value={proposal.id} /><button className="rounded border border-amber-300 px-2 py-1 font-bold text-amber-800">Approve candidate</button></form></div>)}</div> : null}
+      </section> : null}
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
           The premium OCR reviewer queue is temporarily unavailable.
         </div>
       ) : (
-        <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} />
+        <>
+          {satisfactionTasks?.length ? <form action={recordPolicyOcrSatisfaction} className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <input type="hidden" name="review_task_id" value={satisfactionTasks[0].id} />
+            <p className="text-sm font-bold text-emerald-900">Fresh-policy satisfaction check</p>
+            <p className="mt-1 text-xs text-emerald-800">Upload/check a fresh policy copy in the protected workflow, then record whether the result meets your expectations.</p>
+            <div className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="text-xs font-semibold text-emerald-950">Result
+                <select name="satisfied" defaultValue="" required className="mt-1 block h-9 rounded-lg border border-emerald-300 bg-white px-2 text-xs"><option value="" disabled>Select</option><option value="yes">Satisfied</option><option value="no">Not satisfied</option></select>
+              </label>
+              <input name="note" maxLength={500} placeholder="Safe note; no identifiers" className="h-9 min-w-64 rounded-lg border border-emerald-300 bg-white px-2 text-xs" />
+              <button className="h-9 rounded-lg bg-emerald-700 px-3 text-xs font-bold text-white">Record satisfaction</button>
+            </div>
+          </form> : null}
+          <TrainingReviewQueue rows={rows} canTrain={viewer.isOperator} canAssign={viewer.isOperator} />
+        </>
       )}
     </AppShell>
   );

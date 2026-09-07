@@ -1,0 +1,32 @@
+name: Validate policy OCR training candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_json:
+        description: "Sanitized candidate JSON from an approved portal proposal (no OCR, PII or identifiers)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate sanitized candidate
+    runs-on: ubuntu-latest
+    environment: policy-ocr-training-approval
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject sensitive candidate content
+        env:
+          CANDIDATE_JSON: ${{ inputs.candidate_json }}
+        run: |
+          set -euo pipefail
+          test "${#CANDIDATE_JSON}" -le 4000
+          printf '%s' "$CANDIDATE_JSON" | grep -Eiq '"(insurer|product|layout|rule)"'
+          if printf '%s' "$CANDIDATE_JSON" | grep -Eiq 'ocr|policy[_ -]?number|registration|chassis|engine|phone|email|address|raw|base64|token|secret'; then
+            echo "Sensitive or raw OCR content is not allowed in a candidate."
+            exit 1
+          fi
+          echo "Sanitized candidate passed the CI boundary. No source, merge or deployment action is performed."

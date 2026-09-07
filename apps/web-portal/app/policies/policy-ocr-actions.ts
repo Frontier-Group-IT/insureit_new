@@ -21,7 +21,7 @@ import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-struc
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
-import { ensureAutomaticPolicyOcrReview } from "@/lib/policy-ocr-review-automation";
+import { ensureAutomaticPolicyOcrReview, ensurePolicyOcrSatisfactionTask } from "@/lib/policy-ocr-review-automation";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -214,6 +214,12 @@ type ClaimedTrainingJob = {
   attempt_count: number;
 };
 
+type ClaimedOrchestratorSample = ClaimedTrainingJob & {
+  sample_id: string;
+  orchestrator_id: string;
+  iteration_no: number;
+};
+
 export async function processPolicyOcrTrainingWorkerBatch(
     subjectTokenOverride: string | null,
     limit = 2,
@@ -234,7 +240,6 @@ export async function processPolicyOcrTrainingWorkerBatch(
       console.error("Policy OCR worker claim failed", error.code);
       return { ok: false as const, error: "claim_failed", processed: 0, succeeded: 0, needsReview: 0 };
     }
-
     let succeeded = 0;
     let needsReview = 0;
     for (const row of (Array.isArray(jobs) ? jobs : []) as ClaimedTrainingJob[]) {
@@ -246,6 +251,80 @@ export async function processPolicyOcrTrainingWorkerBatch(
     }
     return { ok: true as const, processed: Array.isArray(jobs) ? jobs.length : 0, succeeded, needsReview };
   }
+
+export async function processPolicyOcrTrainingOrchestratorBatch(
+      subjectTokenOverride: string | null,
+      orchestratorId: string,
+      limit = 25,
+    ) {
+      if (process.env.POLICY_OCR_ORCHESTRATOR_ENABLED !== "true") {
+        return { ok: false as const, error: "orchestrator_disabled", processed: 0, succeeded: 0, needsReview: 0 };
+      }
+      if (!getGoogleConfig()) return { ok: false as const, error: "google_ocr_configuration_missing", processed: 0, succeeded: 0, needsReview: 0 };
+      const subjectToken = subjectTokenOverride?.trim()
+        || process.env.VERCEL_OIDC_TOKEN?.trim()
+        || process.env.GOOGLE_WORKLOAD_IDENTITY_SUBJECT_TOKEN?.trim()
+        || null;
+      if (!subjectToken) return { ok: false as const, error: "google_oidc_subject_token_missing", processed: 0, succeeded: 0, needsReview: 0 };
+
+      const admin = createSupabaseAdminClient();
+      const { data: samples, error } = await admin.rpc("claim_policy_ocr_orchestrator_samples", {
+        p_orchestrator_id: orchestratorId,
+        p_limit: Math.max(1, Math.min(limit, 25)),
+        p_lease_minutes: 4,
+      });
+      if (error) {
+        console.error("Policy OCR orchestrator claim failed", error.code);
+        return { ok: false as const, error: "claim_failed", processed: 0, succeeded: 0, needsReview: 0 };
+      }
+      let succeeded = 0;
+      let needsReview = 0;
+      for (const sample of (Array.isArray(samples) ? samples : []) as Array<ClaimedOrchestratorSample>) {
+        const claimed = await admin.from("policy_ocr_training_labels").update({
+          processing_status: "processing",
+          processing_attempts: Math.max(1, sample.attempt_count),
+          lease_token: sample.lease_token,
+          lease_expires_at: new Date(Date.now() + 4 * 60 * 1000).toISOString(),
+          failure_code: null,
+          proposal: null,
+          parser_id: null,
+          parser_version: null,
+          extraction_method: null,
+          proposed_at: null,
+          status: "needs_review",
+        }).eq("id", sample.label_id).in("processing_status", ["pending", "failed"]).select("id").maybeSingle();
+        if (claimed.error || !claimed.data) {
+          await admin.from("policy_ocr_training_samples").update({ status: "rejected", lease_token: null, lease_expires_at: null }).eq("id", sample.sample_id);
+          continue;
+        }
+        const outcome = await processTrainingJob(sample, subjectToken, {
+          orchestratorId: sample.orchestrator_id,
+          sampleId: sample.sample_id,
+          iterationNo: sample.iteration_no,
+        });
+        if (outcome.ok) {
+          succeeded += 1;
+          if (!outcome.exactMatch) needsReview += 1;
+          await admin.from("policy_ocr_training_samples").update({
+            status: outcome.exactMatch ? "accepted" : "review_required",
+            lease_token: null,
+            lease_expires_at: null,
+            comparison: outcome.comparison,
+          }).eq("id", sample.sample_id).eq("lease_token", sample.lease_token);
+          await admin.rpc("refresh_policy_ocr_orchestrator_metrics", { p_orchestrator_id: sample.orchestrator_id });
+          await ensurePolicyOcrSatisfactionTask(sample.orchestrator_id);
+        } else {
+          await admin.from("policy_ocr_training_samples").update({
+            status: sample.attempt_count < 3 ? "queued" : "exhausted",
+            lease_token: null,
+            lease_expires_at: null,
+          }).eq("id", sample.sample_id).eq("lease_token", sample.lease_token);
+          await admin.rpc("refresh_policy_ocr_orchestrator_metrics", { p_orchestrator_id: sample.orchestrator_id });
+          await ensurePolicyOcrSatisfactionTask(sample.orchestrator_id);
+        }
+      }
+      return { ok: true as const, processed: Array.isArray(samples) ? samples.length : 0, succeeded, needsReview };
+    }
 
 export async function processPolicyOcrTrainingDocument(
   labelId: string,
@@ -362,7 +441,7 @@ export async function processPolicyOcrTrainingDocument(
   };
 }
 
-async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string | null) {
+async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string | null, context?: { orchestratorId: string; sampleId: string; iterationNo: number }) {
   const admin = createSupabaseAdminClient();
   try {
     if (Number(job.file_size) > MAX_FILE_SIZE) {
@@ -445,6 +524,9 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
           policyDocumentId: job.policy_document_id,
           proposal,
           reference,
+          orchestratorId: context?.orchestratorId,
+          sampleId: context?.sampleId,
+          iterationNo: context?.iterationNo,
         });
       } catch (error) {
         // OCR remains ready for review even if the durable notification path
@@ -452,7 +534,7 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
         console.error("Policy OCR automatic review handoff failed", safeErrorName(error));
       }
     }
-    return { ok: true as const, exactMatch: comparison.exactMatch };
+    return { ok: true as const, exactMatch: comparison.exactMatch, comparison };
   } catch (error) {
     console.error("Policy OCR training processing failed", safeErrorName(error));
     await failTrainingJob(job, "processing_failed", true);

@@ -28,6 +28,9 @@ export async function ensureAutomaticPolicyOcrReview(input: {
   policyDocumentId: string;
   proposal: TrainingProposal;
   reference: TrainingDatabaseReference;
+  orchestratorId?: string;
+  sampleId?: string;
+  iterationNo?: number;
 }) {
   const comparison = compareTrainingProposalToReference(input.proposal, input.reference);
   const hasAmbiguity = input.proposal.warnings.length > 0;
@@ -50,6 +53,7 @@ export async function ensureAutomaticPolicyOcrReview(input: {
     ? await admin.from("policies").select("policy_type,insurance_companies(name)").eq("id", document.policy_id).maybeSingle<{ policy_type: string | null; insurance_companies: { name: string } | null }>()
     : { data: null };
 
+  const fieldQuestions = buildFieldQuestions(comparison);
   const { data: existing, error: existingError } = await admin
     .from("policy_ocr_training_review_tasks")
     .select("id,assigned_reviewer_profile_id,assignment_version,status")
@@ -71,6 +75,9 @@ export async function ensureAutomaticPolicyOcrReview(input: {
         status: "assigned",
         checklist: {},
         reviewer_note: null,
+        field_questions: fieldQuestions,
+        orchestrator_id: input.orchestratorId ?? null,
+        sample_id: input.sampleId ?? null,
         assigned_at: new Date().toISOString(),
         started_at: null,
         completed_at: null,
@@ -88,12 +95,16 @@ export async function ensureAutomaticPolicyOcrReview(input: {
         training_label_id: input.labelId,
         assigned_reviewer_profile_id: reviewer.profileId,
         assigned_by_profile_id: null,
+        field_questions: fieldQuestions,
+        orchestrator_id: input.orchestratorId ?? null,
+        sample_id: input.sampleId ?? null,
       })
       .select("id,assigned_reviewer_profile_id,assignment_version,status")
       .maybeSingle<ReviewTask>();
     task = inserted ?? null;
     assignmentChanged = Boolean(inserted);
   }
+
   if (!task) {
     // A concurrent worker may have won the unique label race. Re-read and
     // reuse the assigned task rather than creating a second notification.
@@ -156,6 +167,53 @@ export async function ensureAutomaticPolicyOcrReview(input: {
     }).eq("id", notification.id);
     return { needsReview: true as const, taskCreated: assignmentChanged, notificationSent: false, error: "notification_failed" };
   }
+}
+
+export async function ensurePolicyOcrSatisfactionTask(orchestratorId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data: run } = await admin.from("policy_ocr_training_orchestrators").select("id,status").eq("id", orchestratorId).maybeSingle<{ id: string; status: string }>();
+  if (!run || run.status !== "awaiting_satisfaction") return { created: false, notified: false };
+  const reviewerEmail = normalizeEmail(process.env.POLICY_OCR_DEFAULT_REVIEWER_EMAIL) ?? DEFAULT_REVIEWER_EMAIL;
+  const reviewer = await resolveExistingPortalReviewer(admin, reviewerEmail);
+  const { data: existing } = await admin.from("policy_ocr_training_review_tasks")
+    .select("id,assignment_version,status")
+    .eq("orchestrator_id", orchestratorId).eq("task_type", "satisfaction").neq("status", "cancelled")
+    .maybeSingle<{ id: string; assignment_version: number; status: string }>();
+  const task = existing ?? (await admin.from("policy_ocr_training_review_tasks").insert({
+    training_label_id: null, assigned_reviewer_profile_id: reviewer.profileId, assigned_by_profile_id: null,
+    task_type: "satisfaction", orchestrator_id: orchestratorId, field_questions: [], checklist: {},
+  }).select("id,assignment_version,status").maybeSingle<{ id: string; assignment_version: number; status: string }>()).data;
+  if (!task) return { created: false, notified: false };
+  const idempotencyKey = `policy-ocr-satisfaction:${orchestratorId}:${task.assignment_version}`;
+  const { data: notification } = await admin.from("policy_ocr_training_review_notifications").upsert({
+    review_task_id: task.id, assignment_version: task.assignment_version, recipient_profile_id: reviewer.profileId,
+    idempotency_key: idempotencyKey, status: "pending", last_error: null,
+  }, { onConflict: "review_task_id,assignment_version" }).select("id,attempts,status").maybeSingle<{ id: string; attempts: number; status: string }>();
+  if (!notification || notification.status === "sent") return { created: !existing, notified: false };
+  try {
+    const portalUrl = new URL("/policies/ocr-training", process.env.NEXT_PUBLIC_PORTAL_URL?.trim() || "https://portal.insureit.in");
+    portalUrl.searchParams.set("review_task", task.id);
+    const result = await sendResendEmail({
+      to: reviewerEmail, bcc: [REVIEW_NOTIFICATION_BCC], subject: "INSUREIT Policy OCR fresh-policy satisfaction check",
+      text: ["A bounded OCR training iteration met its automated acceptance gates.", "Please upload/check a fresh policy in the protected portal and record whether the result meets your expectations.", "Keep policy content, identifiers and PII inside the secure portal.", `Open the protected task: ${portalUrl.toString()}`].join("\n"),
+      idempotencyKey,
+    });
+    await admin.from("policy_ocr_training_review_notifications").update({ status: "sent", attempts: notification.attempts + 1, provider_message_id: result.id, sent_at: new Date().toISOString(), last_error: null }).eq("id", notification.id);
+    return { created: !existing, notified: true };
+  } catch {
+    await admin.from("policy_ocr_training_review_notifications").update({ status: "failed", attempts: notification.attempts + 1, last_error: "resend_request_failed" }).eq("id", notification.id);
+    return { created: !existing, notified: false };
+  }
+}
+
+function buildFieldQuestions(comparison: ReturnType<typeof compareTrainingProposalToReference>) {
+  return Object.entries(comparison.fields).filter(([, result]) => result !== "match").map(([key, result]) => ({
+    key, issue: result,
+    prompt: result === "reference_missing" ? "The saved reference is blank. What is the correct value shown on the policy copy?"
+      : result === "ocr_missing" ? "OCR did not produce this field. Is the field visible on the policy copy, and what should be extracted?"
+        : "Which value is correct: the OCR proposal or the saved database reference?",
+    allowedAnswers: result === "reference_missing" ? ["provide_correct_value", "withhold"] : ["ocr_correct", "database_correct", "provide_correct_value", "withhold"],
+  }));
 }
 
 async function resolveExistingPortalReviewer(admin: ReturnType<typeof createSupabaseAdminClient>, email: string) {

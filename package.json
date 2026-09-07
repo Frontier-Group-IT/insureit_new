@@ -27,6 +27,7 @@
     "lint:web": "npm --workspace apps/web-portal run lint",
     "typecheck:web": "npm --workspace apps/web-portal run typecheck",
     "policy-ocr:worker-regression": "npm --workspace apps/web-portal run policy-ocr:worker-regression",
+    "policy-ocr:orchestrator-regression": "npm --workspace apps/web-portal run policy-ocr:orchestrator-regression",
     "dev:mobile": "npm --workspace apps/mobile-app run dev",
     "dev:mobile:web": "npm --workspace apps/mobile-app run web",
     "build:mobile:web": "npm --workspace apps/mobile-app run build:web",
