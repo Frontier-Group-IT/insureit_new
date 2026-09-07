@@ -21,7 +21,7 @@ function storedOrFallback(details: Record<string, unknown>, key: string, fallbac
 
 function legacyDriverName(description: string | null) {
   if (!description) return null;
-  const match = description.match(/driver\s*name?\s*[:\-]\s*([^,;\n]+)/i);
+  const match = description.match(/(?:^|\n)\s*driver(?:\s*name)?\s*[:\-]\s*([^,;\n]+)/i);
   return match?.[1]?.trim() || null;
 }
 
