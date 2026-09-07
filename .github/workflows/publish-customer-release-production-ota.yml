@@ -12,10 +12,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: customer-0-3-0-production-ota
-  cancel-in-progress: true
-
 jobs:
   publish:
     if: github.ref == 'refs/heads/main'
