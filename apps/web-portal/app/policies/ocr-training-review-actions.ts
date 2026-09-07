@@ -76,7 +76,7 @@ export async function assignPolicyOcrReviewTask(
       ? await admin.from("policies").select("policy_type,insurance_companies(name)").eq("id", document.policy_id).maybeSingle<{ policy_type: string | null; insurance_companies: { name: string } | null }>()
       : { data: null };
     if (!policy || !/iffco/i.test(policy.insurance_companies?.name ?? "") || !/^package$/i.test(policy.policy_type ?? "")) {
-      throw new Error("This reviewer checklist is currently available only for IFFCO-Tokio Package policies.");
+      throw new Error("This reviewer workflow is currently available only for IFFCO-Tokio Package policies.");
     }
 
     const { data: existing, error: existingError } = await admin
@@ -241,7 +241,7 @@ export async function completePolicyOcrReviewTask(
     if (["completed", "rejected", "cancelled"].includes(task.status)) throw new Error("This reviewer task is no longer open.");
     const checklist = Object.fromEntries(REVIEW_CHECKLIST.map((key) => [key, formData.get(`check_${key}`) === "on"]));
     if (!task.field_questions?.length && REVIEW_CHECKLIST.some((key) => !checklist[key])) {
-      throw new Error("Complete every checklist item after verifying the private policy copy.");
+      throw new Error("Complete every review answer after verifying the private policy copy.");
     }
     const structuredAnswers = Object.fromEntries((task.field_questions ?? []).map((question) => {
       const answer = formText(formData, `answer_${question.key}`);
@@ -263,7 +263,7 @@ export async function completePolicyOcrReviewTask(
       .eq("assigned_reviewer_profile_id", viewer.profile.id)
       .select("id")
       .maybeSingle<{ id: string }>();
-    if (error || !updated) throw new Error("The reviewer checklist could not be saved.");
+    if (error || !updated) throw new Error("The reviewer answers could not be saved.");
     if (Object.keys(structuredAnswers).length) {
       const feedback = Object.fromEntries(Object.entries(structuredAnswers).map(([key, value]) => [key, value.correctValue ? { answer: value.answer, value: value.correctValue } : { answer: value.answer }]));
       await createSupabaseAdminClient().from("policy_ocr_training_feedback").upsert({
@@ -276,7 +276,7 @@ export async function completePolicyOcrReviewTask(
     revalidatePath(QUEUE_PATH);
     return { status: "success", message: "Checklist completed. The sanitized training approval remains with the authorized operator." };
   } catch (error) {
-    return { status: "error", message: error instanceof Error ? error.message : "The reviewer checklist could not be saved." };
+    return { status: "error", message: error instanceof Error ? error.message : "The reviewer answers could not be saved." };
   }
 }
 

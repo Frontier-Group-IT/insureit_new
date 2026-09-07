@@ -190,7 +190,6 @@ assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
 assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
 const queueComponent = readFileSync("app/policies/ocr-training/training-review-queue.tsx", "utf8");
-const reviewAutomation = readFileSync("lib/policy-ocr-review-automation.ts", "utf8");
 assert.match(queueComponent, /Run with Google Cloud/);
 assert.match(queueComponent, /Re-run with Google Cloud/);
 assert.match(queueComponent, /useActionState/);
@@ -199,10 +198,9 @@ assert.doesNotMatch(queueComponent, /different training owner|No self-approval|A
 assert.doesNotMatch(queueComponent, /Assigned PDF verification checklist/);
 assert.doesNotMatch(queueComponent, /check_\$\{key\}/);
 assert.match(queueComponent, /Review questions/);
-assert.match(reviewAutomation, /FIELD_LABELS/);
-assert.match(queueComponent, /For \$\{label\}/);
-assert.match(queueComponent, /database reference is/);
-assert.match(queueComponent, /OCR proposed/);
+assert.match(queueComponent, /ReviewDecisionControls/);
+assert.match(queueComponent, /answer_\$\{keyName\}/);
+assert.match(queueComponent, /provide_correct_value/);
 assert.match(queueComponent, /anju@insureit\.in/);
 
 const reviewerActions = readFileSync("app/policies/ocr-training-review-actions.ts", "utf8");
