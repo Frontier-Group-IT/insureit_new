@@ -48,6 +48,7 @@ type SourceOption = { value: string; label: string };
 type ViewKey = "all" | "active" | "expiring" | "expired" | "claims";
 type BusinessFilter = "all" | "Motor" | "Non Motor";
 type TimeScope = "mtd" | "all";
+type QuickDateRange = "mtd" | "90" | "365";
 type PolicyRegisterReturnState = {
   query: string;
   view: ViewKey;
@@ -122,17 +123,20 @@ function PolicyDateRangeFilter({
   toDate,
   onFromDateChange,
   onToDateChange,
+  onQuickRange,
   onClear,
 }: {
   fromDate: string;
   toDate: string;
   onFromDateChange: (value: string) => void;
   onToDateChange: (value: string) => void;
+  onQuickRange: (value: QuickDateRange) => void;
   onClear: () => void;
 }) {
   const label = fromDate || toDate
     ? `${fromDate ? shortFilterDate(fromDate) : "Any"} – ${toDate ? shortFilterDate(toDate) : "Any"}`
     : "Date Range";
+  const activeQuickRange = quickDateRangeKey(fromDate, toDate);
   return (
     <details className="group relative">
       <summary className="flex h-10 min-w-[170px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
@@ -144,7 +148,21 @@ function PolicyDateRangeFilter({
           <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
           <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
         </div>
-        <div className="mt-2 flex justify-end"><button type="button" onClick={onClear} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button></div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            {(["mtd", "90", "365"] as const).map((range) => (
+              <button
+                key={range}
+                type="button"
+                onClick={() => onQuickRange(range)}
+                className={`min-w-[48px] rounded-lg border px-2.5 py-1.5 text-[9px] font-bold transition ${activeQuickRange === range ? "border-[#7DA7E8] bg-[#EAF2FF] text-[#174EA6]" : "border-[#D7E0EA] bg-[#F8FAFC] text-[#475569] hover:border-[#AFC3DB] hover:bg-[#F1F5F9]"}`}
+              >
+                {range === "mtd" ? "MTD" : range}
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={onClear} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button>
+        </div>
       </div>
     </details>
   );
@@ -281,6 +299,15 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     setPage(1);
   }
 
+  function changeQuickDateRange(value: QuickDateRange) {
+    const bounds = quickDateRangeBounds(value);
+    setTimeScope("all");
+    setFromDate(bounds.from);
+    setToDate(bounds.to);
+    setView("all");
+    setPage(1);
+  }
+
   function resetFilters() {
     setQuery("");
     setBusiness("all");
@@ -378,7 +405,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             toDate={toDate}
             onFromDateChange={changeCustomFromDate}
             onToDateChange={changeCustomToDate}
-            onClear={() => { setFromDate(""); setToDate(""); setPage(1); }}
+            onQuickRange={changeQuickDateRange}
+            onClear={() => { setTimeScope("all"); setFromDate(""); setToDate(""); setView("all"); setPage(1); }}
           />
           <div className="min-w-0 max-w-full xl:min-w-[330px]">
             <div className="flex w-full items-center gap-0.5 overflow-visible rounded-xl border border-[#D8E2EE] bg-[#F8FAFC] p-1">
@@ -572,12 +600,32 @@ function policyBusinessDate(row: Pick<PolicyRow, "issuance_date" | "created_at">
   return row.issuance_date || row.created_at.slice(0, 10);
 }
 
-function monthToDateBounds() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return { from: `${year}-${month}-01`, to: `${year}-${month}-${day}` };
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function monthToDateBounds(now = new Date()) {
+  return { from: formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1)), to: formatLocalDate(now) };
+}
+
+function quickDateRangeBounds(value: QuickDateRange, now = new Date()) {
+  if (value === "mtd") return monthToDateBounds(now);
+  const days = value === "90" ? 90 : 365;
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  from.setDate(from.getDate() - (days - 1));
+  return { from: formatLocalDate(from), to: formatLocalDate(now) };
+}
+
+function quickDateRangeKey(fromDate: string, toDate: string): QuickDateRange | null {
+  if (!fromDate || !toDate) return null;
+  const ranges: QuickDateRange[] = ["mtd", "90", "365"];
+  return ranges.find((range) => {
+    const bounds = quickDateRangeBounds(range);
+    return bounds.from === fromDate && bounds.to === toDate;
+  }) ?? null;
 }
 
 function policyStatus(endDate: string) {
