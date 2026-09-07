@@ -20,7 +20,9 @@
       "resizeMode": "cover",
       "backgroundColor": "#F4F8FC"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "android": {
       "package": "com.insureit.mobile",
       "softwareKeyboardLayoutMode": "pan",
@@ -28,14 +30,18 @@
         "foregroundImage": "./assets/brand/insureit-adaptive-foreground.png",
         "backgroundColor": "#F4F8FC"
       },
-      "permissions": ["android.permission.RECORD_AUDIO"],
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "versionCode": 9
     },
     "ios": {
       "bundleIdentifier": "com.insureit.mobile",
       "buildNumber": "5",
       "supportsTablet": false,
-      "infoPlist": {"ITSAppUsesNonExemptEncryption": false}
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "bundler": "metro",
@@ -44,16 +50,35 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-image-picker", {"photosPermission": "InsureIt uses photos you select to attach accident and claim documents."}],
-      ["expo-document-picker", {"iCloudContainerEnvironment": "Production"}],
-      ["expo-location", {"locationWhenInUsePermission": "Allow InsureIt to use your current location to help record the incident location."}],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "InsureIt uses photos you select to attach accident and claim documents."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow InsureIt to use your current location to help record the incident location."
+        }
+      ],
       "expo-secure-store",
       "expo-font"
     ],
-    "experiments": {"typedRoutes": true},
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "router": {},
-      "eas": {"projectId": "aadcb7a5-072b-4bf9-bc81-c52fabdd5caa"}
+      "eas": {
+        "projectId": "aadcb7a5-072b-4bf9-bc81-c52fabdd5caa"
+      }
     },
     "owner": "antnish"
   }
