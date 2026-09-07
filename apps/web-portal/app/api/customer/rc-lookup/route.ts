@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-09-05-v1";
+const RC_MAPPER_VERSION = "2026-09-07-v2";
 
 type SafeVehicleDetails = {
   registrationNumber: string;
@@ -36,6 +36,7 @@ type CacheRow = {
   transaction_id: string | null;
   fetched_at: string;
   expires_at: string;
+  mapper_version: string | null;
 };
 
 export async function POST(request: Request) {
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
   try {
     const { data } = await admin
       .from("vehicle_rc_lookup_cache")
-      .select("registration_number_normalized,raw_response,normalized_details,transaction_id,fetched_at,expires_at")
+      .select("registration_number_normalized,raw_response,normalized_details,transaction_id,fetched_at,expires_at,mapper_version")
       .eq("registration_number_normalized", registrationNumber)
       .maybeSingle();
     cached = (data as CacheRow | null) ?? null;
@@ -73,12 +74,21 @@ export async function POST(request: Request) {
 
   const now = Date.now();
   if (cached && Date.parse(cached.expires_at) > now) {
-    const details = sanitizeCachedDetails(cached.normalized_details, registrationNumber);
-    if (mappedFieldCount(details) > 0) {
+    const repaired = repairCachedDetails(cached, registrationNumber);
+    if (mappedFieldCount(repaired.details) > 0) {
+      const cacheUpdate: Record<string, unknown> = {
+        last_served_at: new Date(now).toISOString(),
+        updated_at: new Date(now).toISOString(),
+      };
+      if (repaired.didRepair) {
+        cacheUpdate.normalized_details = repaired.details;
+        cacheUpdate.mapper_version = RC_MAPPER_VERSION;
+      }
       void admin
         .from("vehicle_rc_lookup_cache")
-        .update({ last_served_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
+        .update(cacheUpdate)
         .eq("registration_number_normalized", registrationNumber);
+
       return NextResponse.json({
         status: "success",
         provider: "authbridge",
@@ -86,7 +96,7 @@ export async function POST(request: Request) {
         isStale: false,
         transactionId: cached.transaction_id,
         lookedUpAt: cached.fetched_at,
-        details,
+        details: repaired.details,
       });
     }
   }
@@ -142,12 +152,21 @@ export async function POST(request: Request) {
     });
 
     if (cached) {
-      const staleDetails = sanitizeCachedDetails(cached.normalized_details, registrationNumber);
-      if (mappedFieldCount(staleDetails) > 0) {
+      const repaired = repairCachedDetails(cached, registrationNumber);
+      if (mappedFieldCount(repaired.details) > 0) {
+        const cacheUpdate: Record<string, unknown> = {
+          last_served_at: new Date(now).toISOString(),
+          updated_at: new Date(now).toISOString(),
+        };
+        if (repaired.didRepair) {
+          cacheUpdate.normalized_details = repaired.details;
+          cacheUpdate.mapper_version = RC_MAPPER_VERSION;
+        }
         void admin
           .from("vehicle_rc_lookup_cache")
-          .update({ last_served_at: new Date(now).toISOString(), updated_at: new Date(now).toISOString() })
+          .update(cacheUpdate)
           .eq("registration_number_normalized", registrationNumber);
+
         return NextResponse.json({
           status: "success",
           provider: "authbridge",
@@ -155,7 +174,7 @@ export async function POST(request: Request) {
           isStale: true,
           transactionId: cached.transaction_id,
           lookedUpAt: cached.fetched_at,
-          details: staleDetails,
+          details: repaired.details,
         });
       }
     }
@@ -164,13 +183,47 @@ export async function POST(request: Request) {
   }
 }
 
+function repairCachedDetails(cached: CacheRow, registrationNumber: string) {
+  const stored = sanitizeCachedDetails(cached.normalized_details, registrationNumber);
+  const mapperIsCurrent = cached.mapper_version === RC_MAPPER_VERSION;
+
+  if (!mapperIsCurrent && cached.raw_response) {
+    const remapped = sanitizeVehicleResponse(cached.raw_response, registrationNumber);
+    if (mappedFieldCount(remapped) > 0) return { details: remapped, didRepair: true };
+  }
+
+  if ((!stored.manufacturer || !stored.model) && cached.raw_response) {
+    const remapped = sanitizeVehicleResponse(cached.raw_response, registrationNumber);
+    const details = {
+      ...stored,
+      manufacturer: stored.manufacturer ?? remapped.manufacturer,
+      model: stored.model ?? remapped.model,
+    };
+    const didRepair = details.manufacturer !== stored.manufacturer || details.model !== stored.model;
+    return { details, didRepair };
+  }
+
+  return { details: stored, didRepair: false };
+}
+
 function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): SafeVehicleDetails {
   const values = flattenPrimitiveValues(raw);
+  const vehicleDetails = getAuthbridgeVehicleDetails(raw);
+
+  const manufacturer = cleanText(
+    findObjectValue(vehicleDetails, ["Maker/Manufacturer", "Maker Manufacturer", "Manufacturer", "Maker"])
+      ?? findValue(values, ["makermanufacturer", "manufacturer", "manufacturername", "maker", "makername", "makerdescription", "makerdesc", "vehiclemanufacturer", "vehiclemaker"]),
+  );
+  const model = cleanText(
+    findObjectValue(vehicleDetails, ["Model / Makers Class", "Model/Makers Class", "Model Makers Class", "Model", "Makers Class"])
+      ?? findValue(values, ["modelmakersclass", "model", "modelname", "makermodel", "makermodelname", "vehiclename", "vehiclemodel", "vehiclemodelname", "modeldescription", "modeldesc", "variant", "variantname", "modelvariant", "modelvariantname"]),
+  );
+
   return {
     registrationNumber,
     registrationDate: toIsoDate(findValue(values, ["registrationdate", "regdate", "dateofregistration", "registrationdt"])),
-    manufacturer: cleanText(findValue(values, ["manufacturer", "manufacturername", "maker", "makername", "makerdescription", "makerdesc", "vehiclemanufacturer", "vehiclemaker"])),
-    model: cleanText(findValue(values, ["model", "modelname", "makermodel", "makermodelname", "vehiclename", "vehiclemodel", "vehiclemodelname", "modeldescription", "modeldesc", "variant", "variantname", "modelvariant", "modelvariantname"])),
+    manufacturer,
+    model,
     manufacturingYear: toYear(findValue(values, ["manufacturingyear", "manufactureyear", "mfgyear", "yearofmanufacture", "manufacturingdate", "manufacturedate", "monthyearofmanufacture"])),
     vehicleClass: mapVehicleClass(cleanText(findValue(values, ["vehicleclass", "vehicleclassdesc", "vehicleclassdescription", "classofvehicle", "vehiclecategory", "vehicletype", "bodytype"]))),
     fuelType: mapFuel(cleanText(findValue(values, ["fueltype", "fuel", "fueldescription", "fueltypecode"]))),
@@ -179,12 +232,42 @@ function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): Safe
     gvwKg: cleanNumber(findValue(values, ["gvw", "gvwkg", "grossvehicleweight", "grossweight", "grossvehicleweightkg"])),
     chassisNumber: cleanCode(findValue(values, ["chassisnumber", "chassisno", "chassis"])),
     engineNumber: cleanCode(findValue(values, ["enginenumber", "engineno", "engine"])),
-    fitnessExpiryDate: toIsoDate(findValue(values, ["fitnessexpirydate", "fitnessupto", "fitnessvalidupto", "fitnessvalidity"])),
+    fitnessExpiryDate: toIsoDate(findValue(values, ["fitnessexpirydate", "fitnessupto", "fitnessvalidupto", "fitnessvalidity", "fitnessdatercexpirydate"])),
     pucExpiryDate: toIsoDate(findValue(values, ["pucexpirydate", "puccupto", "pucupto", "pucvalidupto", "pollutionupto", "pollutionvalidupto"])),
-    roadTaxExpiryDate: toIsoDate(findValue(values, ["roadtaxexpirydate", "taxupto", "taxvalidupto", "roadtaxupto"])),
+    roadTaxExpiryDate: toIsoDate(findValue(values, ["roadtaxexpirydate", "taxupto", "taxvalidupto", "roadtaxupto", "vehicletaxupto"])),
     nationalPermitExpiryDate: toIsoDate(findValue(values, ["nationalpermitexpirydate", "nationalpermitupto", "nationalpermitvalidupto"])),
     localPermitExpiryDate: toIsoDate(findValue(values, ["localpermitexpirydate", "localpermitupto", "localpermitvalidupto", "permitupto", "permitvalidupto"])),
   };
+}
+
+function getAuthbridgeVehicleDetails(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const root = raw as Record<string, unknown>;
+  const msg = getObjectValue(root, "msg");
+  if (!msg) return null;
+  return getObjectValue(msg, "Vehicle Details");
+}
+
+function getObjectValue(object: Record<string, unknown>, key: string): Record<string, unknown> | null {
+  const normalizedTarget = normalizeKey(key);
+  for (const [candidate, value] of Object.entries(object)) {
+    if (normalizeKey(candidate) !== normalizedTarget) continue;
+    if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  }
+  return null;
+}
+
+function findObjectValue(object: Record<string, unknown> | null, keys: string[]) {
+  if (!object) return null;
+  for (const key of keys) {
+    const normalizedTarget = normalizeKey(key);
+    for (const [candidate, value] of Object.entries(object)) {
+      if (normalizeKey(candidate) !== normalizedTarget) continue;
+      const primitive = toPrimitive(value);
+      if (primitive && primitive.trim() && !/^(null|undefined|na|n\/a)$/i.test(primitive.trim())) return primitive.trim();
+    }
+  }
+  return null;
 }
 
 function sanitizeCachedDetails(raw: unknown, registrationNumber: string): SafeVehicleDetails {
