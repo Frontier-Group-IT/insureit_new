@@ -6,6 +6,7 @@ import { Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ExternalClaimErrorPopup } from '@/components/external-claim-error-popup';
 import { ClaimFormSection } from '@/components/external-claim-ui';
+import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/incident-voice-note';
 import { InternalManagedClaimHeader } from '@/components/internal-managed-claim-header';
 import { LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -33,6 +34,7 @@ type ManagedClaim = {
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
 const BULK_DOCUMENT_TYPE = 'Spot Intimation Attachment';
+const VOICE_NOTE_DOCUMENT_TYPE = 'Incident Voice Note';
 const DOCUMENT_TYPE_BY_KEY: Record<DocumentKey, string> = {
   rc: 'RC Copy',
   insurance: 'Insurance Copy',
@@ -52,8 +54,9 @@ export default function InternalClaimStageOneTracker() {
   const [policyNo, setPolicyNo] = useState('');
   const [insurerName, setInsurerName] = useState('Insurance company');
   const [loading, setLoading] = useState(true);
-  const [uploadingKey, setUploadingKey] = useState<DocumentKey | 'bulk' | ''>('');
+  const [uploadingKey, setUploadingKey] = useState<DocumentKey | 'bulk' | 'audio' | ''>('');
   const [videoStatus, setVideoStatus] = useState('');
+  const [voiceNote, setVoiceNote] = useState<IncidentVoiceNoteFile | null>(null);
   const [message, setMessage] = useState('');
   const [deleteType, setDeleteType] = useState('');
 
@@ -100,6 +103,30 @@ export default function InternalClaimStageOneTracker() {
 
   const savedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status !== 'rejected').map((item) => item.document_type)), [documents]);
   const bulkCount = useMemo(() => documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected').length, [documents]);
+  const voiceDocument = useMemo(() => documents.find((item) => item.document_type === VOICE_NOTE_DOCUMENT_TYPE && item.verification_status !== 'rejected') ?? null, [documents]);
+  const voiceVerified = voiceDocument?.verification_status === 'verified';
+
+  useEffect(() => {
+    if (!voiceDocument) {
+      setVoiceNote(null);
+      return;
+    }
+    let active = true;
+    void (async () => {
+      const bucket = voiceDocument.storage_bucket || 'claim-documents';
+      if (!voiceDocument.storage_path) return;
+      const result = await supabase.storage.from(bucket).createSignedUrl(voiceDocument.storage_path, 60 * 60);
+      if (!active || result.error || !result.data?.signedUrl) return;
+      const raw = voiceDocument as ClaimDocument & { mime_type?: string | null; file_size?: number | null };
+      setVoiceNote({
+        name: voiceDocument.file_name || 'incident-voice-note.m4a',
+        uri: result.data.signedUrl,
+        mimeType: raw.mime_type || 'audio/mp4',
+        size: raw.file_size ?? null,
+      });
+    })();
+    return () => { active = false; };
+  }, [voiceDocument?.id, voiceDocument?.storage_bucket, voiceDocument?.storage_path]);
 
   async function pickDocument(key: DocumentKey) {
     if (!claim || uploadingKey) return;
@@ -200,6 +227,52 @@ export default function InternalClaimStageOneTracker() {
     }
   }
 
+  async function uploadVoiceNote(file: IncidentVoiceNoteFile) {
+    if (!claim || uploadingKey) return;
+    if (voiceVerified) {
+      setMessage('Audio is verified by the claims desk and can no longer be replaced.');
+      return;
+    }
+    setUploadingKey('audio');
+    setMessage('');
+    try {
+      const previous = documents.filter((item) => item.document_type === VOICE_NOTE_DOCUMENT_TYPE && item.verification_status !== 'verified');
+      const uploaded = await uploadFile(claim, VOICE_NOTE_DOCUMENT_TYPE, file, false);
+      if (!uploaded) {
+        setMessage('The audio note could not be uploaded. Please try again.');
+        return;
+      }
+      if (previous.length) {
+        const previousIds = previous.map((item) => item.id).filter(Boolean);
+        await supabase.from('claim_documents').delete().in('id', previousIds);
+        const byBucket = new Map<string, string[]>();
+        previous.forEach((item) => {
+          if (!item.storage_bucket || !item.storage_path) return;
+          byBucket.set(item.storage_bucket, [...(byBucket.get(item.storage_bucket) ?? []), item.storage_path]);
+        });
+        await Promise.all([...byBucket.entries()].map(([bucket, paths]) => supabase.storage.from(bucket).remove(paths)));
+      }
+      const previousIds = new Set(previous.map((item) => item.id));
+      setDocuments((current) => [uploaded, ...current.filter((item) => !previousIds.has(item.id))]);
+      setVoiceNote(file);
+    } finally {
+      setUploadingKey('');
+    }
+  }
+
+  async function handleVoiceNoteChange(file: IncidentVoiceNoteFile | null) {
+    if (file) {
+      await uploadVoiceNote(file);
+      return;
+    }
+    if (voiceVerified) {
+      setMessage('Audio is verified by the claims desk and can no longer be deleted.');
+      return;
+    }
+    await deleteDocuments(VOICE_NOTE_DOCUMENT_TYPE);
+    setVoiceNote(null);
+  }
+
   async function deleteDocuments(documentType: string) {
     if (!claim || uploadingKey) return;
     setDeleteType('');
@@ -208,7 +281,7 @@ export default function InternalClaimStageOneTracker() {
       setMessage('Verified documents are locked by the claims desk.');
       return;
     }
-    setUploadingKey(documentType === BULK_DOCUMENT_TYPE ? 'bulk' : (keyForType(documentType) ?? 'bulk'));
+    setUploadingKey(documentType === VOICE_NOTE_DOCUMENT_TYPE ? 'audio' : documentType === BULK_DOCUMENT_TYPE ? 'bulk' : (keyForType(documentType) ?? 'bulk'));
     try {
       const ids = targets.map((item) => item.id).filter(Boolean);
       const removeResult = await supabase.from('claim_documents').delete().eq('claim_id', claim.id).in('id', ids);
@@ -269,6 +342,14 @@ export default function InternalClaimStageOneTracker() {
         </View>
       </View>
 
+      <IncidentVoiceNote
+        value={voiceNote}
+        saved={voiceVerified}
+        busy={uploadingKey === 'audio'}
+        onChange={(file) => { void handleVoiceNoteChange(file); }}
+      />
+      {voiceVerified ? <View style={styles.audioVerifiedNotice}><MaterialCommunityIcons name="lock-check-outline" size={15} color="#18864B" /><Text style={styles.audioVerifiedText}>Audio verified by Claims Desk · Locked</Text></View> : null}
+
       <Modal visible={Boolean(deleteType)} transparent animationType="fade" onRequestClose={() => setDeleteType('')}>
         <View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.deleteIcon}><MaterialCommunityIcons name="trash-can-outline" size={19} color="#C43232" /></View><Text style={styles.modalTitle}>Delete document?</Text><Text style={styles.modalBody}>Remove the uploaded {deleteType || 'document'} from this claim?</Text><View style={styles.modalActions}><Pressable onPress={() => setDeleteType('')} style={styles.cancelButton}><Text style={styles.cancelText}>Cancel</Text></Pressable><Pressable onPress={() => void deleteDocuments(deleteType)} style={styles.deleteButton}><Text style={styles.deleteText}>Delete</Text></Pressable></View></View></View>
       </Modal>
@@ -303,5 +384,6 @@ const styles = StyleSheet.create({
   fieldWrap: { marginTop: 9 }, fieldLabel: { color: '#233653', fontSize: 11, fontWeight: '800', marginBottom: 5 }, field: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }, fieldValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, placeholder: { color: '#9AA7B8', fontWeight: '700' },
   documentCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12 }, documentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, documentTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' }, optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, tile: { position: 'relative', width: '31.5%', minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' }, tileSaved: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' }, check: { position: 'absolute', top: 5, left: 5, width: 23, height: 23, borderRadius: 12, backgroundColor: '#DDF4E8', alignItems: 'center', justifyContent: 'center' }, remove: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' }, artwork: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' }, artworkImage: { width: 43, height: 43 }, videoArtwork: { width: 38, height: 40, borderRadius: 8, backgroundColor: '#EF1E2F', alignItems: 'center', justifyContent: 'center' }, tileTitle: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 }, tileStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 }, tileStatusSaved: { color: '#18864B' },
   bulkShell: { position: 'relative' }, bulk: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' }, bulkIcon: { width: 34, height: 34 }, bulkCopy: { flex: 1 }, bulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, bulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, marginTop: 2 }, bulkRemove: { position: 'absolute', top: 15, right: 7, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
+  audioVerifiedNotice: { minHeight: 36, marginTop: -4, marginBottom: 12, borderRadius: 12, borderWidth: 1, borderColor: '#B7E4CC', backgroundColor: '#EFFAF4', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10 }, audioVerifiedText: { color: '#166A45', fontSize: 9.5, fontWeight: '900' },
   modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7,24,50,0.48)', padding: 24 }, modalCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20, alignItems: 'center' }, deleteIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center' }, modalTitle: { marginTop: 8, color: palette.navy, fontSize: 18, fontWeight: '900' }, modalBody: { marginTop: 7, color: '#667085', fontSize: 12, textAlign: 'center' }, modalActions: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 16 }, cancelButton: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center' }, cancelText: { color: palette.navy, fontSize: 11, fontWeight: '900' }, deleteButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#C43232', alignItems: 'center', justifyContent: 'center' }, deleteText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
 });
