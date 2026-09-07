@@ -10,6 +10,8 @@ export const POLICY_ACTIVITY_ACTIONS = {
   PAYIN_BILLING_UPDATED: "payin_billing_updated",
   POLICY_SUPERSEDED: "policy_superseded",
   POLICY_REPLACEMENT_CREATED: "policy_replacement_created",
+  POLICY_DATA_CORRECTED: "policy_data_corrected",
+  VEHICLE_DATA_CORRECTED: "vehicle_data_corrected",
 } as const;
 
 export type PolicyActivityAction = (typeof POLICY_ACTIVITY_ACTIONS)[keyof typeof POLICY_ACTIVITY_ACTIONS];
@@ -24,10 +26,13 @@ const ACTION_LABELS: Record<PolicyActivityAction, string> = {
   payin_billing_updated: "Pay-in Billing Updated",
   policy_superseded: "Policy Superseded",
   policy_replacement_created: "Replacement Policy Created",
+  policy_data_corrected: "Policy Data Corrected",
+  vehicle_data_corrected: "Vehicle Data Corrected",
 };
 
 const TRACKED_ACTIONS = Object.values(POLICY_ACTIVITY_ACTIONS);
 const ACTIVITY_TABLE_NAME = "policies";
+const RECONCILIATION_ACTOR_NAME = "System Reconciliation";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
 type AuditRow = { id: string; actor_id: string | null; action: string; created_at: string };
@@ -51,6 +56,15 @@ export type PolicyActivityDisplay = {
 
 function asTrackedAction(value: string): PolicyActivityAction | null {
   return TRACKED_ACTIONS.includes(value as PolicyActivityAction) ? value as PolicyActivityAction : null;
+}
+
+function reconciliationActorName(action: PolicyActivityAction, actorId: string | null) {
+  if (actorId) return null;
+  if (
+    action === POLICY_ACTIVITY_ACTIONS.POLICY_DATA_CORRECTED
+    || action === POLICY_ACTIVITY_ACTIONS.VEHICLE_DATA_CORRECTED
+  ) return RECONCILIATION_ACTOR_NAME;
+  return null;
 }
 
 function timestamp(value: string | null | undefined) {
@@ -122,6 +136,7 @@ export async function loadPolicyActivityHistory({
       id: `audit:${row.id}`,
       action,
       actorId: row.actor_id,
+      actorName: reconciliationActorName(action, row.actor_id),
       at: row.created_at,
     });
   }
