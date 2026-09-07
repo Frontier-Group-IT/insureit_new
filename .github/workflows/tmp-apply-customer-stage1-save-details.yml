@@ -1,0 +1,63 @@
+name: Temporary apply Customer Stage 1 Save Details patch
+
+on:
+  push:
+    branches:
+      - fix/customer-0-3-stage1-save-details-release
+    paths:
+      - '.github/workflows/tmp-apply-customer-stage1-save-details.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/customer-0-3-stage1-save-details-release
+          fetch-depth: 0
+
+      - name: Apply exact Stage 1 behavior change
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/components/internal-claim-stage-one.tsx')
+          source = path.read_text()
+
+          old_redirect = "setCreatedClaimSuccess({ id: claim.id, controlNo: claim.claim_no });"
+          new_redirect = "router.replace({ pathname: '/customer/claim-detail', params: { id: claim.id } });"
+          old_label = "'Start Claim & Continue'"
+          new_label = "'Save Details'"
+
+          if source.count(old_redirect) != 1:
+              raise SystemExit(f'Expected exactly one Stage 1 success handoff, found {source.count(old_redirect)}')
+          if source.count(old_label) != 1:
+              raise SystemExit(f'Expected exactly one Stage 1 CTA label, found {source.count(old_label)}')
+
+          source = source.replace(old_redirect, new_redirect, 1)
+          source = source.replace(old_label, new_label, 1)
+          path.write_text(source)
+
+          if old_redirect in source or old_label in source:
+              raise SystemExit('Old Stage 1 behavior remains after patch')
+          if new_redirect not in source or new_label not in source:
+              raise SystemExit('Expected Stage 1 behavior was not written')
+          PY
+
+      - name: Commit feature patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/mobile-app/components/internal-claim-stage-one.tsx
+          git diff --cached --quiet && { echo 'No Stage 1 patch required.'; exit 0; }
+          git commit -m "Fix Customer 0.3.0 Stage 1 Save Details handoff"
+          git push origin HEAD:fix/customer-0-3-stage1-save-details-release
