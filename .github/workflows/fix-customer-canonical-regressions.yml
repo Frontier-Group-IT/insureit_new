@@ -1,0 +1,169 @@
+name: Fix Customer canonical regressions
+
+on:
+  push:
+    branches:
+      - customer/canonical-0-3-0-production-baseline
+    paths:
+      - '.github/workflows/fix-customer-canonical-regressions.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: customer/canonical-0-3-0-production-baseline
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply scoped Customer claim regression fixes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Expected snippet not found in {path}: {old[:120]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          # 1) Draft managed claims created by immediate uploads must resume safely.
+          path = 'apps/mobile-app/app/customer/start-claim.tsx'
+          replace(path,
+              "      const existingClaim = await findActiveManagedClaim(selectedPolicy.id);\n      if (existingClaim) {\n        setExistingActiveClaimId(existingClaim.id);\n        return;\n      }\n",
+              "      const existingClaim = await findActiveManagedClaim(selectedPolicy.id);\n      if (existingClaim) {\n        if (existingClaim.current_status === 'Draft') {\n          router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id, draftClaimId: existingClaim.id } } as any);\n          return;\n        }\n        setExistingActiveClaimId(existingClaim.id);\n        return;\n      }\n")
+
+          path = 'apps/mobile-app/components/internal-claim-stage-one.tsx'
+          replace(path,
+              "  const { vehicleId, policyId } = useLocalSearchParams<{ vehicleId?: string; policyId?: string }>();",
+              "  const { vehicleId, policyId, draftClaimId } = useLocalSearchParams<{ vehicleId?: string; policyId?: string; draftClaimId?: string }>();")
+          replace(path,
+              "  const [draftClaim, setDraftClaim] = useState<DraftClaim | null>(null);\n",
+              "  const [draftClaim, setDraftClaim] = useState<DraftClaim | null>(null);\n  const [expiryWarningOpen, setExpiryWarningOpen] = useState(false);\n  const [expiryWarningAcknowledged, setExpiryWarningAcknowledged] = useState(false);\n")
+          replace(path,
+              "    void (async () => {\n      const session = await getCurrentSession();",
+              "    void (async () => {\n      if (!vehicleId && !policyId && !draftClaimId) { router.replace('/customer/start-claim'); return; }\n      const session = await getCurrentSession();")
+          replace(path,
+              "      setInsurers(insurerResult.data ?? []);\n\n      const routedPolicy = policyId ? nextPolicies.find((item) => item.id === policyId) : null;",
+              "      setInsurers(insurerResult.data ?? []);\n\n      if (draftClaimId) {\n        const draftResult = await supabase.from('claims').select('id,customer_id,claim_no,vehicle_id,policy_id,current_status').eq('id', draftClaimId).eq('current_status', 'Draft').maybeSingle();\n        const row = draftResult.data as any;\n        if (row && ids.includes(row.customer_id)) {\n          const draftVehicle = nextVehicles.find((item) => item.id === row.vehicle_id) ?? null;\n          const draftPolicy = nextPolicies.find((item) => item.id === row.policy_id) ?? null;\n          if (draftVehicle && draftPolicy && draftPolicy.vehicle_id === draftVehicle.id) {\n            setDraftClaim({ id: row.id, customerId: row.customer_id, controlNo: row.claim_no });\n            setSelectedCustomerId(row.customer_id);\n            setSelectedVehicleId(row.vehicle_id);\n            const docResult = await supabase.from('claim_documents').select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size').eq('claim_id', row.id).order('created_at', { ascending: true });\n            const restored: Record<DocumentKey, UploadedDocument[]> = { rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] };\n            for (const raw of (docResult.data ?? []) as any[]) {\n              const key = raw.document_type === BULK_DOCUMENT_TYPE ? 'bulk' : (Object.entries(DOCUMENT_TYPE_BY_KEY).find(([, value]) => value === raw.document_type)?.[0] as DocumentKey | undefined);\n              if (!key) continue;\n              restored[key].push({ name: raw.file_name ?? 'Document', uri: '', mimeType: raw.mime_type, size: raw.file_size, documentId: raw.id, storageBucket: raw.storage_bucket || 'claim-documents', storagePath: raw.storage_path });\n            }\n            setDocuments(restored);\n            setLoading(false);\n            return;\n          }\n        }\n      }\n\n      const routedPolicy = policyId ? nextPolicies.find((item) => item.id === policyId) : null;")
+          replace(path,
+              "  }, [policyId, router, vehicleId]);",
+              "  }, [draftClaimId, policyId, router, vehicleId]);")
+          replace(path,
+              "  const selectedContext = useMemo(() => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null, [contexts, selectedCustomerId]);\n",
+              "  const selectedContext = useMemo(() => contexts.find((context) => context.customer_id === selectedCustomerId) ?? null, [contexts, selectedCustomerId]);\n\n  useEffect(() => { setExpiryWarningAcknowledged(false); }, [incidentDate, selectedPolicy?.id]);\n")
+          replace(path,
+              "  async function submit() {",
+              "  async function submit(options?: { allowExpiredPolicy?: boolean }) {")
+          replace(path,
+              "    if (spotIntimationAt.getTime() < incidentAt.getTime()) return setValidationMessage('Spot Intimation Date / Time cannot be earlier than Accident Date / Time.');\n\n    setSaving(true);",
+              "    if (spotIntimationAt.getTime() < incidentAt.getTime()) return setValidationMessage('Spot Intimation Date / Time cannot be earlier than Accident Date / Time.');\n    const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(selectedPolicy, incidentAt);\n    if (policyExpiredBeforeIncident && !options?.allowExpiredPolicy && !expiryWarningAcknowledged) { setExpiryWarningOpen(true); return; }\n\n    setSaving(true);")
+          replace(path,
+              "        accident_description: [driver.trim() ? `Driver: ${driver.trim()}` : '', phone.trim() ? `Driver phone: ${phone.trim()}` : ''].filter(Boolean).join('\\n') || null,",
+              "        accident_description: [driver.trim() ? `Driver: ${driver.trim()}` : '', phone.trim() ? `Driver phone: ${phone.trim()}` : '', policyExpiredBeforeIncident ? `Policy expiry warning: Policy expired on ${formatDate(selectedPolicy.end_date)} before incident date ${formatDate(incidentAt.toISOString())}.` : ''].filter(Boolean).join('\\n') || null,")
+          replace(path,
+              "      <Modal visible={Boolean(deleteTarget)} transparent animationType=\"fade\" onRequestClose={() => setDeleteTarget(null)}>",
+              "      <Modal visible={expiryWarningOpen} transparent animationType=\"fade\" onRequestClose={() => setExpiryWarningOpen(false)}><View style={styles.validationBackdrop}><View accessibilityRole=\"alert\" style={styles.validationCard}><View style={styles.deleteConfirmIcon}><MaterialCommunityIcons name=\"shield-alert-outline\" size={20} color=\"#B42318\" /></View><Text style={styles.validationTitle}>Policy expired before incident date</Text><Text style={styles.validationBody}>The selected policy expired on {formatDate(selectedPolicy?.end_date)}. You can still continue, but this claim may need extra insurer review.</Text><View style={styles.deleteConfirmActions}><Pressable accessibilityRole=\"button\" onPress={() => setExpiryWarningOpen(false)} style={styles.deleteCancelButton}><Text style={styles.deleteCancelText}>Review Date</Text></Pressable><Pressable accessibilityRole=\"button\" onPress={() => { setExpiryWarningOpen(false); setExpiryWarningAcknowledged(true); void submit({ allowExpiredPolicy: true }); }} style={styles.deleteConfirmButton}><Text style={styles.deleteConfirmText}>Continue</Text></Pressable></View></View></View></Modal>\n      <Modal visible={Boolean(deleteTarget)} transparent animationType=\"fade\" onRequestClose={() => setDeleteTarget(null)}>")
+          replace(path,
+              "function todayIsoDate() { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }\nfunction formatTime(value: string)",
+              "function todayIsoDate() { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }\nfunction isIncidentAfterPolicyExpiry(policy: Policy | null, incidentAt: Date | null) { if (!policy?.end_date || !incidentAt) return false; const expiry = new Date(`${policy.end_date.slice(0, 10)}T23:59:59`); return !Number.isNaN(expiry.getTime()) && incidentAt.getTime() > expiry.getTime(); }\nfunction formatDate(value?: string | null) { if (!value) return '-'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }\nfunction formatTime(value: string)")
+
+          # 2) Verified Stage 1 evidence must remain locked.
+          path = 'apps/mobile-app/components/internal-claim-stage-one-tracker.tsx'
+          replace(path,
+              "  const savedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status !== 'rejected').map((item) => item.document_type)), [documents]);\n",
+              "  const savedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status !== 'rejected').map((item) => item.document_type)), [documents]);\n  const verifiedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status === 'verified').map((item) => item.document_type)), [documents]);\n")
+          replace(path,
+              "  async function pickDocument(key: DocumentKey) {\n    if (!claim || uploadingKey) return;",
+              "  async function pickDocument(key: DocumentKey) {\n    if (!claim || uploadingKey) return;\n    if (verifiedTypes.has(DOCUMENT_TYPE_BY_KEY[key])) { setMessage('This document is verified by Claims Desk and can no longer be replaced.'); return; }")
+          for key, label in [('rc','RC Copy'),('insurance','Insurance Copy'),('licence','Driver Licence'),('gr','GR / Load Bill'),('accident_photo','Accident Photo')]:
+              old = f'<DocumentTile title="{label}" '
+              new = f'<DocumentTile title="{label}" locked={{verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.{key})}} '
+              replace(path, old, new)
+          replace(path,
+              '<DocumentTile title="Accident Video" icon="video" ',
+              '<DocumentTile title="Accident Video" icon="video" locked={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} ')
+          replace(path,
+              "function DocumentTile({ title, source, icon, saved, busy, status, onPress, onRemove }: { title: string; source?: any; icon?: keyof typeof MaterialCommunityIcons.glyphMap; saved: boolean; busy: boolean; status?: string; onPress: () => void; onRemove: () => void }) {\n  return <Pressable disabled={busy} onPress={onPress} style={[styles.tile, saved && styles.tileSaved]}>{saved ? <View style={styles.check}><MaterialCommunityIcons name=\"check\" size={15} color=\"#18864B\" /></View> : null}{saved ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.remove}><MaterialCommunityIcons name=\"close\" size={13} color=\"#C43232\" /></Pressable> : null}",
+              "function DocumentTile({ title, source, icon, saved, locked, busy, status, onPress, onRemove }: { title: string; source?: any; icon?: keyof typeof MaterialCommunityIcons.glyphMap; saved: boolean; locked: boolean; busy: boolean; status?: string; onPress: () => void; onRemove: () => void }) {\n  return <Pressable disabled={busy || locked} onPress={onPress} style={[styles.tile, saved && styles.tileSaved]}>{locked ? <View style={styles.check}><MaterialCommunityIcons name=\"lock-check-outline\" size={15} color=\"#18864B\" /></View> : saved ? <View style={styles.check}><MaterialCommunityIcons name=\"check\" size={15} color=\"#18864B\" /></View> : null}{saved && !locked ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.remove}><MaterialCommunityIcons name=\"close\" size={13} color=\"#C43232\" /></Pressable> : null}")
+          replace(path,
+              "<Text style={[styles.tileStatus, saved && styles.tileStatusSaved]}>{busy ? (status || 'Uploading…') : saved ? 'Saved' : 'Tap to upload'}</Text>",
+              "<Text style={[styles.tileStatus, saved && styles.tileStatusSaved]}>{busy ? (status || 'Uploading…') : locked ? 'Verified · Locked' : saved ? 'Saved' : 'Tap to upload'}</Text>")
+
+          # 3) Managed Stage 2 is Operations-owned: read claim_stage_details and do not write customer milestones.
+          path = 'apps/mobile-app/app/customer/internal-spot-status.tsx'
+          replace(path,
+              "      const [claimResult, milestoneResult] = await Promise.all([\n        supabase.from('claims').select('id,claim_no,claim_service_mode,vehicle_id,policy_id').eq('id', id).maybeSingle(),\n        (supabase as any).from('claim_milestones').select('*').eq('claim_id', id).eq('milestone_key', 'spot_status').maybeSingle(),\n      ]);",
+              "      const [claimResult, stageDetailResult] = await Promise.all([\n        supabase.from('claims').select('id,claim_no,claim_service_mode,vehicle_id,policy_id').eq('id', id).maybeSingle(),\n        (supabase as any).from('claim_stage_details').select('stage,details,created_at').eq('claim_id', id).order('created_at', { ascending: false }),\n      ]);")
+          replace(path,
+              "      const details = (milestoneResult.data as any)?.details;",
+              "      const stageRow = ((stageDetailResult.data ?? []) as any[]).find((row) => row?.details?.milestone_key === 'spot_status' || row?.stage === 'Surveyor Appointed');\n      const details = stageRow?.details;")
+          old_submit = """    setSubmitting(true);
+    try {
+      const session = await getCurrentSession();
+      if (!session?.user) return router.replace('/login');
+      const { error } = await (supabase as any).from('claim_milestones').upsert({
+        claim_id: id,
+        milestone_key: 'spot_status',
+        milestone_status: 'completed',
+        details: {
+          spot_survey_done_date: surveyDate,
+          surveyor_name: surveyorName.trim() || null,
+          surveyor_email: surveyorEmail.trim() || null,
+          surveyor_phone: surveyorPhone.trim() || null,
+        },
+        completed_at: new Date().toISOString(),
+        recorded_by: session.user.id,
+        recorded_by_actor: 'customer',
+      }, { onConflict: 'claim_id,milestone_key' });
+      if (error) {
+        console.warn('Internal Spot Status save failed', error);
+        setMessage('We could not save Spot Status right now. Please try again.');
+        return;
+      }
+      router.replace({ pathname: '/customer/internal-claim-stage', params: { id, key: 'claim_intimation' } });
+    } catch (error) {
+      console.error('Internal Spot Status submit failed', error);
+      setMessage('We could not save Spot Status right now. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }"""
+          new_submit = """    setSubmitting(true);
+    try {
+      const session = await getCurrentSession();
+      if (!session?.user) return router.replace('/login');
+      router.replace({ pathname: '/customer/internal-claim-stage', params: { id, key: 'claim_intimation' } });
+    } finally {
+      setSubmitting(false);
+    }"""
+          replace(path, old_submit, new_submit)
+          replace(path,
+              '<AppDatePicker label="Spot Survey Done Date *" value={surveyDate} onChange={setSurveyDate} maxDate={todayIsoDate()} formatDisplay={formatDisplayDate} />',
+              '<TextField label="Spot Survey Done Date *" value={surveyDate ? formatDisplayDate(surveyDate) : \'Awaiting Claims Desk\'} editable={false} />')
+          replace(path, '<TextField label="Surveyor Name (Optional)" value={surveyorName} onChangeText={setSurveyorName} />', '<TextField label="Surveyor Name (Optional)" value={surveyorName || \'Awaiting Claims Desk\'} editable={false} />')
+          replace(path, '<TextField label="Surveyor Email (Optional)" value={surveyorEmail} onChangeText={setSurveyorEmail} keyboardType="email-address" autoCapitalize="none" />', '<TextField label="Surveyor Email (Optional)" value={surveyorEmail || \'Awaiting Claims Desk\'} editable={false} />')
+          replace(path, '<TextField label="Surveyor Number (Optional)" value={surveyorPhone} onChangeText={setSurveyorPhone} keyboardType="phone-pad" />', '<TextField label="Surveyor Number (Optional)" value={surveyorPhone || \'Awaiting Claims Desk\'} editable={false} />')
+          replace(path,
+              '        <Pressable accessibilityRole="button" disabled={submitting} onPress={() => void submit()} style={[styles.footerPrimary, submitting && styles.footerDisabled]}>',
+              '        <Pressable accessibilityRole="button" disabled={submitting || !surveyDate} onPress={() => void submit()} style={[styles.footerPrimary, (submitting || !surveyDate) && styles.footerDisabled]}>')
+          replace(path,
+              "          <Text style={styles.footerPrimaryText}>{submitting ? 'Saving...' : 'Save & Continue'}</Text>",
+              "          <Text style={styles.footerPrimaryText}>{submitting ? 'Opening...' : surveyDate ? 'Continue' : 'Awaiting Claims Desk'}</Text>")
+
+      - name: Commit scoped fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/app/customer/start-claim.tsx apps/mobile-app/components/internal-claim-stage-one.tsx apps/mobile-app/components/internal-claim-stage-one-tracker.tsx apps/mobile-app/app/customer/internal-spot-status.tsx
+          git diff --cached --check
+          git commit -m 'Fix canonical Customer claim regressions'
+          git push origin HEAD:customer/canonical-0-3-0-production-baseline
