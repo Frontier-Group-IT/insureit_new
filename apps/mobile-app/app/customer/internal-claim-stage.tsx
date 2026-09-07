@@ -1,7 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
 
+import InternalClaimStageLegacy from '@/components/internal-claim-stage-legacy';
 import InternalClaimStageOneTracker from '@/components/internal-claim-stage-one-tracker';
-import InternalClaimStageLegacyMain from './internal-claim-stage-legacy-main';
+import InternalClaimStageParity from '@/components/internal-claim-stage-parity';
 
 export default function InternalClaimStageScreen() {
   const params = useLocalSearchParams<{ key?: string }>();
@@ -11,5 +12,9 @@ export default function InternalClaimStageScreen() {
     return <InternalClaimStageOneTracker />;
   }
 
-  return <InternalClaimStageLegacyMain />;
+  if (stageKey === 'spot_status') {
+    return <InternalClaimStageLegacy />;
+  }
+
+  return <InternalClaimStageParity />;
 }
