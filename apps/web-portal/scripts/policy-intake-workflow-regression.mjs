@@ -53,6 +53,16 @@ const saveConfirmation=read("components/policy-save-confirmation.tsx");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
 assert(saveConfirmation.includes("getPendingPolicyIntakeId() ? legacySaveButtonLabel : saveButtonLabel"),"Policy Intake onboarding must retain Book Active Policy wording instead of Upload Policy");
+const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");
+assert(copyState.includes('requirePolicyIntakeFinalizer()'),"Policy-copy reuse must require Finalize authority server-side");
+assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");
+assert(copyState.includes('document.storage_bucket !== intake.storage_bucket || document.storage_path !== intake.storage_path'),"Policy-copy reuse must reject stale Intake document references");
+const copyBridge=read("components/policy-intake-copy-reuse-bridge.tsx");
+assert(copyBridge.includes('searchParams.get("intake_id")'),"Policy-copy reuse must recover Intake context from the authoritative onboarding URL rather than relying only on origin-scoped session state");
+assert(copyBridge.includes("verifyPolicyIntakeCurrentPolicyCopy(intakeId)"),"Policy-copy reuse must be server-verified before bypassing the upload modal");
+assert(copyBridge.includes('sessionStorage.setItem(KEY'),"Verified Intake context must restore the existing Policy Save confirmation contract");
+const routeEnhancements=read("components/policy-route-enhancements.tsx");
+assert(routeEnhancements.includes("PolicyIntakeCopyReuseBridge"),"Policy routes must mount the Intake copy reuse bridge before save confirmation");
 
 const handoff=read("app/policy-intakes/handoff-actions.ts");assert(handoff.includes("buildPolicyOcrOnboardingUpdate"),"Operations handoff must reuse the governed OCR onboarding mapper");assert(handoff.includes('cpaOpted:"No"'),"OCR liability amount must not silently opt owner-driver CPA in");
 const migration=read("../../supabase/migrations/202608240001_policy_intake_workflow.sql");assert(migration.includes("create table if not exists public.policy_intake_requests"),"Intake table migration missing");assert(migration.includes("enable row level security"),"Intake table must enable RLS");assert(migration.includes("revoke all on public.policy_intake_requests from anon, authenticated"),"Browser roles must not receive direct intake-table access");
