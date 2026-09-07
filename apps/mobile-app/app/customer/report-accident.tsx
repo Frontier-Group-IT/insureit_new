@@ -305,7 +305,7 @@ export default function ReportAccidentScreen() {
 
       const persisted = await uploadPendingDocuments(claim.id, claim.customer_id);
       if (persisted.saved !== persisted.total) {
-        setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved. You can add the remaining documents on the next screen.`);
+        setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved. You can add the remaining documents from Claim Tracker.`);
       }
 
       try {
@@ -322,7 +322,7 @@ export default function ReportAccidentScreen() {
         // Claim creation must not fail if notification logging is unavailable.
       }
 
-      router.replace({ pathname: '/customer/upload-documents', params: { claimId: claim.id } });
+      router.replace({ pathname: '/customer/claim-detail', params: { id: claim.id } });
     } catch {
       setMessage('We could not submit the incident report right now. Please try again.');
     } finally {
@@ -413,7 +413,7 @@ export default function ReportAccidentScreen() {
             <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIcon} resizeMode="contain" />
             <View style={styles.bulkUploadCopy}>
               <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
-              <Text style={styles.bulkUploadText}>{documents.bulk.length ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready` : 'Select several files now, or add them on the next screen.'}</Text>
+              <Text style={styles.bulkUploadText}>{documents.bulk.length ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready` : 'Select several files now, or add them from Claim Tracker.'}</Text>
             </View>
             <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" />
           </Pressable>
@@ -439,7 +439,7 @@ export default function ReportAccidentScreen() {
       <ClaimActionBar
         primaryDisabled={submitting || uploadingDocuments || !selectedPolicy}
         primaryIcon="arrow-right"
-        primaryLabel={submitting || uploadingDocuments ? 'Saving...' : 'Save & Continue'}
+        primaryLabel={submitting || uploadingDocuments ? 'Saving...' : 'Save Details'}
         onPrimary={() => void submit()}
         onAssistance={() => router.push('/customer/support')}
       />
