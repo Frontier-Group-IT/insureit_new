@@ -1,0 +1,4 @@
+Customer 0.3.0 Stage 1 contract:
+- primary action label is Save Details
+- successful internal claim creation opens /customer/claim-detail for the new claim
+- Stage 1 must not auto-open /customer/upload-documents after save
