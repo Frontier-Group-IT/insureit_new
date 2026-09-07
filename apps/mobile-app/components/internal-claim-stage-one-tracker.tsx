@@ -98,11 +98,57 @@ export default function InternalClaimStageOneTracker() {
     return () => { active = false; };
   }, [claimId]);
 
+  useEffect(() => {
+    if (!claimId) return;
+
+    const refreshDocuments = async () => {
+      const result = await supabase.from('claim_documents').select('*').eq('claim_id', claimId).order('created_at', { ascending: false });
+      if (!result.error) setDocuments((result.data ?? []) as ClaimDocument[]);
+    };
+
+    const channel = supabase
+      .channel(`customer-stage-one-documents-${claimId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'claim_documents', filter: `claim_id=eq.${claimId}` }, () => {
+        void refreshDocuments();
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [claimId]);
+
   const savedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status !== 'rejected').map((item) => item.document_type)), [documents]);
+  const verifiedTypes = useMemo(() => new Set(documents.filter((item) => item.verification_status === 'verified').map((item) => item.document_type)), [documents]);
   const bulkCount = useMemo(() => documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected').length, [documents]);
+  const primaryDocumentTypes = useMemo(() => Object.values(DOCUMENT_TYPE_BY_KEY), []);
+  const allPrimaryDocumentsVerified = primaryDocumentTypes.every((type) => verifiedTypes.has(type));
+
+  async function refreshVerifiedState(documentType: string) {
+    const result = await supabase
+      .from('claim_documents')
+      .select('*')
+      .eq('claim_id', claimId)
+      .eq('document_type', documentType)
+      .eq('verification_status', 'verified')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (result.error) return false;
+    if (result.data?.length) {
+      const verified = result.data[0] as ClaimDocument;
+      setDocuments((current) => current.some((item) => item.id === verified.id) ? current.map((item) => item.id === verified.id ? verified : item) : [verified, ...current]);
+      return true;
+    }
+    return false;
+  }
 
   async function pickDocument(key: DocumentKey) {
     if (!claim || uploadingKey) return;
+    const documentType = DOCUMENT_TYPE_BY_KEY[key];
+    if (verifiedTypes.has(documentType) || await refreshVerifiedState(documentType)) {
+      setMessage(`${documentType} is verified by the claims desk and can no longer be re-uploaded.`);
+      return;
+    }
     setMessage('');
     const multi = key === 'accident_photo' || key === 'accident_video';
     const pickerTypes = key === 'accident_video' ? ['video/*'] : key === 'accident_photo' ? ['image/*'] : ['application/pdf', 'image/*'];
@@ -114,6 +160,10 @@ export default function InternalClaimStageOneTracker() {
       return;
     }
     if (result.canceled || !result.assets?.length) return;
+    if (await refreshVerifiedState(documentType)) {
+      setMessage(`${documentType} was verified by the claims desk while you were selecting a file. Re-upload is now locked.`);
+      return;
+    }
     const picked: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
     const limit = key === 'accident_video' ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
     const label = key === 'accident_video' ? '50 MB' : '5 MB';
@@ -121,7 +171,7 @@ export default function InternalClaimStageOneTracker() {
     if (tooLarge) { setMessage(`${tooLarge.name} is larger than ${label}. Please choose smaller files.`); return; }
 
     setUploadingKey(key);
-    const results = await runConcurrent(picked, 3, (file) => uploadFile(claim, DOCUMENT_TYPE_BY_KEY[key], file, key === 'accident_video'));
+    const results = await runConcurrent(picked, 3, (file) => uploadFile(claim, documentType, file, key === 'accident_video'));
     const uploaded = results.filter((item): item is ClaimDocument => Boolean(item));
     if (uploaded.length) setDocuments((current) => [...uploaded, ...current]);
     if (uploaded.length !== picked.length) setMessage(`${uploaded.length} of ${picked.length} files uploaded. Please retry the remaining files.`);
@@ -129,7 +179,7 @@ export default function InternalClaimStageOneTracker() {
   }
 
   async function pickBulkDocuments() {
-    if (!claim || uploadingKey) return;
+    if (!claim || uploadingKey || allPrimaryDocumentsVerified) return;
     setMessage('');
     let result: Awaited<ReturnType<typeof DocumentPicker.getDocumentAsync>>;
     try {
@@ -252,20 +302,20 @@ export default function InternalClaimStageOneTracker() {
       <View style={styles.documentCard}>
         <View style={styles.documentHeader}><Text style={styles.documentTitle}>Upload claim documents</Text><View style={styles.optionalBadge}><Text style={styles.optionalBadgeText}>Optional now</Text></View></View>
         <View style={styles.grid}>
-          <DocumentTile title="RC Copy" source={require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.rc)} busy={uploadingKey === 'rc'} onPress={() => void pickDocument('rc')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.rc)} />
-          <DocumentTile title="Insurance Copy" source={require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.insurance)} busy={uploadingKey === 'insurance'} onPress={() => void pickDocument('insurance')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.insurance)} />
-          <DocumentTile title="Driver Licence" source={require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.licence)} busy={uploadingKey === 'licence'} onPress={() => void pickDocument('licence')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.licence)} />
-          <DocumentTile title="GR / Load Bill" source={require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.gr)} busy={uploadingKey === 'gr'} onPress={() => void pickDocument('gr')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.gr)} />
-          <DocumentTile title="Accident Photo" source={require('../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_photo)} busy={uploadingKey === 'accident_photo'} onPress={() => void pickDocument('accident_photo')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_photo)} />
-          <DocumentTile title="Accident Video" icon="video" saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} busy={uploadingKey === 'accident_video'} status={videoStatus} onPress={() => void pickDocument('accident_video')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_video)} />
+          <DocumentTile title="RC Copy" source={require('../assets/brand/spot-intimation/glossy_green_vehicle_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.rc)} verified={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.rc)} busy={uploadingKey === 'rc'} onPress={() => void pickDocument('rc')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.rc)} />
+          <DocumentTile title="Insurance Copy" source={require('../assets/brand/spot-intimation/glossy_blue_secure_policy_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.insurance)} verified={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.insurance)} busy={uploadingKey === 'insurance'} onPress={() => void pickDocument('insurance')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.insurance)} />
+          <DocumentTile title="Driver Licence" source={require('../assets/brand/spot-intimation/glossy_purple_id_card_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.licence)} verified={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.licence)} busy={uploadingKey === 'licence'} onPress={() => void pickDocument('licence')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.licence)} />
+          <DocumentTile title="GR / Load Bill" source={require('../assets/brand/spot-intimation/glossy_orange_delivery_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.gr)} verified={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.gr)} busy={uploadingKey === 'gr'} onPress={() => void pickDocument('gr')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.gr)} />
+          <DocumentTile title="Accident Photo" source={require('../assets/brand/spot-intimation/glossy_pink_camera_document_icon.png')} saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_photo)} verified={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_photo)} busy={uploadingKey === 'accident_photo'} onPress={() => void pickDocument('accident_photo')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_photo)} />
+          <DocumentTile title="Accident Video" icon="video" saved={savedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} verified={verifiedTypes.has(DOCUMENT_TYPE_BY_KEY.accident_video)} busy={uploadingKey === 'accident_video'} status={videoStatus} onPress={() => void pickDocument('accident_video')} onRemove={() => setDeleteType(DOCUMENT_TYPE_BY_KEY.accident_video)} />
         </View>
         <View style={styles.bulkShell}>
-          <Pressable disabled={Boolean(uploadingKey)} onPress={() => void pickBulkDocuments()} style={[styles.bulk, bulkCount > 0 && styles.bulkSaved]}>
+          <Pressable disabled={Boolean(uploadingKey) || allPrimaryDocumentsVerified} onPress={() => void pickBulkDocuments()} style={[styles.bulk, bulkCount > 0 && styles.bulkSaved, allPrimaryDocumentsVerified && styles.bulkLocked]}>
             <Image source={require('../assets/claims/claim-documents.png')} style={styles.bulkIcon} resizeMode="contain" />
-            <View style={styles.bulkCopy}><Text style={styles.bulkTitle}>Upload multiple documents</Text><Text style={styles.bulkText}>{uploadingKey === 'bulk' ? 'Uploading selected files…' : bulkCount ? `${bulkCount} file${bulkCount === 1 ? '' : 's'} saved · Tap to add more` : 'Select several files now, or tap again later to add more.'}</Text></View>
-            <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" />
+            <View style={styles.bulkCopy}><Text style={styles.bulkTitle}>{allPrimaryDocumentsVerified ? 'Documents verified' : 'Upload multiple documents'}</Text><Text style={styles.bulkText}>{allPrimaryDocumentsVerified ? 'Claims desk verification is complete. Re-upload is locked.' : uploadingKey === 'bulk' ? 'Uploading selected files…' : bulkCount ? `${bulkCount} file${bulkCount === 1 ? '' : 's'} saved · Tap to add more` : 'Select several files now, or tap again later to add more.'}</Text></View>
+            <MaterialCommunityIcons name={allPrimaryDocumentsVerified ? 'lock-check-outline' : 'plus-circle-outline'} size={21} color={allPrimaryDocumentsVerified ? '#18864B' : '#0A43A3'} />
           </Pressable>
-          {bulkCount ? <Pressable onPress={() => setDeleteType(BULK_DOCUMENT_TYPE)} style={styles.bulkRemove}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
+          {bulkCount && !allPrimaryDocumentsVerified ? <Pressable onPress={() => setDeleteType(BULK_DOCUMENT_TYPE)} style={styles.bulkRemove}><MaterialCommunityIcons name="close" size={14} color="#C43232" /></Pressable> : null}
         </View>
       </View>
 
@@ -276,8 +326,8 @@ export default function InternalClaimStageOneTracker() {
   );
 }
 
-function DocumentTile({ title, source, icon, saved, busy, status, onPress, onRemove }: { title: string; source?: any; icon?: keyof typeof MaterialCommunityIcons.glyphMap; saved: boolean; busy: boolean; status?: string; onPress: () => void; onRemove: () => void }) {
-  return <Pressable disabled={busy} onPress={onPress} style={[styles.tile, saved && styles.tileSaved]}>{saved ? <View style={styles.check}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}{saved ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.remove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}<View style={styles.artwork}>{source ? <Image source={source} style={styles.artworkImage} resizeMode="contain" /> : icon ? <View style={styles.videoArtwork}><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></View> : null}</View><Text style={styles.tileTitle} numberOfLines={2}>{title}</Text><Text style={[styles.tileStatus, saved && styles.tileStatusSaved]}>{busy ? (status || 'Uploading…') : saved ? 'Saved' : 'Tap to upload'}</Text></Pressable>;
+function DocumentTile({ title, source, icon, saved, verified, busy, status, onPress, onRemove }: { title: string; source?: any; icon?: keyof typeof MaterialCommunityIcons.glyphMap; saved: boolean; verified: boolean; busy: boolean; status?: string; onPress: () => void; onRemove: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || verified }} disabled={busy || verified} onPress={onPress} style={[styles.tile, saved && styles.tileSaved, verified && styles.tileVerified]}>{verified ? <View style={styles.verifiedBadge}><MaterialCommunityIcons name="check-decagram" size={12} color="#127A43" /><Text style={styles.verifiedBadgeText}>Verified</Text></View> : saved ? <View style={styles.check}><MaterialCommunityIcons name="check" size={15} color="#18864B" /></View> : null}{saved && !verified ? <Pressable onPress={(event) => { event.stopPropagation(); onRemove(); }} style={styles.remove}><MaterialCommunityIcons name="close" size={13} color="#C43232" /></Pressable> : null}<View style={styles.artwork}>{source ? <Image source={source} style={styles.artworkImage} resizeMode="contain" /> : icon ? <View style={styles.videoArtwork}><MaterialCommunityIcons name={icon} size={20} color="#FFFFFF" /></View> : null}</View><Text style={styles.tileTitle} numberOfLines={2}>{title}</Text><Text style={[styles.tileStatus, saved && styles.tileStatusSaved, verified && styles.tileStatusVerified]}>{busy ? (status || 'Uploading…') : verified ? 'Verified · Locked' : saved ? 'Saved' : 'Tap to upload'}</Text></Pressable>;
 }
 
 function ReadOnlyField({ label, value, icon }: { label: string; value: string; icon?: keyof typeof MaterialCommunityIcons.glyphMap }) {
@@ -301,7 +351,7 @@ const styles = StyleSheet.create({
   subsection: { marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   fieldWrap: { marginTop: 9 }, fieldLabel: { color: '#233653', fontSize: 11, fontWeight: '800', marginBottom: 5 }, field: { minHeight: 48, borderRadius: 13, borderWidth: 1, borderColor: '#D2DFEC', backgroundColor: '#FBFDFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }, fieldValue: { flex: 1, color: palette.navy, fontSize: 12.5, fontWeight: '800' }, placeholder: { color: '#9AA7B8', fontWeight: '700' },
-  documentCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12 }, documentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, documentTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' }, optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, tile: { position: 'relative', width: '31.5%', minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' }, tileSaved: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' }, check: { position: 'absolute', top: 5, left: 5, width: 23, height: 23, borderRadius: 12, backgroundColor: '#DDF4E8', alignItems: 'center', justifyContent: 'center' }, remove: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' }, artwork: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' }, artworkImage: { width: 43, height: 43 }, videoArtwork: { width: 38, height: 40, borderRadius: 8, backgroundColor: '#EF1E2F', alignItems: 'center', justifyContent: 'center' }, tileTitle: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 }, tileStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 }, tileStatusSaved: { color: '#18864B' },
-  bulkShell: { position: 'relative' }, bulk: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' }, bulkIcon: { width: 34, height: 34 }, bulkCopy: { flex: 1 }, bulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, bulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, marginTop: 2 }, bulkRemove: { position: 'absolute', top: 15, right: 7, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
+  documentCard: { borderRadius: 18, borderWidth: 1, borderColor: '#D7E2EF', backgroundColor: '#FFFFFF', padding: 12, marginBottom: 12 }, documentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }, documentTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' }, optionalBadge: { borderRadius: 999, backgroundColor: '#EEF5FF', paddingHorizontal: 9, paddingVertical: 5 }, optionalBadgeText: { color: '#0A43A3', fontSize: 8.5, fontWeight: '900' }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 }, tile: { position: 'relative', width: '31.5%', minHeight: 106, borderRadius: 14, backgroundColor: '#F7FAFF', borderWidth: 1.5, borderColor: '#E2EAF4', paddingVertical: 8, paddingHorizontal: 5, alignItems: 'center', justifyContent: 'center' }, tileSaved: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' }, tileVerified: { backgroundColor: '#ECF9F1', borderColor: '#2FA76A' }, check: { position: 'absolute', top: 5, left: 5, width: 23, height: 23, borderRadius: 12, backgroundColor: '#DDF4E8', alignItems: 'center', justifyContent: 'center' }, verifiedBadge: { position: 'absolute', top: 5, left: 5, minHeight: 22, borderRadius: 11, backgroundColor: '#DDF4E8', paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', gap: 3 }, verifiedBadgeText: { color: '#127A43', fontSize: 6.7, fontWeight: '900' }, remove: { position: 'absolute', top: 5, right: 5, zIndex: 3, width: 23, height: 23, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' }, artwork: { width: 45, height: 45, alignItems: 'center', justifyContent: 'center' }, artworkImage: { width: 43, height: 43 }, videoArtwork: { width: 38, height: 40, borderRadius: 8, backgroundColor: '#EF1E2F', alignItems: 'center', justifyContent: 'center' }, tileTitle: { color: palette.navy, fontSize: 8.5, lineHeight: 11, fontWeight: '800', textAlign: 'center', marginTop: 3 }, tileStatus: { color: '#7A8799', fontSize: 7.5, fontWeight: '800', marginTop: 3 }, tileStatusSaved: { color: '#18864B' }, tileStatusVerified: { color: '#127A43', fontWeight: '900' },
+  bulkShell: { position: 'relative' }, bulk: { minHeight: 58, marginTop: 10, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#AFC8E8', backgroundColor: '#F7FAFF', paddingHorizontal: 10, paddingRight: 38, flexDirection: 'row', alignItems: 'center', gap: 9 }, bulkSaved: { borderStyle: 'solid', borderColor: '#52B57F', backgroundColor: '#EFFAF4' }, bulkLocked: { borderStyle: 'solid', borderColor: '#75C69A', backgroundColor: '#F0FAF4', opacity: 0.85 }, bulkIcon: { width: 34, height: 34 }, bulkCopy: { flex: 1 }, bulkTitle: { color: palette.navy, fontSize: 10.5, fontWeight: '900' }, bulkText: { color: '#718198', fontSize: 8.5, lineHeight: 12, marginTop: 2 }, bulkRemove: { position: 'absolute', top: 15, right: 7, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F1B5B5', alignItems: 'center', justifyContent: 'center' },
   modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7,24,50,0.48)', padding: 24 }, modalCard: { width: '100%', maxWidth: 340, borderRadius: 20, backgroundColor: '#FFFFFF', padding: 20, alignItems: 'center' }, deleteIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#FFF0F0', alignItems: 'center', justifyContent: 'center' }, modalTitle: { marginTop: 8, color: palette.navy, fontSize: 18, fontWeight: '900' }, modalBody: { marginTop: 7, color: '#667085', fontSize: 12, textAlign: 'center' }, modalActions: { width: '100%', flexDirection: 'row', gap: 8, marginTop: 16 }, cancelButton: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center' }, cancelText: { color: palette.navy, fontSize: 11, fontWeight: '900' }, deleteButton: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: '#C43232', alignItems: 'center', justifyContent: 'center' }, deleteText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
 });
