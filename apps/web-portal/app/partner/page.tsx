@@ -54,8 +54,8 @@ export default async function PartnerHomePage() {
           ]}
         />
 
-        <Link href="/partner/renewals/external" prefetch={false} className="group flex items-center gap-3 border-y border-[#DCE4ED] py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
+        <Link href="/partner/renewals/external" prefetch={false} className="group flex items-center gap-3 rounded-xl border border-[#D7E2F4] bg-[#F6F9FF] px-4 py-3.5 transition hover:border-[#C8D8F0] hover:bg-[#F1F5FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EAF1FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
           <span className="min-w-0 flex-1">
             <span className="block text-[11px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
             <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74839A]">External policies expiring within 30 days</span>
