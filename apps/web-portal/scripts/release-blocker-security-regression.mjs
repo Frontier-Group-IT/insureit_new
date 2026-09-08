@@ -28,6 +28,8 @@ const partnerFinalize = source("app/api/intermediary-documents/finalize/route.ts
 const customersPage = source("app/customers/page.tsx");
 const claimsActions = source("app/actions.ts");
 const masterRecordDelete = source("app/master-record-delete-actions.ts");
+const policyIntakesPage = source("app/policy-intakes/page.tsx");
+const itSuperUserDeletePanel = source("components/it-super-user-delete-panel.tsx");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -63,6 +65,17 @@ requireText("claim dependency remains protected", masterRecordDelete, "{ table: 
 requireText("reconciliation dependency remains protected", masterRecordDelete, "{ table: \"reconciliation_lines\", column: \"policy_id\", label: \"reconciliation record\" }");
 requireText("invoice dependency remains protected", masterRecordDelete, "{ table: \"accounts_invoice_lines\", column: \"policy_id\", label: \"invoice line\" }");
 requireText("partner payable dependency remains protected", masterRecordDelete, "{ table: \"partner_payables\", column: \"policy_id\", label: \"partner payable\" }");
+
+requireText("Policy Intake delete page role guard", policyIntakesPage, 'profile.role === "it_super_user"');
+requireText("Policy Intake delete page panel", policyIntakesPage, 'entity="policy_intake"');
+requireText("Policy Intake delete page title", policyIntakesPage, 'title="Delete policy intake record"');
+requireText("Policy Intake delete entity label", itSuperUserDeletePanel, 'policy_intake: "policy intake"');
+requireText("Policy Intake delete config", masterRecordDelete, 'table: "policy_intake_requests"');
+requireText("Policy Intake final policy guard", masterRecordDelete, 'if (entity === "policy_intake" && linkedFinalPolicyId)');
+requireText("Policy Intake official document guard", masterRecordDelete, '{ table: "policy_documents", column: "source_intake_id", label: "official policy document" }');
+requireText("Policy Intake document cleanup", masterRecordDelete, '.from("policy_intake_documents")');
+requireText("Policy Intake concurrent final-policy guard", masterRecordDelete, '.is("final_policy_id", null)');
+requireText("Policy Intake audit marker", masterRecordDelete, 'cascaded_policy_intake_records: true');
 
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
@@ -105,5 +118,8 @@ console.log(JSON.stringify({
   fullAadhaarClientSerializationBlocked: true,
   itSuperUserPolicyDeleteRejectedIntakeException: true,
   rejectedPolicyIntakeRollbackGuard: true,
+  itSuperUserPolicyIntakeDeletePanel: true,
+  policyIntakeFinalPolicyDeleteGuard: true,
+  policyIntakeStorageCleanupGuard: true,
   status: "ok",
 }, null, 2));
