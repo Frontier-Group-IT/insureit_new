@@ -54,14 +54,24 @@ jobs:
           set -euo pipefail
           function_result=$(supabase db query --linked --output-format json "
             select
-              to_regprocedure('public.resolve_claim_document_reupload_events()') is not null as function_ready,
-              exists (
-                select 1
-                from pg_trigger
-                where tgname = 'resolve_claim_document_reupload_events'
-                  and not tgisinternal
-              ) as trigger_ready
+              pg_get_functiondef('public.capture_claim_document_customer_activity'::regproc) like '%claim_document_reupload_resolved%' as capture_ready,
+              pg_get_constraintdef(oid) like '%claim_document_reupload_resolved%' as constraint_ready
+            from pg_constraint
+            where conrelid = 'public.customer_activity_events'::regclass
+              and conname = 'customer_activity_events_event_type_check'
           ")
           echo "$function_result"
-          echo "$function_result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
-          echo "$function_result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$function_result" | grep -Eq '"capture_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$function_result" | grep -Eq '"constraint_ready"[[:space:]]*:[[:space:]]*true'
+
+          stale_result=$(supabase db query --linked --output-format json "
+            select count(*)::int as stale_replacement_events
+            from public.customer_activity_events
+            where event_type = 'claim_document_reuploaded'
+              and (
+                title = 'Replacement document received'
+                or lower(coalesce(metadata ->> 'was_reupload', 'false')) = 'true'
+              )
+          ")
+          echo "$stale_result"
+          echo "$stale_result" | grep -Eq '"stale_replacement_events"[[:space:]]*:[[:space:]]*0'
