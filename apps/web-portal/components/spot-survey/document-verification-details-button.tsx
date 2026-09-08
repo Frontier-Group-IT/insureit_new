@@ -5,7 +5,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { SpotSurveyDocument, SpotSurveyVerification } from "./spot-survey-workspace-v2";
 
-type DetailRow = { label: string; dateKey?: string; statusKey?: string; valueKey?: string };
+type DetailRow = { label: string; dateKey?: string; statusKey?: string; valueKey?: string; unitKey?: string };
 
 const rcRows: DetailRow[] = [
   { label: "Fitness", dateKey: "fitness_valid_upto", statusKey: "fitness_status" },
@@ -16,13 +16,19 @@ const rcRows: DetailRow[] = [
   { label: "National Permit", dateKey: "national_permit_valid_upto", statusKey: "national_permit_status" }
 ];
 
-const insuranceRows: DetailRow[] = [
-  { label: "Insurance Start Date", dateKey: "insurance_start_date" },
-  { label: "Insurance End Date", dateKey: "insurance_end_date", statusKey: "policy_status" },
-  { label: "NCB Verification", valueKey: "ncb_verified" },
-  { label: "GVW Mention in Kgs", valueKey: "gvw_kg" },
-  { label: "Policy Type", valueKey: "policy_type_check" }
-];
+function insuranceRows(details: Record<string, unknown>): DetailRow[] {
+  const classAwareCapacity = Boolean(display(details.vehicle_capacity_value));
+  const capacityLabel = display(details.vehicle_capacity_label) || "GVW Mention in Kgs";
+  return [
+    { label: "Insurance Start Date", dateKey: "insurance_start_date" },
+    { label: "Insurance End Date", dateKey: "insurance_end_date", statusKey: "policy_status" },
+    { label: "NCB Verification", valueKey: "ncb_verified" },
+    classAwareCapacity
+      ? { label: capacityLabel, valueKey: "vehicle_capacity_value", unitKey: "vehicle_capacity_unit" }
+      : { label: "GVW Mention in Kgs", valueKey: "gvw_kg" },
+    { label: "Policy Type", valueKey: "policy_type_check" }
+  ];
+}
 
 export function DocumentVerificationDetailsButton({ document, verification, title }: { document: SpotSurveyDocument; verification: SpotSurveyVerification; title: string }) {
   const [open, setOpen] = useState(false);
@@ -41,7 +47,7 @@ export function DocumentVerificationDetailsButton({ document, verification, titl
         <div className="min-w-0 overflow-y-auto px-5 py-4">
           <VerificationSummary verification={verification} />
           {verificationType === "rc" ? <VerificationTable title="Documents Validity Check" rows={rcRows} details={details} /> : null}
-          {verificationType === "insurance" ? <VerificationTable title="Insurance Verification" rows={insuranceRows} details={details} /> : null}
+          {verificationType === "insurance" ? <VerificationTable title="Insurance Verification" rows={insuranceRows(details)} details={details} /> : null}
           {verificationType !== "rc" && verificationType !== "insurance" ? <GenericDetails details={details} /> : null}
           <Remarks details={details} />
         </div>
@@ -72,7 +78,7 @@ function VerificationSummary({ verification }: { verification: SpotSurveyVerific
 }
 
 function VerificationTable({ title, rows, details }: { title: string; rows: DetailRow[]; details: Record<string, unknown> }) {
-  return <section className="mb-4 rounded-xl border border-[#D9E3F0] bg-white"><div className="border-b border-[#E6EEF7] px-4 py-3"><h3 className="text-[14px] font-semibold text-[#071D49]">{title}</h3></div><div className="divide-y divide-[#EEF2F7]">{rows.map((row) => { const value = row.dateKey ? formatDate(display(details[row.dateKey])) : display(details[row.valueKey ?? ""]); const status = row.statusKey ? display(details[row.statusKey]) : ""; const valid = status.toLowerCase() === "valid"; const invalid = status.toLowerCase() === "invalid"; return <div key={row.label} className="grid grid-cols-[1fr_130px] gap-3 px-4 py-3 sm:grid-cols-[1fr_150px_110px]"><p className="text-[12px] font-semibold text-[#526178]">{row.label}</p><p className="text-[13px] font-semibold text-[#071D49]">{value || "-"}</p>{row.statusKey ? <span className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-semibold ${valid ? "border-green-200 bg-green-50 text-green-700" : invalid ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>{status || "-"}</span> : null}</div>; })}</div></section>;
+  return <section className="mb-4 rounded-xl border border-[#D9E3F0] bg-white"><div className="border-b border-[#E6EEF7] px-4 py-3"><h3 className="text-[14px] font-semibold text-[#071D49]">{title}</h3></div><div className="divide-y divide-[#EEF2F7]">{rows.map((row) => { const rawValue = row.dateKey ? formatDate(display(details[row.dateKey])) : display(details[row.valueKey ?? ""]); const unit = row.unitKey ? display(details[row.unitKey]) : ""; const value = rawValue && unit ? `${rawValue} ${unit}` : rawValue; const status = row.statusKey ? display(details[row.statusKey]) : ""; const valid = status.toLowerCase() === "valid"; const invalid = status.toLowerCase() === "invalid"; return <div key={row.label} className="grid grid-cols-[1fr_130px] gap-3 px-4 py-3 sm:grid-cols-[1fr_150px_110px]"><p className="text-[12px] font-semibold text-[#526178]">{row.label}</p><p className="text-[13px] font-semibold text-[#071D49]">{value || "-"}</p>{row.statusKey ? <span className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-semibold ${valid ? "border-green-200 bg-green-50 text-green-700" : invalid ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>{status || "-"}</span> : null}</div>; })}</div></section>;
 }
 
 function GenericDetails({ details }: { details: Record<string, unknown> }) {
