@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Eye, ShieldCheck } from "lucide-react";
+import { Eye, FileText, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { canAccessPolicy } from "@/lib/policy-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
@@ -23,6 +23,8 @@ type PolicyDetail = {
   vehicles: { vehicle_no: string } | null;
   insurance_companies: { name: string } | null;
 };
+type PolicyIntakeSource = { id: string; intake_number: string };
+type PolicyIntakeDocument = { id: string; file_name: string };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,6 +42,22 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
     .eq("id", id)
     .maybeSingle<PolicyDetail>();
   if (error || !data) notFound();
+
+  const { data: sourceIntake } = await admin
+    .from("policy_intake_requests")
+    .select("id,intake_number")
+    .eq("final_policy_id", id)
+    .order("finalized_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<PolicyIntakeSource>();
+  const { data: policyCopy } = sourceIntake
+    ? await admin
+      .from("policy_intake_documents")
+      .select("id,file_name")
+      .eq("intake_id", sourceIntake.id)
+      .eq("is_current", true)
+      .maybeSingle<PolicyIntakeDocument>()
+    : { data: null as PolicyIntakeDocument | null };
 
   return (
     <AppShell title="Policy details" backHref="/policies">
@@ -64,6 +82,7 @@ export default async function PolicyReadOnlyPage({ params }: { params: Promise<{
           <Info label="Intermediary type" value={pretty(data.intermediary_type)} />
           <Info label="Intermediary code" value={data.intermediary_code} />
         </div>
+        {policyCopy ? <div className="border-t border-[#E5ECF5] bg-white px-5 py-3"><div className="flex flex-col items-start gap-1"><Link href={`/policies/${id}/document`} target="_blank" className="inline-flex items-center gap-2 rounded-xl border border-[#BFD4F5] bg-[#F8FBFF] px-3.5 py-2.5 text-[10px] font-bold text-[#174EA6] transition hover:border-[#8FB4EC] hover:bg-[#EEF5FF]"><FileText className="h-3.5 w-3.5" />View Policy</Link><span className="max-w-[360px] truncate text-[8.5px] text-[#7A8799]">{policyCopy.file_name}</span></div></div> : null}
         <div className="border-t border-[#E5ECF5] bg-[#FBFCFE] px-5 py-4 text-[9.5px] text-[#64748B]">Insurer pay-in, billing, partner payout, retention, margin and settlement controls are intentionally excluded from this read-only view.<Link href="/policies" className="ml-2 font-bold text-[#315B9A] hover:underline">Back to Policy Register</Link></div>
       </section>
     </AppShell>
