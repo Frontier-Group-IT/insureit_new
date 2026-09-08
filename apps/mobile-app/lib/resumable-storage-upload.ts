@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 type ResumableUploadOptions = {
   uri: string;
   accessToken: string;
@@ -15,6 +17,7 @@ export type ResumableUploadResult = {
 const TUS_VERSION = '1.0.0';
 const TUS_CHUNK_SIZE_BYTES = 6 * 1024 * 1024;
 const RETRY_DELAYS_MS = [0, 1000, 3000, 5000, 10000];
+const RESUMABLE_VIDEO_UPLOAD_ENABLED = process.env.EXPO_PUBLIC_CLAIM_VIDEO_RESUMABLE_UPLOAD === 'true';
 
 export async function uploadResumableStorageFile({
   uri,
@@ -34,48 +37,113 @@ export async function uploadResumableStorageFile({
   const fileBlob = await localResponse.blob();
   if (!fileBlob.size || fileBlob.size > maxBytes) throw new Error('The selected video is outside the supported upload size.');
 
+  if (!RESUMABLE_VIDEO_UPLOAD_ENABLED) {
+    return uploadStandardStorageFile({ fileBlob, bucket, objectPath, contentType, onProgress });
+  }
+
   const endpoint = resumableEndpoint(supabaseUrl);
   const authHeaders = {
     authorization: `Bearer ${accessToken}`,
     apikey: anonKey,
     'Tus-Resumable': TUS_VERSION,
   };
-  const createResponse = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      ...authHeaders,
-      'Upload-Length': String(fileBlob.size),
-      'Upload-Metadata': encodeMetadata({
-        bucketName: bucket,
-        objectName: objectPath,
-        contentType,
-        cacheControl: '3600',
-      }),
-    },
-  });
-  if (createResponse.status !== 201) throw new Error(`Resumable upload could not start (${createResponse.status}).`);
+  let uploadUrl = '';
 
-  const location = createResponse.headers.get('location');
-  if (!location) throw new Error('Resumable upload did not return an upload location.');
-  const uploadUrl = new URL(location, endpoint).toString();
-
-  let offset = 0;
-  onProgress?.(0);
-  while (offset < fileBlob.size) {
-    const nextOffset = await uploadChunkWithRecovery({
-      uploadUrl,
-      fileBlob,
-      offset,
-      authHeaders,
+  try {
+    const createResponse = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'Upload-Length': String(fileBlob.size),
+        'Upload-Metadata': encodeMetadata({
+          bucketName: bucket,
+          objectName: objectPath,
+          contentType,
+          cacheControl: '3600',
+        }),
+      },
     });
-    if (nextOffset <= offset || nextOffset > fileBlob.size) {
-      throw new Error('Resumable upload returned an invalid offset.');
-    }
-    offset = nextOffset;
-    onProgress?.(Math.min(1, offset / fileBlob.size));
-  }
+    if (createResponse.status !== 201) throw new Error(`Resumable upload could not start (${createResponse.status}).`);
 
-  return { size: fileBlob.size };
+    const location = createResponse.headers.get('location');
+    if (!location) throw new Error('Resumable upload did not return an upload location.');
+    uploadUrl = new URL(location, endpoint).toString();
+
+    let offset = 0;
+    onProgress?.(0);
+    while (offset < fileBlob.size) {
+      const nextOffset = await uploadChunkWithRecovery({
+        uploadUrl,
+        fileBlob,
+        offset,
+        authHeaders,
+      });
+      if (nextOffset <= offset || nextOffset > fileBlob.size) {
+        throw new Error('Resumable upload returned an invalid offset.');
+      }
+      offset = nextOffset;
+      onProgress?.(Math.min(1, offset / fileBlob.size));
+    }
+
+    return { size: fileBlob.size };
+  } catch (error) {
+    await cleanupFailedResumableUpload({ uploadUrl, authHeaders, bucket, objectPath });
+    throw error;
+  }
+}
+
+async function uploadStandardStorageFile({
+  fileBlob,
+  bucket,
+  objectPath,
+  contentType,
+  onProgress,
+}: {
+  fileBlob: Blob;
+  bucket: string;
+  objectPath: string;
+  contentType: string;
+  onProgress?: (progress: number) => void;
+}): Promise<ResumableUploadResult> {
+  try {
+    const body = await fileBlob.arrayBuffer();
+    const storageResult = await supabase.storage.from(bucket).upload(objectPath, body, { contentType, upsert: false });
+    if (storageResult.error) throw storageResult.error;
+    onProgress?.(1);
+    return { size: body.byteLength };
+  } catch (error) {
+    try {
+      await supabase.storage.from(bucket).remove([objectPath]);
+    } catch {
+      // Best-effort orphan cleanup; preserve the original upload error.
+    }
+    throw error;
+  }
+}
+
+async function cleanupFailedResumableUpload({
+  uploadUrl,
+  authHeaders,
+  bucket,
+  objectPath,
+}: {
+  uploadUrl: string;
+  authHeaders: Record<string, string>;
+  bucket: string;
+  objectPath: string;
+}) {
+  if (uploadUrl) {
+    try {
+      await fetch(uploadUrl, { method: 'DELETE', headers: authHeaders });
+    } catch {
+      // Supabase expires abandoned resumable sessions; deletion is best-effort.
+    }
+  }
+  try {
+    await supabase.storage.from(bucket).remove([objectPath]);
+  } catch {
+    // Covers acknowledgement-loss cases without hiding the original transfer error.
+  }
 }
 
 async function uploadChunkWithRecovery({
@@ -94,8 +162,9 @@ async function uploadChunkWithRecovery({
   for (const delayMs of RETRY_DELAYS_MS) {
     if (delayMs) await wait(delayMs);
     const chunk = fileBlob.slice(offset, Math.min(offset + TUS_CHUNK_SIZE_BYTES, fileBlob.size));
+    let response: Response;
     try {
-      const response = await fetch(uploadUrl, {
+      response = await fetch(uploadUrl, {
         method: 'PATCH',
         headers: {
           ...authHeaders,
@@ -104,25 +173,34 @@ async function uploadChunkWithRecovery({
         },
         body: chunk,
       });
-      if (response.status === 204) {
-        const reportedOffset = Number(response.headers.get('Upload-Offset'));
-        return Number.isFinite(reportedOffset) ? reportedOffset : offset + chunk.size;
-      }
-      lastError = new Error(`Resumable upload chunk failed (${response.status}).`);
-      if (!isRetryableStatus(response.status)) throw lastError;
     } catch (error) {
       lastError = error;
+      const recoveredOffset = await tryReadUploadOffset(uploadUrl, authHeaders);
+      if (recoveredOffset !== null && recoveredOffset !== offset) return recoveredOffset;
+      continue;
     }
 
-    try {
-      const recoveredOffset = await readUploadOffset(uploadUrl, authHeaders);
-      if (recoveredOffset !== offset) return recoveredOffset;
-    } catch {
-      // Keep the original transfer error and retry the same chunk.
+    if (response.status === 204) {
+      const reportedOffset = Number(response.headers.get('Upload-Offset'));
+      return Number.isFinite(reportedOffset) ? reportedOffset : offset + chunk.size;
     }
+
+    lastError = new Error(`Resumable upload chunk failed (${response.status}).`);
+    if (!isRetryableStatus(response.status)) throw lastError;
+
+    const recoveredOffset = await tryReadUploadOffset(uploadUrl, authHeaders);
+    if (recoveredOffset !== null && recoveredOffset !== offset) return recoveredOffset;
   }
 
   throw lastError;
+}
+
+async function tryReadUploadOffset(uploadUrl: string, authHeaders: Record<string, string>) {
+  try {
+    return await readUploadOffset(uploadUrl, authHeaders);
+  } catch {
+    return null;
+  }
 }
 
 async function readUploadOffset(uploadUrl: string, authHeaders: Record<string, string>) {
