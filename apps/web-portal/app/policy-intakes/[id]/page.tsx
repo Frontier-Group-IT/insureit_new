@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FileText, Phone, ShieldCheck, UserRound } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { PolicyIntakeDocumentButton } from "@/components/policy-intake-document-button";
@@ -5,6 +6,7 @@ import { PolicyIntakeHandoffButton } from "@/components/policy-intake-handoff-bu
 import { PolicyIntakeResponseUpload } from "@/components/policy-intake-response-upload";
 import { PolicyIntakeReviewActions } from "@/components/policy-intake-review-actions";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
@@ -64,11 +66,13 @@ const policyKeys = [
   "gross_premium",
 ];
 
-function statusLabel(row: Intake) {
+function statusLabel(row: Intake, duplicate = false) {
+  if (duplicate) return "Duplicate";
   if (row.status === "processing" && row.ocr_status === "failed") return "Manual review required";
   return ({ processing: "Fetching policy & vehicle details", ready_for_review: "Ready for review", in_review: "In review", needs_attention: "Needs attention", completed: "Completed", rejected: "Rejected" } as Record<string, string>)[row.status] ?? row.status;
 }
-function statusClass(row: Intake) {
+function statusClass(row: Intake, duplicate = false) {
+  if (duplicate) return "bg-rose-50 text-rose-700";
   if (row.status === "processing" && row.ocr_status === "failed") return "bg-amber-50 text-amber-800";
   return ({ processing: "bg-blue-50 text-blue-700", ready_for_review: "bg-indigo-50 text-indigo-700", in_review: "bg-violet-50 text-violet-700", needs_attention: "bg-amber-50 text-amber-800", completed: "bg-emerald-50 text-emerald-700", rejected: "bg-rose-50 text-rose-700" } as Record<string, string>)[row.status] ?? "bg-slate-50 text-slate-700";
 }
@@ -87,6 +91,9 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
   const owner = data.submitted_by_profile_id === profile.id;
   if (!reviewer && !finalizer && !owner) return <AppShell title="Policy Intake" backHref="/policy-intakes"><div className="rounded-xl bg-white p-5 text-[11px]">You do not have access to this intake.</div></AppShell>;
 
+  const duplicateCheck = await loadPolicyIntakeDuplicateMatches(admin, [data]);
+  const duplicateMatch = duplicateCheck.ok ? duplicateCheck.matches.get(data.id) ?? null : null;
+  const duplicateBlocked = !duplicateCheck.ok || Boolean(duplicateMatch);
   const profileIds = Array.from(new Set([data.submitted_by_profile_id, data.assigned_to_profile_id].filter(Boolean) as string[]));
   const { data: profileRows } = profileIds.length ? await admin.from("profiles").select("id,full_name").in("id", profileIds).returns<ProfileName[]>() : { data: [] as ProfileName[] };
   const nameById = new Map((profileRows ?? []).map((item) => [item.id, item.full_name]));
@@ -120,7 +127,7 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
         <header className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3.5 sm:px-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div><p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#64748B]">Policy Intake Review</p><h1 className="mt-1 text-[17px] font-semibold text-[#0F172A]">{data.intake_number}</h1><p className="mt-1 text-[9px] text-[#64748B]">Submitted by <span className="font-semibold text-[#334155]">{submittedBy}</span> · {new Date(data.created_at).toLocaleString("en-IN")}</p></div>
-            <span className={`inline-flex self-start rounded-full px-2.5 py-1 text-[8.5px] font-bold ${statusClass(data)}`}>{statusLabel(data)}</span>
+            <span className={`inline-flex self-start rounded-full px-2.5 py-1 text-[8.5px] font-bold ${statusClass(data, Boolean(duplicateMatch))}`}>{statusLabel(data, Boolean(duplicateMatch))}</span>
           </div>
           <div className="mt-3 grid gap-2 border-t border-[#E5ECF5] pt-3 sm:grid-cols-3">
             <HeaderMeta icon={<Phone className="h-3.5 w-3.5" />} label="Customer" value={data.customer_mobile} hint={data.matched_customer_id ? "Existing customer matched" : "Sales supplied"} />
@@ -155,11 +162,18 @@ export default async function PolicyIntakeDetail({ params }: { params: Promise<{
         </section>
         <section className="rounded-2xl border border-[#DCE5EF] bg-white p-3 shadow-sm">
           <p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#64748B]">Review status</p>
-          <div className="mt-2 space-y-2 text-[9px]"><SideMeta label="Workflow" value={statusLabel(data)} /><SideMeta label="Detail fetch" value={ocrLabel(data.ocr_status)} /><SideMeta label="Reviewer" value={reviewerName} /></div>
+          <div className="mt-2 space-y-2 text-[9px]"><SideMeta label="Workflow" value={statusLabel(data, Boolean(duplicateMatch))} /><SideMeta label="Detail fetch" value={ocrLabel(data.ocr_status)} /><SideMeta label="Reviewer" value={reviewerName} /></div>
         </section>
-        {owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
-        {reviewer && !["completed", "rejected"].includes(data.status) ? <PolicyIntakeReviewActions id={data.id} /> : null}
-        {finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} status={data.status} /> : null}
+        {duplicateMatch ? <section className="rounded-2xl border border-rose-200 bg-rose-50 p-3 text-rose-900 shadow-sm">
+          <p className="text-[8px] font-bold uppercase tracking-[.08em]">Duplicate policy intake</p>
+          <p className="mt-1.5 text-[9px] leading-4">{duplicateMatch.kind === "registered_policy" ? `Policy ${duplicateMatch.policyNumber} already exists in the Policy Register.` : `Policy ${duplicateMatch.normalizedPolicyNumber} was already submitted under ${duplicateMatch.intakeNumber}.`}</p>
+          <p className="mt-1 text-[8px] leading-4 text-rose-700">Review and Policy Onboarding actions are disabled for this intake.</p>
+          {(reviewer || finalizer) ? <Link href={duplicateMatch.kind === "registered_policy" ? `/policies/${duplicateMatch.policyId}/edit` : `/policy-intakes/${duplicateMatch.intakeId}`} className="mt-2 inline-flex h-8 items-center rounded-lg border border-rose-200 bg-white px-2.5 text-[8.5px] font-bold text-rose-800 hover:bg-rose-100">{duplicateMatch.kind === "registered_policy" ? "View Existing Policy" : "View Earlier Intake"}</Link> : null}
+        </section> : null}
+        {!duplicateCheck.ok ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[8.5px] leading-4 text-amber-900">Duplicate protection could not be verified. Review and Policy Onboarding actions are temporarily disabled.</div> : null}
+        {!duplicateBlocked && owner && data.status === "needs_attention" ? <PolicyIntakeResponseUpload id={data.id} /> : null}
+        {!duplicateBlocked && reviewer && !["completed", "rejected"].includes(data.status) ? <PolicyIntakeReviewActions id={data.id} /> : null}
+        {!duplicateBlocked && finalizer && (!["completed", "rejected", "needs_attention", "processing"].includes(data.status) || manualReview) ? <PolicyIntakeHandoffButton id={data.id} status={data.status} /> : null}
         <div className="rounded-xl bg-[#F3F7FB] px-3 py-2.5 text-[8.5px] leading-4 text-[#64748B]"><UserRound className="mb-1.5 h-3.5 w-3.5 text-[#315B9A]" />This is a pre-onboarding review sheet. The saved policy copy remains the source document; final corrections are made in Policy Onboarding.</div>
       </aside>
     </div>

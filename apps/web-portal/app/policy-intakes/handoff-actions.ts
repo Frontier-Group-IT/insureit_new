@@ -1,6 +1,7 @@
 "use server";
 
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
+import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -27,6 +28,8 @@ type BrandOption={manufacturer_id:string;brand_name:string};
 type InsurerOption={id:string;name:string};
 type CustomerOption={contact_name:string;company_name:string|null};
 type IntakeForHandoff={
+  id:string;
+  intake_number:string;
   lead_source_type:"posp"|"misp"|"partner";
   lead_source_name:string;
   lead_source_code:string|null;
@@ -34,6 +37,7 @@ type IntakeForHandoff={
   matched_customer_id:string|null;
   ocr_fields:PolicyIntakeOcrField[];
   status:string;
+  created_at:string;
   assigned_to_profile_id:string|null;
 };
 
@@ -42,10 +46,13 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
   const reviewer=await requirePolicyIntakeReviewer();
   const admin=createSupabaseAdminClient();
   const {data:intake}=await admin.from("policy_intake_requests")
-    .select("lead_source_type,lead_source_name,lead_source_code,customer_mobile,matched_customer_id,ocr_fields,status,assigned_to_profile_id")
+    .select("id,intake_number,lead_source_type,lead_source_name,lead_source_code,customer_mobile,matched_customer_id,ocr_fields,status,created_at,assigned_to_profile_id")
     .eq("id",id)
     .maybeSingle<IntakeForHandoff>();
   if(!intake||["completed","rejected"].includes(intake.status))return{ok:false,error:"This intake is no longer available for onboarding."};
+  const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
+  if(!duplicateCheck.ok)return{ok:false,error:duplicateCheck.error};
+  if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot be sent to Policy Onboarding."};
 
   const assignedToAnother=Boolean(intake.assigned_to_profile_id&&intake.assigned_to_profile_id!==reviewer.id);
   if(assignedToAnother&&!takeOver){
@@ -106,8 +113,11 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
 
 export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
   await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
-  const {data:intake}=await admin.from("policy_intake_requests").select("status,assigned_to_profile_id,matched_customer_id").eq("id",id).maybeSingle<{status:string;assigned_to_profile_id:string|null;matched_customer_id:string|null}>();
+  const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,assigned_to_profile_id,matched_customer_id").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];assigned_to_profile_id:string|null;matched_customer_id:string|null}>();
   if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==reviewer.id)return{ok:false,error:"This intake is not assigned to you for Policy Onboarding."};
+  const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
+  if(!duplicateCheck.ok)return{ok:false,error:duplicateCheck.error};
+  if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot continue in Policy Onboarding."};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(error||!data?.draft_payload)return{ok:false,error:"The saved Policy Onboarding draft is unavailable. Return to the intake and start review again."};
   return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId:intake.matched_customer_id};
