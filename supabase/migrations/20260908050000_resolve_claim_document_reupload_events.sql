@@ -2,6 +2,32 @@
 -- document is saved. Keep the original activity row as audit history by
 -- changing its event type instead of deleting it.
 
+alter table public.customer_activity_events
+  drop constraint if exists customer_activity_events_event_type_check;
+
+alter table public.customer_activity_events
+  add constraint customer_activity_events_event_type_check
+  check (
+    event_type = any (array[
+      'claim_submitted'::text,
+      'claim_document_uploaded'::text,
+      'claim_document_reuploaded'::text,
+      'claim_document_reupload_resolved'::text,
+      'claim_documents_completed'::text,
+      'claim_assistance_accepted'::text,
+      'claim_assistance_declined'::text,
+      'spot_surveyor_deputed'::text,
+      'support_ticket_created'::text,
+      'support_ticket_message_sent'::text,
+      'support_ticket_attachment_uploaded'::text,
+      'customer_kyc_uploaded'::text,
+      'customer_kyc_deleted'::text,
+      'endorsement_requested'::text,
+      'roadside_call_started'::text,
+      'notification_unread'::text
+    ])
+  );
+
 create or replace function public.resolve_claim_document_reupload_events()
 returns trigger
 language plpgsql
