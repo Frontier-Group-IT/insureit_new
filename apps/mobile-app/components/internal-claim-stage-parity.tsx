@@ -325,9 +325,11 @@ function ReadOnlyMoney({ label, value }: { label: string; value: unknown }) {
 
 function ReadOnlyChoice({ label, value, yesValue, noValue, noLabel = 'No' }: { label: string; value: unknown; yesValue: string; noValue: string; noLabel?: string }) {
   const normalized = normalizedChoice(value);
-  const selected = yesValue === 'true'
-    ? (normalized === 'yes' || normalized === 'true' ? 'true' : normalized === 'no' || normalized === 'false' ? 'false' : normalized)
-    : normalized;
+  const selected = normalized === 'yes' || normalized === 'true'
+    ? yesValue
+    : normalized === 'no' || normalized === 'false'
+      ? noValue
+      : normalized;
   return <ClaimChoice label={label} value={selected} options={[{ value: yesValue, label: 'Yes' }, { value: noValue, label: noLabel }]} onChange={() => undefined} />;
 }
 
