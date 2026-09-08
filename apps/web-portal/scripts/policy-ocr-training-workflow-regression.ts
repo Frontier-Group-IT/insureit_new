@@ -139,6 +139,49 @@ assert.equal(JSON.stringify(candidate).includes("RAWCHASSIS123456"), false);
 assert.equal(JSON.stringify(candidate).includes("evidence_note"), false);
 assert.equal(JSON.stringify(candidate).includes("PRIVATE PERSON"), false);
 
+const evidenceCandidate = createSanitizedTrainingCandidate({
+  labelId: "abcdef12-3456-7890-abcd-ef1234567890",
+  parserId: "test_motor_v1",
+  parserVersion: "1",
+  values: {
+    vehicle_registration_status: null,
+    vehicle_registration_number: null,
+    vehicle_class: null,
+    vehicle_make: null,
+    vehicle_model: null,
+    vehicle_fuel_type: null,
+    vehicle_manufacturing_year: null,
+    vehicle_capacity: null,
+    vehicle_chassis_number: null,
+    vehicle_engine_number: null,
+    vehicle_rto_name: null,
+    vehicle_rto_state: null,
+    insurer_name: null,
+    policy_product: null,
+    valid_from: null,
+    valid_upto: null,
+    idv: null,
+    od_premium: null,
+    tp_premium: null,
+    cpa_opted: null,
+    cpa_premium: null,
+    printed_net_premium: null,
+    printed_gst: null,
+    printed_gross_premium: null,
+  },
+  proposal: {
+    fields: {
+      od_premium: { value: "6121", confidence: 1, page: 2, evidence: "Total OD Premium 6121" },
+      policy_start_date: { value: "2026-08-21", confidence: 1, page: 2, evidence: "Vehicle Registration Number: SYNREG" },
+      tp_premium: { value: "16369", confidence: 1, page: 2, evidence: "Policy Product: Third Party" },
+    },
+    warnings: [],
+  },
+});
+assert.equal(evidenceCandidate.evidence_labels.od_premium, "Total OD Premium · Page 2");
+assert.equal(evidenceCandidate.evidence_labels.policy_start_date, "Insufficient evidence · Page 2");
+assert.equal(evidenceCandidate.evidence_labels.tp_premium, "Insufficient evidence · Page 2");
+
 assert.equal(
   sanitizeEvidenceNote("PAN ABCDE1234F phone 9876543210 email test@example.com"),
   "PAN [redacted] phone [redacted] email [redacted]",
