@@ -11,6 +11,7 @@ import {
 
 const inputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
 const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
+const readOnlyLabelClass = "mb-0.5 block text-[9px] font-semibold uppercase tracking-[0.04em] text-[#667085]";
 
 export function AddClaimForm() {
   const router = useRouter();
@@ -162,14 +163,14 @@ export function AddClaimForm() {
           <ReadOnlyField label="Cover Dates" value={lookup?.policy ? `${formatDate(lookup.policy.startDate)} - ${formatDate(lookup.policy.endDate)}` : ""} />
           <ReadOnlyField label="Premium" value={lookup?.policy ? formatAmount(lookup.policy.premiumAmount) : ""} />
           <ReadOnlyField label="IDV" value={lookup?.policy ? formatAmount(lookup.policy.insuredDeclaredValue) : ""} />
-          <div>
-            <span className={labelClass}>Policy Copy</span>
-            <div className="flex h-10 items-center rounded-xl border border-[#D7E0EA] bg-[#F8FAFC] px-3 text-[11px] font-medium text-[#344054]">
+          <div className="min-w-0 py-1">
+            <span className={readOnlyLabelClass}>Policy Copy</span>
+            <div className="flex min-h-7 items-center border-b border-[#E7ECF3] pb-1.5 text-[11.5px] font-semibold leading-5 text-[#17203A]">
               {lookup?.policyCopy ? (
-                <Link href={lookup.policyCopy.openUrl} target="_blank" className="truncate font-semibold text-[#174EA6] underline-offset-2 hover:underline">
+                <Link href={lookup.policyCopy.openUrl} target="_blank" className="truncate text-[#174EA6] underline-offset-2 hover:underline">
                   {lookup.policyCopy.fileName}
                 </Link>
-              ) : <span className="min-h-[16px]">&nbsp;</span>}
+              ) : <span className="text-[#98A2B3]">—</span>}
             </div>
           </div>
           <ReadOnlyField label="Policy Type" value={lookup?.policy?.policyType ?? ""} />
@@ -304,10 +305,10 @@ function ClaimSection({ number, title, children, columns }: { number: string; ti
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <span className={labelClass}>{label}</span>
-      <div className="flex min-h-10 items-center rounded-xl border border-[#D7E0EA] bg-[#F8FAFC] px-3 py-2 text-[11px] font-semibold text-[#344054]">
-        <span className="break-words">{value || "\u00A0"}</span>
+    <div className="min-w-0 py-1">
+      <span className={readOnlyLabelClass}>{label}</span>
+      <div className="flex min-h-7 items-center border-b border-[#E7ECF3] pb-1.5 text-[11.5px] font-semibold leading-5 text-[#17203A]">
+        <span className={`break-words ${value ? "text-[#17203A]" : "text-[#98A2B3]"}`}>{value || "—"}</span>
       </div>
     </div>
   );
