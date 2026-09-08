@@ -7,6 +7,7 @@ import { ActiveClaimPopup } from '@/components/active-claim-popup';
 import { ClaimActionBar } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { findActiveManagedClaim } from '@/lib/active-managed-claim';
+import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -148,10 +149,40 @@ export default function StartClaimScreen() {
         setExistingActiveClaimId(existingClaim.id);
         return;
       }
-      router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id } });
+
+      const session = await getCurrentSession();
+      if (!session?.user) {
+        router.replace('/login');
+        return;
+      }
+
+      const { data: draftClaim, error: draftError } = await supabase.from('claims').insert({
+        claim_no: makeClaimNumber(),
+        customer_id: selectedPolicy.customer_id,
+        vehicle_id: selectedVehicle.id,
+        policy_id: selectedPolicy.id,
+        insurance_company_id: selectedPolicy.insurance_company_id,
+        current_status: 'Draft',
+        created_by: session.user.id,
+      }).select('id').single();
+
+      if (draftError || !draftClaim?.id) {
+        const recoveredClaim = await findActiveManagedClaim(selectedPolicy.id);
+        if (recoveredClaim) {
+          if (recoveredClaim.current_status === 'Draft') {
+            router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id, draftClaimId: recoveredClaim.id } } as any);
+            return;
+          }
+          setExistingActiveClaimId(recoveredClaim.id);
+          return;
+        }
+        throw draftError ?? new Error('Claim draft creation did not return a claim.');
+      }
+
+      router.push({ pathname: '/customer/report-accident', params: { vehicleId: selectedVehicle.id, policyId: selectedPolicy.id, draftClaimId: draftClaim.id } } as any);
     } catch (error) {
-      console.warn('Active claim check failed', error);
-      setMessage('We could not verify existing claims right now. Please try again.');
+      console.warn('Start claim failed', error);
+      setMessage('We could not start your claim right now. Please try again.');
     } finally {
       setCheckingActiveClaim(false);
     }
