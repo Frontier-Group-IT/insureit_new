@@ -195,7 +195,8 @@ const queueComponent = readFileSync("app/policies/ocr-training/training-review-q
 assert.match(queueComponent, /Run with Google Cloud/);
 assert.match(queueComponent, /Re-run with Google Cloud/);
 assert.match(queueComponent, /useActionState/);
-assert.match(queueComponent, /Confirm comparison & approve training/);
+assert.doesNotMatch(queueComponent, /Confirm comparison & approve training/);
+assert.match(queueComponent, /Parser training started from the saved answers/);
 assert.doesNotMatch(queueComponent, /different training owner|No self-approval|Awaiting owner/);
 assert.doesNotMatch(queueComponent, /Assigned PDF verification checklist/);
 assert.doesNotMatch(queueComponent, /check_\$\{key\}/);
@@ -218,10 +219,19 @@ assert.match(reviewerActions, /bcc: \[REVIEW_NOTIFICATION_BCC\]/);
 assert.match(reviewerActions, /Current policy number/);
 assert.match(reviewerActions, /policy content, identifiers, PII/);
 assert.match(reviewerActions, /completePolicyOcrReviewTask/);
+assert.match(reviewerActions, /startPolicyOcrTrainingFromReview/);
+assert.match(reviewerActions, /approve_policy_ocr_database_comparison/);
+assert.match(reviewerActions, /Review answers saved and parser training started/);
 const reviewerMigration = readFileSync("../../supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql", "utf8");
 assert.match(reviewerMigration, /policy_ocr_training_review_tasks/);
 assert.match(reviewerMigration, /policy_ocr_training_review_notifications/);
 assert.match(reviewerMigration, /idempotency_key/);
+const reviewAutomation = readFileSync("lib/policy-ocr-review-automation.ts", "utf8");
+assert.match(reviewAutomation, /ensurePolicyOcrBatchReviewNotification/);
+assert.match(reviewAutomation, /policy-ocr-review-batch:/);
+assert.match(reviewAutomation, /One OCR training run has/);
+const batchNotificationMigration = readFileSync("../../supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql", "utf8");
+assert.match(batchNotificationMigration, /policy_ocr_training_batch_notifications/);
 const resend = readFileSync("lib/resend-email.ts", "utf8");
 assert.match(resend, /RESEND_API_KEY/);
 assert.match(resend, /RESEND_FROM_EMAIL/);
@@ -230,6 +240,9 @@ assert.match(resend, /input\.bcc/);
 assert.doesNotMatch(resend, /attachments/);
 const deployWorkflow = readFileSync("../../.github/workflows/deploy-production.yml", "utf8");
 assert.match(deployWorkflow, /20260907130000_policy_ocr_reviewer_tasks\.sql/);
+assert.match(deployWorkflow, /20260908100000_policy_ocr_batch_notifications\.sql/);
+const batchMigrationWorkflow = readFileSync("../../.github/workflows/apply-policy-ocr-reviewer-tasks.yml", "utf8");
+assert.match(batchMigrationWorkflow, /20260908100000_policy_ocr_batch_notifications\.sql/);
 
 const appNavigation = readFileSync("components/claim-manager/app-navigation.tsx", "utf8");
 assert.match(appNavigation, /href:"\/policies\/ocr-training",label:"OCR Training"/);
@@ -240,7 +253,6 @@ const singleOperatorMigration = readFileSync("../../supabase/migrations/20260822
 assert.match(singleOperatorMigration, /drop constraint if exists policy_ocr_training_labels_separate_approval_check/);
 assert.match(singleOperatorMigration, /approve_policy_ocr_database_comparison/);
 assert.doesNotMatch(singleOperatorMigration, /self_approval_forbidden|owner_approved_by <> reviewed_by/);
-assert.match(actions, /approve_policy_ocr_database_comparison/);
 assert.doesNotMatch(actions, /requireTrainingOwner|requireTrainingReviewer|reviewed_by === owner\.id/);
 
 const section02TrainingMigration = readFileSync("../../supabase/migrations/20260822093000_policy_ocr_section_02_training.sql", "utf8");

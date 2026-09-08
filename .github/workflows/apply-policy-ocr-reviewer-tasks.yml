@@ -11,6 +11,7 @@ on:
       - 'supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql'
       - 'supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql'
       - 'supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql'
+      - 'supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql'
       - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
 
 permissions:
@@ -99,10 +100,11 @@ jobs:
               to_regclass('public.policy_ocr_training_orchestrators') is not null as orchestrators_ready,
               to_regclass('public.policy_ocr_training_samples') is not null as samples_ready,
               to_regclass('public.policy_ocr_training_change_proposals') is not null as proposals_ready,
+              to_regclass('public.policy_ocr_training_batch_notifications') is not null as batch_notifications_ready,
               not has_table_privilege('authenticated','public.policy_ocr_training_orchestrators','SELECT') as orchestrators_private
           ")
           echo "$result"
-          for key in orchestrators_ready samples_ready proposals_ready orchestrators_private; do
+          for key in orchestrators_ready samples_ready proposals_ready batch_notifications_ready orchestrators_private; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
           done
 
@@ -117,3 +119,9 @@ jobs:
 
       - name: Record simplified OCR orchestrator claim
         run: supabase migration repair --linked --status applied 20260907190000
+
+      - name: Apply OCR batch reviewer notifications
+        run: supabase db query --linked --file supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql
+
+      - name: Record OCR batch reviewer notifications
+        run: supabase migration repair --linked --status applied 20260908100000

@@ -117,6 +117,10 @@ export async function ensureAutomaticPolicyOcrReview(input: {
   }
   if (!task) return { needsReview: true as const, taskCreated: false, notificationSent: false, error: "task_create_failed" };
 
+  if (input.orchestratorId) {
+    return { needsReview: true as const, taskCreated: assignmentChanged, notificationSent: false };
+  }
+
   const idempotencyKey = `policy-ocr-review:${task.id}:${task.assignment_version}`;
   const { data: existingNotification } = await admin
     .from("policy_ocr_training_review_notifications")
@@ -166,6 +170,107 @@ export async function ensureAutomaticPolicyOcrReview(input: {
       last_error: error instanceof Error && error.message === "resend_configuration_missing" ? "resend_configuration_missing" : "resend_request_failed",
     }).eq("id", notification.id);
     return { needsReview: true as const, taskCreated: assignmentChanged, notificationSent: false, error: "notification_failed" };
+  }
+}
+
+export async function ensurePolicyOcrBatchReviewNotification(orchestratorId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data: samples, error: sampleError } = await admin
+    .from("policy_ocr_training_samples")
+    .select("id,status,training_label_id")
+    .eq("orchestrator_id", orchestratorId);
+  if (sampleError || !samples?.length || samples.some((sample) => ["queued", "processing"].includes(sample.status))) {
+    return { notified: false, pending: Boolean(samples?.some((sample) => ["queued", "processing"].includes(sample.status))) };
+  }
+
+  const { data: tasks, error: taskError } = await admin
+    .from("policy_ocr_training_review_tasks")
+    .select("id,training_label_id")
+    .eq("orchestrator_id", orchestratorId)
+    .eq("task_type", "comparison")
+    .neq("status", "cancelled");
+  if (taskError || !tasks?.length) return { notified: false, pending: false };
+
+  const labelIds = samples.map((sample) => sample.training_label_id).filter(Boolean);
+  const { data: labels, error: labelError } = await admin
+    .from("policy_ocr_training_labels")
+    .select("id,policy_document_id")
+    .in("id", labelIds)
+    .returns<Array<{ id: string; policy_document_id: string }>>();
+  if (labelError) return { notified: false, pending: false };
+  const documentIds = labels?.map((label) => label.policy_document_id) ?? [];
+  const { data: documents, error: documentError } = await admin
+    .from("policy_documents")
+    .select("id,file_name")
+    .in("id", documentIds)
+    .returns<Array<{ id: string; file_name: string | null }>>();
+  if (documentError) return { notified: false, pending: false };
+
+  const reviewerEmail = normalizeEmail(process.env.POLICY_OCR_DEFAULT_REVIEWER_EMAIL) ?? DEFAULT_REVIEWER_EMAIL;
+  const reviewer = await resolveExistingPortalReviewer(admin, reviewerEmail);
+  const idempotencyKey = `policy-ocr-review-batch:${orchestratorId}`;
+  const { data: notification, error: notificationError } = await admin
+    .from("policy_ocr_training_batch_notifications")
+    .upsert({
+      orchestrator_id: orchestratorId,
+      recipient_profile_id: reviewer.profileId,
+      idempotency_key: idempotencyKey,
+      status: "pending",
+      last_error: null,
+    }, { onConflict: "orchestrator_id" })
+    .select("id,attempts,status")
+    .single<{ id: string; attempts: number; status: "pending" | "sent" | "failed" }>();
+  if (notificationError || !notification || notification.status === "sent") {
+    return { notified: false, pending: false };
+  }
+
+  const fileNameByLabel = new Map(labels?.map((label) => [
+    label.id,
+    safeFileLabel(documents?.find((document) => document.id === label.policy_document_id)?.file_name ?? null),
+  ]) ?? []);
+  const portalUrl = new URL("/policies/ocr-training", process.env.NEXT_PUBLIC_PORTAL_URL?.trim() || "https://portal.insureit.in");
+  const taskByLabel = new Map(tasks.map((task) => [task.training_label_id, task]));
+  const policyLines = samples.map((sample, index) => {
+    const task = taskByLabel.get(sample.training_label_id);
+    const taskReference = task ? ` · task ${task.id.replaceAll("-", "").slice(0, 12).toUpperCase()}` : "";
+    const result = task ? "review required" : "comparison complete";
+    return `${index + 1}. ${fileNameByLabel.get(sample.training_label_id) || "Policy copy"} · ${result}${taskReference}`;
+  });
+
+  try {
+    const result = await sendResendEmail({
+      to: reviewerEmail,
+      bcc: [REVIEW_NOTIFICATION_BCC],
+      subject: `INSUREIT Policy OCR review batch · ${samples.length} policies`,
+      text: [
+        "Hello,",
+        "",
+        `One OCR training run has ${samples.length} policy comparisons completed.`,
+        "",
+        ...policyLines,
+        "",
+        "Open the same protected OCR training page to review the listed policies:",
+        portalUrl.toString(),
+        "",
+        "Keep policy content, identifiers and PII inside the protected portal.",
+      ].join("\n"),
+      idempotencyKey,
+    });
+    await admin.from("policy_ocr_training_batch_notifications").update({
+      status: "sent",
+      attempts: notification.attempts + 1,
+      provider_message_id: result.id,
+      last_error: null,
+      sent_at: new Date().toISOString(),
+    }).eq("id", notification.id);
+    return { notified: true, pending: false };
+  } catch {
+    await admin.from("policy_ocr_training_batch_notifications").update({
+      status: "failed",
+      attempts: notification.attempts + 1,
+      last_error: "resend_request_failed",
+    }).eq("id", notification.id);
+    return { notified: false, pending: false };
   }
 }
 

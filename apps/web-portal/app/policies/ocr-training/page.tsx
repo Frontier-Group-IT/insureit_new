@@ -3,8 +3,7 @@ import { requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access
 import type { TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
-import { recordPolicyOcrSatisfaction } from "../ocr-training-orchestrator-actions";
-import { approvePolicyOcrChangeProposal, createPolicyOcrTrainingRun, startPolicyOcrTrainingRun, stopPolicyOcrTrainingRun } from "../ocr-training-orchestrator-actions";
+import { recordPolicyOcrSatisfaction, createPolicyOcrTrainingRun, startPolicyOcrTrainingRun, stopPolicyOcrTrainingRun } from "../ocr-training-orchestrator-actions";
 
 type TrainingDocumentRow = {
   id: string;
@@ -131,10 +130,6 @@ export default async function PolicyOcrTrainingPage({ searchParams }: { searchPa
   const { data: orchestratorRuns } = viewer.isOperator
     ? await admin.from("policy_ocr_training_orchestrators").select("id,status,processed_count,sample_budget,field_accuracy").order("created_at", { ascending: false }).limit(3)
     : { data: [] as Array<{ id: string; status: string; processed_count: number; sample_budget: number; field_accuracy: number | null }> };
-  const { data: pendingProposals } = viewer.isOperator
-    ? await admin.from("policy_ocr_training_change_proposals").select("id,insurer_name,product_family,layout_family,status").eq("status", "pending_it_approval").order("created_at", { ascending: false }).limit(20)
-    : { data: [] as Array<{ id: string; insurer_name: string | null; product_family: string | null; layout_family: string | null; status: string }> };
-
   const rows = (data ?? []).flatMap<TrainingQueueRow>((document) => {
     const label = Array.isArray(document.policy_ocr_training_labels)
       ? document.policy_ocr_training_labels[0] ?? null
@@ -209,14 +204,13 @@ export default async function PolicyOcrTrainingPage({ searchParams }: { searchPa
       </div>
       {viewer.isOperator ? <section className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div><p className="text-sm font-bold text-navy-900">Controlled training iterations</p><p className="text-xs text-slate-500">Create a planned run, then explicitly start or stop it. Nothing is enabled automatically.</p></div>
+          <div><p className="text-sm font-bold text-navy-900">Controlled training iterations</p><p className="text-xs text-slate-500">Create a planned run, then explicitly start or stop it. Reviewer answers start parser training automatically.</p></div>
           <form action={createPolicyOcrTrainingRun}><button className="rounded-lg bg-navy-900 px-3 py-2 text-xs font-bold text-white">Create planned run</button></form>
         </div>
         <div className="mt-3 space-y-2">{(orchestratorRuns ?? []).map((run) => <div key={run.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 text-xs">
           <span><strong>{run.status}</strong> · {run.processed_count}/{run.sample_budget} samples · {run.field_accuracy == null ? "accuracy pending" : `${Math.round(run.field_accuracy * 100)}%`} · <code>{run.id.slice(0, 8)}</code></span>
           <div className="flex gap-2">{run.status === "planned" ? <form action={startPolicyOcrTrainingRun}><input type="hidden" name="orchestrator_id" value={run.id} /><button className="rounded border border-emerald-200 px-2 py-1 font-bold text-emerald-700">Start</button></form> : null}{["planned", "running", "paused"].includes(run.status) ? <form action={stopPolicyOcrTrainingRun}><input type="hidden" name="orchestrator_id" value={run.id} /><button className="rounded border border-red-200 px-2 py-1 font-bold text-red-700">Stop</button></form> : null}</div>
         </div>)}</div>
-        {pendingProposals?.length ? <div className="mt-4 border-t border-slate-100 pt-3"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Pending IT candidate approvals</p>{pendingProposals.map((proposal) => <div key={proposal.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs"><span>{proposal.insurer_name} · {proposal.product_family} · {proposal.layout_family} · <code>{proposal.id.slice(0, 8)}</code></span><form action={approvePolicyOcrChangeProposal}><input type="hidden" name="proposal_id" value={proposal.id} /><button className="rounded border border-amber-300 px-2 py-1 font-bold text-amber-800">Approve candidate</button></form></div>)}</div> : null}
       </section> : null}
       {error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">

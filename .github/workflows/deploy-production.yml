@@ -151,7 +151,7 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907010000_external_renewal_reporting.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-reporting.yml"
             echo "External renewal reporting migration detected. Waiting for its schema workflow..."
-          elif grep -qxE 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql|supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql|supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql|supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql' <<<"$changed_migrations"; then
+          elif grep -qxE 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql|supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql|supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql|supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-policy-ocr-reviewer-tasks.yml"
             echo "Policy OCR reviewer/orchestrator migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
