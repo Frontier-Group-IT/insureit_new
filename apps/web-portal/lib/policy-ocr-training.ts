@@ -359,9 +359,51 @@ export function createSanitizedTrainingCandidate(args: {
       },
     },
     evidence_labels: Object.fromEntries(
-      Object.entries(args.proposal?.fields ?? {}).map(([key, field]) => [key, field?.evidence ?? "Parser evidence"]),
+      Object.entries(args.proposal?.fields ?? {}).map(([key, field]) => [
+        key,
+        field ? summarizeFieldEvidence(key as TrainingFieldKey, field) : "Insufficient evidence",
+      ]),
     ),
   };
+}
+
+const FIELD_EVIDENCE_PATTERNS: Partial<Record<TrainingFieldKey, RegExp>> = {
+  vehicle_registration_status: /\bregistration status\b/i,
+  vehicle_registration_number: /\bregistration(?: number| no)?\b|\bregn\.? no\b/i,
+  vehicle_class: /\bvehicle class\b|\bclass of vehicle\b/i,
+  vehicle_make: /\bvehicle make\b|\bmanufacturer\b|\bmake\b/i,
+  vehicle_model: /\bvehicle model\b|\bmodel\b/i,
+  vehicle_fuel_type: /\bfuel(?: type)?\b/i,
+  vehicle_manufacturing_year: /\bmanufactur(?:ing|e) year\b|\byear of manufacture\b/i,
+  vehicle_capacity: /\bcapacity\b|\bcc\b|\bgvw\b|\bseating\b/i,
+  vehicle_chassis_number: /\bchassis\b/i,
+  vehicle_engine_number: /\bengine\b/i,
+  vehicle_rto_name: /\brto\b/i,
+  vehicle_rto_state: /\brto\b|\bstate\b/i,
+  insurer_name: /\binsurance company\b|\binsurer\b/i,
+  policy_product: /\bpackage\b|\bbundled\b|\bstandalone od\b|\bthird party\b|\bliability only\b/i,
+  policy_number: /\bpolicy number\b|\bpolicy no\b/i,
+  policy_start_date: /\bperiod of cover\b|\bpolicy period\b|\bvalid from\b|\bstart date\b/i,
+  policy_end_date: /\bperiod of cover\b|\bpolicy period\b|\bvalid upto\b|\bvalid up to\b|\bend date\b/i,
+  idv: /\bidv\b|\binsured declared value\b|\bsum insured\b|\btotal value\b/i,
+  od_premium: /\btotal od premium\b|\bod premium\b/i,
+  tp_premium: /\btotal tp premium\b|\bthird.?party premium\b|\bliability(?: premium| total)?\b|\bbasic tp\b/i,
+  cpa_opted: /\bcompulsory pa\b|\bowner driver\b|\bcpa\b/i,
+  cpa_premium: /\bcompulsory pa\b|\bowner driver\b|\bcpa\b/i,
+  total_premium: /\bnet premium\b|\btotal premium\b/i,
+  tax_amount: /\bgst\b|\btax\b/i,
+  gross_premium: /\btotal payable\b|\bgross premium\b|\bgross\b/i,
+};
+
+function summarizeFieldEvidence(key: TrainingFieldKey, field: TrainingProposalField) {
+  const evidence = `${field.evidence ?? ""} ${field.value ?? ""}`;
+  const pattern = FIELD_EVIDENCE_PATTERNS[key];
+  if (!pattern || !pattern.test(evidence)) {
+    return field.page && field.page > 0
+      ? `Insufficient evidence · Page ${field.page}`
+      : "Insufficient evidence";
+  }
+  return summarizeEvidence(field.evidence, key, field.page);
 }
 
 function summarizeEvidence(evidence: string, label: string, page: number | null) {
