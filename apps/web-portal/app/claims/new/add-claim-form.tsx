@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
@@ -10,23 +9,14 @@ import {
   type AddClaimLookup,
 } from "./add-claim-actions";
 
-const headerIcons = {
-  customer: "/assets/Custom-Icons/optimized-128/customers.png",
-  vehicle: "/assets/Custom-Icons/optimized-128/fleet-vehicle.png",
-  makeModel: "/assets/Custom-Icons/optimized-128/fleet-vehicle.png",
-  insurer: "/assets/Custom-Icons/optimized-128/policy.png",
-  lossDate: "/assets/Custom-Icons/optimized-128/claims-intimated-today.png",
-  policy: "/assets/Custom-Icons/optimized-128/policy.png",
-  control: "/assets/Custom-Icons/optimized-128/tasks-work-queue.png",
-  claim: "/assets/Custom-Icons/optimized-128/claims.png",
-  status: "/assets/Custom-Icons/optimized-128/claim-approval.png",
-  intimation: "/assets/Custom-Icons/optimized-128/claim-intimation.png",
-} as const;
+const inputClass = "h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[12px] text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#4F46E5] focus:ring-2 focus:ring-[#E0E7FF]";
+const labelClass = "mb-1 block text-[10.5px] font-semibold text-[#344054]";
 
 export function AddClaimForm() {
   const router = useRouter();
   const requestId = useRef(0);
   const [vehicleNumber, setVehicleNumber] = useState("");
+  const [lossDateTime, setLossDateTime] = useState("");
   const [lookup, setLookup] = useState<AddClaimLookup | null>(null);
   const [lookupMessage, setLookupMessage] = useState("");
   const [loadingLookup, setLoadingLookup] = useState(false);
@@ -75,13 +65,19 @@ export function AddClaimForm() {
 
   async function saveClaim(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!lookup?.vehicle.id || saving) return;
+    if (!lookup?.vehicle.id || !lossDateTime || saving) return;
+
+    const lossAt = new Date(lossDateTime);
+    if (Number.isNaN(lossAt.getTime())) {
+      setSaveMessage("Enter a valid loss date and time.");
+      return;
+    }
 
     setSaving(true);
     setSaveMessage("");
     setExistingClaim(null);
     try {
-      const result = await createOperationsClaim(lookup.vehicle.id);
+      const result = await createOperationsClaim(lookup.vehicle.id, lossAt.toISOString());
       if (!result.ok) {
         setSaveMessage(result.message);
         setExistingClaim(result.existingClaim ?? null);
@@ -95,12 +91,18 @@ export function AddClaimForm() {
     }
   }
 
+  const makeModel = [lookup?.vehicle.make, lookup?.vehicle.model].filter(Boolean).join(" - ");
+  const insurerName = lookup?.insurer?.name ?? "";
+  const policyNo = lookup?.policy?.policyNo ?? "";
+
   return (
-    <form onSubmit={saveClaim} className="mx-auto max-w-[1440px] space-y-3 pb-5">
-      <section className="rounded-xl border border-[#D8E3F2] bg-white px-4 py-4 shadow-[0_8px_22px_rgba(7,29,73,0.045)]">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-[280px] flex-1">
-            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.06em] text-[#526178]">Vehicle Number</span>
+    <div className="mx-auto max-w-[1480px]">
+      <form onSubmit={saveClaim} className="space-y-3 pb-5">
+        <ClaimOnboardingHeader />
+
+        <ClaimSection number="01" title="Claim Details" columns="two">
+          <label>
+            <span className={labelClass}>Vehicle Number</span>
             <div className="relative">
               <input
                 autoFocus
@@ -109,117 +111,139 @@ export function AddClaimForm() {
                 placeholder="Enter vehicle number"
                 autoComplete="off"
                 aria-label="Vehicle Number"
-                className="h-11 w-full rounded-lg border border-[#CCD6E4] bg-white px-3.5 pr-28 text-[13px] font-semibold uppercase tracking-[0.02em] text-[#071D49] outline-none placeholder:font-normal placeholder:normal-case placeholder:tracking-normal placeholder:text-[#8794A6] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100"
+                className={`${inputClass} pr-28 font-semibold uppercase tracking-[0.02em]`}
               />
-              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-semibold text-[#6B7A90]">
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[9.5px] font-semibold text-[#667085]">
                 {loadingLookup ? "Fetching..." : lookup ? "Details found" : ""}
               </span>
             </div>
+            {lookupMessage ? <span role="alert" className="mt-1.5 block text-[10px] font-medium text-[#B42318]">{lookupMessage}</span> : null}
           </label>
-        </div>
-        <p className="mt-2 text-[11px] text-[#66758A]">Customer and active policy details are fetched automatically from the existing vehicle record.</p>
-        {lookupMessage ? <p role="alert" className="mt-2 text-[12px] font-medium text-[#B42318]">{lookupMessage}</p> : null}
-      </section>
 
-      <div>
-        <div className="mb-1.5 flex items-center justify-between gap-3 px-1">
+          <label>
+            <span className={labelClass}>Loss Date &amp; Time</span>
+            <input
+              type="datetime-local"
+              value={lossDateTime}
+              onChange={(event) => setLossDateTime(event.target.value)}
+              aria-label="Loss Date and Time"
+              required
+              className={inputClass}
+            />
+            <span className="mt-1.5 block text-[9.5px] text-[#667085]">Enter the actual date and time of loss/accident.</span>
+          </label>
+        </ClaimSection>
+
+        <ClaimSection number="02" title="Customer & Vehicle Details" columns="four">
+          <ReadOnlyField label="Customer" value={lookup?.customer.name ?? ""} />
+          <ReadOnlyField label="Mobile" value={lookup?.customer.phone ?? ""} />
+          <ReadOnlyField label="Vehicle No." value={lookup?.vehicle.vehicleNo ?? ""} />
+          <ReadOnlyField label="Make & Model" value={makeModel} />
+        </ClaimSection>
+
+        <ClaimSection number="03" title="Active Policy Details" columns="four">
+          <ReadOnlyField label="Insurer" value={insurerName} />
+          <ReadOnlyField label="Policy No." value={policyNo} />
+          <ReadOnlyField label="Policy Source" value={lookup?.policy ? "Sankalp policy" : ""} />
+          <ReadOnlyField label="Cover Dates" value={lookup?.policy ? `${formatDate(lookup.policy.startDate)} - ${formatDate(lookup.policy.endDate)}` : ""} />
+          <ReadOnlyField label="Premium" value={lookup?.policy ? formatAmount(lookup.policy.premiumAmount) : ""} />
+          <ReadOnlyField label="IDV" value={lookup?.policy ? formatAmount(lookup.policy.insuredDeclaredValue) : ""} />
           <div>
-            <p className="text-[12px] font-semibold text-[#071D49]">Customer Details &amp; Active Policy Details</p>
-            <p className="text-[10px] text-[#68758A]">Unavailable values remain blank.</p>
+            <span className={labelClass}>Policy Copy</span>
+            <div className="flex h-10 items-center rounded-xl border border-[#D7E0EA] bg-[#F8FAFC] px-3 text-[11px] font-medium text-[#344054]">
+              {lookup?.policyCopy ? (
+                <Link href={lookup.policyCopy.openUrl} target="_blank" className="truncate font-semibold text-[#174EA6] underline-offset-2 hover:underline">
+                  {lookup.policyCopy.fileName}
+                </Link>
+              ) : <span className="min-h-[16px]">&nbsp;</span>}
+            </div>
           </div>
-          {lookup?.policy ? <span className="rounded-full bg-[#E9F7EF] px-2.5 py-1 text-[10px] font-semibold text-[#16764B]">Active policy found</span> : null}
-        </div>
-        <ClaimReferenceStrip data={lookup} />
-      </div>
+          <ReadOnlyField label="Policy Type" value={lookup?.policy?.policyType ?? ""} />
+        </ClaimSection>
 
-      {saveMessage ? (
-        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#F2C8C5] bg-[#FFF7F6] px-3.5 py-2.5 text-[12px] font-medium text-[#B42318]">
-          <span>{saveMessage}</span>
-          {existingClaim ? (
-            <Link href={`/claims/${existingClaim.id}`} className="rounded-md bg-white px-3 py-1.5 font-semibold text-[#003A83] shadow-sm ring-1 ring-[#D7E1EE]">
-              Open {existingClaim.claimNo}
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+        <ClaimSection number="04" title="Claim Record" columns="four">
+          <ReadOnlyField label="Control No." value="" />
+          <ReadOnlyField label="Claim No." value="" />
+          <ReadOnlyField label="Claim Status" value="" />
+          <ReadOnlyField label="Spot Intimation Date & Time" value="" />
+        </ClaimSection>
 
-      <div className="flex justify-end gap-2">
-        <Link href="/claims" className="inline-flex h-10 items-center justify-center rounded-lg border border-[#D5DFEB] bg-white px-4 text-[12px] font-semibold text-[#526178] transition hover:bg-[#F7F9FC]">
-          Cancel
-        </Link>
-        <button
-          type="submit"
-          disabled={!lookup?.vehicle.id || loadingLookup || saving}
-          className="inline-flex h-10 min-w-[110px] items-center justify-center rounded-lg bg-[#003A83] px-5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#073E83] disabled:cursor-not-allowed disabled:bg-[#A9B8CA]"
-        >
-          {saving ? "Saving..." : "Save"}
-        </button>
-      </div>
-    </form>
+        {saveMessage ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F2C8C5] bg-[#FFF7F6] px-4 py-3 text-[11px] font-medium text-[#B42318]">
+            <span>{saveMessage}</span>
+            {existingClaim ? (
+              <Link prefetch={false} href={`/claims/${existingClaim.id}`} className="rounded-lg bg-white px-3 py-1.5 font-semibold text-[#003A83] shadow-sm ring-1 ring-[#D7E1EE]">
+                Open {existingClaim.claimNo}
+              </Link>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-end gap-2 rounded-xl border border-[#D9E2F0] bg-white/95 px-4 py-2.5 shadow-[0_-6px_24px_rgba(15,23,42,0.05)] backdrop-blur">
+          <Link href="/claims" className="rounded-lg border border-[#CBD5E1] px-4 py-2 text-[11px] font-semibold text-[#334155] transition hover:border-[#94A3B8] hover:bg-[#F8FAFC]">
+            Cancel
+          </Link>
+          <button
+            type="submit"
+            disabled={!lookup?.vehicle.id || !lossDateTime || loadingLookup || saving}
+            className="rounded-lg bg-[#17365D] px-5 py-2 text-[11px] font-semibold text-white transition hover:bg-[#102A49] disabled:cursor-not-allowed disabled:bg-[#A9B8CA]"
+          >
+            {saving ? "Saving..." : "Save Claim"}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 
-function ClaimReferenceStrip({ data }: { data: AddClaimLookup | null }) {
-  const policyNo = data?.policy?.policyNo ?? "";
-  const insurerName = data?.insurer?.name ?? "";
-  const insurerDisplay = insurerName && policyNo ? `${insurerName} - ${policyNo}` : insurerName;
-  const makeModel = [data?.vehicle.make, data?.vehicle.model].filter(Boolean).join(" - ");
+function ClaimOnboardingHeader() {
+  const steps = [
+    { number: "01", label: "Claim Details" },
+    { number: "02", label: "Customer & Vehicle" },
+    { number: "03", label: "Active Policy" },
+    { number: "04", label: "Claim Record" },
+  ];
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#17355E] bg-[#071D49] shadow-[0_8px_22px_rgba(7,29,73,0.16)]">
-      <div className="grid md:grid-cols-3 xl:grid-cols-5">
-        <ReferenceInfo label="Customer" title={data?.customer.name ?? ""} subtitle={data?.customer.phone ?? ""} icon={headerIcons.customer} />
-        <ReferenceInfo label="Vehicle No." title={data?.vehicle.vehicleNo ?? ""} icon={headerIcons.vehicle} />
-        <ReferenceInfo label="Make & Model" title={makeModel} icon={headerIcons.makeModel} />
-        <ReferenceInfo label="Insurer" title={insurerDisplay} icon={headerIcons.insurer} />
-        <ReferenceInfo label="Loss Date" title="" icon={headerIcons.lossDate} last />
+    <section className="overflow-hidden rounded-xl border border-[#D7E1EE] bg-white shadow-[0_4px_18px_rgba(23,54,93,0.06)]">
+      <div className="flex min-h-[64px] items-center justify-between gap-4 bg-[#1D416C] px-5 py-3 sm:px-6">
+        <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white">Claim Onboarding</h1>
+        <Link href="/claims" className="shrink-0 rounded-lg border border-white/20 bg-white/[0.03] px-4 py-2 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
       </div>
-      <div className="grid border-t border-white/15 md:grid-cols-3 xl:grid-cols-5">
-        <ReferenceInfo label="Policy No." title={policyNo} icon={headerIcons.policy} />
-        <ReferenceInfo label="Control No." title="" icon={headerIcons.control} />
-        <ReferenceInfo label="Claim No." title="" icon={headerIcons.claim} />
-        <ReferenceInfo label="Claim Status" title="" icon={headerIcons.status} />
-        <ReferenceInfo label="Spot Intimation Date & Time" title="" icon={headerIcons.intimation} last />
-      </div>
-      <div className="grid gap-x-4 gap-y-1 border-t border-white/15 px-3 py-1.5 text-[9px] sm:grid-cols-2 lg:grid-cols-4">
-        <PolicyMeta label="Policy source" value={data?.policy ? "Sankalp policy" : ""} />
-        <PolicyMeta label="Cover dates" value={data?.policy ? `${formatDate(data.policy.startDate)} - ${formatDate(data.policy.endDate)}` : ""} />
-        <PolicyMeta label="Premium / IDV" value={data?.policy ? `${formatAmount(data.policy.premiumAmount)} / ${formatAmount(data.policy.insuredDeclaredValue)}` : ""} />
-        <div className="min-w-0 truncate text-[#C7D9F7]">
-          <span className="font-medium uppercase tracking-[0.04em] text-[#8FA7C8]">Policy copy: </span>
-          {data?.policyCopy ? (
-            <Link href={data.policyCopy.openUrl} target="_blank" className="font-semibold text-[#C7D9F7] underline-offset-2 hover:underline">
-              {data.policyCopy.fileName}
-            </Link>
-          ) : null}
-        </div>
+      <div className="grid grid-cols-1 bg-white sm:grid-cols-4">
+        {steps.map((step, index) => (
+          <div key={step.number} className={`flex min-h-[46px] items-center justify-center gap-2.5 px-4 py-2 ${index < steps.length - 1 ? "border-b border-[#E1E7EF] sm:border-b-0 sm:border-r" : ""}`}>
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F1F6FB] text-[8.5px] font-bold text-[#315B6B]">{step.number}</span>
+            <span className="text-[10px] font-medium text-[#53657D] sm:text-[10.5px]">{step.label}</span>
+          </div>
+        ))}
       </div>
     </section>
   );
 }
 
-function ReferenceInfo({ label, title, subtitle, icon, last = false }: { label: string; title: string; subtitle?: string; icon: string; last?: boolean }) {
+function ClaimSection({ number, title, children, columns }: { number: string; title: string; children: ReactNode; columns: "two" | "four" }) {
+  const grid = columns === "two" ? "md:grid-cols-2" : "md:grid-cols-2 xl:grid-cols-4";
   return (
-    <div className={`min-w-0 px-4 py-3 ${last ? "" : "border-b border-white/15 xl:border-b-0 xl:border-r"}`}>
-      <div className="flex min-w-0 items-start gap-2.5">
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center">
-          <Image src={icon} alt="" width={28} height={28} className="h-7 w-7 object-contain" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <span className="block text-[9px] font-medium uppercase tracking-[0.05em] text-[#9FB4D3]">{label}</span>
-          <span className="mt-0.5 block min-h-[18px] break-words text-[14px] font-semibold leading-[1.2] text-white">{title || "\u00A0"}</span>
-          {subtitle !== undefined ? <span className="mt-0.5 block min-h-[14px] text-[11px] leading-tight text-[#CBD8E9]">{subtitle || "\u00A0"}</span> : null}
+    <section className="overflow-hidden rounded-xl border border-[#D9E2F0] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <div className="flex min-h-[50px] items-center border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-[9.5px] font-bold text-white">{number}</span>
+          <h2 className="text-[13px] font-semibold text-[#17203A]">{title}</h2>
         </div>
       </div>
-    </div>
+      <div className={`grid min-w-0 grid-cols-1 gap-x-3 gap-y-3 p-3.5 sm:p-4 ${grid}`}>{children}</div>
+    </section>
   );
 }
 
-function PolicyMeta({ label, value }: { label: string; value: string }) {
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 truncate text-[#C7D9F7]">
-      <span className="font-medium uppercase tracking-[0.04em] text-[#8FA7C8]">{label}: </span>
-      <span className="font-semibold">{value || "\u00A0"}</span>
+    <div>
+      <span className={labelClass}>{label}</span>
+      <div className="flex min-h-10 items-center rounded-xl border border-[#D7E0EA] bg-[#F8FAFC] px-3 py-2 text-[11px] font-semibold text-[#344054]">
+        <span className="break-words">{value || "\u00A0"}</span>
+      </div>
     </div>
   );
 }
