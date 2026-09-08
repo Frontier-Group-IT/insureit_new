@@ -490,7 +490,7 @@ function PolicyMobileCard({ policy }: { policy: PolicyRow & { status: string; da
           <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 font-semibold">{validityHint(policy)}</span>
         </div>
         <div className={`grid gap-2 ${isNonMotor ? "grid-cols-2" : "grid-cols-3"}`}>
-          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{insuredValuePrefix(policy)} {formatCurrency(policy.insured_declared_value)}</span>
+          <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{insuredValuePrefix(policy)} {formatInsuredValue(policy)}</span>
           <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{formatCurrency(policy.gross_premium)}</span>
           {!isNonMotor ? <span className="rounded-xl bg-[#F7F9FC] px-3 py-2 text-center font-semibold">{claimCount(policy)} claims</span> : null}
         </div>
@@ -535,7 +535,7 @@ function RiskAssetCell({ policy }: { policy: PolicyRow }) {
 }
 
 function InsuredValueCell({ policy }: { policy: PolicyRow }) {
-  return <div className="text-right tabular-nums"><p className="font-semibold text-[#334155]">{formatCurrency(policy.insured_declared_value)}</p><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8A96A7]">{insuredValuePrefix(policy)}</p></div>;
+  return <div className="text-right tabular-nums"><p className="font-semibold text-[#334155]">{formatInsuredValue(policy)}</p><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#8A96A7]">{insuredValuePrefix(policy)}</p></div>;
 }
 
 function policyBusinessLine(policy: PolicyRow) {
@@ -580,6 +580,16 @@ function riskAssetSecondary(policy: PolicyRow) {
 function insuredValuePrefix(policy: PolicyRow) {
   if (policyBusinessLine(policy) !== "Non Motor") return "IDV";
   return /liability/i.test(policyCategory(policy)) ? "Limit" : "SI";
+}
+
+function isThirdPartyPolicy(policy: PolicyRow) {
+  const thirdPartyPattern = /third[\s-]*party/i;
+  return thirdPartyPattern.test(policy.policy_type?.trim() ?? "") || thirdPartyPattern.test(policy.policy_product?.trim() ?? "");
+}
+
+function formatInsuredValue(policy: PolicyRow) {
+  if (policy.insured_declared_value) return formatCurrency(policy.insured_declared_value);
+  return isThirdPartyPolicy(policy) ? "0" : "-";
 }
 
 function firstText(...values: unknown[]) {
