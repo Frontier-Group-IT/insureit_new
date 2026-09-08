@@ -86,6 +86,9 @@ jobs:
       - name: Customer notification bell panel regression
         run: node apps/mobile-app/scripts/customer-notification-panel-regression.mjs
 
+      - name: Customer Start Claim OTA regression
+        run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
+
       - name: Build Expo web review export
         run: npm run build:mobile:web
 
@@ -107,6 +110,7 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Dependency lockfile: must remain synchronized"
             echo "- Static checks: TypeScript typecheck and Expo lint"
+            echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
             echo "- Review build: Expo web export"
             echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"
             echo "- Production deployment: not triggered by this workflow"
