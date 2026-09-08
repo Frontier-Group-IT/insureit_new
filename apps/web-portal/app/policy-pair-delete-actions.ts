@@ -65,6 +65,7 @@ function friendlyRpcError(message: string) {
   if (/replacement audit/i.test(message)) return message;
   if (/another non-rejected policy intake/i.test(message)) return message;
   if (/official document on another policy/i.test(message)) return message;
+  if (/external renewal opportunity/i.test(message)) return message;
   if (/not the completed intake/i.test(message)) return message;
   if (/changed while preparing deletion/i.test(message)) return message;
   return `Unable to delete the completed Policy + Policy Intake pair: ${message}`;
