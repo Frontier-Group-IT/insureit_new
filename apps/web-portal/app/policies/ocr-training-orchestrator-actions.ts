@@ -122,6 +122,34 @@ export async function autoFinalizeReviewedPolicyOcrTraining(limit = 50) {
   return { attempted: labels.length, finalized, skipped };
 }
 
+export async function enqueueOutstandingPolicyOcrRefinementJobs(limit = 100) {
+  const admin = createSupabaseAdminClient();
+  const { data: candidates, error: candidatesError } = await admin
+    .from("policy_ocr_training_candidates")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(Math.max(1, Math.min(limit, 200)));
+  if (candidatesError || !candidates?.length) return { enqueued: 0 };
+
+  const candidateIds = candidates.map((candidate) => candidate.id);
+  const { data: existingJobs, error: jobsError } = await admin
+    .from("policy_ocr_refinement_jobs")
+    .select("training_candidate_id")
+    .in("training_candidate_id", candidateIds);
+  if (jobsError) return { enqueued: 0 };
+
+  const existingIds = new Set((existingJobs ?? []).map((job) => job.training_candidate_id));
+  const missing = candidateIds
+    .filter((candidateId) => !existingIds.has(candidateId))
+    .map((training_candidate_id) => ({ training_candidate_id }));
+  if (!missing.length) return { enqueued: 0 };
+
+  const { error: insertError } = await admin
+    .from("policy_ocr_refinement_jobs")
+    .upsert(missing, { onConflict: "training_candidate_id", ignoreDuplicates: true });
+  return { enqueued: insertError ? 0 : missing.length };
+}
+
 async function requireApprovalOperator() {
   const { profile } = await getAuthenticatedProfile(await getServerAccessToken());
   if (!profile?.id || profile.role !== "it_super_user" || !(await hasEffectiveCapability(profile, "approve_policy_ocr_training", "approve"))) {

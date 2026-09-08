@@ -227,6 +227,7 @@ const orchestratorActions = readFileSync("app/policies/ocr-training-orchestrator
 assert.match(orchestratorActions, /autoFinalizeReviewedPolicyOcrTraining/);
 assert.match(orchestratorActions, /approve_policy_ocr_training_candidate/);
 assert.match(orchestratorActions, /enqueue_policy_ocr_refinement_job/);
+assert.match(orchestratorActions, /enqueueOutstandingPolicyOcrRefinementJobs/);
 assert.doesNotMatch(queueComponent, /Ready to approve/);
 const reviewerMigration = readFileSync("../../supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql", "utf8");
 assert.match(reviewerMigration, /policy_ocr_training_review_tasks/);
