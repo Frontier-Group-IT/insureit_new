@@ -12,6 +12,7 @@ on:
       - 'supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql'
       - 'supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql'
       - 'supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql'
+      - 'supabase/migrations/20260908130000_policy_ocr_refinement_jobs.sql'
       - '.github/workflows/apply-policy-ocr-reviewer-tasks.yml'
 
 permissions:
@@ -97,6 +98,12 @@ jobs:
       - name: Record OCR batch reviewer notifications
         run: supabase migration repair --linked --status applied 20260908100000
 
+      - name: Apply OCR refinement job queue
+        run: supabase db query --linked --file supabase/migrations/20260908130000_policy_ocr_refinement_jobs.sql
+
+      - name: Record OCR refinement job queue
+        run: supabase migration repair --linked --status applied 20260908130000
+
       - name: Verify bounded OCR orchestrator schema
         shell: bash
         run: |
@@ -107,10 +114,11 @@ jobs:
               to_regclass('public.policy_ocr_training_samples') is not null as samples_ready,
               to_regclass('public.policy_ocr_training_change_proposals') is not null as proposals_ready,
               to_regclass('public.policy_ocr_training_batch_notifications') is not null as batch_notifications_ready,
+              to_regclass('public.policy_ocr_refinement_jobs') is not null as refinement_jobs_ready,
               not has_table_privilege('authenticated','public.policy_ocr_training_orchestrators','SELECT') as orchestrators_private
           ")
           echo "$result"
-          for key in orchestrators_ready samples_ready proposals_ready batch_notifications_ready orchestrators_private; do
+          for key in orchestrators_ready samples_ready proposals_ready batch_notifications_ready refinement_jobs_ready orchestrators_private; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
           done
 

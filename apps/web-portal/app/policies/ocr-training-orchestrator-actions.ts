@@ -107,13 +107,17 @@ export async function autoFinalizeReviewedPolicyOcrTraining(limit = 50) {
       values,
       proposal: label.proposal,
     });
-    const { error: approvalError } = await admin.rpc("approve_policy_ocr_training_candidate", {
+    const { data: candidateId, error: approvalError } = await admin.rpc("approve_policy_ocr_training_candidate", {
       p_label_id: label.id,
       p_actor_id: label.reviewed_by,
       p_candidate_payload: candidate,
     });
-    if (approvalError) skipped += 1;
-    else finalized += 1;
+    if (approvalError || !candidateId) skipped += 1;
+    else {
+      const { error: queueError } = await admin.rpc("enqueue_policy_ocr_refinement_job", { p_candidate_id: candidateId });
+      if (queueError) skipped += 1;
+      else finalized += 1;
+    }
   }
   return { attempted: labels.length, finalized, skipped };
 }

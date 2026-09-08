@@ -1,0 +1,85 @@
+name: Create policy OCR refinement PR
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Claim sanitized refinement job
+        id: job
+        env:
+          WORKER_SECRET: ${{ secrets.POLICY_OCR_WORKER_SECRET }}
+        run: |
+          set -euo pipefail
+          response=$(curl --fail-with-body --silent --show-error \
+            -H "x-insureit-policy-ocr-worker-secret: $WORKER_SECRET" \
+            https://portal.insureit.in/api/internal/policy-ocr/refinement-jobs)
+          job_id=$(jq -r '.job.id // empty' <<<"$response")
+          if [[ -z "$job_id" ]]; then
+            echo "has_job=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          jq -e '.job.candidate.candidate_payload | type == "object"' <<<"$response" >/dev/null
+          jq '.job.candidate.candidate_payload' <<<"$response" > refinement-candidate.json
+          echo "has_job=true" >> "$GITHUB_OUTPUT"
+          echo "job_id=$job_id" >> "$GITHUB_OUTPUT"
+      - name: Create sanitized regression proposal
+        if: steps.job.outputs.has_job == 'true'
+        env:
+          JOB_ID: ${{ steps.job.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          mkdir -p apps/web-portal/scripts/generated-policy-ocr-training
+          cp refinement-candidate.json "apps/web-portal/scripts/generated-policy-ocr-training/${JOB_ID}.json"
+          rm refinement-candidate.json
+          jq -e '."schema_version" == "policy_ocr_training_candidate_v2" and (.ground_truth | type == "object")' \
+            "apps/web-portal/scripts/generated-policy-ocr-training/${JOB_ID}.json" >/dev/null
+      - name: Open refinement PR
+        if: steps.job.outputs.has_job == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_ID: ${{ steps.job.outputs.job_id }}
+        run: |
+          set -euo pipefail
+          branch="automation/policy-ocr-refinement-${JOB_ID}"
+          git switch -c "$branch"
+          git config user.name "insureit-ocr-automation"
+          git config user.email "223556219+Copilot@users.noreply.github.com"
+          git add "apps/web-portal/scripts/generated-policy-ocr-training/${JOB_ID}.json"
+          git commit -m "Add sanitized policy OCR refinement candidate"
+          git push --set-upstream origin "$branch"
+          url=$(gh pr create --base main --head "$branch" \
+            --title "Policy OCR refinement candidate ${JOB_ID}" \
+            --body "Automated sanitized OCR refinement candidate. Canonical CI must validate this PR before any parser change is merged.")
+          number="${url##*/}"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+      - name: Mark refinement job
+        if: always() && steps.job.outputs.has_job == 'true'
+        env:
+          WORKER_SECRET: ${{ secrets.POLICY_OCR_WORKER_SECRET }}
+          JOB_ID: ${{ steps.job.outputs.job_id }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          BRANCH_NAME: ${{ steps.pr.outputs.branch }}
+        run: |
+          status="pr_open"
+          if [[ -z "${PR_NUMBER:-}" ]]; then status="failed"; fi
+          curl --fail-with-body --silent --show-error -X POST \
+            -H "content-type: application/json" \
+            -H "x-insureit-policy-ocr-worker-secret: $WORKER_SECRET" \
+            https://portal.insureit.in/api/internal/policy-ocr/refinement-jobs \
+            --data "$(jq -n --arg id "$JOB_ID" --arg status "$status" --arg branch "${BRANCH_NAME:-}" --argjson pr "${PR_NUMBER:-null}" '{id:$id,status:$status,branchName:$branch,pullRequestNumber:$pr}')"
