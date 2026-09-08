@@ -21,7 +21,6 @@ const vehicleClasses = [
   { value: 'CPM', label: 'CPM - Contractor Plant & Machinery' },
 ];
 const fuelOptions = ['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'Bi-Fuel', 'Other'];
-const policyTypeOptions = ['Motor', 'Health', 'Life', 'Travel', 'Personal Accident', 'Fire', 'Marine', 'Engineering', 'Liability', 'Cyber', 'Property', 'Agriculture / Crop', 'Other / Miscellaneous'];
 const MAX_POLICY_COPY_SIZE_BYTES = 5 * 1024 * 1024;
 type PickedPolicyCopy = { uri: string; name: string; mimeType: string | null; size: number | null };
 type RcLookupState = 'idle' | 'loading' | 'success' | 'error';
@@ -51,8 +50,6 @@ export default function AddVehicleScreen() {
   const [insurerQuery, setInsurerQuery] = useState('');
   const [selectedCompanyId, setSelectedCompanyId] = useState('');
   const [policyNo, setPolicyNo] = useState('');
-  const [policyType, setPolicyType] = useState('Motor');
-  const [policyTypeOpen, setPolicyTypeOpen] = useState(false);
   const [policyStartDate, setPolicyStartDate] = useState('');
   const [policyEndDate, setPolicyEndDate] = useState('');
   const [premium, setPremium] = useState('');
@@ -235,7 +232,6 @@ export default function AddVehicleScreen() {
     const hasPolicyDetails = Boolean(selectedCompanyId || policyNo.trim() || policyStartDate || policyEndDate || premium.trim() || idv.trim() || policyCopy);
     if (hasPolicyDetails && !selectedCompanyId) return setMessage('Search and select the insurer to save policy details.');
     if (hasPolicyDetails && !policyNo.trim()) return setMessage('Enter policy number to save policy details.');
-    if (hasPolicyDetails && !policyType.trim()) return setMessage('Select policy type to save policy details.');
     if (hasPolicyDetails && !policyStartDate) return setMessage('Select policy start date to save policy details.');
     if (hasPolicyDetails && !policyEndDate) return setMessage('Select policy end date to save policy details.');
     if (hasPolicyDetails && new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
@@ -323,7 +319,7 @@ export default function AddVehicleScreen() {
         p_vehicle_id: createdVehicle.id,
         p_insurance_company_id: selectedCompanyId,
         p_policy_no: policyNo.trim().toUpperCase(),
-        p_policy_type: policyType.trim(),
+        p_policy_type: 'Motor',
         p_start_date: policyStartDate,
         p_end_date: policyEndDate,
         p_premium_amount: premiumValue,
@@ -402,10 +398,7 @@ export default function AddVehicleScreen() {
 
         <FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
-          <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
-            <View style={styles.column}><PolicyTypeDropdown value={policyType} open={policyTypeOpen} onToggle={() => setPolicyTypeOpen((value) => !value)} onSelect={(value) => { setPolicyType(value); setPolicyTypeOpen(false); }} /></View>
-          </View>
+          <InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate(defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
             <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
@@ -470,10 +463,6 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
 
 function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void }) {
   return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={styles.inputShell}><MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" /><TextInput value={query} onChangeText={onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />{selectedInsurer ? <MaterialCommunityIcons name="check-circle" size={18} color="#12805C" /> : null}</View><View style={styles.selectMenu}>{!query.trim() ? <Text style={styles.emptyLookupText}>Type matching letters to search insurer.</Text> : selectedInsurer ? <Text style={styles.emptyLookupText}>Selected: {selectedInsurer.name}</Text> : companies.length ? companies.map((company) => <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={styles.selectOption}><Text style={styles.selectOptionText} numberOfLines={1}>{company.name}</Text></Pressable>) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}</View></View>;
-}
-
-function PolicyTypeDropdown({ value, open, onToggle, onSelect }: { value: string; open: boolean; onToggle: () => void; onSelect: (value: string) => void }) {
-  return <View style={styles.field}><Text style={styles.fieldLabel}>Policy type</Text><Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}><View style={styles.selectIcon}><MaterialCommunityIcons name="shield-car" size={18} color="#0A43A3" /></View><Text style={styles.selectValue} numberOfLines={1}>{value}</Text><MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} /></Pressable>{open ? <View style={styles.selectMenu}>{policyTypeOptions.map((type) => { const active = value === type; return <Pressable key={type} accessibilityRole="button" onPress={() => onSelect(type)} style={[styles.selectOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{type}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>; })}</View> : null}</View>;
 }
 
 function ReadonlyDateField({ label, value }: { label: string; value: string }) {
