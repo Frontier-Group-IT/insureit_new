@@ -91,6 +91,12 @@ jobs:
       - name: Record bounded OCR training orchestrator migration
         run: supabase migration repair --linked --status applied 20260907170000
 
+      - name: Apply OCR batch reviewer notifications
+        run: supabase db query --linked --file supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql
+
+      - name: Record OCR batch reviewer notifications
+        run: supabase migration repair --linked --status applied 20260908100000
+
       - name: Verify bounded OCR orchestrator schema
         shell: bash
         run: |
@@ -119,9 +125,3 @@ jobs:
 
       - name: Record simplified OCR orchestrator claim
         run: supabase migration repair --linked --status applied 20260907190000
-
-      - name: Apply OCR batch reviewer notifications
-        run: supabase db query --linked --file supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql
-
-      - name: Record OCR batch reviewer notifications
-        run: supabase migration repair --linked --status applied 20260908100000
