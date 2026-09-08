@@ -151,7 +151,7 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907010000_external_renewal_reporting.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-reporting.yml"
             echo "External renewal reporting migration detected. Waiting for its schema workflow..."
-          elif grep -qxE 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql|supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql|supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql|supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql' <<<"$changed_migrations"; then
+          elif grep -qxE 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql|supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql|supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql|supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-policy-ocr-reviewer-tasks.yml"
             echo "Policy OCR reviewer/orchestrator migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
@@ -166,6 +166,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907200000_surveyor_appointed_notification_title.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-surveyor-appointed-notification-title.yml"
             echo "Surveyor appointed notification title migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260908050000_resolve_claim_document_reupload_events.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-claim-document-reupload-resolution.yml"
+            echo "Claim document reupload resolution migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
