@@ -97,6 +97,14 @@ begin
     raise exception 'Cannot delete this policy pair because the intake is referenced by an official document on another policy.' using errcode = '23503';
   end if;
 
+  if exists (
+    select 1
+    from public.external_renewal_policy_intake_links
+    where intake_id = p_intake_id
+  ) then
+    raise exception 'Cannot delete this policy pair because the completed intake is linked to an external renewal opportunity. Reopen or resolve that opportunity before coordinated cleanup.' using errcode = '23503';
+  end if;
+
   update public.policy_intake_requests
   set final_policy_id = null
   where final_policy_id = p_policy_id
