@@ -18,9 +18,8 @@ const deployWorkflow = fs.readFileSync(path.join(root, "../../.github/workflows/
 assert.match(actions, /createPolicyOcrTrainingRun/);
 assert.match(actions, /startPolicyOcrTrainingRun/);
 assert.match(actions, /stopPolicyOcrTrainingRun/);
-assert.match(actions, /createPolicyOcrProposalFromFeedback/);
-assert.match(actions, /POLICY_OCR_GITHUB_APP_TOKEN/);
-assert.match(actions, /actions\/workflows\/policy-ocr-training-candidate\.yml\/dispatches/);
+assert.match(actions, /recordPolicyOcrSatisfaction/);
+assert.doesNotMatch(actions, /pending_it_approval|approvePolicyOcrChangeProposal|createPolicyOcrProposalFromFeedback/);
 assert.match(page, /satisfactionTasks/);
 assert.match(page, /recordPolicyOcrSatisfaction/);
 assert.match(migration, /policy_ocr_training_orchestrators/);

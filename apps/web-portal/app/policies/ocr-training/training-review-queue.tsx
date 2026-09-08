@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { runPolicyOcrTrainingLabel, submitPolicyOcrDatabaseComparison, type ConfirmPolicyOcrTrainingState, type RunPolicyOcrTrainingState } from "../ocr-training-actions";
+import { runPolicyOcrTrainingLabel, type RunPolicyOcrTrainingState } from "../ocr-training-actions";
 import { assignPolicyOcrReviewTask, completePolicyOcrReviewTask, type AssignPolicyOcrReviewState, type ReviewerChecklistState, startPolicyOcrReviewTask } from "../ocr-training-review-actions";
 import { compareTrainingProposalToReference, compareTrainingValue, formatReviewerDate, type TrainingComparisonKey, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
-import { createPolicyOcrProposalFromFeedback } from "../ocr-training-orchestrator-actions";
 
 export type TrainingQueueRow = { documentId: string; labelId: string; fileName: string; uploadedAt: string; policyReference: string; linkedInsurer: string; status: "needs_review" | "reviewed" | "approved" | "rejected"; processingStatus: "pending" | "processing" | "ready" | "failed" | "exhausted"; processingAttempts: number; failureCode: string | null; proposal: TrainingProposal | null; databaseReference: TrainingDatabaseReference; parserId: string | null; parserVersion: string | null; proposedAt: string | null; reviewedBy: string | null; reviewedAt: string | null; approvedBy: string | null; approvedAt: string | null; reviewTask: ReviewTask | null };
 
@@ -141,9 +140,6 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
 
       <ReviewerComparisonTables row={row} proposal={proposal} comparison={comparison} />
 
-      <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-        {canTrain && ready && (row.status === "needs_review" || row.status === "reviewed") ? <TrainingConfirmationForm documentId={row.documentId} /> : null}
-      </div>
     </section>
   );
 }
@@ -217,24 +213,6 @@ function ComparisonSection({ title, children }: { title: string; children: React
 }
 
 const INITIAL_OCR_RUN_STATE: RunPolicyOcrTrainingState = { status: "idle", message: null };
-const INITIAL_CONFIRM_STATE: ConfirmPolicyOcrTrainingState = { status: "idle", message: null };
-
-function TrainingConfirmationForm({ documentId }: { documentId: string }) {
-  const [state, formAction, pending] = useActionState(submitPolicyOcrDatabaseComparison, INITIAL_CONFIRM_STATE);
-  return (
-    <form action={formAction} className="flex max-w-sm flex-col items-end gap-2">
-      <input type="hidden" name="policy_document_id" value={documentId} />
-      <button disabled={pending} className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60">
-        {pending ? "Approving training…" : "Confirm comparison & approve training"}
-      </button>
-      {state.message ? (
-        <span className={`text-right text-xs font-semibold ${state.status === "success" ? "text-emerald-700" : "text-red-700"}`} role="status">
-          {state.message}
-        </span>
-      ) : null}
-    </form>
-  );
-}
 
 function OcrRunForm({ labelId, rerun = false }: { labelId: string; rerun?: boolean }) {
   const [state, formAction, pending] = useActionState(runPolicyOcrTrainingLabel, INITIAL_OCR_RUN_STATE);
@@ -288,9 +266,7 @@ function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain:
   const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const isStarted = task.status !== "assigned" || startState.status === "success";
   if (task.status === "completed") {
-    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer questions completed. The authorized operator still controls sanitized training approval.
-      {canTrain && task.field_questions?.length ? <form action={createPolicyOcrProposalFromFeedback} className="mt-2"><input type="hidden" name="review_task_id" value={task.id} /><button className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Generate sanitized candidate proposal</button></form> : null}
-    </div>;
+    return <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs font-semibold text-emerald-800">Reviewer questions completed. Parser training started from the saved answers.</div>;
   }
   return (
     <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/60 px-3 py-2">

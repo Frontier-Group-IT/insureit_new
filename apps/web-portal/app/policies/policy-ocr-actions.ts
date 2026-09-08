@@ -21,7 +21,7 @@ import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-struc
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
-import { ensureAutomaticPolicyOcrReview, ensurePolicyOcrSatisfactionTask } from "@/lib/policy-ocr-review-automation";
+import { ensurePolicyOcrBatchReviewNotification, ensureAutomaticPolicyOcrReview, ensurePolicyOcrSatisfactionTask } from "@/lib/policy-ocr-review-automation";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -323,6 +323,7 @@ export async function processPolicyOcrTrainingOrchestratorBatch(
           await ensurePolicyOcrSatisfactionTask(sample.orchestrator_id);
         }
       }
+      await ensurePolicyOcrBatchReviewNotification(orchestratorId);
       return { ok: true as const, processed: Array.isArray(samples) ? samples.length : 0, succeeded, needsReview };
     }
 

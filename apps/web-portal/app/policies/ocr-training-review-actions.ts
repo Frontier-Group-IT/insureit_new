@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requirePolicyOcrTrainingOperator, requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access";
-import { sanitizeEvidenceNote } from "@/lib/policy-ocr-training";
+import {
+  createSanitizedTrainingCandidate,
+  type TrainingDatabaseReference,
+  type TrainingProposal,
+  parseReviewerDate,
+  sanitizeEvidenceNote,
+} from "@/lib/policy-ocr-training";
+import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 import { sendResendEmail } from "@/lib/resend-email";
 
 const QUEUE_PATH = "/policies/ocr-training";
@@ -273,11 +280,144 @@ export async function completePolicyOcrReviewTask(
         sanitized_evidence: feedback,
       }, { onConflict: "review_task_id" });
     }
+    await startPolicyOcrTrainingFromReview(task.id, viewer.profile.id);
     revalidatePath(QUEUE_PATH);
-    return { status: "success", message: "Checklist completed. The sanitized training approval remains with the authorized operator." };
+    return { status: "success", message: "Review answers saved and parser training started." };
   } catch (error) {
     return { status: "error", message: error instanceof Error ? error.message : "The reviewer answers could not be saved." };
   }
+}
+
+type StructuredFeedback = Record<string, { answer: string; correctValue: string | null }>;
+
+const PROPOSAL_KEYS: Partial<Record<keyof TrainingDatabaseReference, keyof TrainingProposal["fields"]>> = {
+  vehicle_registration_status: "vehicle_registration_status",
+  vehicle_registration_number: "vehicle_registration_number",
+  vehicle_class: "vehicle_class",
+  vehicle_make: "vehicle_make",
+  vehicle_model: "vehicle_model",
+  vehicle_fuel_type: "vehicle_fuel_type",
+  vehicle_manufacturing_year: "vehicle_manufacturing_year",
+  vehicle_capacity: "vehicle_capacity",
+  vehicle_chassis_number: "vehicle_chassis_number",
+  vehicle_engine_number: "vehicle_engine_number",
+  vehicle_rto_name: "vehicle_rto_name",
+  vehicle_rto_state: "vehicle_rto_state",
+  insurer_name: "insurer_name",
+  policy_product: "policy_product",
+  policy_number: "policy_number",
+  valid_from: "policy_start_date",
+  valid_upto: "policy_end_date",
+  idv: "idv",
+  od_premium: "od_premium",
+  tp_premium: "tp_premium",
+  cpa_opted: "cpa_opted",
+  cpa_premium: "cpa_premium",
+};
+
+const NUMERIC_REFERENCE_KEYS = new Set<keyof TrainingDatabaseReference>([
+  "idv",
+  "od_premium",
+  "tp_premium",
+  "cpa_premium",
+  "printed_net_premium",
+  "printed_gst",
+  "printed_gross_premium",
+]);
+
+function coerceTrainingFeedbackValue(key: keyof TrainingDatabaseReference, value: string | null) {
+  if (value === null || value.trim() === "") return null;
+  if (NUMERIC_REFERENCE_KEYS.has(key)) {
+    const parsed = Number(value.replaceAll(",", "").replace(/[^\d.-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (key === "vehicle_manufacturing_year") {
+    const parsed = Number(value.replace(/[^\d]/g, ""));
+    return Number.isInteger(parsed) ? parsed : null;
+  }
+  if (key === "cpa_opted") {
+    if (/^(yes|true|1)$/i.test(value)) return true;
+    if (/^(no|false|0)$/i.test(value)) return false;
+    return null;
+  }
+  if (key === "valid_from" || key === "valid_upto") return parseReviewerDate(value) ?? (/^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
+  return value.trim();
+}
+
+function resolveTrainingReference(
+  reference: TrainingDatabaseReference,
+  proposal: TrainingProposal | null,
+  feedback: StructuredFeedback,
+): TrainingDatabaseReference {
+  const resolved = { ...reference };
+  for (const [rawKey, answer] of Object.entries(feedback)) {
+    const key = rawKey as keyof TrainingDatabaseReference;
+    if (!(key in resolved)) continue;
+    if (answer.answer === "withhold") {
+      resolved[key] = null;
+      continue;
+    }
+    if (answer.answer === "database_correct") continue;
+    const proposalKey = PROPOSAL_KEYS[key];
+    const proposalValue = proposalKey ? proposal?.fields[proposalKey]?.value ?? null : null;
+    const value = answer.answer === "provide_correct_value" ? answer.correctValue : proposalValue;
+    resolved[key] = coerceTrainingFeedbackValue(key, value) as never;
+  }
+  return resolved;
+}
+
+function assertFinancialReconciliation(values: TrainingDatabaseReference) {
+  if (values.od_premium === null || values.tp_premium === null || values.cpa_premium === null || values.printed_net_premium === null) return;
+  if (Math.abs(values.od_premium + values.tp_premium + values.cpa_premium - values.printed_net_premium) > 2) {
+    throw new Error("The confirmed OD, TP and CPA values do not reconcile to printed net premium.");
+  }
+}
+
+async function startPolicyOcrTrainingFromReview(taskId: string, reviewerProfileId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data: task, error: taskError } = await admin
+    .from("policy_ocr_training_review_tasks")
+    .select("id,training_label_id,structured_feedback")
+    .eq("id", taskId)
+    .eq("status", "completed")
+    .maybeSingle<{ id: string; training_label_id: string; structured_feedback: StructuredFeedback | null }>();
+  if (taskError || !task?.training_label_id || !task.structured_feedback) throw new Error("The parser training input could not be loaded.");
+
+  const { data: label, error: labelError } = await admin
+    .from("policy_ocr_training_labels")
+    .select("id,policy_document_id,processing_status,status,parser_id,parser_version,proposal")
+    .eq("id", task.training_label_id)
+    .maybeSingle<{ id: string; policy_document_id: string; processing_status: string; status: string; parser_id: string | null; parser_version: string | null; proposal: TrainingProposal | null }>();
+  if (labelError || !label) throw new Error("The OCR training record could not be loaded.");
+  if (label.status === "approved") return;
+  if (label.processing_status !== "ready") throw new Error("The OCR proposal is not ready for parser training.");
+
+  const { data: document, error: documentError } = await admin
+    .from("policy_documents")
+    .select("policy_id")
+    .eq("id", label.policy_document_id)
+    .eq("document_type", "policy_copy")
+    .maybeSingle<{ policy_id: string | null }>();
+  if (documentError || !document?.policy_id) throw new Error("The policy reference could not be loaded for parser training.");
+
+  const reference = await loadPolicyOcrTrainingReference(document.policy_id);
+  if (!reference) throw new Error("The saved policy reference could not be loaded for parser training.");
+  const resolved = resolveTrainingReference(reference, label.proposal, task.structured_feedback);
+  assertFinancialReconciliation(resolved);
+  const candidate = createSanitizedTrainingCandidate({
+    labelId: label.id,
+    parserId: label.parser_id,
+    parserVersion: label.parser_version,
+    values: resolved,
+    proposal: label.proposal,
+  });
+  const { error: approvalError } = await admin.rpc("approve_policy_ocr_database_comparison", {
+    p_label_id: label.id,
+    p_actor_id: reviewerProfileId,
+    p_reference: resolved,
+    p_candidate_payload: candidate,
+  });
+  if (approvalError) throw new Error("Parser training could not be started from the saved review answers.");
 }
 
 async function loadAssignedTask(taskId: string | null, profileId: string): Promise<ReviewTask> {
