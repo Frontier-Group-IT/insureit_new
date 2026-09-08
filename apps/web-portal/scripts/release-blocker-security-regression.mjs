@@ -85,6 +85,7 @@ requireText("completed Policy + Intake storage collection", policyPairDelete, '.
 requireText("completed Policy document storage collection", policyPairDelete, '.from("policy_documents")');
 requireText("completed Policy + Intake atomic RPC", policyPairDelete, 'admin.rpc("delete_policy_with_completed_intake_pair"');
 requireText("completed Policy + Intake storage cleanup audit", policyPairDelete, 'delete_policy_with_completed_intake_storage_cleanup_incomplete');
+requireText("completed Policy + Intake external renewal error", policyPairDelete, 'external renewal opportunity');
 requireText("completed Policy + Intake UI action", itSuperUserDeletePanel, 'Delete Policy + Intake');
 requireText("completed Policy + Intake stronger confirmation", itSuperUserDeletePanel, 'DELETE BOTH');
 requireText("completed Policy + Intake cleanup only offered after intake blocker", itSuperUserDeletePanel, 'entity === "policy" && /policy intake/i.test(result.error)');
@@ -100,6 +101,8 @@ requireText("completed Policy + Intake invoice blocker", policyPairDeleteMigrati
 requireText("completed Policy + Intake payable blocker", policyPairDeleteMigration, "from public.partner_payables where policy_id = p_policy_id");
 requireText("completed Policy + Intake replacement audit blocker", policyPairDeleteMigration, "from public.policy_replacement_audit");
 requireText("completed Policy + Intake other active intake blocker", policyPairDeleteMigration, "another non-rejected policy intake");
+requireText("completed Policy + Intake external renewal blocker", policyPairDeleteMigration, "from public.external_renewal_policy_intake_links");
+requireText("completed Policy + Intake external renewal message", policyPairDeleteMigration, "linked to an external renewal opportunity");
 requireText("completed Policy + Intake rejected links preserved", policyPairDeleteMigration, "set final_policy_id = null");
 requireText("completed Policy + Intake intake deletion", policyPairDeleteMigration, "delete from public.policy_intake_requests");
 requireText("completed Policy + Intake policy deletion", policyPairDeleteMigration, "delete from public.policies");
@@ -153,6 +156,7 @@ console.log(JSON.stringify({
   policyIntakeStorageCleanupGuard: true,
   itSuperUserCompletedPolicyIntakeAtomicCleanup: true,
   completedPolicyIntakeProtectedDependencies: true,
+  completedPolicyIntakeExternalRenewalGuard: true,
   completedPolicyIntakeStorageCleanupAudit: true,
   status: "ok",
 }, null, 2));
