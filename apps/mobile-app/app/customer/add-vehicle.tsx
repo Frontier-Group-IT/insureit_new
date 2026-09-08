@@ -8,6 +8,7 @@ import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { lookupCustomerRc } from '@/lib/customer-rc-lookup';
+import { lookupCustomerRcPolicyDetails } from '@/lib/customer-rc-policy-details';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany } from '@/lib/types';
@@ -58,6 +59,7 @@ export default function AddVehicleScreen() {
   const [premium, setPremium] = useState('');
   const [idv, setIdv] = useState('');
   const [policyCopy, setPolicyCopy] = useState<PickedPolicyCopy | null>(null);
+  const [policyDetailsFetchedFromRc, setPolicyDetailsFetchedFromRc] = useState(false);
   const [registrationDate, setRegistrationDate] = useState('');
   const [fitnessExpiryDate, setFitnessExpiryDate] = useState('');
   const [pucExpiryDate, setPucExpiryDate] = useState('');
@@ -127,12 +129,23 @@ export default function AddVehicleScreen() {
     return () => { active = false; };
   }, []);
 
+  function clearRcPolicyPrefill() {
+    if (!policyDetailsFetchedFromRc) return;
+    setSelectedCompanyId('');
+    setInsurerQuery('');
+    setPolicyNo('');
+    setPolicyType('Motor');
+    setPolicyEndDate('');
+    setPolicyDetailsFetchedFromRc(false);
+  }
+
   function changeVehicleNo(value: string) {
     const next = value.replace(/[^A-Za-z0-9 -]/g, '').toUpperCase();
     setVehicleNo(next);
     if (normalizeRc(next) !== lastFetchedRc) {
       setRcLookupState('idle');
       setRcLookupMessage('');
+      clearRcPolicyPrefill();
     }
   }
 
@@ -166,6 +179,7 @@ export default function AddVehicleScreen() {
       if (details.registrationDate) setRegistrationDate(details.registrationDate);
 
       let manufacturerNeedsConfirmation = false;
+      let insurerNeedsConfirmation = false;
       if (details.manufacturer) {
         const resolvedMake = resolveManufacturer(details.manufacturer, manufacturers);
         if (resolvedMake) {
@@ -195,12 +209,41 @@ export default function AddVehicleScreen() {
       if (details.nationalPermitExpiryDate) setNationalPermitExpiryDate(details.nationalPermitExpiryDate);
       if (details.localPermitExpiryDate) setLocalPermitExpiryDate(details.localPermitExpiryDate);
 
+      try {
+        const policyResponse = await lookupCustomerRcPolicyDetails(normalized);
+        const policyDetails = policyResponse.details;
+        const hasFetchedPolicyDetails = Boolean(policyDetails.insuranceCompany || policyDetails.policyNumber || policyDetails.policyEndDate);
+        if (hasFetchedPolicyDetails) {
+          if (policyDetails.insuranceCompany) {
+            const resolvedInsurer = resolveInsurer(policyDetails.insuranceCompany, companies);
+            if (resolvedInsurer) {
+              setSelectedCompanyId(resolvedInsurer.id);
+              setInsurerQuery(resolvedInsurer.name);
+            } else {
+              setSelectedCompanyId('');
+              setInsurerQuery(policyDetails.insuranceCompany);
+              insurerNeedsConfirmation = true;
+            }
+          }
+          if (policyDetails.policyNumber) setPolicyNo(policyDetails.policyNumber);
+          if (policyDetails.policyEndDate) setPolicyEndDate(policyDetails.policyEndDate);
+          setPolicyType('Motor');
+          setPolicyDetailsFetchedFromRc(true);
+        } else {
+          setPolicyDetailsFetchedFromRc(false);
+        }
+      } catch (policyError) {
+        console.warn('Customer RC insurance detail prefill skipped', policyError instanceof Error ? policyError.message : 'lookup failed');
+      }
+
       setLastFetchedRc(normalized);
       setRcLookupState('success');
       if (response.isStale) {
         setRcLookupMessage('Vehicle details found from an earlier lookup. Please review before saving.');
       } else if (manufacturerNeedsConfirmation) {
         setRcLookupMessage('Vehicle details found. Please confirm the manufacturer before saving.');
+      } else if (insurerNeedsConfirmation) {
+        setRcLookupMessage('Vehicle details found. Please confirm the insurer before saving policy details.');
       } else {
         setRcLookupMessage('Vehicle details found. Please review the filled information.');
       }
@@ -364,7 +407,7 @@ export default function AddVehicleScreen() {
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
         {message ? <Message type="error">{message}</Message> : null}
-        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setLastFetchedRc(''); }} /> : null}
+        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setLastFetchedRc(''); clearRcPolicyPrefill(); }} /> : null}
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
@@ -401,13 +444,14 @@ export default function AddVehicleScreen() {
         ) : null}
 
         <FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">
+          {policyDetailsFetchedFromRc ? <View style={styles.policyHintBox}><MaterialCommunityIcons name="shield-check-outline" size={18} color="#0A43A3" /><Text style={styles.policyHintText}>Insurance details were fetched from RC records. Please review them before saving.</Text></View> : null}
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
             <View style={styles.column}><PolicyTypeDropdown value={policyType} open={policyTypeOpen} onToggle={() => setPolicyTypeOpen((value) => !value)} onSelect={(value) => { setPolicyType(value); setPolicyTypeOpen(false); }} /></View>
           </View>
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate(defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
+            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); if (!policyDetailsFetchedFromRc || !policyEndDate) setPolicyEndDate(defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
             <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
           </View>
           <View style={styles.twoColumnRow}>
@@ -486,7 +530,7 @@ function MoneyField({ label, icon, value, onChangeText }: { label: string; icon:
 
 function AccountDropdown({ contexts, selectedCustomerId, open, onToggle, onSelect }: { contexts: CustomerAccountContext[]; selectedCustomerId: string; open: boolean; onToggle: () => void; onSelect: (customerId: string) => void }) {
   const selected = contexts.find((context) => context.customer_id === selectedCustomerId);
-  return <View style={styles.accountBlock}><Text style={styles.fieldLabel}>Add for</Text><Pressable accessibilityRole="button" onPress={onToggle} style={styles.dropdownButton}><View style={styles.accountCopy}><Text style={styles.accountTitle} numberOfLines={1}>{selected ? customerAccountTitle(selected) : 'Select customer'}</Text><Text style={styles.accountMeta}>{selected ? `${accountSelectorRoleLabel(selected)} - ${partnerTypeLabel(selected.partner_type)}` : 'Choose where this vehicle belongs'}</Text></View><MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={palette.navy} /></Pressable>{open ? <View style={styles.dropdownMenu}>{contexts.map((context) => { const active = context.customer_id === selectedCustomerId; return <Pressable key={context.customer_id} accessibilityRole="button" onPress={() => onSelect(context.customer_id)} style={[styles.dropdownItem, active && styles.dropdownItemActive]}><View style={styles.accountCopy}><Text style={[styles.accountTitle, active && styles.accountTitleActive]} numberOfLines={1}>{customerAccountTitle(context)}</Text><Text style={[styles.accountMeta, active && styles.accountMetaActive]}>{accountSelectorRoleLabel(context)} - {partnerTypeLabel(context.partner_type)}</Text></View>{active ? <MaterialCommunityIcons name="check-circle" size={19} color={palette.navy} /> : null}</Pressable>; })}</View> : null}</View>;
+  return <View style={styles.accountBlock}><Text style={styles.fieldLabel}>Add for</Text><Pressable accessibilityRole="button" onPress={onToggle} style={styles.dropdownButton}><View style={styles.accountCopy}><Text style={styles.accountTitle} numberOfLines={1}>{selected ? customerAccountTitle(selected) : 'Select customer'}</Text><Text style={styles.accountMeta}>{selected ? `${accountSelectorRoleLabel(selected)} - ${partnerTypeLabel(selected.partner_type)}` : 'Choose where this vehicle belongs'}</Text></View><MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={palette.navy} /></Pressable>{open ? <View style={styles.dropdownMenu}>{contexts.map((context) => { const active = context.customer_id === selectedCustomerId; return <Pressable key={context.customer_id} accessibilityRole="button" onPress={() => onSelect(context.customer_id)} style={[styles.dropdownItem, active && styles.dropdownItemActive]}><View style={styles.accountCopy}><Text style={[styles.accountTitle, active && styles.accountTitleActive]} numberOfLines={1}>{customerAccountTitle(context)}</Text><Text style={[styles.accountMeta, active && styles.accountMetaActive]}>{accountSelectorRoleLabel(context)} - ${partnerTypeLabel(context.partner_type)}</Text></View>{active ? <MaterialCommunityIcons name="check-circle" size={19} color={palette.navy} /> : null}</Pressable>; })}</View> : null}</View>;
 }
 
 function accountSelectorRoleLabel(context: CustomerAccountContext) {
@@ -522,6 +566,21 @@ function resolveManufacturer(providerValue: string, manufacturers: string[]) {
   const exact = manufacturers.find((item) => normalizeManufacturer(item) === provider);
   if (exact) return exact;
   const candidates = manufacturers.filter((item) => { const normalized = normalizeManufacturer(item); return normalized.length >= 3 && (provider.includes(normalized) || normalized.includes(provider)); });
+  return candidates.length === 1 ? candidates[0] : null;
+}
+function normalizeInsurer(value: string) {
+  return value.toUpperCase().replace(/&/g, ' AND ').replace(/\b(PRIVATE|PVT|LIMITED|LTD|GENERAL|INSURANCE|ASSURANCE|COMPANY|CO|INDIA)\b/g, ' ').replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function resolveInsurer(providerValue: string, companies: InsuranceCompany[]) {
+  const compact = providerValue.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const exact = companies.find((company) => company.name.toUpperCase().replace(/[^A-Z0-9]/g, '') === compact);
+  if (exact) return exact;
+  const provider = normalizeInsurer(providerValue);
+  if (!provider) return null;
+  const candidates = companies.filter((company) => {
+    const normalized = normalizeInsurer(company.name);
+    return normalized.length >= 3 && (normalized === provider || provider.includes(normalized) || normalized.includes(provider));
+  });
   return candidates.length === 1 ? candidates[0] : null;
 }
 function cleanProviderModel(model: string, manufacturer: string | null) {
