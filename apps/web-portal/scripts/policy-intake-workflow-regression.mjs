@@ -62,9 +62,11 @@ assert(workspace.includes('{ value: "in_review", label: "In Review", count: stat
 assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
-assert(contextCard.includes("View Policy Copy"),"Onboarding sidebar must keep the intake policy copy available to Operations");
-assert(contextCard.includes('document.getElementById("policy-summary-fixed-card")'),"Intake context must align with the existing right-side summary area");
-const commercialShell=read("components/policy-commercial-shell.tsx");assert(commercialShell.includes("PolicyIntakeOnboardingContextCard"),"Policy Onboarding must render the intake context in its summary sidebar");
+assert(contextCard.includes("View Policy Copy"),"Policy Onboarding footer must keep the intake policy copy available to Operations");
+assert(contextCard.includes('FOOTER_TARGET_ID="policy-intake-footer-left-target"'),"Intake context must target the bottom-left onboarding footer area");
+assert(contextCard.includes('label==="Book Active Policy"||label==="Booking policy…"'),"Intake context must anchor beside the existing policy footer actions");
+assert(!contextCard.includes('document.getElementById("policy-summary-fixed-card")'),"Intake context must no longer mount in the right-side policy summary area");
+const commercialShell=read("components/policy-commercial-shell.tsx");assert(commercialShell.includes("PolicyIntakeOnboardingContextCard"),"Policy Onboarding must render the intake context for its footer action");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
