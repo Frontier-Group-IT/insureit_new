@@ -342,7 +342,7 @@ function formatValue(value: string | number | boolean | null, date: boolean) {
 }
 
 function filterLabel(filter: Filter) {
-  return filter === "all" ? "All" : filter === "needs_review" ? "Needs review" : filter === "exact_match" ? "Exact match" : filter === "reviewed" ? "Ready to approve" : filter === "approved" ? "Approved" : "Failed";
+  return filter === "all" ? "All" : filter === "needs_review" ? "Needs review" : filter === "exact_match" ? "Exact match" : filter === "reviewed" ? "Reviewed" : filter === "approved" ? "Approved" : "Failed";
 }
 
 function statusLabel(row: TrainingQueueRow) {
