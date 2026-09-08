@@ -6,6 +6,7 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access";
 import { createSanitizedTrainingCandidate, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
+import { startPolicyOcrTrainingFromReview } from "./ocr-training-review-actions";
 
 const QUEUE_PATH = "/policies/ocr-training";
 
@@ -32,6 +33,20 @@ type ReviewedTrainingLabel = {
 
 export async function autoFinalizeReviewedPolicyOcrTraining(limit = 50) {
   const admin = createSupabaseAdminClient();
+  const { data: completedTasks } = await admin
+    .from("policy_ocr_training_review_tasks")
+    .select("id,training_label_id,assigned_reviewer_profile_id")
+    .eq("status", "completed")
+    .not("assigned_reviewer_profile_id", "is", null)
+    .limit(Math.max(1, Math.min(limit, 100)))
+    .returns<Array<{ id: string; training_label_id: string; assigned_reviewer_profile_id: string }>>();
+
+  const taskResults = await Promise.allSettled(
+    (completedTasks ?? []).map((task) => startPolicyOcrTrainingFromReview(task.id, task.assigned_reviewer_profile_id)),
+  );
+  let finalized = taskResults.filter((result) => result.status === "fulfilled").length;
+  let skipped = taskResults.length - finalized;
+
   const { data: labels, error } = await admin
     .from("policy_ocr_training_labels")
     .select("id,reviewed_by,parser_id,parser_version,proposal,section_02_reference,insurer_name,policy_product,valid_from,valid_upto,idv,od_premium,tp_premium,cpa_opted,cpa_premium,printed_net_premium,printed_gst,printed_gross_premium")
@@ -40,10 +55,7 @@ export async function autoFinalizeReviewedPolicyOcrTraining(limit = 50) {
     .not("reviewed_by", "is", null)
     .limit(Math.max(1, Math.min(limit, 100)))
     .returns<ReviewedTrainingLabel[]>();
-  if (error || !labels?.length) return { attempted: 0, finalized: 0, skipped: 0 };
-
-  let finalized = 0;
-  let skipped = 0;
+  if (error || !labels?.length) return { attempted: (completedTasks ?? []).length, finalized, skipped };
   for (const label of labels) {
     if (!label.reviewed_by) {
       skipped += 1;
