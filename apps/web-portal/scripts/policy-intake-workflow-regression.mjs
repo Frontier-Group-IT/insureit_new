@@ -67,6 +67,11 @@ assert(contextCard.includes('FOOTER_TARGET_ID="policy-intake-footer-left-target"
 assert(contextCard.includes('label==="Book Active Policy"||label==="Booking policy…"'),"Intake context must anchor beside the existing policy footer actions");
 assert(!contextCard.includes('document.getElementById("policy-summary-fixed-card")'),"Intake context must no longer mount in the right-side policy summary area");
 const commercialShell=read("components/policy-commercial-shell.tsx");assert(commercialShell.includes("PolicyIntakeOnboardingContextCard"),"Policy Onboarding must render the intake context for its footer action");
+const unifiedForm=read("components/policy-unified-form.tsx");
+assert(unifiedForm.includes('if(sourceIntakeId){router.push("/policy-intakes");}'),"Completed Policy Intake booking must return Operations to the Policy Intake Queue");
+assert(!unifiedForm.includes('router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}?success=completed`)'),"Completed Policy Intake booking must not return to the individual Intake Review page");
+assert(unifiedForm.includes('router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`)'),"Save & Return to Intake must keep returning to the individual Intake Review page");
+assert(unifiedForm.includes('router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}&policy_id=${encodeURIComponent(result.policyId)}`)'),"Direct Policy Onboarding must keep returning to the Policy Register");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
