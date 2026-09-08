@@ -176,13 +176,6 @@ export function AddClaimForm() {
           <ReadOnlyField label="Policy Type" value={lookup?.policy?.policyType ?? ""} />
         </ClaimSection>
 
-        <ClaimSection number="04" title="Claim Record" columns="four">
-          <ReadOnlyField label="Control No." value="" />
-          <ReadOnlyField label="Claim No." value="" />
-          <ReadOnlyField label="Claim Status" value="" />
-          <ReadOnlyField label="Spot Intimation Date & Time" value="" />
-        </ClaimSection>
-
         {saveMessage ? (
           <div role="alert" className="rounded-xl border border-[#F2C8C5] bg-[#FFF7F6] px-4 py-3 text-[11px] font-medium text-[#B42318]">
             {saveMessage}
@@ -267,7 +260,6 @@ function ClaimOnboardingHeader() {
     { number: "01", label: "Claim Details" },
     { number: "02", label: "Customer & Vehicle" },
     { number: "03", label: "Active Policy" },
-    { number: "04", label: "Claim Record" },
   ];
 
   return (
@@ -276,7 +268,7 @@ function ClaimOnboardingHeader() {
         <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-white">Claim Onboarding</h1>
         <Link href="/claims" className="shrink-0 rounded-lg border border-white/20 bg-white/[0.03] px-4 py-2 text-[10px] font-semibold text-white transition hover:border-white/35 hover:bg-white/[0.08]">Back</Link>
       </div>
-      <div className="grid grid-cols-1 bg-white sm:grid-cols-4">
+      <div className="grid grid-cols-1 bg-white sm:grid-cols-3">
         {steps.map((step, index) => (
           <div key={step.number} className={`flex min-h-[46px] items-center justify-center gap-2.5 px-4 py-2 ${index < steps.length - 1 ? "border-b border-[#E1E7EF] sm:border-b-0 sm:border-r" : ""}`}>
             <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F1F6FB] text-[8.5px] font-bold text-[#315B6B]">{step.number}</span>
