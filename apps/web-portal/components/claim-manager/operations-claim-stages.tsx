@@ -443,17 +443,6 @@ function formatDisplayDate(value: string) {
 
 function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
-  const [locationError, setLocationError] = useState("");
-  const captureLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError("Location capture is not supported in this browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => { setLocation(`${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`); setLocationError(""); },
-      () => setLocationError("Unable to access your location. Enter it manually."),
-    );
-  };
 
   return (
     <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
@@ -478,12 +467,8 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
             if (field.name === "location") {
               return (
                 <div key={field.name} className="min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <label htmlFor="spot-intimation-location" className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}</label>
-                    <button type="button" onClick={captureLocation} className="text-[10px] font-semibold normal-case tracking-normal text-[#174EA6] hover:underline">Use current location</button>
-                  </div>
+                  <label htmlFor="spot-intimation-location" className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}</label>
                   <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
-                  {locationError ? <span role="alert" className="mt-1 block text-[10px] font-medium text-rose-700">{locationError}</span> : null}
                 </div>
               );
             }
