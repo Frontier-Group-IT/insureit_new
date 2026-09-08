@@ -89,8 +89,12 @@ export function AddClaimForm() {
     try {
       const result = await createOperationsClaim(lookup.vehicle.id, lossAt.toISOString());
       if (!result.ok) {
-        setSaveMessage(result.message);
-        setExistingClaim(result.existingClaim ?? null);
+        if (result.existingClaim) {
+          setExistingClaim(result.existingClaim);
+          setSaveMessage("");
+        } else {
+          setSaveMessage(result.message);
+        }
         return;
       }
       router.push("/claims");
@@ -179,13 +183,8 @@ export function AddClaimForm() {
         </ClaimSection>
 
         {saveMessage ? (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#F2C8C5] bg-[#FFF7F6] px-4 py-3 text-[11px] font-medium text-[#B42318]">
-            <span>{saveMessage}</span>
-            {existingClaim ? (
-              <Link prefetch={false} href={`/claims/${existingClaim.id}`} className="rounded-lg bg-white px-3 py-1.5 font-semibold text-[#003A83] shadow-sm ring-1 ring-[#D7E1EE]">
-                Open {existingClaim.claimNo}
-              </Link>
-            ) : null}
+          <div role="alert" className="rounded-xl border border-[#F2C8C5] bg-[#FFF7F6] px-4 py-3 text-[11px] font-medium text-[#B42318]">
+            {saveMessage}
           </div>
         ) : null}
 
@@ -202,6 +201,62 @@ export function AddClaimForm() {
           </button>
         </div>
       </form>
+
+      {existingClaim ? (
+        <ExistingClaimPopup
+          onViewClaim={() => router.push(`/claims/${existingClaim.id}`)}
+          onCancel={() => setExistingClaim(null)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ExistingClaimPopup({ onViewClaim, onCancel }: { onViewClaim: () => void; onCancel: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071832]/60 px-5 py-8 backdrop-blur-[1px]"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onCancel();
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="existing-claim-title"
+        aria-describedby="existing-claim-description"
+        className="w-full max-w-[420px] rounded-[22px] bg-white px-6 pb-6 pt-7 text-center shadow-[0_20px_60px_rgba(7,29,73,0.24)] sm:px-7"
+      >
+        <div className="mx-auto mb-5 grid h-[58px] w-[58px] place-items-center rounded-full bg-[#FFF0E8] text-[#E66A4E]">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.3 3.3 2.7 17a2 2 0 0 0 1.75 3h15.1A2 2 0 0 0 21.3 17L13.7 3.3a2 2 0 0 0-3.4 0Z" />
+            <path d="M12 8v5" />
+            <path d="M12 17h.01" />
+          </svg>
+        </div>
+        <h2 id="existing-claim-title" className="text-[21px] font-extrabold tracking-[-0.02em] text-[#081D49]">
+          Claim already in progress
+        </h2>
+        <p id="existing-claim-description" className="mt-3 text-[13.5px] font-semibold leading-5 text-[#667085]">
+          An active claim already exists for this policy.
+        </p>
+        <button
+          type="button"
+          autoFocus
+          onClick={onViewClaim}
+          className="mt-6 min-h-[50px] w-full rounded-[14px] bg-[#07327B] px-4 text-[13px] font-extrabold text-white transition hover:bg-[#062A68] focus:outline-none focus:ring-2 focus:ring-[#9CB6DA] focus:ring-offset-2"
+        >
+          View Existing Claim
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="mt-3 min-h-[50px] w-full rounded-[14px] border-[1.5px] border-[#9CB6DA] bg-white px-4 text-[13px] font-extrabold text-[#07327B] transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#9CB6DA] focus:ring-offset-2"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
