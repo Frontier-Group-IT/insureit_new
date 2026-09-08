@@ -30,6 +30,8 @@ const claimsActions = source("app/actions.ts");
 const masterRecordDelete = source("app/master-record-delete-actions.ts");
 const policyIntakesPage = source("app/policy-intakes/page.tsx");
 const itSuperUserDeletePanel = source("components/it-super-user-delete-panel.tsx");
+const policyPairDelete = source("app/policy-pair-delete-actions.ts");
+const policyPairDeleteMigration = source("../../supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql");
 
 for (const [name, content] of [
   ["account review page", accountReview],
@@ -77,6 +79,37 @@ requireText("Policy Intake document cleanup", masterRecordDelete, '.from("policy
 requireText("Policy Intake concurrent final-policy guard", masterRecordDelete, '.is("final_policy_id", null)');
 requireText("Policy Intake audit marker", masterRecordDelete, 'cascaded_policy_intake_records: true');
 
+requireText("completed Policy + Intake cleanup role guard", policyPairDelete, 'profile.role !== "it_super_user"');
+requireText("completed Policy + Intake lookup", policyPairDelete, '.eq("status", "completed")');
+requireText("completed Policy + Intake storage collection", policyPairDelete, '.from("policy_intake_documents")');
+requireText("completed Policy document storage collection", policyPairDelete, '.from("policy_documents")');
+requireText("completed Policy + Intake atomic RPC", policyPairDelete, 'admin.rpc("delete_policy_with_completed_intake_pair"');
+requireText("completed Policy + Intake storage cleanup audit", policyPairDelete, 'delete_policy_with_completed_intake_storage_cleanup_incomplete');
+requireText("completed Policy + Intake external renewal error", policyPairDelete, 'external renewal opportunity');
+requireText("completed Policy + Intake UI action", itSuperUserDeletePanel, 'Delete Policy + Intake');
+requireText("completed Policy + Intake stronger confirmation", itSuperUserDeletePanel, 'DELETE BOTH');
+requireText("completed Policy + Intake cleanup only offered after intake blocker", itSuperUserDeletePanel, 'entity === "policy" && /policy intake/i.test(result.error)');
+
+requireText("completed Policy + Intake migration security definer", policyPairDeleteMigration, "security definer");
+requireText("completed Policy + Intake actor role guard", policyPairDeleteMigration, "role::text = 'it_super_user'");
+requireText("completed Policy + Intake policy row lock", policyPairDeleteMigration, "from public.policies\n  where id = p_policy_id\n  for update");
+requireText("completed Policy + Intake intake row lock", policyPairDeleteMigration, "from public.policy_intake_requests\n  where id = p_intake_id\n  for update");
+requireText("completed Policy + Intake completed-state guard", policyPairDeleteMigration, "<> 'completed'");
+requireText("completed Policy + Intake claim blocker", policyPairDeleteMigration, "from public.claims where policy_id = p_policy_id");
+requireText("completed Policy + Intake reconciliation blocker", policyPairDeleteMigration, "from public.reconciliation_lines where policy_id = p_policy_id");
+requireText("completed Policy + Intake invoice blocker", policyPairDeleteMigration, "from public.accounts_invoice_lines where policy_id = p_policy_id");
+requireText("completed Policy + Intake payable blocker", policyPairDeleteMigration, "from public.partner_payables where policy_id = p_policy_id");
+requireText("completed Policy + Intake replacement audit blocker", policyPairDeleteMigration, "from public.policy_replacement_audit");
+requireText("completed Policy + Intake other active intake blocker", policyPairDeleteMigration, "another non-rejected policy intake");
+requireText("completed Policy + Intake external renewal blocker", policyPairDeleteMigration, "from public.external_renewal_policy_intake_links");
+requireText("completed Policy + Intake external renewal message", policyPairDeleteMigration, "linked to an external renewal opportunity");
+requireText("completed Policy + Intake rejected links preserved", policyPairDeleteMigration, "set final_policy_id = null");
+requireText("completed Policy + Intake intake deletion", policyPairDeleteMigration, "delete from public.policy_intake_requests");
+requireText("completed Policy + Intake policy deletion", policyPairDeleteMigration, "delete from public.policies");
+requireText("completed Policy + Intake audit trail", policyPairDeleteMigration, "delete_policy_with_completed_intake");
+requireText("completed Policy + Intake RPC browser revoke", policyPairDeleteMigration, "revoke all on function public.delete_policy_with_completed_intake_pair(uuid, uuid, uuid) from authenticated");
+requireText("completed Policy + Intake RPC service-role grant", policyPairDeleteMigration, "grant execute on function public.delete_policy_with_completed_intake_pair(uuid, uuid, uuid) to service_role");
+
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "rejected-1", status: "rejected" }]),
   { rejectedIds: ["rejected-1"], blockingCount: 0 },
@@ -86,7 +119,7 @@ assert.deepEqual(
 assert.deepEqual(
   classifyPolicyIntakeDeleteLinks([{ id: "completed-1", status: "completed" }]),
   { rejectedIds: [], blockingCount: 1 },
-  "A completed policy intake must continue blocking policy deletion."
+  "A completed policy intake must continue blocking ordinary policy deletion."
 );
 
 assert.deepEqual(
@@ -95,7 +128,7 @@ assert.deepEqual(
     { id: "completed-1", status: "completed" },
   ]),
   { rejectedIds: ["rejected-1"], blockingCount: 1 },
-  "A mixed rejected + completed intake set must still block policy deletion."
+  "A mixed rejected + completed intake set must still block ordinary policy deletion."
 );
 
 assert.deepEqual(
@@ -121,5 +154,9 @@ console.log(JSON.stringify({
   itSuperUserPolicyIntakeDeletePanel: true,
   policyIntakeFinalPolicyDeleteGuard: true,
   policyIntakeStorageCleanupGuard: true,
+  itSuperUserCompletedPolicyIntakeAtomicCleanup: true,
+  completedPolicyIntakeProtectedDependencies: true,
+  completedPolicyIntakeExternalRenewalGuard: true,
+  completedPolicyIntakeStorageCleanupAudit: true,
   status: "ok",
 }, null, 2));
