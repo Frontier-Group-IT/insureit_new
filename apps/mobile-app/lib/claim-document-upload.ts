@@ -2,6 +2,8 @@ export type ClaimUploadDescriptor =
   | { ok: true; mimeType: string; storageExtension: string }
   | { ok: false; message: string };
 
+export type ClaimUploadStorageFailureKind = 'auth' | 'already_exists' | 'transient' | 'terminal';
+
 const MIME_ALIASES: Record<string, string> = {
   'application/x-pdf': 'application/pdf',
   'image/jpg': 'image/jpeg',
@@ -64,6 +66,35 @@ function unsupportedMessage(name: string) {
   return `${label} is not a supported claim document. Choose a PDF, JPG, PNG, WEBP, HEIC, or a supported video/audio file.`;
 }
 
+function storageErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message.toLowerCase();
+  if (error && typeof error === 'object' && 'message' in error) return String((error as { message?: unknown }).message ?? '').toLowerCase();
+  return String(error ?? '').toLowerCase();
+}
+
+export function claimUploadStorageErrorStatus(error: unknown) {
+  if (!error || typeof error !== 'object') return null;
+  const candidate = (error as { statusCode?: unknown; status?: unknown }).statusCode ?? (error as { status?: unknown }).status;
+  const numeric = typeof candidate === 'number' ? candidate : Number(candidate);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
+export function classifyClaimUploadStorageError(error: unknown): ClaimUploadStorageFailureKind {
+  const status = claimUploadStorageErrorStatus(error);
+  const message = storageErrorMessage(error);
+
+  if (status === 409 || /already exists|duplicate|resource exists/.test(message)) return 'already_exists';
+  if (status === 401 || status === 403 || /unauthori[sz]ed|jwt|token expired|invalid token|authentication/.test(message)) return 'auth';
+  if (
+    status === 408 ||
+    status === 425 ||
+    status === 429 ||
+    (status !== null && status >= 500) ||
+    /network|fetch|timeout|timed out|connection|econn|socket|temporar|unavailable|gateway/.test(message)
+  ) return 'transient';
+  return 'terminal';
+}
+
 export function resolveClaimUploadDescriptor(file: { name: string; mimeType?: string | null }): ClaimUploadDescriptor {
   const mimeType = normalizedMimeType(file.mimeType);
   const extension = fileExtension(file.name);
@@ -97,8 +128,9 @@ export function claimUploadTooLargeMessage(name: string, maxSizeLabel: string) {
   return `${label} is larger than ${maxSizeLabel}. Please choose a smaller file.`;
 }
 
-export function claimUploadStorageMessage(name: string) {
+export function claimUploadStorageMessage(name: string, afterRetry = false) {
   const label = name.trim() || 'The selected file';
+  if (afterRetry) return `${label} could not be uploaded after retrying. Please tap the document again to try once more.`;
   return `${label} could not be uploaded to secure storage. Please try again.`;
 }
 
