@@ -56,6 +56,8 @@ const UPLOAD_STATUSES = new Set([
   'Final Documents Submitted',
 ]);
 
+const READ_ONLY_FIELD_STYLE = { opacity: 0.68 } as const;
+
 export default function InternalClaimStageParity() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; key?: string }>();
@@ -311,24 +313,26 @@ function renderStage(key: InternalJourneyStageKey, values: Record<string, unknow
 }
 
 function ReadOnlyDate({ label, value }: { label: string; value: unknown }) {
-  return <AppDatePicker label={label} value={isoDate(value)} onChange={() => undefined} formatDisplay={displayDate} />;
+  return <View style={READ_ONLY_FIELD_STYLE}><AppDatePicker label={label} value={isoDate(value)} onChange={() => undefined} formatDisplay={displayDate} /></View>;
 }
 
 function ReadOnlyText({ label, value }: { label: string; value: unknown }) {
-  return <TextField label={label} value={display(value)} />;
+  return <View style={READ_ONLY_FIELD_STYLE}><TextField label={label} value={display(value)} /></View>;
 }
 
 function ReadOnlyMoney({ label, value }: { label: string; value: unknown }) {
   const amount = numeric(value);
-  return <TextField label={label} value={amount === null ? '' : String(amount)} keyboardType="decimal-pad" />;
+  return <View style={READ_ONLY_FIELD_STYLE}><TextField label={label} value={amount === null ? '' : String(amount)} keyboardType="decimal-pad" /></View>;
 }
 
 function ReadOnlyChoice({ label, value, yesValue, noValue, noLabel = 'No' }: { label: string; value: unknown; yesValue: string; noValue: string; noLabel?: string }) {
   const normalized = normalizedChoice(value);
-  const selected = yesValue === 'true'
-    ? (normalized === 'yes' || normalized === 'true' ? 'true' : normalized === 'no' || normalized === 'false' ? 'false' : normalized)
-    : normalized;
-  return <ClaimChoice label={label} value={selected} options={[{ value: yesValue, label: 'Yes' }, { value: noValue, label: noLabel }]} onChange={() => undefined} />;
+  const selected = normalized === 'yes' || normalized === 'true'
+    ? yesValue
+    : normalized === 'no' || normalized === 'false'
+      ? noValue
+      : normalized;
+  return <View style={READ_ONLY_FIELD_STYLE}><ClaimChoice label={label} value={selected} options={[{ value: yesValue, label: 'Yes' }, { value: noValue, label: noLabel }]} onChange={() => undefined} /></View>;
 }
 
 function Gap() { return <View style={{ height: 10 }} />; }

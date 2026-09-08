@@ -22,6 +22,7 @@ const entityLabels: Record<DeletableMasterEntity, string> = {
   customer_onboarding_application: "onboarding application",
   vehicle: "vehicle",
   policy: "policy",
+  policy_intake: "policy intake",
   external_policy: "external policy",
   claim: "claim"
 };
@@ -47,6 +48,7 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   const entityLabel = entityLabels[entity];
   const isClaim = entity === "claim";
   const isCustomerApplication = entity === "customer_onboarding_application";
+  const isPolicyIntake = entity === "policy_intake";
 
   function closeConfirmation() {
     if (isPending) return;
@@ -92,7 +94,9 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
                 ? "Permanent claim deletion also removes claim-linked workflow rows through the database cascade. Linked claim document files are cleaned from storage after deletion."
                 : isCustomerApplication
                   ? "Permanent deletion removes this onboarding application, its application contacts and document metadata, and attempts to clean its uploaded files. Any customer already created from the application remains intact."
-                  : `Permanent deletion is blocked when this ${entityLabel} still has dependent master or claim records.`}
+                  : isPolicyIntake
+                    ? "Permanent deletion removes this policy intake, its intake workflow/document metadata, and attempts to clean its uploaded intake files. Deletion is blocked once a final policy or official policy document is linked."
+                    : `Permanent deletion is blocked when this ${entityLabel} still has dependent master or claim records.`}
             </p>
           </div>
 
@@ -135,6 +139,7 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
               {selected.detail ? <p className="mt-0.5 break-words text-[10px] text-[#9F1239]">{selected.detail}</p> : null}
               {isClaim ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this claim removes its linked claim documents metadata, status history, tasks and notifications. The policy, vehicle and customer remain intact.</p> : null}
               {isCustomerApplication ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">If this application has already created a customer record, that customer and its vehicles, policies and claims will remain unchanged.</p> : null}
+              {isPolicyIntake ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this intake removes its intake documents and draft/workflow metadata. A linked final policy is never deleted by this action.</p> : null}
             </div>
 
             <label className="mt-4 block">

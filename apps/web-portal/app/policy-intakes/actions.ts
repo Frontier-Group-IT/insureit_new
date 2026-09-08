@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { extractPolicyIntakeDocument, type PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { canAccessIntermediary } from "@/lib/employee-access-scope";
+import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { requirePolicyIntakeCreator, requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer, requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -49,7 +50,15 @@ export async function openPolicyIntakeDocument(id:string){const profile=await re
 
 export async function loadPolicyIntakeOnboardingContext(id:string):Promise<{ok:true;context:PolicyIntakeOnboardingContext}|{ok:false;error:string}>{const profile=await requirePolicyIntakeFinalizer(),admin=createSupabaseAdminClient();const{data}=await admin.from("policy_intake_requests").select("id,intake_number,submitted_by_profile_id,submitted_by_portal_account_id,lead_source_name,lead_source_type,customer_mobile").eq("id",id).maybeSingle<{id:string;intake_number:string;submitted_by_profile_id:string|null;submitted_by_portal_account_id:string|null;lead_source_name:string;lead_source_type:string;customer_mobile:string}>();if(!data)return{ok:false,error:"Policy Intake context is unavailable."};const submittedBy=await resolvePolicyIntakeSubmitterName(admin,data.submitted_by_profile_id,data.submitted_by_portal_account_id);return{ok:true,context:{id:data.id,number:data.intake_number,submittedBy,leadSource:data.lead_source_name,leadSourceType:data.lead_source_type.toUpperCase(),customerMobile:data.customer_mobile}};}
 
-export async function claimPolicyIntakeForReview(id:string){const profile=await requirePolicyIntakeReviewer(),admin=createSupabaseAdminClient();const{data,error}=await admin.from("policy_intake_requests").update({status:"in_review",assigned_to_profile_id:profile.id,attention_reason:null}).eq("id",id).in("status",["ready_for_review","in_review","processing"]).or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${profile.id}`).select("id").maybeSingle<{id:string}>();if(error||!data)return{ok:false as const,error:"This intake is already being reviewed by another Operations user."};revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};}
+export async function claimPolicyIntakeForReview(id:string){
+  const profile=await requirePolicyIntakeReviewer(),admin=createSupabaseAdminClient();
+  const{data:intake,error:intakeError}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[]}>();
+  if(intakeError||!intake)return{ok:false as const,error:"This policy intake is unavailable. Refresh and try again."};
+  const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
+  if(!duplicateCheck.ok)return{ok:false as const,error:duplicateCheck.error};
+  if(duplicateCheck.matches.has(id))return{ok:false as const,error:"This policy intake is a duplicate and cannot be claimed for review."};
+  const{data,error}=await admin.from("policy_intake_requests").update({status:"in_review",assigned_to_profile_id:profile.id,attention_reason:null}).eq("id",id).in("status",["ready_for_review","in_review","processing"]).or(`assigned_to_profile_id.is.null,assigned_to_profile_id.eq.${profile.id}`).select("id").maybeSingle<{id:string}>();if(error||!data)return{ok:false as const,error:"This intake is already being reviewed by another Operations user."};revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};
+}
 export async function updatePolicyIntakeStatus(id:string,status:"needs_attention"|"rejected",reason:string){const profile=await requirePolicyIntakeReviewer(),clean=reason.trim();if(!clean)return{ok:false as const,error:"Add a short reason."};const admin=createSupabaseAdminClient();const{error}=await admin.from("policy_intake_requests").update({status,attention_reason:clean,assigned_to_profile_id:profile.id}).eq("id",id).in("status",["processing","ready_for_review","in_review","needs_attention"]);if(error)return{ok:false as const,error:"Could not update this intake."};revalidatePath(`/policy-intakes/${id}`);revalidatePath("/policy-intakes");return{ok:true as const};}
 
 export async function completePolicyIntakeByPolicyCode(id:string,policyCode:string){

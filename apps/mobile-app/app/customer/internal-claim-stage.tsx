@@ -31,13 +31,23 @@ function isInitialDocumentType(documentType: string) {
 
 export default function InternalClaimStageScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ id?: string; key?: string }>();
+  const params = useLocalSearchParams<{ id?: string; key?: string; intent?: string }>();
   const claimId = typeof params.id === 'string' ? params.id : '';
   const stageKey = typeof params.key === 'string' ? params.key : '';
-  const [routeResolved, setRouteResolved] = useState(false);
+  const openRequiredDocument = params.intent === 'required_document';
+  const [routeResolved, setRouteResolved] = useState(!openRequiredDocument);
 
   useEffect(() => {
     let active = true;
+
+    if (!openRequiredDocument) {
+      setRouteResolved(true);
+      return () => {
+        active = false;
+      };
+    }
+
+    setRouteResolved(false);
 
     void (async () => {
       if (!claimId) {
@@ -96,7 +106,7 @@ export default function InternalClaimStageScreen() {
     return () => {
       active = false;
     };
-  }, [claimId, router, stageKey]);
+  }, [claimId, openRequiredDocument, router, stageKey]);
 
   if (!routeResolved) {
     return <Screen title="Claim Stage"><LoadingState label="Opening required document" /></Screen>;

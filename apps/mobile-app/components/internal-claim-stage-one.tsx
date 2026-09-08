@@ -11,6 +11,13 @@ import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/inci
 import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
+import {
+  claimUploadFileReadMessage,
+  claimUploadMetadataMessage,
+  claimUploadStorageMessage,
+  claimUploadTooLargeMessage,
+  resolveClaimUploadDescriptor,
+} from '@/lib/claim-document-upload';
 import { recordClaimEvent } from '@/lib/claim-notifications';
 import { getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +29,7 @@ type TimeTarget = 'incident' | 'intimation' | null;
 type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'accident_photo' | 'accident_video' | 'bulk';
 type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null };
 type UploadedDocument = PickedDocument & { documentId: string; storageBucket: string; storagePath: string };
+type ClaimDocumentUploadResult = { ok: true; document: UploadedDocument } | { ok: false; message: string };
 type DocumentTileState = 'idle' | 'ready';
 type DeleteTarget = { key: DocumentKey; title: string } | null;
 type LocationNotice = { tone: 'info' | 'error'; text: string } | null;
@@ -104,7 +112,7 @@ export default function InternalClaimStageOne() {
       setInsurers(insurerResult.data ?? []);
 
       if (draftClaimId) {
-        const draftResult = await supabase.from('claims').select('id,customer_id,claim_no,vehicle_id,policy_id,current_status').eq('id', draftClaimId).eq('current_status', 'Draft').maybeSingle();
+        const draftResult = await supabase.from('claims').select('id,customer_id,claim_no,vehicle_id,policy_id,current_status,created_at,spot_intimation_at').eq('id', draftClaimId).eq('current_status', 'Draft').maybeSingle();
         const row = draftResult.data as any;
         if (row && ids.includes(row.customer_id)) {
           const draftVehicle = nextVehicles.find((item) => item.id === row.vehicle_id) ?? null;
@@ -113,6 +121,11 @@ export default function InternalClaimStageOne() {
             setDraftClaim({ id: row.id, customerId: row.customer_id, controlNo: row.claim_no });
             setSelectedCustomerId(row.customer_id);
             setSelectedVehicleId(row.vehicle_id);
+            const initialIntimation = localDateTimeParts(row.spot_intimation_at ?? row.created_at);
+            if (initialIntimation) {
+              setIntimationDate((current) => current || initialIntimation.date);
+              setIntimationTime((current) => current || initialIntimation.time);
+            }
             const docResult = await supabase.from('claim_documents').select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size').eq('claim_id', row.id).order('created_at', { ascending: true });
             const restored: Record<DocumentKey, UploadedDocument[]> = { rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] };
             for (const raw of (docResult.data ?? []) as any[]) {
@@ -165,61 +178,91 @@ export default function InternalClaimStageOne() {
       insurance_company_id: selectedPolicy.insurance_company_id,
       current_status: 'Draft',
       created_by: session.user.id,
-    }).select('id, customer_id, claim_no').single();
+    }).select('id, customer_id, claim_no, created_at').single();
     if (error || !data) {
       setMessage(mapSubmitError(error));
       return null;
     }
     const next = { id: data.id, customerId: data.customer_id, controlNo: data.claim_no };
     setDraftClaim(next);
+    const initialIntimation = localDateTimeParts((data as any).created_at);
+    if (initialIntimation) {
+      setIntimationDate((current) => current || initialIntimation.date);
+      setIntimationTime((current) => current || initialIntimation.time);
+    }
     return next;
   }
 
-  async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument): Promise<UploadedDocument | null> {
+  async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument): Promise<ClaimDocumentUploadResult> {
     const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
+    const storageBucket = 'claim-documents';
     let storagePath = '';
+    let storageUploaded = false;
     try {
       const session = await getCurrentSession();
-      if (!session?.user) return null;
+      if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.' };
+
       let uploadUri = pickedFile.uri;
       let uploadName = pickedFile.name;
-      let uploadMimeType = pickedFile.mimeType ?? 'application/octet-stream';
+      let uploadMimeType = pickedFile.mimeType;
       if (isAccidentVideo) {
         setVideoProcessingStatus(pickedFile.size && pickedFile.size > 10 * 1024 * 1024 ? 'Preparing video for compression…' : 'Preparing video…');
-        const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`));
-        uploadUri = prepared.uri;
-        if (prepared.compressed) {
-          const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
-          uploadName = `${stem}.mp4`;
-          uploadMimeType = 'video/mp4';
+        try {
+          const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`));
+          uploadUri = prepared.uri;
+          if (prepared.compressed) {
+            const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
+            uploadName = `${stem}.mp4`;
+            uploadMimeType = 'video/mp4';
+          }
+          setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
+        } catch {
+          return { ok: false, message: `${pickedFile.name || 'The selected video'} could not be prepared for upload. Please try again.` };
         }
-        setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
       }
-      const extension = uploadName.includes('.') ? uploadName.split('.').pop() : 'bin';
-      storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(uploadUri);
-      const body = await response.arrayBuffer();
-      const max = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
-      if (body.byteLength > max) return null;
-      const storageBucket = 'claim-documents';
+
+      const descriptor = resolveClaimUploadDescriptor({ name: uploadName, mimeType: uploadMimeType });
+      if (!descriptor.ok) return descriptor;
+      uploadMimeType = descriptor.mimeType;
+      storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
+
+      let body: ArrayBuffer;
+      try {
+        const response = await fetch(uploadUri);
+        body = await response.arrayBuffer();
+      } catch {
+        return { ok: false, message: claimUploadFileReadMessage(pickedFile.name) };
+      }
+
+      const maxUploadSizeBytes = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
+      const maxUploadSizeLabel = isAccidentVideo ? '50 MB' : '5 MB';
+      if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: claimUploadTooLargeMessage(pickedFile.name, maxUploadSizeLabel) };
+
       const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, body, { contentType: uploadMimeType, upsert: false });
-      if (uploadResult.error) return null;
+      if (uploadResult.error) return { ok: false, message: claimUploadStorageMessage(pickedFile.name) };
+      storageUploaded = true;
+
       const { data: record, error } = await supabase.from('claim_documents').insert({ claim_id: targetClaimId, customer_id: customerId, document_type: documentType, file_name: uploadName, storage_bucket: storageBucket, storage_path: storagePath, mime_type: uploadMimeType, file_size: body.byteLength, uploaded_by: session.user.id }).select('id').single();
       if (error || !record?.id) {
         await supabase.storage.from(storageBucket).remove([storagePath]);
-        return null;
+        storageUploaded = false;
+        return { ok: false, message: claimUploadMetadataMessage(pickedFile.name) };
       }
-      return { ...pickedFile, name: uploadName, mimeType: uploadMimeType, size: body.byteLength, documentId: record.id, storageBucket, storagePath };
+
+      return {
+        ok: true,
+        document: { ...pickedFile, name: uploadName, mimeType: uploadMimeType, size: body.byteLength, documentId: record.id, storageBucket, storagePath },
+      };
     } catch {
-      if (storagePath) await supabase.storage.from('claim-documents').remove([storagePath]);
-      return null;
+      if (storageUploaded && storagePath) await supabase.storage.from(storageBucket).remove([storagePath]);
+      return { ok: false, message: `${pickedFile.name || 'The selected document'} could not be uploaded. Please try again.` };
     } finally {
       if (isAccidentVideo) setVideoProcessingStatus('');
     }
   }
 
   async function uploadConcurrently(files: PickedDocument[], claim: DraftClaim, documentType: string) {
-    const results: Array<UploadedDocument | null> = new Array(files.length).fill(null);
+    const results: ClaimDocumentUploadResult[] = new Array(files.length);
     let cursor = 0;
     async function worker() {
       while (true) {
@@ -230,7 +273,7 @@ export default function InternalClaimStageOne() {
     }
     const workers = Math.min(DOCUMENT_UPLOAD_CONCURRENCY, files.length);
     await Promise.all(Array.from({ length: workers }, () => worker()));
-    return results.filter((item): item is UploadedDocument => Boolean(item));
+    return results;
   }
 
   async function deleteUploadedDocuments(items: UploadedDocument[]) {
@@ -251,9 +294,11 @@ export default function InternalClaimStageOne() {
       const claim = await ensureDraftClaim();
       if (!claim) return;
       const documentType = key === 'bulk' ? BULK_DOCUMENT_TYPE : DOCUMENT_TYPE_BY_KEY[key];
-      const uploaded = await uploadConcurrently(picked, claim, documentType);
+      const results = await uploadConcurrently(picked, claim, documentType);
+      const uploaded = results.filter((result): result is Extract<ClaimDocumentUploadResult, { ok: true }> => result.ok).map((result) => result.document);
+      const failures = results.filter((result): result is Extract<ClaimDocumentUploadResult, { ok: false }> => !result.ok);
       if (!uploaded.length) {
-        setMessage('The selected document could not be uploaded. Please try again.');
+        setMessage(failures[0]?.message ?? 'The selected document could not be uploaded. Please try again.');
         return;
       }
       const append = key === 'bulk' || key === 'accident_photo' || key === 'accident_video';
@@ -262,7 +307,7 @@ export default function InternalClaimStageOne() {
         if (previous.length) await deleteUploadedDocuments(previous);
       }
       setDocuments((current) => ({ ...current, [key]: append ? [...current[key], ...uploaded] : [uploaded[0]] }));
-      if (uploaded.length !== picked.length) setMessage(`${uploaded.length} of ${picked.length} selected files uploaded. Please retry the remaining file${picked.length - uploaded.length === 1 ? '' : 's'}.`);
+      if (failures.length) setMessage(`${uploaded.length} of ${picked.length} selected files uploaded. ${failures[0].message}`);
     } finally {
       setUploadingDocuments(false);
     }
@@ -279,7 +324,9 @@ export default function InternalClaimStageOne() {
     const limit = key === 'accident_video' ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
     const label = key === 'accident_video' ? '50 MB' : '5 MB';
     const tooLarge = picked.find((file) => file.size != null && file.size > limit);
-    if (tooLarge) return setMessage(`${tooLarge.name} is larger than ${label}. Please choose smaller files.`);
+    if (tooLarge) return setMessage(claimUploadTooLargeMessage(tooLarge.name, label));
+    const unsupported = picked.map((file) => resolveClaimUploadDescriptor(file)).find((descriptor) => !descriptor.ok);
+    if (unsupported && !unsupported.ok) return setMessage(unsupported.message);
     await uploadPickedFiles(key, picked);
   }
 
@@ -290,7 +337,9 @@ export default function InternalClaimStageOne() {
     if (result.canceled || !result.assets?.length) return;
     const picked: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
     const tooLarge = picked.find((file) => file.size != null && file.size > MAX_UPLOAD_SIZE_BYTES);
-    if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
+    if (tooLarge) return setMessage(claimUploadTooLargeMessage(tooLarge.name, '5 MB'));
+    const unsupported = picked.map((file) => resolveClaimUploadDescriptor(file)).find((descriptor) => !descriptor.ok);
+    if (unsupported && !unsupported.ok) return setMessage(unsupported.message);
     await uploadPickedFiles('bulk', picked);
   }
 
@@ -346,7 +395,7 @@ export default function InternalClaimStageOne() {
   async function uploadVoiceNote(targetClaimId: string, customerId: string) {
     if (!voiceNote) return true;
     const uploaded = await uploadClaimDocument(targetClaimId, customerId, VOICE_NOTE_DOCUMENT_TYPE, voiceNote);
-    return Boolean(uploaded);
+    return uploaded.ok;
   }
 
   async function submit(options?: { allowExpiredPolicy?: boolean }) {
@@ -474,6 +523,7 @@ function TimePickerModal({ value, visible, title, onClose, onSelect }: { value: 
 function TimeColumn({ label, value, options, onSelect }: { label: string; value: number; options: number[]; onSelect: (value: number) => void }) { return <View style={styles.timeColumn}><Text style={styles.timeColumnLabel}>{label}</Text><View style={styles.timeOptions}>{options.map((option) => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: option === value }} onPress={() => onSelect(option)} style={[styles.timeOption, option === value && styles.timeOptionSelected]}><Text style={[styles.timeOptionText, option === value && styles.timeOptionTextSelected]}>{String(option).padStart(2, '0')}</Text></Pressable>)}</View></View>; }
 function parseTime(value: string) { const match = /^(\d{2}):(\d{2})$/.exec(value); return match ? { hour: Number(match[1]), minute: Number(match[2]) } : { hour: new Date().getHours(), minute: Math.floor(new Date().getMinutes() / 5) * 5 }; }
 function parseDateTime(date: string, time: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time.trim())) return null; const [year, month, day] = date.split('-').map(Number); const [hour, minute] = time.trim().split(':').map(Number); const value = new Date(year, month - 1, day, hour, minute); return Number.isNaN(value.getTime()) ? null : value; }
+function localDateTimeParts(value?: string | null) { if (!value) return null; const date = new Date(value); if (Number.isNaN(date.getTime())) return null; return { date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}` }; }
 function todayIsoDate() { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 function isIncidentAfterPolicyExpiry(policy: Policy | null, incidentAt: Date | null) { if (!policy?.end_date || !incidentAt) return false; const expiry = new Date(`${policy.end_date.slice(0, 10)}T23:59:59`); return !Number.isNaN(expiry.getTime()) && incidentAt.getTime() > expiry.getTime(); }
 function formatDate(value?: string | null) { if (!value) return '-'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }

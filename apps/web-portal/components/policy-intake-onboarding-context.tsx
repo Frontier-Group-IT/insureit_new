@@ -1,18 +1,19 @@
 "use client";
 
-import { ExternalLink, FileText, ShieldCheck, UserRound } from "lucide-react";
+import { ExternalLink, FileText } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { loadPolicyIntakeOnboardingContext, openPolicyIntakeDocument, type PolicyIntakeOnboardingContext } from "@/app/policy-intakes/actions";
 
 const KEY="insureit:policy-intake:pending:v1";
 const RESET_EVENT="insureit:policy-onboarding:reset";
+const FOOTER_TARGET_ID="policy-intake-footer-left-target";
 
 export function PolicyIntakeOnboardingContextCard(){
   const[context,setContext]=useState<PolicyIntakeOnboardingContext|null>(null);
   const[error,setError]=useState<string|null>(null);
   const[opening,setOpening]=useState(false);
-  const[desktopTarget,setDesktopTarget]=useState<HTMLElement|null>(null);
+  const[footerTarget,setFooterTarget]=useState<HTMLElement|null>(null);
 
   useEffect(()=>{
     let pending:{id?:string;savedAt?:number}|null=null;
@@ -22,7 +23,7 @@ export function PolicyIntakeOnboardingContextCard(){
   },[]);
 
   useEffect(()=>{
-    const clear=()=>{setContext(null);setError(null);setOpening(false);setDesktopTarget(null);};
+    const clear=()=>{setContext(null);setError(null);setOpening(false);};
     window.addEventListener(RESET_EVENT,clear);
     return()=>window.removeEventListener(RESET_EVENT,clear);
   },[]);
@@ -31,20 +32,33 @@ export function PolicyIntakeOnboardingContextCard(){
     if(!context)return;
     let frame=0;
     let attempts=0;
-    const findTarget=()=>{
-      if(window.innerWidth<1280){setDesktopTarget(null);return;}
-      const target=document.getElementById("policy-summary-fixed-card");
-      if(target){
-        setDesktopTarget(target);
-        requestAnimationFrame(()=>window.dispatchEvent(new Event("resize")));
+
+    const findFooter=()=>{
+      const submitButton=Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(button=>{
+        const label=button.textContent?.trim()??"";
+        return label==="Book Active Policy"||label==="Booking policy…";
+      });
+      const actions=submitButton?.parentElement;
+      if(actions){
+        let target=document.getElementById(FOOTER_TARGET_ID);
+        if(!target){
+          target=document.createElement("div");
+          target.id=FOOTER_TARGET_ID;
+          target.className="mr-auto min-w-0";
+          actions.insertBefore(target,actions.firstChild);
+        }
+        setFooterTarget(target);
         return;
       }
-      if(attempts++<12)frame=requestAnimationFrame(findTarget);
+      if(attempts++<20)frame=requestAnimationFrame(findFooter);
     };
-    findTarget();
-    const onResize=()=>findTarget();
-    window.addEventListener("resize",onResize);
-    return()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",onResize);};
+
+    findFooter();
+    return()=>{
+      cancelAnimationFrame(frame);
+      const target=document.getElementById(FOOTER_TARGET_ID);
+      target?.remove();
+    };
   },[context]);
 
   async function openCopy(){
@@ -57,10 +71,14 @@ export function PolicyIntakeOnboardingContextCard(){
   }
 
   if(!context)return null;
-  const card=<div className="rounded-2xl border border-[#D9E2F0] bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,.09)]"><div className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><ShieldCheck className="h-3.5 w-3.5"/></span><div className="min-w-0 flex-1"><p className="text-[7.5px] font-bold uppercase tracking-[.1em] text-[#7A8798]">Policy Intake</p><p className="truncate text-[10.5px] font-bold text-[#17365D]">{context.number}</p></div></div><button type="button" onClick={openCopy} disabled={opening} className="mt-2.5 flex h-9 w-full items-center justify-center gap-2 rounded-xl border border-[#CFE0F2] bg-[#F4F8FC] text-[9px] font-bold text-[#244C73] hover:bg-[#EDF5FC] disabled:opacity-60"><FileText className="h-3.5 w-3.5"/>{opening?"Opening…":"View Policy Copy"}<ExternalLink className="h-3 w-3"/></button><div className="mt-2.5 space-y-1.5 border-t border-[#E8EDF3] pt-2.5 text-[8.5px] text-[#667085]"><p className="flex items-center gap-1.5"><UserRound className="h-3 w-3 text-[#7A8798]"/><span className="font-semibold text-[#344054]">{context.submittedBy}</span></p><p><span className="font-semibold text-[#344054]">{context.leadSourceType}</span> · {context.leadSource}</p><p>Customer · {context.customerMobile}</p></div>{error?<p className="mt-2 rounded-lg bg-red-50 px-2 py-1.5 text-[8px] font-semibold text-red-700">{error}</p>:null}</div>;
 
-  return <>
-    <div className="mt-3 xl:hidden">{card}</div>
-    {desktopTarget?createPortal(<div className="mt-2">{card}</div>,desktopTarget):null}
-  </>;
+  const action=<div className="flex min-w-0 flex-col items-start">
+    <button type="button" onClick={openCopy} disabled={opening} className="flex h-9 items-center gap-2 rounded-xl border border-[#CFE0F2] bg-[#F4F8FC] px-3.5 text-[9px] font-bold text-[#244C73] transition hover:bg-[#EDF5FC] disabled:opacity-60">
+      <FileText className="h-3.5 w-3.5"/>{opening?"Opening…":"View Policy Copy"}<ExternalLink className="h-3 w-3"/>
+    </button>
+    <p className="mt-1 max-w-[320px] truncate text-[8px] text-[#667085]">Policy Intake {context.number} · {context.leadSourceType} · {context.leadSource}</p>
+    {error?<p className="mt-1 text-[8px] font-semibold text-red-600">{error}</p>:null}
+  </div>;
+
+  return footerTarget?createPortal(action,footerTarget):null;
 }

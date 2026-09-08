@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import { roleCapabilities } from "../lib/roles.ts";
+import { normalizePolicyNumber, policyNumberFromIntake } from "../lib/policy-intake-duplicate.ts";
 
 const read=(path)=>fs.readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
 const salesCreators=["director","sales_head","zonal_head","asm","sales_manager","relationship_manager"];
@@ -8,6 +9,14 @@ for(const role of salesCreators){assert(roleCapabilities[role].includes("view_po
 for(const role of ["sales_operations_head","backoffice_executive"]){assert(roleCapabilities[role].includes("view_policy_intakes"),`${role} must view policy intakes`);assert(roleCapabilities[role].includes("review_policy_intakes"),`${role} must review policy intakes`);assert(roleCapabilities[role].includes("finalize_policy_intakes"),`${role} must explicitly finalize policy intakes`);}
 assert(roleCapabilities.sales_operations_head.includes("create_policies"),"Operations Head needs governed policy-create authority to finalize reviewed intakes");assert(!roleCapabilities.backoffice_executive.includes("create_policy_intakes"),"Backoffice must remain Operations-side, not sales submitter");
 for(const role of ["claims_head","claim_processor","field_executive"])assert(!roleCapabilities[role].includes("view_policy_intakes"),`${role} must not inherit policy intake access`);
+
+const duplicateGuard=read("lib/policy-intake-duplicate.ts");
+assert.equal(normalizePolicyNumber(" n-857/7606 "),"N8577606","Policy numbers must compare in canonical normalized form");
+assert.equal(policyNumberFromIntake([{key:"policy_number",label:"Policy number",value:" N-857/7606 ",confidence:1,page:1,evidence:"test"}]),"N8577606","OCR policy number must use the same canonical normalization");
+assert(duplicateGuard.includes('.in("policy_no_normalized", normalizedNumbers)'),"Registered-policy duplicate detection must use policies.policy_no_normalized");
+assert(!duplicateGuard.includes('.in("policy_code", normalizedNumbers)'),"Internal policy_code must never be used as the insurer policy-number duplicate key");
+assert(duplicateGuard.includes("firstIntakeByPolicyNumber"),"Duplicate detector must retain earlier-intake duplicate protection");
+assert(duplicateGuard.includes('candidate.status === "completed"'),"Completed historical intakes must not be reclassified as duplicates");
 
 const actions=read("app/policy-intakes/actions.ts");
 assert(actions.includes('canAccessIntermediary(profile.id,profile.role,leadSourceId,"view_intermediaries")'),"Submission must re-check lead-source scope server-side");
@@ -23,18 +32,25 @@ assert(actions.includes('preparePolicyIntakeResponseUpload'),"Initiators must be
 assert(actions.includes('.from("policy_intake_documents")'),"Original and replacement copies must retain document lineage");
 assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads must not delete the previous policy copy");
 assert(actions.includes('.from("policy_documents")'),"Finalization must attach the accepted intake copy to the final policy");
+assert(actions.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Claiming an intake for review must re-check duplicate status server-side");
+assert(actions.includes("duplicate and cannot be claimed for review"),"Duplicate intakes must be blocked from entering Operations review");
 
 const intakeForm=read("components/policy-intake-form.tsx");
 assert(intakeForm.includes('fetch(signedUrl,{method:"PUT"'),"Browser must upload policy bytes directly to signed private storage");
 assert(intakeForm.includes("Saving policy intake"),"Sales submission must communicate immediate save instead of blocking on OCR");
 assert(intakeForm.includes("fetched in the background"),"Sales must be told policy and vehicle details are fetched in the background");
 assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must stay on the form with a recoverable error");
+const queue=read("app/policy-intakes/page.tsx");
+assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy Intake queue must use the shared duplicate detector");
+assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
 const detail=read("app/policy-intakes/[id]/page.tsx");
 assert(detail.includes("PolicyIntakeResponseUpload"),"Needs-attention intake must expose the response uploader to its initiator");
 assert(/hasEffectiveCapability\(profile,\s*["']finalize_policy_intakes["'],\s*["']approve["']\)/.test(detail),"Detail page must distinguish Review from Finalize authority");
 assert(detail.includes("Manual review required"),"OCR technical failure must remain reviewable instead of blaming Sales");
 assert(detail.includes("Policy Intake Review")&&detail.includes("Vehicle details")&&detail.includes("Policy & premium"),"Intake detail must retain the compact pre-onboarding review structure");
 assert(detail.includes('source="Sales"')&&detail.includes('source="OCR"'),"Review page must distinguish Sales-supplied values from OCR proposals");
+assert(detail.includes("Duplicate policy intake")&&detail.includes("View Existing Policy"),"Duplicate detail must explain the match and link Operations to the existing policy");
+assert(detail.includes("duplicateBlocked")&&detail.includes("!duplicateBlocked && reviewer")&&detail.includes("!duplicateBlocked && finalizer"),"Duplicate detail must hide review and onboarding actions");
 const workspace=read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("Policy Intake Queue"),"Operations intake queue must use the register workspace");
 assert(workspace.includes("Action Required")&&workspace.includes("RegisterPagination"),"Operations intake queue must expose status views and pagination");
@@ -46,9 +62,16 @@ assert(workspace.includes('{ value: "in_review", label: "In Review", count: stat
 assert(workspace.includes('My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>'),"Reviewer queue must keep My Active Work as a separate personal shortcut");
 
 const contextCard=read("components/policy-intake-onboarding-context.tsx");
-assert(contextCard.includes("View Policy Copy"),"Onboarding sidebar must keep the intake policy copy available to Operations");
-assert(contextCard.includes('document.getElementById("policy-summary-fixed-card")'),"Intake context must align with the existing right-side summary area");
-const commercialShell=read("components/policy-commercial-shell.tsx");assert(commercialShell.includes("PolicyIntakeOnboardingContextCard"),"Policy Onboarding must render the intake context in its summary sidebar");
+assert(contextCard.includes("View Policy Copy"),"Policy Onboarding footer must keep the intake policy copy available to Operations");
+assert(contextCard.includes('FOOTER_TARGET_ID="policy-intake-footer-left-target"'),"Intake context must target the bottom-left onboarding footer area");
+assert(contextCard.includes('label==="Book Active Policy"||label==="Booking policy…"'),"Intake context must anchor beside the existing policy footer actions");
+assert(!contextCard.includes('document.getElementById("policy-summary-fixed-card")'),"Intake context must no longer mount in the right-side policy summary area");
+const commercialShell=read("components/policy-commercial-shell.tsx");assert(commercialShell.includes("PolicyIntakeOnboardingContextCard"),"Policy Onboarding must render the intake context for its footer action");
+const unifiedForm=read("components/policy-unified-form.tsx");
+assert(unifiedForm.includes('if(sourceIntakeId){router.push("/policy-intakes");}'),"Completed Policy Intake booking must return Operations to the Policy Intake Queue");
+assert(!unifiedForm.includes('router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}?success=completed`)'),"Completed Policy Intake booking must not return to the individual Intake Review page");
+assert(unifiedForm.includes('router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`)'),"Save & Return to Intake must keep returning to the individual Intake Review page");
+assert(unifiedForm.includes('router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}&policy_id=${encodeURIComponent(result.policyId)}`)'),"Direct Policy Onboarding must keep returning to the Policy Register");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
@@ -64,7 +87,11 @@ assert(copyBridge.includes('sessionStorage.setItem(KEY'),"Verified Intake contex
 const routeEnhancements=read("components/policy-route-enhancements.tsx");
 assert(routeEnhancements.includes("PolicyIntakeCopyReuseBridge"),"Policy routes must mount the Intake copy reuse bridge before save confirmation");
 
-const handoff=read("app/policy-intakes/handoff-actions.ts");assert(handoff.includes("buildPolicyOcrOnboardingUpdate"),"Operations handoff must reuse the governed OCR onboarding mapper");assert(handoff.includes('cpaOpted:"No"'),"OCR liability amount must not silently opt owner-driver CPA in");
+const handoff=read("app/policy-intakes/handoff-actions.ts");
+assert(handoff.includes("buildPolicyOcrOnboardingUpdate"),"Operations handoff must reuse the governed OCR onboarding mapper");
+assert(handoff.includes('cpaOpted:"No"'),"OCR liability amount must not silently opt owner-driver CPA in");
+assert(handoff.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Policy Onboarding handoff must re-check duplicate status server-side");
+assert(handoff.includes("duplicate and cannot be sent to Policy Onboarding")&&handoff.includes("duplicate and cannot continue in Policy Onboarding"),"Duplicate intakes must be blocked both before handoff and when reopening an existing onboarding draft");
 const migration=read("../../supabase/migrations/202608240001_policy_intake_workflow.sql");assert(migration.includes("create table if not exists public.policy_intake_requests"),"Intake table migration missing");assert(migration.includes("enable row level security"),"Intake table must enable RLS");assert(migration.includes("revoke all on public.policy_intake_requests from anon, authenticated"),"Browser roles must not receive direct intake-table access");
 const lineage=read("../../supabase/migrations/20260824164500_policy_intake_document_lineage.sql");assert(lineage.includes("create table if not exists public.policy_intake_documents"),"Intake document history migration missing");assert(lineage.includes("source_intake_id"),"Official policy document must retain its source intake lineage");
 const permissions=read("lib/permission-management.ts");assert(permissions.includes('label:"Initiate policy intake"'),"Permission UI must use Initiate terminology");assert(permissions.includes('label:"Review policy intake"'),"Permission UI must use Review terminology");assert(permissions.includes('label:"Finalize policy intake"'),"Permission UI must expose separate Finalize authority");
