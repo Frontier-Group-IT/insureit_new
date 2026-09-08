@@ -89,6 +89,12 @@ jobs:
       - name: Customer Start Claim OTA regression
         run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
 
+      - name: Customer internal claim video upload regression
+        run: node apps/mobile-app/scripts/customer-internal-video-upload-regression.mjs
+
+      - name: Managed claim card parity regression
+        run: node apps/mobile-app/scripts/managed-claim-card-parity-regression.mjs
+
       - name: Build Expo web review export
         run: npm run build:mobile:web
 
@@ -111,6 +117,8 @@ jobs:
             echo "- Dependency lockfile: must remain synchronized"
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
+            echo "- Internal claim video regression: multi-select, 3-way concurrency, verification/re-upload guards, 50 MB limit and resumable upload contract remain intact"
+            echo "- Managed claim card parity: Sankalp managed and external cards share compact layout and animated status treatment"
             echo "- Review build: Expo web export"
             echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"
             echo "- Production deployment: not triggered by this workflow"

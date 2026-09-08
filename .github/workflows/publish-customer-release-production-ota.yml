@@ -8,6 +8,15 @@ on:
       - 'apps/mobile-app/**'
       - '.github/workflows/publish-customer-release-production-ota.yml'
   workflow_dispatch:
+    inputs:
+      enable_resumable_video_upload:
+        description: 'Enable Customer internal-claim resumable Accident Video upload'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 permissions:
   contents: read
@@ -22,6 +31,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      EXPO_PUBLIC_CLAIM_VIDEO_RESUMABLE_UPLOAD: ${{ github.event_name == 'workflow_dispatch' && inputs.enable_resumable_video_upload || 'true' }}
     steps:
       - name: Check out exact main source
         uses: actions/checkout@v4
@@ -63,6 +73,10 @@ jobs:
           [ -n "${EXPO_PUBLIC_SUPABASE_URL:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_URL is missing." >&2; exit 1; }
           [ -n "${EXPO_PUBLIC_SUPABASE_ANON_KEY:-}" ] || { echo "EXPO_PUBLIC_SUPABASE_ANON_KEY is missing." >&2; exit 1; }
           [ -n "${EXPO_PUBLIC_PORTAL_URL:-}" ] || { echo "EXPO_PUBLIC_PORTAL_URL is missing." >&2; exit 1; }
+          case "${EXPO_PUBLIC_CLAIM_VIDEO_RESUMABLE_UPLOAD:-}" in
+            true|false) ;;
+            *) echo "EXPO_PUBLIC_CLAIM_VIDEO_RESUMABLE_UPLOAD must be true or false." >&2; exit 1 ;;
+          esac
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -109,12 +123,14 @@ jobs:
         env:
           PUBLISH_RESULT: ${{ steps.publish.outputs.result }}
           PUBLISH_EXIT_CODE: ${{ steps.publish.outputs.exit_code }}
+          VIDEO_ROLLOUT: ${{ env.EXPO_PUBLIC_CLAIM_VIDEO_RESUMABLE_UPLOAD }}
         shell: bash
         run: |
           node <<'NODE'
           const fs = require('fs');
           const result = process.env.PUBLISH_RESULT || 'unknown';
           const exitCode = process.env.PUBLISH_EXIT_CODE || 'unknown';
+          const videoRollout = process.env.VIDEO_ROLLOUT || 'unknown';
           const icon = result === 'success' ? '✅' : result === 'failed' ? '❌' : '⚠️';
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
             '## Customer production OTA publication', '',
@@ -123,9 +139,11 @@ jobs:
             '| Expo channel | `production` |',
             '| Runtime | `0.3.0` |',
             '| Android versionCode | `9` |',
+            `| Resumable Accident Video rollout | \`${videoRollout}\` |`,
             `| CLI exit code | \`${exitCode}\` |`,
             `| Source commit | \`${process.env.GITHUB_SHA || 'unknown'}\` |`, '',
-            'JavaScript/assets only. No APK/AAB is built.', ''
+            'JavaScript/assets only. No APK/AAB is built.', '',
+            'Rollback: manually dispatch this workflow with resumable video upload set to false.', ''
           ].join('\n') + '\n');
           NODE
 

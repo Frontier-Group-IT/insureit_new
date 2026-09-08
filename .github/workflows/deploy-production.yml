@@ -169,6 +169,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260908050000_resolve_claim_document_reupload_events.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-claim-document-reupload-resolution.yml"
             echo "Claim document reupload resolution migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-policy-intake-pair-delete.yml"
+            echo "Policy Intake pair-delete migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
