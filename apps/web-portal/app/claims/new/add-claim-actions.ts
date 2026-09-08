@@ -163,9 +163,14 @@ export async function lookupClaimVehicle(vehicleNumber: string): Promise<AddClai
   };
 }
 
-export async function createOperationsClaim(vehicleId: string): Promise<CreateOperationsClaimResult> {
+export async function createOperationsClaim(vehicleId: string, lossAtIso: string): Promise<CreateOperationsClaimResult> {
   const profile = await requireCapability("manage_claims", "edit");
   if (!vehicleId) return { ok: false, message: "Select a valid vehicle before saving the claim." };
+
+  const lossAt = new Date(lossAtIso);
+  if (!lossAtIso || Number.isNaN(lossAt.getTime())) {
+    return { ok: false, message: "Enter a valid loss date and time before saving the claim." };
+  }
 
   const admin = createSupabaseAdminClient();
   const { data: vehicle, error: vehicleError } = await admin
@@ -216,6 +221,7 @@ export async function createOperationsClaim(vehicleId: string): Promise<CreateOp
         vehicle_id: vehicle.id,
         policy_id: policy?.id ?? null,
         insurance_company_id: policy?.insurance_company_id ?? null,
+        accident_at: lossAt.toISOString(),
         current_status: "Initial Documents Pending",
         created_by: profile.id,
         claim_service_mode: "broker_managed",
