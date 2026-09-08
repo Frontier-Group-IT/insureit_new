@@ -10,13 +10,15 @@ import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/inci
 import { InternalManagedClaimHeader } from '@/components/internal-managed-claim-header';
 import { LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
+import { uploadResumableStorageFile } from '@/lib/resumable-storage-upload';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import { prepareVideoForUpload } from '@/lib/video-compression';
 import type { ClaimDocument } from '@/lib/types';
 
 type DocumentKey = 'rc' | 'insurance' | 'licence' | 'gr' | 'accident_photo' | 'accident_video';
-type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null };
+type PickedDocument = { name: string; uri: string; mimeType?: string | null; size?: number | null; transferId: string };
+type VideoTransfer = { phase: 'preparing' | 'compressing' | 'uploading' | 'done' | 'failed'; progress: number };
 type ManagedClaim = {
   id: string;
   claim_no: string;
@@ -33,6 +35,7 @@ type ManagedClaim = {
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
+const VIDEO_COMPRESSION_THRESHOLD_BYTES = 10 * 1024 * 1024;
 const BULK_DOCUMENT_TYPE = 'Spot Intimation Attachment';
 const VOICE_NOTE_DOCUMENT_TYPE = 'Incident Voice Note';
 const DOCUMENT_TYPE_BY_KEY: Record<DocumentKey, string> = {
@@ -55,7 +58,8 @@ export default function InternalClaimStageOneTracker() {
   const [insurerName, setInsurerName] = useState('Insurance company');
   const [loading, setLoading] = useState(true);
   const [uploadingKey, setUploadingKey] = useState<DocumentKey | 'bulk' | 'audio' | ''>('');
-  const [videoStatus, setVideoStatus] = useState('');
+  const [videoTransfers, setVideoTransfers] = useState<Record<string, VideoTransfer>>({});
+  const [videoBatchTotal, setVideoBatchTotal] = useState(0);
   const [voiceNote, setVoiceNote] = useState<IncidentVoiceNoteFile | null>(null);
   const [message, setMessage] = useState('');
   const [deleteType, setDeleteType] = useState('');
@@ -114,6 +118,20 @@ export default function InternalClaimStageOneTracker() {
   const bulkCount = useMemo(() => documents.filter((item) => item.document_type === BULK_DOCUMENT_TYPE && item.verification_status !== 'rejected').length, [documents]);
   const voiceDocument = useMemo(() => documents.find((item) => item.document_type === VOICE_NOTE_DOCUMENT_TYPE && item.verification_status !== 'rejected') ?? null, [documents]);
   const voiceVerified = voiceDocument?.verification_status === 'verified';
+  const videoStatus = useMemo(() => {
+    const transfers = Object.values(videoTransfers);
+    if (!videoBatchTotal || !transfers.length) return '';
+    const done = transfers.filter((item) => item.phase === 'done').length;
+    const failed = transfers.filter((item) => item.phase === 'failed').length;
+    const preparing = transfers.some((item) => item.phase === 'preparing' || item.phase === 'compressing');
+    const overallProgress = transfers.reduce((sum, item) => {
+      if (item.phase === 'done') return sum + 1;
+      if (item.phase === 'uploading') return sum + item.progress;
+      return sum;
+    }, 0) / videoBatchTotal;
+    const suffix = failed ? ` · ${failed} failed` : '';
+    return `${preparing ? 'Preparing & uploading' : 'Uploading'} ${Math.round(overallProgress * 100)}% · ${done}/${videoBatchTotal} done${suffix}`;
+  }, [videoBatchTotal, videoTransfers]);
 
   useEffect(() => {
     if (!voiceDocument) {
@@ -151,18 +169,30 @@ export default function InternalClaimStageOneTracker() {
       return;
     }
     if (result.canceled || !result.assets?.length) return;
-    const picked: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const batchId = Date.now().toString(36);
+    const picked: PickedDocument[] = result.assets.map((asset, index) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null, transferId: `${batchId}-${index}-${Math.random().toString(36).slice(2, 7)}` }));
     const limit = key === 'accident_video' ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
     const label = key === 'accident_video' ? '50 MB' : '5 MB';
     const tooLarge = picked.find((file) => file.size != null && file.size > limit);
     if (tooLarge) { setMessage(`${tooLarge.name} is larger than ${label}. Please choose smaller files.`); return; }
 
+    if (key === 'accident_video') {
+      setVideoBatchTotal(picked.length);
+      setVideoTransfers(Object.fromEntries(picked.map((file) => [file.transferId, { phase: 'preparing', progress: 0 } satisfies VideoTransfer])));
+    }
     setUploadingKey(key);
-    const results = await runConcurrent(picked, 3, (file) => uploadFile(claim, DOCUMENT_TYPE_BY_KEY[key], file, key === 'accident_video'));
-    const uploaded = results.filter((item): item is ClaimDocument => Boolean(item));
-    if (uploaded.length) setDocuments((current) => [...uploaded, ...current]);
-    if (uploaded.length !== picked.length) setMessage(`${uploaded.length} of ${picked.length} files uploaded. Please retry the remaining files.`);
-    setUploadingKey('');
+    try {
+      const results = await runConcurrent(picked, 3, (file) => uploadFile(claim, DOCUMENT_TYPE_BY_KEY[key], file, key === 'accident_video'));
+      const uploaded = results.filter((item): item is ClaimDocument => Boolean(item));
+      if (uploaded.length) setDocuments((current) => [...uploaded, ...current]);
+      if (uploaded.length !== picked.length) setMessage(`${uploaded.length} of ${picked.length} files uploaded. Please retry the remaining files.`);
+    } finally {
+      if (key === 'accident_video') {
+        setVideoTransfers({});
+        setVideoBatchTotal(0);
+      }
+      setUploadingKey('');
+    }
   }
 
   async function pickBulkDocuments() {
@@ -172,11 +202,12 @@ export default function InternalClaimStageOneTracker() {
     try {
       result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
     } catch {
-      setMessage('The file picker could not be opened. Please try again.');
+      setMessage('The document picker could not be opened. Please try again.');
       return;
     }
     if (result.canceled || !result.assets?.length) return;
-    const picked: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
+    const batchId = Date.now().toString(36);
+    const picked: PickedDocument[] = result.assets.map((asset, index) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null, transferId: `${batchId}-${index}-${Math.random().toString(36).slice(2, 7)}` }));
     const tooLarge = picked.find((file) => file.size != null && file.size > MAX_UPLOAD_SIZE_BYTES);
     if (tooLarge) { setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`); return; }
 
@@ -188,17 +219,26 @@ export default function InternalClaimStageOneTracker() {
     setUploadingKey('');
   }
 
+  function updateVideoTransfer(transferId: string, next: VideoTransfer) {
+    setVideoTransfers((current) => ({ ...current, [transferId]: next }));
+  }
+
   async function uploadFile(targetClaim: ManagedClaim, documentType: string, file: PickedDocument, video: boolean): Promise<ClaimDocument | null> {
     let storagePath = '';
+    let storageCommitted = false;
     try {
       const session = await getCurrentSession();
       if (!session?.user) return null;
       let uri = file.uri;
       let name = file.name;
       let mimeType = file.mimeType ?? 'application/octet-stream';
+      let uploadedSize = file.size ?? null;
       if (video) {
-        setVideoStatus(file.size && file.size > 10 * 1024 * 1024 ? 'Preparing video…' : 'Uploading…');
-        const prepared = await prepareVideoForUpload(file.uri, file.size, (progress) => setVideoStatus(`Compressing… ${Math.round(progress * 100)}%`));
+        updateVideoTransfer(file.transferId, { phase: 'preparing', progress: 0 });
+        const shouldCompress = file.size == null || file.size > VIDEO_COMPRESSION_THRESHOLD_BYTES;
+        const prepared = await prepareVideoForUpload(file.uri, file.size, (progress) => {
+          updateVideoTransfer(file.transferId, { phase: shouldCompress ? 'compressing' : 'preparing', progress });
+        });
         uri = prepared.uri;
         if (prepared.compressed) {
           name = `${file.name.replace(/\.[^.]+$/, '') || 'accident-video'}.mp4`;
@@ -207,12 +247,30 @@ export default function InternalClaimStageOneTracker() {
       }
       const extension = name.includes('.') ? name.split('.').pop() : 'bin';
       storagePath = `${targetClaim.customer_id}/${targetClaim.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(uri);
-      const body = await response.arrayBuffer();
-      const max = video ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
-      if (body.byteLength > max) return null;
-      const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: mimeType, upsert: false });
-      if (storageResult.error) return null;
+
+      if (video) {
+        updateVideoTransfer(file.transferId, { phase: 'uploading', progress: 0 });
+        const resumableResult = await uploadResumableStorageFile({
+          uri,
+          accessToken: session.access_token,
+          bucket: 'claim-documents',
+          objectPath: storagePath,
+          contentType: mimeType,
+          maxBytes: MAX_VIDEO_UPLOAD_SIZE_BYTES,
+          onProgress: (progress) => updateVideoTransfer(file.transferId, { phase: 'uploading', progress }),
+        });
+        uploadedSize = resumableResult.size;
+        storageCommitted = true;
+      } else {
+        const response = await fetch(uri);
+        const body = await response.arrayBuffer();
+        if (body.byteLength > MAX_UPLOAD_SIZE_BYTES) return null;
+        const storageResult = await supabase.storage.from('claim-documents').upload(storagePath, body, { contentType: mimeType, upsert: false });
+        if (storageResult.error) return null;
+        uploadedSize = body.byteLength;
+        storageCommitted = true;
+      }
+
       const record = await supabase.from('claim_documents').insert({
         claim_id: targetClaim.id,
         customer_id: targetClaim.customer_id,
@@ -221,19 +279,20 @@ export default function InternalClaimStageOneTracker() {
         storage_bucket: 'claim-documents',
         storage_path: storagePath,
         mime_type: mimeType,
-        file_size: body.byteLength,
+        file_size: uploadedSize,
         uploaded_by: session.user.id,
       }).select('*').single();
       if (record.error || !record.data) {
-        await supabase.storage.from('claim-documents').remove([storagePath]);
+        if (storageCommitted) await supabase.storage.from('claim-documents').remove([storagePath]);
+        if (video) updateVideoTransfer(file.transferId, { phase: 'failed', progress: 0 });
         return null;
       }
+      if (video) updateVideoTransfer(file.transferId, { phase: 'done', progress: 1 });
       return record.data as ClaimDocument;
     } catch {
-      if (storagePath) await supabase.storage.from('claim-documents').remove([storagePath]);
+      if (storageCommitted && storagePath) await supabase.storage.from('claim-documents').remove([storagePath]);
+      if (video) updateVideoTransfer(file.transferId, { phase: 'failed', progress: 0 });
       return null;
-    } finally {
-      if (video) setVideoStatus('');
     }
   }
 
@@ -247,7 +306,7 @@ export default function InternalClaimStageOneTracker() {
     setMessage('');
     try {
       const previous = documents.filter((item) => item.document_type === VOICE_NOTE_DOCUMENT_TYPE && item.verification_status !== 'verified');
-      const uploaded = await uploadFile(claim, VOICE_NOTE_DOCUMENT_TYPE, file, false);
+      const uploaded = await uploadFile(claim, VOICE_NOTE_DOCUMENT_TYPE, { ...file, transferId: `audio-${Date.now().toString(36)}` }, false);
       if (!uploaded) {
         setMessage('The audio note could not be uploaded. Please try again.');
         return;
