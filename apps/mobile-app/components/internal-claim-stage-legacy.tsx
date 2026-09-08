@@ -366,7 +366,7 @@ export default function InternalClaimStageScreen() {
         {message ? <Message type="error">{message}</Message> : null}
 
         <ClaimFormSection title="Spot Survey" iconImage={require('../assets/claims/claim-survey.png')}>
-          <View pointerEvents="none">
+          <View pointerEvents="none" style={styles.blockedControl}>
             <AppDatePicker
               label="Spot Survey Done Date *"
               value={surveyDate}
@@ -377,11 +377,11 @@ export default function InternalClaimStageScreen() {
         </ClaimFormSection>
 
         <ClaimFormSection title="Surveyor Details" optional iconImage={require('../assets/claims/claim-assessment.png')}>
-          <View pointerEvents="none"><TextField label="Surveyor Name (Optional)" value={surveyorName} /></View>
+          <View pointerEvents="none" style={styles.blockedControl}><TextField label="Surveyor Name (Optional)" value={surveyorName} /></View>
           <View style={styles.gap} />
-          <View pointerEvents="none"><TextField label="Surveyor Email (Optional)" value={surveyorEmail} keyboardType="email-address" autoCapitalize="none" /></View>
+          <View pointerEvents="none" style={styles.blockedControl}><TextField label="Surveyor Email (Optional)" value={surveyorEmail} keyboardType="email-address" autoCapitalize="none" /></View>
           <View style={styles.gap} />
-          <View pointerEvents="none"><TextField label="Surveyor Number (Optional)" value={surveyorPhone} keyboardType="phone-pad" /></View>
+          <View pointerEvents="none" style={styles.blockedControl}><TextField label="Surveyor Number (Optional)" value={surveyorPhone} keyboardType="phone-pad" /></View>
         </ClaimFormSection>
       </Screen>
     );
@@ -716,6 +716,7 @@ function formatValue(value: unknown, money?: boolean) {
 
 const styles = StyleSheet.create({
   gap: { height: 10 },
+  blockedControl: { opacity: 0.68 },
   subsection: { marginTop: 16, marginBottom: 8, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E7EBF0' },
   subsectionTitle: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   stageOneLabelRow: { minHeight: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
