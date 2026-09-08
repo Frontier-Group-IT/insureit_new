@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/shell";
+import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { PolicyIntakeWorkspace, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
@@ -31,6 +32,15 @@ export default async function PolicyIntakesPage() {
   const unavailable = Boolean(error || (duplicateCheck && !duplicateCheck.ok));
 
   return <AppShell title={reviewer ? "Policy Intakes" : "My Policy Intakes"}>
+    {profile.role === "it_super_user" && !unavailable ? <ItSuperUserDeletePanel
+      entity="policy_intake"
+      title="Delete policy intake record"
+      records={workspaceRows.map((intake) => ({
+        id: intake.id,
+        label: intake.intake_number,
+        detail: [intake.status.replaceAll("_", " "), intake.lead_source_name, intake.customer_mobile].filter(Boolean).join(" • "),
+      }))}
+    /> : null}
     {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} />}
   </AppShell>;
 }
