@@ -1,0 +1,59 @@
+{
+  "parser_id": "hdfc_ergo_motor_v1",
+  "ground_truth": {
+    "section_02": {
+      "vehicle_make": "Honda",
+      "vehicle_class": "TWP",
+      "vehicle_model": "ACTIVA-110 STD",
+      "vehicle_capacity": null,
+      "vehicle_rto_name": null,
+      "vehicle_fuel_type": null,
+      "vehicle_rto_state": null,
+      "vehicle_engine_number": "SYNENGINE04D9AF2AD63E",
+      "vehicle_chassis_number": "SYNCHASSIS04D9AF2AD63E",
+      "vehicle_manufacturing_year": 2025,
+      "vehicle_registration_number": "SYNREG04D9AF2AD63E",
+      "vehicle_registration_status": "registered"
+    },
+    "section_03": {
+      "idv": 70000,
+      "cpa_opted": false,
+      "od_premium": 863,
+      "tp_premium": 155,
+      "valid_from": "2026-06-27",
+      "valid_upto": "2027-06-26",
+      "cpa_premium": 0,
+      "printed_gst": 183.24,
+      "insurer_name": "HDFC ERGO General Insurance Company Limited",
+      "policy_number": "SYN-04D9AF2AD63E",
+      "policy_product": "SAOD",
+      "printed_net_premium": 1018,
+      "printed_gross_premium": 1201.24
+    }
+  },
+  "parser_version": "hdfc_ergo_motor_v1.1.0+layout-hdfc_twp_saod-v5",
+  "schema_version": "policy_ocr_training_candidate_v2",
+  "evidence_labels": {
+    "idv": "IDV / Sum Insured · Page 1",
+    "cpa_opted": "Owner-driver CPA · Page 1",
+    "od_premium": "OD premium · Page 3",
+    "tax_amount": "GST / Tax · Page 3",
+    "tp_premium": "Policy Product · Page 1",
+    "cpa_premium": "Owner-driver CPA · Page 1",
+    "insurer_name": "Insurer Header · Page 1",
+    "vehicle_make": "Vehicle Make · Page 1",
+    "gross_premium": "Gross / Total Payable · Page 3",
+    "policy_number": "Policy Number · Page 1",
+    "total_premium": "Net Premium · Page 3",
+    "vehicle_class": "Vehicle Class · Page 1",
+    "vehicle_model": "Vehicle Model · Page 1",
+    "policy_product": "Policy product · Page 1",
+    "vehicle_capacity": "Manufacturing Year · Page 1",
+    "vehicle_rto_name": "RTO · Page 1",
+    "vehicle_rto_state": "RTO · Page 1",
+    "vehicle_engine_number": "Engine Number · Page 1",
+    "vehicle_chassis_number": "Chassis Number · Page 1",
+    "vehicle_registration_number": "Vehicle Registration Number · Page 1",
+    "vehicle_registration_status": "Vehicle Registration Status · Page 1"
+  }
+}
