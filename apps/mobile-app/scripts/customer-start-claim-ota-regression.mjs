@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const startClaim = await readFile(new URL('../app/customer/start-claim.tsx', import.meta.url), 'utf8');
+const spotIntimation = await readFile(new URL('../components/internal-claim-stage-one.tsx', import.meta.url), 'utf8');
 const rootLayout = await readFile(new URL('../app/_layout.tsx', import.meta.url), 'utf8');
 const appConfig = JSON.parse(await readFile(new URL('../app.json', import.meta.url), 'utf8')).expo;
 const easConfig = JSON.parse(await readFile(new URL('../eas.json', import.meta.url), 'utf8'));
@@ -26,6 +27,17 @@ assert.match(
   startClaim,
   /if \(draftError \|\| !draftClaim\?\.id\)[\s\S]*findActiveManagedClaim\(selectedPolicy\.id\)/,
   'Start Claim must retain duplicate/race recovery before reporting a creation failure.',
+);
+
+assert.match(
+  spotIntimation,
+  /primaryLabel=\{voiceRecording \? 'Stop recording first' : uploadingDocuments \? 'Uploading documents…' : saving \? 'Saving\.\.\.' : 'Save Details'\}/,
+  'Spot Intimation primary action must be labeled Save Details.',
+);
+assert.doesNotMatch(
+  spotIntimation,
+  /Save\s*&\s*move\s*to\s*Initial\s*Documents\s*Submitted/i,
+  'The old Spot Intimation action label must not return.',
 );
 
 assert.match(rootLayout, /Updates\.useUpdates\(\)/, 'Root layout must observe Expo update download state.');
