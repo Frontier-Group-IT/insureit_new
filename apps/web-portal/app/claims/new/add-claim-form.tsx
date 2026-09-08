@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import {
   createOperationsClaim,
   lookupClaimVehicle,
@@ -62,6 +62,16 @@ export function AddClaimForm() {
 
     return () => window.clearTimeout(timer);
   }, [vehicleNumber]);
+
+  function handleLossDateTimeChange(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const nextValue = input.value;
+    setLossDateTime(nextValue);
+
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(nextValue)) {
+      window.requestAnimationFrame(() => input.blur());
+    }
+  }
 
   async function saveClaim(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,7 +135,7 @@ export function AddClaimForm() {
             <input
               type="datetime-local"
               value={lossDateTime}
-              onChange={(event) => setLossDateTime(event.target.value)}
+              onChange={handleLossDateTimeChange}
               aria-label="Loss Date and Time"
               required
               className={inputClass}
