@@ -104,7 +104,7 @@ export default function InternalClaimStageOne() {
       setInsurers(insurerResult.data ?? []);
 
       if (draftClaimId) {
-        const draftResult = await supabase.from('claims').select('id,customer_id,claim_no,vehicle_id,policy_id,current_status').eq('id', draftClaimId).eq('current_status', 'Draft').maybeSingle();
+        const draftResult = await supabase.from('claims').select('id,customer_id,claim_no,vehicle_id,policy_id,current_status,created_at,spot_intimation_at').eq('id', draftClaimId).eq('current_status', 'Draft').maybeSingle();
         const row = draftResult.data as any;
         if (row && ids.includes(row.customer_id)) {
           const draftVehicle = nextVehicles.find((item) => item.id === row.vehicle_id) ?? null;
@@ -113,6 +113,11 @@ export default function InternalClaimStageOne() {
             setDraftClaim({ id: row.id, customerId: row.customer_id, controlNo: row.claim_no });
             setSelectedCustomerId(row.customer_id);
             setSelectedVehicleId(row.vehicle_id);
+            const initialIntimation = localDateTimeParts(row.spot_intimation_at ?? row.created_at);
+            if (initialIntimation) {
+              setIntimationDate((current) => current || initialIntimation.date);
+              setIntimationTime((current) => current || initialIntimation.time);
+            }
             const docResult = await supabase.from('claim_documents').select('id,document_type,file_name,storage_bucket,storage_path,mime_type,file_size').eq('claim_id', row.id).order('created_at', { ascending: true });
             const restored: Record<DocumentKey, UploadedDocument[]> = { rc: [], insurance: [], licence: [], gr: [], accident_photo: [], accident_video: [], bulk: [] };
             for (const raw of (docResult.data ?? []) as any[]) {
@@ -165,13 +170,18 @@ export default function InternalClaimStageOne() {
       insurance_company_id: selectedPolicy.insurance_company_id,
       current_status: 'Draft',
       created_by: session.user.id,
-    }).select('id, customer_id, claim_no').single();
+    }).select('id, customer_id, claim_no, created_at').single();
     if (error || !data) {
       setMessage(mapSubmitError(error));
       return null;
     }
     const next = { id: data.id, customerId: data.customer_id, controlNo: data.claim_no };
     setDraftClaim(next);
+    const initialIntimation = localDateTimeParts((data as any).created_at);
+    if (initialIntimation) {
+      setIntimationDate((current) => current || initialIntimation.date);
+      setIntimationTime((current) => current || initialIntimation.time);
+    }
     return next;
   }
 
@@ -474,6 +484,7 @@ function TimePickerModal({ value, visible, title, onClose, onSelect }: { value: 
 function TimeColumn({ label, value, options, onSelect }: { label: string; value: number; options: number[]; onSelect: (value: number) => void }) { return <View style={styles.timeColumn}><Text style={styles.timeColumnLabel}>{label}</Text><View style={styles.timeOptions}>{options.map((option) => <Pressable key={option} accessibilityRole="button" accessibilityState={{ selected: option === value }} onPress={() => onSelect(option)} style={[styles.timeOption, option === value && styles.timeOptionSelected]}><Text style={[styles.timeOptionText, option === value && styles.timeOptionTextSelected]}>{String(option).padStart(2, '0')}</Text></Pressable>)}</View></View>; }
 function parseTime(value: string) { const match = /^(\d{2}):(\d{2})$/.exec(value); return match ? { hour: Number(match[1]), minute: Number(match[2]) } : { hour: new Date().getHours(), minute: Math.floor(new Date().getMinutes() / 5) * 5 }; }
 function parseDateTime(date: string, time: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(time.trim())) return null; const [year, month, day] = date.split('-').map(Number); const [hour, minute] = time.trim().split(':').map(Number); const value = new Date(year, month - 1, day, hour, minute); return Number.isNaN(value.getTime()) ? null : value; }
+function localDateTimeParts(value?: string | null) { if (!value) return null; const date = new Date(value); if (Number.isNaN(date.getTime())) return null; return { date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}` }; }
 function todayIsoDate() { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; }
 function isIncidentAfterPolicyExpiry(policy: Policy | null, incidentAt: Date | null) { if (!policy?.end_date || !incidentAt) return false; const expiry = new Date(`${policy.end_date.slice(0, 10)}T23:59:59`); return !Number.isNaN(expiry.getTime()) && incidentAt.getTime() > expiry.getTime(); }
 function formatDate(value?: string | null) { if (!value) return '-'; const date = new Date(value); if (Number.isNaN(date.getTime())) return value; return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
