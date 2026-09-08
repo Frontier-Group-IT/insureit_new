@@ -22,6 +22,7 @@ import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layou
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 import { ensurePolicyOcrBatchReviewNotification, ensureAutomaticPolicyOcrReview, ensurePolicyOcrSatisfactionTask } from "@/lib/policy-ocr-review-automation";
+import { autoFinalizeReviewedPolicyOcrTraining } from "./ocr-training-orchestrator-actions";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const OCR_TIMEOUT_MS = 120 * 1000;
@@ -268,6 +269,7 @@ export async function processPolicyOcrTrainingOrchestratorBatch(
       if (!subjectToken) return { ok: false as const, error: "google_oidc_subject_token_missing", processed: 0, succeeded: 0, needsReview: 0 };
 
       const admin = createSupabaseAdminClient();
+      await autoFinalizeReviewedPolicyOcrTraining();
       const { data: samples, error } = await admin.rpc("claim_policy_ocr_orchestrator_samples", {
         p_orchestrator_id: orchestratorId,
         p_limit: Math.max(1, Math.min(limit, 25)),
