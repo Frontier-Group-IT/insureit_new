@@ -68,12 +68,15 @@ export function resolveClaimUploadDescriptor(file: { name: string; mimeType?: st
   const mimeType = normalizedMimeType(file.mimeType);
   const extension = fileExtension(file.name);
   const extensionMimeType = MIME_BY_EXTENSION[extension];
+  const hasSpecificMimeType = Boolean(mimeType) && !GENERIC_MIME_TYPES.has(mimeType);
 
-  if (mimeType && !GENERIC_MIME_TYPES.has(mimeType) && EXTENSION_BY_MIME[mimeType]) {
+  if (hasSpecificMimeType) {
+    const canonicalExtension = EXTENSION_BY_MIME[mimeType];
+    if (!canonicalExtension) return { ok: false, message: unsupportedMessage(file.name) };
     return {
       ok: true,
       mimeType,
-      storageExtension: extensionMimeType === mimeType ? extension : EXTENSION_BY_MIME[mimeType],
+      storageExtension: extensionMimeType === mimeType ? extension : canonicalExtension,
     };
   }
 
