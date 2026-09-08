@@ -12,7 +12,7 @@ jobs:
   process:
     name: Process bounded OCR training sample
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - name: Call protected Vercel worker
         env:
