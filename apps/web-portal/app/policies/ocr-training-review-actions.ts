@@ -411,13 +411,16 @@ export async function startPolicyOcrTrainingFromReview(taskId: string, reviewerP
     values: resolved,
     proposal: label.proposal,
   });
-  const { error: approvalError } = await admin.rpc("approve_policy_ocr_database_comparison", {
+  const { data: candidateId, error: approvalError } = await admin.rpc("approve_policy_ocr_database_comparison", {
     p_label_id: label.id,
     p_actor_id: reviewerProfileId,
     p_reference: resolved,
     p_candidate_payload: candidate,
   });
   if (approvalError) throw new Error("Parser training could not be started from the saved review answers.");
+  if (!candidateId) throw new Error("Parser training candidate creation returned no candidate.");
+  const { error: queueError } = await admin.rpc("enqueue_policy_ocr_refinement_job", { p_candidate_id: candidateId });
+  if (queueError) throw new Error("Parser refinement automation could not be queued.");
 }
 
 async function loadAssignedTask(taskId: string | null, profileId: string): Promise<ReviewTask> {

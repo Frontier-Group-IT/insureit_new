@@ -1,4 +1,5 @@
 import { DocumentVerificationModalButton } from "./document-verification-modal-v3";
+import { InsuranceVerificationModalButton } from "./insurance-verification-modal";
 import { VerifyDocumentButton } from "./verify-buttons";
 
 export function VerificationActionButton({ claimId, documentId, itemKey, incidentDate, policyStartDate, policyEndDate }: { claimId: string; documentId: string; itemKey: string; incidentDate?: string | null; policyStartDate?: string | null; policyEndDate?: string | null }) {
@@ -11,7 +12,7 @@ export function VerificationActionButton({ claimId, documentId, itemKey, inciden
   }
 
   if (itemKey === "insurance") {
-    return <DocumentVerificationModalButton claimId={claimId} documentId={documentId} modalType="insurance" incidentDate={incidentDate} policyStartDate={policyStartDate} policyEndDate={policyEndDate} />;
+    return <InsuranceVerificationModalButton claimId={claimId} documentId={documentId} incidentDate={incidentDate} policyStartDate={policyStartDate} policyEndDate={policyEndDate} />;
   }
 
   if (itemKey === "dl") {
