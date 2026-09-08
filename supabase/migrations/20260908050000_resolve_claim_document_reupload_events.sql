@@ -113,7 +113,7 @@ set event_type = 'claim_document_reupload_resolved'
 where event_type = 'claim_document_reuploaded'
   and (
     title = 'Replacement document received'
-    or coalesce((metadata ->> 'was_reupload')::boolean, false) = true
+    or lower(coalesce(metadata ->> 'was_reupload', 'false')) = 'true'
   );
 
 -- Resolve older request rows when a later replacement-received activity exists
