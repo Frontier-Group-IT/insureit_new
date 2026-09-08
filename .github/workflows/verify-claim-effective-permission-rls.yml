@@ -1,0 +1,30 @@
+name: Verify claim effective permission RLS
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260908123000_align_claim_workflow_rls_with_effective_manage_claims.sql'
+      - 'apps/web-portal/scripts/claim-effective-permission-rls-regression.mjs'
+      - 'apps/web-portal/app/claims/**'
+      - 'apps/web-portal/lib/roles.ts'
+      - '.github/workflows/verify-claim-effective-permission-rls.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: claim effective permission RLS regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run claim effective permission regression
+        working-directory: apps/web-portal
+        run: node scripts/claim-effective-permission-rls-regression.mjs
