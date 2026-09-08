@@ -373,7 +373,7 @@ function assertFinancialReconciliation(values: TrainingDatabaseReference) {
   }
 }
 
-async function startPolicyOcrTrainingFromReview(taskId: string, reviewerProfileId: string) {
+export async function startPolicyOcrTrainingFromReview(taskId: string, reviewerProfileId: string) {
   const admin = createSupabaseAdminClient();
   const { data: task, error: taskError } = await admin
     .from("policy_ocr_training_review_tasks")
