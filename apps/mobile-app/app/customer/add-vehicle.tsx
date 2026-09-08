@@ -447,7 +447,7 @@ export default function AddVehicleScreen() {
           {policyDetailsFetchedFromRc ? <View style={styles.policyHintBox}><MaterialCommunityIcons name="shield-check-outline" size={18} color="#0A43A3" /><Text style={styles.policyHintText}>Insurance details were fetched from RC records. Please review them before saving.</Text></View> : null}
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" /></View>
+            <View style={styles.column}><MaskedCodeField icon="identifier" label="Policy no." value={policyNo} onChangeText={setPolicyNo} /></View>
             <View style={styles.column}><PolicyTypeDropdown value={policyType} open={policyTypeOpen} onToggle={() => setPolicyTypeOpen((value) => !value)} onSelect={(value) => { setPolicyType(value); setPolicyTypeOpen(false); }} /></View>
           </View>
           <View style={styles.twoColumnRow}>
