@@ -11,6 +11,13 @@ import { IncidentVoiceNote, type IncidentVoiceNoteFile } from '@/components/inci
 import { ClaimActionBar, ClaimFormSection, ClaimIdentityCard, ExternalClaimStageHeader } from '@/components/external-claim-ui';
 import { LoadingState, Screen, TextField } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
+import {
+  claimUploadFileReadMessage,
+  claimUploadMetadataMessage,
+  claimUploadStorageMessage,
+  claimUploadTooLargeMessage,
+  resolveClaimUploadDescriptor,
+} from '@/lib/claim-document-upload';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
 import { detailRecord, stringValue, validateStageChronology } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
@@ -180,23 +187,25 @@ export default function SelfManagedClaimScreen() {
     const maxUploadSizeBytes = key === 'accident_video' ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
     const maxUploadSizeLabel = key === 'accident_video' ? '50 MB' : '5 MB';
     const tooLarge = pickedFiles.find((file) => file.size !== null && file.size !== undefined && file.size > maxUploadSizeBytes);
-    if (tooLarge) return setMessage(`${tooLarge.name} is larger than ${maxUploadSizeLabel}. Please choose smaller files.`);
+    if (tooLarge) return setMessage(claimUploadTooLargeMessage(tooLarge.name, maxUploadSizeLabel));
+    const unsupported = pickedFiles.map((file) => resolveClaimUploadDescriptor(file)).find((descriptor) => !descriptor.ok);
+    if (unsupported && !unsupported.ok) return setMessage(unsupported.message);
 
     if (editing && policy) {
       setUploadingDocuments(true);
       const uploadedDocuments: ClaimDocument[] = [];
-      let failed = 0;
+      let firstFailureMessage = '';
       for (const picked of pickedFiles) {
         const uploaded = await uploadClaimDocument(claimId, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
         if (uploaded.ok && uploaded.document) uploadedDocuments.push(uploaded.document);
-        else failed += 1;
+        else if (!firstFailureMessage) firstFailureMessage = uploaded.message;
       }
       setUploadingDocuments(false);
       if (uploadedDocuments.length) {
         setSavedDocuments((current) => [...uploadedDocuments, ...current]);
         setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
       }
-      if (failed) setMessage(`${uploadedDocuments.length} of ${pickedFiles.length} files were saved. Please retry the remaining ${failed}.`);
+      if (uploadedDocuments.length !== pickedFiles.length) setMessage(`${uploadedDocuments.length} of ${pickedFiles.length} files were saved. ${firstFailureMessage || 'Please retry the remaining files.'}`);
       setDocuments((current) => ({ ...current, [key]: [] }));
       return;
     }
@@ -210,17 +219,21 @@ export default function SelfManagedClaimScreen() {
     if (result.canceled || !result.assets?.length) return;
     const additions: PickedDocument[] = result.assets.map((asset) => ({ name: asset.name, uri: asset.uri, mimeType: asset.mimeType, size: asset.size ?? null }));
     const tooLarge = additions.find((file) => file.size !== null && file.size !== undefined && file.size > MAX_UPLOAD_SIZE_BYTES);
-    if (tooLarge) return setMessage(`${tooLarge.name} is larger than 5 MB. Please choose smaller files.`);
+    if (tooLarge) return setMessage(claimUploadTooLargeMessage(tooLarge.name, '5 MB'));
+    const unsupported = additions.map((file) => resolveClaimUploadDescriptor(file)).find((descriptor) => !descriptor.ok);
+    if (unsupported && !unsupported.ok) return setMessage(unsupported.message);
 
     if (editing && policy) {
       setUploadingDocuments(true);
       let successCount = 0;
+      let firstFailureMessage = '';
       for (const file of additions) {
         const uploaded = await uploadClaimDocument(claimId, policy.customer_id, BULK_DOCUMENT_TYPE, file);
         if (uploaded.ok) successCount += 1;
+        else if (!firstFailureMessage) firstFailureMessage = uploaded.message;
       }
       setUploadingDocuments(false);
-      if (successCount !== additions.length) setMessage(`${successCount} of ${additions.length} documents were saved. Please retry the remaining files.`);
+      if (successCount !== additions.length) setMessage(`${successCount} of ${additions.length} documents were saved. ${firstFailureMessage || 'Please retry the remaining files.'}`);
       if (successCount) setSavedBulkCount((current) => current + successCount);
       return;
     }
@@ -373,54 +386,77 @@ export default function SelfManagedClaimScreen() {
 
   async function uploadClaimDocument(targetClaimId: string, customerId: string, documentType: string, pickedFile: PickedDocument) {
     const isAccidentVideo = documentType === DOCUMENT_TYPE_BY_KEY.accident_video;
+    const storageBucket = 'claim-documents';
+    let storagePath = '';
+    let storageUploaded = false;
     try {
       const session = await getCurrentSession();
       if (!session?.user) return { ok: false, message: 'Please sign in again before uploading documents.', document: null };
       let uploadUri = pickedFile.uri;
       let uploadName = pickedFile.name;
-      let uploadMimeType = pickedFile.mimeType ?? 'application/octet-stream';
+      let uploadMimeType = pickedFile.mimeType;
       if (isAccidentVideo) {
         setVideoProcessingStatus(pickedFile.size && pickedFile.size > 10 * 1024 * 1024 ? 'Preparing video for compression…' : 'Preparing video…');
-        const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => {
-          setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`);
-        });
-        uploadUri = prepared.uri;
-        if (prepared.compressed) {
-          const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
-          uploadName = `${stem}.mp4`;
-          uploadMimeType = 'video/mp4';
+        try {
+          const prepared = await prepareVideoForUpload(pickedFile.uri, pickedFile.size, (progress) => {
+            setVideoProcessingStatus(`Compressing video… ${Math.round(progress * 100)}%`);
+          });
+          uploadUri = prepared.uri;
+          if (prepared.compressed) {
+            const stem = pickedFile.name.replace(/\.[^.]+$/, '') || 'accident-video';
+            uploadName = `${stem}.mp4`;
+            uploadMimeType = 'video/mp4';
+          }
+          setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
+        } catch {
+          return { ok: false, message: `${pickedFile.name || 'The selected video'} could not be prepared for upload. Please try again.`, document: null };
         }
-        setVideoProcessingStatus(prepared.compressed ? 'Uploading compressed video…' : 'Uploading video…');
       }
-      const extension = uploadName.includes('.') ? uploadName.split('.').pop() : 'bin';
-      const storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
-      const response = await fetch(uploadUri);
-      const body = await response.arrayBuffer();
+
+      const descriptor = resolveClaimUploadDescriptor({ name: uploadName, mimeType: uploadMimeType });
+      if (!descriptor.ok) return { ok: false, message: descriptor.message, document: null };
+      uploadMimeType = descriptor.mimeType;
+      storagePath = `${customerId}/${targetClaimId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${descriptor.storageExtension}`;
+
+      let body: ArrayBuffer;
+      try {
+        const response = await fetch(uploadUri);
+        body = await response.arrayBuffer();
+      } catch {
+        return { ok: false, message: claimUploadFileReadMessage(pickedFile.name), document: null };
+      }
+
       const maxUploadSizeBytes = isAccidentVideo ? MAX_VIDEO_UPLOAD_SIZE_BYTES : MAX_UPLOAD_SIZE_BYTES;
       const maxUploadSizeLabel = isAccidentVideo ? '50 MB' : '5 MB';
-      if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: `${pickedFile.name} is larger than ${maxUploadSizeLabel}. Please choose a smaller file.`, document: null };
+      if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: claimUploadTooLargeMessage(pickedFile.name, maxUploadSizeLabel), document: null };
 
-      const uploadResult = await supabase.storage.from('claim-documents').upload(storagePath, body, {
+      const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, body, {
         contentType: uploadMimeType,
         upsert: false,
       });
-      if (uploadResult.error) return { ok: false, message: `${pickedFile.name} could not be uploaded.`, document: null };
+      if (uploadResult.error) return { ok: false, message: claimUploadStorageMessage(pickedFile.name), document: null };
+      storageUploaded = true;
 
       const { data, error } = await supabase.from('claim_documents').insert({
         claim_id: targetClaimId,
         customer_id: customerId,
         document_type: documentType,
         file_name: uploadName,
-        storage_bucket: 'claim-documents',
+        storage_bucket: storageBucket,
         storage_path: storagePath,
         mime_type: uploadMimeType,
         file_size: body.byteLength,
         uploaded_by: session.user.id,
       }).select('*').single();
-      if (error) return { ok: false, message: `${pickedFile.name} uploaded, but its claim document record could not be saved.`, document: null };
+      if (error) {
+        await supabase.storage.from(storageBucket).remove([storagePath]);
+        storageUploaded = false;
+        return { ok: false, message: claimUploadMetadataMessage(pickedFile.name), document: null };
+      }
       return { ok: true, message: '', document: data as ClaimDocument };
     } catch {
-      return { ok: false, message: `${pickedFile.name} could not be uploaded.`, document: null };
+      if (storageUploaded && storagePath) await supabase.storage.from(storageBucket).remove([storagePath]);
+      return { ok: false, message: `${pickedFile.name || 'The selected document'} could not be uploaded. Please try again.`, document: null };
     } finally {
       if (isAccidentVideo) setVideoProcessingStatus('');
     }
@@ -437,16 +473,18 @@ export default function SelfManagedClaimScreen() {
       ...documents.bulk.map((file) => ({ type: BULK_DOCUMENT_TYPE, file })),
       ...(voiceNote ? [{ type: VOICE_NOTE_DOCUMENT_TYPE, file: voiceNote }] : []),
     ];
-    if (!queued.length) return { total: 0, saved: 0 };
+    if (!queued.length) return { total: 0, saved: 0, firstFailureMessage: '' };
 
     setUploadingDocuments(true);
     let saved = 0;
+    let firstFailureMessage = '';
     for (const item of queued) {
       const result = await uploadClaimDocument(targetClaimId, customerId, item.type, item.file);
       if (result.ok) saved += 1;
+      else if (!firstFailureMessage) firstFailureMessage = result.message;
     }
     setUploadingDocuments(false);
-    return { total: queued.length, saved };
+    return { total: queued.length, saved, firstFailureMessage };
   }
 
   async function captureCurrentLocation() {
@@ -550,7 +588,7 @@ export default function SelfManagedClaimScreen() {
       if (claimUpdate.error || milestoneUpdate.error) { setSaving(false); return setMessage(claimUpdate.error?.message || milestoneUpdate.error?.message || 'We could not update Spot Intimation.'); }
       const persisted = await persistPendingDocuments(claimId, policy.customer_id);
       setSaving(false);
-      if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} queued documents were saved. You can retry the remaining documents from Spot Intimation.`);
+      if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} queued documents were saved. ${persisted.firstFailureMessage || 'You can retry the remaining documents from Spot Intimation.'}`);
       router.replace({ pathname: '/customer/self-managed-spot-status', params: { id: claimId } });
       return;
     }
@@ -584,7 +622,7 @@ export default function SelfManagedClaimScreen() {
 
     const persisted = await persistPendingDocuments(created.claim_id, policy.customer_id);
     setSaving(false);
-    if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved to the claim. The saved documents are available in Claim Tracker.`);
+    if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved to the claim. ${persisted.firstFailureMessage || 'The saved documents are available in Claim Tracker.'}`);
 
     let controlNo = typeof created.claim_no === 'string' ? created.claim_no.trim() : '';
     if (!controlNo) {
