@@ -4,6 +4,7 @@ import { AlertTriangle, Search, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { deleteMasterRecord, type DeletableMasterEntity } from "@/app/master-record-delete-actions";
+import { deletePolicyWithCompletedIntake } from "@/app/policy-pair-delete-actions";
 
 type DeleteRecordOption = {
   id: string;
@@ -16,6 +17,8 @@ type Props = {
   title: string;
   records: DeleteRecordOption[];
 };
+
+type ConfirmationMode = "single" | "policy_pair" | null;
 
 const entityLabels: Record<DeletableMasterEntity, string> = {
   customer: "customer",
@@ -31,9 +34,10 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const [confirming, setConfirming] = useState(false);
+  const [confirmationMode, setConfirmationMode] = useState<ConfirmationMode>(null);
   const [confirmationText, setConfirmationText] = useState("");
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [offerPolicyPairCleanup, setOfferPolicyPairCleanup] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const filtered = useMemo(() => {
@@ -49,21 +53,54 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   const isClaim = entity === "claim";
   const isCustomerApplication = entity === "customer_onboarding_application";
   const isPolicyIntake = entity === "policy_intake";
+  const isPolicyPairConfirmation = confirmationMode === "policy_pair";
+  const requiredConfirmation = isPolicyPairConfirmation ? "DELETE BOTH" : "DELETE";
+
+  function resetDeleteFeedback() {
+    setMessage(null);
+    setOfferPolicyPairCleanup(false);
+  }
 
   function closeConfirmation() {
     if (isPending) return;
-    setConfirming(false);
+    setConfirmationMode(null);
     setConfirmationText("");
   }
 
   function confirmDelete() {
-    if (!selected || confirmationText !== "DELETE" || isPending) return;
+    if (!selected || confirmationText !== requiredConfirmation || isPending || !confirmationMode) return;
     setMessage(null);
     startTransition(async () => {
+      if (confirmationMode === "policy_pair") {
+        const result = await deletePolicyWithCompletedIntake(selected.id);
+        if (!result.ok) {
+          setMessage({ type: "error", text: result.error });
+          setConfirmationMode(null);
+          setConfirmationText("");
+          return;
+        }
+
+        const cleanupNote = result.storageCleanupFailed > 0
+          ? ` ${result.storageCleanupFailed} uploaded file(s) could not be cleaned from storage automatically and were audit-logged for review.`
+          : "";
+        setMessage({
+          type: "success",
+          text: `${selected.label} and completed Policy Intake ${result.intakeNumber} were deleted successfully.${cleanupNote}`,
+        });
+        setSelectedId("");
+        setQuery("");
+        setOfferPolicyPairCleanup(false);
+        setConfirmationMode(null);
+        setConfirmationText("");
+        router.refresh();
+        return;
+      }
+
       const result = await deleteMasterRecord(entity, selected.id);
       if (!result.ok) {
         setMessage({ type: "error", text: result.error });
-        setConfirming(false);
+        setOfferPolicyPairCleanup(entity === "policy" && /policy intake/i.test(result.error));
+        setConfirmationMode(null);
         setConfirmationText("");
         return;
       }
@@ -71,7 +108,8 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
       setMessage({ type: "success", text: `${selected.label} was deleted successfully.` });
       setSelectedId("");
       setQuery("");
-      setConfirming(false);
+      setOfferPolicyPairCleanup(false);
+      setConfirmationMode(null);
       setConfirmationText("");
       router.refresh();
     });
@@ -103,32 +141,53 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
           <label className="relative min-w-0 flex-1">
             <span className="mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[#64748B]">Find record</span>
             <Search className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-[#94A3B8]" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={`Search ${entityLabel}...`} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-[11px]" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); resetDeleteFeedback(); }} placeholder={`Search ${entityLabel}...`} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-[11px]" />
           </label>
 
           <label className="min-w-0 flex-[1.35]">
             <span className="mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[#64748B]">Select exact record</span>
-            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); setMessage(null); }} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px]">
+            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); resetDeleteFeedback(); }} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px]">
               <option value="">Choose a {entityLabel}</option>
               {filtered.map((record) => <option key={record.id} value={record.id}>{record.label}{record.detail ? ` — ${record.detail}` : ""}</option>)}
             </select>
           </label>
 
-          <button type="button" disabled={!selected || isPending} onClick={() => { setMessage(null); setConfirming(true); }} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-600 px-4 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">
+          <button type="button" disabled={!selected || isPending} onClick={() => { resetDeleteFeedback(); setConfirmationMode("single"); }} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-600 px-4 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">
             <Trash2 className="h-4 w-4" />Delete {entityLabel}
           </button>
         </div>
 
-        {message ? <div className={`mt-3 rounded-xl border px-3 py-2 text-[10.5px] font-medium ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>{message.text}</div> : null}
+        {message ? (
+          <div className={`mt-3 rounded-xl border px-3 py-2 text-[10.5px] font-medium ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+              <span>{message.text}</span>
+              {message.type === "error" && offerPolicyPairCleanup && selected ? (
+                <button
+                  type="button"
+                  onClick={() => { setConfirmationText(""); setConfirmationMode("policy_pair"); }}
+                  disabled={isPending}
+                  className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-3 text-[10px] font-bold text-white hover:bg-red-800 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />Delete Policy + Intake
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </section>
 
-      {confirming && selected ? (
+      {confirmationMode && selected ? (
         <div className="fixed inset-0 z-[90] grid place-items-center bg-[#0F172A]/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby={`delete-${entity}-title`}>
           <div className="w-full max-w-md rounded-3xl border border-white/80 bg-white p-5 shadow-[0_30px_90px_rgba(15,23,42,.24)]">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-red-100 text-red-700"><Trash2 className="h-5 w-5" /></span>
-                <div><h2 id={`delete-${entity}-title`} className="font-display text-[16px] font-semibold text-[#0F172A]">Permanently delete {entityLabel}?</h2><p className="mt-1 text-[10.5px] leading-4 text-[#64748B]">This action cannot be undone.</p></div>
+                <div>
+                  <h2 id={`delete-${entity}-title`} className="font-display text-[16px] font-semibold text-[#0F172A]">
+                    {isPolicyPairConfirmation ? "Permanently delete Policy + completed Intake?" : `Permanently delete ${entityLabel}?`}
+                  </h2>
+                  <p className="mt-1 text-[10.5px] leading-4 text-[#64748B]">This action cannot be undone.</p>
+                </div>
               </div>
               <button type="button" onClick={closeConfirmation} disabled={isPending} className="grid h-8 w-8 place-items-center rounded-xl text-[#64748B] hover:bg-[#F1F5F9]" aria-label="Close delete confirmation"><X className="h-4 w-4" /></button>
             </div>
@@ -137,20 +196,25 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
               <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-red-600">Selected record</p>
               <p className="mt-1 break-words text-[12px] font-semibold text-[#7F1D1D]">{selected.label}</p>
               {selected.detail ? <p className="mt-0.5 break-words text-[10px] text-[#9F1239]">{selected.detail}</p> : null}
-              {isClaim ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this claim removes its linked claim documents metadata, status history, tasks and notifications. The policy, vehicle and customer remain intact.</p> : null}
-              {isCustomerApplication ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">If this application has already created a customer record, that customer and its vehicles, policies and claims will remain unchanged.</p> : null}
-              {isPolicyIntake ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this intake removes its intake documents and draft/workflow metadata. A linked final policy is never deleted by this action.</p> : null}
+              {isPolicyPairConfirmation ? (
+                <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">
+                  This coordinated cleanup permanently removes the selected policy and its linked completed Policy Intake in one atomic database operation. Claims, reconciliation, invoice lines, partner payables, replacement-audit references, or another non-rejected intake will still block deletion. Linked Policy and Intake files are cleaned from storage after the database transaction succeeds.
+                </p>
+              ) : null}
+              {!isPolicyPairConfirmation && isClaim ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this claim removes its linked claim documents metadata, status history, tasks and notifications. The policy, vehicle and customer remain intact.</p> : null}
+              {!isPolicyPairConfirmation && isCustomerApplication ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">If this application has already created a customer record, that customer and its vehicles, policies and claims will remain unchanged.</p> : null}
+              {!isPolicyPairConfirmation && isPolicyIntake ? <p className="mt-2 text-[10px] leading-4 text-[#9F1239]">Deleting this intake removes its intake documents and draft/workflow metadata. A linked final policy is never deleted by this action.</p> : null}
             </div>
 
             <label className="mt-4 block">
-              <span className="text-[10.5px] font-medium text-[#334155]">Type <strong>DELETE</strong> to confirm</span>
-              <input autoFocus value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-[#CBD5E1] px-3 text-[12px] font-semibold tracking-[0.08em]" placeholder="DELETE" />
+              <span className="text-[10.5px] font-medium text-[#334155]">Type <strong>{requiredConfirmation}</strong> to confirm</span>
+              <input autoFocus value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-[#CBD5E1] px-3 text-[12px] font-semibold tracking-[0.08em]" placeholder={requiredConfirmation} />
             </label>
 
             <div className="mt-5 flex justify-end gap-2">
               <button type="button" onClick={closeConfirmation} disabled={isPending} className="h-10 rounded-xl border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#475569] disabled:opacity-50">Cancel</button>
-              <button type="button" onClick={confirmDelete} disabled={confirmationText !== "DELETE" || isPending} className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-[10.5px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
-                <Trash2 className="h-4 w-4" />{isPending ? "Deleting..." : "Delete permanently"}
+              <button type="button" onClick={confirmDelete} disabled={confirmationText !== requiredConfirmation || isPending} className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-600 px-4 text-[10.5px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">
+                <Trash2 className="h-4 w-4" />{isPending ? "Deleting..." : isPolicyPairConfirmation ? "Delete both permanently" : "Delete permanently"}
               </button>
             </div>
           </div>
