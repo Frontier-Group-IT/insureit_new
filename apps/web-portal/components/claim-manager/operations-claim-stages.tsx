@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { advanceClaimWorkflow, saveSpotIntimationDetails } from "@/app/actions";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
@@ -174,7 +175,13 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
   const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
-  const [showSpotSaved, setShowSpotSaved] = useState(false);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!successNotice) return;
+    const timer = window.setTimeout(() => setSuccessNotice(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [successNotice]);
 
   const [state, formAction] = useActionState(
     async (_previous: ActionState, formData: FormData): Promise<ActionState> => {
@@ -182,14 +189,17 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         const milestoneKey = formData.get("milestone_key");
         if (typeof milestoneKey === "string" && milestoneKey && milestoneKey !== "spot_intimation") {
           const result = await completeClaimJourneyStage(claimId, formData);
+          const message = result.advanced ? "Claim stage updated." : "Stage details saved.";
+          setSuccessNotice(message);
           return {
             ok: true,
-            message: result.advanced ? "Claim stage updated." : "Stage details saved.",
+            message,
             advanced: result.advanced,
             nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
           };
         }
         await advanceClaimWorkflow(claimId, formData);
+        setSuccessNotice("Claim stage updated.");
         return { ok: true, message: "Claim stage updated.", advanced: true, nextStageKey: "spot_status" };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : "Unable to update the claim stage.", advanced: false, nextStageKey: null };
@@ -204,6 +214,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
     async (_previous: { ok: boolean; message: string }, formData: FormData) => {
       try {
         await saveSpotIntimationDetails(claimId, formData);
+        setSuccessNotice("Spot Intimation details saved.");
         return { ok: true, message: "Spot Intimation details saved." };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : "Unable to save Spot Intimation details." };
@@ -231,7 +242,6 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
-    setShowSpotSaved(false);
     setSelectedKey("spot_status");
     router.replace(`/claims/${claimId}?stage=spot_status`);
   }, [claimId, router, spotState.ok]);
@@ -288,7 +298,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               formAction={spotCurrentEditable ? formAction : spotFormAction}
               state={spotCurrentEditable ? state : { ok: spotState.ok, message: spotState.message, advanced: false, nextStageKey: null }}
               standalone={!spotCurrentEditable}
-              onSubmitStart={() => { setShowSpotSaved(false); setSpotSubmitting(true); }}
+              onSubmitStart={() => setSpotSubmitting(true)}
             />
             <div className="mt-3">{spotContent}</div>
             <div className="mt-3 flex justify-end">
@@ -360,7 +370,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 );
               })}
             </div>
-            {state.message ? <p role={state.ok ? "status" : "alert"} className={`mt-3 rounded-md border px-3 py-2 text-[12px] font-medium ${state.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-rose-200 bg-rose-50 text-rose-800"}`}>{state.message}</p> : null}
+            {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
             <div className="mt-3 flex justify-end"><FormSubmitButton label="Save Details" pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>
           </form>
         ) : selected.key !== "spot_intimation" && selected.key !== "claim_intimation" ? (
@@ -368,14 +378,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         ) : null}
       </div>
 
-      {showSpotSaved ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-[#071D49]/35 px-4" role="presentation">
-          <div role="dialog" aria-modal="true" aria-labelledby="spot-intimation-saved-title" className="w-full max-w-sm rounded-2xl border border-[#D9E3F0] bg-white p-5 text-center shadow-[0_18px_50px_rgba(7,29,73,0.2)]">
-            <h2 id="spot-intimation-saved-title" className="text-[16px] font-semibold text-[#071D49]">Spot Intimation details saved</h2>
-            <button type="button" onClick={() => { setShowSpotSaved(false); router.refresh(); }} className="mt-4 rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white hover:bg-[#12356C]">OK</button>
-          </div>
-        </div>
-      ) : null}
+      {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
     </section>
   );
 }
