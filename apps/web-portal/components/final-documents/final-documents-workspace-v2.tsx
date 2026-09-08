@@ -4,6 +4,7 @@ import { Camera, ContactRound, Eye, FilePenLine, FileText, RefreshCw, ShieldChec
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
+import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, submitFinalDocumentsDraft, uploadFinalDocument, verifyFinalDocument } from "./final-documents-actions";
 import { classifyStage3BulkAttachment, loadStage3UnclassifiedAttachments, type Stage3UnclassifiedAttachment } from "./stage3-bulk-classify-actions";
@@ -47,6 +48,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
   const [activeTab, setActiveTab] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [result, setResult] = useState<ActionResult | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [unclassifiedAttachments, setUnclassifiedAttachments] = useState<Stage3UnclassifiedAttachment[]>([]);
   const [classifications, setClassifications] = useState<Record<string, string>>({});
@@ -70,6 +72,12 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
     return () => { cancelled = true; };
   }, [claimId]);
 
+  useEffect(() => {
+    if (!successNotice) return;
+    const timer = window.setTimeout(() => setSuccessNotice(null), 3500);
+    return () => window.clearTimeout(timer);
+  }, [successNotice]);
+
   function baseForm() {
     const formData = new FormData();
     formData.set("claimId", claimId);
@@ -91,12 +99,15 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
     setPendingAction(label);
     startTransition(async () => {
       const response = await action();
-      setResult(response);
       setPendingAction(null);
       if (response.ok) {
+        setResult(null);
+        setSuccessNotice(response.message || "Changes saved successfully.");
         onSuccess?.();
         setTimeout(() => router.refresh(), 0);
+        return;
       }
+      setResult(response);
     });
   }
 
@@ -148,13 +159,14 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
       try {
         const response = await completeClaimJourneyStage(claimId, formData);
         setPendingAction(null);
+        setResult(null);
         if (response.advanced) {
-          setResult({ ok: true, message: "Claim Intimation completed. Work Approval is now open." });
+          setSuccessNotice("Claim Intimation completed. Work Approval is now open.");
           router.replace(`/claims/${claimId}?stage=work_approval`);
           router.refresh();
           return;
         }
-        setResult({ ok: true, message: "Stage details saved." });
+        setSuccessNotice("Stage details saved.");
         router.refresh();
       } catch (error) {
         setPendingAction(null);
@@ -217,9 +229,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
         </div>
         <div className="grid overflow-hidden rounded-xl border border-[#D9E3F0] md:grid-cols-5">{finalDocumentTabs.map((tab, index) => <button key={tab} type="button" onClick={() => setActiveTab(index)} className={`flex items-center gap-2 px-4 py-3 text-left text-[12px] font-semibold ${activeTab === index ? "bg-[#071D49] text-white" : "border-l border-[#D9E3F0] bg-[#FBFCFE] text-[#071D49]"}`}><span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ${activeTab === index ? "bg-white text-[#071D49]" : "bg-[#EEF4FF] text-[#071D49]"}`}>{index + 1}</span>{tab}</button>)}</div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{visibleRows.map((row) => <DocumentCard key={row.type} claimId={claimId} row={row} isPending={isPending} pendingAction={pendingAction} run={run} refresh={() => router.refresh()} />)}</div>
-        {result ? <p className={`mt-3 rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message}</p> : null}
+        {result && !result.ok ? <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{result.message}</p> : null}
         <div className="mt-4 flex items-center justify-between gap-3"><button type="button" disabled={activeTab === 0} onClick={() => setActiveTab((value) => Math.max(0, value - 1))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49] disabled:bg-[#F4F7FC] disabled:text-[#9AA7BA]">Previous</button><div className="flex items-center gap-3"><button type="button" onClick={() => run("draft", () => submitFinalDocumentsDraft(baseForm()))} className="rounded-lg border border-[#D9E3F0] bg-white px-5 py-2 text-[12px] font-semibold text-[#071D49]">Save as Draft</button><button type="button" disabled={isPending} onClick={saveAndContinue} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">{isPending && pendingAction === "save-continue" ? "Saving..." : "Save Details"}</button><button type="button" disabled={activeTab === finalDocumentTabs.length - 1 || isPending} onClick={() => setActiveTab((value) => Math.min(finalDocumentTabs.length - 1, value + 1))} className="rounded-lg bg-[#071D49] px-5 py-2 text-[12px] font-semibold text-white disabled:bg-[#A9B4C5]">Next</button></div></div>
       </section>
+
+      {successNotice ? <ClaimStageSuccessPopup message={successNotice} /> : null}
     </div>
   );
 }
