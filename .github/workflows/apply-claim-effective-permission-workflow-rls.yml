@@ -1,0 +1,84 @@
+name: Apply claim effective permission workflow RLS
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260908123000_align_claim_workflow_rls_with_effective_manage_claims.sql'
+      - '.github/workflows/apply-claim-effective-permission-workflow-rls.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply claim effective permission workflow RLS
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260908123000_align_claim_workflow_rls_with_effective_manage_claims.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply claim workflow RLS migration
+        run: supabase db query --linked --file supabase/migrations/20260908123000_align_claim_workflow_rls_with_effective_manage_claims.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260908123000
+
+      - name: Verify effective claim workflow gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.can_manage_claim(uuid)') is not null as claim_gate_ready,
+              exists (
+                select 1 from pg_policies
+                where schemaname='public' and tablename='claim_stage_details'
+                  and policyname='claim stage details effective manage claims insert'
+              ) as stage_insert_ready,
+              exists (
+                select 1 from pg_policies
+                where schemaname='public' and tablename='claim_status_history'
+                  and policyname='claim history effective manage claims insert'
+              ) as history_insert_ready,
+              exists (
+                select 1 from pg_policies
+                where schemaname='public' and tablename='claim_documents'
+                  and policyname='claim documents effective manage claims update'
+              ) as document_update_ready,
+              exists (
+                select 1 from pg_policies
+                where schemaname='public' and tablename='claim_financials'
+                  and policyname='claim financials effective manage claims update'
+              ) as financial_update_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"claim_gate_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"stage_insert_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"history_insert_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"document_update_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"financial_update_ready"[[:space:]]*:[[:space:]]*true'
