@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { BackofficePolicyRegister } from "@/components/backoffice-policy-register";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
+import { PolicyIntakePolicyRegisterLinksPortal } from "@/components/policy-intake-policy-register-links";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
+import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
@@ -76,24 +79,35 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   const afterAuth = performance.now();
   if (!profile) redirect("/access-denied");
   if (searchParams) await searchParams;
-  const accessibleRmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies");
+  const [accessibleRmEmployeeIds, canReviewPolicyIntakes] = await Promise.all([
+    getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies"),
+    hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
+  ]);
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
+  const policyIntakeSummaryPromise = canReviewPolicyIntakes
+    ? loadPolicyIntakeReviewSummary(admin)
+    : Promise.resolve(null);
 
   if (profile.role === "backoffice_executive") {
     if (accessibleRmEmployeeIds !== null && !accessibleRmEmployeeIds.length) {
+      const policyIntakeSummary = await policyIntakeSummaryPromise;
       const finishedAt = performance.now();
       logPortalRoutePerformance("/policies", {
         auth_ms: afterAuth - startedAt,
         scope_ms: afterScope - afterAuth,
-        data_ms: 0,
+        data_ms: finishedAt - afterScope,
         total_ms: finishedAt - startedAt,
       });
-      return <AppShell title="Policies"><BackofficePolicyRegister rows={[]} /></AppShell>;
+      return <AppShell title="Policies"><PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} /><BackofficePolicyRegister rows={[]} /></AppShell>;
     }
     let safeQuery = admin.from("policies").select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no,chassis_no,engine_no),insurance_companies(name)").order("created_at", { ascending: false });
     if (accessibleRmEmployeeIds !== null) safeQuery = safeQuery.in("rm_employee_id", accessibleRmEmployeeIds);
-    const { data, error } = await safeQuery.returns<BackofficePolicyRow[]>();
+    const [policyResult, policyIntakeSummary] = await Promise.all([
+      safeQuery.returns<BackofficePolicyRow[]>(),
+      policyIntakeSummaryPromise,
+    ]);
+    const { data, error } = policyResult;
     const finishedAt = performance.now();
     logPortalRoutePerformance("/policies", {
       auth_ms: afterAuth - startedAt,
@@ -101,18 +115,19 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       data_ms: finishedAt - afterScope,
       total_ms: finishedAt - startedAt,
     });
-    return <AppShell title="Policies">{error ? <RegisterError /> : <BackofficePolicyRegister rows={data ?? []} />}</AppShell>;
+    return <AppShell title="Policies"><PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} />{error ? <RegisterError /> : <BackofficePolicyRegister rows={data ?? []} />}</AppShell>;
   }
 
   if (accessibleRmEmployeeIds !== null && !accessibleRmEmployeeIds.length) {
+    const policyIntakeSummary = await policyIntakeSummaryPromise;
     const finishedAt = performance.now();
     logPortalRoutePerformance("/policies", {
       auth_ms: afterAuth - startedAt,
       scope_ms: afterScope - afterAuth,
-      data_ms: 0,
+      data_ms: finishedAt - afterScope,
       total_ms: finishedAt - startedAt,
     });
-    return <AppShell title="Policies"><PolicyWorkspace rows={[]} sourceOptions={[]} /></AppShell>;
+    return <AppShell title="Policies"><PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} /><PolicyWorkspace rows={[]} sourceOptions={[]} /></AppShell>;
   }
 
   const activeSourcesPromise = admin
@@ -125,9 +140,10 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
 
   let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, rm_name, rm_employee_id, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
   if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
-  const [sourceResult, policyResult] = await Promise.all([
+  const [sourceResult, policyResult, policyIntakeSummary] = await Promise.all([
     activeSourcesPromise,
     query.returns<PolicyRow[]>(),
+    policyIntakeSummaryPromise,
   ]);
 
   const finishedAt = performance.now();
@@ -158,6 +174,7 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
 
   return <AppShell title="Policies">
     {profile.role === "it_super_user" && !error ? <ItSuperUserDeletePanel entity="policy" title="Delete policy master record" records={rows.map((policy) => ({ id: policy.id, label: policy.policy_no, detail: [policy.vehicles?.vehicle_no, policy.customers?.contact_name, policy.insurance_companies?.name].filter(Boolean).join(" • ") }))} /> : null}
+    <PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} />
     {error ? <RegisterError /> : <PolicyWorkspace rows={workspaceRows} sourceOptions={sourceOptions} />}
   </AppShell>;
 }
