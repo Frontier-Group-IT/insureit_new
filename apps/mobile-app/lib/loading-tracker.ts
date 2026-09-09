@@ -2,6 +2,7 @@ export type TrackedLoadingEntry = {
   id: string;
   label: string;
   startedAt: number;
+  progress?: number;
 };
 
 type Listener = (entries: TrackedLoadingEntry[]) => void;
@@ -15,6 +16,17 @@ export function beginTrackedLoading(label = 'Loading') {
   entries = [...entries, { id, label, startedAt: Date.now() }];
   emit();
   return id;
+}
+
+export function updateTrackedLoading(id: string, progress: number) {
+  const normalized = Math.max(0, Math.min(1, Number.isFinite(progress) ? progress : 0));
+  let changed = false;
+  entries = entries.map((entry) => {
+    if (entry.id !== id || entry.progress === normalized) return entry;
+    changed = true;
+    return { ...entry, progress: normalized };
+  });
+  if (changed) emit();
 }
 
 export function endTrackedLoading(id: string) {
