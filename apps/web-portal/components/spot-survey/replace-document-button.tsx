@@ -15,6 +15,7 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
   const formRef = useRef<HTMLFormElement>(null);
   const previewUrl = useMemo(() => selectedFile && selectedFile.type.startsWith("image/") ? URL.createObjectURL(selectedFile) : null, [selectedFile]);
   const isReplaceAction = actionLabel === "Replace";
+  const isUploadAction = actionLabel === "Upload";
 
   const modal = open && typeof document !== "undefined" ? createPortal(
     <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/55 px-4 py-5">
@@ -111,12 +112,12 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
       <button
         type="button"
         onClick={() => { setResult(null); setOpen(true); }}
-        {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : {})}
+        {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : { "aria-label": `Upload ${label}`, title: `Upload ${label}` })}
         className={isReplaceAction
           ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30"
-          : "h-8 rounded-md border border-[#D15B5B] bg-white px-2 text-[12px] font-semibold text-[#C43D3D] transition hover:bg-[#FFF5F5]"}
+          : "min-w-0 flex-1 cursor-pointer rounded-none px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49] transition-colors hover:rounded-md hover:bg-[#F4F8FF] hover:text-[#174EA6] focus-visible:rounded-md focus-visible:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25"}
       >
-        {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : actionLabel}
+        {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : isUploadAction ? "Document not uploaded" : actionLabel}
       </button>
       {modal}
     </>
