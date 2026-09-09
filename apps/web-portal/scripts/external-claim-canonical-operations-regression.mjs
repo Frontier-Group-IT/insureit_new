@@ -6,6 +6,7 @@ const claimsWorkspace = fs.readFileSync(path.join(root, 'app/claims/claims-works
 const claimPage = fs.readFileSync(path.join(root, 'app/claims/[id]/page.tsx'), 'utf8');
 const operationsStages = fs.readFileSync(path.join(root, 'components/claim-manager/operations-claim-stages.tsx'), 'utf8');
 const stageActions = fs.readFileSync(path.join(root, 'app/claims/stage-actions.ts'), 'utf8');
+const finalDocumentsActions = fs.readFileSync(path.join(root, 'components/final-documents/final-documents-actions.ts'), 'utf8');
 const entry = fs.readFileSync(path.join(root, 'components/claims/external-claim-operations-entry.tsx'), 'utf8');
 const action = fs.readFileSync(path.join(root, 'app/claims/external-operations-actions.ts'), 'utf8');
 const mobileStartClaim = fs.readFileSync(path.join(root, '../mobile-app/app/customer/start-claim.tsx'), 'utf8');
@@ -37,6 +38,10 @@ assert(claimsWorkspace.includes('<ExternalClaimOperationsEntry claimId={claim.id
 assert(claimPage.includes('claim.policy_service_source === "external" && claim.claim_service_mode === "self_managed"'), 'Direct External Claim links must pass through the Operations ownership boundary.');
 assert(claimPage.includes('<OperationsClaimStages'), 'External Claims must ultimately reuse the canonical OperationsClaimStages component.');
 assert(claimPage.includes('.from("claim_milestones")'), 'Broker-managed External Claim detail must read preserved Customer milestones.');
+assert(claimPage.includes('.select("milestone_key, milestone_status, details")'), 'External Claim detail must read live Customer milestone details for prefilling.');
+assert(claimPage.includes('const externalCustomerFallbackRows: StageDetailRow[]'), 'External Claim detail must build live Customer fallback rows.');
+assert(claimPage.includes('details={[...(stageRows ?? []), ...externalCustomerFallbackRows]}'), 'Operations stage details must take priority before live Customer fallback rows.');
+assert(claimPage.includes('mergeExternalSpotDetails(spotDetails, customerSpotIntimationDetails)'), 'External Spot Intimation must merge live Customer details without replacing Operations values.');
 assert(claimPage.includes('Customer external journey'), 'Operations claim detail must label Customer External Claim progress separately.');
 assert(claimPage.includes('Operations processing'), 'Operations claim detail must label Operations progress separately.');
 assert(claimPage.includes('Customer completion does not auto-advance or overwrite the Operations workflow.'), 'Dual-journey display must explain that Customer completion does not advance Operations.');
@@ -67,6 +72,11 @@ assert(stageActions.includes('.eq("milestone_key", stageKey)'), 'External future
 assert(stageActions.includes('completedExternalMilestoneStatuses.has(customerMilestone?.milestone_status ?? "")'), 'Only completed or not-applicable Customer milestones may unlock External stage review.');
 assert(stageActions.includes('const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey && vehicleDeliveryReady;'), 'Save-only External stage review must not advance claims.current_status.');
 assert(stageActions.includes('} else if (!terminal && targetIndex > activeIndex) {'), 'Existing Internal/SIBL stage-order guard must remain in place.');
+
+assert(finalDocumentsActions.includes('policy_service_source: "sibl" | "external" | null'), 'Claim Intimation loader must know whether the claim is External.');
+assert(finalDocumentsActions.includes('.eq("milestone_key", "claim_intimation")'), 'External Claim Intimation loader must read the matching live Customer milestone.');
+assert(finalDocumentsActions.includes('detailText(details, "claim_intimation_date", "contact_person_name") || detailText(customerDetails, "claim_intimation_date")'), 'Operations Claim Intimation values must win before Customer fallback values.');
+assert(finalDocumentsActions.includes('detailText(details, "estimate_amount") || detailText(customerDetails, "estimate_amount")'), 'External Customer estimate amount must prefill only when Operations has no value.');
 
 assert(entry.includes('beginExternalOperationsWorkflow'), 'External Claim entry control must use the protected ownership action.');
 assert(action.includes('hasEffectiveCapability(profile, "manage_claims", "edit")'), 'External ownership transfer must use the same manage_claims edit permission.');
