@@ -9,6 +9,9 @@ const entry = fs.readFileSync(path.join(root, 'components/claims/external-claim-
 const action = fs.readFileSync(path.join(root, 'app/claims/external-operations-actions.ts'), 'utf8');
 const mobileStartClaim = fs.readFileSync(path.join(root, '../mobile-app/app/customer/start-claim.tsx'), 'utf8');
 const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'), 'utf8');
+const enumCastFixMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'utf8');
+const schemaWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/apply-external-claim-canonical-operations.yml'), 'utf8');
+const deployWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/deploy-production.yml'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -35,6 +38,16 @@ assert(migration.includes("policy_service_source = 'external'"), 'External polic
 assert(migration.includes("from public.claim_milestones"), 'Customer milestone history must be preserved during Operations takeover.');
 assert(migration.includes('external_customer_snapshot'), 'Customer milestone details must be copied as prefilling/history evidence.');
 assert(migration.includes('prevent_duplicate_active_external_claim_insert'), 'External policy duplicate-claim protection must survive ownership transfer.');
+assert(enumCastFixMigration.includes('create or replace function public.begin_external_claim_operations_workflow'), 'Follow-up migration must replace only the External Claim takeover RPC.');
+assert(enumCastFixMigration.includes("csd.details->>'milestone_key' = cm.milestone_key::text"), 'External Claim takeover must compare milestone keys using a safe enum-to-text cast.');
+assert(!enumCastFixMigration.includes("csd.details->>'milestone_key' = cm.milestone_key\n"), 'Follow-up migration must not retain the unsafe text-to-enum comparison.');
+assert(!enumCastFixMigration.includes('create or replace function public.prevent_duplicate_active_external_claim_insert'), 'Enum-cast fix must not redefine the duplicate External Claim guard.');
+assert(!enumCastFixMigration.includes('create trigger prevent_duplicate_active_external_claim_insert'), 'Enum-cast fix must not recreate the duplicate External Claim trigger.');
+assert(schemaWorkflow.includes('20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'External Claim schema workflow must apply the enum-cast fix migration.');
+assert(schemaWorkflow.includes('supabase migration repair --linked --status applied 20260909133000'), 'External Claim schema workflow must record the follow-up migration.');
+assert(schemaWorkflow.includes('milestone_enum_cast_ready'), 'External Claim schema workflow must verify the corrected function contract.');
+assert(deployWorkflow.includes('20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'Production deploy gate must recognize the External Claim enum-cast fix migration.');
+assert(deployWorkflow.includes('apply-external-claim-canonical-operations.yml'), 'Production deploy gate must wait for the External Claim schema workflow.');
 assert(mobileStartClaim.includes("claim_service_mode?: 'broker_managed' | 'self_managed' | null"), 'Customer active-claim lookup must understand managed External Claims.');
 assert(mobileStartClaim.includes("claim.claim_service_mode === 'broker_managed'"), 'Customer Start Claim must detect an already Operations-managed External Claim.');
 
