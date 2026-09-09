@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,7 +24,6 @@ import { PartnerStatBlock } from '@/components/ui/partner-stat-block';
 import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
 import { formatIndianCurrency } from '@/lib/format';
 import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
-import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
@@ -42,6 +41,25 @@ type HomeWorkspace = {
   activity: PartnerActivityData['items'];
   currentMonth: CommissionRange | null;
 };
+
+type DashboardIconName =
+  | 'activity'
+  | 'alert-circle'
+  | 'bell'
+  | 'chevron-down'
+  | 'chevron-right'
+  | 'clipboard'
+  | 'credit-card'
+  | 'file-plus'
+  | 'file-text'
+  | 'refresh-cw'
+  | 'search'
+  | 'shield'
+  | 'trending-down'
+  | 'trending-up'
+  | 'upload-cloud'
+  | 'users'
+  | 'x-circle';
 
 export default function PartnerHomeDashboard() {
   const router = useRouter();
@@ -89,7 +107,7 @@ export default function PartnerHomeDashboard() {
 
   const { identity } = context;
   const pendingItems = data?.today.filter((item) => item.kind !== 'renewal').slice(0, 3) ?? [];
-  const displayName = identity.display_name.trim().split(/\s+/)[0] || 'Partner';
+  const displayName = identity.display_name.trim() || 'Partner';
 
   const submitSearch = () => {
     const query = searchQuery.trim();
@@ -114,20 +132,12 @@ export default function PartnerHomeDashboard() {
         }
       >
         <View style={styles.hero}>
-          <Image source={require('../../assets/insureit-partner-official.png')} style={styles.heroWatermark} resizeMode="contain" />
-
           <View style={styles.heroTopRow}>
-            <View style={styles.heroBrandLockup}>
-              <Image
-                source={require('../../assets/insureit-partner-official.png')}
-                style={styles.heroLogo}
-                resizeMode="contain"
-              />
-              <View style={styles.heroBrandText}>
-                <Text style={styles.heroBrand}>insureit</Text>
-                <Text style={styles.heroPartner}>PARTNER</Text>
-              </View>
-            </View>
+            <Image
+              source={require('../../assets/insureit-partner-official.png')}
+              style={styles.heroLogo}
+              resizeMode="contain"
+            />
             <View style={styles.heroActions}>
               <Pressable
                 accessibilityRole="button"
@@ -135,7 +145,7 @@ export default function PartnerHomeDashboard() {
                 onPress={() => router.push('/activity')}
                 style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
               >
-                <Ionicons name="notifications-outline" size={21} color="#FFFFFF" />
+                <Feather name="bell" size={20} color="#FFFFFF" />
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -149,13 +159,20 @@ export default function PartnerHomeDashboard() {
           </View>
 
           <View style={styles.heroGreeting}>
-            <Text numberOfLines={1} style={styles.heroGreetingText}>{dayGreeting()} {displayName}</Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+              style={styles.heroGreetingText}
+            >
+              {dayGreeting()} {displayName}
+            </Text>
           </View>
         </View>
 
         <View style={styles.body}>
           <View style={styles.searchShell}>
-            <Ionicons name="search-outline" size={22} color={partnerTheme.colors.brandStrong} />
+            <Feather name="search" size={21} color={partnerTheme.colors.brandStrong} />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -170,7 +187,7 @@ export default function PartnerHomeDashboard() {
             />
             {searchQuery.length ? (
               <Pressable accessibilityRole="button" accessibilityLabel="Clear search" onPress={() => setSearchQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={19} color="#9AA7B8" />
+                <Feather name="x-circle" size={18} color="#9AA7B8" />
               </Pressable>
             ) : null}
             <View style={styles.searchDivider} />
@@ -182,7 +199,7 @@ export default function PartnerHomeDashboard() {
               style={({ pressed }) => [styles.searchAction, pressed && styles.pressed]}
             >
               <Text style={[styles.searchActionText, searchQuery.trim().length < 2 && styles.searchActionDisabled]}>Search</Text>
-              <Ionicons name="chevron-forward" size={16} color={searchQuery.trim().length < 2 ? '#B6BFCC' : partnerTheme.colors.brand} />
+              <Feather name="chevron-right" size={15} color={searchQuery.trim().length < 2 ? '#B6BFCC' : partnerTheme.colors.brand} />
             </Pressable>
           </View>
 
@@ -220,7 +237,10 @@ export default function PartnerHomeDashboard() {
               <PartnerEnter delay={20}>
                 <View style={styles.businessCard}>
                   <View style={styles.sectionTopRow}>
-                    <Text style={styles.periodLabel}>This Month</Text>
+                    <View style={styles.periodLabelWrap}>
+                      <Text style={styles.periodLabel}>This Month</Text>
+                      <Feather name="chevron-down" size={13} color="#123E83" />
+                    </View>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel="View business report"
@@ -229,7 +249,7 @@ export default function PartnerHomeDashboard() {
                       style={({ pressed }) => [styles.inlineAction, pressed && styles.pressed]}
                     >
                       <Text style={styles.inlineActionText}>View Report</Text>
-                      <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+                      <Feather name="chevron-right" size={14} color={partnerTheme.colors.brand} />
                     </Pressable>
                   </View>
 
@@ -241,35 +261,29 @@ export default function PartnerHomeDashboard() {
                           <Text style={styles.businessPremiumFraction}>.{currencyParts(data.business.premium_this_month).fraction}</Text>
                         ) : null}
                       </Text>
-                      <Text style={styles.businessCaption}>Gross Premium</Text>
+                      <Text style={styles.businessCaption}>Business Generated</Text>
                       <Trend
                         value={Number(data.business.premium_change_percent || 0)}
                         hasPrevious={Number(data.business.premium_last_month || 0) > 0}
                       />
                     </View>
-                    <View style={styles.businessArtWrap}>
-                      <Image source={PartnerAssets.status.businessGrowth} style={styles.businessArt} resizeMode="contain" />
-                    </View>
+                    <MiniBusinessChart />
                   </View>
 
                   <View style={styles.businessStats}>
-                    <View style={styles.statVisualCell}>
-                      <Image source={PartnerAssets.actions.policyRegister} style={styles.statIcon} resizeMode="contain" />
-                      <PartnerStatBlock
-                        value={currentMonth?.policies ?? data.business.policies_this_month}
-                        label="Policies Sold"
-                      />
-                    </View>
+                    <DashboardMetric
+                      icon="file-text"
+                      value={currentMonth?.policies ?? data.business.policies_this_month}
+                      label="Policies Sold"
+                    />
                     <View style={styles.statVisualDivider} />
-                    <View style={styles.statVisualCell}>
-                      <Image source={PartnerAssets.actions.payoutGrowth} style={styles.statIcon} resizeMode="contain" />
-                      <PartnerStatBlock
-                        value={currentMonth?.commission_available
-                          ? formatCompactIndianAmount(currentMonth.commission_earned)
-                          : '—'}
-                        label="Commission Earned"
-                      />
-                    </View>
+                    <DashboardMetric
+                      icon="credit-card"
+                      value={currentMonth?.commission_available
+                        ? formatCompactIndianAmount(currentMonth.commission_earned)
+                        : '—'}
+                      label="Commission Earned"
+                    />
                   </View>
                 </View>
               </PartnerEnter>
@@ -280,10 +294,10 @@ export default function PartnerHomeDashboard() {
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                   </View>
                   <View style={styles.quickGrid}>
-                    <QuickAction asset={PartnerAssets.navigation.policyIntake} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-                    <QuickAction asset={PartnerAssets.actions.renewals} label="Renewals" onPress={() => router.push('/renewals')} />
-                    <QuickAction asset={PartnerAssets.navigation.claims} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
-                    <QuickAction asset={PartnerAssets.navigation.customers} label="Customers" onPress={() => router.push('/customers')} />
+                    <QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+                    <QuickAction icon="refresh-cw" label="Renewals" onPress={() => router.push('/renewals')} />
+                    <QuickAction icon="shield" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+                    <QuickAction icon="users" label="Customers" onPress={() => router.push('/customers')} />
                   </View>
                 </View>
               </PartnerEnter>
@@ -296,7 +310,9 @@ export default function PartnerHomeDashboard() {
                         <Text style={styles.sectionTitle}>Pending Tasks</Text>
                         <Text style={styles.sectionHint}>Keep up with important actions.</Text>
                       </View>
-                      <Image source={PartnerAssets.status.pendingReview} style={styles.pendingHeroArt} resizeMode="contain" />
+                      <View style={styles.pendingHeroIcon}>
+                        <Feather name="clipboard" size={23} color={partnerTheme.colors.brandStrong} />
+                      </View>
                     </View>
                     <View style={styles.pendingList}>
                       {pendingItems.map((item, index) => (
@@ -307,13 +323,15 @@ export default function PartnerHomeDashboard() {
                           onPress={() => router.push(item.route as never)}
                           style={({ pressed }) => [styles.pendingRow, index < pendingItems.length - 1 && styles.rowBorder, pressed && styles.pressed]}
                         >
-                          <Image source={attentionAsset(item.kind)} style={styles.pendingIcon} resizeMode="contain" />
+                          <View style={styles.pendingIconWrap}>
+                            <Feather name={attentionIcon(item.kind)} size={17} color={partnerTheme.colors.brandStrong} />
+                          </View>
                           <Text style={styles.pendingCount}>{item.count}</Text>
                           <View style={styles.pendingCopy}>
                             <Text numberOfLines={1} style={styles.pendingTitle}>{item.title}</Text>
                             <Text numberOfLines={1} style={styles.pendingSubtitle}>{item.subtitle}</Text>
                           </View>
-                          <Ionicons name="chevron-forward" size={17} color={partnerTheme.colors.brandStrong} />
+                          <Feather name="chevron-right" size={17} color={partnerTheme.colors.brandStrong} />
                         </Pressable>
                       ))}
                     </View>
@@ -330,7 +348,7 @@ export default function PartnerHomeDashboard() {
                     style={({ pressed }) => [styles.renewalStrip, pressed && styles.pressed]}
                   >
                     <View style={styles.renewalIconWrap}>
-                      <Image source={PartnerAssets.status.renewalDue} style={styles.renewalIcon} resizeMode="contain" />
+                      <Feather name="refresh-cw" size={20} color={partnerTheme.colors.brandStrong} />
                     </View>
                     <View style={styles.renewalCopy}>
                       <Text style={styles.renewalTitle}>Renewals Due Soon</Text>
@@ -338,7 +356,7 @@ export default function PartnerHomeDashboard() {
                     </View>
                     <View style={styles.viewRenewals}>
                       <Text style={styles.viewRenewalsText}>View</Text>
-                      <Ionicons name="chevron-forward" size={16} color={partnerTheme.colors.brand} />
+                      <Feather name="chevron-right" size={15} color={partnerTheme.colors.brand} />
                     </View>
                   </Pressable>
                 </PartnerEnter>
@@ -351,7 +369,7 @@ export default function PartnerHomeDashboard() {
                       <Text style={styles.sectionTitle}>Recent Activity</Text>
                       <Pressable accessibilityRole="button" accessibilityLabel="View all recent activity" onPress={() => router.push('/activity')} style={styles.inlineAction}>
                         <Text style={styles.inlineActionText}>View All</Text>
-                        <Ionicons name="chevron-forward" size={15} color={partnerTheme.colors.brand} />
+                        <Feather name="chevron-right" size={14} color={partnerTheme.colors.brand} />
                       </Pressable>
                     </View>
                     {activity.map((item, index) => (
@@ -363,7 +381,7 @@ export default function PartnerHomeDashboard() {
                         style={({ pressed }) => [styles.activityRow, index < activity.length - 1 && styles.rowBorder, pressed && styles.pressed]}
                       >
                         <View style={styles.activityIconWrap}>
-                          <Image source={activityAsset(item.kind)} style={styles.activityIcon} resizeMode="contain" />
+                          <Feather name={activityIcon(item.kind)} size={17} color={partnerTheme.colors.brandStrong} />
                         </View>
                         <View style={styles.activityCopy}>
                           <Text numberOfLines={1} style={styles.activityTitle}>{item.title}</Text>
@@ -413,7 +431,7 @@ export default function PartnerHomeDashboard() {
 function HomeSkeleton() {
   return (
     <View style={styles.skeletonWrap}>
-      <PartnerSkeleton height={188} radius={18} />
+      <PartnerSkeleton height={166} radius={15} />
       <View style={styles.skeletonHeader}><PartnerSkeleton width="30%" height={18} /></View>
       <View style={styles.quickGrid}>
         <PartnerSkeleton width="23%" height={86} radius={14} />
@@ -427,7 +445,7 @@ function HomeSkeleton() {
   );
 }
 
-function QuickAction({ asset, label, onPress }: { asset: number; label: string; onPress: () => void }) {
+function QuickAction({ icon, label, onPress }: { icon: DashboardIconName; label: string; onPress: () => void }) {
   const scale = useState(() => new Animated.Value(1))[0];
   const animate = (pressed: boolean) => {
     Animated.spring(scale, {
@@ -449,7 +467,7 @@ function QuickAction({ asset, label, onPress }: { asset: number; label: string; 
     >
       <Animated.View style={[styles.quickAction, { transform: [{ scale }] }]}>
         <View style={styles.quickIconCircle}>
-          <Image source={asset} style={styles.quickImage} resizeMode="contain" />
+          <Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />
         </View>
         <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
@@ -457,17 +475,51 @@ function QuickAction({ asset, label, onPress }: { asset: number; label: string; 
   );
 }
 
-function attentionAsset(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return PartnerAssets.navigation.policyIntake;
-  if (kind === 'renewal') return PartnerAssets.actions.renewals;
-  return PartnerAssets.navigation.claims;
+function DashboardMetric({ icon, value, label }: { icon: DashboardIconName; value: string | number; label: string }) {
+  return (
+    <View accessibilityLabel={`${label}. ${String(value)}`} style={styles.statVisualCell}>
+      <View style={styles.statIconWrap}>
+        <Feather name={icon} size={18} color={partnerTheme.colors.brandStrong} />
+      </View>
+      <View style={styles.statCopy}>
+        <Text numberOfLines={1} style={styles.statValue}>{value}</Text>
+        <Text numberOfLines={1} style={styles.statLabel}>{label}</Text>
+      </View>
+    </View>
+  );
 }
 
-function activityAsset(kind: PartnerActivityData['items'][number]['kind']) {
-  if (kind === 'policy') return PartnerAssets.status.policyActive;
-  if (kind === 'claim') return PartnerAssets.navigation.claims;
-  if (kind === 'intake') return PartnerAssets.navigation.policyIntake;
-  return PartnerAssets.status.announcement;
+function MiniBusinessChart() {
+  const bars = [13, 19, 27, 35, 43, 52];
+  return (
+    <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.businessChart}>
+      <View style={styles.businessChartBaseline} />
+      <View style={styles.businessBars}>
+        {bars.map((height, index) => (
+          <View
+            key={height}
+            style={[
+              styles.businessBar,
+              { height, opacity: 0.46 + index * 0.085 },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function attentionIcon(kind: PartnerHomeData['today'][number]['kind']): DashboardIconName {
+  if (kind === 'intake_attention') return 'alert-circle';
+  if (kind === 'renewal') return 'refresh-cw';
+  return 'shield';
+}
+
+function activityIcon(kind: PartnerActivityData['items'][number]['kind']): DashboardIconName {
+  if (kind === 'policy') return 'file-text';
+  if (kind === 'claim') return 'shield';
+  if (kind === 'intake') return 'upload-cloud';
+  return 'activity';
 }
 
 function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
@@ -475,9 +527,9 @@ function Trend({ value, hasPrevious }: { value: number; hasPrevious: boolean }) 
   const positive = value >= 0;
   return (
     <View style={styles.trend}>
-      <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={15} color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning} />
+      <Feather name={positive ? 'trending-up' : 'trending-down'} size={14} color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning} />
       <Text style={[styles.trendText, { color: positive ? partnerTheme.colors.success : partnerTheme.colors.warning }]}>
-        {Math.abs(value).toFixed(1)}% {positive ? 'vs' : 'below'} last month
+        {positive ? '+' : ''}{Math.abs(value).toFixed(1)}% {positive ? 'vs' : 'below'} last month
       </Text>
     </View>
   );
@@ -546,52 +598,53 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 128, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 8 },
-  heroWatermark: { position: 'absolute', right: -46, top: -34, width: 286, height: 188, opacity: 0.11 },
+  hero: { height: 106, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 7 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBrandLockup: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 38 },
-  heroLogo: { width: 31, height: 31 },
-  heroBrandText: { justifyContent: 'center' },
-  heroBrand: { color: '#FFFFFF', fontSize: 21, lineHeight: 23, fontWeight: '800', letterSpacing: -0.45 },
-  heroPartner: { marginTop: 0, color: '#D8E8FF', fontSize: 8.5, lineHeight: 10, fontWeight: '700', letterSpacing: 2.6 },
+  heroLogo: { width: 43, height: 43 },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroIconButton: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
-  heroAvatar: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
-  heroAvatarText: { color: '#144E98', fontSize: 12, lineHeight: 16, fontWeight: '800' },
-  heroGreeting: { marginTop: 12, maxWidth: '72%' },
-  heroGreetingText: { color: '#FFFFFF', fontSize: 18.5, lineHeight: 24, fontWeight: '700', letterSpacing: -0.15 },
+  heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
+  heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
+  heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
+  heroGreeting: { marginTop: 5, maxWidth: '84%' },
+  heroGreetingText: { color: '#FFFFFF', fontSize: 15.5, lineHeight: 20, fontWeight: '400', letterSpacing: -0.05 },
 
-  body: { marginTop: -15, paddingHorizontal: 16 },
-  searchShell: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
-  searchInput: { flex: 1, minWidth: 0, paddingVertical: 12, color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 17 },
-  searchDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: '#D9E1EC' },
-  searchAction: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  body: { marginTop: -13, paddingHorizontal: 16 },
+  searchShell: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  searchInput: { flex: 1, minWidth: 0, paddingVertical: 11, color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 17 },
+  searchDivider: { width: StyleSheet.hairlineWidth, height: 27, backgroundColor: '#D9E1EC' },
+  searchAction: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 2 },
   searchActionText: { color: partnerTheme.colors.brand, fontSize: 11.5, lineHeight: 15, fontWeight: '700' },
   searchActionDisabled: { color: '#B6BFCC' },
   updatedRow: { marginTop: 7, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  roleText: { flex: 1, color: '#7A879A', fontSize: 9.5, lineHeight: 13 },
+  roleText: { flex: 1, color: '#D99B5F', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
   updatedText: { color: '#8C97A8', fontSize: 9.5, lineHeight: 13 },
   refreshWarning: { marginTop: 10 },
 
-  businessCard: { marginTop: 10, padding: 13, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.045, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  businessCard: { marginTop: 10, padding: 12, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   sectionTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  periodLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   periodLabel: { color: '#123E83', fontFamily: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium', default: undefined }), fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  inlineAction: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  inlineAction: { minHeight: 30, flexDirection: 'row', alignItems: 'center', gap: 2 },
   inlineActionText: { color: partnerTheme.colors.brand, fontSize: 10.5, lineHeight: 14, fontWeight: '700' },
-  businessMainRow: { marginTop: 0, flexDirection: 'row', alignItems: 'center' },
-  businessMainCopy: { flex: 1, minWidth: 0 },
-  businessPremium: { marginTop: 3, color: '#0D1522', fontSize: 32, lineHeight: 37, fontWeight: '800', letterSpacing: -0.7 },
-  businessPremiumFraction: { fontSize: 18, lineHeight: 23, fontWeight: '700' },
-  businessCaption: { marginTop: 0, color: '#53647A', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
-  businessArtWrap: { width: 70, height: 64, alignItems: 'center', justifyContent: 'center' },
-  businessArt: { width: 60, height: 60 },
-  trend: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  trendText: { fontSize: 10.5, lineHeight: 14, fontWeight: '600' },
-  trendNeutral: { marginTop: 6, color: partnerTheme.colors.inkMuted, fontSize: 10.5, lineHeight: 14 },
-  businessStats: { marginTop: 11, paddingTop: 10, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5EBF4' },
-  statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statVisualDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 8, backgroundColor: '#DFE6EF' },
-  statIcon: { width: 30, height: 30 },
+  businessMainRow: { marginTop: 0, minHeight: 76, flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
+  businessMainCopy: { flex: 1, minWidth: 0, paddingBottom: 2 },
+  businessPremium: { marginTop: 2, color: '#0D2855', fontSize: 29.5, lineHeight: 34, fontWeight: '800', letterSpacing: -0.65 },
+  businessPremiumFraction: { fontSize: 17, lineHeight: 21, fontWeight: '700' },
+  businessCaption: { marginTop: 0, color: '#53647A', fontSize: 10, lineHeight: 13.5, fontWeight: '500' },
+  businessChart: { width: 118, height: 64, justifyContent: 'flex-end', paddingHorizontal: 5, paddingBottom: 4 },
+  businessChartBaseline: { position: 'absolute', left: 4, right: 4, bottom: 4, height: StyleSheet.hairlineWidth, backgroundColor: '#DCE8F5' },
+  businessBars: { height: 56, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  businessBar: { width: 13, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#8BB6E7' },
+  trend: { marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  trendText: { fontSize: 10, lineHeight: 13.5, fontWeight: '600' },
+  trendNeutral: { marginTop: 5, color: partnerTheme.colors.inkMuted, fontSize: 10, lineHeight: 13.5 },
+  businessStats: { marginTop: 8, paddingTop: 9, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5EBF4' },
+  statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
+  statVisualDivider: { width: StyleSheet.hairlineWidth, height: 40, marginHorizontal: 9, backgroundColor: '#DFE6EF' },
+  statIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF6FF' },
+  statCopy: { flex: 1, minWidth: 0 },
+  statValue: { color: '#112D5F', fontSize: 16, lineHeight: 20, fontWeight: '800' },
+  statLabel: { marginTop: 1, color: '#66758B', fontSize: 9.5, lineHeight: 12.5 },
 
   sectionHeaderRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   sectionTitle: { color: '#102E62', fontSize: 14, lineHeight: 19, fontWeight: '800' },
@@ -601,15 +654,14 @@ const styles = StyleSheet.create({
   quickActionTouch: { flex: 1, minHeight: 88 },
   quickAction: { flex: 1, minHeight: 88, alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 2, borderRadius: 13, backgroundColor: '#F3F8FF' },
   quickIconCircle: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
-  quickImage: { width: 31, height: 31 },
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
   pendingCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
-  pendingHeroArt: { width: 62, height: 62, marginRight: 2 },
+  pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   pendingList: { marginTop: 2, paddingRight: 2 },
   pendingRow: { minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D3E1EF' },
-  pendingIcon: { width: 27, height: 27 },
+  pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },
   pendingCount: { minWidth: 22, color: '#D84D43', fontSize: 13, lineHeight: 17, fontWeight: '800', textAlign: 'center' },
   pendingCopy: { flex: 1, minWidth: 0 },
   pendingTitle: { color: '#17345F', fontSize: 11, lineHeight: 15, fontWeight: '700' },
@@ -617,7 +669,6 @@ const styles = StyleSheet.create({
 
   renewalStrip: { marginTop: 11, minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE8F5' },
   renewalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF4FF' },
-  renewalIcon: { width: 34, height: 34 },
   renewalCopy: { flex: 1, minWidth: 0 },
   renewalTitle: { color: '#16366D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   renewalText: { marginTop: 2, color: '#D65349', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
@@ -627,7 +678,6 @@ const styles = StyleSheet.create({
   activityCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 8, paddingBottom: 5, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3EAF3' },
   activityRow: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 6 },
   activityIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF6FF' },
-  activityIcon: { width: 29, height: 29 },
   activityCopy: { flex: 1, minWidth: 0 },
   activityTitle: { color: '#17335E', fontSize: 10.5, lineHeight: 14, fontWeight: '800' },
   activitySubtitle: { marginTop: 2, color: '#708096', fontSize: 9.5, lineHeight: 13 },
