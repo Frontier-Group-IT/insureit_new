@@ -82,9 +82,7 @@ export async function assignPolicyOcrReviewTask(
     const { data: policy } = document.policy_id
       ? await admin.from("policies").select("policy_type,insurance_companies(name)").eq("id", document.policy_id).maybeSingle<{ policy_type: string | null; insurance_companies: { name: string } | null }>()
       : { data: null };
-    if (!policy || !/iffco/i.test(policy.insurance_companies?.name ?? "") || !/^package$/i.test(policy.policy_type ?? "")) {
-      throw new Error("This reviewer workflow is currently available only for IFFCO-Tokio Package policies.");
-    }
+    if (!policy) throw new Error("The policy reference could not be loaded for reviewer assignment.");
 
     const { data: existing, error: existingError } = await admin
       .from("policy_ocr_training_review_tasks")
@@ -218,8 +216,7 @@ export async function startPolicyOcrReviewTask(
 ): Promise<ReviewerChecklistState> {
   try {
     const viewer = await requirePolicyOcrTrainingViewer();
-    if (viewer.isOperator) throw new Error("Assigned reviewer action is not available to the training operator.");
-    const task = await loadAssignedTask(formText(formData, "review_task_id"), viewer.profile.id);
+    const task = await loadAssignedTask(formText(formData, "review_task_id"), viewer.profile.id, viewer.isOperator);
     if (["completed", "rejected", "cancelled"].includes(task.status)) throw new Error("This reviewer task is no longer open.");
     const admin = createSupabaseAdminClient();
     const { data: updated, error } = await admin
@@ -243,8 +240,7 @@ export async function completePolicyOcrReviewTask(
 ): Promise<ReviewerChecklistState> {
   try {
     const viewer = await requirePolicyOcrTrainingViewer();
-    if (viewer.isOperator) throw new Error("Assigned reviewer action is not available to the training operator.");
-    const task = await loadAssignedTask(formText(formData, "review_task_id"), viewer.profile.id);
+    const task = await loadAssignedTask(formText(formData, "review_task_id"), viewer.profile.id, viewer.isOperator);
     if (["completed", "rejected", "cancelled"].includes(task.status)) throw new Error("This reviewer task is no longer open.");
     const checklist = Object.fromEntries(REVIEW_CHECKLIST.map((key) => [key, formData.get(`check_${key}`) === "on"]));
     if (!task.field_questions?.length && REVIEW_CHECKLIST.some((key) => !checklist[key])) {
@@ -423,15 +419,15 @@ export async function startPolicyOcrTrainingFromReview(taskId: string, reviewerP
   if (queueError) throw new Error("Parser refinement automation could not be queued.");
 }
 
-async function loadAssignedTask(taskId: string | null, profileId: string): Promise<ReviewTask> {
+async function loadAssignedTask(taskId: string | null, profileId: string, operator = false): Promise<ReviewTask> {
   if (!taskId) throw new Error("Reviewer task reference is missing.");
-  const { data, error } = await createSupabaseAdminClient()
+  let query = createSupabaseAdminClient()
     .from("policy_ocr_training_review_tasks")
     .select("id,training_label_id,assigned_reviewer_profile_id,assignment_version,status,field_questions")
-    .eq("id", taskId)
-    .eq("assigned_reviewer_profile_id", profileId)
-    .maybeSingle<ReviewTask>();
-  if (error || !data) throw new Error("This reviewer task is not assigned to your portal user.");
+    .eq("id", taskId);
+  if (!operator) query = query.eq("assigned_reviewer_profile_id", profileId);
+  const { data, error } = await query.maybeSingle<ReviewTask>();
+  if (error || !data) throw new Error(operator ? "This reviewer task could not be loaded." : "This reviewer task is not assigned to your portal user.");
   return data;
 }
 
@@ -494,19 +490,12 @@ function buildReviewerEmail(input: { fileName: string | null; insurer: string | 
     `Insurer: ${safeEmailValue(input.insurer) || "Not linked"}`,
     `Product: ${safeEmailValue(input.product) || "Not linked"}`,
     "",
-    "Verify from the uploaded policy copy:",
-    "1. Insurer.",
-    "2. Package product.",
-    "3. Current policy number.",
-    "4. Current policy dates.",
-    "5. IDV.",
-    "6. OD = 4814.",
-    "7. Portal TP / Net B = 7367.",
-    "8. CPA opted = No.",
-    "9. CPA = 0.",
-    "10. Section 02: registration status pending/unregistered.",
-    "11. Section 02: class MISD if supported by this layout.",
-    "12. Section 02: chassis and engine.",
+    "Verify the uploaded policy copy against every compared field:",
+    "1. Use the PDF as the source of truth when it conflicts with the saved reference.",
+    "2. Confirm insurer, product, policy number, dates and policy/premium values.",
+    "3. Confirm vehicle fields only where the training task explicitly includes them.",
+    "4. Withhold any value that cannot be proven from the PDF.",
+    "5. Confirm financial values reconcile before submitting the review.",
     "",
     "Keep the policy PDF and all raw OCR inside the secure portal. Do not email policy content, identifiers, PII or attachments.",
     `Open the protected portal task: ${input.portalUrl}`,

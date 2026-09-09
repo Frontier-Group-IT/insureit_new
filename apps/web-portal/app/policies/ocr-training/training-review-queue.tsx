@@ -109,7 +109,8 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
         </Link>
       </div>
 
-      {canAssign && isIffcoPackage(row) ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} canTrain={canTrain} /> : null}
+      {canAssign ? <ReviewerAssignmentForm labelId={row.labelId} task={row.reviewTask} /> : null}
+      {row.reviewTask ? <ReviewerChecklistForm task={row.reviewTask} /> : null}
 
       {!ready ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -262,7 +263,7 @@ function ReviewerAssignmentForm({ labelId, task }: { labelId: string; task: Revi
 
 const INITIAL_CHECKLIST_STATE: ReviewerChecklistState = { status: "idle", message: null };
 
-function ReviewerChecklistForm({ task, canTrain }: { task: ReviewTask; canTrain: boolean }) {
+function ReviewerChecklistForm({ task }: { task: ReviewTask }) {
   const [startState, startAction, startPending] = useActionState(startPolicyOcrReviewTask, INITIAL_CHECKLIST_STATE);
   const isStarted = task.status !== "assigned" || startState.status === "success";
   if (task.status === "completed") {
@@ -369,10 +370,6 @@ function effectiveStatus(row: TrainingQueueRow): TrainingQueueRow["status"] {
 function isExactDatabaseMatch(row: TrainingQueueRow) {
   if (row.processingStatus !== "ready" || !row.proposal) return false;
   return compareTrainingProposalToReference(row.proposal, row.databaseReference).exactMatch;
-}
-
-function isIffcoPackage(row: TrainingQueueRow) {
-  return /iffco/i.test(row.linkedInsurer) && /^package$/i.test(row.databaseReference.policy_product ?? "");
 }
 
 function StatusBadge({ label, tone }: { label: string; tone: string }) {

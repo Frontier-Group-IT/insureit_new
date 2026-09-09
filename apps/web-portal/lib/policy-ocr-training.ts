@@ -367,6 +367,17 @@ export function createSanitizedTrainingCandidate(args: {
   };
 }
 
+export function hasStaleTrainingEvidenceLabels(payload: unknown) {
+  if (!payload || typeof payload !== "object") return false;
+  const evidenceLabels = (payload as { evidence_labels?: unknown }).evidence_labels;
+  if (!evidenceLabels || typeof evidenceLabels !== "object") return true;
+  return Object.entries(evidenceLabels as Record<string, unknown>).some(([key, value]) => {
+    if (typeof value !== "string" || value === "Insufficient evidence" || value.startsWith("Insufficient evidence ·")) return false;
+    const pattern = FIELD_EVIDENCE_PATTERNS[key as TrainingFieldKey];
+    return Boolean(pattern && !pattern.test(value));
+  });
+}
+
 const FIELD_EVIDENCE_PATTERNS: Partial<Record<TrainingFieldKey, RegExp>> = {
   vehicle_registration_status: /\bregistration status\b/i,
   vehicle_registration_number: /\bregistration(?: number| no)?\b|\bregn\.? no\b/i,
