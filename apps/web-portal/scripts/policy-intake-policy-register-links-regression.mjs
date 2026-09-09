@@ -26,7 +26,12 @@ assert(quickLinks.includes('.ui-page-stage a[href="/policies/new"]'), "Policy In
 assert(quickLinks.includes("summary.actionRequired !== null"), "RM summaries must not render the reviewer-only Action Required shortcut");
 assert(quickLinks.includes('href="/policy-intakes?view=action"'), "Action Required must deep-link to the Policy Intake Action Required view");
 assert(quickLinks.includes('href="/policy-intakes?view=in_review"'), "In Review must deep-link to the Policy Intake In Review view");
-assert(quickLinks.includes('text-[#C62828]'), "Policy Intake quick links must keep the approved red emphasis");
+assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must be derived from whether the count is positive");
+assert(quickLinks.includes('active ? "text-[#C62828]" : "text-[#64748B]"'), "Zero-count quick links must be neutral while positive counts remain red");
+assert(quickLinks.includes('hover:bg-[#F8FAFC]'), "Quick links must reveal only a subtle rounded hover surface");
+assert(!quickLinks.includes('border border-[#FECACA]'), "Quick links must not render a permanent alert border");
+assert(!quickLinks.includes('bg-[#FFF7F7]'), "Quick links must not render a permanent alert background");
+assert(!quickLinks.includes('bg-[#FEE2E2]'), "Quick-link icons must remain flat without a separate red tile");
 
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");

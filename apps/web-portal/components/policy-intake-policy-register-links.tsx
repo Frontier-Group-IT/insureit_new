@@ -30,7 +30,7 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
   if (!summary || !host) return null;
 
   return createPortal(
-    <div className="flex shrink-0 items-center gap-2">
+    <div className="flex shrink-0 items-center gap-1">
       {summary.actionRequired !== null ? <PolicyIntakeQuickLink
         href="/policy-intakes?view=action"
         label="Action Required"
@@ -49,17 +49,19 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
 }
 
 function PolicyIntakeQuickLink({ href, label, count, icon }: { href: string; label: string; count: number; icon: ReactNode }) {
+  const active = count > 0;
+  const tone = active ? "text-[#C62828]" : "text-[#64748B]";
   return <Link
     prefetch={false}
     href={href}
     aria-label={`${label}: ${count}. Open Policy Intakes.`}
-    className="group inline-flex h-11 min-w-[128px] items-center gap-2 rounded-xl border border-[#FECACA] bg-[#FFF7F7] px-2.5 text-[#C62828] transition hover:border-[#FCA5A5] hover:bg-[#FFF0F0] focus:outline-none focus:ring-2 focus:ring-[#DC2626]/15"
+    className={`group inline-flex h-11 min-w-[118px] items-center gap-2 rounded-xl px-2.5 transition-colors hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#CBD5E1]/60 ${tone}`}
   >
-    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#FEE2E2] text-[#DC2626]">{icon}</span>
+    <span className="grid h-6 w-6 shrink-0 place-items-center">{icon}</span>
     <span className="min-w-0 flex-1">
       <span className="block whitespace-nowrap text-[8.5px] font-bold leading-3">{label}</span>
       <span className="block text-[15px] font-black leading-4 tabular-nums">{count}</span>
     </span>
-    <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-65 transition group-hover:translate-x-0.5" />
+    <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-55 transition group-hover:translate-x-0.5" />
   </Link>;
 }
