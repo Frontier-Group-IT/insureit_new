@@ -23,17 +23,24 @@ import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatBlock } from '@/components/ui/partner-stat-block';
 import { getPartnerActivity, type PartnerActivityData } from '@/lib/engagement';
 import { formatIndianCurrency } from '@/lib/format';
-import { getPartnerHome, type PartnerHomeData } from '@/lib/home';
+import { getPartnerBusinessRange, getPartnerHome, type PartnerHomeData } from '@/lib/home';
 import { PartnerAssets } from '@/lib/partner-assets';
 import { getPartnerStories, type PartnerStory } from '@/lib/stories';
 import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
+type CommissionRange = {
+  policies: number;
+  commission_available?: boolean;
+  commission_earned?: number | string | null;
+};
+
 type HomeWorkspace = {
   home: PartnerHomeData;
   stories: PartnerStory[];
   activity: PartnerActivityData['items'];
+  currentMonth: CommissionRange | null;
 };
 
 export default function PartnerHomeDashboard() {
@@ -42,10 +49,13 @@ export default function PartnerHomeDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchHomeWorkspace = useCallback(async (): Promise<HomeWorkspace> => {
-    const [homeResult, storiesResult, activityResult] = await Promise.allSettled([
+    const today = new Date();
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const [homeResult, storiesResult, activityResult, currentMonthResult] = await Promise.allSettled([
       getPartnerHome(),
       getPartnerStories(),
       getPartnerActivity(6),
+      getPartnerBusinessRange(toLocalDateKey(monthStart), toLocalDateKey(today)),
     ]);
 
     if (homeResult.status === 'rejected') throw homeResult.reason;
@@ -53,6 +63,9 @@ export default function PartnerHomeDashboard() {
       home: homeResult.value,
       stories: storiesResult.status === 'fulfilled' ? storiesResult.value.items : [],
       activity: activityResult.status === 'fulfilled' ? activityResult.value.items.slice(0, 3) : [],
+      currentMonth: currentMonthResult.status === 'fulfilled'
+        ? currentMonthResult.value as CommissionRange
+        : null,
     };
   }, []);
 
@@ -70,6 +83,7 @@ export default function PartnerHomeDashboard() {
   const data = workspace.data?.home ?? null;
   const stories = workspace.data?.stories ?? [];
   const activity = workspace.data?.activity ?? [];
+  const currentMonth = workspace.data?.currentMonth ?? null;
 
   if (!context) return null;
 
@@ -131,7 +145,6 @@ export default function PartnerHomeDashboard() {
           <View style={styles.heroGreeting}>
             <Text style={styles.heroGreetingSmall}>{dayGreeting()},</Text>
             <Text style={styles.heroGreetingName}>{displayName}</Text>
-            <Text style={styles.heroSubtitle}>Grow business together.</Text>
           </View>
         </View>
 
@@ -237,12 +250,20 @@ export default function PartnerHomeDashboard() {
                   <View style={styles.businessStats}>
                     <View style={styles.statVisualCell}>
                       <Image source={PartnerAssets.actions.policyRegister} style={styles.statIcon} resizeMode="contain" />
-                      <PartnerStatBlock value={data.business.policies_this_month} label="Policies" />
+                      <PartnerStatBlock
+                        value={currentMonth?.policies ?? data.business.policies_this_month}
+                        label="Policies Sold"
+                      />
                     </View>
                     <View style={styles.statVisualDivider} />
                     <View style={styles.statVisualCell}>
-                      <Image source={PartnerAssets.navigation.customers} style={styles.statIcon} resizeMode="contain" />
-                      <PartnerStatBlock value={data.business.total_customers} label="Customers" />
+                      <Image source={PartnerAssets.actions.payoutGrowth} style={styles.statIcon} resizeMode="contain" />
+                      <PartnerStatBlock
+                        value={currentMonth?.commission_available
+                          ? formatCompactIndianAmount(currentMonth.commission_earned)
+                          : '—'}
+                        label="Commission Earned"
+                      />
                     </View>
                   </View>
                 </View>
@@ -507,28 +528,34 @@ function formatActivityDate(value: string) {
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short' }).format(date);
 }
 
+function toLocalDateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#073A78' },
   scroll: { flex: 1, backgroundColor: '#F4F7FB' },
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 218, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 12 },
-  heroArtwork: { position: 'absolute', right: -42, bottom: -10, width: 300, height: 190, opacity: 0.72 },
-  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5, 49, 105, 0.28)' },
+  hero: { height: 142, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 10 },
+  heroArtwork: { position: 'absolute', right: -24, bottom: -28, width: 248, height: 156, opacity: 0.34 },
+  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5, 49, 105, 0.42)' },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBrand: { color: '#FFFFFF', fontSize: 25, lineHeight: 28, fontWeight: '800', letterSpacing: -0.5 },
-  heroPartner: { marginTop: 2, color: '#D8E8FF', fontSize: 9.5, lineHeight: 12, fontWeight: '700', letterSpacing: 3.2 },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  heroIconButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
-  heroAvatar: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
-  heroAvatarText: { color: '#144E98', fontSize: 13, lineHeight: 17, fontWeight: '800' },
-  heroGreeting: { marginTop: 34, maxWidth: '54%' },
-  heroGreetingSmall: { color: '#E4EDFB', fontSize: 16, lineHeight: 20, fontWeight: '500' },
-  heroGreetingName: { marginTop: 1, color: '#FFFFFF', fontSize: 27, lineHeight: 32, fontWeight: '800' },
-  heroSubtitle: { marginTop: 7, color: '#EAF2FF', fontSize: 13, lineHeight: 18, fontWeight: '500' },
+  heroBrand: { color: '#FFFFFF', fontSize: 23, lineHeight: 26, fontWeight: '800', letterSpacing: -0.5 },
+  heroPartner: { marginTop: 1, color: '#D8E8FF', fontSize: 9, lineHeight: 11, fontWeight: '700', letterSpacing: 3.0 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroIconButton: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
+  heroAvatar: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
+  heroAvatarText: { color: '#144E98', fontSize: 12, lineHeight: 16, fontWeight: '800' },
+  heroGreeting: { marginTop: 11, maxWidth: '64%' },
+  heroGreetingSmall: { color: '#EDF4FF', fontSize: 12.5, lineHeight: 16, fontWeight: '500' },
+  heroGreetingName: { marginTop: 0, color: '#FFFFFF', fontSize: 22, lineHeight: 27, fontWeight: '800' },
 
-  body: { marginTop: -22, paddingHorizontal: 16 },
+  body: { marginTop: -15, paddingHorizontal: 16 },
   searchShell: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   searchInput: { flex: 1, minWidth: 0, paddingVertical: 12, color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 17 },
   searchDivider: { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: '#D9E1EC' },
@@ -540,25 +567,25 @@ const styles = StyleSheet.create({
   updatedText: { color: '#8C97A8', fontSize: 9.5, lineHeight: 13 },
   refreshWarning: { marginTop: 10 },
 
-  businessCard: { marginTop: 12, padding: 15, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.045, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  businessCard: { marginTop: 10, padding: 13, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.045, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
   sectionTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  periodLabel: { color: '#123E83', fontFamily: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium', default: undefined }), fontSize: 13, lineHeight: 18, fontWeight: '800' },
-  inlineAction: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  periodLabel: { color: '#123E83', fontFamily: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium', default: undefined }), fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
+  inlineAction: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 2 },
   inlineActionText: { color: partnerTheme.colors.brand, fontSize: 10.5, lineHeight: 14, fontWeight: '700' },
-  businessMainRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center' },
+  businessMainRow: { marginTop: 0, flexDirection: 'row', alignItems: 'center' },
   businessMainCopy: { flex: 1, minWidth: 0 },
-  businessPremium: { marginTop: 5, color: '#0D1522', fontSize: 34, lineHeight: 39, fontWeight: '800', letterSpacing: -0.7 },
-  businessPremiumFraction: { fontSize: 19, lineHeight: 24, fontWeight: '700' },
-  businessCaption: { marginTop: 1, color: '#53647A', fontSize: 11, lineHeight: 15, fontWeight: '500' },
-  businessArtWrap: { width: 78, height: 72, alignItems: 'center', justifyContent: 'center' },
-  businessArt: { width: 68, height: 68 },
-  trend: { marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  businessPremium: { marginTop: 3, color: '#0D1522', fontSize: 32, lineHeight: 37, fontWeight: '800', letterSpacing: -0.7 },
+  businessPremiumFraction: { fontSize: 18, lineHeight: 23, fontWeight: '700' },
+  businessCaption: { marginTop: 0, color: '#53647A', fontSize: 10.5, lineHeight: 14, fontWeight: '500' },
+  businessArtWrap: { width: 70, height: 64, alignItems: 'center', justifyContent: 'center' },
+  businessArt: { width: 60, height: 60 },
+  trend: { marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 5 },
   trendText: { fontSize: 10.5, lineHeight: 14, fontWeight: '600' },
-  trendNeutral: { marginTop: 7, color: partnerTheme.colors.inkMuted, fontSize: 10.5, lineHeight: 14 },
-  businessStats: { marginTop: 13, paddingTop: 11, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5EBF4' },
-  statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9 },
-  statVisualDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 10, backgroundColor: '#DFE6EF' },
-  statIcon: { width: 32, height: 32 },
+  trendNeutral: { marginTop: 6, color: partnerTheme.colors.inkMuted, fontSize: 10.5, lineHeight: 14 },
+  businessStats: { marginTop: 11, paddingTop: 10, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5EBF4' },
+  statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statVisualDivider: { width: StyleSheet.hairlineWidth, height: 38, marginHorizontal: 8, backgroundColor: '#DFE6EF' },
+  statIcon: { width: 30, height: 30 },
 
   sectionHeaderRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   sectionTitle: { color: '#102E62', fontSize: 14, lineHeight: 19, fontWeight: '800' },
