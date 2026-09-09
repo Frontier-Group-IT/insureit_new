@@ -11,7 +11,7 @@ import { type ClaimStatus } from "@/lib/claim-workflow";
 import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { readInternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
+import { readInternalSpotIntimationDetails, type InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
 type ClaimDetail = SpotSurveyClaim & {
   customer_id: string;
@@ -53,6 +53,7 @@ type StageDetailRow = {
 type CustomerMilestoneRow = {
   milestone_key: string;
   milestone_status: string;
+  details: Record<string, unknown> | null;
 };
 
 const externalCustomerStages = [
@@ -267,7 +268,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const externalCustomerMilestoneResult = claim.policy_service_source === "external"
     ? await admin
       .from("claim_milestones")
-      .select("milestone_key, milestone_status")
+      .select("milestone_key, milestone_status, details")
       .eq("claim_id", id)
       .returns<CustomerMilestoneRow[]>()
     : null;
@@ -277,11 +278,33 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const externalCustomerJourney = externalCustomerMilestones
     ? summarizeExternalCustomerJourney(externalCustomerMilestones)
     : null;
+  const externalCustomerFallbackRows: StageDetailRow[] = (externalCustomerMilestones ?? [])
+    .filter((milestone) => milestone.details && Object.keys(milestone.details).length > 0)
+    .map((milestone) => ({
+      id: `external-customer-${milestone.milestone_key}`,
+      claim_id: id,
+      stage: null,
+      details: {
+        ...(milestone.details ?? {}),
+        milestone_key: milestone.milestone_key,
+        external_customer_live_fallback: true,
+      },
+      created_at: "1970-01-01T00:00:00.000Z",
+    }));
+  const customerSpotIntimationDetails = externalCustomerMilestones?.find((milestone) => milestone.milestone_key === "spot_intimation")?.details;
+  const effectiveSpotDetails = claim.policy_service_source === "external"
+    ? mergeExternalSpotDetails(spotDetails, customerSpotIntimationDetails)
+    : spotDetails;
+  const effectiveClaimWithSpotIntimation = {
+    ...claimWithSpotIntimation,
+    spotIntimationAt: effectiveSpotDetails.spot_intimation_at,
+    spotDetails: effectiveSpotDetails,
+  };
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
       <div className="[&>section>div:first-child>div:nth-child(3)_img]:grayscale [&>section>div:first-child>div:nth-child(3)_img]:invert [&>section>div:first-child>div:nth-child(3)_img]:contrast-[4] [&>section>div:first-child>div:nth-child(3)_img]:mix-blend-screen">
-        <SpotClaimHeader claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
+        <SpotClaimHeader claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       </div>
       {externalCustomerJourney ? (
         <div className="mt-[6px] rounded-2xl border border-[#D8E3F2] bg-[#F8FBFF] px-4 py-3">
@@ -310,11 +333,11 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           claimId={claim.id}
           currentStatus={claim.current_status}
           insurerClaimNo={claim.insurer_claim_no}
-          details={stageRows ?? []}
+          details={[...(stageRows ?? []), ...externalCustomerFallbackRows]}
           accidentAt={claim.accident_at}
-          spotIntimationAt={claimWithSpotIntimation.spotIntimationAt}
-          spotDetails={spotDetails}
-          spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
+          spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
+          spotDetails={effectiveSpotDetails}
+          spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
           claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
@@ -337,6 +360,21 @@ function summarizeExternalCustomerJourney(rows: CustomerMilestoneRow[]) {
     total: externalCustomerStages.length,
     latestLabel: latestStage?.label ?? "Not started",
     complete: completedStages.length === externalCustomerStages.length,
+  };
+}
+
+function mergeExternalSpotDetails(operations: InternalSpotIntimationDetails, customerDetails: Record<string, unknown> | null | undefined): InternalSpotIntimationDetails {
+  const customerText = (key: string) => {
+    const value = customerDetails?.[key];
+    return typeof value === "string" && value.trim() ? value.trim() : null;
+  };
+  return {
+    incident_at: operations.incident_at ?? customerText("incident_at") ?? customerText("accident_at"),
+    spot_intimation_at: operations.spot_intimation_at ?? customerText("spot_intimation_at"),
+    driver_name: operations.driver_name ?? customerText("driver_name"),
+    driver_phone: operations.driver_phone ?? customerText("driver_phone"),
+    location: operations.location ?? customerText("location") ?? customerText("accident_location"),
+    accident_description: operations.accident_description ?? customerText("accident_description"),
   };
 }
 
