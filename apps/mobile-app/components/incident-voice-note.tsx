@@ -156,7 +156,6 @@ export function IncidentVoiceNote({ value, saved = false, locked = false, busy =
             <MaterialCommunityIcons name={playerState.playing ? 'pause-circle-outline' : 'play-circle-outline'} size={20} color="#18864B" />
             <Text style={styles.readyText}>Voice note ready</Text>
           </Pressable>
-          {isLocked ? <Text style={styles.lockedText}>Verified · Locked</Text> : null}
           {!isLocked ? (
             <View style={styles.actions}>
               <Pressable accessibilityRole="button" accessibilityLabel="Delete voice note" disabled={busy} onPress={() => void removeVoiceNote()} style={styles.deleteButton}>
@@ -207,7 +206,6 @@ const styles = StyleSheet.create({
   readyRowDisabled: { opacity: 0.72 },
   readyRowPressed: { opacity: 0.78 },
   readyText: { color: '#166A45', fontSize: 10.5, fontWeight: '900' },
-  lockedText: { color: '#18864B', fontSize: 9.5, fontWeight: '900', textAlign: 'center' },
   actions: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
   secondaryButton: { flexGrow: 1, minHeight: 42, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#BFD4EE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 10 },
   secondaryText: { color: '#0A43A3', fontSize: 10, fontWeight: '900' },
