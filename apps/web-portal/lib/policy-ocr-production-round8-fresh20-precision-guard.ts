@@ -129,12 +129,16 @@ export function refineProductionRound8Fresh20Precision(
     const od = parseMoney(netParts?.[1]);
     const netB = parseMoney(netParts?.[2]);
     const basicTp = firstMoney(text, /Basic\s+TP\s+Premium\s+([\d,]+(?:\.\d+)?)/i);
+    const existingCpaOpted = fields.get("cpa_opted")?.value?.trim() ?? "";
+    const existingCpa = numberField(fields, "cpa_premium");
     if (od != null && netB != null) {
       const page = findPage(pages, /Net\s*\(A\)/i);
       setMoney(fields, "od_premium", od, page, "Round 8 IFFCO printed Net(A)");
       if (basicTp != null) setMoney(fields, "tp_premium", basicTp, page, "Round 8 IFFCO printed Basic TP; liability additions remain separate");
-      set(fields, "cpa_opted", "No", .999, page, "Round 8 IFFCO PA Owner Driver CSI is zero");
-      setMoney(fields, "cpa_premium", 0, page, "Round 8 IFFCO PA Owner Driver CSI is zero");
+      if (!/^Yes$/i.test(existingCpaOpted) && !(existingCpa != null && existingCpa > 0)) {
+        set(fields, "cpa_opted", "No", .999, page, "Round 8 IFFCO PA Owner Driver CSI is zero");
+        setMoney(fields, "cpa_premium", 0, page, "Round 8 IFFCO PA Owner Driver CSI is zero");
+      }
       changed = true;
     }
     const totals = [...text.matchAll(/(?:^|\n)\s*Total\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)\s+([\d,]+(?:\.\d+)?)/gi)];
