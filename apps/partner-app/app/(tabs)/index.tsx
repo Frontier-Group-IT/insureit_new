@@ -132,6 +132,11 @@ export default function PartnerHomeDashboard() {
         }
       >
         <View style={styles.hero}>
+          <Image
+            source={require('../../assets/partner-home-banner.png')}
+            style={styles.heroBackdrop}
+            resizeMode="cover"
+          />
           <View style={styles.heroTopRow}>
             <Image
               source={require('../../assets/insureit-partner-official.png')}
@@ -202,13 +207,6 @@ export default function PartnerHomeDashboard() {
               <Feather name="chevron-right" size={15} color={searchQuery.trim().length < 2 ? '#B6BFCC' : partnerTheme.colors.brand} />
             </Pressable>
           </View>
-
-          {data ? (
-            <View style={styles.updatedRow}>
-              <Text style={styles.roleText}>{identity.actor_kind === 'employee' ? humanize(identity.role) : humanize(identity.intermediary_type)}</Text>
-              <Text style={styles.updatedText}>{formatUpdatedAt(data.generated_at)}</Text>
-            </View>
-          ) : null}
 
           {workspace.loading && !data ? (
             <HomeSkeleton />
@@ -544,10 +542,6 @@ function initials(value: string) {
   return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
 }
 
-function humanize(value: string) {
-  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
 function formatCompactIndianAmount(value: number | string | null | undefined) {
   const amount = Number(value ?? 0);
   if (!Number.isFinite(amount)) return '₹0';
@@ -573,12 +567,6 @@ function formatCacheTime(value: number | null) {
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
-function formatUpdatedAt(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Pull down to refresh';
-  return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
-}
-
 function formatActivityDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
@@ -598,14 +586,15 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 106, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 7 },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroLogo: { width: 43, height: 43 },
+  hero: { height: 106, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },
+  heroBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.28 },
+  heroTopRow: { zIndex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
   heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroGreeting: { marginTop: 5, maxWidth: '84%' },
+  heroGreeting: { zIndex: 1, marginTop: 5, maxWidth: '84%' },
   heroGreetingText: { color: '#FFFFFF', fontSize: 15.5, lineHeight: 20, fontWeight: '400', letterSpacing: -0.05 },
 
   body: { marginTop: -13, paddingHorizontal: 16 },
@@ -615,9 +604,6 @@ const styles = StyleSheet.create({
   searchAction: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 2 },
   searchActionText: { color: partnerTheme.colors.brand, fontSize: 11.5, lineHeight: 15, fontWeight: '700' },
   searchActionDisabled: { color: '#B6BFCC' },
-  updatedRow: { marginTop: 7, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  roleText: { flex: 1, color: '#D99B5F', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
-  updatedText: { color: '#8C97A8', fontSize: 9.5, lineHeight: 13 },
   refreshWarning: { marginTop: 10 },
 
   businessCard: { marginTop: 10, padding: 12, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
@@ -638,9 +624,9 @@ const styles = StyleSheet.create({
   trend: { marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontSize: 10, lineHeight: 13.5, fontWeight: '600' },
   trendNeutral: { marginTop: 5, color: partnerTheme.colors.inkMuted, fontSize: 10, lineHeight: 13.5 },
-  businessStats: { marginTop: 8, paddingTop: 9, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5EBF4' },
+  businessStats: { marginTop: 8, paddingTop: 9, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1.5, borderTopColor: '#B8C8DC' },
   statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
-  statVisualDivider: { width: StyleSheet.hairlineWidth, height: 40, marginHorizontal: 9, backgroundColor: '#DFE6EF' },
+  statVisualDivider: { width: 1.5, height: 42, marginHorizontal: 9, backgroundColor: '#B7C6DA' },
   statIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF6FF' },
   statCopy: { flex: 1, minWidth: 0 },
   statValue: { color: '#112D5F', fontSize: 16, lineHeight: 20, fontWeight: '800' },
