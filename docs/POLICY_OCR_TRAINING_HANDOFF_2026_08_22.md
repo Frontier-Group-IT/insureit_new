@@ -422,7 +422,7 @@ whitespace validation passed. Production/live verification remains
 
 ## 19. IFFCO MISD liability normalization
 
-**IMPLEMENTED / PDF-VERIFIED LOCALLY / NOT MERGED OR DEPLOYED 2026-09-09:**
+**MERGED / DEPLOYED / LIVE FAILURE CONFIRMED 2026-09-09:**
 an attached IFFCO commercial MISD policy established that its printed Net (B)
 contains Basic TP, owner-driver CPA and legal-liability-to-driver as separate
 components. The normalized Section 03 contract keeps owner-driver CPA semantic:
@@ -443,6 +443,20 @@ same relationship.
 
 No PDF, raw OCR dump, customer identity, policy number, registration, chassis
 or engine value was added to source control. The complete OCR regression chain,
-typecheck, lint (existing warnings only) and whitespace validation passed.
-Production Google replay remains **UNVERIFIED** until this increment is merged,
-deployed and the same protected policy is rerun.
+typecheck, lint (existing warnings only) and whitespace validation passed before
+the first release.
+
+PR `#1548` merged as `389564f886b8415f82393bead04c1a0d11305137`;
+Vercel reported the deployment complete. The protected-policy replay still
+withheld OD/TP/CPA. The live warning proved that the first sanitized fixture
+did not reproduce Google's actual row association: the payable owner-driver
+CPA amount was emitted at the end of the preceding zero-valued add-on row,
+while the explicit `PA Owner Driver CSI` label appeared on the following row
+without its amount.
+
+**LEARNING:** for this bounded IFFCO MISD layout, accept that adjacent-row
+association only when the current row has an explicit owner-driver CPA label,
+the immediately preceding row is a known zero-valued IFFCO add-on row, and its
+trailing positive amount is a plausible CPA premium. The final OD/TP/CPA set
+must still reconcile to printed net. Do not generalize this into an
+unrestricted previous-line numeric fallback.
