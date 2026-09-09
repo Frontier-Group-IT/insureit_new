@@ -1,0 +1,128 @@
+name: Temporary Partner Home banner divider polish
+
+on:
+  push:
+    branches:
+      - partner/home-banner-final-polish
+    paths:
+      - '.github/workflows/tmp-partner-home-banner-divider-polish.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply scoped Partner Home polish
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/partner-app/app/(tabs)/index.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str, label: str):
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "        <View style={styles.hero}>\n          <View style={styles.heroTopRow}>",
+              "        <View style={styles.hero}>\n          <Image\n            source={require('../../assets/partner-home-banner.png')}\n            style={styles.heroBackdrop}\n            resizeMode=\"cover\"\n          />\n          <View style={styles.heroTopRow}>",
+              'hero banner insertion',
+          )
+
+          replace_once(
+              "          {data ? (\n            <View style={styles.updatedRow}>\n              <Text style={styles.roleText}>{identity.actor_kind === 'employee' ? humanize(identity.role) : humanize(identity.intermediary_type)}</Text>\n              <Text style={styles.updatedText}>{formatUpdatedAt(data.generated_at)}</Text>\n            </View>\n          ) : null}\n\n",
+              "",
+              'role/updated row removal',
+          )
+
+          replace_once(
+              "function humanize(value: string) {\n  return value.replaceAll('_', ' ').replace(/\\b\\w/g, (letter) => letter.toUpperCase());\n}\n\n",
+              "",
+              'humanize helper removal',
+          )
+
+          replace_once(
+              "function formatUpdatedAt(value: string) {\n  const date = new Date(value);\n  if (Number.isNaN(date.getTime())) return 'Pull down to refresh';\n  return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;\n}\n\n",
+              "",
+              'updated-at helper removal',
+          )
+
+          replace_once(
+              "  hero: { height: 106, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 7 },\n  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },\n  heroLogo: { width: 43, height: 43 },",
+              "  hero: { height: 106, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },\n  heroBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.28 },\n  heroTopRow: { zIndex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },\n  heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },",
+              'hero styles',
+          )
+
+          replace_once(
+              "  heroGreeting: { marginTop: 5, maxWidth: '84%' },",
+              "  heroGreeting: { zIndex: 1, marginTop: 5, maxWidth: '84%' },",
+              'hero greeting layer',
+          )
+
+          replace_once(
+              "  updatedRow: { marginTop: 7, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },\n  roleText: { flex: 1, color: '#D99B5F', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },\n  updatedText: { color: '#8C97A8', fontSize: 9.5, lineHeight: 13 },\n",
+              "",
+              'obsolete role/update styles',
+          )
+
+          replace_once(
+              "  businessStats: { marginTop: 8, paddingTop: 9, flexDirection: 'row', alignItems: 'center', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5EBF4' },\n  statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },\n  statVisualDivider: { width: StyleSheet.hairlineWidth, height: 40, marginHorizontal: 9, backgroundColor: '#DFE6EF' },",
+              "  businessStats: { marginTop: 8, paddingTop: 9, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1.5, borderTopColor: '#B8C8DC' },\n  statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },\n  statVisualDivider: { width: 1.5, height: 42, marginHorizontal: 9, backgroundColor: '#B7C6DA' },",
+              'business dividers',
+          )
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          test -f apps/partner-app/assets/partner-home-banner.png
+          test -f apps/partner-app/assets/insureit-partner-official.png
+          git diff --check
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify Partner source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:uat
+          npm run typecheck:partner
+          npm run lint:partner
+          npm run build:partner:web
+
+      - name: Commit verified implementation and remove temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/tmp-partner-home-banner-divider-polish.yml
+          git add 'apps/partner-app/app/(tabs)/index.tsx'
+          git config user.name 'chatgpt[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Polish Partner Home banner and business dividers'
+          git push origin HEAD:partner/home-banner-final-polish
