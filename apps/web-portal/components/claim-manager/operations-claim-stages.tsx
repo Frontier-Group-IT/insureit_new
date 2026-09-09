@@ -275,7 +275,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           const isCurrent = hasExternalVisualProgress ? externalVisualCurrentIndex === index : !journeyComplete && stage.key === active?.key;
           const isCompleted = hasExternalVisualProgress ? externalStageCompleted : journeyComplete || index < activeIndex;
           const isSelected = stage.key === selected.key;
-          const showSelectedMarker = !hasExternalVisualProgress && isSelected;
+          const showSelectedMarker = isSelected;
           return (
             <li key={stage.key} className="border-b border-[#D9E3F0] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
               <button
