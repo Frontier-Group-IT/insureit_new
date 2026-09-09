@@ -12,6 +12,15 @@ export type ExternalClaimReadonlyMilestone = {
   updatedAt: string | null;
 };
 
+export type ExternalClaimReadonlyDocument = {
+  id: string;
+  milestoneKey: string | null;
+  documentType: string;
+  fileName: string;
+  verificationStatus: string;
+  openUrl: string;
+};
+
 export type ExternalClaimReadonlySnapshot = {
   accidentAt: string | null;
   spotIntimationAt: string | null;
@@ -22,6 +31,7 @@ export type ExternalClaimReadonlySnapshot = {
   policyType: string | null;
   insurerName: string | null;
   milestones: ExternalClaimReadonlyMilestone[];
+  documents: ExternalClaimReadonlyDocument[];
 };
 
 type ExternalClaimRow = {
@@ -42,6 +52,14 @@ type MilestoneRow = {
   details: Record<string, unknown> | null;
   completed_at: string | null;
   updated_at: string | null;
+};
+
+type DocumentRow = {
+  id: string;
+  milestone_key: string | null;
+  document_type: string | null;
+  file_name: string | null;
+  verification_status: string | null;
 };
 
 export async function loadExternalClaimReadonlyJourney(claimId: string): Promise<ExternalClaimReadonlySnapshot> {
@@ -65,14 +83,23 @@ export async function loadExternalClaimReadonlyJourney(claimId: string): Promise
     throw new Error("This read-only view is available only for customer-managed claims.");
   }
 
-  const { data: milestoneRows, error: milestoneError } = await admin
-    .from("claim_milestones")
-    .select("milestone_key,milestone_status,details,completed_at,updated_at")
-    .eq("claim_id", claimId)
-    .order("created_at", { ascending: true })
-    .returns<MilestoneRow[]>();
+  const [{ data: milestoneRows, error: milestoneError }, { data: documentRows, error: documentError }] = await Promise.all([
+    admin
+      .from("claim_milestones")
+      .select("milestone_key,milestone_status,details,completed_at,updated_at")
+      .eq("claim_id", claimId)
+      .order("created_at", { ascending: true })
+      .returns<MilestoneRow[]>(),
+    admin
+      .from("claim_documents")
+      .select("id,milestone_key,document_type,file_name,verification_status")
+      .eq("claim_id", claimId)
+      .order("created_at", { ascending: false })
+      .returns<DocumentRow[]>(),
+  ]);
 
   if (milestoneError) throw new Error(milestoneError.message);
+  if (documentError) throw new Error(documentError.message);
 
   let policyNo: string | null = null;
   let policyType: string | null = null;
@@ -114,6 +141,14 @@ export async function loadExternalClaimReadonlyJourney(claimId: string): Promise
       details: milestone.details ?? {},
       completedAt: milestone.completed_at,
       updatedAt: milestone.updated_at,
+    })),
+    documents: (documentRows ?? []).map((document) => ({
+      id: document.id,
+      milestoneKey: document.milestone_key,
+      documentType: document.document_type?.trim() || "Document",
+      fileName: document.file_name?.trim() || "Unnamed claim document",
+      verificationStatus: document.verification_status?.trim() || "pending",
+      openUrl: `/claim-documents/${document.id}/open`,
     })),
   };
 }
