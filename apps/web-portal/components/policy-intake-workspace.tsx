@@ -125,7 +125,7 @@ function PolicyIntakeDateRangeFilter({
 
 export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId, initialView }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string; initialView?: PolicyIntakeViewKey }) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ViewKey>(reviewer ? (initialView ?? "action") : "all");
+  const [view, setView] = useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"));
   const [source, setSource] = useState("all");
   const [ocr, setOcr] = useState("all");
   const [fromDate, setFromDate] = useState("");

@@ -79,15 +79,19 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   const afterAuth = performance.now();
   if (!profile) redirect("/access-denied");
   if (searchParams) await searchParams;
-  const [accessibleRmEmployeeIds, canReviewPolicyIntakes] = await Promise.all([
+  const [accessibleRmEmployeeIds, canReviewPolicyIntakes, canViewPolicyIntakes] = await Promise.all([
     getAccessiblePolicyRmEmployeeIds(profile.id, profile.role, "view_policies"),
     hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
+    hasEffectiveCapability(profile, "view_policy_intakes", "view"),
   ]);
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
+  const canTrackOwnPolicyIntakes = profile.role === "relationship_manager" && canViewPolicyIntakes;
   const policyIntakeSummaryPromise = canReviewPolicyIntakes
     ? loadPolicyIntakeReviewSummary(admin)
-    : Promise.resolve(null);
+    : canTrackOwnPolicyIntakes
+      ? loadPolicyIntakeReviewSummary(admin, { submittedByProfileId: profile.id, includeActionRequired: false })
+      : Promise.resolve(null);
 
   if (profile.role === "backoffice_executive") {
     if (accessibleRmEmployeeIds !== null && !accessibleRmEmployeeIds.length) {
