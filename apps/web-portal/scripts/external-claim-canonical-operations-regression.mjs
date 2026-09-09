@@ -42,12 +42,12 @@ assert(claimPage.includes('.select("milestone_key, milestone_status, details")')
 assert(claimPage.includes('const externalCustomerFallbackRows: StageDetailRow[]'), 'External Claim detail must build live Customer fallback rows.');
 assert(claimPage.includes('details={[...(stageRows ?? []), ...externalCustomerFallbackRows]}'), 'Operations stage details must take priority before live Customer fallback rows.');
 assert(claimPage.includes('mergeExternalSpotDetails(spotDetails, customerSpotIntimationDetails)'), 'External Spot Intimation must merge live Customer details without replacing Operations values.');
-assert(claimPage.includes('Customer external journey'), 'Operations claim detail must label Customer External Claim progress separately.');
-assert(claimPage.includes('Operations processing'), 'Operations claim detail must label Operations progress separately.');
-assert(claimPage.includes('Customer completion does not auto-advance or overwrite the Operations workflow.'), 'Dual-journey display must explain that Customer completion does not advance Operations.');
+assert(!claimPage.includes('Customer external journey'), 'Operations claim detail must not render the removed Customer External Journey summary section.');
+assert(!claimPage.includes('Operations processing'), 'Operations claim detail must not render the removed Operations Processing summary section.');
+assert(!claimPage.includes('Customer completion does not auto-advance or overwrite the Operations workflow.'), 'Operations claim detail must not render the removed dual-journey explanatory copy.');
 assert(claimPage.includes('currentStatus={claim.current_status}'), 'Operations actions must keep claims.current_status as their workflow authority.');
 assert(claimPage.includes('externalCustomerMilestones={externalCustomerMilestones?.map'), 'External Claim stage bar must receive preserved Customer milestones for visual progress.');
-assert(!claimPage.includes('.update({ current_status'), 'Dual-journey display must not write Operations status from Customer milestones.');
+assert(!claimPage.includes('.update({ current_status'), 'External Customer milestone display/data flow must not write Operations status from Customer milestones.');
 assert(operationsStages.includes('externalCustomerMilestones?: CustomerMilestoneVisual[];'), 'OperationsClaimStages must support an External Customer milestone projection.');
 assert(operationsStages.includes('const hasExternalVisualProgress = externalCustomerMilestones !== undefined;'), 'External milestone projection must be opt-in so Internal/SIBL behavior is unchanged.');
 assert(operationsStages.includes('const externalVisualCurrentIndex = hasExternalVisualProgress'), 'External milestone projection must derive the first incomplete visual stage.');
