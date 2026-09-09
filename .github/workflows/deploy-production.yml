@@ -172,7 +172,7 @@ jobs:
           elif grep -qx 'supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-policy-intake-pair-delete.yml"
             echo "Policy Intake pair-delete migration detected. Waiting for its schema workflow..."
-          elif grep -qx 'supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql' <<<"$changed_migrations"; then
+          elif grep -qx 'supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql' <<<"$changed_migrations" || grep -qx 'supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-claim-canonical-operations.yml"
             echo "External Claim canonical Operations migration detected. Waiting for its schema workflow..."
           else
