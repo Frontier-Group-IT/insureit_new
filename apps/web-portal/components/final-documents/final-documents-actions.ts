@@ -8,7 +8,7 @@ import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessTok
 
 const bucketName = "claim-documents";
 type ActionResult = { ok: boolean; message?: string };
-type ClaimRow = { id: string; customer_id: string | null; current_status: string | null };
+type ClaimRow = { id: string; customer_id: string | null; current_status: string | null; policy_service_source: "sibl" | "external" | null };
 
 type ClaimIntimationDetails = {
   claim_intimation_date: string;
@@ -27,7 +27,7 @@ async function currentProfile() {
 
 async function loadClaim(claimId: string) {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status").eq("id", claimId).maybeSingle<ClaimRow>();
+  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, policy_service_source").eq("id", claimId).maybeSingle<ClaimRow>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
   return data;
 }
@@ -44,11 +44,20 @@ function isDateValue(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00`));
 }
 
+function detailText(details: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = details[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
 export async function loadFinalClaimIntimationDetails(claimId: string): Promise<{ ok: boolean; details?: ClaimIntimationDetails; message?: string }> {
   try {
     if (!claimId) throw new Error("Missing claim id.");
     await currentProfile();
-    await loadClaim(claimId);
+    const claim = await loadClaim(claimId);
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from("claim_stage_details")
@@ -59,15 +68,28 @@ export async function loadFinalClaimIntimationDetails(claimId: string): Promise<
       .limit(1)
       .maybeSingle<{ details: Record<string, unknown> | null }>();
     if (error) throw new Error(error.message);
+
+    let customerDetails: Record<string, unknown> = {};
+    if (claim.policy_service_source === "external") {
+      const { data: customerMilestone, error: customerMilestoneError } = await supabase
+        .from("claim_milestones")
+        .select("details")
+        .eq("claim_id", claimId)
+        .eq("milestone_key", "claim_intimation")
+        .maybeSingle<{ details: Record<string, unknown> | null }>();
+      if (customerMilestoneError) throw new Error(customerMilestoneError.message);
+      customerDetails = customerMilestone?.details ?? {};
+    }
+
     const details = data?.details ?? {};
     return {
       ok: true,
       details: {
-        claim_intimation_date: typeof details.claim_intimation_date === "string" ? details.claim_intimation_date : typeof details.contact_person_name === "string" ? details.contact_person_name : "",
-        dealership_name: typeof details.dealership_name === "string" ? details.dealership_name : "",
-        dealership_location: typeof details.dealership_location === "string" ? details.dealership_location : typeof details.dealership_address === "string" ? details.dealership_address : "",
-        gate_in_date: typeof details.gate_in_date === "string" ? details.gate_in_date : typeof details.contact_number === "string" ? details.contact_number : "",
-        estimate_amount: typeof details.estimate_amount === "number" ? String(details.estimate_amount) : typeof details.estimate_amount === "string" ? details.estimate_amount : ""
+        claim_intimation_date: detailText(details, "claim_intimation_date", "contact_person_name") || detailText(customerDetails, "claim_intimation_date"),
+        dealership_name: detailText(details, "dealership_name") || detailText(customerDetails, "dealership_name"),
+        dealership_location: detailText(details, "dealership_location", "dealership_address") || detailText(customerDetails, "dealership_location", "dealership_address"),
+        gate_in_date: detailText(details, "gate_in_date", "contact_number") || detailText(customerDetails, "gate_in_date"),
+        estimate_amount: detailText(details, "estimate_amount") || detailText(customerDetails, "estimate_amount")
       }
     };
   } catch (error) {
