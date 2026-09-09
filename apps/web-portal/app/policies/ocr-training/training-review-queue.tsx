@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { runPolicyOcrTrainingLabel, type RunPolicyOcrTrainingState } from "../ocr-training-actions";
 import { assignPolicyOcrReviewTask, completePolicyOcrReviewTask, type AssignPolicyOcrReviewState, type ReviewerChecklistState, startPolicyOcrReviewTask } from "../ocr-training-review-actions";
-import { compareTrainingProposalToReference, compareTrainingValue, formatReviewerDate, type TrainingComparisonKey, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
+import { compareTrainingProposalToReference, compareTrainingValue, formatReviewerDate, type PolicyOcrStructuredEvidence, type TrainingComparisonKey, type TrainingDatabaseReference, type TrainingProposal } from "@/lib/policy-ocr-training";
 
-export type TrainingQueueRow = { documentId: string; labelId: string; fileName: string; uploadedAt: string; policyReference: string; linkedInsurer: string; status: "needs_review" | "reviewed" | "approved" | "rejected"; processingStatus: "pending" | "processing" | "ready" | "failed" | "exhausted"; processingAttempts: number; failureCode: string | null; proposal: TrainingProposal | null; databaseReference: TrainingDatabaseReference; parserId: string | null; parserVersion: string | null; proposedAt: string | null; reviewedBy: string | null; reviewedAt: string | null; approvedBy: string | null; approvedAt: string | null; reviewTask: ReviewTask | null };
+export type TrainingQueueRow = { documentId: string; labelId: string; fileName: string; uploadedAt: string; policyReference: string; linkedInsurer: string; status: "needs_review" | "reviewed" | "approved" | "rejected"; processingStatus: "pending" | "processing" | "ready" | "failed" | "exhausted"; processingAttempts: number; failureCode: string | null; proposal: TrainingProposal | null; databaseReference: TrainingDatabaseReference; parserId: string | null; parserVersion: string | null; extractionMethod: string | null; structuredEvidence: PolicyOcrStructuredEvidence; proposedAt: string | null; updatedAt: string; reviewedBy: string | null; reviewedAt: string | null; approvedBy: string | null; approvedAt: string | null; reviewTask: ReviewTask | null };
 
 type ReviewTask = {
   id: string;
@@ -77,7 +78,10 @@ export function TrainingReviewQueue({ rows, canTrain, canAssign, selectedDocumen
               <span className="text-xs font-semibold text-slate-700">{row.linkedInsurer}</span>
               <span><StatusBadge label={statusLabel(row)} tone={statusTone(row)} /></span>
               <span className="text-xs text-slate-600">{comparison ? comparison.exactMatch ? "Exact match" : `${comparison.mismatchedFields} review · ${comparison.missingOcrFields} missing` : processingLabel(row.processingStatus)}</span>
-              <span className="text-xs font-bold text-blue-700">Open review →</span>
+              <span className="text-xs font-bold text-blue-700">
+                <span className="block text-slate-600">{formatRunTimestamp(row.updatedAt)}</span>
+                <span className="block text-[10px]">Open review →</span>
+              </span>
             </Link>
           );
         })}
@@ -102,6 +106,13 @@ function TrainingReviewCard({ row, canTrain, canAssign }: { row: TrainingQueueRo
           </div>
           <p className="mt-1 text-[11px] text-slate-500">
             Policy {row.policyReference} · {row.linkedInsurer} · {new Date(row.uploadedAt).toLocaleDateString("en-IN")}
+          </p>
+          <p className="mt-2 text-[11px] text-slate-500">
+            Parser <span className="font-semibold text-slate-700">{row.parserVersion ?? "Not recorded"}</span>
+            {" · "}
+            Structured tables <span className="font-semibold text-slate-700">{structuredEvidenceLabel(row.structuredEvidence)}</span>
+            {" · "}
+            Last run <span className="font-semibold text-slate-700">{formatRunTimestamp(row.updatedAt)}</span>
           </p>
         </div>
         <Link href={`/policies/ocr-training/documents/${row.documentId}/open`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700">
@@ -213,10 +224,14 @@ function ComparisonSection({ title, children }: { title: string; children: React
   );
 }
 
-const INITIAL_OCR_RUN_STATE: RunPolicyOcrTrainingState = { status: "idle", message: null };
+const INITIAL_OCR_RUN_STATE: RunPolicyOcrTrainingState = { status: "idle", message: null, refreshKey: null };
 
 function OcrRunForm({ labelId, rerun = false }: { labelId: string; rerun?: boolean }) {
   const [state, formAction, pending] = useActionState(runPolicyOcrTrainingLabel, INITIAL_OCR_RUN_STATE);
+  const router = useRouter();
+  useEffect(() => {
+    if (state.status === "success" && state.refreshKey !== null) router.refresh();
+  }, [router, state.refreshKey, state.status]);
   return (
     <form action={formAction} className="flex max-w-sm flex-col items-end gap-2">
       <input type="hidden" name="training_label_id" value={labelId} />
@@ -375,4 +390,17 @@ function isExactDatabaseMatch(row: TrainingQueueRow) {
 function StatusBadge({ label, tone }: { label: string; tone: string }) {
   const classes = tone === "green" ? "bg-emerald-100 text-emerald-800" : tone === "red" ? "bg-red-100 text-red-800" : tone === "blue" ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800";
   return <span className={`rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${classes}`}>{label}</span>;
+}
+
+function structuredEvidenceLabel(evidence: PolicyOcrStructuredEvidence) {
+  if (evidence.status === "present") return `${evidence.tableCount} present`;
+  if (evidence.status === "zero_or_unusable") return "0 · zero/unusable";
+  if (evidence.status === "not_requested") return "not requested";
+  return "not recorded";
+}
+
+function formatRunTimestamp(value: string | null | undefined) {
+  if (!value) return "Not recorded";
+  const timestamp = new Date(value);
+  return Number.isNaN(timestamp.getTime()) ? "Not recorded" : timestamp.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 }

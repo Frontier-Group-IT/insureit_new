@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
-import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, hasStaleTrainingEvidenceLabels, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
+import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatPolicyOcrExtractionMethod, formatReviewerDate, hasStaleTrainingEvidenceLabels, parsePolicyOcrExtractionMethod, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
 import { extractVehicleFields } from "../lib/policy-ocr-parsers.ts";
 
@@ -9,6 +9,12 @@ assert.equal(parseReviewerDate("21/08/2026"), "2026-08-21");
 assert.equal(parseReviewerDate("31/02/2026"), null);
 assert.equal(parseReviewerDate("2026-08-21"), null);
 assert.equal(formatReviewerDate("2026-08-21"), "21/08/2026");
+const structuredMetadata = formatPolicyOcrExtractionMethod("google_document_ai", { status: "present", tableCount: 3 });
+assert.equal(structuredMetadata, "google_document_ai;layout_tables=present;table_count=3");
+assert.deepEqual(parsePolicyOcrExtractionMethod(structuredMetadata), { status: "present", tableCount: 3 });
+assert.deepEqual(parsePolicyOcrExtractionMethod("google_document_ai;layout_tables=zero_or_unusable;table_count=0"), { status: "zero_or_unusable", tableCount: 0 });
+assert.deepEqual(parsePolicyOcrExtractionMethod("google_document_ai;layout_tables=not_requested;table_count=0"), { status: "not_requested", tableCount: 0 });
+assert.deepEqual(parsePolicyOcrExtractionMethod("google_document_ai"), { status: "not_recorded", tableCount: 0 });
 
 const proposal = buildTrainingProposal({
   ok: true,
@@ -209,6 +215,7 @@ assert.doesNotMatch(migration, /add constraint policy_ocr_training_labels_separa
 
 const actions = readFileSync("app/policies/ocr-training-actions.ts", "utf8");
 const trainingAccess = readFileSync("lib/policy-ocr-training-access.ts", "utf8");
+const trainingLib = readFileSync("lib/policy-ocr-training.ts", "utf8");
 const workerActions = readFileSync("app/policies/policy-ocr-actions.ts", "utf8");
 assert.match(trainingAccess, /review_policy_ocr_training/);
 assert.match(trainingAccess, /approve_policy_ocr_training/);
@@ -219,12 +226,15 @@ assert.match(workerActions, /Automated comparison reference from saved Section 0
 assert.match(workerActions, /compareTrainingProposalToReference/);
 assert.match(workerActions, /processPolicyOcrTrainingDocument/);
 assert.match(workerActions, /requirePolicyOcrTrainingOperator/);
+assert.match(workerActions, /formatPolicyOcrExtractionMethod/);
+assert.match(trainingLib, /layout_tables/);
 assert.doesNotMatch(actions, /POLICY_OCR_WORKER_SECRET|CRON_SECRET/);
 assert.match(actions, /RunPolicyOcrTrainingState/);
 assert.match(actions, /Google OCR completed/);
 assert.match(workerActions, /\.eq\("id", label\.id\)/);
 assert.match(workerActions, /\.eq\("processing_status", label\.processing_status\)/);
 assert.match(actions, /runPolicyOcrTrainingLabel/);
+assert.match(actions, /revalidatePath\("\/policies\/ocr-training"\)/);
 assert.doesNotMatch(actions, /writeFile|appendFile|apply_patch/);
 
 assert.equal(existsSync("app/api/internal/policy-ocr-training/process/route.ts"), false);
@@ -245,11 +255,15 @@ assert.match(queuePage, /document\.file_name/);
 assert.match(queuePage, /\.range\(0, 999\)/);
 assert.match(queuePage, /searchParams/);
 assert.match(queuePage, /selectedDocumentId/);
+assert.match(queuePage, /updated_at/);
 assert.doesNotMatch(queuePage, /schedulePolicyOcrTraining/);
 const queueComponent = readFileSync("app/policies/ocr-training/training-review-queue.tsx", "utf8");
 assert.match(queueComponent, /Run with Google Cloud/);
 assert.match(queueComponent, /Re-run with Google Cloud/);
 assert.match(queueComponent, /useActionState/);
+assert.match(queueComponent, /router\.refresh\(\)/);
+assert.match(queueComponent, /refreshKey/);
+assert.match(queueComponent, /Structured tables/);
 assert.doesNotMatch(queueComponent, /Confirm comparison & approve training/);
 assert.match(queueComponent, /Parser training started from the saved answers/);
 assert.doesNotMatch(queueComponent, /different training owner|No self-approval|Awaiting owner/);

@@ -53,6 +53,35 @@ export type TrainingProposal = {
   warnings: string[];
 };
 
+export type PolicyOcrStructuredEvidenceStatus = "present" | "zero_or_unusable" | "not_requested" | "not_recorded";
+
+export type PolicyOcrStructuredEvidence = {
+  status: PolicyOcrStructuredEvidenceStatus;
+  tableCount: number;
+};
+
+const POLICY_OCR_EXTRACTION_METHOD_RE = /^(?<method>[a-z0-9_]+);layout_tables=(?<status>present|zero_or_unusable|not_requested);table_count=(?<count>\d+)$/;
+
+export function formatPolicyOcrExtractionMethod(
+  method: string,
+  evidence: Omit<PolicyOcrStructuredEvidence, "status"> & {
+    status: Exclude<PolicyOcrStructuredEvidenceStatus, "not_recorded">;
+  },
+) {
+  const safeMethod = method.trim().toLowerCase().replace(/[^a-z0-9_]/g, "_").slice(0, 32) || "unknown";
+  const safeCount = Math.max(0, Math.min(999, Math.floor(Number.isFinite(evidence.tableCount) ? evidence.tableCount : 0)));
+  return `${safeMethod};layout_tables=${evidence.status};table_count=${safeCount}`;
+}
+
+export function parsePolicyOcrExtractionMethod(method: string | null | undefined): PolicyOcrStructuredEvidence {
+  const match = method?.match(POLICY_OCR_EXTRACTION_METHOD_RE);
+  if (!match?.groups) return { status: "not_recorded", tableCount: 0 };
+  return {
+    status: match.groups.status as Exclude<PolicyOcrStructuredEvidenceStatus, "not_recorded">,
+    tableCount: Number(match.groups.count),
+  };
+}
+
 export type TrainingDatabaseReference = {
   vehicle_registration_status: string | null;
   vehicle_registration_number: string | null;

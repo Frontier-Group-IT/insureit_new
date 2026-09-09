@@ -5,6 +5,7 @@ import { requirePolicyEditor } from "@/lib/policy-access-server";
 import {
   buildTrainingProposal,
   compareTrainingProposalToReference,
+  formatPolicyOcrExtractionMethod,
   type TrainingDatabaseReference,
 } from "@/lib/policy-ocr-training";
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
@@ -40,6 +41,10 @@ export type PolicyOcrResult =
       parserId: string;
       parserVersion: string;
       extractionMethod: string;
+      structuredEvidence: {
+        status: "present" | "zero_or_unusable" | "not_requested";
+        tableCount: number;
+      };
       warnings: string[];
     }
   | { ok: false; error: string };
@@ -170,9 +175,10 @@ async function extractPolicyFile(
           ? refineNewIndiaCommercialPolicy(pages, baseParsed)
           : refineAdditionalMotorPolicy(pages, baseParsed);
 
-    const tables = file.type === "application/pdf"
+    const layoutResult = file.type === "application/pdf"
       ? await processLayoutTables({ config, content, mimeType: file.type, accessToken: googleAccessToken, signal: controller.signal })
-      : [];
+      : { tables: [] as StructuredPolicyTable[], status: "not_requested" as const };
+    const tables = layoutResult.tables;
     if (baseParsed.parserId === "iffco_tokio_commercial_motor_v1" && parsed.fields.find((field) => field.key === "policy_product")?.value !== "SAOD") {
       parsed = refineIffcoStructuredFinancials(tables, parsed);
     }
@@ -189,7 +195,14 @@ async function extractPolicyFile(
       model: "Google Document AI Enterprise OCR + Layout Parser",
       parserId: parsed.parserId,
       parserVersion: parsed.parserVersion,
-      extractionMethod: "google_document_ai",
+      extractionMethod: formatPolicyOcrExtractionMethod("google_document_ai", {
+        status: layoutResult.status,
+        tableCount: tables.length,
+      }),
+      structuredEvidence: {
+        status: layoutResult.status,
+        tableCount: tables.length,
+      },
       warnings: parsed.warnings,
     };
   } catch (error) {
@@ -623,7 +636,7 @@ async function processLayoutTables(args: {
   mimeType: string;
   accessToken: string;
   signal: AbortSignal;
-}): Promise<StructuredPolicyTable[]> {
+}): Promise<{ tables: StructuredPolicyTable[]; status: "present" | "zero_or_unusable" }> {
   try {
     const endpoint = `https://${args.config.location}-documentai.googleapis.com/v1/projects/${encodeURIComponent(args.config.projectId)}/locations/${encodeURIComponent(args.config.location)}/processors/${encodeURIComponent(args.config.layoutProcessorId)}:process`;
     const response = await fetch(endpoint, {
@@ -647,13 +660,14 @@ async function processLayoutTables(args: {
     const payload = await response.json().catch(() => null) as DocumentAiResponse | null;
     if (!response.ok) {
       console.error("Google Layout Parser request failed", response.status, payload?.error?.status);
-      return [];
+      return { tables: [], status: "zero_or_unusable" };
     }
-    return extractDocumentLayoutTables(payload?.document);
+    const tables = extractDocumentLayoutTables(payload?.document);
+    return { tables, status: tables.length ? "present" : "zero_or_unusable" };
   } catch (error) {
     // Layout tables improve structured extraction but must not make primary OCR unavailable.
     console.error("Google Layout Parser request failed", safeErrorName(error));
-    return [];
+    return { tables: [], status: "zero_or_unusable" };
   }
 }
 

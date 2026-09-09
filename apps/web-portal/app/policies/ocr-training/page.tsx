@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/shell";
 import { requirePolicyOcrTrainingViewer } from "@/lib/policy-ocr-training-access";
-import type { TrainingProposal } from "@/lib/policy-ocr-training";
+import { parsePolicyOcrExtractionMethod, type TrainingProposal } from "@/lib/policy-ocr-training";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { TrainingReviewQueue, type TrainingQueueRow } from "./training-review-queue";
 import { recordPolicyOcrSatisfaction, createPolicyOcrTrainingRun, startPolicyOcrTrainingRun, stopPolicyOcrTrainingRun } from "../ocr-training-orchestrator-actions";
@@ -47,7 +47,9 @@ type TrainingLabel = {
   proposal: TrainingProposal | null;
   parser_id: string | null;
   parser_version: string | null;
+  extraction_method: string | null;
   proposed_at: string | null;
+  updated_at: string;
   insurer_name: string | null;
   policy_product: string | null;
   policy_number: string | null;
@@ -185,7 +187,10 @@ export default async function PolicyOcrTrainingPage({ searchParams }: { searchPa
       proposal: label.proposal,
       parserId: label.parser_id,
       parserVersion: label.parser_version,
+      extractionMethod: label.extraction_method,
+      structuredEvidence: parsePolicyOcrExtractionMethod(label.extraction_method),
       proposedAt: label.proposed_at,
+      updatedAt: label.updated_at,
       reviewedBy: label.reviewed_by,
       reviewedAt: label.reviewed_at,
       approvedBy: label.owner_approved_by,
