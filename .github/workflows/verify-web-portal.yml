@@ -85,6 +85,8 @@ jobs:
         run: npm run server-auth-claims:regression
       - name: Claim spot multi-upload and intimation regression
         run: npm run claim-spot-multi-upload:regression
+      - name: External claim read-only nine-stage regression
+        run: node scripts/external-claim-readonly-journey-regression.mjs
       - name: Auth phase observability regression
         run: npm run auth-phase-observability:regression
       - name: Dashboard performance regression
@@ -96,7 +98,7 @@ jobs:
       - name: Policy edit helper performance regression
         run: npm run policy-edit-helper-performance:regression
       - name: Reconciliation stylesheet performance regression
-        run: npm run reconciliation-stylesheet-performance:regression
+        run: npm run reconciliation-stylesheet-performance-regression
       - name: Policy reference data cache regression
         run: npm run policy-reference-cache:regression
       - name: Policy edit insurer cache regression
@@ -162,6 +164,7 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
+            echo "- Claim regressions: spot multi-upload/intimation and External Claim read-only nine-stage protection"
             echo "- Performance regressions: expensive register create/edit workflow links do not auto-prefetch"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard, 8 fresh20 precision and 9 fresh20 Digit recovery, post-training replay safety, onboarding Section 02/03 import, premium training workflow, protected worker"
             echo "- Static checks: typecheck and lint"
