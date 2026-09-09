@@ -6,6 +6,7 @@ const claimsWorkspace = fs.readFileSync(path.join(root, 'app/claims/claims-works
 const claimPage = fs.readFileSync(path.join(root, 'app/claims/[id]/page.tsx'), 'utf8');
 const operationsStages = fs.readFileSync(path.join(root, 'components/claim-manager/operations-claim-stages.tsx'), 'utf8');
 const stageActions = fs.readFileSync(path.join(root, 'app/claims/stage-actions.ts'), 'utf8');
+const finalDocumentsWorkspace = fs.readFileSync(path.join(root, 'components/final-documents/final-documents-workspace-v2.tsx'), 'utf8');
 const finalDocumentsActions = fs.readFileSync(path.join(root, 'components/final-documents/final-documents-actions.ts'), 'utf8');
 const entry = fs.readFileSync(path.join(root, 'components/claims/external-claim-operations-entry.tsx'), 'utf8');
 const action = fs.readFileSync(path.join(root, 'app/claims/external-operations-actions.ts'), 'utf8');
@@ -52,8 +53,10 @@ assert(operationsStages.includes('const selectedSaveOnly = !selectedIsCurrent;')
 assert(!operationsStages.includes('externalVisualCurrentIndex'), 'External current-stage styling must not derive a second current stage from Customer milestones.');
 assert(operationsStages.includes('const isCurrent = !journeyComplete && stage.key === active?.key;'), 'Operations current-stage styling must use the shared claims.current_status stage.');
 assert(operationsStages.includes('const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);'), 'Completed Customer milestones may supplement completion styling without replacing the shared current stage.');
-assert(operationsStages.includes('nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null'), 'Save Details must not visually jump to the next stage.');
+assert(operationsStages.includes('nextStageKey: nextStageKeyFor(milestoneKey)'), 'Successful Stage 2 and Stage 4-8 saves must navigate to the next visible stage even when the save itself is non-advancing.');
 assert(operationsStages.includes('if (!spotState.ok) return;\n    setSelectedKey("spot_status");\n    router.replace(`/claims/${claimId}?stage=spot_status`);'), 'Spot Intimation Save Details must navigate to Stage 2 after a successful save.');
+assert(finalDocumentsWorkspace.includes('setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");\n        router.replace(`/claims/${claimId}?stage=work_approval`);'), 'Claim Intimation Save Details must navigate to Stage 4 after a successful save, whether or not the workflow status advances.');
+assert(operationsStages.includes('return index >= 0 && index < stages.length - 1 ? stages[index + 1].key : null;'), 'Payment Encashment must remain the terminal Stage 9 with no Stage 10 navigation.');
 assert(operationsStages.includes('label={selectedSaveOnly ? "Save Details"'), 'Historical stages must show an explicit Save Details action.');
 assert(operationsStages.includes('"Save & complete claim"'), 'The current final stage must expose explicit claim completion wording.');
 assert(operationsStages.includes('`Save & move to ${nextStageLabel}`'), 'The current non-final stage must expose an explicit advance action.');
