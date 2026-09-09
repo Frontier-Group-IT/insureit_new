@@ -1,0 +1,106 @@
+name: Build Partner final RC APK locally
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/build-partner-final-local-rc.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      EAS_LOCAL_BUILD_ARTIFACTS_DIR: ${{ github.workspace }}/eas-local-artifacts
+
+    steps:
+      - name: Check out exact current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Require exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] || {
+            echo "Refusing Partner local RC build: checkout is not current origin/main." >&2
+            exit 1
+          }
+
+      - name: Validate Partner release identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const customer = require('./apps/mobile-app/app.json');
+          const pkg = require('./apps/partner-app/package.json');
+          const eas = require('./apps/partner-app/eas.json');
+          const expo = app.expo || {};
+          if (expo?.extra?.eas?.projectId !== 'e47d2267-489e-4d16-bef7-72479717464e') throw new Error('Unexpected Partner EAS project.');
+          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') throw new Error('Unexpected Partner native identity.');
+          if (expo.android?.package === customer?.expo?.android?.package) throw new Error('Partner overlaps Customer Android package.');
+          if (!pkg.dependencies?.['expo-updates']) throw new Error('expo-updates is missing from Partner binary dependencies.');
+          if (expo.runtimeVersion?.policy !== 'appVersion' || !expo.updates?.url) throw new Error('Partner OTA runtime configuration is incomplete.');
+          if (eas?.cli?.appVersionSource !== 'remote') throw new Error('Partner EAS version source must be remote.');
+          NODE
+
+      - name: Require Expo token
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner app
+        run: |
+          npm --workspace apps/partner-app run verify:routes
+          npm run typecheck:partner
+          npm run lint:partner
+
+      - name: Build signed Android APK locally
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$EAS_LOCAL_BUILD_ARTIFACTS_DIR"
+          npx eas-cli build --platform android --profile preview --local --non-interactive
+
+      - name: Show APK artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          find "$EAS_LOCAL_BUILD_ARTIFACTS_DIR" -maxdepth 3 -type f -print
+          find "$EAS_LOCAL_BUILD_ARTIFACTS_DIR" -type f -name '*.apk' | grep -q .
+
+      - name: Upload installable Partner APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: insureit-partner-final-rc-apk
+          path: eas-local-artifacts/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
