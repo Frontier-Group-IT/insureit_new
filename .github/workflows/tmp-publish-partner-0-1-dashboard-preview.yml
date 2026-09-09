@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_DASHBOARD_COMMIT: c729781ade684f263f83d88fd712573674d072a4
+      EXPECTED_DASHBOARD_COMMIT: 697a11ee79d42c50489c48ab80b6736d2946f0b5
 
     steps:
       - name: Checkout exact branch snapshot
@@ -28,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require exact 0.1.0 dashboard-only app delta
+      - name: Require exact 0.1.0 dashboard-and-search-only app delta
         shell: bash
         run: |
           set -euo pipefail
@@ -43,8 +43,9 @@ jobs:
           }
           changed_app_files=$(git diff --name-only "$ACCEPTED_BASELINE" HEAD -- apps/partner-app)
           printf '%s\n' "$changed_app_files"
-          [ "$changed_app_files" = 'apps/partner-app/app/(tabs)/index.tsx' ] || {
-            echo "::error::Refusing OTA: Partner app delta is not dashboard-only." >&2
+          expected_files=$(printf '%s\n' 'apps/partner-app/app/(tabs)/index.tsx' 'apps/partner-app/app/search.tsx')
+          [ "$changed_app_files" = "$expected_files" ] || {
+            echo "::error::Refusing OTA: Partner app delta is not limited to Home dashboard and Search handoff." >&2
             exit 1
           }
 
@@ -113,7 +114,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 dashboard visual refresh ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 dashboard visual pass 2 and inline search ${EXPECTED_DASHBOARD_COMMIT}" \
             --non-interactive \
             --json > partner-dashboard-preview-update.json
           cat partner-dashboard-preview-update.json
@@ -134,9 +135,9 @@ jobs:
             echo '## Partner 0.1.0 dashboard preview OTA'
             echo
             echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
-            echo "- Verified dashboard source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
+            echo "- Verified dashboard/search source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
             echo '- Runtime required: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- App delta: Home dashboard only'
+            echo '- App delta: Home dashboard + Search query handoff only'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
