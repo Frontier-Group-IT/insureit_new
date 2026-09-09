@@ -210,7 +210,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             ok: true,
             message,
             advanced: result.advanced,
-            nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
+            nextStageKey: nextStageKeyFor(milestoneKey),
           };
         }
         await advanceClaimWorkflow(claimId, formData);
@@ -242,13 +242,13 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!state.ok) return;
-    if (state.advanced && state.nextStageKey) {
+    if (state.nextStageKey) {
       setSelectedKey(state.nextStageKey);
       router.replace(`/claims/${claimId}?stage=${state.nextStageKey}`);
       return;
     }
     router.refresh();
-  }, [claimId, router, state.advanced, state.nextStageKey, state.ok]);
+  }, [claimId, router, state.nextStageKey, state.ok]);
 
   useEffect(() => {
     if (!initialStageKey || !stages.some((stage) => stage.key === initialStageKey)) return;

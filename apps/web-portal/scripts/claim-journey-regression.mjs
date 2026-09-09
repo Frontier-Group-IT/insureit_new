@@ -66,6 +66,9 @@ assert.match(operationsStages, /name: "driver_name"/);
 assert.match(operationsStages, /name: "driver_phone"/);
 assert.match(operationsStages, /name: "location"/);
 assert.match(operationsStages, /Use current location/);
+assert.match(operationsStages, /nextStageKey: nextStageKeyFor\(milestoneKey\)/);
+assert.match(operationsStages, /if \(state\.nextStageKey\)/);
+assert.doesNotMatch(operationsStages, /if \(state\.advanced && state\.nextStageKey\)/);
 
 const internalSpotContract = await readFile(path.join(repoRoot, "apps/web-portal/lib/internal-spot-intimation.ts"), "utf8");
 assert.match(internalSpotContract, /validateInternalSpotIntimation/);
