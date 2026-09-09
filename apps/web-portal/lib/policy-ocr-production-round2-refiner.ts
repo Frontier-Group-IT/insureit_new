@@ -201,15 +201,36 @@ function ownerDriverCpa(tables: StructuredPolicyTable[], text: string, maxPage: 
   if (explicitCpaOptOut(text)) return null;
   for (const table of tables) {
     if (table.page > maxPage) continue;
-    for (const row of table.rows) {
+    for (let rowIndex = 0; rowIndex < table.rows.length; rowIndex += 1) {
+      const row = table.rows[rowIndex];
       const joined = clean(row.join(" | "));
       if (!/(?:P\.?\s*A\.?\s+Owner[-\s]*Driver|Compulsory\s+P\.?\s*A\.?\s+Premium\s+for\s+Owner[-\s]*Driver|Personal\s+Accident\s+Premium\s+for\s+Owner[-\s]*Driver|(?:P\.?A\.?|PERSONAL\s+ACCIDENT|CPA).{0,35}OWNER[-\s]*DRIVER|OWNER[-\s]*DRIVER.{0,35}(?:P\.?A\.?|PERSONAL\s+ACCIDENT|CPA))/i.test(joined)) continue;
       if (/PAID\s+DRIVER|EMPLOYEE|PASSENGER|WORKMEN/i.test(joined)) continue;
       const values = moneyValues(joined).filter((v) => v >= 100 && v <= 5000 && !isYear(v));
       if (values.length) return { value: values[values.length - 1], page: table.page, evidence: "Explicit owner-driver CPA row" };
+      const shifted = shiftedOwnerDriverPremium(clean(table.rows[rowIndex - 1]?.join(" | ") ?? ""), joined);
+      if (shifted !== null) return { value: shifted, page: table.page, evidence: "Explicit owner-driver CPA row with adjacent wrapped premium" };
     }
   }
+  const lines = text.split(/\r?\n/).map(clean);
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const line = lines[lineIndex];
+    if (!OWNER_DRIVER_ROW.test(line) || /PAID\s+DRIVER|EMPLOYEE|PASSENGER|WORKMEN/i.test(line)) continue;
+    const shifted = shiftedOwnerDriverPremium(lines[lineIndex - 1] ?? "", line);
+    if (shifted !== null) return { value: shifted, page: 1, evidence: "Explicit owner-driver CPA row with adjacent wrapped premium" };
+  }
   return null;
+}
+
+const OWNER_DRIVER_ROW = /(?:P\.?\s*A\.?\s+Owner[-\s]*Driver|Compulsory\s+P\.?\s*A\.?\s+Premium\s+for\s+Owner[-\s]*Driver|Personal\s+Accident\s+Premium\s+for\s+Owner[-\s]*Driver)/i;
+
+function shiftedOwnerDriverPremium(previous: string, ownerDriverRow: string) {
+  if (!OWNER_DRIVER_ROW.test(ownerDriverRow) || !/(?:Geographical\s+Area\s+Extension|Bi[-\s]*Fuel\s+Kit|Fiber\s+Glass\s+Fuel\s+Tank)/i.test(previous)) return null;
+  const values = moneyValues(previous.replace(/\(\s*IMT\s*\d+\s*\)/gi, " ").replace(/\bIMT\s*\d+\b/gi, " "))
+    .filter((value) => value >= 0 && value <= 5000 && !isYear(value));
+  if (!values.includes(0)) return null;
+  const candidate = [...values].reverse().find((value) => value >= 100);
+  return candidate ?? null;
 }
 
 function exactMoney(tables: StructuredPolicyTable[], pages: string[], label: RegExp, min: number, max: number, mode: "smallest" | "largest", maxPage: number): MoneyHit | null {
