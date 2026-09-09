@@ -1,9 +1,10 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
+import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
 type HeaderProps = {
@@ -35,14 +36,31 @@ const stageIcons: Array<keyof typeof MaterialCommunityIcons.glyphMap> = [
   'cash-check',
 ];
 
-export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, claimNo }: HeaderProps) {
+export function CompactDocumentStageHeader({ step, title, vehicleNo, claimNo }: HeaderProps) {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string; key?: string }>();
   const [assistanceTooltipVisible, setAssistanceTooltipVisible] = useState(false);
+  const [policyNo, setPolicyNo] = useState('');
   const icon = stageIcons[Math.max(0, Math.min(stageIcons.length - 1, step - 1))];
   const currentIndex = Math.max(0, Math.min(SELF_MANAGED_MILESTONES.length - 1, step - 1));
   const claimId = typeof params.id === 'string' ? params.id : '';
   const returnStage = typeof params.key === 'string' ? params.key : 'claim_intimation';
+
+  useEffect(() => {
+    if (!claimId) {
+      setPolicyNo('');
+      return;
+    }
+    let active = true;
+    void (async () => {
+      const claimResult = await supabase.from('claims').select('external_policy_id').eq('id', claimId).maybeSingle();
+      const externalPolicyId = (claimResult.data as { external_policy_id?: string | null } | null)?.external_policy_id;
+      if (!active || !externalPolicyId) return;
+      const policyResult = await (supabase as any).from('external_policies').select('policy_no').eq('id', externalPolicyId).maybeSingle();
+      if (active) setPolicyNo(policyResult.data?.policy_no ?? '');
+    })();
+    return () => { active = false; };
+  }, [claimId]);
 
   function openAssistance() {
     if (!claimId) return;
@@ -72,7 +90,7 @@ export function CompactDocumentStageHeader({ step, title, subtitle, vehicleNo, c
         <View style={styles.headerCopy}>
           <Text style={styles.title}>{title}</Text>
           {vehicleNo || claimNo ? <Text style={styles.identity}>{[vehicleNo, claimNo].filter(Boolean).join('  •  ')}</Text> : null}
-          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          {policyNo ? <Text style={styles.policyMeta}>POLICY : {policyNo}</Text> : null}
         </View>
         <View style={styles.assistanceWrap}>
           {assistanceTooltipVisible ? <View style={styles.assistanceTooltip} pointerEvents="none"><Text style={styles.assistanceTooltipText}>Get Assistance</Text></View> : null}
@@ -155,7 +173,7 @@ const styles = StyleSheet.create({
   eyebrow: { color: '#145ED7', fontSize: 10.5, fontWeight: '900', letterSpacing: 0.25 },
   title: { color: palette.navy, fontSize: 23, lineHeight: 28, fontWeight: '900', marginTop: 3 },
   identity: { color: '#52637B', fontSize: 10.5, lineHeight: 14, fontWeight: '800', marginTop: 3 },
-  subtitle: { color: '#6C7889', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 4 },
+  policyMeta: { color: '#52637B', fontSize: 8.2, lineHeight: 11, fontWeight: '700', marginTop: 2 },
   assistanceWrap: { position: 'relative', alignSelf: 'flex-start', marginTop: 7 },
   assistanceButton: { width: 40, height: 40, borderRadius: 14, borderWidth: 1, borderColor: '#C6D9F5', backgroundColor: '#EDF3FF', alignItems: 'center', justifyContent: 'center' },
   assistanceButtonPressed: { backgroundColor: '#E0EBFF', transform: [{ scale: 0.97 }] },
