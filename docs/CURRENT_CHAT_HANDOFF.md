@@ -963,6 +963,12 @@ Reviewer submission no longer exposes the separate comparison-confirmation or pe
 
 **IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED:** the protected refinement-job worker now detects stored candidates whose evidence labels no longer satisfy the current field-specific semantic evidence rules. Before returning a claimed job to GitHub Actions, it rebuilds the sanitized candidate from the protected training label and current sanitizer, persists it through the existing approval RPC, and returns only the refreshed sanitized payload. This automatically repairs legacy candidates such as stale date/TP evidence without exposing PDFs, raw OCR, PII or provider data. The focused training-workflow regression, typecheck and lint pass; production behavior remains **UNVERIFIED** until the change is merged, deployed and a queued legacy candidate is observed being refreshed.
 
+### IFFCO MISD live training sample — 2026-09-09
+
+**LIVE VERIFIED:** the reviewed IFFCO commercial-vehicle sample completed the single-operator PDF-grounded review, and an explicit Google rerun completed afterward. The rerun still showed the pre-refinement result shape: TP missing, owner-driver CPA misread as `No/0`, printed GST misread, and the same vehicle-field omissions. The PDF-grounded review remains the authoritative training reference; no parser improvement is claimed from the rerun.
+
+**IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED:** the sanitized Production Round 2 regression now covers the live sample's IFFCO MISD shape with Basic TP, explicit owner-driver CPA, and header-column vehicle evidence. The regression, complete OCR suite, typecheck, lint and whitespace checks pass. No raw OCR, PDF, policy number, customer data or vehicle identifiers were added. A fresh production rerun remains required after the next parser release.
+
 
 ## 2026-08-25 phased mobile merge and main-only Expo preview plan
 
