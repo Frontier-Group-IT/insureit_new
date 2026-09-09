@@ -38,7 +38,7 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
   const playerState = useAudioPlayerStatus(player);
   const [message, setMessage] = useState('');
   const stoppingRef = useRef(false);
-  const locked = saved;
+  const locked = saved && !onRemoveSaved;
 
   const stopRecording = useCallback(async () => {
     if (!recorderState.isRecording) return;
