@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   pendingCopy: { flex: 1, minWidth: 0 },
   pendingTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   pendingTitle: { flexShrink: 1, color: partnerTheme.colors.ink, ...partnerTheme.typography.cardTitle },
-  pendingCount: { color: partnerTheme.colors.brandStrong, fontWeight: '700', ...partnerTheme.typography.caption },
+  pendingCount: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.caption },
   pendingSubtitle: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
 
   renewalStrip: { marginTop: 12, minHeight: 78, flexDirection: 'row', alignItems: 'center', gap: 11, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, backgroundColor: '#F4F8FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D7E5F8' },
