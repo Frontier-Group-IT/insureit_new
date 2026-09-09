@@ -419,3 +419,30 @@ net/GST/gross and reconciled OD/TP/CPA values. Targeted IFFCO regressions, the
 complete OCR regression chain, typecheck, lint (existing warnings only) and
 whitespace validation passed. Production/live verification remains
 **UNVERIFIED** because this branch was not merged or deployed.
+
+## 19. IFFCO MISD liability normalization
+
+**IMPLEMENTED / PDF-VERIFIED LOCALLY / NOT MERGED OR DEPLOYED 2026-09-09:**
+an attached IFFCO commercial MISD policy established that its printed Net (B)
+contains Basic TP, owner-driver CPA and legal-liability-to-driver as separate
+components. The normalized Section 03 contract keeps owner-driver CPA semantic:
+
+```text
+portal TP = Basic TP + legal-liability-to-driver
+CPA amount = explicit owner-driver CPA only
+OD + portal TP + CPA = printed taxable/net premium
+```
+
+The saved database reference had combined the legal-driver addition into the
+CPA amount. The PDF contradicted that mapping, so the parser and sanitized
+regression follow PDF truth instead. The Round 2 IFFCO MISD refiner now adds
+only an explicitly labeled legal-driver amount to Basic TP, preserves an
+explicit owner-driver CPA amount separately, and derives OD only when the three
+components reconcile to printed net. A changed-value fresh sibling covers the
+same relationship.
+
+No PDF, raw OCR dump, customer identity, policy number, registration, chassis
+or engine value was added to source control. The complete OCR regression chain,
+typecheck, lint (existing warnings only) and whitespace validation passed.
+Production Google replay remains **UNVERIFIED** until this increment is merged,
+deployed and the same protected policy is rerun.
