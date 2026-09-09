@@ -58,7 +58,7 @@ export function refineProductionRound3Precision(
     if (key === "cpa_premium") {
       return /Explicit owner-driver CPA row/i.test(evidence);
     }
-    return /Round 2 exact premium row|Printed net - Basic TP - explicit owner-driver CPA/i.test(evidence);
+    return /Round 2 exact premium row|Printed net - TP\/liability - explicit owner-driver CPA/i.test(evidence);
   }
 
   if (!family) return parsed;

@@ -95,14 +95,20 @@ function refineIffco(fields: Fields, tables: StructuredPolicyTable[], pages: str
     set(fields, "cpa_premium", "0", .995, cpa?.page ?? 1, cpa?.evidence ?? "No explicit payable owner-driver CPA row");
   }
 
-  // Verified IFFCO MISD truth uses the printed Basic TP amount. Paid-driver
-  // liability remains a separate liability addition and must not be folded into TP.
-  const tp = exactMoney(tables, pages, /BASIC\s+(?:TP|THIRD[-\s]*PARTY)(?:\s+PREMIUM)?/i, 100, 100000, "largest", 4);
+  const basicTp = exactMoney(tables, pages, /BASIC\s+(?:TP|THIRD[-\s]*PARTY)(?:\s+PREMIUM)?/i, 100, 100000, "largest", 4);
+  const legalDriver = exactMoney(tables, pages, /LEGAL\s+LIABILITY\s+TO\s+(?:PAID\s+)?DRIVER/i, 1, 5000, "largest", 4);
+  const tp = basicTp
+    ? {
+        ...basicTp,
+        value: round4(basicTp.value + (legalDriver?.value ?? 0)),
+        evidence: `${basicTp.evidence}${legalDriver ? ` | legal-driver liability ${money(legalDriver.value)}` : ""}`,
+      }
+    : null;
   if (tp) putMoney(fields, "tp_premium", tp);
   const netValue = numeric(fields.get("total_premium")?.value);
   if (netValue != null && tp) {
     const odValue = round4(netValue - tp.value - cpaValue);
-    if (odValue >= 0 && odValue < netValue) putMoney(fields, "od_premium", { value: odValue, page: tp.page, evidence: "Printed net - Basic TP - explicit owner-driver CPA" });
+    if (odValue >= 0 && odValue < netValue) putMoney(fields, "od_premium", { value: odValue, page: tp.page, evidence: "Printed net - TP/liability - explicit owner-driver CPA" });
   }
 }
 

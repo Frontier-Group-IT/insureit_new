@@ -42,10 +42,10 @@ function values(result: ParsedPolicyResult) { return Object.fromEntries(result.f
   ] }];
   const result = refineProductionRound2Policy(pages, tables, parsed("iffco_tokio_commercial_motor_v2", "iffco_tokio_commercial_motor_v2.3.0+prod-r1-iffco_misd", [field("total_premium","12362"), field("tp_premium","7317"), field("cpa_opted","Yes"), field("cpa_premium","1"), field("vehicle_make","Non Elect. Acc.")]));
   const v = values(result);
-  assert.equal(v.tp_premium, "7267");
+  assert.equal(v.tp_premium, "7317");
   assert.equal(v.cpa_opted, "No");
   assert.equal(v.cpa_premium, "0");
-  assert.equal(v.od_premium, "5095");
+  assert.equal(v.od_premium, "5045");
   assert.equal(v.vehicle_make, "JCB");
   assert.equal(v.vehicle_model, "3DX PLUS");
 }
@@ -116,6 +116,68 @@ function values(result: ParsedPolicyResult) { return Object.fromEntries(result.f
   assert.equal(v.total_premium, "18795");
   assert.equal(v.tax_amount, "3383.1");
   assert.equal(v.gross_premium, "22178.1");
+}
+
+{
+  const pages = ["IFFCO-TOKIO General Insurance Company Limited\nCOMMERCIAL VEHICLE PACKAGE POLICY\nJCB BACKHOE LOADER\nBasic TP Premium 7267.00\nPA Owner Driver CSI Rs 1500000 330.00\nLegal Liability to Driver (IMT 28) 50.00"];
+  const tables: StructuredPolicyTable[] = [{ page: 1, rows: [
+    ["Make of Vehicle", "Model of Vehicle", "Fuel Type", "Year of Manufacture", "CC"],
+    ["JCB", "3DX PLUS BACKHOE LOADER", "DIESEL", "2026", "4765"],
+    ["Basic TP Premium (Including TPPD)", "7267.00"],
+    ["PA Owner Driver CSI Rs 1500000", "330.00"],
+    ["Legal Liability to Driver (IMT 28)", "50.00"],
+    ["Net (A)", "4667.00", "Net (B)", "7647.00"],
+    ["Premium/Taxable Value RS.", "12314.00"],
+    ["GST Amount(Rs.)", "2216.52"],
+    ["Gross Premium Payable Rs.", "14530.52"],
+  ] }];
+  const result = refineApprovedMotorPolicyLayout(
+    pages,
+    tables,
+    parsed("iffco_tokio_commercial_motor_v1", "iffco_tokio_commercial_motor_v1.2.0", [
+      field("total_premium", "12314"),
+      field("tax_amount", "2216.52"),
+      field("gross_premium", "14530.52"),
+      field("cpa_opted", "No"),
+      field("cpa_premium", "0"),
+    ]),
+  );
+  const v = values(result);
+  assert.equal(v.tp_premium, "7317");
+  assert.equal(v.cpa_premium, "330");
+  assert.equal(v.cpa_opted, "Yes");
+  assert.equal(v.od_premium, "4667");
+  assert.equal(v.total_premium, "12314");
+  assert.equal(v.tax_amount, "2216.52");
+  assert.equal(v.gross_premium, "14530.52");
+}
+
+{
+  const pages = ["IFFCO-TOKIO General Insurance Company Limited\nCOMMERCIAL VEHICLE PACKAGE POLICY\nSPECIAL TYPE VEHICLE\nBasic TP Premium 8120.00\nPersonal Accident Premium for Owner Driver 275.00\nLegal Liability to Paid Driver 75.00"];
+  const tables: StructuredPolicyTable[] = [{ page: 1, rows: [
+    ["Make of Vehicle", "Model of Vehicle", "Fuel Type", "Year of Manufacture", "CC"],
+    ["JCB", "4DX SYNTHETIC", "DIESEL", "2025", "4390"],
+    ["Basic TP Premium", "8120.00"],
+    ["Personal Accident Premium for Owner Driver", "275.00"],
+    ["Legal Liability to Paid Driver", "75.00"],
+    ["Premium/Taxable Value RS.", "14470.00"],
+    ["GST Amount(Rs.)", "2604.60"],
+    ["Gross Premium Payable Rs.", "17074.60"],
+  ] }];
+  const result = refineApprovedMotorPolicyLayout(
+    pages,
+    tables,
+    parsed("iffco_tokio_commercial_motor_v1", "iffco_tokio_commercial_motor_v1.2.0", [
+      field("total_premium", "14470"),
+      field("tax_amount", "2604.60"),
+      field("gross_premium", "17074.60"),
+    ]),
+  );
+  const v = values(result);
+  assert.equal(v.tp_premium, "8195");
+  assert.equal(v.cpa_premium, "275");
+  assert.equal(v.cpa_opted, "Yes");
+  assert.equal(v.od_premium, "6000");
 }
 
 {
