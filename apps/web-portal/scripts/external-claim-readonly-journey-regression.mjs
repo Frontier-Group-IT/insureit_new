@@ -36,6 +36,7 @@ for (const stageKey of stageKeys) {
 assert(viewer.includes('View only'), 'External claim viewer must visibly identify its read-only state.');
 assert(viewer.includes('loadExternalClaimReadonlyJourney'), 'External claim viewer must load customer-managed milestone evidence through the read-only loader.');
 assert(viewer.includes('Document evidence'), 'External claim viewer must expose document evidence in view-only mode.');
+assert(viewer.includes('document.milestoneKey'), 'External claim viewer must prefer each document persisted milestone key when grouping evidence.');
 assert(!viewer.includes('resolveAssistanceIntake'), 'External claim viewer must not import the assistance mutation action.');
 assert(!viewer.includes('<form'), 'External claim viewer must not render mutation forms.');
 assert(!viewer.includes('type="submit"'), 'External claim viewer must not render submit controls.');
@@ -49,6 +50,8 @@ assert(loader.includes('requireCapability("view_claims")'), 'Read-only loader mu
 assert(loader.includes('canAccessCustomer'), 'Read-only loader must preserve customer-scope authorization.');
 assert(loader.includes('claim.claim_service_mode !== "self_managed"'), 'Read-only loader must reject non-self-managed claims.');
 assert(loader.includes('.from("claim_milestones")'), 'Read-only loader must use claim_milestones as the external journey source.');
+assert(loader.includes('.from("claim_documents")'), 'Read-only loader must load customer claim evidence without mutations.');
+assert(loader.includes('milestone_key,document_type,file_name,verification_status'), 'Read-only loader must retrieve persisted claim document milestone keys.');
 
 assert(page.includes('if (claim.claim_service_mode === "self_managed")'), 'Claim detail route must keep self-managed claims on the external branch.');
 assert(page.includes('<AssistanceIntakePanel'), 'Self-managed claim route must render the isolated external read-only viewer component.');
