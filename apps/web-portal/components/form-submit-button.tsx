@@ -35,6 +35,7 @@ export function FormSubmitButton({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [formChanged, setFormChanged] = useState(false);
   const requireChange = /^(Save primary details|Save documents)$/i.test(label);
+  const displayLabel = label === "Save & move to Initial Documents Submitted" ? "Save details" : label;
 
   useEffect(() => {
     if (!requireChange) return;
@@ -85,7 +86,7 @@ export function FormSubmitButton({
       title={requireChange && !formChanged ? "Make a change before saving." : undefined}
       onClick={() => { preserveSubmitIntent(); onSubmitStart?.(); }}
     >
-      {isCurrentSubmission ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{label}</>}
+      {isCurrentSubmission ? <InsureItButtonLoader label={pendingLabel} /> : <>{icon}{displayLabel}</>}
     </button>
   );
 }
