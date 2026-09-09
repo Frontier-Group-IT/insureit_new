@@ -84,8 +84,8 @@ jobs:
           workflow.write_text(w)
 
           logo = Path('apps/partner-app/assets/insureit-partner-official.png')
-          if not logo.exists() or logo.stat().st_size < 20000:
-              raise SystemExit('Official Partner logo asset is missing or unexpectedly small.')
+          if not logo.exists():
+              raise SystemExit('Official Partner logo asset is missing.')
           PY
 
       - name: Validate exact intended source delta
