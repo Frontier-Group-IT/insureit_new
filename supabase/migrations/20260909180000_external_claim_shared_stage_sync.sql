@@ -1,12 +1,10 @@
 -- External Claim shared 9-stage authority.
 --
--- Approved rule:
+-- Rule:
 -- - Customer and Operations share one forward-only 9-stage position for External Claims.
--- - Customer completion may move Operations forward to the same stage, never backward.
--- - Operations may move the shared journey forward only through an explicit stage/status advance.
--- - Plain Operations "Save Details" writes must never advance the shared journey.
--- - When Operations moves to Stage N+1, the prior Customer milestone(s) are completed so
---   the Customer tracker opens on the same current stage.
+-- - Completing Customer Stage N opens shared Stage N+1 (Stage 9 completion => Claim Complete).
+-- - Operations forward status movement completes the prior Customer milestone(s).
+-- - Plain Operations "Save Details" never advances an External Claim.
 -- - Internal/SIBL claims are unchanged.
 
 create or replace function public.external_claim_shared_stage_rank(p_status text)
@@ -97,11 +95,11 @@ set search_path = public
 as $$
 declare
   v_claim public.claims%rowtype;
-  v_customer_stage integer;
+  v_completed_stage integer;
   v_operations_stage integer;
+  v_target_stage integer;
   v_target_status public.claim_status;
   v_changed_by uuid := p_changed_by;
-  v_has_sync_history boolean := false;
 begin
   select *
     into v_claim
@@ -123,55 +121,38 @@ begin
     return;
   end if;
 
-  v_customer_stage := public.external_claim_customer_completed_stage(p_claim_id);
-  if v_customer_stage = 0 then
+  v_completed_stage := public.external_claim_customer_completed_stage(p_claim_id);
+  if v_completed_stage = 0 then
     return;
   end if;
 
   v_operations_stage := public.external_claim_shared_stage_rank(v_claim.current_status::text);
 
-  -- Customer progress is a forward floor only. Preserve Operations if it is already
-  -- at the same stage (including a more specific sub-status) or further ahead.
-  -- Stage 9 is special: a complete 9/9 Customer journey completes the shared claim.
-  if v_customer_stage < 9 and v_operations_stage >= v_customer_stage then
-    return;
-  end if;
-
-  if v_customer_stage = 9 and v_claim.current_status::text = 'Claim Complete' then
-    -- The older self-managed auto-settle trigger can complete the claim first.
-    -- Keep one idempotent shared-stage audit event without inventing a false prior state.
-    select exists (
-      select 1
-      from public.claim_status_history h
-      where h.claim_id = p_claim_id
-        and h.to_status::text = 'Claim Complete'
-        and coalesce(h.notes, '') like 'Customer External Claim progress synchronized shared journey%'
-    ) into v_has_sync_history;
-
-    if not v_has_sync_history then
-      insert into public.claim_status_history (claim_id, from_status, to_status, notes, changed_by)
-      values (
-        p_claim_id,
-        v_claim.current_status,
-        v_claim.current_status,
-        'Customer External Claim progress synchronized shared journey to stage 9 of 9.',
-        v_changed_by
-      );
+  if v_completed_stage = 9 then
+    if v_claim.current_status::text = 'Claim Complete' then
+      return;
     end if;
-    return;
-  end if;
+    v_target_stage := 9;
+    v_target_status := 'Claim Complete'::public.claim_status;
+  else
+    -- The Customer tracker opens the first incomplete milestone, so completing Stage N
+    -- means the shared current stage is N+1.
+    v_target_stage := v_completed_stage + 1;
+    if v_operations_stage >= v_target_stage then
+      return;
+    end if;
 
-  v_target_status := case v_customer_stage
-    when 1 then 'Accident Reported'::public.claim_status
-    when 2 then 'Surveyor Appointed'::public.claim_status
-    when 3 then 'Survey Status'::public.claim_status
-    when 4 then 'Work Approval Status'::public.claim_status
-    when 5 then 'RA Intimation'::public.claim_status
-    when 6 then 'RA Intimation Done'::public.claim_status
-    when 7 then 'DO Status'::public.claim_status
-    when 8 then 'DO Submitted'::public.claim_status
-    when 9 then 'Claim Complete'::public.claim_status
-  end;
+    v_target_status := case v_target_stage
+      when 2 then 'Surveyor Appointed'::public.claim_status
+      when 3 then 'Final Documents Awaited'::public.claim_status
+      when 4 then 'Survey Done'::public.claim_status
+      when 5 then 'Work Approval Received'::public.claim_status
+      when 6 then 'RA Intimation Done'::public.claim_status
+      when 7 then 'Final Bill Submitted'::public.claim_status
+      when 8 then 'DO Submitted'::public.claim_status
+      when 9 then 'Payment Stage'::public.claim_status
+    end;
+  end if;
 
   if v_target_status is null or v_claim.current_status = v_target_status then
     return;
@@ -196,7 +177,15 @@ begin
     p_claim_id,
     v_claim.current_status,
     v_target_status,
-    format('Customer External Claim progress synchronized shared journey to stage %s of 9.', v_customer_stage),
+    case
+      when v_completed_stage = 9
+        then 'Customer completed External Claim stage 9 of 9; shared journey marked Claim Complete.'
+      else format(
+        'Customer completed External Claim stage %s of 9; shared journey opened stage %s of 9.',
+        v_completed_stage,
+        v_target_stage
+      )
+    end,
     v_changed_by
   );
 end;
@@ -209,8 +198,8 @@ security definer
 set search_path = public
 as $$
 begin
-  -- Only Customer-authored milestone progression drives this direction. Operations
-  -- mirroring uses actor=sankalp and therefore cannot recurse into Operations status.
+  -- Operations mirroring uses actor=sankalp and therefore cannot recurse back into
+  -- Customer -> Operations status synchronization.
   if new.recorded_by_actor::text <> 'customer' then
     return new;
   end if;
@@ -223,9 +212,6 @@ begin
 end;
 $$;
 
--- Any real forward Operations status change must be reflected in the Customer journey.
--- This deliberately watches claims.current_status rather than individual UI actions so
--- Stage 1, document verification transitions, and Stages 2-9 all share the same rule.
 create or replace function public.sync_external_operations_stage_to_customer_from_claim()
 returns trigger
 language plpgsql
@@ -274,10 +260,6 @@ begin
     v_limit := v_new_stage - 1;
   else
     -- Movement within one canonical stage does not complete that stage.
-    return new;
-  end if;
-
-  if v_limit <= 0 then
     return new;
   end if;
 
@@ -348,15 +330,12 @@ revoke all on function public.sync_external_customer_stage_to_operations(uuid, u
 revoke all on function public.sync_external_customer_stage_to_operations_from_milestone() from public;
 revoke all on function public.sync_external_operations_stage_to_customer_from_claim() from public;
 
--- Keep the existing auto-settlement trigger intact. This trigger is Customer-only and
--- uses an actor guard so Operations milestone mirroring cannot recurse.
 drop trigger if exists trg_sync_external_customer_stage_to_operations on public.claim_milestones;
 create trigger trg_sync_external_customer_stage_to_operations
 after insert or update of milestone_status, completed_at, details, recorded_by_actor on public.claim_milestones
 for each row
 execute function public.sync_external_customer_stage_to_operations_from_milestone();
 
--- Mirror every official forward External Claim status move back into Customer milestones.
 drop trigger if exists trg_sync_external_operations_stage_to_customer on public.claims;
 create trigger trg_sync_external_operations_stage_to_customer
 after update of current_status on public.claims
@@ -364,8 +343,9 @@ for each row
 when (old.current_status is distinct from new.current_status)
 execute function public.sync_external_operations_stage_to_customer_from_claim();
 
--- Replace the managed-stage persistence function additively. Internal/SIBL behavior
--- is preserved; only External Claims gain the explicit-completion guard.
+-- Preserve the existing Internal/SIBL stage persistence contract. External Claims add
+-- one rule only: a stage-detail row without the server-owned completed_at marker is a
+-- Save Details write and must not advance claims.current_status.
 create or replace function public.persist_managed_claim_stage_transition_from_details()
 returns trigger
 language plpgsql
@@ -412,7 +392,6 @@ begin
     raise exception 'Managed claim not found.';
   end if;
 
-  -- Keep authoritative claim summary fields synchronized from every detail save.
   update public.claims
      set insurer_claim_no = case
            when new.details ? 'insurer_claim_no'
@@ -434,8 +413,6 @@ begin
          end
    where id = new.claim_id;
 
-  -- External "Save Details" writes do not carry the server-only completion marker.
-  -- Therefore they can update values but cannot silently advance the shared stage.
   if v_claim.policy_service_source::text = 'external'
      and not (new.details ? 'completed_at') then
     return new;
@@ -501,7 +478,6 @@ begin
      where id = new.claim_id and current_status::text = v_status;
 
   else
-    -- Historical/completed-stage edits deliberately do not change current_status.
     return new;
   end if;
 
@@ -522,16 +498,17 @@ after insert on public.claim_stage_details
 for each row
 execute function public.persist_managed_claim_stage_transition_from_details();
 
--- Bring existing External Claims forward to the Customer's latest contiguous stage.
+-- Existing External Claims must become aligned immediately when this migration is
+-- applied; do not wait for the Customer to edit another milestone.
 do $$
 declare
   v_claim_id uuid;
 begin
   for v_claim_id in
-    select id
-      from public.claims
-     where policy_service_source::text = 'external'
-       and external_policy_id is not null
+    select c.id
+      from public.claims c
+     where c.policy_service_source::text = 'external'
+       and c.external_policy_id is not null
   loop
     perform public.sync_external_customer_stage_to_operations(v_claim_id, null);
   end loop;
