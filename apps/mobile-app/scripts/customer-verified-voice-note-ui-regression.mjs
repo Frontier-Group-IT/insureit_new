@@ -27,7 +27,9 @@ requireText(voice, "<Text style={styles.readyText}>Voice note ready</Text>", 'Vo
 requireText(voice, 'onPress={() => void togglePlayback()}', 'Voice note ready row must control playback.');
 requireText(voice, '{!isLocked ? (', 'Verified voice notes must hide destructive/re-record actions.');
 requireText(voice, 'if (busy || isLocked || recorderState.isRecording) return;', 'Component-level delete/re-record protection must remain for locked audio.');
-requireText(voice, "<Text style={styles.lockedText}>Verified · Locked</Text>", 'Verified voice note must carry the locked status inside the card.');
+forbidText(voice, 'Verified · Locked', 'Verified/locked copy must stay removed from the Incident Voice Note card.');
+forbidText(tracker, 'Audio verified by Claims Desk · Locked', 'The separate audio verified footer must stay removed from Stage 1.');
+forbidText(tracker, "locked ? 'Verified · Locked'", 'Verified/locked copy must stay removed from Stage 1 document tiles.');
 forbidText(voice, "<Text style={styles.secondaryText}>{playerState.playing ? 'Pause' : 'Play'}</Text>", 'Standalone Play/Pause button must not return; playback belongs to Voice note ready.');
 
 console.log('Customer verified voice-note UI regression checks passed.');
