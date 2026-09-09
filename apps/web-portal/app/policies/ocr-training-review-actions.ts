@@ -219,13 +219,12 @@ export async function startPolicyOcrReviewTask(
     const task = await loadAssignedTask(formText(formData, "review_task_id"), viewer.profile.id, viewer.isOperator);
     if (["completed", "rejected", "cancelled"].includes(task.status)) throw new Error("This reviewer task is no longer open.");
     const admin = createSupabaseAdminClient();
-    const { data: updated, error } = await admin
+    let updateQuery = admin
       .from("policy_ocr_training_review_tasks")
       .update({ status: task.status === "assigned" ? "in_review" : task.status, started_at: task.status === "assigned" ? new Date().toISOString() : undefined })
-      .eq("id", task.id)
-      .eq("assigned_reviewer_profile_id", viewer.profile.id)
-      .select("id")
-      .maybeSingle<{ id: string }>();
+      .eq("id", task.id);
+    if (!viewer.isOperator) updateQuery = updateQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
+    const { data: updated, error } = await updateQuery.select("id").maybeSingle<{ id: string }>();
     if (error || !updated) throw new Error("The reviewer task could not be started.");
     revalidatePath(QUEUE_PATH);
     return { status: "success", message: null };
@@ -259,13 +258,12 @@ export async function completePolicyOcrReviewTask(
       throw new Error("Complete every field-level OCR question.");
     }
     const note = sanitizeReviewerNote(formText(formData, "reviewer_note"));
-    const { data: updated, error } = await createSupabaseAdminClient()
+    let updateQuery = createSupabaseAdminClient()
       .from("policy_ocr_training_review_tasks")
       .update({ status: "completed", checklist, reviewer_note: note, structured_feedback: Object.keys(structuredAnswers).length ? structuredAnswers : null, started_at: task.status === "assigned" ? new Date().toISOString() : undefined, completed_at: new Date().toISOString() })
-      .eq("id", task.id)
-      .eq("assigned_reviewer_profile_id", viewer.profile.id)
-      .select("id")
-      .maybeSingle<{ id: string }>();
+      .eq("id", task.id);
+    if (!viewer.isOperator) updateQuery = updateQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
+    const { data: updated, error } = await updateQuery.select("id").maybeSingle<{ id: string }>();
     if (error || !updated) throw new Error("The reviewer answers could not be saved.");
     if (Object.keys(structuredAnswers).length) {
       const feedback = Object.fromEntries(Object.entries(structuredAnswers).map(([key, value]) => [key, value.correctValue ? { answer: value.answer, value: value.correctValue } : { answer: value.answer }]));
