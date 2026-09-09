@@ -59,33 +59,11 @@ jobs:
                   raise SystemExit(f'Expected Home header source block not found:\n{old[:180]}')
               text = text.replace(old, new, 1)
 
-          index.write_text(text)
-
-          workflow = Path('.github/workflows/tmp-publish-partner-0-1-dashboard-preview.yml')
-          w = workflow.read_text()
-          changes = [
-              (
-                  "expected_files=$(printf '%s\\n' 'apps/partner-app/app/(tabs)/index.tsx' 'apps/partner-app/app/search.tsx')",
-                  "expected_files=$(printf '%s\\n' 'apps/partner-app/app/(tabs)/index.tsx' 'apps/partner-app/app/search.tsx' 'apps/partner-app/assets/insureit-partner-official.png')"
-              ),
-              (
-                  'Partner 0.1.0 Policies Sold and cohort Commission Earned ${EXPECTED_DASHBOARD_COMMIT}',
-                  'Partner 0.1.0 branded home header and cohort commission ${EXPECTED_DASHBOARD_COMMIT}'
-              ),
-              (
-                  '- App delta: Home dashboard + Search query handoff only',
-                  '- App delta: Home dashboard + Search query handoff + official Partner logo asset only'
-              ),
-          ]
-          for old, new in changes:
-              if old not in w:
-                  raise SystemExit(f'Expected publisher source block not found: {old}')
-              w = w.replace(old, new, 1)
-          workflow.write_text(w)
-
           logo = Path('apps/partner-app/assets/insureit-partner-official.png')
           if not logo.exists():
               raise SystemExit('Official Partner logo asset is missing.')
+
+          index.write_text(text)
           PY
 
       - name: Validate exact intended source delta
@@ -93,10 +71,11 @@ jobs:
         run: |
           set -euo pipefail
           git diff --check
-          git diff --name-only
+          changed=$(git diff --name-only)
+          printf '%s\n' "$changed"
+          [ "$changed" = 'apps/partner-app/app/(tabs)/index.tsx' ]
           grep -q "heroGreetingText" 'apps/partner-app/app/(tabs)/index.tsx'
           grep -q "insureit-partner-official.png" 'apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "official Partner logo asset only" '.github/workflows/tmp-publish-partner-0-1-dashboard-preview.yml'
 
       - name: Commit patched source
         shell: bash
@@ -104,6 +83,6 @@ jobs:
           set -euo pipefail
           git config user.name 'chatgpt-release-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add 'apps/partner-app/app/(tabs)/index.tsx' '.github/workflows/tmp-publish-partner-0-1-dashboard-preview.yml'
+          git add 'apps/partner-app/app/(tabs)/index.tsx'
           git commit -m 'Use official Partner logo in compact Home header'
           git push origin HEAD:partner/home-official-logo-header
