@@ -275,6 +275,7 @@ assert.match(reviewerActions, /Verify the uploaded policy copy against every com
 assert.match(reviewerActions, /policy content, identifiers, PII/);
 assert.match(reviewerActions, /completePolicyOcrReviewTask/);
 assert.match(reviewerActions, /startPolicyOcrTrainingFromReview/);
+assert.match(reviewerActions, /if \(!viewer\.isOperator\) updateQuery = updateQuery\.eq\("assigned_reviewer_profile_id", viewer\.profile\.id\)/);
 assert.match(reviewerActions, /approve_policy_ocr_database_comparison/);
 assert.match(reviewerActions, /Review answers saved and parser training started/);
 assert.match(reviewerActions, /enqueue_policy_ocr_refinement_job/);
