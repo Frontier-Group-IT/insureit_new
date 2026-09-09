@@ -25,6 +25,7 @@ type FieldDefinition = { key: string; label: string; kind?: FieldKind; aliases?:
 
 type IntakeDocument = {
   id: string;
+  milestoneKey?: string | null;
   documentType: string;
   fileName: string;
   verificationStatus: string;
@@ -154,12 +155,16 @@ export function AssistanceIntakePanel(props: AssistanceIntakePanelProps) {
     completedAt: null,
     updatedAt: null,
   } satisfies ExternalClaimReadonlyMilestone));
+  const evidenceDocuments = snapshot?.documents ?? props.documents;
   const activeKey = activeStageKey(progress);
   const activeIndex = stages.findIndex((stage) => stage.key === activeKey);
   const journeyComplete = stages.every((stage) => isCompletedStatus(progress.find((item) => item.key === stage.key)?.status));
   const selectedMilestone = progress.find((milestone) => milestone.key === selectedKey);
   const selectedDetails = selectedMilestone?.details ?? {};
-  const selectedDocuments = useMemo(() => props.documents.filter((document) => documentStage(document.documentType) === selectedKey), [props.documents, selectedKey]);
+  const selectedDocuments = useMemo(
+    () => evidenceDocuments.filter((document) => documentStage(document.documentType, document.milestoneKey) === selectedKey),
+    [evidenceDocuments, selectedKey],
+  );
   const completedMilestones = progress.filter((milestone) => isCompletedStatus(milestone.status)).length;
 
   return (
@@ -357,7 +362,9 @@ function formatMilestoneStatus(status?: string | null) {
   return status.replaceAll("_", " ");
 }
 
-function documentStage(documentType: string): StageKey {
+function documentStage(documentType: string, milestoneKey?: string | null): StageKey {
+  if (milestoneKey && stages.some((stage) => stage.key === milestoneKey)) return milestoneKey as StageKey;
+
   const normalized = documentType.trim().toLowerCase();
   if (stageOneDocumentTypes.has(normalized)) return "spot_intimation";
   if (workApprovalDocumentTypes.has(normalized)) return "work_approval";
