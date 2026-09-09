@@ -1,5 +1,7 @@
 -- Fix the External Claim Operations takeover snapshot comparison without rewriting
 -- the already-applied 20260909121000 migration.
+-- Release-gate marker: the follow-up Customer milestone RLS migration is applied by
+-- the same protected External Claim schema workflow.
 --
 -- claim_stage_details.details->>'milestone_key' is text while
 -- claim_milestones.milestone_key is public.claim_milestone_key. Cast the enum to

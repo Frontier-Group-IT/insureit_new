@@ -8,8 +8,13 @@ const operationsStages = fs.readFileSync(path.join(root, 'components/claim-manag
 const entry = fs.readFileSync(path.join(root, 'components/claims/external-claim-operations-entry.tsx'), 'utf8');
 const action = fs.readFileSync(path.join(root, 'app/claims/external-operations-actions.ts'), 'utf8');
 const mobileStartClaim = fs.readFileSync(path.join(root, '../mobile-app/app/customer/start-claim.tsx'), 'utf8');
+const mobileClaimDetail = fs.readFileSync(path.join(root, '../mobile-app/app/customer/claim-detail.tsx'), 'utf8');
+const mobileExternalStageOne = fs.readFileSync(path.join(root, '../mobile-app/app/customer/self-managed-claim.tsx'), 'utf8');
+const mobileExternalSpotStatus = fs.readFileSync(path.join(root, '../mobile-app/app/customer/self-managed-spot-status.tsx'), 'utf8');
 const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'), 'utf8');
 const enumCastFixMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'utf8');
+const customerProcessingMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'), 'utf8');
+const customerMilestoneRpcMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'), 'utf8');
 const schemaWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/apply-external-claim-canonical-operations.yml'), 'utf8');
 const deployWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/deploy-production.yml'), 'utf8');
 
@@ -43,12 +48,36 @@ assert(enumCastFixMigration.includes("csd.details->>'milestone_key' = cm.milesto
 assert(!enumCastFixMigration.includes("csd.details->>'milestone_key' = cm.milestone_key\n"), 'Follow-up migration must not retain the unsafe text-to-enum comparison.');
 assert(!enumCastFixMigration.includes('create or replace function public.prevent_duplicate_active_external_claim_insert'), 'Enum-cast fix must not redefine the duplicate External Claim guard.');
 assert(!enumCastFixMigration.includes('create trigger prevent_duplicate_active_external_claim_insert'), 'Enum-cast fix must not recreate the duplicate External Claim trigger.');
-assert(schemaWorkflow.includes('20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'External Claim schema workflow must apply the enum-cast fix migration.');
-assert(schemaWorkflow.includes('supabase migration repair --linked --status applied 20260909133000'), 'External Claim schema workflow must record the follow-up migration.');
-assert(schemaWorkflow.includes('milestone_enum_cast_ready'), 'External Claim schema workflow must verify the corrected function contract.');
+
+assert(schemaWorkflow.includes('20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'External Claim schema workflow must retain the already-applied enum-cast migration as a release marker.');
+assert(schemaWorkflow.includes('20260909150000_preserve_external_customer_claim_milestones.sql'), 'External Claim schema workflow must apply the External Customer milestone RLS migration.');
+assert(schemaWorkflow.includes('20260909160000_preserve_external_customer_milestone_rpc.sql'), 'External Claim schema workflow must apply the External Customer milestone RPC migration.');
+assert(schemaWorkflow.includes('supabase migration repair --linked --status applied 20260909150000'), 'External Claim schema workflow must record the milestone RLS migration.');
+assert(schemaWorkflow.includes('supabase migration repair --linked --status applied 20260909160000'), 'External Claim schema workflow must record the milestone RPC migration.');
+assert(schemaWorkflow.includes('customer_external_rpc_ready'), 'External Claim schema workflow must verify the Customer External milestone RPC contract.');
+assert(schemaWorkflow.includes('non_external_self_managed_guard_ready'), 'External Claim schema workflow must verify the non-External self-managed guard remains present.');
+
 assert(deployWorkflow.includes('20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'Production deploy gate must recognize the External Claim enum-cast fix migration.');
+assert(deployWorkflow.includes('20260909150000_preserve_external_customer_claim_milestones.sql'), 'Production deploy gate must recognize the External Customer milestone RLS migration.');
+assert(deployWorkflow.includes('20260909160000_preserve_external_customer_milestone_rpc.sql'), 'Production deploy gate must recognize the External Customer milestone RPC migration.');
 assert(deployWorkflow.includes('apply-external-claim-canonical-operations.yml'), 'Production deploy gate must wait for the External Claim schema workflow.');
+
 assert(mobileStartClaim.includes("claim_service_mode?: 'broker_managed' | 'self_managed' | null"), 'Customer active-claim lookup must understand managed External Claims.');
 assert(mobileStartClaim.includes("claim.claim_service_mode === 'broker_managed'"), 'Customer Start Claim must detect an already Operations-managed External Claim.');
+assert(mobileStartClaim.includes("pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id, id: existingClaim.id }"), 'Existing External Claims must reopen the Customer self-tracked journey with the route parameter consumed by the destination screen.');
+assert(!mobileStartClaim.includes('claimId: existingClaim.id'), 'Existing External Claim resume must not use the obsolete claimId parameter.');
+assert(mobileClaimDetail.includes("claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed'"), 'External-policy claims must keep the Customer self-tracked journey regardless of Operations ownership mode.');
+assert(mobileExternalStageOne.includes("if (!claim || !claim.external_policy_id)"), 'External Claim Stage 1 must remain editable for externally sourced claims regardless of Operations ownership mode.');
+assert(!mobileExternalStageOne.includes("claim.claim_service_mode !== 'self_managed'"), 'External Claim Stage 1 must not reject a claim only because Operations ownership is broker_managed.');
+assert(mobileExternalSpotStatus.includes("if (!(claimResult.data as any).external_policy_id)"), 'External Claim Spot Status must validate External policy identity rather than service mode.');
+assert(!mobileExternalSpotStatus.includes("claim_service_mode !== 'self_managed'"), 'External Claim Spot Status must not reject a claim only because Operations ownership is broker_managed.');
+
+assert(customerProcessingMigration.includes("claim.policy_service_source = 'external'::public.policy_service_source"), 'Customer milestone RLS must explicitly preserve External-policy claims.');
+assert(customerProcessingMigration.includes("claim.claim_service_mode = 'self_managed'::public.claim_service_mode"), 'Customer milestone RLS must preserve the original self-managed rule for non-External claims.');
+assert(customerMilestoneRpcMigration.includes("v_claim.policy_service_source = 'external'::public.policy_service_source"), 'Customer milestone RPC must allow externally sourced claims regardless of Operations ownership mode.');
+assert(customerMilestoneRpcMigration.includes('v_claim.external_policy_id is not null'), 'Customer milestone RPC must require a real External policy link.');
+assert(customerMilestoneRpcMigration.includes("v_claim.claim_service_mode = 'self_managed'::public.claim_service_mode"), 'Customer milestone RPC must preserve the original self-managed rule for non-External claims.');
+assert(customerMilestoneRpcMigration.includes("coalesce(v_claim.assistance_status::text, 'not_requested') <> 'accepted'"), 'Non-External self-managed claims must retain the assistance takeover restriction.');
+assert(!customerMilestoneRpcMigration.includes("v_claim.claim_service_mode = 'broker_managed'::public.claim_service_mode"), 'Customer milestone RPC must not broadly authorize broker-managed Internal/SIBL claims.');
 
 console.log('External Claim canonical Operations workflow regression passed.');

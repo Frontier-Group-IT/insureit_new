@@ -134,7 +134,7 @@ export default function StartClaimScreen() {
       if (selectedPolicy.source === 'external') {
         const existingClaim = await findActiveExternalPolicyClaim(selectedPolicy.id);
         if (existingClaim) {
-          setExistingActiveClaimId(existingClaim.id);
+          router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id, id: existingClaim.id } } as any);
           return;
         }
         router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id } } as any);

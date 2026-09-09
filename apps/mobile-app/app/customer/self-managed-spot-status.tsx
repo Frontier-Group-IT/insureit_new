@@ -47,7 +47,7 @@ export default function SelfManagedSpotStatusScreen() {
         setLoading(false);
         return;
       }
-      if ((claimResult.data as any).claim_service_mode !== 'self_managed') {
+      if (!(claimResult.data as any).external_policy_id) {
         router.replace({ pathname: '/customer/claim-detail', params: { id } });
         return;
       }
