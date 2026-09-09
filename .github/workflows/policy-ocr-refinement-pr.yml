@@ -43,7 +43,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p apps/web-portal/scripts/generated-policy-ocr-training
-          cp refinement-candidate.json "apps/web-portal/scripts/generated-policy-ocr-training/${JOB_ID}.json"
+          node apps/web-portal/scripts/normalize-policy-ocr-training-candidate.mjs \
+            refinement-candidate.json \
+            "apps/web-portal/scripts/generated-policy-ocr-training/${JOB_ID}.json"
           rm refinement-candidate.json
           jq -e '."schema_version" == "policy_ocr_training_candidate_v2" and (.ground_truth | type == "object")' \
             "apps/web-portal/scripts/generated-policy-ocr-training/${JOB_ID}.json" >/dev/null

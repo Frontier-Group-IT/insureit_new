@@ -86,11 +86,20 @@ jobs:
       - name: Customer notification bell panel regression
         run: node apps/mobile-app/scripts/customer-notification-panel-regression.mjs
 
+      - name: Customer Add Vehicle Policy Type regression
+        run: node apps/mobile-app/scripts/customer-add-vehicle-policy-type-regression.mjs
+
       - name: Customer Start Claim OTA regression
         run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
 
       - name: Customer internal claim video upload regression
         run: node apps/mobile-app/scripts/customer-internal-video-upload-regression.mjs
+
+      - name: Customer claim video Camera and Gallery/File regression
+        run: node apps/mobile-app/scripts/customer-claim-video-source-regression.mjs
+
+      - name: Customer verified voice note UI regression
+        run: node apps/mobile-app/scripts/customer-verified-voice-note-ui-regression.mjs
 
       - name: Managed claim card parity regression
         run: node apps/mobile-app/scripts/managed-claim-card-parity-regression.mjs
@@ -116,8 +125,11 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Dependency lockfile: must remain synchronized"
             echo "- Static checks: TypeScript typecheck and Expo lint"
+            echo "- Add Vehicle regression: Policy Type is absent from the Customer Add Vehicle UI while vehicle-linked policy creation remains Motor-backed"
             echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
             echo "- Internal claim video regression: multi-select, 3-way concurrency, verification/re-upload guards, 50 MB limit and resumable upload contract remain intact"
+            echo "- Claim video source regression: internal and external Accident Video flows offer Camera and Gallery / File while reusing the installed expo-image-picker native capability"
+            echo "- Verified voice-note regression: verified audio uses the green locked card, hides destructive actions and plays from the Voice note ready row"
             echo "- Managed claim card parity: Sankalp managed and external cards share compact layout and animated status treatment"
             echo "- Review build: Expo web export"
             echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"

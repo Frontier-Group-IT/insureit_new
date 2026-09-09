@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { ClaimManagerShell } from "@/components/claim-manager/claim-manager-shell";
 import { OperationsClaimStages } from "@/components/claim-manager/operations-claim-stages";
 import { AssistanceIntakePanel } from "@/components/claims/assistance-intake-panel";
+import { ExternalClaimOperationsEntry } from "@/components/claims/external-claim-operations-entry";
 import { finalDocumentDefinitions } from "@/components/final-documents/final-document-groups";
 import { FinalDocumentsWorkspaceV2, type DealershipDetailsV2, type FinalDocumentRowV2 } from "@/components/final-documents/final-documents-workspace-v2";
 import { SpotClaimHeader, SpotSurveyWorkspace, type SpotSurveyClaim, type SpotSurveyDocument, type SpotSurveyVerification, type SurveyorDetails } from "@/components/spot-survey/spot-survey-workspace-v2";
@@ -204,6 +205,14 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
   const dealershipDetails = extractDealershipDetails(stageRows ?? []);
   const backHref = "/claims";
   const title = `Documents Verification - ${claimForVerification.claim_no}${claimForVerification.insurer_claim_no ? ` / ${claimForVerification.insurer_claim_no}` : ""}`;
+
+  if (claim.policy_service_source === "external" && claim.claim_service_mode === "self_managed") {
+    return (
+      <ClaimManagerShell title={`External Claim - ${claim.claim_no}`} backHref={backHref}>
+        <ExternalClaimOperationsEntry claimId={claim.id} auto />
+      </ClaimManagerShell>
+    );
+  }
 
   if (claim.claim_service_mode === "self_managed") {
     const { data: milestoneRows } = await admin

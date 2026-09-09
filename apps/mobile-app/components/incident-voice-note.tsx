@@ -23,6 +23,7 @@ export type IncidentVoiceNoteFile = {
 type Props = {
   value: IncidentVoiceNoteFile | null;
   saved?: boolean;
+  locked?: boolean;
   busy?: boolean;
   onChange: (file: IncidentVoiceNoteFile | null) => void;
   onRemoveSaved?: () => Promise<void> | void;
@@ -31,13 +32,14 @@ type Props = {
 
 const MAX_RECORDING_MS = 2 * 60 * 1000;
 
-export function IncidentVoiceNote({ value, saved = false, busy = false, onChange, onRemoveSaved, onRecordingChange }: Props) {
+export function IncidentVoiceNote({ value, saved = false, locked = false, busy = false, onChange, onRemoveSaved, onRecordingChange }: Props) {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const recorderState = useAudioRecorderState(recorder, 250);
   const player = useAudioPlayer(value?.uri ? { uri: value.uri } : null);
   const playerState = useAudioPlayerStatus(player);
   const [message, setMessage] = useState('');
   const stoppingRef = useRef(false);
+  const isLocked = locked || saved;
 
   const stopRecording = useCallback(async () => {
     if (!recorderState.isRecording) return;
@@ -72,7 +74,7 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
   }, [recorderState.durationMillis, recorderState.isRecording, stopRecording]);
 
   async function startRecording() {
-    if (busy || recorderState.isRecording) return;
+    if (busy || isLocked || recorderState.isRecording) return;
     setMessage('');
     const permission = await requestRecordingPermissionsAsync();
     if (!permission.granted) {
@@ -105,7 +107,7 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
   }
 
   async function removeVoiceNote() {
-    if (busy || recorderState.isRecording) return;
+    if (busy || isLocked || recorderState.isRecording) return;
     try {
       if (playerState.playing) player.pause();
       if (saved && !value && onRemoveSaved) {
@@ -124,13 +126,14 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
   const hasVoiceNote = Boolean(value?.uri || saved);
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, isLocked && styles.cardLocked]}>
       <View style={styles.headingRow}>
-        <View style={styles.icon}><MaterialCommunityIcons name="microphone-outline" size={25} color="#0A43A3" /></View>
+        <View style={[styles.icon, isLocked && styles.iconLocked]}><MaterialCommunityIcons name="microphone-outline" size={25} color={isLocked ? '#18864B' : '#0A43A3'} /></View>
         <View style={styles.copy}>
           <Text style={styles.title}>Incident Voice Note</Text>
           <Text style={styles.text}>Describe what happened in your own words. Maximum recording time is 2 minutes.</Text>
         </View>
+        {isLocked ? <View style={styles.lockBadge}><MaterialCommunityIcons name="lock-check-outline" size={18} color="#18864B" /></View> : null}
       </View>
 
       {recorderState.isRecording ? (
@@ -143,28 +146,30 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
         </View>
       ) : hasVoiceNote ? (
         <View style={styles.readyPanel}>
-          <View style={styles.readyRow}>
-            <MaterialCommunityIcons name="check-circle-outline" size={19} color="#18864B" />
-            <Text style={styles.readyText}>{saved && !value ? 'Voice note saved' : 'Voice note ready'}</Text>
-          </View>
-          <View style={styles.actions}>
-            {value?.uri ? (
-              <Pressable accessibilityRole="button" accessibilityLabel={playerState.playing ? 'Pause voice note' : 'Play voice note'} disabled={busy} onPress={() => void togglePlayback()} style={styles.secondaryButton}>
-                <MaterialCommunityIcons name={playerState.playing ? 'pause' : 'play'} size={17} color="#0A43A3" />
-                <Text style={styles.secondaryText}>{playerState.playing ? 'Pause' : 'Play'}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={playerState.playing ? 'Pause voice note' : 'Play voice note'}
+            disabled={busy || !value?.uri}
+            onPress={() => void togglePlayback()}
+            style={({ pressed }) => [styles.readyRow, (busy || !value?.uri) && styles.readyRowDisabled, pressed && value?.uri && !busy && styles.readyRowPressed]}
+          >
+            <MaterialCommunityIcons name={playerState.playing ? 'pause-circle-outline' : 'play-circle-outline'} size={20} color="#18864B" />
+            <Text style={styles.readyText}>Voice note ready</Text>
+          </Pressable>
+          {!isLocked ? (
+            <View style={styles.actions}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Delete voice note" disabled={busy} onPress={() => void removeVoiceNote()} style={styles.deleteButton}>
+                <MaterialCommunityIcons name="trash-can-outline" size={17} color="#B42318" />
+                <Text style={styles.deleteText}>Delete</Text>
               </Pressable>
-            ) : null}
-            <Pressable accessibilityRole="button" accessibilityLabel="Delete voice note" disabled={busy} onPress={() => void removeVoiceNote()} style={styles.deleteButton}>
-              <MaterialCommunityIcons name="trash-can-outline" size={17} color="#B42318" />
-              <Text style={styles.deleteText}>Delete</Text>
-            </Pressable>
-            {!saved ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Record voice note again" disabled={busy} onPress={() => void startRecording()} style={styles.secondaryButton}>
-                <MaterialCommunityIcons name="microphone" size={17} color="#0A43A3" />
-                <Text style={styles.secondaryText}>Re-record</Text>
-              </Pressable>
-            ) : null}
-          </View>
+              {!saved ? (
+                <Pressable accessibilityRole="button" accessibilityLabel="Record voice note again" disabled={busy} onPress={() => void startRecording()} style={styles.secondaryButton}>
+                  <MaterialCommunityIcons name="microphone" size={17} color="#0A43A3" />
+                  <Text style={styles.secondaryText}>Re-record</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       ) : (
         <Pressable accessibilityRole="button" accessibilityLabel="Record Voice Note" disabled={busy} onPress={() => void startRecording()} style={[styles.recordButton, busy && styles.disabled]}>
@@ -180,8 +185,11 @@ export function IncidentVoiceNote({ value, saved = false, busy = false, onChange
 
 const styles = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 1, borderColor: '#CADAF0', backgroundColor: '#F5F9FF', padding: 13, marginBottom: 12 },
+  cardLocked: { backgroundColor: '#EFFAF4', borderColor: '#52B57F' },
   headingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   icon: { width: 48, height: 48, borderRadius: 15, backgroundColor: '#E6F0FF', alignItems: 'center', justifyContent: 'center' },
+  iconLocked: { backgroundColor: '#DDF4E8' },
+  lockBadge: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#DDF4E8', alignItems: 'center', justifyContent: 'center' },
   copy: { flex: 1, minWidth: 0 },
   title: { color: palette.navy, fontSize: 12.5, fontWeight: '900' },
   text: { color: '#68778D', fontSize: 9.5, lineHeight: 14, fontWeight: '600', marginTop: 3 },
@@ -194,7 +202,9 @@ const styles = StyleSheet.create({
   recordingText: { color: '#B42318', fontSize: 11, fontWeight: '900' },
   stopButton: { minHeight: 46, borderRadius: 13, backgroundColor: '#C43232', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
   readyPanel: { marginTop: 12, gap: 9 },
-  readyRow: { minHeight: 36, borderRadius: 11, backgroundColor: '#EFFAF4', borderWidth: 1, borderColor: '#B7E4CC', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  readyRow: { minHeight: 42, borderRadius: 11, backgroundColor: '#E7F8EF', borderWidth: 1, borderColor: '#9DD8B9', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  readyRowDisabled: { opacity: 0.72 },
+  readyRowPressed: { opacity: 0.78 },
   readyText: { color: '#166A45', fontSize: 10.5, fontWeight: '900' },
   actions: { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
   secondaryButton: { flexGrow: 1, minHeight: 42, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#BFD4EE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 10 },

@@ -69,6 +69,9 @@ function requestMethod(input: RequestInfo | URL, init?: RequestInit) {
 function shouldTrackRequest(url: string, method: string) {
   if (!url.startsWith(supabaseUrl!)) return false;
   if (method === 'GET' || method === 'OPTIONS' || method === 'HEAD') return false;
+  // Supabase creates signed read URLs with POST. Treat that as a preload/read,
+  // not as a document upload that should block the page with the global loader.
+  if (url.includes('/storage/v1/object/sign/')) return false;
   return url.includes('/storage/v1/object');
 }
 
