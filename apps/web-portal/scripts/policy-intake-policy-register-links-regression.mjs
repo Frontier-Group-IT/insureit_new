@@ -47,5 +47,6 @@ assert(workspace.includes('action: baseFiltered.filter((row) => row.status === "
 assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'), "Policy Intake workspace In Review semantics must remain unchanged");
 assert(workspace.includes("xl:flex-none"), "Policy Intake desktop status controls must not flex-grow into unused space");
 assert(workspace.includes("xl:[&>div]:!w-fit"), "Policy Intake desktop status-tab border must end after the final status option");
+assert(workspace.includes("items-center justify-between gap-1"), "Policy Intake reviewer controls must keep My Active Work pinned to the far right of the available filter row");
 
 console.log("policy intake policy register links regression: ok");
