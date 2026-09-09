@@ -161,6 +161,11 @@ function nextStageKeyFor(stageKey: string | null): StageKey | null {
   return index >= 0 && index < stages.length - 1 ? stages[index + 1].key : null;
 }
 
+function nextStageLabelFor(stageKey: StageKey) {
+  const nextKey = nextStageKeyFor(stageKey);
+  return nextKey ? stages.find((stage) => stage.key === nextKey)?.label ?? "next stage" : "claim completion";
+}
+
 export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
@@ -172,22 +177,20 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       .filter((milestone) => completedExternalMilestoneStatuses.has(milestone.status))
       .map((milestone) => milestone.key),
   );
-  const externalVisualCurrentIndex = hasExternalVisualProgress
-    ? stages.findIndex((stage) => !externalVisualCompletedKeys.has(stage.key))
-    : -1;
   const [selectedKey, setSelectedKey] = useState(() => stages.some((stage) => stage.key === initialStageKey) ? initialStageKey! : active?.key ?? stages[0].key);
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
   const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
   const selectedAvailable = journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
-  const selectedSaveOnly = externalSelectedCompleted || !selectedIsCurrent;
+  const selectedSaveOnly = !selectedIsCurrent;
   const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
   const detail = selectedDetails[0];
   const spotDetail = details.find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
   const managerNext = managerTransitions[currentStatus];
   const stageTarget = stageCompletionTargets[selected.key];
-  const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext && !externalSelectedCompleted);
+  const nextStageLabel = nextStageLabelFor(selected.key);
+  const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
   const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
@@ -210,7 +213,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             ok: true,
             message,
             advanced: result.advanced,
-            nextStageKey: nextStageKeyFor(milestoneKey),
+            nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
           };
         }
         await advanceClaimWorkflow(claimId, formData);
@@ -257,9 +260,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
-    setSelectedKey("spot_status");
-    router.replace(`/claims/${claimId}?stage=spot_status`);
-  }, [claimId, router, spotState.ok]);
+    router.refresh();
+  }, [router, spotState.ok]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
@@ -272,8 +274,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
         {stages.map((stage, index) => {
           const externalStageCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(stage.key);
           const available = journeyComplete || index <= activeIndex || externalStageCompleted;
-          const isCurrent = hasExternalVisualProgress ? externalVisualCurrentIndex === index : !journeyComplete && stage.key === active?.key;
-          const isCompleted = hasExternalVisualProgress ? externalStageCompleted : journeyComplete || index < activeIndex;
+          const isCurrent = !journeyComplete && stage.key === active?.key;
+          const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);
           const isSelected = stage.key === selected.key;
           const showSelectedMarker = isSelected;
           return (
@@ -388,7 +390,13 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
               })}
             </div>
             {state.message && !state.ok ? <p role="alert" className="mt-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] font-medium text-rose-800">{state.message}</p> : null}
-            <div className="mt-3 flex justify-end"><FormSubmitButton label="Save Details" pendingLabel="Saving..." className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60" /></div>
+            <div className="mt-3 flex justify-end">
+              <FormSubmitButton
+                label={selectedSaveOnly ? "Save Details" : selected.key === "payment_encashment" ? "Save & complete claim" : `Save & move to ${nextStageLabel}`}
+                pendingLabel="Saving..."
+                className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white disabled:opacity-60"
+              />
+            </div>
           </form>
         ) : selected.key !== "spot_intimation" && selected.key !== "claim_intimation" ? (
           <p className="mt-3 rounded-lg border border-[#E4ECF6] bg-[#FBFCFE] px-3 py-2 text-[12px] font-medium text-[#526178]">This stage will open when the previous stage is completed.</p>
