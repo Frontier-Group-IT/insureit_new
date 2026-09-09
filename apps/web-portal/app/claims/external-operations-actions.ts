@@ -5,6 +5,11 @@ import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessTok
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 
 export type ExternalOperationsTakeoverResult = { ok: boolean; message?: string };
+type ExternalOperationsTakeoverPayload = {
+  ok?: boolean;
+  policy_service_source?: string;
+  claim_service_mode?: string;
+};
 
 export async function beginExternalOperationsWorkflow(claimId: string): Promise<ExternalOperationsTakeoverResult> {
   try {
@@ -18,10 +23,11 @@ export async function beginExternalOperationsWorkflow(claimId: string): Promise<
     }
 
     const supabase = await createServerSupabaseClient();
-    const { data, error } = await (supabase.rpc as any)("begin_external_claim_operations_workflow", {
-      p_claim_id: cleanClaimId,
-      p_actor_id: profile.id,
-    });
+    const rpcResult = await supabase.rpc(
+      "begin_external_claim_operations_workflow" as never,
+      { p_claim_id: cleanClaimId, p_actor_id: profile.id } as never,
+    ) as unknown as { data: ExternalOperationsTakeoverPayload | null; error: { message: string } | null };
+    const { data, error } = rpcResult;
 
     if (error) throw new Error(error.message);
     if (!data?.ok || data.policy_service_source !== "external" || data.claim_service_mode !== "broker_managed") {
