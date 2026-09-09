@@ -160,13 +160,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
         const response = await completeClaimJourneyStage(claimId, formData);
         setPendingAction(null);
         setResult(null);
-        if (response.advanced) {
-          setSuccessNotice("Claim Intimation completed. Work Approval is now open.");
-          router.replace(`/claims/${claimId}?stage=work_approval`);
-          router.refresh();
-          return;
-        }
-        setSuccessNotice("Stage details saved.");
+        setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");
+        router.replace(`/claims/${claimId}?stage=work_approval`);
         router.refresh();
       } catch (error) {
         setPendingAction(null);

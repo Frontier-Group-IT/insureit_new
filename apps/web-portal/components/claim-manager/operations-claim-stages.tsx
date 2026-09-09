@@ -213,7 +213,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             ok: true,
             message,
             advanced: result.advanced,
-            nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null,
+            nextStageKey: nextStageKeyFor(milestoneKey),
           };
         }
         await advanceClaimWorkflow(claimId, formData);
