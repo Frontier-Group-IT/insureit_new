@@ -30,6 +30,7 @@ assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must
 assert(quickLinks.includes('active ? "text-[#C62828]" : "text-[#64748B]"'), "Positive Policy Intake counts must be red while zero counts remain neutral");
 assert(quickLinks.includes('hover:bg-[#F8FAFC]'), "Policy Intake quick links must reveal only a subtle rounded hover surface");
 assert(quickLinks.includes("rounded-xl px-2.5 transition-colors"), "Policy Intake quick links must retain rounded hit targets without a permanent card treatment");
+assert(quickLinks.includes('className="ml-auto shrink-0 text-[15px] font-black leading-4 tabular-nums"'), "Policy Intake quick-link counts must sit on the far right of each rounded hover target");
 assert(!quickLinks.includes("ChevronRight"), "Policy Intake quick links must not render chevrons");
 assert(!quickLinks.includes("tone=\"danger\""), "Policy Intake quick links must not use the reverted highlighted danger-card treatment");
 assert(!quickLinks.includes("tone=\"review\""), "Policy Intake quick links must not use the reverted highlighted review-card treatment");
