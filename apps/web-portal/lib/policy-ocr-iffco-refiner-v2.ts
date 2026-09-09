@@ -1,10 +1,11 @@
 import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
 
-const VERSION = "iffco_tokio_commercial_motor_v2.3.0";
+const VERSION = "iffco_tokio_commercial_motor_v2.3.1";
 const MONEY_RE = /[0-9][0-9,]*(?:\.[0-9]{1,2})?/g;
 const DATE_RE = /([0-9]{1,2})[\/-]([0-9]{1,2})[\/-]([0-9]{2,4})/;
 const DATE_TOKEN_RE = /[0-9]{1,2}[\/-][0-9]{1,2}[\/-][0-9]{2,4}/g;
 const TOLERANCE = 0.05;
+const OWNER_DRIVER_CPA_LABEL = /(?:P\.?\s*A\.?\s+Owner[-\s]*Driver|Compulsory\s+P\.?\s*A\.?\s+Premium\s+for\s+Owner[-\s]*Driver|Personal\s+Accident\s+Premium\s+for\s+Owner[-\s]*Driver)/i;
 const REPLACE_KEYS = new Set([
   "insurer_name", "policy_product", "policy_number", "policy_start_date", "policy_end_date",
   "idv", "od_premium", "tp_premium", "cpa_premium", "cpa_opted",
@@ -251,7 +252,7 @@ function findOwnerDriverPremium(pages: string[]): Hit | null {
     const segmentStart = tableStart >= 0 ? tableStart : 0;
     const segmentEnd = tableEndMatch?.index !== undefined ? segmentStart + tableEndMatch.index + 260 : Math.min(page.length, segmentStart + 2600);
     const segment = page.slice(segmentStart, segmentEnd);
-    const regex = /P\.?A\.?\s+Owner[-\s]*Driver/gi;
+    const regex = new RegExp(OWNER_DRIVER_CPA_LABEL.source, "gi");
     let match: RegExpExecArray | null;
     let zeroHit: Hit | null = null;
 

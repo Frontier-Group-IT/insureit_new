@@ -62,6 +62,29 @@ Since you, as insured, have declared that you do not have a valid driving licens
     ],
     expected: expected("N9000006", "1200000", "4814", "7367", "0", "No", "2026-08-04", "2027-08-03", "12181", "2192.58", "14373.58"),
   },
+  {
+    name: "fresh sibling with explicit personal-accident owner-driver wording",
+    pages: [
+      `IFFCO-TOKIO GENERAL INSURANCE CO.LTD
+COMMERCIAL VEHICLE CERTIFICATE OF INSURANCE cum SCHEDULE & TAX INVOICE
+P400 Policy # N9200001
+Period of Insurance From: 14/08/2026 00:00:00
+To: Midnight On 13/08/2027 23:59:59
+Insured Motor Vehicle Details & Premium Calculation
+Coverage IDV in Rs.
+Package 2100000 Non Electrical Accessories are not covered as its value is 0
+A. Own Damage (Rs.) B. Third Party (Rs.)
+Personal Accident Premium for Owner Driver 275.00
+Basic TP Premium 8420.00
+Legal Liability to Driver (IMT 28) 100.00
+Net (A) 10000.00 Net (B) 8795.00
+Premium/Taxable Value RS. 18795.00
+Gross Premium Payable Rs. 22178.10
+GST Details 997134 18795.00 18.00 3383.10 22178.10
+Total 18795.00 3383.10 22178.10`,
+    ],
+    expected: expected("N9200001", "2100000", "10000", "8520", "275", "Yes", "2026-08-14", "2027-08-13", "18795", "3383.1", "22178.1"),
+  },
 
   // Real-layout fixtures below are sanitized reconstructions of the supplied IFFCO schedules.
   {

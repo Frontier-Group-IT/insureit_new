@@ -401,3 +401,21 @@ revealed-corpus aggregate from `267/332` to `310/372`, or approximately `83.3%`
 precision and `77.0%` coverage. Treat this strictly as **UNVERIFIED** until a
 separate post-deployment replay measures it. Never overwrite the immutable
 Round 8 frozen prediction/result to obtain the replay score.
+
+## 18. IFFCO owner-driver CPA label aliases
+
+**IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED 2026-09-09:** the IFFCO
+flattened and Layout Parser refiners now accept only these additional explicit
+owner-driver CPA row labels:
+
+- `Compulsory PA Premium for Owner Driver`
+- `Personal Accident Premium for Owner Driver`
+
+The existing `P.A. Owner Driver` wording remains supported. The change is
+bounded to explicit CPA labels; structured financial fields are still withheld
+when Basic TP, CPA, printed net or reconciliation evidence is missing or
+inconsistent. A sanitized fresh sibling covers Basic TP, positive CPA, printed
+net/GST/gross and reconciled OD/TP/CPA values. Targeted IFFCO regressions, the
+complete OCR regression chain, typecheck, lint (existing warnings only) and
+whitespace validation passed. Production/live verification remains
+**UNVERIFIED** because this branch was not merged or deployed.

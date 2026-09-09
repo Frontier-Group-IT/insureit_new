@@ -5,6 +5,7 @@ type MoneyHit = { value: number; page: number; evidence: string };
 
 const FINANCIAL_KEYS = new Set(["od_premium", "tp_premium", "cpa_premium", "cpa_opted"]);
 const TOLERANCE = 0.05;
+const OWNER_DRIVER_CPA_LABEL = /(?:P\.?\s*A\.?\s+Owner[-\s]*Driver|Compulsory\s+P\.?\s*A\.?\s+Premium\s+for\s+Owner[-\s]*Driver|Personal\s+Accident\s+Premium\s+for\s+Owner[-\s]*Driver)/i;
 
 export function refineIffcoStructuredFinancials(
   tables: StructuredPolicyTable[],
@@ -69,13 +70,13 @@ export function refineIffcoStructuredFinancials(
     !/IFFCO.*(?:OD|TP|CPA|premium components|Owner-Driver CPA row|liability rows|printed net premium)/i.test(warning),
   );
 
-  return { ...parsed, parserVersion: `${parsed.parserVersion}+layout-table-v5.1`, fields, warnings };
+  return { ...parsed, parserVersion: `${parsed.parserVersion}+layout-table-v5.2`, fields, warnings };
 }
 
 function removeUnsafeFinancialFields(parsed: ParsedPolicyResult, extraWarnings: string[]): ParsedPolicyResult {
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+layout-table-v5.1`,
+    parserVersion: `${parsed.parserVersion}+layout-table-v5.2`,
     fields: parsed.fields.filter((field) => !FINANCIAL_KEYS.has(field.key)),
     warnings: unique([...parsed.warnings, ...extraWarnings]),
   };
@@ -180,7 +181,7 @@ function findOwnerDriverPremium(tables: StructuredPolicyTable[]): MoneyHit | nul
   for (const table of tables) {
     for (const row of table.rows) {
       const joined = normalize(row.join(" | "));
-      if (!/P\.?A\.?\s+Owner[-\s]*Driver/i.test(joined)) continue;
+      if (!OWNER_DRIVER_CPA_LABEL.test(joined)) continue;
       const cleaned = joined.replace(/\(\s*IMT\s*\d+\s*\)/gi, " ").replace(/\bIMT\s*\d+\b/gi, " ");
       const values = moneyValues(cleaned).filter((value) => value >= 0 && value <= 1500000 && !isYear(value));
       const coverageIndex = values.findIndex((value) => value >= 100000);
