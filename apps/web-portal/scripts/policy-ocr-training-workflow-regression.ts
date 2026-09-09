@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
-import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
+import { buildTrainingProposal, compareTrainingProposalToReference, compareTrainingValue, createSanitizedTrainingCandidate, formatReviewerDate, hasStaleTrainingEvidenceLabels, parseReviewerDate, sanitizeEvidenceNote } from "../lib/policy-ocr-training.ts";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
 import { extractVehicleFields } from "../lib/policy-ocr-parsers.ts";
 
@@ -132,6 +132,18 @@ const candidate = createSanitizedTrainingCandidate({
 });
 
 assert.equal(candidate.ground_truth.section_03.policy_number, "SYN-ABCDEF123456");
+assert.equal(hasStaleTrainingEvidenceLabels({
+  evidence_labels: {
+    valid_from: "Vehicle Registration Number",
+    tp_premium: "Policy Product",
+  },
+}), true);
+assert.equal(hasStaleTrainingEvidenceLabels({
+  evidence_labels: {
+    valid_from: "Policy Period",
+    tp_premium: "Total TP Premium",
+  },
+}), false);
 assert.equal(candidate.ground_truth.section_02.vehicle_registration_number, "SYNREGABCDEF123456");
 assert.equal(candidate.ground_truth.section_02.vehicle_chassis_number, "SYNCHASSISABCDEF123456");
 assert.equal(JSON.stringify(candidate).includes("MH12AB1234"), false);
@@ -259,7 +271,7 @@ const reviewerActions = readFileSync("app/policies/ocr-training-review-actions.t
 assert.match(reviewerActions, /RESEND_API_KEY|sendResendEmail/);
 assert.match(reviewerActions, /REVIEW_NOTIFICATION_BCC/);
 assert.match(reviewerActions, /bcc: \[REVIEW_NOTIFICATION_BCC\]/);
-assert.match(reviewerActions, /Current policy number/);
+assert.match(reviewerActions, /Verify the uploaded policy copy against every compared field/);
 assert.match(reviewerActions, /policy content, identifiers, PII/);
 assert.match(reviewerActions, /completePolicyOcrReviewTask/);
 assert.match(reviewerActions, /startPolicyOcrTrainingFromReview/);
