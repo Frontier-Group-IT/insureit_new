@@ -26,15 +26,17 @@ assert(quickLinks.includes('.ui-page-stage a[href="/policies/new"]'), "Policy In
 assert(quickLinks.includes("summary.actionRequired !== null"), "RM summaries must not render the reviewer-only Action Required shortcut");
 assert(quickLinks.includes('href="/policy-intakes?view=action"'), "Action Required must deep-link to the Policy Intake Action Required view");
 assert(quickLinks.includes('href="/policy-intakes?view=in_review"'), "In Review must deep-link to the Policy Intake In Review view");
-assert(quickLinks.includes('tone="danger"'), "Action Required must use the highlighted danger treatment");
-assert(quickLinks.includes('tone="review"'), "In Review must use its distinct highlighted review treatment");
-assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must still be derived from whether the count is positive");
-assert(quickLinks.includes('border-[#FCA5A5] bg-[#FFF6F6]'), "Positive Action Required shortcuts must remain visibly highlighted in red");
-assert(quickLinks.includes('border-[#F6C66A] bg-[#FFF8EA]'), "Positive In Review shortcuts must remain visibly highlighted in amber");
-assert(quickLinks.includes("rounded-2xl border"), "Policy Intake quick links must render as rounded highlighted buttons");
-assert(quickLinks.includes("rounded-full transition-transform"), "Policy Intake quick-link icons must retain their circular highlighted tiles");
-assert(quickLinks.includes("hover:-translate-y-0.5"), "Policy Intake quick links must gain a stronger rounded hover treatment");
-assert(quickLinks.includes("hover:shadow-[0_8px_22px"), "Positive Policy Intake quick links must strengthen their highlight shadow on hover");
+assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must be derived from whether the count is positive");
+assert(quickLinks.includes('active ? "text-[#C62828]" : "text-[#64748B]"'), "Positive Policy Intake counts must be red while zero counts remain neutral");
+assert(quickLinks.includes('hover:bg-[#F8FAFC]'), "Policy Intake quick links must reveal only a subtle rounded hover surface");
+assert(quickLinks.includes("rounded-xl px-2.5 transition-colors"), "Policy Intake quick links must retain rounded hit targets without a permanent card treatment");
+assert(!quickLinks.includes("ChevronRight"), "Policy Intake quick links must not render chevrons");
+assert(!quickLinks.includes("tone=\"danger\""), "Policy Intake quick links must not use the reverted highlighted danger-card treatment");
+assert(!quickLinks.includes("tone=\"review\""), "Policy Intake quick links must not use the reverted highlighted review-card treatment");
+assert(!quickLinks.includes("rounded-2xl border"), "Policy Intake quick links must not render permanent bordered cards");
+assert(!quickLinks.includes('bg-[#FEE2E2]'), "Policy Intake quick-link icons must remain flat without red icon tiles");
+assert(!quickLinks.includes('bg-[#FEF0C7]'), "Policy Intake quick-link icons must remain flat without amber icon tiles");
+assert(!quickLinks.includes("hover:-translate-y-0.5"), "Policy Intake quick links must not use raised card hover motion");
 
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
