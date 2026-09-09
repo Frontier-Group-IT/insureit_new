@@ -353,7 +353,7 @@ function strictOwnerDriverPremium(tables: StructuredPolicyTable[], text: string,
     if (table.page > maxPage) continue;
     for (const row of table.rows) {
       const joined = clean(row.join(" | "));
-      if (!/(?:COMPULSORY\s+)?P\.?A\.?\s+(?:COVER\s+)?(?:FOR\s+)?OWNER[-\s]*DRIVER|OWNER[-\s]*DRIVER\s+(?:CPA|P\.?A\.?)/i.test(joined)) continue;
+      if (!/(?:P\.?\s*A\.?\s+Owner[-\s]*Driver|Compulsory\s+P\.?\s*A\.?\s+Premium\s+for\s+Owner[-\s]*Driver|Personal\s+Accident\s+Premium\s+for\s+Owner[-\s]*Driver|Owner[-\s]*Driver\s+(?:CPA|P\.?\s*A\.?))/i.test(joined)) continue;
       if (/PAID\s+DRIVER|EMPLOYEE|PASSENGER|WORKMEN/i.test(joined)) continue;
       const sanitized = joined.replace(/(?:CSI|SUM\s+INSURED)[^|]{0,80}/gi, " ").replace(/\b(?:5|9|18|28|100)\s*%/g, " ");
       const values = moneyValues(sanitized).filter((value) => value >= 0 && value <= 5000 && !isYear(value));

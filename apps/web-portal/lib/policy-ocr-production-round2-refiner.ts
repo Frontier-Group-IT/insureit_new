@@ -197,7 +197,7 @@ function ownerDriverCpa(tables: StructuredPolicyTable[], text: string, maxPage: 
     if (table.page > maxPage) continue;
     for (const row of table.rows) {
       const joined = clean(row.join(" | "));
-      if (!/(?:P\.?A\.?|PERSONAL\s+ACCIDENT|CPA).{0,35}OWNER[-\s]*DRIVER|OWNER[-\s]*DRIVER.{0,35}(?:P\.?A\.?|PERSONAL\s+ACCIDENT|CPA)/i.test(joined)) continue;
+      if (!/(?:P\.?\s*A\.?\s+Owner[-\s]*Driver|Compulsory\s+P\.?\s*A\.?\s+Premium\s+for\s+Owner[-\s]*Driver|Personal\s+Accident\s+Premium\s+for\s+Owner[-\s]*Driver|(?:P\.?A\.?|PERSONAL\s+ACCIDENT|CPA).{0,35}OWNER[-\s]*DRIVER|OWNER[-\s]*DRIVER.{0,35}(?:P\.?A\.?|PERSONAL\s+ACCIDENT|CPA))/i.test(joined)) continue;
       if (/PAID\s+DRIVER|EMPLOYEE|PASSENGER|WORKMEN/i.test(joined)) continue;
       const values = moneyValues(joined).filter((v) => v >= 100 && v <= 5000 && !isYear(v));
       if (values.length) return { value: values[values.length - 1], page: table.page, evidence: "Explicit owner-driver CPA row" };
