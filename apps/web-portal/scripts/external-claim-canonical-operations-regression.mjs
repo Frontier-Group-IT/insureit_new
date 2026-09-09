@@ -35,6 +35,12 @@ assert(!claimsWorkspace.includes('function isExternalClaim(claim: QueueClaimRow)
 assert(claimsWorkspace.includes('<ExternalClaimOperationsEntry claimId={claim.id}'), 'External Claim Proceed must enter canonical Operations ownership before navigation.');
 assert(claimPage.includes('claim.policy_service_source === "external" && claim.claim_service_mode === "self_managed"'), 'Direct External Claim links must pass through the Operations ownership boundary.');
 assert(claimPage.includes('<OperationsClaimStages'), 'External Claims must ultimately reuse the canonical OperationsClaimStages component.');
+assert(claimPage.includes('.from("claim_milestones")'), 'Broker-managed External Claim detail must read preserved Customer milestones.');
+assert(claimPage.includes('Customer external journey'), 'Operations claim detail must label Customer External Claim progress separately.');
+assert(claimPage.includes('Operations processing'), 'Operations claim detail must label Operations progress separately.');
+assert(claimPage.includes('Customer completion does not auto-advance or overwrite the Operations workflow.'), 'Dual-journey display must explain that Customer completion does not advance Operations.');
+assert(claimPage.includes('currentStatus={claim.current_status}'), 'Canonical Operations stage must remain driven by claims.current_status.');
+assert(!claimPage.includes('.update({ current_status'), 'Dual-journey display must not write Operations status from Customer milestones.');
 assert(entry.includes('beginExternalOperationsWorkflow'), 'External Claim entry control must use the protected ownership action.');
 assert(action.includes('hasEffectiveCapability(profile, "manage_claims", "edit")'), 'External ownership transfer must use the same manage_claims edit permission.');
 assert(action.includes('begin_external_claim_operations_workflow'), 'External ownership transfer must use the atomic database function.');

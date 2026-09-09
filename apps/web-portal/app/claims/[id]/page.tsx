@@ -50,6 +50,25 @@ type StageDetailRow = {
   created_at: string;
 };
 
+type CustomerMilestoneRow = {
+  milestone_key: string;
+  milestone_status: string;
+};
+
+const externalCustomerStages = [
+  { key: "spot_intimation", label: "Spot Intimation" },
+  { key: "spot_status", label: "Spot Status" },
+  { key: "claim_intimation", label: "Claim Intimation" },
+  { key: "work_approval", label: "Work Approval" },
+  { key: "repair_ri", label: "Repair & RI" },
+  { key: "billing", label: "Billing" },
+  { key: "delivery_order", label: "Delivery Order" },
+  { key: "vehicle_delivery", label: "Vehicle Delivery" },
+  { key: "payment_encashment", label: "Payment Encashment" },
+] as const;
+
+const completedCustomerMilestoneStatuses = new Set(["completed", "not_applicable"]);
+
 export default async function ClaimDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ stage?: string }> }) {
   const { id } = await params;
   const requestedStage = (await searchParams)?.stage;
@@ -245,11 +264,44 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     );
   }
 
+  const externalCustomerMilestoneResult = claim.policy_service_source === "external"
+    ? await admin
+      .from("claim_milestones")
+      .select("milestone_key, milestone_status")
+      .eq("claim_id", id)
+      .returns<CustomerMilestoneRow[]>()
+    : null;
+  const externalCustomerJourney = externalCustomerMilestoneResult && !externalCustomerMilestoneResult.error
+    ? summarizeExternalCustomerJourney(externalCustomerMilestoneResult.data ?? [])
+    : null;
+
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
       <div className="[&>section>div:first-child>div:nth-child(3)_img]:grayscale [&>section>div:first-child>div:nth-child(3)_img]:invert [&>section>div:first-child>div:nth-child(3)_img]:contrast-[4] [&>section>div:first-child>div:nth-child(3)_img]:mix-blend-screen">
         <SpotClaimHeader claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} />
       </div>
+      {externalCustomerJourney ? (
+        <div className="mt-[6px] rounded-2xl border border-[#D8E3F2] bg-[#F8FBFF] px-4 py-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5C6878]">Customer external journey</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-[16px] font-semibold text-[#071D49]">{externalCustomerJourney.completed}/{externalCustomerJourney.total} stages complete</p>
+                <span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${externalCustomerJourney.complete ? "bg-emerald-100 text-emerald-800" : "bg-blue-100 text-blue-800"}`}>
+                  {externalCustomerJourney.complete ? "Customer journey complete" : "Customer progress"}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-[#5C6878]">Latest customer milestone: <span className="font-semibold text-[#344256]">{externalCustomerJourney.latestLabel}</span></p>
+            </div>
+            <div className="min-w-0 border-t border-[#D8E3F2] pt-3 md:border-l md:border-t-0 md:pl-4 md:pt-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#5C6878]">Operations processing</p>
+              <p className="mt-1 text-[16px] font-semibold text-[#071D49]">{claim.current_status}</p>
+              <p className="mt-1 text-[11px] text-[#5C6878]">The Operations stage below is controlled separately.</p>
+            </div>
+          </div>
+          <p className="mt-2 border-t border-[#E2EAF4] pt-2 text-[10px] font-medium text-[#526173]">Customer completion does not auto-advance or overwrite the Operations workflow.</p>
+        </div>
+      ) : null}
       <div className="mt-[6px]">
         <OperationsClaimStages
           claimId={claim.id}
@@ -266,6 +318,22 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
       </div>
     </ClaimManagerShell>
   );
+}
+
+function summarizeExternalCustomerJourney(rows: CustomerMilestoneRow[]) {
+  const completedKeys = new Set(
+    rows
+      .filter((row) => completedCustomerMilestoneStatuses.has(row.milestone_status))
+      .map((row) => row.milestone_key),
+  );
+  const completedStages = externalCustomerStages.filter((stage) => completedKeys.has(stage.key));
+  const latestStage = completedStages[completedStages.length - 1];
+  return {
+    completed: completedStages.length,
+    total: externalCustomerStages.length,
+    latestLabel: latestStage?.label ?? "Not started",
+    complete: completedStages.length === externalCustomerStages.length,
+  };
 }
 
 function extractSurveyorDetails(rows: StageDetailRow[]): SurveyorDetails | null {
