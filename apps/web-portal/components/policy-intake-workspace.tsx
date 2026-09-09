@@ -185,17 +185,17 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     </div>
 
     <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-      <div className="flex flex-col gap-2 xl:grid xl:grid-cols-[132px_132px_140px_minmax(0,1fr)] xl:items-center xl:gap-1">
+      <div className="flex flex-col gap-2 xl:grid xl:grid-cols-[160px_160px_140px_minmax(0,1fr)] xl:items-center xl:gap-1.5">
         <div className="[&>label]:block [&>label]:w-full [&_select]:w-full xl:[&_select]:!h-9 xl:[&_select]:!min-w-0 xl:[&_select]:!pl-8 xl:[&_select]:!pr-6 xl:[&_select]:!text-[10px]">
-          <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source"><option value="all">All lead sources</option>{sources.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</RegisterSelect>
+          <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source"><option value="all">All Lead Source</option>{sources.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</RegisterSelect>
         </div>
         <div className="[&>label]:block [&>label]:w-full [&_select]:w-full xl:[&_select]:!h-9 xl:[&_select]:!min-w-0 xl:[&_select]:!pl-8 xl:[&_select]:!pr-6 xl:[&_select]:!text-[10px]">
-          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="OCR status"><option value="all">All detail states</option><option value="queued">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
+          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="OCR status"><option value="all">All Detail Status</option><option value="queued">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
         </div>
         <PolicyIntakeDateRangeFilter fromDate={fromDate} toDate={toDate} onFromDateChange={(value) => { setFromDate(value); setPage(1); }} onToDateChange={(value) => { setToDate(value); setPage(1); }} onClear={() => { setFromDate(""); setToDate(""); setPage(1); }} />
         <div className="min-w-0">
           <div className="flex min-w-0 items-center justify-between gap-1">
-            <div className="min-w-0 flex-1 xl:flex-none [&>div]:w-full xl:[&>div]:!w-fit xl:[&>div]:!gap-0.5 xl:[&>div]:!overflow-visible xl:[&>div]:!p-0.5 xl:[&>div>button]:!h-7 xl:[&>div>button]:!px-1.5 xl:[&>div>button]:!text-[9px]">
+            <div className="min-w-0 flex-1 [&>div]:w-full xl:[&>div]:!w-full xl:[&>div]:!gap-0.5 xl:[&>div]:!overflow-visible xl:[&>div]:!p-0.5 xl:[&>div>button]:!h-7 xl:[&>div>button]:!min-w-0 xl:[&>div>button]:!flex-1 xl:[&>div>button]:!px-1.5 xl:[&>div>button]:!text-[9px]">
               <RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [
                 { value: "action", label: "Action Required", count: stats.action },
                 { value: "in_review", label: "In Review", count: stats.inReview },
