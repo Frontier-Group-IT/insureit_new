@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, FileText, Plus, RotateCcw, Search, ShieldCheck } from "lucide-react";
+import { CalendarDays, ChevronDown, FileText, Plus, RotateCcw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
-  BrokerRegisterShell,
   RegisterEmpty,
   RegisterPagination,
   RegisterSelect,
@@ -89,12 +88,39 @@ function dateValue(value: string) {
   if (Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
 }
-function DateFilter({ label, value, min, max, onChange }: { label: string; value: string; min?: string; max?: string; onChange: (value: string) => void }) {
-  return <label className="relative block h-10 min-w-[138px]">
-    <span className={`pointer-events-none absolute inset-y-0 left-3 right-9 z-10 flex items-center text-[10.5px] font-semibold ${value ? "text-[#334155]" : "text-[#64748B]"}`}>{value || label}</span>
-    <CalendarDays className="pointer-events-none absolute right-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[#64748B]" />
-    <input type="date" value={value} min={min} max={max} aria-label={label} onChange={(event) => onChange(event.target.value)} className="absolute inset-0 h-10 w-full cursor-pointer rounded-xl border border-[#CBD5E1] bg-white text-transparent outline-none focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:opacity-0" />
-  </label>;
+function shortFilterDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+}
+function PolicyIntakeDateRangeFilter({
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  onClear,
+}: {
+  fromDate: string;
+  toDate: string;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onClear: () => void;
+}) {
+  const label = fromDate || toDate
+    ? `${fromDate ? shortFilterDate(fromDate) : "Any"} – ${toDate ? shortFilterDate(toDate) : "Any"}`
+    : "Date Range";
+  return <details className="group relative w-full">
+    <summary className="flex h-10 w-full min-w-[170px] cursor-pointer list-none items-center justify-between gap-2 rounded-xl border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] outline-none transition hover:border-[#9FB2C8] focus-visible:ring-2 focus-visible:ring-[#17365D]/10 [&::-webkit-details-marker]:hidden">
+      <span className="flex min-w-0 items-center gap-2"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-[#64748B]" /><span className="truncate">{label}</span></span>
+      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[#64748B] transition group-open:rotate-180" />
+    </summary>
+    <div className="absolute right-0 top-11 z-30 w-[292px] rounded-xl border border-[#D7E0EA] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.16)]">
+      <div className="grid grid-cols-2 gap-2">
+        <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">From date</span><input type="date" value={fromDate} max={toDate || undefined} onChange={(event) => onFromDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+        <label><span className="mb-1 block text-[8px] font-bold text-[#7C899B]">To date</span><input type="date" value={toDate} min={fromDate || undefined} onChange={(event) => onToDateChange(event.target.value)} className="h-9 w-full rounded-lg border border-[#D7E0EA] px-2 text-[9.5px] font-semibold text-[#334155] outline-none focus:border-[#17365D]" /></label>
+      </div>
+      <div className="mt-2 flex justify-end"><button type="button" onClick={onClear} className="rounded-lg px-2.5 py-1.5 text-[9px] font-bold text-[#64748B] hover:bg-[#F8FAFC]">Clear dates</button></div>
+    </div>
+  </details>;
 }
 
 export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId, initialView }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string; initialView?: PolicyIntakeViewKey }) {
@@ -142,67 +168,54 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
   function reset() { setQuery(""); setSource("all"); setOcr("all"); setFromDate(""); setToDate(""); setView(reviewer ? "action" : "all"); setPage(1); }
   function changeView(value: string) { setView(value as ViewKey); setPage(1); }
 
-  return <BrokerRegisterShell
-    title={reviewer ? "Policy Intake Queue" : "My Policy Intakes"}
-    eyebrow="Operations workflow"
-    description={reviewer ? "Review policy copies submitted by Sales before final policy onboarding." : "Track the policy copies you submitted to Operations."}
-    icon={<ShieldCheck className="h-5 w-5" />}
-    metrics={reviewer ? [
-      { label: "Action required", value: stats.action, hint: "Ready / manual review", tone: "amber" },
-      { label: "In review", value: stats.inReview, hint: `${stats.myActiveWork} assigned to you`, tone: "blue" },
-      { label: "Processing", value: stats.processing, hint: "Fetching policy details", tone: "navy" },
-      { label: "Completed", value: stats.completed, hint: "Finalized intakes", tone: "green" },
-    ] : [
-      { label: "Total", value: stats.all, hint: "Submitted by you", tone: "navy" },
-      { label: "Processing", value: stats.processing, hint: "Fetching details", tone: "blue" },
-      { label: "In review", value: stats.inReview, hint: "With Operations", tone: "amber" },
-      { label: "Completed", value: stats.completed, hint: "Finalized", tone: "green" },
-    ]}
-  >
-    <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
-      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <label className="relative min-w-[260px] flex-1 xl:max-w-[410px]">
+  return <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
+    <div className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3 sm:px-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]"><FileText className="h-5 w-5" /></span>
+          <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">{reviewer ? "Policy Intake Queue" : "My Policy Intakes"}</h2>
+          <label className="relative ml-1 min-w-0 flex-1 lg:max-w-[430px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B93AA]" />
-            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search PIR, customer, vehicle, policy, insurer or source" className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[11px] outline-none focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10" />
+            <input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Search PIR, customer, vehicle, policy, insurer or source" aria-label="Search PIR, customer, vehicle, policy, insurer or source" className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-10 pr-3 text-[12px] text-[#0F172A] outline-none transition focus:border-[#17365D] focus:ring-2 focus:ring-[#17365D]/10" />
           </label>
-          <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source"><option value="all">All lead sources</option>{sources.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</RegisterSelect>
-          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="OCR status"><option value="all">All detail states</option><option value="queued">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
-          <DateFilter label="From date" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(1); }} />
-          <DateFilter label="To date" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(1); }} />
-          <button type="button" onClick={reset} aria-label="Reset filters" title="Reset filters" className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] hover:bg-[#F8FAFC]"><RotateCcw className="h-4 w-4" /></button>
+          <button type="button" onClick={reset} aria-label="Reset filters" title="Reset filters" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#CBD5E1] bg-white text-[#475569] transition hover:border-[#9FB2C8] hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#17365D]/10"><RotateCcw className="h-4 w-4" /></button>
         </div>
-        {creator ? <Link href="/policy-intakes/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[10px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.18)]"><Plus className="h-4 w-4" />New Intake</Link> : null}
+        {creator ? <Link prefetch={false} href="/policy-intakes/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#17365D] px-3 text-[11px] font-bold text-white shadow-[0_10px_24px_rgba(23,54,93,.22)]"><Plus className="h-4 w-4" />New Intake</Link> : null}
       </div>
     </div>
 
-    <div className="border-b border-[#E5ECF5] bg-[#FBFCFE] px-3 py-2 sm:px-4">
-      <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
-        <RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [
-          { value: "action", label: "Action Required", count: stats.action },
-          { value: "in_review", label: "In Review", count: stats.inReview },
-          { value: "processing", label: "Processing", count: stats.processing },
-          { value: "completed", label: "Completed", count: stats.completed },
-          { value: "duplicate", label: "Duplicate", count: stats.duplicate },
-          { value: "rejected", label: "Rejected", count: stats.rejected },
-          { value: "all", label: "All", count: stats.all },
-        ] : [
-          { value: "all", label: "All", count: stats.all },
-          { value: "processing", label: "Processing", count: stats.processing },
-          { value: "in_review", label: "In Review", count: stats.inReview },
-          { value: "completed", label: "Completed", count: stats.completed },
-          { value: "duplicate", label: "Duplicate", count: stats.duplicate },
-          { value: "rejected", label: "Rejected", count: stats.rejected },
-        ]} />
-        {reviewer ? <button
-          type="button"
-          onClick={() => changeView("mine")}
-          aria-pressed={view === "mine"}
-          className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg border px-3 text-[10px] font-bold transition ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`}
-          title="Show only policy intakes currently assigned to you"
-        >
-          My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span>
-        </button> : null}
+    <div className="border-b border-[#E5ECF5] bg-white px-3 py-2 sm:px-4">
+      <div className="flex flex-col gap-2 xl:grid xl:grid-cols-[minmax(168px,0.78fr)_minmax(168px,0.78fr)_minmax(170px,0.82fr)_minmax(620px,auto)] xl:items-center xl:gap-1.5">
+        <div className="[&>label]:block [&>label]:w-full [&_select]:w-full">
+          <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source"><option value="all">All lead sources</option>{sources.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</RegisterSelect>
+        </div>
+        <div className="[&>label]:block [&>label]:w-full [&_select]:w-full">
+          <RegisterSelect value={ocr} onChange={(value) => { setOcr(value); setPage(1); }} label="OCR status"><option value="all">All detail states</option><option value="queued">Queued</option><option value="processing">Fetching</option><option value="completed">Fetched</option><option value="failed">Manual review</option></RegisterSelect>
+        </div>
+        <PolicyIntakeDateRangeFilter fromDate={fromDate} toDate={toDate} onFromDateChange={(value) => { setFromDate(value); setPage(1); }} onToDateChange={(value) => { setToDate(value); setPage(1); }} onClear={() => { setFromDate(""); setToDate(""); setPage(1); }} />
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <div className="min-w-0 flex-1 [&>div]:w-full">
+              <RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [
+                { value: "action", label: "Action Required", count: stats.action },
+                { value: "in_review", label: "In Review", count: stats.inReview },
+                { value: "processing", label: "Processing", count: stats.processing },
+                { value: "completed", label: "Completed", count: stats.completed },
+                { value: "duplicate", label: "Duplicate", count: stats.duplicate },
+                { value: "rejected", label: "Rejected", count: stats.rejected },
+                { value: "all", label: "All", count: stats.all },
+              ] : [
+                { value: "all", label: "All", count: stats.all },
+                { value: "processing", label: "Processing", count: stats.processing },
+                { value: "in_review", label: "In Review", count: stats.inReview },
+                { value: "completed", label: "Completed", count: stats.completed },
+                { value: "duplicate", label: "Duplicate", count: stats.duplicate },
+                { value: "rejected", label: "Rejected", count: stats.rejected },
+              ]} />
+            </div>
+            {reviewer ? <button type="button" onClick={() => changeView("mine")} aria-pressed={view === "mine"} className={`inline-flex h-8 shrink-0 items-center justify-center rounded-lg border px-3 text-[10px] font-bold transition ${view === "mine" ? "border-[#17365D] bg-[#17365D] text-white shadow-sm" : "border-[#C9D5E3] bg-white text-[#526178] hover:border-[#9FB4CD] hover:bg-[#F8FAFC]"}`} title="Show only policy intakes currently assigned to you">My Active Work <span className="ml-1.5 opacity-80">{stats.myActiveWork}</span></button> : null}
+          </div>
+        </div>
       </div>
     </div>
 
@@ -225,5 +238,5 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
       {!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the search, lead source, OCR state, date range or status view." /> : null}
     </div>
     <RegisterPagination pageRows={pageRows.length} filteredRows={filtered.length} safePage={safePage} totalPages={totalPages} pageSize={PAGE_SIZE} onPrevious={() => setPage(Math.max(1, safePage - 1))} onNext={() => setPage(Math.min(totalPages, safePage + 1))} />
-  </BrokerRegisterShell>;
+  </section>;
 }
