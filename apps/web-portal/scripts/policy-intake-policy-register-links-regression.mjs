@@ -4,11 +4,17 @@ import assert from "node:assert/strict";
 const read = (path) => fs.readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 
 const policiesPage = read("app/policies/page.tsx");
-assert(policiesPage.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'), "Policy Register quick links must remain permission-gated to Policy Intake reviewers");
-assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin)"), "Policy Register must load the Policy Intake review summary");
+assert(policiesPage.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'), "Policy Register reviewer shortcuts must remain permission-gated to Policy Intake reviewers");
+assert(policiesPage.includes('hasEffectiveCapability(profile, "view_policy_intakes", "view")'), "Policy Register RM tracking must require Policy Intake view access");
+assert(policiesPage.includes('profile.role === "relationship_manager" && canViewPolicyIntakes'), "Only Relationship Managers with Policy Intake view access may receive the owner-scoped shortcut");
+assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin)"), "Policy Register reviewers must load the organization Policy Intake review summary");
+assert(policiesPage.includes("loadPolicyIntakeReviewSummary(admin, { submittedByProfileId: profile.id, includeActionRequired: false })"), "RM Policy Register summary must be scoped to the logged-in RM and omit reviewer-only Action Required");
 assert(policiesPage.includes("PolicyIntakePolicyRegisterLinksPortal"), "Policy Register must mount the Policy Intake quick-link portal");
 
 const summary = read("lib/policy-intake-review-summary.ts");
+assert(summary.includes("actionRequired: number | null"), "Policy Register summary must support hiding reviewer-only Action Required");
+assert(summary.includes('query = query.eq("submitted_by_profile_id", options.submittedByProfileId)'), "Owner Policy Intake summaries must be filtered by the submitting profile before counts are calculated");
+assert(summary.includes("options.includeActionRequired ?? true"), "Reviewer summaries must retain Action Required by default");
 assert(summary.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"), "Policy Register counts must use the same duplicate detector as the Policy Intake queue");
 assert(summary.includes('status: "Duplicate"'), "Duplicate intakes must be excluded from actionable Policy Register counts");
 assert(summary.includes('row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")'), "Action Required count must match the Policy Intake queue definition");
@@ -17,18 +23,21 @@ assert(summary.includes(".limit(500)"), "Policy Register summary must use the sa
 
 const quickLinks = read("components/policy-intake-policy-register-links.tsx");
 assert(quickLinks.includes('.ui-page-stage a[href="/policies/new"]'), "Policy Intake quick links must mount beside the Policy Register Add Policy action");
+assert(quickLinks.includes("summary.actionRequired !== null"), "RM summaries must not render the reviewer-only Action Required shortcut");
 assert(quickLinks.includes('href="/policy-intakes?view=action"'), "Action Required must deep-link to the Policy Intake Action Required view");
 assert(quickLinks.includes('href="/policy-intakes?view=in_review"'), "In Review must deep-link to the Policy Intake In Review view");
 assert(quickLinks.includes('text-[#C62828]'), "Policy Intake quick links must keep the approved red emphasis");
 
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
-assert(intakePage.includes('return value === "in_review" ? "in_review" : "action"'), "Reviewer deep links must resolve only to Action Required or In Review");
+assert(intakePage.includes('if (value === "in_review") return "in_review"'), "In Review deep links must be valid for reviewer and owner views");
+assert(intakePage.includes('return reviewer ? "action" : "all"'), "Non-reviewers must still reject reviewer-only Action Required as their default/deep-link fallback");
+assert(intakePage.includes('if (!reviewer) query = query.eq("submitted_by_profile_id", profile.id)'), "Non-reviewer Policy Intake lists must remain restricted to records submitted by the logged-in user");
 assert(intakePage.includes("initialView={initialView}"), "Policy Intake route must pass the deep-linked initial view into the workspace");
 
 const workspace = read("components/policy-intake-workspace.tsx");
 assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake view keys must remain explicit and typed");
-assert(workspace.includes('useState<ViewKey>(reviewer ? (initialView ?? "action") : "all")'), "Policy Intake reviewers must open the requested deep-linked view while non-reviewers remain on All");
+assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
 assert(workspace.includes('action: baseFiltered.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length'), "Policy Intake workspace Action Required semantics must remain unchanged");
 assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'), "Policy Intake workspace In Review semantics must remain unchanged");
 
