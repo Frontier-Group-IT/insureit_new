@@ -50,8 +50,8 @@ assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake vie
 assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
 assert(workspace.includes('action: baseFiltered.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length'), "Policy Intake workspace Action Required semantics must remain unchanged");
 assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'), "Policy Intake workspace In Review semantics must remain unchanged");
-assert(workspace.includes("xl:flex-none"), "Policy Intake desktop status controls must not flex-grow into unused space");
-assert(workspace.includes("xl:[&>div]:!w-fit"), "Policy Intake desktop status-tab border must end after the final status option");
+assert(workspace.includes("min-w-0 flex-1 [&>div]:w-full xl:[&>div]:!w-full"), "Policy Intake desktop status controls must expand into the remaining filter-row space");
+assert(workspace.includes("xl:[&>div>button]:!min-w-0 xl:[&>div>button]:!flex-1"), "Policy Intake desktop status options must distribute across the available status-tab width");
 assert(workspace.includes("items-center justify-between gap-1"), "Policy Intake reviewer controls must keep My Active Work pinned to the far right of the available filter row");
 
 console.log("policy intake policy register links regression: ok");
