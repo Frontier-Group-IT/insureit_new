@@ -1,0 +1,185 @@
+name: Temporary customer compatibility guard patch
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: diagnostic-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: diagnostic-placeholder
+      POSP_MISP_DATA_ENCRYPTION_KEY: diagnostic-placeholder-key-with-sufficient-length
+      NEXT_PUBLIC_SITE_URL: https://example.invalid
+      ICALL_GATEWAY_URL: https://example.invalid
+      ICALL_GATEWAY_SECRET: diagnostic-placeholder
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Guard legacy and onboarding customer actions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          actions_path = Path('apps/web-portal/app/actions.ts')
+          actions = actions_path.read_text()
+          actions = actions.replace(
+              'import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";\n',
+              'import { createServerSupabaseClient, getServerAccessToken, getAuthenticatedProfile } from "@/lib/auth-server";\nimport { canAccessCustomer, isProfileWithinAccessScope } from "@/lib/employee-access-scope";\n'
+          )
+          actions = actions.replace(
+              'import { canManageUsers, canUpdateClaimStage, canVerifyClaimDocuments, isAppRole } from "@/lib/roles";',
+              'import { canManageUsers, canUpdateClaimStage, canVerifyClaimDocuments, hasCapability, isAppRole } from "@/lib/roles";'
+          )
+          create_start = actions.index('export async function createCustomer(formData: FormData) {')
+          update_start = actions.index('export async function updateCustomer(id: string, formData: FormData) {', create_start)
+          vehicle_start = actions.index('export async function createVehicle(formData: FormData) {', update_start)
+          create_replacement = '''export async function createCustomer(formData: FormData) {
+            const accessToken = await getServerAccessToken();
+            const { profile } = await getAuthenticatedProfile(accessToken);
+            if (!profile?.id || !hasCapability(profile.role, "manage_customers")) {
+              throw new Error("You are not authorized to create customers.");
+            }
+
+            const assignedAgentId = textValue(formData, "assigned_agent_id");
+            if (assignedAgentId && !await isProfileWithinAccessScope(profile.id, profile.role, assignedAgentId)) {
+              throw new Error("The selected agent is outside your permitted hierarchy.");
+            }
+
+            const supabase = await createServerSupabaseClient();
+            const contactName = textValue(formData, "contact_name");
+            const phone = textValue(formData, "phone");
+
+            if (!contactName || !phone) {
+              throw new Error("Contact name and phone are required.");
+            }
+
+            const { error } = await supabase.from("customers").insert({
+              customer_code: `CUST-${Date.now()}`,
+              contact_name: contactName,
+              company_name: textValue(formData, "company_name"),
+              phone,
+              email: textValue(formData, "email"),
+              address: textValue(formData, "address"),
+              city: textValue(formData, "city"),
+              state: textValue(formData, "state"),
+              assigned_agent_id: assignedAgentId,
+              created_by: profile.id
+            });
+
+            if (error) throw new Error("Customer could not be created.");
+            redirect("/customers");
+          }
+
+          '''
+          update_replacement = '''export async function updateCustomer(id: string, formData: FormData) {
+            const accessToken = await getServerAccessToken();
+            const { profile } = await getAuthenticatedProfile(accessToken);
+            if (!profile?.id || !hasCapability(profile.role, "manage_customers")) {
+              throw new Error("You are not authorized to update customers.");
+            }
+            if (!await canAccessCustomer(profile.id, profile.role, id)) {
+              throw new Error("You are not authorized to update this customer.");
+            }
+
+            const assignedAgentId = textValue(formData, "assigned_agent_id");
+            if (assignedAgentId && !await isProfileWithinAccessScope(profile.id, profile.role, assignedAgentId)) {
+              throw new Error("The selected agent is outside your permitted hierarchy.");
+            }
+
+            const supabase = await createServerSupabaseClient();
+            const contactName = textValue(formData, "contact_name");
+            const phone = textValue(formData, "phone");
+
+            if (!contactName || !phone) {
+              throw new Error("Contact name and phone are required.");
+            }
+
+            const { error } = await supabase
+              .from("customers")
+              .update({
+                contact_name: contactName,
+                company_name: textValue(formData, "company_name"),
+                phone,
+                email: textValue(formData, "email"),
+                address: textValue(formData, "address"),
+                city: textValue(formData, "city"),
+                state: textValue(formData, "state"),
+                assigned_agent_id: assignedAgentId
+              })
+              .eq("id", id);
+
+            if (error) throw new Error("Customer could not be updated.");
+            redirect("/customers");
+          }
+
+          '''
+          actions_path.write_text(actions[:create_start] + create_replacement + update_replacement + actions[vehicle_start:])
+
+          permission_files = [
+              Path('apps/web-portal/app/customers/actions.ts'),
+              Path('apps/web-portal/app/customers/corporate-actions.ts'),
+              Path('apps/web-portal/app/customers/dealership-actions.ts'),
+              Path('apps/web-portal/app/customers/group-actions.ts'),
+          ]
+          for path in permission_files:
+              text = path.read_text()
+              text = text.replace(
+                  'import { canManageMasterData } from "@/lib/roles";',
+                  'import { hasCapability } from "@/lib/roles";'
+              )
+              text = text.replace(
+                  '!canManageMasterData(profile.role)',
+                  '!hasCapability(profile.role, "manage_customers")'
+              )
+              path.write_text(text)
+
+          corporate_path = Path('apps/web-portal/app/customers/corporate-actions.ts')
+          corporate = corporate_path.read_text()
+          corporate = corporate.replace(
+              'import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";\n',
+              'import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";\nimport { canAccessCustomer } from "@/lib/employee-access-scope";\n'
+          )
+          old_group = '''  const admin = createSupabaseAdminClient();
+          if (groupCustomerId) {
+            const { data: group } = await admin.from("customers").select("id").eq("id", groupCustomerId).eq("partner_type", "group").eq("onboarding_status", "active").maybeSingle<{ id: string }>();
+            if (!group) return fail("Select an active Group customer.", "group_customer_id");
+          }
+          '''
+          new_group = '''  const admin = createSupabaseAdminClient();
+          if (groupCustomerId) {
+            if (!await canAccessCustomer(profile.id, profile.role, groupCustomerId)) {
+              return fail("Select a Group customer within your permitted scope.", "group_customer_id");
+            }
+            const { data: group } = await admin.from("customers").select("id").eq("id", groupCustomerId).eq("partner_type", "group").eq("onboarding_status", "active").maybeSingle<{ id: string }>();
+            if (!group) return fail("Select an active Group customer.", "group_customer_id");
+          }
+          '''
+          if old_group not in corporate:
+              raise SystemExit('Corporate group validation block was not found')
+          corporate_path.write_text(corporate.replace(old_group, new_group))
+          PY
+          rm .github/workflows/temporary-customer-compatibility-patch.yml
+      - name: Commit guarded customer actions
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web-portal/app/actions.ts apps/web-portal/app/customers/actions.ts apps/web-portal/app/customers/corporate-actions.ts apps/web-portal/app/customers/dealership-actions.ts apps/web-portal/app/customers/group-actions.ts .github/workflows/temporary-customer-compatibility-patch.yml
+          git commit -m "Guard customer compatibility actions by record scope"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+      - run: npm ci
+      - name: Typecheck web portal
+        run: npm run typecheck:web
+      - name: Build web portal
+        run: npm run build:web
