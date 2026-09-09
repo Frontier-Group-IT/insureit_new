@@ -172,6 +172,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260908152200_delete_completed_policy_intake_pair.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-policy-intake-pair-delete.yml"
             echo "Policy Intake pair-delete migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-external-claim-canonical-operations.yml"
+            echo "External Claim canonical Operations migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"

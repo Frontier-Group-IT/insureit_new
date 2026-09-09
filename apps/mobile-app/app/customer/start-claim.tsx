@@ -31,6 +31,7 @@ type SelfManagedClaimRow = {
   id: string;
   current_status?: string | null;
   created_at?: string | null;
+  claim_service_mode?: 'broker_managed' | 'self_managed' | null;
 };
 
 type SelfManagedMilestoneRow = {
@@ -131,7 +132,7 @@ export default function StartClaimScreen() {
     setCheckingActiveClaim(true);
     try {
       if (selectedPolicy.source === 'external') {
-        const existingClaim = await findActiveSelfManagedClaim(selectedPolicy.id);
+        const existingClaim = await findActiveExternalPolicyClaim(selectedPolicy.id);
         if (existingClaim) {
           setExistingActiveClaimId(existingClaim.id);
           return;
@@ -311,12 +312,11 @@ export default function StartClaimScreen() {
   );
 }
 
-async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<SelfManagedClaimRow | null> {
+async function findActiveExternalPolicyClaim(externalPolicyId: string): Promise<SelfManagedClaimRow | null> {
   const claimResult = await (supabase as any)
     .from('claims')
-    .select('id,current_status,created_at')
+    .select('id,current_status,created_at,claim_service_mode')
     .eq('external_policy_id', externalPolicyId)
-    .eq('claim_service_mode', 'self_managed')
     .order('created_at', { ascending: false });
 
   if (claimResult.error) throw claimResult.error;
@@ -326,7 +326,11 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
   const unsettledClaims = claims.filter((claim) => !SETTLED_SELF_MANAGED_STATUSES.has(claim.current_status ?? ''));
   if (!unsettledClaims.length) return null;
 
-  const claimIds = unsettledClaims.map((claim) => claim.id);
+  const managedClaim = unsettledClaims.find((claim) => claim.claim_service_mode === 'broker_managed');
+  if (managedClaim) return managedClaim;
+
+  const selfManagedClaims = unsettledClaims.filter((claim) => claim.claim_service_mode !== 'broker_managed');
+  const claimIds = selfManagedClaims.map((claim) => claim.id);
   const milestoneResult = await (supabase as any)
     .from('claim_milestones')
     .select('claim_id,milestone_key,milestone_status')
@@ -334,7 +338,7 @@ async function findActiveSelfManagedClaim(externalPolicyId: string): Promise<Sel
   if (milestoneResult.error) throw milestoneResult.error;
 
   const milestones = (milestoneResult.data ?? []) as SelfManagedMilestoneRow[];
-  for (const claim of unsettledClaims) {
+  for (const claim of selfManagedClaims) {
     const completedKeys = new Set(
       milestones
         .filter((item) => item.claim_id === claim.id && COMPLETED_MILESTONE_STATUSES.has(item.milestone_status))
