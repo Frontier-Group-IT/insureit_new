@@ -296,7 +296,12 @@ assert.match(batchMigrationWorkflow, /20260908100000_policy_ocr_batch_notificati
 assert.match(batchMigrationWorkflow, /20260908130000_policy_ocr_refinement_jobs\.sql/);
 const refinementWorkflow = readFileSync("../../.github/workflows/policy-ocr-refinement-pr.yml", "utf8");
 assert.match(refinementWorkflow, /generated-policy-ocr-training/);
+const candidateNormalizer = readFileSync("scripts/normalize-policy-ocr-training-candidate.mjs", "utf8");
+assert.match(candidateNormalizer, /Insufficient evidence/);
+assert.match(candidateNormalizer, /tp_premium/);
+assert.match(candidateNormalizer, /policy_start_date/);
 assert.match(refinementWorkflow, /gh pr create/);
+assert.match(refinementWorkflow, /normalize-policy-ocr-training-candidate\.mjs/);
 
 const appNavigation = readFileSync("components/claim-manager/app-navigation.tsx", "utf8");
 assert.match(appNavigation, /href:"\/policies\/ocr-training",label:"OCR Training"/);
