@@ -969,6 +969,8 @@ Reviewer submission no longer exposes the separate comparison-confirmation or pe
 
 **IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED:** the sanitized Production Round 2 regression now covers the live sample's IFFCO MISD shape with Basic TP, explicit owner-driver CPA, and header-column vehicle evidence. The regression, complete OCR suite, typecheck, lint and whitespace checks pass. No raw OCR, PDF, policy number, customer data or vehicle identifiers were added. A fresh production rerun remains required after the next parser release.
 
+**IMPLEMENTED LOCALLY / NOT MERGED OR DEPLOYED:** IFFCO flattened and Layout Parser refiners now recognize only the explicit owner-driver CPA label aliases `Compulsory PA Premium for Owner Driver` and `Personal Accident Premium for Owner Driver` in addition to the existing `P.A. Owner Driver` wording. A sanitized fresh sibling proves Basic TP, explicit CPA, printed net/GST/gross and reconciliation without discarding financial fields. The targeted IFFCO regressions, complete OCR suite, typecheck, lint (existing warnings only) and `git diff --check` pass. No deployment or merge was performed.
+
 
 ## 2026-08-25 phased mobile merge and main-only Expo preview plan
 

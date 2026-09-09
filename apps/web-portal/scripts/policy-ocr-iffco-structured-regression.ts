@@ -121,7 +121,63 @@ for (const key of ["od_premium", "tp_premium", "cpa_premium"]) {
   }
 }
 console.log("PASS: incomplete structured evidence withholds unsafe financial fields");
-console.log("IFFCO structured regression: 5/5 cases passed.");
+
+const freshSiblingBase: ParsedPolicyResult = {
+  ...base,
+  fields: base.fields
+    .filter((field) => !["total_premium", "od_premium", "tp_premium", "cpa_premium"].includes(field.key))
+    .concat([
+      { key: "od_premium", label: "OD premium", value: "1", confidence: .99, page: 1, evidence: "unsafe flattened candidate" },
+      { key: "tp_premium", label: "Third party premium", value: "18420", confidence: .99, page: 1, evidence: "unsafe flattened candidate" },
+      { key: "cpa_premium", label: "CPA amount", value: "0", confidence: .99, page: 1, evidence: "unsafe flattened candidate" },
+    ]),
+};
+const freshSibling = refineIffcoStructuredFinancials([
+  {
+    page: 1,
+    rows: [
+      ["Basic TP Premium", "", "8,420.00"],
+      ["Compulsory PA Premium for Owner Driver", "", "275.00"],
+      ["Legal Liability to Driver", "IMT 28", "100.00"],
+    ],
+  },
+  {
+    page: 1,
+    rows: [
+      ["Insurance Cover", "SAC", "Taxable Value (Rs.)", "GST Amount (Rs.)", "Gross Premium Payable (Rs.)"],
+      ["GST Details", "997134", "18,795.00", "3,383.10", "22,178.10"],
+    ],
+  },
+], freshSiblingBase);
+assertField(freshSibling, "total_premium", "18795");
+assertField(freshSibling, "od_premium", "10000");
+assertField(freshSibling, "tp_premium", "8520");
+assertField(freshSibling, "cpa_premium", "275");
+assertField(freshSibling, "cpa_opted", "Yes");
+console.log("PASS: fresh IFFCO sibling with explicit Compulsory PA CPA row reconciles structured financials");
+
+const personalAccidentAlias = refineIffcoStructuredFinancials([
+  {
+    page: 1,
+    rows: [
+      ["Basic TP Premium", "", "8,420.00"],
+      ["Personal Accident Premium for Owner Driver", "", "275.00"],
+      ["Legal Liability to Driver", "IMT 28", "100.00"],
+    ],
+  },
+  {
+    page: 1,
+    rows: [
+      ["Taxable Value (Rs.)", "GST Amount (Rs.)", "Gross Premium Payable (Rs.)"],
+      ["18,795.00", "3,383.10", "22,178.10"],
+    ],
+  },
+], freshSiblingBase);
+assertField(personalAccidentAlias, "cpa_premium", "275");
+assertField(personalAccidentAlias, "cpa_opted", "Yes");
+console.log("PASS: Personal Accident owner-driver CPA label remains narrowly recognized");
+
+console.log("IFFCO structured regression: 7/7 cases passed.");
 
 function assertField(result: ParsedPolicyResult, key: string, expected: string) {
   const value = result.fields.find((field) => field.key === key)?.value;
