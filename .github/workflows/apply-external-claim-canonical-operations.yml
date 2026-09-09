@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'
+      - 'supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'
       - '.github/workflows/apply-external-claim-canonical-operations.yml'
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
-          test -f supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql
+          test -f supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -42,11 +42,11 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply External Claim Operations migration
-        run: supabase db query --linked --file supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql
+      - name: Apply External Claim takeover enum-cast fix
+        run: supabase db query --linked --file supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
 
       - name: Record migration as applied
-        run: supabase migration repair --linked --status applied 20260909121000
+        run: supabase migration repair --linked --status applied 20260909133000
 
       - name: Verify External Claim Operations contract
         shell: bash
@@ -60,9 +60,20 @@ jobs:
                 select 1 from pg_trigger
                 where tgname = 'prevent_duplicate_active_external_claim_insert'
                   and not tgisinternal
-              ) as trigger_ready
+              ) as trigger_ready,
+              position(
+                'cm.milestone_key::text'
+                in pg_get_functiondef('public.begin_external_claim_operations_workflow(uuid,uuid)'::regprocedure)
+              ) > 0 as milestone_enum_cast_ready,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20260909133000'
+              ) as migration_recorded
           ")
           echo "$result"
           echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"duplicate_guard_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"milestone_enum_cast_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"migration_recorded"[[:space:]]*:[[:space:]]*true'
