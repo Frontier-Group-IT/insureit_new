@@ -31,12 +31,12 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
 
   return createPortal(
     <div className="flex shrink-0 items-center gap-2">
-      <PolicyIntakeQuickLink
+      {summary.actionRequired !== null ? <PolicyIntakeQuickLink
         href="/policy-intakes?view=action"
         label="Action Required"
         count={summary.actionRequired}
         icon={<AlertTriangle className="h-3.5 w-3.5" />}
-      />
+      /> : null}
       <PolicyIntakeQuickLink
         href="/policy-intakes?view=in_review"
         label="In Review"
