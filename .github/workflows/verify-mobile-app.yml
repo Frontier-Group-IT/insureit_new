@@ -104,6 +104,9 @@ jobs:
       - name: Managed claim card parity regression
         run: node apps/mobile-app/scripts/managed-claim-card-parity-regression.mjs
 
+      - name: Customer External Claim list identity regression
+        run: node apps/mobile-app/scripts/customer-external-claim-list-regression.mjs
+
       - name: Build Expo web review export
         run: npm run build:mobile:web
 
@@ -131,6 +134,7 @@ jobs:
             echo "- Claim video source regression: internal and external Accident Video flows offer Camera and Gallery / File while reusing the installed expo-image-picker native capability"
             echo "- Verified voice-note regression: verified audio uses the green locked card, hides destructive actions and plays from the Voice note ready row"
             echo "- Managed claim card parity: Sankalp managed and external cards share compact layout and animated status treatment"
+            echo "- External Claim list identity regression: external policy identity survives Operations takeover, uses milestone progress, and cannot inherit Internal Action Required status"
             echo "- Review build: Expo web export"
             echo "- Artifact: \`mobile-web-review-${GITHUB_SHA}\` (retained for 14 days after a green run)"
             echo "- Production deployment: not triggered by this workflow"
