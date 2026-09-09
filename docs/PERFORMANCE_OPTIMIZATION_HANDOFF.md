@@ -38,6 +38,14 @@ No index, RLS, permission, region, accounting, storage, OCR, or workflow-state c
 
 No index, RLS, permission, region, accounting-rule, storage, OCR, or workflow-state change is included in this pass. Apply only after the feature PR is green and approved for merge.
 
+## 2026-08-31 renewal report deferred enrichment pass
+
+**IMPLEMENTED, NOT APPLIED:** branch `perf/renewal-report-deferred-enrichment` rewrites `public.get_renewal_report_v3(...)` so customer, vehicle, and risk-reference display enrichment runs only after renewal filtering and pagination. Insurer naming remains in the base because insurer summaries and filter options depend on it. The function signature, security mode, horizon/bucket rules, filters, summary definitions, ordering, pagination bounds, and JSON contract are preserved.
+
+**VERIFIED read-only production evidence before migration:** the live default 25-row renewal report measured **27.772 ms / 2,381 shared-hit blocks**. The equivalent candidate query measured **13.934 ms / 212 shared-hit blocks**. The full JSON response compared **exactly equal = true** for the tested default page.
+
+No index, RLS, permission, region, accounting-rule, storage, OCR, or workflow-state change is included in this pass. Apply only after the feature PR is green and approved for merge.
+
 ## 1. Why this file exists
 
 The portal was repeatedly slowed by architectural patterns that looked harmless in isolation:
