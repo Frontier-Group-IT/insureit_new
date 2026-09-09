@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_DASHBOARD_COMMIT: b4e91244a8bb26d2a0cb4a938230865606b1eadb
+      EXPECTED_DASHBOARD_COMMIT: 675225f066c52a96526fbccf9a5209ba3f6b7827
 
     steps:
       - name: Checkout exact branch snapshot
@@ -114,7 +114,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 branded home header and cohort commission ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 white logo contrast ${EXPECTED_DASHBOARD_COMMIT}" \
             --non-interactive \
             --json > partner-dashboard-preview-update.json
           cat partner-dashboard-preview-update.json
@@ -132,14 +132,14 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 branded dashboard preview OTA'
+            echo '## Partner 0.1.0 white-logo preview OTA'
             echo
             echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
-            echo "- Verified dashboard/search source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
+            echo "- Verified white-logo source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
             echo '- Runtime required: `0.1.0`'
             echo '- Channel: `preview`'
             echo '- App delta: Home dashboard + Search query handoff + official Partner logo asset only'
-            echo '- Header: compact official logo lockup + one-line greeting + faded logo watermark'
+            echo '- Header: white high-contrast official logo + one-line greeting + faded logo watermark'
             echo '- Commission invariant: payout total for the exact Policies Sold cohort'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
