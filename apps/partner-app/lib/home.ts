@@ -52,7 +52,6 @@ export async function getPartnerHome() {
   return data as PartnerHomeData;
 }
 
-
 export type PartnerBusinessRangeSummary = {
   generated_at: string;
   from_date: string;
@@ -61,6 +60,8 @@ export type PartnerBusinessRangeSummary = {
   premium_previous_period: number | string;
   premium_change_percent: number | string;
   policies: number;
+  commission_available?: boolean;
+  commission_earned?: number | string | null;
   customers: number;
   renewals: number;
   claims: number;
