@@ -45,5 +45,7 @@ assert(workspace.includes("export type PolicyIntakeViewKey"), "Policy Intake vie
 assert(workspace.includes('useState<ViewKey>(initialView ?? (reviewer ? "action" : "all"))'), "Policy Intake workspace must honor the validated owner In Review deep link without granting reviewer defaults");
 assert(workspace.includes('action: baseFiltered.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length'), "Policy Intake workspace Action Required semantics must remain unchanged");
 assert(workspace.includes('inReview: baseFiltered.filter((row) => row.status === "in_review").length'), "Policy Intake workspace In Review semantics must remain unchanged");
+assert(workspace.includes("xl:flex-none"), "Policy Intake desktop status controls must not flex-grow into unused space");
+assert(workspace.includes("xl:[&>div]:!w-fit"), "Policy Intake desktop status-tab border must end after the final status option");
 
 console.log("policy intake policy register links regression: ok");

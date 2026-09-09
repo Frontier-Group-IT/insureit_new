@@ -195,7 +195,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
         <PolicyIntakeDateRangeFilter fromDate={fromDate} toDate={toDate} onFromDateChange={(value) => { setFromDate(value); setPage(1); }} onToDateChange={(value) => { setToDate(value); setPage(1); }} onClear={() => { setFromDate(""); setToDate(""); setPage(1); }} />
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-1">
-            <div className="min-w-0 flex-1 [&>div]:w-full xl:[&>div]:!gap-0.5 xl:[&>div]:!overflow-visible xl:[&>div]:!p-0.5 xl:[&>div>button]:!h-7 xl:[&>div>button]:!px-1.5 xl:[&>div>button]:!text-[9px]">
+            <div className="min-w-0 flex-1 xl:flex-none [&>div]:w-full xl:[&>div]:!w-fit xl:[&>div]:!gap-0.5 xl:[&>div]:!overflow-visible xl:[&>div]:!p-0.5 xl:[&>div>button]:!h-7 xl:[&>div>button]:!px-1.5 xl:[&>div>button]:!text-[9px]">
               <RegisterViewTabs value={view === "mine" ? "" : view} onChange={changeView} options={reviewer ? [
                 { value: "action", label: "Action Required", count: stats.action },
                 { value: "in_review", label: "In Review", count: stats.inReview },
