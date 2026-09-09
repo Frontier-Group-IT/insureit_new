@@ -49,6 +49,37 @@ function values(result: ParsedPolicyResult) { return Object.fromEntries(result.f
 }
 
 {
+  const pages = ["IFFCO-TOKIO General Insurance Company Limited\nCOMMERCIAL VEHICLE PACKAGE POLICY\nJCB BACKHOE LOADER\nPolicy schedule"];
+  const tables: StructuredPolicyTable[] = [{ page: 1, rows: [
+    ["Make of Vehicle", "Model of Vehicle", "Fuel Type", "Year of Manufacture", "Engine No"],
+    ["JCB", "3DX", "PETROL", "2026", "SYNENGINE001"],
+    ["Basic TP Premium", "7267"],
+    ["P.A. Owner-Driver", "380"],
+  ] }];
+  const result = refineProductionRound2Policy(
+    pages,
+    tables,
+    parsed("iffco_tokio_commercial_motor_v2", "iffco_tokio_commercial_motor_v2.3.0", [
+      field("total_premium", "12401"),
+      field("od_premium", "4754"),
+      field("tp_premium", "7317"),
+      field("cpa_opted", "No"),
+      field("cpa_premium", "0"),
+    ]),
+  );
+  const v = values(result);
+  assert.equal(v.tp_premium, "7267");
+  assert.equal(v.cpa_opted, "Yes");
+  assert.equal(v.cpa_premium, "380");
+  assert.equal(v.od_premium, "4754");
+  assert.equal(v.vehicle_make, "JCB");
+  assert.equal(v.vehicle_model, "3DX");
+  assert.equal(v.vehicle_fuel_type, "Petrol");
+  assert.equal(v.vehicle_manufacturing_year, "2026");
+  assert.equal(v.vehicle_engine_number, "SYNENGINE001");
+}
+
+{
   const pages = ["NATIONAL INSURANCE COMPANY LIMITED\nMOTOR CYCLE PACKAGE POLICY\nNEW VEHICLE\nGST 18%\nOwner Driver PA cover not opted"];
   const tables: StructuredPolicyTable[] = [{ page: 1, rows: [
     ["Make","Model","Fuel Type","Year of Manufacture","Chassis No","Engine No"],
