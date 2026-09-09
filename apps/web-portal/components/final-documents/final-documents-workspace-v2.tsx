@@ -283,7 +283,7 @@ function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: 
           </div>
           <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
             {!verified ? (
-              <button type="button" disabled={isPending} onClick={verify} aria-label={`Verify ${row.name}`} title="Verify document" className="h-8 shrink-0 rounded-md border border-[#16A36A] bg-white px-2 text-[11px] font-semibold text-[#16895C] transition hover:bg-[#F2FBF7] disabled:cursor-not-allowed disabled:border-[#D9E3F0] disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "..." : "Verify"}</button>
+              <button type="button" disabled={isPending} onClick={verify} aria-label={`Verify ${row.name}`} title="Verify document" className="h-8 shrink-0 rounded-none border border-transparent bg-transparent px-2 text-[11px] font-semibold text-[#16895C] transition-colors hover:rounded-md hover:border-green-200 hover:bg-[#F2FBF7] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-transparent disabled:text-[#9AA7BA]">{isPending && pendingAction === `verify-${row.type}` ? "..." : "Verify"}</button>
             ) : row.viewUrl ? (
               <a href={row.viewUrl} target="_blank" rel="noreferrer" aria-label="View document" title="View document" className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#174EA6] transition hover:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/30">
                 <Eye aria-hidden="true" size={17} strokeWidth={2} />
