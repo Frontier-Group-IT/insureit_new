@@ -301,10 +301,10 @@ function DocumentCard({ claimId, row, isPending, pendingAction, run, refresh }: 
       ) : (
         <div className="flex min-h-11 items-center gap-2">
           <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${visual.accent}`}><div className="text-[22px] leading-none">{visual.fallbackIcon}</div></div>
-          <p className="min-w-0 flex-1 text-[11px] font-semibold text-[#071D49]">Document not uploaded</p>
-          <div className="shrink-0">
-            <label className="grid h-8 cursor-pointer place-items-center rounded-md border border-[#EF4444] bg-white px-3 text-[11px] font-semibold text-[#EF4444]"><input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />{isPending && pendingAction === `upload-${row.type}` ? "Uploading..." : "Upload"}</label>
-          </div>
+          <label title={`Upload ${row.name}`} className="min-w-0 flex-1 cursor-pointer rounded-none px-2 py-1.5 text-[11px] font-semibold text-[#071D49] transition-colors hover:rounded-md hover:bg-[#F4F8FF] hover:text-[#174EA6] focus-within:rounded-md focus-within:bg-[#F4F8FF] focus-within:ring-2 focus-within:ring-[#174EA6]/25">
+            <input type="file" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (file) upload(file); event.target.value = ""; }} />
+            {isPending && pendingAction === `upload-${row.type}` ? "Uploading..." : "Document not uploaded"}
+          </label>
         </div>
       )}
     </article>
