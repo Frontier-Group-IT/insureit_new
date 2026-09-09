@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound2Policy } from "../lib/policy-ocr-production-round2-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineApprovedMotorPolicyLayout } from "../lib/policy-ocr-approved-layout-refiner.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 import type { StructuredPolicyTable } from "../lib/policy-ocr-iffco-structured-refiner.ts";
 
@@ -77,6 +79,43 @@ function values(result: ParsedPolicyResult) { return Object.fromEntries(result.f
   assert.equal(v.vehicle_fuel_type, "Petrol");
   assert.equal(v.vehicle_manufacturing_year, "2026");
   assert.equal(v.vehicle_engine_number, "SYNENGINE001");
+}
+
+{
+  const pages = ["IFFCO-TOKIO General Insurance Company Limited\nCOMMERCIAL VEHICLE PACKAGE POLICY\nJCB BACKHOE LOADER\nBasic TP Premium 8420.00\nCompulsory PA Premium for Owner Driver 275.00"];
+  const tables: StructuredPolicyTable[] = [{ page: 1, rows: [
+    ["Make of Vehicle", "Model of Vehicle", "Fuel Type", "Year of Manufacture", "Chassis Number", "Engine Number"],
+    ["JCB", "3DX PLUS", "DIESEL", "2026", "SYNCHASSISIFFCO002", "SYNENGINEIFFCO002"],
+    ["Basic TP Premium", "8420.00"],
+    ["Compulsory PA Premium for Owner Driver", "275.00"],
+    ["Taxable Value (Rs.)", "18795.00"],
+    ["GST Amount (Rs.)", "3383.10"],
+    ["Gross Premium Payable (Rs.)", "22178.10"],
+  ] }];
+  const result = refineApprovedMotorPolicyLayout(
+    pages,
+    tables,
+    parsed("iffco_tokio_commercial_motor_v1", "iffco_tokio_commercial_motor_v1.2.0", [
+      field("total_premium", "18795"),
+      field("tax_amount", "3383.10"),
+      field("gross_premium", "22178.10"),
+    ]),
+  );
+  const v = values(result);
+  assert.equal(v.vehicle_class, "MISD");
+  assert.equal(v.vehicle_make, "JCB");
+  assert.equal(v.vehicle_model, "3DX PLUS");
+  assert.equal(v.vehicle_fuel_type, "Diesel");
+  assert.equal(v.vehicle_manufacturing_year, "2026");
+  assert.equal(v.vehicle_chassis_number, "SYNCHASSISIFFCO002");
+  assert.equal(v.vehicle_engine_number, "SYNENGINEIFFCO002");
+  assert.equal(v.tp_premium, "8420");
+  assert.equal(v.cpa_premium, "275");
+  assert.equal(v.cpa_opted, "Yes");
+  assert.equal(v.od_premium, "10100");
+  assert.equal(v.total_premium, "18795");
+  assert.equal(v.tax_amount, "3383.1");
+  assert.equal(v.gross_premium, "22178.1");
 }
 
 {

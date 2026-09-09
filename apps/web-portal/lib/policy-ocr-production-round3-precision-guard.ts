@@ -36,15 +36,29 @@ export function refineProductionRound3Precision(
   } else if (version.includes("+prod-r2-iffco")) {
     family = "iffco";
     // IFFCO Round 2 still derives OD/TP/CPA from ambiguous premium rows and
-    // has unstable make/capacity column association. Preserve the fields that
-    // generalized, but withhold these known low-precision outputs.
+    // has unstable make/capacity column association. Preserve only fields that
+    // carry the explicit structured evidence now covered by the MISD layout
+    // regressions; ambiguous Round 2 fallbacks remain withheld.
     for (const key of [
       "od_premium",
       "tp_premium",
       "cpa_premium",
       "vehicle_make",
       "vehicle_capacity",
-    ]) fields.delete(key);
+    ]) {
+      const field = fields.get(key);
+      if (!field || !isTrustedIffcoStructuredEvidence(field.evidence, key)) fields.delete(key);
+    }
+  }
+
+  function isTrustedIffcoStructuredEvidence(evidence: string, key: string) {
+    if (key === "vehicle_make" || key === "vehicle_capacity") {
+      return /Round 2 header-column association/i.test(evidence);
+    }
+    if (key === "cpa_premium") {
+      return /Explicit owner-driver CPA row/i.test(evidence);
+    }
+    return /Round 2 exact premium row|Printed net - Basic TP - explicit owner-driver CPA/i.test(evidence);
   }
 
   if (!family) return parsed;
