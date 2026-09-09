@@ -114,13 +114,19 @@ export default function PartnerHomeDashboard() {
         }
       >
         <View style={styles.hero}>
-          <Image source={PartnerAssets.banners.businessGrowth01} style={styles.heroArtwork} resizeMode="cover" />
-          <View style={styles.heroShade} />
+          <Image source={require('../../assets/insureit-partner-official.png')} style={styles.heroWatermark} resizeMode="contain" />
 
           <View style={styles.heroTopRow}>
-            <View>
-              <Text style={styles.heroBrand}>insureit</Text>
-              <Text style={styles.heroPartner}>PARTNER</Text>
+            <View style={styles.heroBrandLockup}>
+              <Image
+                source={require('../../assets/insureit-partner-official.png')}
+                style={styles.heroLogo}
+                resizeMode="contain"
+              />
+              <View style={styles.heroBrandText}>
+                <Text style={styles.heroBrand}>insureit</Text>
+                <Text style={styles.heroPartner}>PARTNER</Text>
+              </View>
             </View>
             <View style={styles.heroActions}>
               <Pressable
@@ -143,8 +149,7 @@ export default function PartnerHomeDashboard() {
           </View>
 
           <View style={styles.heroGreeting}>
-            <Text style={styles.heroGreetingSmall}>{dayGreeting()},</Text>
-            <Text style={styles.heroGreetingName}>{displayName}</Text>
+            <Text numberOfLines={1} style={styles.heroGreetingText}>{dayGreeting()} {displayName}</Text>
           </View>
         </View>
 
@@ -541,19 +546,20 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 142, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 10 },
-  heroArtwork: { position: 'absolute', right: -24, bottom: -28, width: 248, height: 156, opacity: 0.34 },
-  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(5, 49, 105, 0.42)' },
+  hero: { height: 128, overflow: 'hidden', backgroundColor: '#073A78', paddingHorizontal: 20, paddingTop: 8 },
+  heroWatermark: { position: 'absolute', right: -46, top: -34, width: 286, height: 188, opacity: 0.11 },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBrand: { color: '#FFFFFF', fontSize: 23, lineHeight: 26, fontWeight: '800', letterSpacing: -0.5 },
-  heroPartner: { marginTop: 1, color: '#D8E8FF', fontSize: 9, lineHeight: 11, fontWeight: '700', letterSpacing: 3.0 },
+  heroBrandLockup: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 38 },
+  heroLogo: { width: 31, height: 31 },
+  heroBrandText: { justifyContent: 'center' },
+  heroBrand: { color: '#FFFFFF', fontSize: 21, lineHeight: 23, fontWeight: '800', letterSpacing: -0.45 },
+  heroPartner: { marginTop: 0, color: '#D8E8FF', fontSize: 8.5, lineHeight: 10, fontWeight: '700', letterSpacing: 2.6 },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroIconButton: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
   heroAvatar: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
   heroAvatarText: { color: '#144E98', fontSize: 12, lineHeight: 16, fontWeight: '800' },
-  heroGreeting: { marginTop: 11, maxWidth: '64%' },
-  heroGreetingSmall: { color: '#EDF4FF', fontSize: 12.5, lineHeight: 16, fontWeight: '500' },
-  heroGreetingName: { marginTop: 0, color: '#FFFFFF', fontSize: 22, lineHeight: 27, fontWeight: '800' },
+  heroGreeting: { marginTop: 12, maxWidth: '72%' },
+  heroGreetingText: { color: '#FFFFFF', fontSize: 18.5, lineHeight: 24, fontWeight: '700', letterSpacing: -0.15 },
 
   body: { marginTop: -15, paddingHorizontal: 16 },
   searchShell: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },

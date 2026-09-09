@@ -28,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require exact 0.1.0 dashboard-and-search-only app delta
+      - name: Require exact 0.1.0 dashboard-search-and-logo app delta
         shell: bash
         run: |
           set -euo pipefail
@@ -43,9 +43,9 @@ jobs:
           }
           changed_app_files=$(git diff --name-only "$ACCEPTED_BASELINE" HEAD -- apps/partner-app)
           printf '%s\n' "$changed_app_files"
-          expected_files=$(printf '%s\n' 'apps/partner-app/app/(tabs)/index.tsx' 'apps/partner-app/app/search.tsx')
+          expected_files=$(printf '%s\n' 'apps/partner-app/app/(tabs)/index.tsx' 'apps/partner-app/app/search.tsx' 'apps/partner-app/assets/insureit-partner-official.png')
           [ "$changed_app_files" = "$expected_files" ] || {
-            echo "::error::Refusing OTA: Partner app delta is not limited to Home dashboard and Search handoff." >&2
+            echo "::error::Refusing OTA: Partner app delta is not limited to Home dashboard, Search handoff and official Partner logo." >&2
             exit 1
           }
 
@@ -114,7 +114,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 Policies Sold and cohort Commission Earned ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 branded home header and cohort commission ${EXPECTED_DASHBOARD_COMMIT}" \
             --non-interactive \
             --json > partner-dashboard-preview-update.json
           cat partner-dashboard-preview-update.json
@@ -132,13 +132,14 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 dashboard preview OTA'
+            echo '## Partner 0.1.0 branded dashboard preview OTA'
             echo
             echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
             echo "- Verified dashboard/search source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
             echo '- Runtime required: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- App delta: Home dashboard + Search query handoff only'
+            echo '- App delta: Home dashboard + Search query handoff + official Partner logo asset only'
+            echo '- Header: compact official logo lockup + one-line greeting + faded logo watermark'
             echo '- Commission invariant: payout total for the exact Policies Sold cohort'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
