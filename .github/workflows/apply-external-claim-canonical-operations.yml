@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'
+      - 'supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'
       - '.github/workflows/apply-external-claim-canonical-operations.yml'
 
 permissions:
@@ -33,6 +34,7 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
+          test -f supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -42,38 +44,48 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply External Claim takeover enum-cast fix
-        run: supabase db query --linked --file supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
+      - name: Apply External Claim customer-processing protection
+        run: supabase db query --linked --file supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
 
       - name: Record migration as applied
-        run: supabase migration repair --linked --status applied 20260909133000
+        run: supabase migration repair --linked --status applied 20260909150000
 
-      - name: Verify External Claim Operations contract
+      - name: Verify External Claim Operations and Customer contracts
         shell: bash
         run: |
           set -euo pipefail
           result=$(supabase db query --linked --output-format json "
             select
               to_regprocedure('public.begin_external_claim_operations_workflow(uuid,uuid)') is not null as takeover_ready,
-              to_regprocedure('public.prevent_duplicate_active_external_claim_insert()') is not null as duplicate_guard_ready,
-              exists (
-                select 1 from pg_trigger
-                where tgname = 'prevent_duplicate_active_external_claim_insert'
-                  and not tgisinternal
-              ) as trigger_ready,
               position(
                 'cm.milestone_key::text'
                 in pg_get_functiondef('public.begin_external_claim_operations_workflow(uuid,uuid)'::regprocedure)
               ) > 0 as milestone_enum_cast_ready,
               exists (
+                select 1 from pg_policies
+                where schemaname = 'public'
+                  and tablename = 'claim_milestones'
+                  and policyname = 'customer can create self managed milestones'
+                  and with_check like '%policy_service_source%external%'
+                  and with_check like '%external_policy_id%'
+              ) as customer_external_insert_ready,
+              exists (
+                select 1 from pg_policies
+                where schemaname = 'public'
+                  and tablename = 'claim_milestones'
+                  and policyname = 'customer can update self managed milestones'
+                  and qual like '%policy_service_source%external%'
+                  and with_check like '%policy_service_source%external%'
+              ) as customer_external_update_ready,
+              exists (
                 select 1
                 from supabase_migrations.schema_migrations
-                where version = '20260909133000'
+                where version = '20260909150000'
               ) as migration_recorded
           ")
           echo "$result"
           echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
-          echo "$result" | grep -Eq '"duplicate_guard_ready"[[:space:]]*:[[:space:]]*true'
-          echo "$result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_enum_cast_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_external_insert_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_external_update_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"migration_recorded"[[:space:]]*:[[:space:]]*true'
