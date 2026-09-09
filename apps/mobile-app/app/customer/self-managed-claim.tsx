@@ -124,7 +124,7 @@ export default function SelfManagedClaimScreen() {
         if (!active) return;
         const claim = claimResult.data as any;
         setClaimNo(claim?.claim_no ?? '');
-        if (!claim || claim.claim_service_mode !== 'self_managed' || !claim.external_policy_id) {
+        if (!claim || !claim.external_policy_id) {
           setMessage('This external claim is not available for self-tracked editing.');
           setLoading(false);
           return;
