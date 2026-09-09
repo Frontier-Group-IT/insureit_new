@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 
-import { beginTrackedLoading, endTrackedLoading } from '@/lib/loading-tracker';
+import { beginTrackedLoading, endTrackedLoading, updateTrackedLoading } from '@/lib/loading-tracker';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
@@ -44,8 +44,17 @@ function platformFetch(input: RequestInfo | URL, init?: RequestInit) {
   const method = requestMethod(input, init);
   const tracked = shouldTrackRequest(url, method);
   const token = tracked ? beginTrackedLoading(requestLabel(url, method)) : null;
-  const request = Platform.OS === 'web' && typeof XMLHttpRequest !== 'undefined'
-    ? xhrFetch(input, init)
+  const claimDocumentUpload = isClaimDocumentUpload(url, method);
+  const canUseXhr = typeof XMLHttpRequest !== 'undefined' && (Platform.OS === 'web' || claimDocumentUpload);
+  if (token && claimDocumentUpload) updateTrackedLoading(token, 0);
+
+  const request = canUseXhr
+    ? xhrFetch(
+      input,
+      init,
+      token && claimDocumentUpload ? (progress) => updateTrackedLoading(token, progress) : undefined,
+      Platform.OS === 'web' ? 15000 : 0,
+    )
     : fetch(input, init);
 
   return request.finally(() => {
@@ -75,6 +84,10 @@ function shouldTrackRequest(url: string, method: string) {
   return url.includes('/storage/v1/object');
 }
 
+function isClaimDocumentUpload(url: string, method: string) {
+  return method === 'POST' && url.includes('/storage/v1/object/claim-documents/');
+}
+
 function requestLabel(url: string, method: string) {
   if (!url.includes('/storage/v1/object')) return 'Processing request';
   if (method === 'DELETE') return 'Deleting document';
@@ -83,7 +96,12 @@ function requestLabel(url: string, method: string) {
   return 'Processing document';
 }
 
-function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+function xhrFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  onUploadProgress?: (progress: number) => void,
+  timeoutMs = 15000,
+): Promise<Response> {
   return new Promise((resolve, reject) => {
     const request = input instanceof Request ? input : null;
     const url = request?.url ?? input.toString();
@@ -96,9 +114,17 @@ function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respons
     }
     headers.forEach((value, key) => xhr.setRequestHeader(key, value));
 
+    if (onUploadProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || event.total <= 0) return;
+        onUploadProgress(Math.min(1, event.loaded / event.total));
+      };
+    }
+
     xhr.onload = () => {
       const responseHeaders = parseResponseHeaders(xhr.getAllResponseHeaders());
       const body = [101, 204, 205, 304].includes(xhr.status) ? null : xhr.responseText;
+      if (onUploadProgress && xhr.status >= 200 && xhr.status < 300) onUploadProgress(1);
       resolve(new Response(body, {
         status: xhr.status,
         statusText: xhr.statusText,
@@ -107,7 +133,7 @@ function xhrFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Respons
     };
     xhr.onerror = () => reject(new TypeError('Network request failed'));
     xhr.ontimeout = () => reject(new TypeError('Network request timed out'));
-    xhr.timeout = 15000;
+    xhr.timeout = timeoutMs;
     xhr.send((init?.body ?? null) as XMLHttpRequestBodyInit | null);
   });
 }

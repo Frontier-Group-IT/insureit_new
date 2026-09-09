@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { ClaimVideoSourceModalHost } from '@/lib/claim-video-document-picker';
 import {
   beginTrackedLoading,
   endTrackedLoading,
@@ -25,12 +26,15 @@ const minimumVisibleMs = 420;
 const quietPeriodMs = 220;
 
 export function AppLoadingProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useState<TrackedLoadingEntry[]>(getTrackedLoadingEntries());
-  const [overlayVisible, setOverlayVisible] = useState(entries.length > 0);
-  const [overlayLabel, setOverlayLabel] = useState(entries[entries.length - 1]?.label || 'Loading');
+  const initialEntries = getTrackedLoadingEntries();
+  const initialLabel = initialEntries[initialEntries.length - 1]?.label || 'Loading';
+  const [entries, setEntries] = useState<TrackedLoadingEntry[]>(initialEntries);
+  const [overlayVisible, setOverlayVisible] = useState(initialEntries.length > 0);
+  const [overlayLabel, setOverlayLabel] = useState(initialLabel);
+  const [overlayProgress, setOverlayProgress] = useState<number | null>(() => uploadProgress(initialEntries, initialLabel));
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const overlayShownAt = useRef(entries.length > 0 ? Date.now() : 0);
-  const overlayVisibleRef = useRef(entries.length > 0);
+  const overlayShownAt = useRef(initialEntries.length > 0 ? Date.now() : 0);
+  const overlayVisibleRef = useRef(initialEntries.length > 0);
 
   const begin = useCallback((label = 'Loading') => beginTrackedLoading(label), []);
   const end = useCallback((id: string) => endTrackedLoading(id), []);
@@ -41,7 +45,9 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
     if (entries.length > 0) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       hideTimer.current = null;
-      setOverlayLabel(entries[entries.length - 1]?.label || 'Loading');
+      const nextLabel = entries[entries.length - 1]?.label || 'Loading';
+      setOverlayLabel(nextLabel);
+      setOverlayProgress(uploadProgress(entries, nextLabel));
       if (!overlayVisibleRef.current) {
         overlayVisibleRef.current = true;
         overlayShownAt.current = Date.now();
@@ -56,6 +62,7 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
     hideTimer.current = setTimeout(() => {
       overlayVisibleRef.current = false;
       setOverlayVisible(false);
+      setOverlayProgress(null);
       hideTimer.current = null;
     }, delay);
   }, [entries]);
@@ -74,7 +81,8 @@ export function AppLoadingProvider({ children }: { children: ReactNode }) {
 
   return <LoadingContext.Provider value={value}>
     {children}
-    {overlayVisible ? <AppLoadingOverlay label={overlayLabel} /> : null}
+    {overlayVisible ? <AppLoadingOverlay label={overlayLabel} progress={overlayProgress} /> : null}
+    <ClaimVideoSourceModalHost />
   </LoadingContext.Provider>;
 }
 
@@ -102,13 +110,35 @@ function loadingSubtitle(label: string) {
   return 'Please wait while InsureIT finishes loading.';
 }
 
-function AppLoadingOverlay({ label }: { label: string }) {
-  return <View accessibilityRole="progressbar" accessibilityLabel={label} style={styles.overlay}>
+function uploadProgress(entries: TrackedLoadingEntry[], activeLabel: string) {
+  if (activeLabel !== 'Uploading document') return null;
+  const uploadEntries = entries.filter((entry) => entry.label === 'Uploading document' && typeof entry.progress === 'number');
+  if (!uploadEntries.length) return null;
+  return uploadEntries.reduce((total, entry) => total + (entry.progress ?? 0), 0) / uploadEntries.length;
+}
+
+function AppLoadingOverlay({ label, progress }: { label: string; progress: number | null }) {
+  const progressPercent = progress === null ? null : Math.max(0, Math.min(100, Math.round(progress * 100)));
+  return <View
+    accessibilityRole="progressbar"
+    accessibilityLabel={label}
+    accessibilityValue={progressPercent === null ? undefined : { min: 0, max: 100, now: progressPercent }}
+    style={styles.overlay}
+  >
     <View style={styles.card}>
       <View style={styles.iconShell}>
         <MaterialCommunityIcons name="shield-check-outline" size={30} color="#0A43A3" />
       </View>
-      <ActivityIndicator size="large" color="#0A43A3" />
+      {progressPercent === null ? (
+        <ActivityIndicator size="large" color="#0A43A3" />
+      ) : (
+        <>
+          <Text style={styles.progressValue}>{progressPercent}%</Text>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${progressPercent}%` }]} />
+          </View>
+        </>
+      )}
       <Text style={styles.title}>{label}</Text>
       <Text style={styles.subtitle}>{loadingSubtitle(label)}</Text>
     </View>
@@ -149,6 +179,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  progressValue: {
+    color: '#0A43A3',
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+  progressTrack: {
+    marginTop: 10,
+    width: '82%',
+    height: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: '#E4ECF5',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#0A43A3',
   },
   title: {
     marginTop: 14,
