@@ -56,12 +56,10 @@ function PolicyIntakeQuickLink({ href, label, count, icon }: { href: string; lab
     prefetch={false}
     href={href}
     aria-label={`${label}: ${count}. Open Policy Intakes.`}
-    className={`group inline-flex h-11 min-w-[108px] items-center gap-2 rounded-xl px-2.5 transition-colors hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#CBD5E1]/60 ${tone}`}
+    className={`group inline-flex h-11 min-w-[122px] items-center gap-2 rounded-xl px-2.5 transition-colors hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#CBD5E1]/60 ${tone}`}
   >
     <span className="grid h-6 w-6 shrink-0 place-items-center">{icon}</span>
-    <span className="min-w-0 flex-1">
-      <span className="block whitespace-nowrap text-[8.5px] font-bold leading-3">{label}</span>
-      <span className="block text-[15px] font-black leading-4 tabular-nums">{count}</span>
-    </span>
+    <span className="whitespace-nowrap text-[8.5px] font-bold leading-3">{label}</span>
+    <span className="ml-auto shrink-0 text-[15px] font-black leading-4 tabular-nums">{count}</span>
   </Link>;
 }
