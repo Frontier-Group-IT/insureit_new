@@ -12,6 +12,7 @@ module.exports = function (api) {
 
           alias: {
             '@': './',
+            '^expo-document-picker$': './lib/claim-video-document-picker',
           },
         },
       ],
