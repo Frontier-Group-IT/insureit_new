@@ -139,7 +139,7 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
           claim.current_status === "Surveyor Appointed" ? <SurveyorAssignedNotice claimId={claim.id} details={surveyorDetails} /> :
           claim.current_status === "Initial Documents Verified" || claim.current_status === "Claim Intimated" ? <SurveyorDeputationForm claimId={claim.id} /> :
           canFinalizeInitialDocuments ? <FinalizeInitialDocumentVerificationButton claimId={claim.id} /> : null
-        ) : <div className="mt-3 rounded-xl border border-[#E4ECF6] bg-[#FBFCFE] p-3 text-[12px] font-semibold text-[#526178]">Complete all required document verification to enable spot surveyor deputation.</div>}
+        ) : null}
       </section>
     </div>
   );
