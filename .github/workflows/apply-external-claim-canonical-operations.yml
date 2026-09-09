@@ -9,6 +9,7 @@ on:
       - 'supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'
       - 'supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'
       - 'supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'
+      - 'supabase/migrations/20260909170000_sync_external_customer_milestones_to_operations.sql'
       - '.github/workflows/apply-external-claim-canonical-operations.yml'
 
 permissions:
@@ -37,6 +38,7 @@ jobs:
           test -f supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
           test -f supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
           test -f supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
+          test -f supabase/migrations/20260909170000_sync_external_customer_milestones_to_operations.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -46,17 +48,19 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply External Claim customer-processing protection
+      - name: Apply External Claim customer-processing and stage-sync protection
         run: |
           set -euo pipefail
           supabase db query --linked --file supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
           supabase db query --linked --file supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
+          supabase db query --linked --file supabase/migrations/20260909170000_sync_external_customer_milestones_to_operations.sql
 
       - name: Record migrations as applied
         run: |
           set -euo pipefail
           supabase migration repair --linked --status applied 20260909150000
           supabase migration repair --linked --status applied 20260909160000
+          supabase migration repair --linked --status applied 20260909170000
 
       - name: Verify External Claim Operations and Customer contracts
         shell: bash
@@ -105,6 +109,31 @@ jobs:
                   in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
                 ) > 0
               ) as non_external_self_managed_guard_ready,
+              to_regprocedure('public.sync_external_claim_operations_stage(uuid,uuid)') is not null as customer_stage_sync_ready,
+              exists (
+                select 1
+                from pg_trigger
+                where tgname = 'trg_sync_external_claim_operations_stage'
+                  and tgrelid = 'public.claim_milestones'::regclass
+                  and not tgisinternal
+              ) as customer_stage_sync_trigger_ready,
+              not exists (
+                select 1
+                from public.claims c
+                where c.policy_service_source::text = 'external'
+                  and c.external_policy_id is not null
+                  and c.current_status::text not in ('Rejected', 'Settled', 'Closed')
+                  and public.external_claim_operations_stage_rank(c.current_status::text)
+                    < public.external_claim_customer_completed_stage(c.id)
+              ) as customer_stage_floor_applied,
+              not exists (
+                select 1
+                from public.claims c
+                where c.policy_service_source::text = 'external'
+                  and c.external_policy_id is not null
+                  and public.external_claim_customer_completed_stage(c.id) = 9
+                  and c.current_status::text not in ('Claim Complete', 'Settled', 'Closed', 'Rejected')
+              ) as customer_complete_synced,
               exists (
                 select 1
                 from supabase_migrations.schema_migrations
@@ -114,7 +143,12 @@ jobs:
                 select 1
                 from supabase_migrations.schema_migrations
                 where version = '20260909160000'
-              ) as milestone_rpc_migration_recorded
+              ) as milestone_rpc_migration_recorded,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20260909170000'
+              ) as milestone_stage_sync_migration_recorded
           ")
           echo "$result"
           echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
@@ -123,5 +157,10 @@ jobs:
           echo "$result" | grep -Eq '"customer_external_update_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"customer_external_rpc_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"non_external_self_managed_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_stage_sync_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_stage_sync_trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_stage_floor_applied"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_complete_synced"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rls_migration_recorded"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rpc_migration_recorded"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"milestone_stage_sync_migration_recorded"[[:space:]]*:[[:space:]]*true'
