@@ -24,6 +24,8 @@ const claimCardIcons = {
 
 type ClaimFilter = 'All' | 'Open' | 'Action Required' | 'Completed';
 type CustomerClaim = Claim & {
+  external_policy_id?: string | null;
+  policy_service_source?: 'sibl' | 'external' | null;
   claim_service_mode?: 'broker_managed' | 'self_managed' | null;
   assistance_status?: 'not_requested' | 'requested' | 'accepted' | 'declined' | 'cancelled' | null;
 };
@@ -91,7 +93,8 @@ export default function ClaimsScreen() {
   const filteredClaims = useMemo(() => {
     const search = query.trim().toLowerCase();
     return claims.filter((claim) => {
-      if (!matchesFilter(claim, filter, documents, tasks)) return false;
+      const claimMilestones = milestonesByClaimId.get(claim.id) ?? [];
+      if (!matchesFilter(claim, filter, documents, tasks, claimMilestones)) return false;
       const vehicle = vehicles.find((item) => item.id === claim.vehicle_id);
       const policy = policies.find((item) => item.id === claim.policy_id);
       const insurerId = claim.insurance_company_id || policy?.insurance_company_id;
@@ -99,7 +102,7 @@ export default function ClaimsScreen() {
       const haystack = [claim.claim_no, claim.insurer_claim_no, claim.current_status, claim.accident_location, vehicle?.vehicle_no, vehicle?.make, vehicle?.model, policy?.policy_no, insurer?.name].filter(Boolean).join(' ').toLowerCase();
       return !search || haystack.includes(search);
     });
-  }, [claims, documents, filter, insurers, policies, query, tasks, vehicles]);
+  }, [claims, documents, filter, insurers, milestonesByClaimId, policies, query, tasks, vehicles]);
 
   if (loading) return <Screen title="My Claims"><LoadingState /></Screen>;
 
@@ -116,7 +119,7 @@ export default function ClaimsScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroller} contentContainerStyle={styles.filterWrap}>
         {(['All', 'Open', 'Action Required', 'Completed'] as ClaimFilter[]).map((item) => (
           <Pressable key={item} accessibilityRole="button" accessibilityState={{ selected: filter === item }} onPress={() => setFilter(item)} style={[styles.filterChip, filter === item && styles.filterChipActive]}>
-            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, claims, documents, tasks)})</Text>
+            <Text style={[styles.filterText, filter === item && styles.filterTextActive]}>{item} ({countForFilter(item, claims, documents, tasks, milestonesByClaimId)})</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -130,31 +133,34 @@ export default function ClaimsScreen() {
         const insurer = insurers.find((item) => item.id === insurerId);
         const tone = claimTone(claim.current_status);
         const policyExpiredBeforeIncident = isIncidentAfterPolicyExpiry(claim, policy);
+        const externalClaim = isExternalPolicyClaim(claim);
         const selfTracked = claim.claim_service_mode === 'self_managed';
-        const completed = ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
-        const selfTrackedStatusColor = completed ? '#12805C' : '#C43838';
-        const assistanceRequested = selfTracked && !completed && claim.assistance_status === 'requested';
+        const claimMilestones = milestonesByClaimId.get(claim.id) ?? [];
+        const completed = externalClaim ? isExternalJourneyComplete(claimMilestones) : ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
+        const externalStatusColor = completed ? '#12805C' : '#0A43A3';
+        const assistanceRequested = externalClaim && selfTracked && !completed && claim.assistance_status === 'requested';
         const claimDocuments = documents.filter((document) => document.claim_id === claim.id);
         const requestedFinalDocumentTypes = requestedFinalDocumentTypesFor(claim.id, tasks);
-        const internalProjection = projectInternalClaim(claim.current_status, {
+        const internalProjection = externalClaim ? null : projectInternalClaim(claim.current_status, {
           hasRejectedDocuments: hasOutstandingRejectedDocumentsForStatus(claim, claimDocuments, requestedFinalDocumentTypes),
           hasRequiredDocuments: hasAllRequiredDocuments(claim, claimDocuments, requestedFinalDocumentTypes),
         });
+        const externalModeLabel = completed ? 'EXTERNAL CLAIM · COMPLETED' : selfTracked ? 'SELF TRACKED' : 'EXTERNAL CLAIM';
 
         return (
-          <Pressable key={claim.id} accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no}`} onPress={() => router.push({ pathname: selfTracked ? '/customer/self-managed-claim-detail' : '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, selfTracked && styles.externalCard, { borderColor: selfTracked ? '#C9DAF2' : tone.border }]}>
+          <Pressable key={claim.id} accessibilityRole="button" accessibilityLabel={`Open claim ${claim.claim_no}`} onPress={() => router.push({ pathname: externalClaim ? '/customer/self-managed-claim-detail' : '/customer/claim-detail', params: { id: claim.id } })} style={[styles.claimCard, externalClaim && styles.externalCard, { borderColor: externalClaim ? '#C9DAF2' : tone.border }]}>
             <View style={[styles.accentBar, { backgroundColor: palette.navy }]} />
 
             <View style={styles.claimTop}>
-              <View style={[styles.statusIcon, { backgroundColor: selfTracked ? '#F7FAFF' : tone.soft }]}>
-                <Image source={claimCardIcon(claim.current_status, selfTracked)} resizeMode="contain" style={styles.statusIconImage} />
+              <View style={[styles.statusIcon, { backgroundColor: externalClaim ? '#F7FAFF' : tone.soft }]}>
+                <Image source={claimCardIcon(claim.current_status, externalClaim, completed)} resizeMode="contain" style={styles.statusIconImage} />
               </View>
               <View style={styles.claimTitleCopy}>
-                <Text style={[styles.modeLabel, { color: selfTracked ? selfTrackedStatusColor : tone.accent }]}>{selfTracked ? 'SELF TRACKED' : claimStageLabel(claim.current_status)}</Text>
+                <Text style={[styles.modeLabel, { color: externalClaim ? externalStatusColor : tone.accent }]}>{externalClaim ? externalModeLabel : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
                 <Text style={styles.vehicleMeta} numberOfLines={1}>{[vehicle?.make, vehicle?.model].filter(Boolean).join(' · ') || insurer?.name || 'Claim record'}</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={21} color={selfTracked ? '#0A43A3' : tone.accent} />
+              <MaterialCommunityIcons name="chevron-right" size={21} color={externalClaim ? '#0A43A3' : tone.accent} />
             </View>
 
             <View style={styles.identityRow}>
@@ -164,8 +170,8 @@ export default function ClaimsScreen() {
 
             <View style={styles.currentRow}>
               <View style={styles.currentCopy}>
-                <Text style={styles.currentLabel}>{selfTracked ? 'CURRENT MILESTONE' : 'CURRENT STATUS'}</Text>
-                <Text style={styles.currentValue}>{selfTracked ? selfManagedCurrentMilestone(milestonesByClaimId.get(claim.id) ?? []) : internalProjection.substage}</Text>
+                <Text style={styles.currentLabel}>{externalClaim ? 'CURRENT MILESTONE' : 'CURRENT STATUS'}</Text>
+                <Text style={styles.currentValue}>{externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.substage ?? claim.current_status}</Text>
               </View>
               <View style={styles.incidentCopy}>
                 <Text style={styles.currentLabel}>INCIDENT</Text>
@@ -176,7 +182,7 @@ export default function ClaimsScreen() {
             {assistanceRequested ? <View style={styles.assistancePill}><MaterialCommunityIcons name="clock-outline" size={13} color="#805700" /><Text style={styles.assistancePillText}>Assistance requested</Text></View> : null}
             {policyExpiredBeforeIncident ? <View style={styles.expiredClaimWarning}><MaterialCommunityIcons name="alert-octagon-outline" size={16} color="#B42318" /><Text style={styles.expiredClaimWarningText}>Policy expired before loss date</Text></View> : null}
 
-            {!selfTracked ? <Text style={styles.managedMeta} numberOfLines={1}>{[policy?.policy_no, insurer?.name].filter(Boolean).join(' · ')}</Text> : null}
+            {!externalClaim ? <Text style={styles.managedMeta} numberOfLines={1}>{[policy?.policy_no, insurer?.name].filter(Boolean).join(' · ')}</Text> : null}
           </Pressable>
         );
       })}
@@ -186,21 +192,39 @@ export default function ClaimsScreen() {
   );
 }
 
-function selfManagedCurrentMilestone(milestones: ClaimMilestone[]) {
-  const completed = new Set(milestones.filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable').map((item) => item.milestone_key));
-  if (completed.size >= SELF_MANAGED_MILESTONES.length) return SELF_MANAGED_MILESTONES[SELF_MANAGED_MILESTONES.length - 1]?.label ?? 'Claim complete';
+function completedExternalMilestoneKeys(milestones: ClaimMilestone[]) {
+  return new Set(milestones.filter((item) => item.milestone_status === 'completed' || item.milestone_status === 'not_applicable').map((item) => item.milestone_key));
+}
+
+function isExternalJourneyComplete(milestones: ClaimMilestone[]) {
+  const completed = completedExternalMilestoneKeys(milestones);
+  return SELF_MANAGED_MILESTONES.every((stage) => completed.has(stage.key));
+}
+
+function externalCurrentMilestone(milestones: ClaimMilestone[]) {
+  const completed = completedExternalMilestoneKeys(milestones);
+  if (SELF_MANAGED_MILESTONES.every((stage) => completed.has(stage.key))) return 'Claim Complete';
   return SELF_MANAGED_MILESTONES.find((stage) => !completed.has(stage.key))?.label ?? 'Spot Intimation';
+}
+
+function isExternalPolicyClaim(claim: CustomerClaim) {
+  return claim.policy_service_source === 'external' || Boolean(claim.external_policy_id);
 }
 
 function validClaimFilter(value?: string): ClaimFilter {
   return value === 'Open' || value === 'Action Required' || value === 'Completed' || value === 'All' ? value : 'All';
 }
 
-function matchesFilter(claim: CustomerClaim, filter: ClaimFilter, documents: ClaimDocument[], tasks: ClaimTask[]) {
+function matchesFilter(claim: CustomerClaim, filter: ClaimFilter, documents: ClaimDocument[], tasks: ClaimTask[], milestones: ClaimMilestone[]) {
+  const externalClaim = isExternalPolicyClaim(claim);
+  const externalCompleted = externalClaim && isExternalJourneyComplete(milestones);
   if (filter === 'All') return true;
-  if (filter === 'Completed') return ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
+  if (filter === 'Completed') return externalClaim ? externalCompleted : ['Closed', 'Settled', 'Claim Complete'].includes(claim.current_status);
   if (filter === 'Action Required') {
-    if (claim.claim_service_mode === 'self_managed') return claim.current_status.includes('Document') || claim.current_status.includes('Awaited') || claim.current_status.includes('Pending');
+    if (externalClaim) {
+      if (externalCompleted || claim.claim_service_mode !== 'self_managed') return false;
+      return claim.current_status.includes('Document') || claim.current_status.includes('Awaited') || claim.current_status.includes('Pending');
+    }
     const claimDocuments = documents.filter((document) => document.claim_id === claim.id);
     const requestedFinalDocumentTypes = requestedFinalDocumentTypesFor(claim.id, tasks);
     return projectInternalClaim(claim.current_status, {
@@ -208,12 +232,13 @@ function matchesFilter(claim: CustomerClaim, filter: ClaimFilter, documents: Cla
       hasRequiredDocuments: hasAllRequiredDocuments(claim, claimDocuments, requestedFinalDocumentTypes),
     }).customerActionRequired;
   }
+  if (externalClaim) return !externalCompleted && claim.current_status !== 'Rejected';
   return !['Closed', 'Settled', 'Claim Complete', 'Rejected'].includes(claim.current_status);
 }
-function countForFilter(filter: ClaimFilter, claims: CustomerClaim[], documents: ClaimDocument[], tasks: ClaimTask[]) { return claims.filter((claim) => matchesFilter(claim, filter, documents, tasks)).length; }
+function countForFilter(filter: ClaimFilter, claims: CustomerClaim[], documents: ClaimDocument[], tasks: ClaimTask[], milestonesByClaimId: Map<string, ClaimMilestone[]>) { return claims.filter((claim) => matchesFilter(claim, filter, documents, tasks, milestonesByClaimId.get(claim.id) ?? [])).length; }
 function claimStageLabel(status: ClaimStatus) { if (status.includes('Document') || status.includes('Awaited')) return 'DOCUMENT STAGE'; if (status.includes('Survey') || status.includes('Inspected')) return 'SURVEY STAGE'; if (status.includes('Approval') || status.includes('Estimate')) return 'APPROVAL STAGE'; if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return 'REPAIR / DO STAGE'; if (status.includes('Payment') || status.includes('Settlement')) return 'PAYMENT STAGE'; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return 'COMPLETED'; return 'CLAIM STAGE'; }
 function claimTone(status: ClaimStatus) { if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return { accent: '#12805C', soft: '#E8F8F0', border: '#BFEBD0' }; if (status === 'Rejected') return { accent: '#C43838', soft: '#FDECEC', border: '#F2C6C6' }; if (status.includes('Payment') || status.includes('Settlement')) return { accent: '#B7791F', soft: '#FFF4E2', border: '#F7DCA2' }; if (status.includes('Repair') || status.includes('DO') || status.includes('RA')) return { accent: '#7C3AED', soft: '#F0E9FF', border: '#D8C8FF' }; if (status.includes('Document') || status.includes('Awaited')) return { accent: '#C83272', soft: '#FFF0F6', border: '#F8BFD7' }; return { accent: '#0B63CE', soft: '#EEF5FF', border: '#CFE0FF' }; }
-function claimCardIcon(status: ClaimStatus, selfTracked: boolean): ImageSourcePropType { if (selfTracked) return claimCardIcons.default; if (status.includes('Document') || status.includes('Awaited')) return claimCardIcons.documents; if (status.includes('Survey') || status.includes('Inspected')) return claimCardIcons.survey; if (status.includes('Approval') || status.includes('Estimate') || status.includes('Repair') || status.includes('DO') || status.includes('RA')) return claimCardIcons.assessment; if (status.includes('Payment') || status.includes('Settlement')) return claimCardIcons.settlement; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return claimCardIcons.completed; return claimCardIcons.default; }
+function claimCardIcon(status: ClaimStatus, externalClaim: boolean, completed: boolean): ImageSourcePropType { if (externalClaim) return completed ? claimCardIcons.completed : claimCardIcons.default; if (status.includes('Document') || status.includes('Awaited')) return claimCardIcons.documents; if (status.includes('Survey') || status.includes('Inspected')) return claimCardIcons.survey; if (status.includes('Approval') || status.includes('Estimate') || status.includes('Repair') || status.includes('DO') || status.includes('RA')) return claimCardIcons.assessment; if (status.includes('Payment') || status.includes('Settlement')) return claimCardIcons.settlement; if (status === 'Closed' || status === 'Settled' || status === 'Claim Complete') return claimCardIcons.completed; return claimCardIcons.default; }
 function formatDate(value?: string | null) { if (!value) return '-'; return new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }); }
 function isIncidentAfterPolicyExpiry(claim: CustomerClaim, policy?: Policy | null) { const incident = claim.accident_at ? new Date(claim.accident_at) : null; const expiry = policyExpiryEndOfDay(policy?.end_date); if (!incident || Number.isNaN(incident.getTime()) || !expiry) return false; return incident.getTime() > expiry.getTime(); }
 function policyExpiryEndOfDay(value?: string | null) { if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return null; const [year, month, day] = value.slice(0, 10).split('-').map(Number); const parsed = new Date(year, month - 1, day, 23, 59, 59, 999); return Number.isNaN(parsed.getTime()) ? null : parsed; }
