@@ -53,7 +53,7 @@ assert(!operationsStages.includes('externalVisualCurrentIndex'), 'External curre
 assert(operationsStages.includes('const isCurrent = !journeyComplete && stage.key === active?.key;'), 'Operations current-stage styling must use the shared claims.current_status stage.');
 assert(operationsStages.includes('const isCompleted = journeyComplete || index < activeIndex || (externalStageCompleted && !isCurrent);'), 'Completed Customer milestones may supplement completion styling without replacing the shared current stage.');
 assert(operationsStages.includes('nextStageKey: result.advanced ? nextStageKeyFor(milestoneKey) : null'), 'Save Details must not visually jump to the next stage.');
-assert(operationsStages.includes('if (!spotState.ok) return;\n    router.refresh();'), 'Historical Spot Intimation Save Details must not visually advance to Stage 2.');
+assert(operationsStages.includes('if (!spotState.ok) return;\n    setSelectedKey("spot_status");\n    router.replace(`/claims/${claimId}?stage=spot_status`);'), 'Spot Intimation Save Details must navigate to Stage 2 after a successful save.');
 assert(operationsStages.includes('label={selectedSaveOnly ? "Save Details"'), 'Historical stages must show an explicit Save Details action.');
 assert(operationsStages.includes('"Save & complete claim"'), 'The current final stage must expose explicit claim completion wording.');
 assert(operationsStages.includes('`Save & move to ${nextStageLabel}`'), 'The current non-final stage must expose an explicit advance action.');
