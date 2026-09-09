@@ -105,7 +105,8 @@ assert(schemaWorkflow.includes('20260909180000_external_claim_shared_stage_sync.
 assert(schemaWorkflow.includes('supabase migration repair --linked --status applied 20260909180000'), 'External Claim schema workflow must record the shared-stage migration.');
 assert(schemaWorkflow.includes('shared_customer_to_operations_ready'), 'Schema workflow must verify Customer -> Operations shared-stage synchronization.');
 assert(schemaWorkflow.includes('shared_operations_to_customer_ready'), 'Schema workflow must verify Operations -> Customer synchronization.');
-assert(schemaWorkflow.includes('shared_stage_trigger_ready'), 'Schema workflow must verify the Customer milestone sync trigger.');
+assert(schemaWorkflow.includes('shared_customer_trigger_ready'), 'Schema workflow must verify the Customer milestone sync trigger.');
+assert(schemaWorkflow.includes('shared_operations_trigger_ready'), 'Schema workflow must verify the Operations status sync trigger.');
 assert(deployWorkflow.includes('20260909180000_external_claim_shared_stage_sync.sql'), 'Production deploy gate must recognize the shared-stage migration.');
 assert(deployWorkflow.includes('apply-external-claim-canonical-operations.yml'), 'Production deploy must wait for the External Claim schema workflow.');
 
