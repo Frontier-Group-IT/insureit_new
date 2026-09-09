@@ -118,17 +118,25 @@ jobs:
                 'new.details ? ''completed_at'''
                 in pg_get_functiondef('public.persist_managed_claim_stage_transition_from_details()'::regprocedure)
               ) > 0 as shared_operations_explicit_completion_ready,
+              to_regprocedure('public.sync_external_operations_stage_to_customer_from_claim()') is not null as shared_operations_to_customer_ready,
               position(
                 '''sankalp''::public.claim_milestone_actor'
-                in pg_get_functiondef('public.persist_managed_claim_stage_transition_from_details()'::regprocedure)
-              ) > 0 as shared_operations_to_customer_ready,
+                in pg_get_functiondef('public.sync_external_operations_stage_to_customer_from_claim()'::regprocedure)
+              ) > 0 as shared_operations_actor_ready,
               exists (
                 select 1
                 from pg_trigger
                 where tgrelid = 'public.claim_milestones'::regclass
                   and tgname = 'trg_sync_external_customer_stage_to_operations'
                   and not tgisinternal
-              ) as shared_stage_trigger_ready,
+              ) as shared_customer_trigger_ready,
+              exists (
+                select 1
+                from pg_trigger
+                where tgrelid = 'public.claims'::regclass
+                  and tgname = 'trg_sync_external_operations_stage_to_customer'
+                  and not tgisinternal
+              ) as shared_operations_trigger_ready,
               exists (
                 select 1
                 from supabase_migrations.schema_migrations
@@ -156,7 +164,9 @@ jobs:
           echo "$result" | grep -Eq '"shared_customer_actor_guard_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_operations_explicit_completion_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_operations_to_customer_ready"[[:space:]]*:[[:space:]]*true'
-          echo "$result" | grep -Eq '"shared_stage_trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_operations_actor_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_customer_trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_operations_trigger_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rls_migration_recorded"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rpc_migration_recorded"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_stage_migration_recorded"[[:space:]]*:[[:space:]]*true'
