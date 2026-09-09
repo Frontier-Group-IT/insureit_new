@@ -51,21 +51,18 @@ export default async function PolicyIntakesPage() {
   const portalAccountById = new Map((portalAccountRows ?? []).map((item) => [item.id, item]));
   const intermediaryNameById = new Map((intermediaryRows ?? []).map((item) => [item.id, item.display_name]));
 
+  const rowsWithSubmitters: PolicyIntakeWorkspaceRow[] = rows.map((row) => {
+    let submittedBy = row.submitted_by_profile_id ? profileNameById.get(row.submitted_by_profile_id)?.trim() || "Sales user" : "INSUREIT Partner user";
+    if (row.submitted_by_portal_account_id) {
+      const portalAccount = portalAccountById.get(row.submitted_by_portal_account_id);
+      const intermediaryName = portalAccount ? intermediaryNameById.get(portalAccount.intermediary_id)?.trim() : "";
+      if (intermediaryName) submittedBy = intermediaryName;
+    }
+    return { ...row, submitted_by_name: submittedBy };
+  });
   const duplicateCheck = error ? null : await loadPolicyIntakeDuplicateMatches(admin, rows);
-  const workspaceRows: PolicyIntakeWorkspaceRow[] = duplicateCheck?.ok
-    ? rows.map((row) => {
-        let submittedBy = row.submitted_by_profile_id ? profileNameById.get(row.submitted_by_profile_id)?.trim() || "Sales user" : "INSUREIT Partner user";
-        if (row.submitted_by_portal_account_id) {
-          const portalAccount = portalAccountById.get(row.submitted_by_portal_account_id);
-          const intermediaryName = portalAccount ? intermediaryNameById.get(portalAccount.intermediary_id)?.trim() : "";
-          if (intermediaryName) submittedBy = intermediaryName;
-        }
-        return {
-          ...row,
-          submitted_by_name: submittedBy,
-          status: duplicateCheck.matches.has(row.id) ? "Duplicate" : row.status,
-        };
-      })
+  const workspaceRows = duplicateCheck?.ok
+    ? rowsWithSubmitters.map((row) => duplicateCheck.matches.has(row.id) ? { ...row, status: "Duplicate" } : row)
     : [];
   const unavailable = Boolean(error || (duplicateCheck && !duplicateCheck.ok));
 
