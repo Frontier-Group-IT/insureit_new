@@ -271,8 +271,11 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
       .eq("claim_id", id)
       .returns<CustomerMilestoneRow[]>()
     : null;
-  const externalCustomerJourney = externalCustomerMilestoneResult && !externalCustomerMilestoneResult.error
-    ? summarizeExternalCustomerJourney(externalCustomerMilestoneResult.data ?? [])
+  const externalCustomerMilestones = externalCustomerMilestoneResult && !externalCustomerMilestoneResult.error
+    ? externalCustomerMilestoneResult.data ?? []
+    : undefined;
+  const externalCustomerJourney = externalCustomerMilestones
+    ? summarizeExternalCustomerJourney(externalCustomerMilestones)
     : null;
 
   return (
@@ -314,6 +317,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           spotContent={<SpotSurveyWorkspace claim={{ ...claimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
           claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
           initialStageKey={requestedStage}
+          externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
         />
       </div>
     </ClaimManagerShell>

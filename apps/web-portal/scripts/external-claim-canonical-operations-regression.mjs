@@ -39,8 +39,17 @@ assert(claimPage.includes('.from("claim_milestones")'), 'Broker-managed External
 assert(claimPage.includes('Customer external journey'), 'Operations claim detail must label Customer External Claim progress separately.');
 assert(claimPage.includes('Operations processing'), 'Operations claim detail must label Operations progress separately.');
 assert(claimPage.includes('Customer completion does not auto-advance or overwrite the Operations workflow.'), 'Dual-journey display must explain that Customer completion does not advance Operations.');
-assert(claimPage.includes('currentStatus={claim.current_status}'), 'Canonical Operations stage must remain driven by claims.current_status.');
+assert(claimPage.includes('currentStatus={claim.current_status}'), 'Operations actions must keep claims.current_status as their workflow authority.');
+assert(claimPage.includes('externalCustomerMilestones={externalCustomerMilestones?.map'), 'External Claim stage bar must receive preserved Customer milestones for visual progress.');
 assert(!claimPage.includes('.update({ current_status'), 'Dual-journey display must not write Operations status from Customer milestones.');
+assert(operationsStages.includes('externalCustomerMilestones?: CustomerMilestoneVisual[];'), 'OperationsClaimStages must support a visual-only External Customer milestone projection.');
+assert(operationsStages.includes('const hasExternalVisualProgress = externalCustomerMilestones !== undefined;'), 'External milestone projection must be opt-in so Internal/SIBL behavior is unchanged.');
+assert(operationsStages.includes('const externalVisualCurrentIndex = hasExternalVisualProgress'), 'External milestone projection must derive the first incomplete visual stage.');
+assert(operationsStages.includes('const isCurrent = hasExternalVisualProgress ? externalVisualCurrentIndex === index'), 'External Claim current-stage styling must come from Customer milestone progress.');
+assert(operationsStages.includes('const isCompleted = hasExternalVisualProgress ? externalVisualCompletedKeys.has(stage.key)'), 'External Claim completed-stage styling must come from Customer milestone progress.');
+assert(operationsStages.includes('const available = journeyComplete || index <= activeIndex;'), 'External visual progress must not unlock Operations stage navigation/actions.');
+assert(operationsStages.includes('const selectedAvailable = journeyComplete || selectedIndex <= activeIndex;'), 'Operations stage edit availability must remain tied to canonical Operations status.');
+assert(operationsStages.includes('const selectedIsCurrent = !journeyComplete && selected.key === active?.key;'), 'Operations stage writes must remain tied to canonical Operations current status.');
 assert(entry.includes('beginExternalOperationsWorkflow'), 'External Claim entry control must use the protected ownership action.');
 assert(action.includes('hasEffectiveCapability(profile, "manage_claims", "edit")'), 'External ownership transfer must use the same manage_claims edit permission.');
 assert(action.includes('begin_external_claim_operations_workflow'), 'External ownership transfer must use the atomic database function.');
