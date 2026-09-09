@@ -1,0 +1,68 @@
+name: Apply External Claim canonical Operations workflow
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'
+      - '.github/workflows/apply-external-claim-canonical-operations.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply External Claim canonical Operations workflow
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply External Claim Operations migration
+        run: supabase db query --linked --file supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260909121000
+
+      - name: Verify External Claim Operations contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.begin_external_claim_operations_workflow(uuid,uuid)') is not null as takeover_ready,
+              to_regprocedure('public.prevent_duplicate_active_external_claim_insert()') is not null as duplicate_guard_ready,
+              exists (
+                select 1 from pg_trigger
+                where tgname = 'prevent_duplicate_active_external_claim_insert'
+                  and not tgisinternal
+              ) as trigger_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"duplicate_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"trigger_ready"[[:space:]]*:[[:space:]]*true'
