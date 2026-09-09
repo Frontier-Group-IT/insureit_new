@@ -98,7 +98,7 @@ jobs:
       - name: Policy edit helper performance regression
         run: npm run policy-edit-helper-performance:regression
       - name: Reconciliation stylesheet performance regression
-        run: npm run reconciliation-stylesheet-performance-regression
+        run: npm run reconciliation-stylesheet-performance:regression
       - name: Policy reference data cache regression
         run: npm run policy-reference-cache:regression
       - name: Policy edit insurer cache regression
