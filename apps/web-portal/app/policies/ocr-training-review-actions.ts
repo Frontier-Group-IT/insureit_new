@@ -224,8 +224,8 @@ export async function startPolicyOcrReviewTask(
       .update({ status: task.status === "assigned" ? "in_review" : task.status, started_at: task.status === "assigned" ? new Date().toISOString() : undefined })
       .eq("id", task.id);
     if (!viewer.isOperator) updateQuery = updateQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
-    const { data: updated, error } = await updateQuery.select("id").maybeSingle<{ id: string }>();
-    if (error || !updated) throw new Error("The reviewer task could not be started.");
+    const { error } = await updateQuery;
+    if (error) throw new Error("The reviewer task could not be started.");
     revalidatePath(QUEUE_PATH);
     return { status: "success", message: null };
   } catch (error) {
@@ -263,8 +263,8 @@ export async function completePolicyOcrReviewTask(
       .update({ status: "completed", checklist, reviewer_note: note, structured_feedback: Object.keys(structuredAnswers).length ? structuredAnswers : null, started_at: task.status === "assigned" ? new Date().toISOString() : undefined, completed_at: new Date().toISOString() })
       .eq("id", task.id);
     if (!viewer.isOperator) updateQuery = updateQuery.eq("assigned_reviewer_profile_id", viewer.profile.id);
-    const { data: updated, error } = await updateQuery.select("id").maybeSingle<{ id: string }>();
-    if (error || !updated) throw new Error("The reviewer answers could not be saved.");
+    const { error } = await updateQuery;
+    if (error) throw new Error("The reviewer answers could not be saved.");
     if (Object.keys(structuredAnswers).length) {
       const feedback = Object.fromEntries(Object.entries(structuredAnswers).map(([key, value]) => [key, value.correctValue ? { answer: value.answer, value: value.correctValue } : { answer: value.answer }]));
       await createSupabaseAdminClient().from("policy_ocr_training_feedback").upsert({
