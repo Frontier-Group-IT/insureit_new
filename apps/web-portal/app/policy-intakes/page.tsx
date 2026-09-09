@@ -19,8 +19,8 @@ type IntermediaryName = { id: string; display_name: string };
 type PolicyIntakeSearchParams = { view?: string };
 
 function resolveInitialView(value: string | undefined, reviewer: boolean): PolicyIntakeViewKey {
-  if (!reviewer) return "all";
-  return value === "in_review" ? "in_review" : "action";
+  if (value === "in_review") return "in_review";
+  return reviewer ? "action" : "all";
 }
 
 export default async function PolicyIntakesPage({ searchParams }: { searchParams?: Promise<PolicyIntakeSearchParams> }) {
