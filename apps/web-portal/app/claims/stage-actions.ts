@@ -19,6 +19,7 @@ type ManagedClaim = {
   id: string;
   current_status: ClaimStatus;
   claim_service_mode: "broker_managed" | "self_managed";
+  policy_service_source: "sibl" | "external" | null;
 };
 
 type StageDetailsRow = {
@@ -80,6 +81,8 @@ const requiredFields: Record<OperationsStageKey, readonly string[]> = {
   vehicle_delivery: ["vehicle_received"],
   payment_encashment: ["depreciation_slip_submitted", "satisfaction_voucher_submitted", "payment_received_date", "payment_received_amount"],
 };
+
+const completedExternalMilestoneStatuses = new Set(["completed", "not_applicable"]);
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -166,7 +169,7 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   const supabase = await createServerSupabaseClient();
   const { data: claim, error: claimError } = await supabase
     .from("claims")
-    .select("id,current_status,claim_service_mode")
+    .select("id,current_status,claim_service_mode,policy_service_source")
     .eq("id", claimId)
     .maybeSingle<ManagedClaim>();
 
@@ -177,9 +180,26 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   const activeKey = currentStageKey(claim.current_status);
   const targetIndex = orderedStageKeys.indexOf(stageKey);
   const activeIndex = activeKey ? orderedStageKeys.indexOf(activeKey) : orderedStageKeys.length - 1;
+  const externalActiveIndex = activeKey ? orderedStageKeys.indexOf(activeKey) : -1;
   const terminal = ["Claim Complete", "Settled", "Closed"].includes(claim.current_status);
 
-  if (!terminal && targetIndex > activeIndex) {
+  if (claim.policy_service_source === "external" && !terminal && targetIndex > externalActiveIndex) {
+    if (!saveOnly) {
+      throw new Error("Completed Customer External stages can be reviewed only in save-only mode until Operations reaches that stage.");
+    }
+
+    const { data: customerMilestone, error: customerMilestoneError } = await supabase
+      .from("claim_milestones")
+      .select("milestone_status")
+      .eq("claim_id", claimId)
+      .eq("milestone_key", stageKey)
+      .maybeSingle<{ milestone_status: string }>();
+
+    if (customerMilestoneError) throw new Error(customerMilestoneError.message);
+    if (!completedExternalMilestoneStatuses.has(customerMilestone?.milestone_status ?? "")) {
+      throw new Error("This External Claim stage is not available yet. The Customer milestone is not completed.");
+    }
+  } else if (!terminal && targetIndex > activeIndex) {
     throw new Error("This stage is not available yet. Complete the current stage first.");
   }
 
