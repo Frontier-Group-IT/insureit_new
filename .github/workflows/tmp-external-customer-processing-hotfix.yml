@@ -1,0 +1,77 @@
+name: Temporary External Claim customer processing hotfix
+
+on:
+  push:
+    branches:
+      - fix/external-claim-customer-processing
+    paths:
+      - '.github/workflows/tmp-external-customer-processing-hotfix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/external-claim-customer-processing
+          fetch-depth: 0
+      - name: Apply surgical Customer External Claim patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          start = Path('apps/mobile-app/app/customer/start-claim.tsx')
+          text = start.read_text()
+          old = """        if (existingClaim) {\n          setExistingActiveClaimId(existingClaim.id);\n          return;\n        }\n"""
+          new = """        if (existingClaim) {\n          router.push({ pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id, claimId: existingClaim.id } } as any);\n          return;\n        }\n"""
+          if old not in text and new not in text:
+              raise SystemExit('Start Claim External existing-claim block not found')
+          if old in text:
+              start.write_text(text.replace(old, new, 1))
+
+          detail = Path('apps/mobile-app/app/customer/claim-detail.tsx')
+          text = detail.read_text()
+          old = "const selfManaged = claim?.claim_service_mode === 'self_managed';"
+          new = "const selfManaged = claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed';"
+          if old not in text and new not in text:
+              raise SystemExit('Claim Detail selfManaged discriminator not found')
+          if old in text:
+              detail.write_text(text.replace(old, new, 1))
+
+          regression = Path('apps/web-portal/scripts/external-claim-canonical-operations-regression.mjs')
+          text = regression.read_text()
+          marker = "const mobileStartClaim = fs.readFileSync(path.join(root, '../mobile-app/app/customer/start-claim.tsx'), 'utf8');\n"
+          addition = marker + "const mobileClaimDetail = fs.readFileSync(path.join(root, '../mobile-app/app/customer/claim-detail.tsx'), 'utf8');\n"
+          if "const mobileClaimDetail =" not in text:
+              if marker not in text:
+                  raise SystemExit('Regression mobileStartClaim marker not found')
+              text = text.replace(marker, addition, 1)
+          migration_marker = "const enumCastFixMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'utf8');\n"
+          migration_addition = migration_marker + "const customerProcessingMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'), 'utf8');\n"
+          if "const customerProcessingMigration =" not in text:
+              if migration_marker not in text:
+                  raise SystemExit('Regression enum-cast migration marker not found')
+              text = text.replace(migration_marker, migration_addition, 1)
+          assertion_marker = "assert(mobileStartClaim.includes(\"claim.claim_service_mode === 'broker_managed'\"), 'Customer Start Claim must detect an already Operations-managed External Claim.');\n"
+          assertions = """assert(mobileStartClaim.includes("pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id, claimId: existingClaim.id }"), 'Existing External Claims must reopen the Customer self-tracked journey even after Operations enters the claim.');\nassert(mobileClaimDetail.includes("claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed'"), 'External-policy claims must keep the Customer self-tracked journey regardless of Operations ownership mode.');\nassert(customerProcessingMigration.includes("claim.policy_service_source = 'external'::public.policy_service_source"), 'Customer milestone RLS must explicitly preserve External-policy claims.');\nassert(customerProcessingMigration.includes("claim.claim_service_mode = 'self_managed'::public.claim_service_mode"), 'Customer milestone RLS must preserve the original self-managed rule for non-External claims.');\n"""
+          if "Existing External Claims must reopen" not in text:
+              if assertion_marker not in text:
+                  raise SystemExit('Regression existing broker-managed assertion marker not found')
+              text = text.replace(assertion_marker, assertion_marker + assertions, 1)
+          regression.write_text(text)
+      - name: Commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo 'Patch already applied.'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add apps/mobile-app/app/customer/start-claim.tsx apps/mobile-app/app/customer/claim-detail.tsx apps/web-portal/scripts/external-claim-canonical-operations-regression.mjs
+          git commit -m 'Restore Customer External Claim processing alongside Operations workflow'
+          git push origin HEAD:fix/external-claim-customer-processing
