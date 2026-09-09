@@ -260,8 +260,9 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
   useEffect(() => {
     if (!spotState.ok) return;
-    router.refresh();
-  }, [router, spotState.ok]);
+    setSelectedKey("spot_status");
+    router.replace(`/claims/${claimId}?stage=spot_status`);
+  }, [claimId, router, spotState.ok]);
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#DFE8F4] bg-white shadow-[0_8px_22px_rgba(7,29,73,0.035)]">
