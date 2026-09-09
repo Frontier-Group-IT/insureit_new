@@ -29,7 +29,8 @@ export type PolicyIntakeWorkspaceRow = {
   assigned_to_profile_id: string | null;
 };
 
-type ViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
+export type PolicyIntakeViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
+type ViewKey = PolicyIntakeViewKey;
 const PAGE_SIZE = 15;
 
 const rowTones: Record<string, string> = {
@@ -96,9 +97,9 @@ function DateFilter({ label, value, min, max, onChange }: { label: string; value
   </label>;
 }
 
-export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string }) {
+export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileId, initialView }: { rows: PolicyIntakeWorkspaceRow[]; reviewer: boolean; creator: boolean; currentProfileId: string; initialView?: PolicyIntakeViewKey }) {
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ViewKey>(reviewer ? "action" : "all");
+  const [view, setView] = useState<ViewKey>(reviewer ? (initialView ?? "action") : "all");
   const [source, setSource] = useState("all");
   const [ocr, setOcr] = useState("all");
   const [fromDate, setFromDate] = useState("");

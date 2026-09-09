@@ -1,6 +1,6 @@
 import { AppShell } from "@/components/shell";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
-import { PolicyIntakeWorkspace, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
+import { PolicyIntakeWorkspace, type PolicyIntakeViewKey, type PolicyIntakeWorkspaceRow } from "@/components/policy-intake-workspace";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
@@ -16,13 +16,21 @@ type PolicyIntakeListRow = Omit<PolicyIntakeWorkspaceRow, "submitted_by_name"> &
 type ProfileName = { id: string; full_name: string };
 type PortalAccount = { id: string; intermediary_id: string };
 type IntermediaryName = { id: string; display_name: string };
+type PolicyIntakeSearchParams = { view?: string };
 
-export default async function PolicyIntakesPage() {
+function resolveInitialView(value: string | undefined, reviewer: boolean): PolicyIntakeViewKey {
+  if (!reviewer) return "all";
+  return value === "in_review" ? "in_review" : "action";
+}
+
+export default async function PolicyIntakesPage({ searchParams }: { searchParams?: Promise<PolicyIntakeSearchParams> }) {
   const profile = await requirePolicyIntakeViewer();
+  const params = searchParams ? await searchParams : undefined;
   const [reviewer, creator] = await Promise.all([
     hasEffectiveCapability(profile, "review_policy_intakes", "edit"),
     hasEffectiveCapability(profile, "create_policy_intakes", "edit"),
   ]);
+  const initialView = resolveInitialView(params?.view, reviewer);
   const admin = createSupabaseAdminClient();
   let query = admin
     .from("policy_intake_requests")
@@ -76,6 +84,6 @@ export default async function PolicyIntakesPage() {
         detail: [intake.status.replaceAll("_", " "), intake.lead_source_name, intake.customer_mobile].filter(Boolean).join(" • "),
       }))}
     /> : null}
-    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} />}
+    {unavailable ? <div className="mx-auto max-w-[1480px] rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] font-semibold text-red-700">Policy Intakes are temporarily unavailable.</div> : <PolicyIntakeWorkspace rows={workspaceRows} reviewer={reviewer} creator={creator} currentProfileId={profile.id} initialView={initialView} />}
   </AppShell>;
 }

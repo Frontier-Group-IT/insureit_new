@@ -51,6 +51,8 @@ jobs:
         run: npm run access-control:backoffice-data-entry-regression
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Policy Intake Policy Register quick-link regression
+        run: node scripts/policy-intake-policy-register-links-regression.mjs
       - name: Partner web core security regression
         run: npm run partner-web:core-regression
       - name: External renewal intake visibility regression
@@ -162,7 +164,7 @@ jobs:
             echo "## Web portal verification gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
-            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
+            echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Policy Intake Policy Register quick-link, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Claim regressions: spot multi-upload/intimation and External Claim read-only nine-stage protection"
             echo "- Performance regressions: expensive register create/edit workflow links do not auto-prefetch"
