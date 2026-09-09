@@ -1,0 +1,50 @@
+name: Verify customer logo asset
+
+on:
+  pull_request:
+    paths:
+      - 'apps/mobile-app/assets/brand/insureit-primary-logo.png'
+      - 'apps/mobile-app/assets/brand/insureit-primary-logo-clean.png'
+      - 'apps/mobile-app/assets/brand/logo (2).png'
+      - 'apps/mobile-app/components/first-look.tsx'
+      - '.github/workflows/verify-customer-logo-asset.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-canonical-customer-mark:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify canonical shield asset
+        shell: python
+        run: |
+          from pathlib import Path
+          import struct
+
+          brand = Path('apps/mobile-app/assets/brand')
+          canonical = brand / 'insureit-primary-logo.png'
+          inverse = brand / 'insureit-primary-logo-clean.png'
+          defective = brand / 'logo (2).png'
+
+          def png_size(path: Path) -> tuple[int, int]:
+              data = path.read_bytes()
+              if data[:8] != b'\x89PNG\r\n\x1a\n':
+                  raise SystemExit(f'{path} is not a PNG')
+              return struct.unpack('>II', data[16:24])
+
+          canonical_bytes = canonical.read_bytes()
+          inverse_bytes = inverse.read_bytes()
+          defective_bytes = defective.read_bytes()
+
+          if png_size(canonical) != (404, 486):
+              raise SystemExit('Canonical INSUREIT shield dimensions changed unexpectedly')
+          if inverse_bytes != canonical_bytes:
+              raise SystemExit('Customer inverse/header shield must match the canonical INSUREIT shield asset')
+          if inverse_bytes == defective_bytes:
+              raise SystemExit('Customer inverse/header shield regressed to the previously defective logo asset')
+
+          print('Customer header shield matches the canonical 404x486 INSUREIT mark and differs from the defective asset.')
