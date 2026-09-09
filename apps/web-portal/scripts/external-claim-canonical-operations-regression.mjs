@@ -9,6 +9,7 @@ const entry = fs.readFileSync(path.join(root, 'components/claims/external-claim-
 const action = fs.readFileSync(path.join(root, 'app/claims/external-operations-actions.ts'), 'utf8');
 const mobileStartClaim = fs.readFileSync(path.join(root, '../mobile-app/app/customer/start-claim.tsx'), 'utf8');
 const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'), 'utf8');
+const followupMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'utf8');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -35,6 +36,17 @@ assert(migration.includes("policy_service_source = 'external'"), 'External polic
 assert(migration.includes("from public.claim_milestones"), 'Customer milestone history must be preserved during Operations takeover.');
 assert(migration.includes('external_customer_snapshot'), 'Customer milestone details must be copied as prefilling/history evidence.');
 assert(migration.includes('prevent_duplicate_active_external_claim_insert'), 'External policy duplicate-claim protection must survive ownership transfer.');
+assert(
+  followupMigration.includes('create or replace function public.begin_external_claim_operations_workflow') &&
+    followupMigration.includes("csd.details->>'milestone_key' = cm.milestone_key::text") &&
+    !followupMigration.includes('prevent_duplicate_active_external_claim_insert') &&
+    !followupMigration.includes('create trigger prevent_duplicate_active_external_claim_insert'),
+  'Follow-up migration must cast milestone_key to text without redefining duplicate-claim protection.',
+);
+assert(
+  !/csd\.details->>'milestone_key'\s*=\s*cm\.milestone_key(?!::text)/.test(followupMigration),
+  'Follow-up migration must not compare JSON text directly to the claim_milestone_key enum.',
+);
 assert(mobileStartClaim.includes("claim_service_mode?: 'broker_managed' | 'self_managed' | null"), 'Customer active-claim lookup must understand managed External Claims.');
 assert(mobileStartClaim.includes("claim.claim_service_mode === 'broker_managed'"), 'Customer Start Claim must detect an already Operations-managed External Claim.');
 
