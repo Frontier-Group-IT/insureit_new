@@ -91,7 +91,7 @@ jobs:
                   in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
                 ) > 0
                 and position(
-                  'v_claim.external_policy_id IS NOT NULL'
+                  'v_claim.external_policy_id is not null'
                   in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
                 ) > 0
               ) as customer_external_rpc_ready,
