@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { AlertTriangle, ChevronRight, Clock3 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { PolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 
@@ -48,7 +48,7 @@ export function PolicyIntakePolicyRegisterLinksPortal({ summary }: { summary: Po
   );
 }
 
-function PolicyIntakeQuickLink({ href, label, count, icon }: { href: string; label: string; count: number; icon: React.ReactNode }) {
+function PolicyIntakeQuickLink({ href, label, count, icon }: { href: string; label: string; count: number; icon: ReactNode }) {
   return <Link
     prefetch={false}
     href={href}
