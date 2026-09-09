@@ -9,6 +9,7 @@ on:
       - 'supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'
       - 'supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'
       - 'supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'
+      - 'supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql'
       - '.github/workflows/apply-external-claim-canonical-operations.yml'
 
 permissions:
@@ -37,6 +38,7 @@ jobs:
           test -f supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
           test -f supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
           test -f supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
+          test -f supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -46,17 +48,19 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply External Claim customer-processing protection
+      - name: Apply External Claim customer-processing and shared-stage protection
         run: |
           set -euo pipefail
           supabase db query --linked --file supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
           supabase db query --linked --file supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
+          supabase db query --linked --file supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql
 
       - name: Record migrations as applied
         run: |
           set -euo pipefail
           supabase migration repair --linked --status applied 20260909150000
           supabase migration repair --linked --status applied 20260909160000
+          supabase migration repair --linked --status applied 20260909180000
 
       - name: Verify External Claim Operations and Customer contracts
         shell: bash
@@ -105,6 +109,34 @@ jobs:
                   in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
                 ) > 0
               ) as non_external_self_managed_guard_ready,
+              to_regprocedure('public.sync_external_customer_stage_to_operations(uuid,uuid)') is not null as shared_customer_to_operations_ready,
+              position(
+                'recorded_by_actor'
+                in pg_get_functiondef('public.sync_external_customer_stage_to_operations_from_milestone()'::regprocedure)
+              ) > 0 as shared_customer_actor_guard_ready,
+              position(
+                'new.details ? ''completed_at'''
+                in pg_get_functiondef('public.persist_managed_claim_stage_transition_from_details()'::regprocedure)
+              ) > 0 as shared_operations_explicit_completion_ready,
+              to_regprocedure('public.sync_external_operations_stage_to_customer_from_claim()') is not null as shared_operations_to_customer_ready,
+              position(
+                '''sankalp''::public.claim_milestone_actor'
+                in pg_get_functiondef('public.sync_external_operations_stage_to_customer_from_claim()'::regprocedure)
+              ) > 0 as shared_operations_actor_ready,
+              exists (
+                select 1
+                from pg_trigger
+                where tgrelid = 'public.claim_milestones'::regclass
+                  and tgname = 'trg_sync_external_customer_stage_to_operations'
+                  and not tgisinternal
+              ) as shared_customer_trigger_ready,
+              exists (
+                select 1
+                from pg_trigger
+                where tgrelid = 'public.claims'::regclass
+                  and tgname = 'trg_sync_external_operations_stage_to_customer'
+                  and not tgisinternal
+              ) as shared_operations_trigger_ready,
               exists (
                 select 1
                 from supabase_migrations.schema_migrations
@@ -114,7 +146,12 @@ jobs:
                 select 1
                 from supabase_migrations.schema_migrations
                 where version = '20260909160000'
-              ) as milestone_rpc_migration_recorded
+              ) as milestone_rpc_migration_recorded,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20260909180000'
+              ) as shared_stage_migration_recorded
           ")
           echo "$result"
           echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
@@ -123,5 +160,13 @@ jobs:
           echo "$result" | grep -Eq '"customer_external_update_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"customer_external_rpc_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"non_external_self_managed_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_customer_to_operations_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_customer_actor_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_operations_explicit_completion_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_operations_to_customer_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_operations_actor_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_customer_trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_operations_trigger_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rls_migration_recorded"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rpc_migration_recorded"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"shared_stage_migration_recorded"[[:space:]]*:[[:space:]]*true'

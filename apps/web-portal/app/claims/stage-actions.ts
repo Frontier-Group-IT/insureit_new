@@ -104,7 +104,7 @@ function currentStageKey(status: ClaimStatus) {
 function stageDetailsFromForm(formData: FormData, stageKey: OperationsStageKey) {
   const details: Record<string, string | number> = { milestone_key: stageKey };
   for (const [key, value] of formData.entries()) {
-    if (["notes", "next_status", "current_status", "milestone_key", "save_only"].includes(key)) continue;
+    if (["notes", "next_status", "current_status", "milestone_key", "save_only", "completed_at"].includes(key)) continue;
     if (typeof value !== "string" || !value.trim()) continue;
     const numericValue = Number(value.replace(/,/g, ""));
     details[key] = Number.isFinite(numericValue) && /amount|tds|gst|labour|parts|bill|received|estimate/i.test(key)
