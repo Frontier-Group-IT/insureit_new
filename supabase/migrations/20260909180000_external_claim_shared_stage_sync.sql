@@ -3,10 +3,10 @@
 -- Approved rule:
 -- - Customer and Operations share one forward-only 9-stage position for External Claims.
 -- - Customer completion may move Operations forward to the same stage, never backward.
--- - Operations may move the shared journey forward only through an explicit stage-completion write.
+-- - Operations may move the shared journey forward only through an explicit stage/status advance.
 -- - Plain Operations "Save Details" writes must never advance the shared journey.
--- - When Operations advances Stage N -> N+1, the matching Stage N Customer milestone is completed
---   so the Customer tracker opens on the same next stage.
+-- - When Operations moves to Stage N+1, the prior Customer milestone(s) are completed so
+--   the Customer tracker opens on the same current stage.
 -- - Internal/SIBL claims are unchanged.
 
 create or replace function public.external_claim_shared_stage_rank(p_status text)
@@ -139,7 +139,7 @@ begin
 
   if v_customer_stage = 9 and v_claim.current_status::text = 'Claim Complete' then
     -- The older self-managed auto-settle trigger can complete the claim first.
-    -- Keep an idempotent shared-stage audit event without inventing a false prior status.
+    -- Keep one idempotent shared-stage audit event without inventing a false prior state.
     select exists (
       select 1
       from public.claim_status_history h
@@ -210,7 +210,7 @@ set search_path = public
 as $$
 begin
   -- Only Customer-authored milestone progression drives this direction. Operations
-  -- writes use actor=sankalp and are handled by the managed-stage transition trigger.
+  -- mirroring uses actor=sankalp and therefore cannot recurse into Operations status.
   if new.recorded_by_actor::text <> 'customer' then
     return new;
   end if;
@@ -223,21 +223,149 @@ begin
 end;
 $$;
 
+-- Any real forward Operations status change must be reflected in the Customer journey.
+-- This deliberately watches claims.current_status rather than individual UI actions so
+-- Stage 1, document verification transitions, and Stages 2-9 all share the same rule.
+create or replace function public.sync_external_operations_stage_to_customer_from_claim()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_old_stage integer;
+  v_new_stage integer;
+  v_limit integer := 0;
+  v_keys text[] := array[
+    'spot_intimation',
+    'spot_status',
+    'claim_intimation',
+    'work_approval',
+    'repair_ri',
+    'billing',
+    'delivery_order',
+    'vehicle_delivery',
+    'payment_encashment'
+  ];
+  v_index integer;
+  v_key text;
+  v_details jsonb;
+begin
+  if coalesce(new.policy_service_source::text, '') <> 'external'
+     or new.external_policy_id is null then
+    return new;
+  end if;
+
+  -- Rejection is a terminal Operations decision, not forward Customer completion.
+  if new.current_status::text = 'Rejected' then
+    return new;
+  end if;
+
+  v_old_stage := public.external_claim_shared_stage_rank(old.current_status::text);
+  v_new_stage := public.external_claim_shared_stage_rank(new.current_status::text);
+
+  if v_new_stage = 0 or v_new_stage < v_old_stage then
+    return new;
+  end if;
+
+  if new.current_status::text in ('Claim Complete', 'Settled', 'Closed') then
+    v_limit := 9;
+  elsif v_new_stage > v_old_stage then
+    v_limit := v_new_stage - 1;
+  else
+    -- Movement within one canonical stage does not complete that stage.
+    return new;
+  end if;
+
+  if v_limit <= 0 then
+    return new;
+  end if;
+
+  for v_index in 1..least(v_limit, array_length(v_keys, 1)) loop
+    v_key := v_keys[v_index];
+
+    select csd.details
+      into v_details
+      from public.claim_stage_details csd
+     where csd.claim_id = new.id
+       and csd.details->>'milestone_key' = v_key
+     order by csd.created_at desc
+     limit 1;
+
+    insert into public.claim_milestones (
+      claim_id,
+      milestone_key,
+      milestone_status,
+      details,
+      completed_at,
+      recorded_by,
+      recorded_by_actor
+    ) values (
+      new.id,
+      v_key::public.claim_milestone_key,
+      'completed'::public.claim_milestone_status,
+      coalesce(v_details, '{}'::jsonb),
+      now(),
+      auth.uid(),
+      'sankalp'::public.claim_milestone_actor
+    )
+    on conflict (claim_id, milestone_key) do update
+      set milestone_status = case
+            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
+              then claim_milestones.milestone_status
+            else 'completed'::public.claim_milestone_status
+          end,
+          details = case
+            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
+              then claim_milestones.details
+            else coalesce(claim_milestones.details, '{}'::jsonb) || excluded.details
+          end,
+          completed_at = case
+            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
+              then claim_milestones.completed_at
+            else excluded.completed_at
+          end,
+          recorded_by = case
+            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
+              then claim_milestones.recorded_by
+            else excluded.recorded_by
+          end,
+          recorded_by_actor = case
+            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
+              then claim_milestones.recorded_by_actor
+            else excluded.recorded_by_actor
+          end,
+          updated_at = now();
+  end loop;
+
+  return new;
+end;
+$$;
+
 revoke all on function public.external_claim_shared_stage_rank(text) from public;
 revoke all on function public.external_claim_customer_completed_stage(uuid) from public;
 revoke all on function public.sync_external_customer_stage_to_operations(uuid, uuid) from public;
 revoke all on function public.sync_external_customer_stage_to_operations_from_milestone() from public;
+revoke all on function public.sync_external_operations_stage_to_customer_from_claim() from public;
 
 -- Keep the existing auto-settlement trigger intact. This trigger is Customer-only and
--- uses a separate actor guard so Operations milestone mirroring cannot recurse.
+-- uses an actor guard so Operations milestone mirroring cannot recurse.
 drop trigger if exists trg_sync_external_customer_stage_to_operations on public.claim_milestones;
 create trigger trg_sync_external_customer_stage_to_operations
 after insert or update of milestone_status, completed_at, details, recorded_by_actor on public.claim_milestones
 for each row
 execute function public.sync_external_customer_stage_to_operations_from_milestone();
 
+-- Mirror every official forward External Claim status move back into Customer milestones.
+drop trigger if exists trg_sync_external_operations_stage_to_customer on public.claims;
+create trigger trg_sync_external_operations_stage_to_customer
+after update of current_status on public.claims
+for each row
+when (old.current_status is distinct from new.current_status)
+execute function public.sync_external_operations_stage_to_customer_from_claim();
+
 -- Replace the managed-stage persistence function additively. Internal/SIBL behavior
--- is preserved; only External Claims gain the explicit-completion guard and Customer mirror.
+-- is preserved; only External Claims gain the explicit-completion guard.
 create or replace function public.persist_managed_claim_stage_transition_from_details()
 returns trigger
 language plpgsql
@@ -249,7 +377,6 @@ declare
   v_stage_key text;
   v_status text;
   v_rows integer := 0;
-  v_completed_at timestamptz;
 begin
   v_stage_key := coalesce(new.details->>'milestone_key', '');
 
@@ -307,8 +434,8 @@ begin
          end
    where id = new.claim_id;
 
-  -- For External Claims, only an explicit Operations stage completion may advance.
-  -- The server action adds completed_at only for Save & move / complete actions.
+  -- External "Save Details" writes do not carry the server-only completion marker.
+  -- Therefore they can update values but cannot silently advance the shared stage.
   if v_claim.policy_service_source::text = 'external'
      and not (new.details ? 'completed_at') then
     return new;
@@ -383,57 +510,12 @@ begin
     raise exception 'The claim stage could not be persisted.';
   end if;
 
-  -- Operations completion of Stage N moves the Customer's shared journey to Stage N+1
-  -- by completing the same Stage N milestone. Existing Customer completion timestamps
-  -- and actor identity are preserved; Operations values become the latest verified values.
-  if v_claim.policy_service_source::text = 'external' and v_claim.external_policy_id is not null then
-    v_completed_at := coalesce(nullif(new.details->>'completed_at', '')::timestamptz, now());
-
-    insert into public.claim_milestones (
-      claim_id,
-      milestone_key,
-      milestone_status,
-      details,
-      completed_at,
-      recorded_by,
-      recorded_by_actor
-    ) values (
-      new.claim_id,
-      v_stage_key::public.claim_milestone_key,
-      'completed'::public.claim_milestone_status,
-      coalesce(new.details, '{}'::jsonb),
-      v_completed_at,
-      auth.uid(),
-      'sankalp'::public.claim_milestone_actor
-    )
-    on conflict (claim_id, milestone_key) do update
-      set milestone_status = case
-            when claim_milestones.milestone_status::text = 'not_applicable'
-              then claim_milestones.milestone_status
-            else 'completed'::public.claim_milestone_status
-          end,
-          details = coalesce(claim_milestones.details, '{}'::jsonb) || excluded.details,
-          completed_at = coalesce(claim_milestones.completed_at, excluded.completed_at),
-          recorded_by = case
-            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
-              then claim_milestones.recorded_by
-            else excluded.recorded_by
-          end,
-          recorded_by_actor = case
-            when claim_milestones.milestone_status::text in ('completed', 'not_applicable')
-              then claim_milestones.recorded_by_actor
-            else excluded.recorded_by_actor
-          end,
-          updated_at = now();
-  end if;
-
   return new;
 end;
 $$;
 
 revoke all on function public.persist_managed_claim_stage_transition_from_details() from public;
 
--- Keep the existing trigger binding explicit after replacing its function.
 drop trigger if exists trg_persist_managed_claim_stage_transition on public.claim_stage_details;
 create trigger trg_persist_managed_claim_stage_transition
 after insert on public.claim_stage_details
