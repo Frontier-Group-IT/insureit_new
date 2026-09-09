@@ -178,14 +178,16 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [selectedKey, setSelectedKey] = useState(() => stages.some((stage) => stage.key === initialStageKey) ? initialStageKey! : active?.key ?? stages[0].key);
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
-  const selectedAvailable = journeyComplete || selectedIndex <= activeIndex;
+  const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);
+  const selectedAvailable = journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;
   const selectedIsCurrent = !journeyComplete && selected.key === active?.key;
+  const selectedSaveOnly = externalSelectedCompleted || !selectedIsCurrent;
   const selectedDetails = stageOwnedDetails(details, selected.key, selected.statuses);
   const detail = selectedDetails[0];
   const spotDetail = details.find((row) => row.details?.milestone_key === "spot_intimation" || typeof row.details?.incident_at === "string" || typeof row.details?.accident_at === "string" || typeof row.details?.spot_intimation_at === "string");
   const managerNext = managerTransitions[currentStatus];
   const stageTarget = stageCompletionTargets[selected.key];
-  const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext);
+  const spotCurrentEditable = Boolean(selected.key === "spot_intimation" && selectedIsCurrent && managerNext && !externalSelectedCompleted);
   const stageEditable = Boolean(selected.key !== "spot_intimation" && selected.key !== "claim_intimation" && selectedAvailable && stageTarget);
   const [spotSubmitting, setSpotSubmitting] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
@@ -268,9 +270,10 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
 
       <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
         {stages.map((stage, index) => {
-          const available = journeyComplete || index <= activeIndex;
+          const externalStageCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(stage.key);
+          const available = journeyComplete || index <= activeIndex || externalStageCompleted;
           const isCurrent = hasExternalVisualProgress ? externalVisualCurrentIndex === index : !journeyComplete && stage.key === active?.key;
-          const isCompleted = hasExternalVisualProgress ? externalVisualCompletedKeys.has(stage.key) : journeyComplete || index < activeIndex;
+          const isCompleted = hasExternalVisualProgress ? externalStageCompleted : journeyComplete || index < activeIndex;
           const isSelected = stage.key === selected.key;
           const showSelectedMarker = !hasExternalVisualProgress && isSelected;
           return (
@@ -333,8 +336,8 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
           <form action={formAction} className="mt-3 rounded-xl border border-[#D9E6F7] bg-[#F8FBFF] p-3">
             <input type="hidden" name="milestone_key" value={selected.key} />
             <input type="hidden" name="next_status" value={stageTarget ?? ""} />
-            <input type="hidden" name="save_only" value={selectedIsCurrent ? "false" : "true"} />
-            <input type="hidden" name="notes" value={selectedIsCurrent ? `Operations completed ${selected.label} and opened the next journey stage.` : `Operations edited ${selected.label} details.`} />
+            <input type="hidden" name="save_only" value={selectedSaveOnly ? "true" : "false"} />
+            <input type="hidden" name="notes" value={selectedSaveOnly ? `Operations edited ${selected.label} details.` : `Operations completed ${selected.label} and opened the next journey stage.`} />
             <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
