@@ -39,6 +39,10 @@ const checks = [
   ['Internal new-claim video still uses video-only picker contract', hasVideoDocumentPicker(internalCreate)],
   ['Internal tracked Stage 1 video still uses video-only picker contract', hasVideoDocumentPicker(internalTracker)],
   ['External self-managed claim video still uses video-only picker contract', hasVideoDocumentPicker(externalClaim)],
+  ['External claim storage failures are classified with status logging', externalClaim.includes('classifyClaimUploadStorageError(uploadError)') && externalClaim.includes('claimUploadStorageErrorStatus(uploadError)')],
+  ['External claim refreshes authentication before retrying auth failures', externalClaim.includes("failureKind === 'auth'") && externalClaim.includes('supabase.auth.refreshSession()')],
+  ['External claim retries transient storage failures up to three attempts', externalClaim.includes('CLAIM_UPLOAD_MAX_ATTEMPTS = 3') && externalClaim.includes("failureKind === 'transient'")],
+  ['External claim treats an already-existing retry target as uploaded', externalClaim.includes("failureKind === 'already_exists' && attempt > 1")],
   ['Existing expo-image-picker dependency is reused', Boolean(packageJson.dependencies?.['expo-image-picker'])],
   ['Existing expo-image-picker native plugin remains configured', imagePickerPluginConfigured],
   ['Customer runtime remains 0.3.0', appConfig.expo.version === '0.3.0'],
@@ -53,4 +57,4 @@ if (failed.length) {
   process.exit(1);
 }
 
-console.log('\nCustomer internal/external claim video Camera + Gallery / File regression passed.');
+console.log('\nCustomer internal/external claim video Camera + Gallery / File + resilient external storage regression passed.');

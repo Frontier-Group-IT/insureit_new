@@ -14,8 +14,10 @@ import { getCurrentSession } from '@/lib/auth';
 import {
   claimUploadFileReadMessage,
   claimUploadMetadataMessage,
+  claimUploadStorageErrorStatus,
   claimUploadStorageMessage,
   claimUploadTooLargeMessage,
+  classifyClaimUploadStorageError,
   resolveClaimUploadDescriptor,
 } from '@/lib/claim-document-upload';
 import { type ClaimMilestone } from '@/lib/claim-service-mode';
@@ -46,6 +48,8 @@ type LocationNotice = { tone: 'info' | 'error'; text: string } | null;
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
+const CLAIM_UPLOAD_MAX_ATTEMPTS = 3;
+const CLAIM_UPLOAD_RETRY_DELAY_MS = 350;
 const DOCUMENT_TYPE_BY_KEY: Record<Exclude<DocumentKey, 'bulk'>, string> = {
   rc: 'RC Copy',
   insurance: 'Insurance Copy',
@@ -59,6 +63,10 @@ const VOICE_NOTE_DOCUMENT_TYPE = 'Incident Voice Note';
 
 function isMultiMediaKey(key: Exclude<DocumentKey, 'bulk'>): key is 'accident_photo' | 'accident_video' {
   return key === 'accident_photo' || key === 'accident_video';
+}
+
+function waitForClaimUploadRetry(attempt: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, CLAIM_UPLOAD_RETRY_DELAY_MS * attempt));
 }
 
 export default function SelfManagedClaimScreen() {
@@ -430,12 +438,50 @@ export default function SelfManagedClaimScreen() {
       const maxUploadSizeLabel = isAccidentVideo ? '50 MB' : '5 MB';
       if (body.byteLength > maxUploadSizeBytes) return { ok: false, message: claimUploadTooLargeMessage(pickedFile.name, maxUploadSizeLabel), document: null };
 
-      const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, body, {
-        contentType: uploadMimeType,
-        upsert: false,
-      });
-      if (uploadResult.error) return { ok: false, message: claimUploadStorageMessage(pickedFile.name), document: null };
-      storageUploaded = true;
+      let authRefreshAttempted = false;
+      for (let attempt = 1; attempt <= CLAIM_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
+        let uploadError: unknown = null;
+        try {
+          const uploadResult = await supabase.storage.from(storageBucket).upload(storagePath, body, {
+            contentType: uploadMimeType,
+            upsert: false,
+          });
+          uploadError = uploadResult.error;
+        } catch (error) {
+          uploadError = error;
+        }
+
+        if (!uploadError) {
+          storageUploaded = true;
+          break;
+        }
+
+        const failureKind = classifyClaimUploadStorageError(uploadError);
+        console.warn('Self-managed claim document storage upload attempt failed', {
+          attempt,
+          kind: failureKind,
+          status: claimUploadStorageErrorStatus(uploadError),
+        });
+
+        if (failureKind === 'already_exists' && attempt > 1) {
+          storageUploaded = true;
+          break;
+        }
+
+        const canRefreshAuth = failureKind === 'auth' && !authRefreshAttempted && attempt < CLAIM_UPLOAD_MAX_ATTEMPTS;
+        const canRetryTransient = failureKind === 'transient' && attempt < CLAIM_UPLOAD_MAX_ATTEMPTS;
+        if (!canRefreshAuth && !canRetryTransient) break;
+
+        if (canRefreshAuth) {
+          authRefreshAttempted = true;
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) break;
+        }
+
+        await waitForClaimUploadRetry(attempt);
+      }
+
+      if (!storageUploaded) return { ok: false, message: claimUploadStorageMessage(pickedFile.name, true), document: null };
 
       const { data, error } = await supabase.from('claim_documents').insert({
         claim_id: targetClaimId,
