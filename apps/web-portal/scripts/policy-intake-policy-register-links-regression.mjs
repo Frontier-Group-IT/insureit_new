@@ -26,12 +26,15 @@ assert(quickLinks.includes('.ui-page-stage a[href="/policies/new"]'), "Policy In
 assert(quickLinks.includes("summary.actionRequired !== null"), "RM summaries must not render the reviewer-only Action Required shortcut");
 assert(quickLinks.includes('href="/policy-intakes?view=action"'), "Action Required must deep-link to the Policy Intake Action Required view");
 assert(quickLinks.includes('href="/policy-intakes?view=in_review"'), "In Review must deep-link to the Policy Intake In Review view");
-assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must be derived from whether the count is positive");
-assert(quickLinks.includes('active ? "text-[#C62828]" : "text-[#64748B]"'), "Zero-count quick links must be neutral while positive counts remain red");
-assert(quickLinks.includes('hover:bg-[#F8FAFC]'), "Quick links must reveal only a subtle rounded hover surface");
-assert(!quickLinks.includes('border border-[#FECACA]'), "Quick links must not render a permanent alert border");
-assert(!quickLinks.includes('bg-[#FFF7F7]'), "Quick links must not render a permanent alert background");
-assert(!quickLinks.includes('bg-[#FEE2E2]'), "Quick-link icons must remain flat without a separate red tile");
+assert(quickLinks.includes('tone="danger"'), "Action Required must use the highlighted danger treatment");
+assert(quickLinks.includes('tone="review"'), "In Review must use its distinct highlighted review treatment");
+assert(quickLinks.includes("const active = count > 0"), "Quick-link urgency must still be derived from whether the count is positive");
+assert(quickLinks.includes('border-[#FCA5A5] bg-[#FFF6F6]'), "Positive Action Required shortcuts must remain visibly highlighted in red");
+assert(quickLinks.includes('border-[#F6C66A] bg-[#FFF8EA]'), "Positive In Review shortcuts must remain visibly highlighted in amber");
+assert(quickLinks.includes("rounded-2xl border"), "Policy Intake quick links must render as rounded highlighted buttons");
+assert(quickLinks.includes("rounded-full transition-transform"), "Policy Intake quick-link icons must retain their circular highlighted tiles");
+assert(quickLinks.includes("hover:-translate-y-0.5"), "Policy Intake quick links must gain a stronger rounded hover treatment");
+assert(quickLinks.includes("hover:shadow-[0_8px_22px"), "Positive Policy Intake quick links must strengthen their highlight shadow on hover");
 
 const intakePage = read("app/policy-intakes/page.tsx");
 assert(intakePage.includes("type PolicyIntakeSearchParams = { view?: string }"), "Policy Intake route must accept the view query parameter");
