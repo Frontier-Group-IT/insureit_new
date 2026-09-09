@@ -13,6 +13,7 @@ import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimati
 type StageDetail = { stage?: string | null; details: Record<string, unknown> | null; created_at: string };
 type StageField = { name: string; label: string; type?: string };
 type StageFields = Record<string, StageField[]>;
+type CustomerMilestoneVisual = { key: string; status: string };
 
 type Props = {
   claimId: string;
@@ -25,6 +26,7 @@ type Props = {
   accidentAt?: string | null;
   spotIntimationAt?: string | null;
   spotDetails?: InternalSpotIntimationDetails | null;
+  externalCustomerMilestones?: CustomerMilestoneVisual[];
 };
 
 const stages = [
@@ -52,6 +54,8 @@ const stageCompletionTargets: Partial<Record<StageKey, ClaimStatus>> = {
   vehicle_delivery: "Payment Stage",
   payment_encashment: "Claim Complete",
 };
+
+const completedExternalMilestoneStatuses = new Set(["completed", "not_applicable"]);
 
 // Keep these labels in sync with the Customer app's managed claim stage screens.
 const fields: StageFields = {
@@ -157,11 +161,20 @@ function nextStageKeyFor(stageKey: string | null): StageKey | null {
   return index >= 0 && index < stages.length - 1 ? stages[index + 1].key : null;
 }
 
-export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails }: Props) {
+export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, details, spotContent, claimIntimationContent, initialStageKey, accidentAt, spotIntimationAt, spotDetails, externalCustomerMilestones }: Props) {
   const router = useRouter();
   const active = stages.find((stage) => (stage.statuses as readonly string[]).includes(currentStatus));
   const activeIndex = active ? stages.findIndex((stage) => stage.key === active.key) : 0;
   const journeyComplete = ["Claim Complete", "Settled", "Closed"].includes(currentStatus);
+  const hasExternalVisualProgress = externalCustomerMilestones !== undefined;
+  const externalVisualCompletedKeys = new Set(
+    (externalCustomerMilestones ?? [])
+      .filter((milestone) => completedExternalMilestoneStatuses.has(milestone.status))
+      .map((milestone) => milestone.key),
+  );
+  const externalVisualCurrentIndex = hasExternalVisualProgress
+    ? stages.findIndex((stage) => !externalVisualCompletedKeys.has(stage.key))
+    : -1;
   const [selectedKey, setSelectedKey] = useState(() => stages.some((stage) => stage.key === initialStageKey) ? initialStageKey! : active?.key ?? stages[0].key);
   const selected = stages.find((stage) => stage.key === selectedKey) ?? stages[0];
   const selectedIndex = stages.findIndex((stage) => stage.key === selected.key);
@@ -256,17 +269,18 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
       <ol className="grid border-y border-[#D9E3F0] md:grid-cols-3 xl:grid-cols-9">
         {stages.map((stage, index) => {
           const available = journeyComplete || index <= activeIndex;
-          const isCurrent = !journeyComplete && stage.key === active?.key;
-          const isCompleted = journeyComplete || index < activeIndex;
+          const isCurrent = hasExternalVisualProgress ? externalVisualCurrentIndex === index : !journeyComplete && stage.key === active?.key;
+          const isCompleted = hasExternalVisualProgress ? externalVisualCompletedKeys.has(stage.key) : journeyComplete || index < activeIndex;
           const isSelected = stage.key === selected.key;
+          const showSelectedMarker = !hasExternalVisualProgress && isSelected;
           return (
             <li key={stage.key} className="border-b border-[#D9E3F0] last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
               <button
                 type="button"
                 disabled={!available}
-                aria-current={isSelected ? "step" : undefined}
+                aria-current={isCurrent ? "step" : undefined}
                 onClick={() => setSelectedKey(stage.key)}
-                className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${isSelected ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
+                className={`flex min-h-[50px] w-full items-center justify-center border-b-2 px-2.5 py-1.5 text-center transition focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#174EA6] ${showSelectedMarker ? "border-b-[#071D49]" : "border-b-transparent"} ${isCurrent ? "bg-[#F7FAFF]" : available ? "bg-white hover:bg-[#FAFCFF]" : "cursor-not-allowed bg-white"}`}
               >
                 <span className="flex items-center justify-center gap-2">
                   <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${isCompleted ? "bg-[#E8F8F0] text-[#0A9B72]" : isCurrent ? "bg-[#155EEF] text-white shadow-[0_2px_6px_rgba(21,94,239,0.18)]" : "bg-[#EEF2F7] text-[#58708F]"}`}>
