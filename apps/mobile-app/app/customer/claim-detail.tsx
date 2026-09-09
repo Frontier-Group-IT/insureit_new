@@ -93,7 +93,7 @@ export default function ClaimDetailScreen() {
     return () => { active = false; };
   }, [id]);
 
-  const selfManaged = claim?.claim_service_mode === 'self_managed';
+  const selfManaged = claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed';
 
   useEffect(() => {
     if (!selfManaged) return;

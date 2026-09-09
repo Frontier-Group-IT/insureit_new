@@ -8,8 +8,10 @@ const operationsStages = fs.readFileSync(path.join(root, 'components/claim-manag
 const entry = fs.readFileSync(path.join(root, 'components/claims/external-claim-operations-entry.tsx'), 'utf8');
 const action = fs.readFileSync(path.join(root, 'app/claims/external-operations-actions.ts'), 'utf8');
 const mobileStartClaim = fs.readFileSync(path.join(root, '../mobile-app/app/customer/start-claim.tsx'), 'utf8');
+const mobileClaimDetail = fs.readFileSync(path.join(root, '../mobile-app/app/customer/claim-detail.tsx'), 'utf8');
 const migration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909121000_external_claim_canonical_operations_workflow.sql'), 'utf8');
 const enumCastFixMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'), 'utf8');
+const customerProcessingMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'), 'utf8');
 const schemaWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/apply-external-claim-canonical-operations.yml'), 'utf8');
 const deployWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/deploy-production.yml'), 'utf8');
 
@@ -50,5 +52,9 @@ assert(deployWorkflow.includes('20260909133000_fix_external_claim_takeover_miles
 assert(deployWorkflow.includes('apply-external-claim-canonical-operations.yml'), 'Production deploy gate must wait for the External Claim schema workflow.');
 assert(mobileStartClaim.includes("claim_service_mode?: 'broker_managed' | 'self_managed' | null"), 'Customer active-claim lookup must understand managed External Claims.');
 assert(mobileStartClaim.includes("claim.claim_service_mode === 'broker_managed'"), 'Customer Start Claim must detect an already Operations-managed External Claim.');
+assert(mobileStartClaim.includes("pathname: '/customer/self-managed-claim', params: { externalPolicyId: selectedPolicy.id, claimId: existingClaim.id }"), 'Existing External Claims must reopen the Customer self-tracked journey even after Operations enters the claim.');
+assert(mobileClaimDetail.includes("claim?.policy_service_source === 'external' || claim?.claim_service_mode === 'self_managed'"), 'External-policy claims must keep the Customer self-tracked journey regardless of Operations ownership mode.');
+assert(customerProcessingMigration.includes("claim.policy_service_source = 'external'::public.policy_service_source"), 'Customer milestone RLS must explicitly preserve External-policy claims.');
+assert(customerProcessingMigration.includes("claim.claim_service_mode = 'self_managed'::public.claim_service_mode"), 'Customer milestone RLS must preserve the original self-managed rule for non-External claims.');
 
 console.log('External Claim canonical Operations workflow regression passed.');
