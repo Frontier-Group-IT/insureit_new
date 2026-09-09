@@ -8,6 +8,7 @@ on:
     paths:
       - 'supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql'
       - 'supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'
+      - 'supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'
       - '.github/workflows/apply-external-claim-canonical-operations.yml'
 
 permissions:
@@ -35,6 +36,7 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260909133000_fix_external_claim_takeover_milestone_enum_cast.sql
           test -f supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
+          test -f supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -45,10 +47,16 @@ jobs:
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
       - name: Apply External Claim customer-processing protection
-        run: supabase db query --linked --file supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
+        run: |
+          set -euo pipefail
+          supabase db query --linked --file supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
+          supabase db query --linked --file supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
 
-      - name: Record migration as applied
-        run: supabase migration repair --linked --status applied 20260909150000
+      - name: Record migrations as applied
+        run: |
+          set -euo pipefail
+          supabase migration repair --linked --status applied 20260909150000
+          supabase migration repair --linked --status applied 20260909160000
 
       - name: Verify External Claim Operations and Customer contracts
         shell: bash
@@ -77,15 +85,43 @@ jobs:
                   and qual like '%policy_service_source%external%'
                   and with_check like '%policy_service_source%external%'
               ) as customer_external_update_ready,
+              (
+                position(
+                  'v_claim.policy_service_source'
+                  in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
+                ) > 0
+                and position(
+                  'v_claim.external_policy_id IS NOT NULL'
+                  in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
+                ) > 0
+              ) as customer_external_rpc_ready,
+              (
+                position(
+                  'v_claim.claim_service_mode'
+                  in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
+                ) > 0
+                and position(
+                  'v_claim.assistance_status'
+                  in pg_get_functiondef('public.save_self_managed_milestone(uuid,text,jsonb,timestamptz)'::regprocedure)
+                ) > 0
+              ) as non_external_self_managed_guard_ready,
               exists (
                 select 1
                 from supabase_migrations.schema_migrations
                 where version = '20260909150000'
-              ) as migration_recorded
+              ) as milestone_rls_migration_recorded,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20260909160000'
+              ) as milestone_rpc_migration_recorded
           ")
           echo "$result"
           echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_enum_cast_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"customer_external_insert_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"customer_external_update_ready"[[:space:]]*:[[:space:]]*true'
-          echo "$result" | grep -Eq '"migration_recorded"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"customer_external_rpc_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"non_external_self_managed_guard_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"milestone_rls_migration_recorded"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"milestone_rpc_migration_recorded"[[:space:]]*:[[:space:]]*true'
