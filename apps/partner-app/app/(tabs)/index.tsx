@@ -71,6 +71,7 @@ const GeneratedDashboardAssets = {
   homeHeader: require('../../assets/generated-dashboard/home-header-insurance.jpg'),
   pendingTasks: require('../../assets/generated-dashboard/pending-tasks-illustration.jpg'),
   pendingDocument: require('../../assets/generated-dashboard/pending-document-alert.png'),
+  customerAction: require('../../assets/partner/actions/customer-register.png'),
 } as const;
 
 export default function PartnerHomeDashboard() {
@@ -305,10 +306,10 @@ export default function PartnerHomeDashboard() {
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                   </View>
                   <View style={styles.quickGrid}>
-                    <QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-                    <QuickAction icon="refresh-cw" label="Renewals" onPress={() => router.push('/renewals')} />
-                    <QuickAction icon="shield" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
-                    <QuickAction icon="users" label="Customers" onPress={() => router.push('/customers')} />
+                    <QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+                    <QuickAction asset={GeneratedDashboardAssets.renewalAdd} label="Renewals" onPress={() => router.push('/renewals')} />
+                    <QuickAction asset={GeneratedDashboardAssets.policyVerified} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+                    <QuickAction asset={GeneratedDashboardAssets.customerAction} label="Customers" onPress={() => router.push('/customers')} />
                   </View>
                 </View>
               </PartnerEnter>
@@ -614,9 +615,9 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 112, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },
-  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.82 },
-  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.34)' },
+  hero: { height: 152, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 10 },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.94 },
+  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.22)' },
   heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -670,13 +671,13 @@ const styles = StyleSheet.create({
   quickActionTouch: { flex: 1, minHeight: 88 },
   quickAction: { flex: 1, minHeight: 88, alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 2, borderRadius: 13, backgroundColor: '#F3F8FF' },
   quickIconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
-  quickImageAsset: { width: 42, height: 42 },
+  quickImageAsset: { width: 46, height: 46 },
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
-  pendingCard: { marginTop: 11, minHeight: 142, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
-  pendingBackdrop: { position: 'absolute', right: 4, bottom: 4, width: 132, height: 132, opacity: 0.9 },
-  pendingHeaderSpacer: { width: 122, height: 1 },
-  pendingList: { marginTop: 2, paddingRight: 118 },
+  pendingCard: { marginTop: 11, minHeight: 154, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 10, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
+  pendingBackdrop: { position: 'absolute', right: -8, top: 0, width: 190, height: 154, opacity: 1 },
+  pendingHeaderSpacer: { width: 154, height: 1 },
+  pendingList: { marginTop: 4, paddingRight: 150 },
   pendingRow: { minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D3E1EF' },
   pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },
