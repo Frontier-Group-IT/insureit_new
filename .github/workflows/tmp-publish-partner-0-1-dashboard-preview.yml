@@ -1,4 +1,4 @@
-name: Temporary publish Partner 0.1.0 Home banner preview
+name: Temporary publish Partner 0.1.0 generated dashboard assets
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_DASHBOARD_COMMIT: 1622915c9c7aedbdd25919cc52f1b4fd3b2ed687
+      EXPECTED_DASHBOARD_COMMIT: 34eb5364747f079142b6a3c9de9b9f33aa5d8d5a
 
     steps:
       - name: Checkout exact branch snapshot
@@ -28,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require exact 0.1.0 dashboard-search-logo-and-banner app delta
+      - name: Require exact 0.1.0 dashboard asset delta
         shell: bash
         run: |
           set -euo pipefail
@@ -43,9 +43,19 @@ jobs:
           }
           changed_app_files=$(git diff --name-only "$ACCEPTED_BASELINE" HEAD -- apps/partner-app)
           printf '%s\n' "$changed_app_files"
-          expected_files=$(printf '%s\n' 'apps/partner-app/app/(tabs)/index.tsx' 'apps/partner-app/app/search.tsx' 'apps/partner-app/assets/insureit-partner-official.png' 'apps/partner-app/assets/partner-home-banner.png')
+          expected_files=$(printf '%s\n' \
+            'apps/partner-app/app/(tabs)/index.tsx' \
+            'apps/partner-app/app/search.tsx' \
+            'apps/partner-app/assets/generated-dashboard/commission-earned.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-add.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-sold.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-verified.png' \
+            'apps/partner-app/assets/generated-dashboard/renewal-add.png' \
+            'apps/partner-app/assets/generated-dashboard/renewal-due.png' \
+            'apps/partner-app/assets/insureit-partner-official.png' \
+            'apps/partner-app/assets/partner-home-banner.png')
           [ "$changed_app_files" = "$expected_files" ] || {
-            echo "::error::Refusing OTA: Partner app delta is not limited to Home dashboard, Search handoff, logo-only official mark and supplied Home banner." >&2
+            echo "::error::Refusing OTA: Partner app delta is outside the verified Home/Search/logo/banner/generated-dashboard asset set." >&2
             exit 1
           }
 
@@ -106,7 +116,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish dashboard OTA to existing Partner preview channel
+      - name: Publish generated dashboard assets OTA to existing Partner preview channel
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -114,7 +124,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 Home translucent banner polish ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 generated dashboard assets ${EXPECTED_DASHBOARD_COMMIT}" \
             --non-interactive \
             --json > partner-dashboard-preview-update.json
           cat partner-dashboard-preview-update.json
@@ -132,16 +142,13 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 Home translucent-banner preview OTA'
+            echo '## Partner 0.1.0 generated-dashboard-assets OTA'
             echo
             echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
             echo "- Verified dashboard source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
             echo '- Runtime required: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- App delta: Home dashboard + Search query handoff + logo-only official mark + supplied translucent Home banner'
-            echo '- Header: supplied growth/protection artwork at low opacity behind the logo-only INSUREIT shield and greeting'
-            echo '- Home metadata row: Partner role and updated-time line removed'
-            echo '- Business card: stronger horizontal and vertical dividers around Policies Sold and Commission Earned'
-            echo '- Commission invariant: payout total for the exact Policies Sold cohort'
+            echo '- App delta: verified Home/Search/logo/banner plus six optimized generated dashboard icon assets'
+            echo '- Generated assets: Policy Intake, Policies Sold, Commission Earned, Renewals, verified/Claims, Renewal Due'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
