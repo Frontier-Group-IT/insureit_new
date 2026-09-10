@@ -1,6 +1,6 @@
 "use client";
 
-import { FilePenLine } from "lucide-react";
+import { FilePenLine, FilePlus2 } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/auth";
 
 const bucketName = "claim-documents";
 
-export function ReplaceDocumentButton({ claimId, documentId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentId?: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
+export function ReplaceDocumentButton({ claimId, documentId, documentType, label, actionLabel = "Replace", iconOnly = false }: { claimId: string; customerId: string; documentId?: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace"; iconOnly?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -80,8 +80,8 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
           <div className="flex items-start gap-3">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[28px]">📄</div>
             <div>
-              <h2 className="text-[18px] font-semibold leading-tight text-[#071D49]">{isReplaceAction ? `Replace ${label}` : `Upload Valid ${label}`}</h2>
-              <p className="mt-2 max-w-[330px] text-[12px] leading-5 text-[#4B596B]">{isReplaceAction ? `Select a new ${label} file. The existing file will be replaced and must be verified again.` : `Please upload clear and valid ${label}.`}</p>
+              <h2 className="text-[18px] font-semibold leading-tight text-[#071D49]">{isReplaceAction ? `Replace ${label}` : iconOnly ? `Upload New ${label}` : `Upload Valid ${label}`}</h2>
+              <p className="mt-2 max-w-[330px] text-[12px] leading-5 text-[#4B596B]">{isReplaceAction ? `Select a new ${label} file. The existing file will be replaced and must be verified again.` : iconOnly ? `Add another ${label} file without changing the existing uploaded files.` : `Please upload clear and valid ${label}.`}</p>
             </div>
           </div>
           <button type="button" onClick={() => setOpen(false)} className="text-[28px] leading-none text-[#071D49]">×</button>
@@ -142,18 +142,22 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
     document.body
   ) : null;
 
+  const uploadLabel = iconOnly ? `Upload new ${label}` : `Upload ${label}`;
+
   return (
     <>
       <button
         type="button"
         disabled={isReplaceAction && !documentId}
         onClick={() => { setResult(null); setOpen(true); }}
-        {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : { "aria-label": `Upload ${label}`, title: `Upload ${label}` })}
+        {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : { "data-document-action": iconOnly ? "upload-new" : "upload", "aria-label": uploadLabel, title: uploadLabel })}
         className={isReplaceAction
           ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30 disabled:cursor-not-allowed disabled:opacity-40"
-          : "min-w-0 flex-1 cursor-pointer rounded-none px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49] transition-colors hover:rounded-md hover:bg-[#F4F8FF] hover:text-[#174EA6] focus-visible:rounded-md focus-visible:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25"}
+          : iconOnly
+            ? "grid h-7 w-7 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#2563EB] transition hover:bg-[#EEF4FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/25"
+            : "min-w-0 flex-1 cursor-pointer rounded-none px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49] transition-colors hover:rounded-md hover:bg-[#F4F8FF] hover:text-[#174EA6] focus-visible:rounded-md focus-visible:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25"}
       >
-        {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : isUploadAction ? "Document not uploaded" : actionLabel}
+        {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : iconOnly ? <FilePlus2 aria-hidden="true" size={16} strokeWidth={2} /> : isUploadAction ? "Document not uploaded" : actionLabel}
       </button>
       {modal}
     </>
