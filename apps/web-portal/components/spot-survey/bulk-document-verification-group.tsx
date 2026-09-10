@@ -155,8 +155,9 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
             })}
           </div>
         ) : hasMultipleFiles ? (
-          <div id={contentId} className="flex min-h-8 items-center justify-center px-1 py-1 text-center">
-            <p className="text-[11px] font-semibold tracking-[0.04em] text-[#526178]">{item.documents.length} FILES ARE UPLOADED</p>
+          <div id={contentId} className="flex min-h-11 items-center gap-2">
+            <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div>
+            <p className="min-w-0 flex-1 px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49]">{item.documents.length} FILES ARE UPLOADED</p>
           </div>
         ) : null
       ) : (
