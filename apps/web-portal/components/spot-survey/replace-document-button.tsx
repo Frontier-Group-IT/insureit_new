@@ -13,6 +13,15 @@ import { createSupabaseBrowserClient } from "@/lib/auth";
 
 const bucketName = "claim-documents";
 
+async function bestEffortCancelClaimDocumentUploads(claimId: string, paths: string[]) {
+  if (!paths.length) return;
+  try {
+    await cancelClaimDocumentUploads(claimId, paths);
+  } catch {
+    // Cleanup is secondary recovery. It must never replace the original upload failure or crash the claim page.
+  }
+}
+
 export function ReplaceDocumentButton({ claimId, documentId, documentType, label, actionLabel = "Replace", iconOnly = false }: { claimId: string; customerId: string; documentId?: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace"; iconOnly?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -59,7 +68,10 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
                 documentType: upload.documentType
               }, documentId);
               if (!response.ok) {
-                await cancelClaimDocumentUploads(claimId, [upload.path]);
+                await bestEffortCancelClaimDocumentUploads(claimId, [upload.path]);
+                uploadedPath = null;
+              } else {
+                // Finalization owns the object now. Never delete it because of a later client-side/UI failure.
                 uploadedPath = null;
               }
               setResult(response);
@@ -69,7 +81,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
                 setTimeout(() => router.refresh(), 0);
               }
             } catch {
-              if (uploadedPath) await cancelClaimDocumentUploads(claimId, [uploadedPath]);
+              if (uploadedPath) await bestEffortCancelClaimDocumentUploads(claimId, [uploadedPath]);
               setResult({ ok: false, message: isReplaceAction ? "Replacement failed. Please try again." : "Upload failed. Please try again." });
             }
           });

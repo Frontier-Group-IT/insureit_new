@@ -14,6 +14,15 @@ type Result = { ok: boolean; message?: string };
 const bucketName = "claim-documents";
 const acceptedTypes = "image/jpeg,image/png,image/webp,image/heic,video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.mkv,.avi";
 
+async function bestEffortCancelClaimDocumentUploads(claimId: string, paths: string[]) {
+  if (!paths.length) return;
+  try {
+    await cancelClaimDocumentUploads(claimId, paths);
+  } catch {
+    // Cleanup is secondary recovery. It must never replace the original upload failure or crash the claim page.
+  }
+}
+
 export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -73,7 +82,10 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
                     }))
                   );
                   if (!response.ok) {
-                    await cancelClaimDocumentUploads(claimId, uploadedPaths);
+                    await bestEffortCancelClaimDocumentUploads(claimId, uploadedPaths);
+                    uploadedPaths.length = 0;
+                  } else {
+                    // Finalization owns these objects now. Never delete them because of a later client-side/UI failure.
                     uploadedPaths.length = 0;
                   }
                   setResult(response);
@@ -82,7 +94,7 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
                     router.refresh();
                   }
                 } catch {
-                  if (uploadedPaths.length) await cancelClaimDocumentUploads(claimId, uploadedPaths);
+                  if (uploadedPaths.length) await bestEffortCancelClaimDocumentUploads(claimId, uploadedPaths);
                   setResult({ ok: false, message: "Upload failed. Please try again." });
                 }
               });
