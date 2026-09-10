@@ -1,50 +1,158 @@
-name: Temporary patch Partner banner visibility
+name: Temporary publish Partner 0.1.0 generated dashboard assets
 
 on:
   push:
     branches:
-      - partner/fix-visible-banners-distinct-icons
+      - partner/preview-0.1.0-dashboard-refresh
     paths:
       - '.github/workflows/tmp-publish-partner-0-1-dashboard-preview.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
+  publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
+      EXPECTED_DASHBOARD_COMMIT: d052394c1fb05aff454a93be62f8e3d546170508
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact branch snapshot
+        uses: actions/checkout@v4
         with:
-          ref: partner/fix-visible-banners-distinct-icons
           fetch-depth: 0
-      - name: Patch Partner Home visuals
+
+      - name: Require exact 0.1.0 dashboard asset delta
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('apps/partner-app/app/(tabs)/index.tsx')
-          s=p.read_text()
-          pairs=[
-          ('resizeMode="contain"\n          />\n          <View style={styles.heroTopRow}>','resizeMode="cover"\n          />\n          <View style={styles.heroBackdropShade} />\n          <View style={styles.heroTopRow}>'),
-          ('<QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push(\'/policy-intake-new\')} />\n                    <QuickAction asset={GeneratedDashboardAssets.renewalAdd} label="Renewals" onPress={() => router.push(\'/renewals\')} />\n                    <QuickAction asset={GeneratedDashboardAssets.policyVerified} label="Claims" onPress={() => router.push(\'/(tabs)/claims\')} />','<QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push(\'/policy-intake-new\')} />\n                    <QuickAction icon="refresh-cw" label="Renewals" onPress={() => router.push(\'/renewals\')} />\n                    <QuickAction icon="shield" label="Claims" onPress={() => router.push(\'/(tabs)/claims\')} />'),
-          ('<Image\n                        source={GeneratedDashboardAssets.pendingDocument}\n                        style={styles.pendingHeroAsset}\n                        resizeMode="contain"\n                      />','<View style={styles.pendingHeaderSpacer} />'),
-          ("hero: { height: 106, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },\n  heroBackdrop: { position: 'absolute', top: -3, right: -18, width: 330, height: 110, opacity: 0.42 },\n  heroTopRow: { zIndex: 1,","hero: { height: 112, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },\n  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.82 },\n  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.34)' },\n  heroTopRow: { zIndex: 2,"),
-          ("heroGreeting: { zIndex: 1,","heroGreeting: { zIndex: 2,"),
-          ("quickIconCircle: { width: 39, height: 39, borderRadius: 20,","quickIconCircle: { width: 42, height: 42, borderRadius: 21,"),
-          ('<Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />','<Feather name={icon} size={23} color={partnerTheme.colors.brandStrong} />'),
-          ("pendingCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF',","pendingCard: { marginTop: 11, minHeight: 142, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF',"),
-          ("pendingBackdrop: { position: 'absolute', top: -2, right: -38, width: 235, height: 112, opacity: 0.42 },\n  pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },\n  pendingHeroAsset: { width: 48, height: 48 },\n  pendingList: { marginTop: 2, paddingRight: 2 },","pendingBackdrop: { position: 'absolute', right: 4, bottom: 4, width: 132, height: 132, opacity: 0.9 },\n  pendingHeaderSpacer: { width: 122, height: 1 },\n  pendingList: { marginTop: 2, paddingRight: 118 },")]
-          for old,new in pairs:
-              if old not in s:
-                  raise SystemExit('missing source fragment: '+old[:120])
-              s=s.replace(old,new,1)
-          p.write_text(s)
-          PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add 'apps/partner-app/app/(tabs)/index.tsx'
-          git commit -m 'Make Partner banners visible and quick icons distinct'
-          git push origin HEAD:partner/fix-visible-banners-distinct-icons
+          git fetch origin partner/preview-0.1.0-dashboard-refresh
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/partner/preview-0.1.0-dashboard-refresh)" ] || {
+            echo "::error::Branch advanced after checkout." >&2
+            exit 1
+          }
+          git merge-base --is-ancestor "$EXPECTED_DASHBOARD_COMMIT" HEAD || {
+            echo "::error::Expected verified dashboard commit is not contained in publish head." >&2
+            exit 1
+          }
+          changed_app_files=$(git diff --name-only "$ACCEPTED_BASELINE" HEAD -- apps/partner-app)
+          printf '%s\n' "$changed_app_files"
+          expected_files=$(printf '%s\n' \
+            'apps/partner-app/app/(tabs)/index.tsx' \
+            'apps/partner-app/app/search.tsx' \
+            'apps/partner-app/assets/generated-dashboard/commission-earned.png' \
+            'apps/partner-app/assets/generated-dashboard/home-header-insurance.jpg' \
+            'apps/partner-app/assets/generated-dashboard/pending-document-alert.png' \
+            'apps/partner-app/assets/generated-dashboard/pending-tasks-illustration.jpg' \
+            'apps/partner-app/assets/generated-dashboard/policy-add.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-sold.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-verified.png' \
+            'apps/partner-app/assets/generated-dashboard/renewal-add.png' \
+            'apps/partner-app/assets/generated-dashboard/renewal-due.png' \
+            'apps/partner-app/assets/insureit-partner-official.png' \
+            'apps/partner-app/assets/partner-home-banner.png')
+          [ "$changed_app_files" = "$expected_files" ] || {
+            echo "::error::Refusing OTA: Partner app delta is outside the verified Home/Search/logo/banner/generated-dashboard asset set." >&2
+            exit 1
+          }
+
+      - name: Validate installed-runtime identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.1.0') throw new Error(`Expected installed-compatible app version/runtime 0.1.0, found ${expo.version}`);
+          if (expo.android?.versionCode !== 1 || expo.ios?.buildNumber !== '1') throw new Error('Expected Partner 0.1.0 native build identity.');
+          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') throw new Error('Unexpected Partner package identity.');
+          if (expo.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected appVersion runtime policy.');
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner EAS project.');
+          if (expo?.updates?.url !== 'https://u.expo.dev/8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner update URL.');
+          NODE
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Require synchronized dependency lockfile
+        shell: bash
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            echo "::error::package-lock.json is out of sync."
+            git diff -- package-lock.json
+            exit 1
+          fi
+
+      - name: Verify Partner 0.1.0 source before OTA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:uat
+          npm run typecheck:partner
+          npm run lint:partner
+          npm run build:partner:web
+
+      - name: Verify Expo access
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "::error::EXPO_TOKEN_PARTNER is missing."; exit 1; }
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Publish generated dashboard banners and distinct icons OTA to existing Partner preview channel
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Partner 0.1.0 generated banners and distinct dashboard icons ${EXPECTED_DASHBOARD_COMMIT}" \
+            --non-interactive \
+            --json > partner-dashboard-preview-update.json
+          cat partner-dashboard-preview-update.json
+
+      - name: Verify latest preview update metadata
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json || true
+          cat latest-preview.json || true
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Partner 0.1.0 generated-dashboard-assets OTA'
+            echo
+            echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
+            echo "- Verified dashboard source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
+            echo '- Runtime required: `0.1.0`'
+            echo '- Channel: `preview`'
+            echo '- App delta: verified Home/Search/logo/banner plus generated dashboard icon and illustration assets'
+            echo '- Generated banners: insurance-family header and Pending Tasks checklist illustration'
+            echo '- Distinct assets: Policy Intake, Renewals, Claims, Pending Tasks, Policies Sold, Commission Earned, Renewal Due'
+            echo '- Native APK/AAB build: NOT triggered'
+          } >> "$GITHUB_STEP_SUMMARY"
