@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const workspace = await readFile(new URL("../components/spot-survey/spot-survey-workspace-v2.tsx", import.meta.url), "utf8");
+const bulkVerificationGroup = await readFile(new URL("../components/spot-survey/bulk-document-verification-group.tsx", import.meta.url), "utf8");
 const uploader = await readFile(new URL("../components/spot-survey/spot-media-upload-button.tsx", import.meta.url), "utf8");
 const replacementUploader = await readFile(new URL("../components/spot-survey/replace-document-button.tsx", import.meta.url), "utf8");
 const actions = await readFile(new URL("../app/claims/[id]/spot-survey-actions.ts", import.meta.url), "utf8");
@@ -19,11 +20,17 @@ assert.match(workspace, /Spot Intimation Date & Time/, "Claim header must show t
 assert.match(workspace, /const spotAt = claim\.spotIntimationAt \?\? claim\.created_at;/, "Spot intimation display must prefer the persisted stage timestamp and retain a creation-time fallback.");
 assert.match(workspace, /formatIntimationDate\(spotAt\)/, "Spot intimation date must use the resolved persisted timestamp.");
 assert.match(workspace, /formatIntimationTime\(spotAt\)/, "Spot intimation time must use the resolved persisted timestamp.");
-assert.match(workspace, /<SpotMediaUploadButton claimId=\{claim\.id\}/, "Spot Photo card must expose the multi-upload action.");
-assert.match(workspace, /documentCount: spotDocuments\.length/, "Spot Photo card must retain awareness of multiple uploaded media records.");
-assert.match(workspace, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Each row-level Replace control must target the exact existing document id.");
-assert.match(workspace, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentType=\{item\.documentType\}[\s\S]*?actionLabel="Upload"/, "Missing-document Upload must remain separate from row replacement and must not require an existing document id.");
-assert.match(workspace, /firstDocument \? <ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentType=\{item\.documentType\} label=\{item\.title\} actionLabel="Upload" iconOnly \/>/, "A populated document category must expose one icon-only Upload New action in its header.");
+assert.match(workspace, /BulkDocumentVerificationGroup/, "Spot document categories must render through the selectable bulk verification group.");
+assert.match(workspace, /item\.documents\.length > 0 && item\.documents\.every/, "A document category must count as verified only when every current file is verified.");
+assert.match(bulkVerificationGroup, /type="checkbox"/, "Pending files must expose checkmark selection for grouped verification.");
+assert.match(bulkVerificationGroup, /documentIds=\{selectedDocumentIds\}/, "The category Verify action must receive only the selected file ids.");
+assert.match(bulkVerificationGroup, /variant="header"/, "Bulk Verify must render beside the document count in the category header.");
+assert.match(bulkVerificationGroup, /disabled=\{selectedDocumentIds\.length === 0\}/, "Bulk Verify must remain disabled until at least one pending file is selected.");
+assert.match(bulkVerificationGroup, /document\.verification_status !== "rejected"/, "Rejected files must not be selectable for verification before replacement.");
+assert.match(bulkVerificationGroup, /<RequestReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\}/, "Reupload must remain available per individual file.");
+assert.match(bulkVerificationGroup, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Each row-level Replace control must target the exact existing document id.");
+assert.match(bulkVerificationGroup, /actionLabel="Upload" iconOnly/, "A populated document category must retain the icon-only Upload New action in its header.");
+assert.doesNotMatch(bulkVerificationGroup, /<VerificationActionButton[\s\S]{0,180}documentId=\{document\.id\}/, "Per-file Verify controls must not be rendered for pending files.");
 
 assert.match(uploader, /type="file"[\s\S]*multiple/, "Spot media selector must allow multiple files.");
 assert.match(uploader, /video\/mp4/, "Spot media selector must accept MP4 video.");
@@ -123,6 +130,12 @@ assert.match(loadClaimFunction, /claim_service_mode !== "broker_managed"/, "Priv
 assert.doesNotMatch(loadClaimFunction, /createServerSupabaseClient\(\)/, "Claim existence lookup must not regress to the RLS-filtered authenticated client.");
 assert.doesNotMatch(actions, /loadClaim\(claimId\);/, "Claim actions must pass the already-authorized profile into the scoped claim loader.");
 assert.match(actions, /supabase\.rpc\("advance_initial_documents_verified"/, "Initial-document advancement must continue through the existing secure RPC.");
+assert.match(actions, /function parseDocumentIds\(value: string\)/, "Verification must parse the selected file ids through a bounded server-side helper.");
+assert.match(actions, /\.eq\("claim_id", claimId\)[\s\S]*?\.in\("id", documentIds\)/, "Bulk verification must reload every selected file inside the authorized claim scope.");
+assert.match(actions, /families\.size !== 1/, "Bulk verification must reject a mixed document-category selection.");
+assert.match(actions, /documents\.some\(\(document\) => document\.verification_status === "rejected"\)/, "Bulk verification must reject unresolved reupload files.");
+assert.match(actions, /\.in\("id", idsToVerify\)/, "Selected document statuses must be updated in one claim-scoped batch.");
+assert.match(actions, /matchingDocuments\.length > 0 && matchingDocuments\.every\(\(document\) => document\.verification_status === "verified"\)/, "Claim-stage advancement must wait until every current file in each required document category is verified.");
 
 assert.match(insuranceCapacity, /vehicleClassCode === "PCP" \|\| vehicleClassCode === "TWP"/, "PCP and TWP insurance verification must resolve capacity from engine CC.");
 assert.match(insuranceCapacity, /vehicleClassCode === "GCV"/, "GCV insurance verification must retain GVW capacity.");
@@ -132,6 +145,8 @@ assert.match(insuranceCapacity, /fuelType\.includes\("electric"\)/, "Electric ve
 assert.match(insuranceCapacityAction, /canAccessCustomer/, "Class-aware capacity lookup must retain customer access scoping.");
 assert.match(insuranceCapacityAction, /vehicle_class_code,vehicle_class_description,vehicle_type,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,vehicle_category/, "Capacity lookup must use canonical vehicle-class fields.");
 assert.match(verificationAction, /InsuranceVerificationModalButton/, "Insurance Copy verification must route through the class-aware modal.");
+assert.match(verificationAction, /documentIds\?: string\[\]/, "Verification action must accept a selected group of document ids.");
+assert.match(verificationAction, /targetIds\.join\(","\)/, "Selected document ids must be sent through the existing verification modal as one bounded target set.");
 assert.match(insuranceModal, /vehicle_capacity_value/, "New insurance verifications must persist explicit class-aware capacity metadata.");
 assert.match(insuranceModal, /formData\.set\("gvw_kg", capacityValue\)/, "Class-aware verification must preserve the existing gvw_kg server contract for backward compatibility.");
 assert.match(insuranceModal, /<option>Hazardous<\/option>/, "Hazardous policy selection must remain available.");
@@ -152,4 +167,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot multi-upload, signed direct storage, cleanup crash guard, icon-only upload-new, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot upload, selectable bulk verification, signed direct storage, cleanup crash guard, icon-only upload-new, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
