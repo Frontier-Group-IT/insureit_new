@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Image, type ImageSourcePropType, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
@@ -28,6 +29,9 @@ export default function SettingsScreen() {
     }
   };
 
+  const updateSource = Updates.isEmbeddedLaunch ? 'Embedded build' : 'OTA update';
+  const updateId = Updates.updateId ? Updates.updateId.slice(0, 8) : 'Embedded';
+
   return (
     <PartnerScreen eyebrow="ACCOUNT" title="Settings & app info" onBack={() => router.back()}>
       <PartnerSectionHeader title="Account" />
@@ -50,8 +54,11 @@ export default function SettingsScreen() {
       <View style={styles.details}>
         <InfoRow label="App" value="INSUREIT Partner" />
         <InfoRow label="Version" value="0.1.0" />
-        <InfoRow label="Runtime" value="0.1.0" />
-        <InfoRow label="Updates" value="Automatic on launch" last />
+        <InfoRow label="Runtime" value={Updates.runtimeVersion || '0.1.0'} />
+        <InfoRow label="Channel" value={Updates.channel || 'preview'} />
+        <InfoRow label="Running from" value={updateSource} />
+        <InfoRow label="Update ID" value={updateId} />
+        <InfoRow label="Updates" value="Automatic on launch & foreground" last />
       </View>
 
       <View style={[styles.menu, styles.updateMenu]}>
