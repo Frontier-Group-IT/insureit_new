@@ -18,6 +18,7 @@ const rcDateFields = ["fitness_valid_upto", "tax_valid_upto", "insurance_valid_u
 const insuranceRequiredFields = ["insurance_start_date", "insurance_end_date", "ncb_verified", "policy_type_check", "gvw_kg"] as const;
 const dlRequiredFields = ["licence_valid_upto", "dl_inbound", "dl_valid_for_loss_vehicle"] as const;
 const grRequiredFields = ["gr_gvw_kg", "unladen_weight_kg", "load_weight_kg", "load_difference_kg"] as const;
+const maxBulkVerificationDocuments = 25;
 
 type ClaimForVerification = { id: string; customer_id: string; current_status: ClaimStatus; accident_at: string | null; claim_service_mode: "broker_managed" | "self_managed" };
 type ClaimDocumentStatus = { id: string; document_type: string; verification_status: string };
@@ -40,7 +41,7 @@ async function loadClaim(claimId: string, profile: NonNullable<Awaited<ReturnTyp
   return data;
 }
 
-async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification, documentId: string, profileId: string | null) {
+async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification, _documentId: string, profileId: string | null) {
   const nextStatus = verifiedStatusFor(claim.current_status);
   if (!nextStatus || nextStatus === claim.current_status) return false;
 
@@ -53,12 +54,10 @@ async function advanceAfterInitialDocumentsVerified(claim: ClaimForVerification,
   if (documentsError) throw new Error(documentsError.message);
 
   const requiredTypes = requiredDocumentTypesForStatus(claim.current_status);
-  const allVerified = requiredTypes.length > 0 && requiredTypes.every((type) =>
-    documents.some((document) =>
-      matchesRequiredDocument(document.document_type, type) &&
-      (document.id === documentId || document.verification_status === "verified")
-    )
-  );
+  const allVerified = requiredTypes.length > 0 && requiredTypes.every((type) => {
+    const matchingDocuments = documents.filter((document) => matchesRequiredDocument(document.document_type, type));
+    return matchingDocuments.length > 0 && matchingDocuments.every((document) => document.verification_status === "verified");
+  });
   if (!allVerified) return false;
 
   const { data: updatedClaim, error: updateError } = await supabase.rpc("advance_initial_documents_verified", {
@@ -83,6 +82,12 @@ function collectVerificationDetails(formData: FormData) {
     details[key] = cleanValue;
   }
   return details;
+}
+
+function parseDocumentIds(value: string) {
+  const ids = Array.from(new Set(value.split(",").map((id) => id.trim()).filter(Boolean)));
+  if (ids.length > maxBulkVerificationDocuments) throw new Error(`Select no more than ${maxBulkVerificationDocuments} files at a time.`);
+  return ids;
 }
 
 function incidentDateOnly(value?: string | null) {
@@ -117,6 +122,18 @@ function verificationTypeForDocument(documentType: string): VerificationType {
   if (normalized.includes("registration") || normalized.includes("rc")) return "rc";
   if (normalized.includes("policy") || normalized.includes("insurance")) return "insurance";
   return "document";
+}
+
+function verificationFamilyForDocument(documentType: string) {
+  const normalized = documentType.trim().toLowerCase();
+  if (isSpotDocument(documentType)) return "spot";
+  if (isDlDocument(documentType)) return "dl";
+  if (isGrDocument(documentType)) return "gr";
+  const verificationType = verificationTypeForDocument(documentType);
+  if (verificationType === "rc" || verificationType === "insurance") return verificationType;
+  if (normalized.includes("video")) return "video";
+  if (normalized.includes("audio") || normalized.includes("voice")) return "audio";
+  return `document:${normalized}`;
 }
 
 function requiredFieldsForDocument(documentType: string) {
@@ -198,35 +215,96 @@ async function saveVerificationHistory(params: { claimId: string; documentId: st
 
 export async function verifySpotSurveyDocument(formData: FormData): Promise<ActionResult> {
   try {
-    const documentId = String(formData.get("documentId") ?? "").trim();
+    const rawDocumentIds = String(formData.get("documentId") ?? "").trim();
+    const documentIds = parseDocumentIds(rawDocumentIds);
     const claimId = String(formData.get("claimId") ?? "").trim();
-    if (!documentId || !claimId) throw new Error("Missing claim or document id.");
+    if (!documentIds.length || !claimId) throw new Error("Missing claim or document id.");
     const profile = await currentProfile();
     const claim = await loadClaim(claimId, profile);
     const supabase = await createServerSupabaseClient();
     const rawDetails = collectVerificationDetails(formData);
     const incidentDate = incidentDateOnly(claim.accident_at);
-    const { data: document, error: documentError } = await supabase.from("claim_documents").select("id, claim_id, document_type, verification_status").eq("id", documentId).eq("claim_id", claimId).maybeSingle<{ id: string; claim_id: string; document_type: string; verification_status: string }>();
-    if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
+    const { data: selectedDocuments, error: documentError } = await supabase
+      .from("claim_documents")
+      .select("id, document_type, verification_status")
+      .eq("claim_id", claimId)
+      .in("id", documentIds)
+      .returns<ClaimDocumentStatus[]>();
+    if (documentError) throw new Error(documentError.message);
+    if ((selectedDocuments ?? []).length !== documentIds.length) throw new Error("One or more selected documents are unavailable for this claim.");
 
-    const { finalDetails, isValid, invalidReason } = applyAutomaticValidity(rawDetails, incidentDate, document.document_type);
-    const detailsPayload = { verification_type: "spot_survey_document", document_type: document.document_type, document_id: document.id, incident_date: incidentDate, is_valid: isValid, invalid_reason: invalidReason, ...finalDetails, verified: isValid, verified_at: new Date().toISOString() };
+    const documentsById = new Map((selectedDocuments ?? []).map((document) => [document.id, document]));
+    const documents = documentIds.map((documentId) => documentsById.get(documentId)).filter((document): document is ClaimDocumentStatus => Boolean(document));
+    const families = new Set(documents.map((document) => verificationFamilyForDocument(document.document_type)));
+    if (families.size !== 1) throw new Error("Selected files must belong to the same document category.");
+    if (documents.some((document) => document.verification_status === "rejected")) throw new Error("Replace rejected files before selecting them for verification.");
 
-    if (!isValid) {
-      await saveVerificationHistory({ claimId, documentId: document.id, documentType: document.document_type, verificationType: verificationTypeForDocument(document.document_type), incidentDate, isValid: false, invalidReason, details: detailsPayload, verifiedBy: profile?.id ?? null });
-      await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: invalidReason, changed_by: profile?.id ?? null });
+    const documentsToVerify = documents.filter((document) => document.verification_status !== "verified");
+    if (!documentsToVerify.length) return { ok: true, message: "Selected documents are already verified." };
+
+    const verifiedAt = new Date().toISOString();
+    const attempts = documentsToVerify.map((document) => {
+      const { finalDetails, isValid, invalidReason } = applyAutomaticValidity(rawDetails, incidentDate, document.document_type);
+      const detailsPayload = { verification_type: "spot_survey_document", document_type: document.document_type, document_id: document.id, incident_date: incidentDate, is_valid: isValid, invalid_reason: invalidReason, ...finalDetails, verified: isValid, verified_at: verifiedAt };
+      return { document, detailsPayload, isValid, invalidReason };
+    });
+    const invalidAttempt = attempts.find((attempt) => !attempt.isValid);
+
+    if (invalidAttempt) {
+      const { error: verificationError } = await supabase.from("claim_document_verifications").insert(attempts.map((attempt) => ({
+        claim_id: claimId,
+        document_id: attempt.document.id,
+        document_type: attempt.document.document_type,
+        verification_type: verificationTypeForDocument(attempt.document.document_type),
+        incident_date: incidentDate,
+        is_valid: false,
+        invalid_reason: attempt.invalidReason,
+        details: attempt.detailsPayload,
+        verified_by: profile?.id ?? null
+      })));
+      if (verificationError) throw new Error(verificationError.message);
+      const invalidReason = invalidAttempt.invalidReason ?? "Document cannot be verified because required details are missing or invalid.";
+      const { error: historyError } = await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: invalidReason, changed_by: profile?.id ?? null });
+      if (historyError) throw new Error(historyError.message);
       revalidatePath(`/claims/${claimId}`);
-      return { ok: false, message: invalidReason ?? "Document cannot be verified because required details are missing or invalid." };
+      return { ok: false, message: invalidReason };
     }
 
-    const { error: reviewError } = await supabase.from("claim_documents").update({ verification_status: "verified", verified_by: profile?.id ?? null, verified_at: new Date().toISOString(), rejection_reason: null }).eq("id", documentId).eq("claim_id", claimId);
+    const idsToVerify = documentsToVerify.map((document) => document.id);
+    const { error: reviewError } = await supabase
+      .from("claim_documents")
+      .update({ verification_status: "verified", verified_by: profile?.id ?? null, verified_at: verifiedAt, rejection_reason: null })
+      .eq("claim_id", claimId)
+      .in("id", idsToVerify);
     if (reviewError) throw new Error(reviewError.message);
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile?.id ?? null });
-    await saveVerificationHistory({ claimId, documentId: document.id, documentType: document.document_type, verificationType: verificationTypeForDocument(document.document_type), incidentDate, isValid: true, invalidReason: null, details: detailsPayload, verifiedBy: profile?.id ?? null });
-    await advanceAfterInitialDocumentsVerified(claim, document.id, profile?.id ?? null);
-    await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${document.document_type} verified during spot survey.`, changed_by: profile?.id ?? null });
+
+    const { error: stageDetailsError } = await supabase.from("claim_stage_details").insert(attempts.map((attempt) => ({
+      claim_id: claimId,
+      stage: claim.current_status,
+      details: attempt.detailsPayload,
+      created_by: profile?.id ?? null
+    })));
+    if (stageDetailsError) throw new Error(stageDetailsError.message);
+
+    const { error: verificationError } = await supabase.from("claim_document_verifications").insert(attempts.map((attempt) => ({
+      claim_id: claimId,
+      document_id: attempt.document.id,
+      document_type: attempt.document.document_type,
+      verification_type: verificationTypeForDocument(attempt.document.document_type),
+      incident_date: incidentDate,
+      is_valid: true,
+      invalid_reason: null,
+      details: attempt.detailsPayload,
+      verified_by: profile?.id ?? null
+    })));
+    if (verificationError) throw new Error(verificationError.message);
+
+    await advanceAfterInitialDocumentsVerified(claim, "", profile?.id ?? null);
+    const documentLabel = documentsToVerify[0]?.document_type ?? "Document";
+    const { error: historyError } = await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${documentsToVerify.length} ${documentLabel} file${documentsToVerify.length === 1 ? "" : "s"} verified during spot survey.`, changed_by: profile?.id ?? null });
+    if (historyError) throw new Error(historyError.message);
     revalidatePath(`/claims/${claimId}`); revalidatePath("/claims"); revalidatePath("/dashboard");
-    return { ok: true, message: "Document verified successfully." };
+    return { ok: true, message: `${documentsToVerify.length} document${documentsToVerify.length === 1 ? "" : "s"} verified successfully.` };
   } catch (error) {
     console.error("verifySpotSurveyDocument failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Verification failed." };
