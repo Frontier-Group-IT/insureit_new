@@ -1,5 +1,5 @@
 import { usePathname } from 'expo-router';
-import { ComponentProps, isValidElement } from 'react';
+import { isValidElement, type ComponentProps } from 'react';
 
 import { CustomerPageSkeleton } from '@/components/customer-page-skeleton';
 import { LoadingState as BaseLoadingState, Screen as BaseScreen } from './ui';
