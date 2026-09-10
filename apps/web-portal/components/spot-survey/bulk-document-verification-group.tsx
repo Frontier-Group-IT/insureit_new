@@ -107,22 +107,21 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
           </div>
         )}
-        <div className="flex shrink-0 items-center gap-1">
-          {allVerified ? <StatusBadge tone="green" label="Verified" /> : item.documents.length ? (
-            <div className="w-[64px]">
-              <VerificationActionButton
-                claimId={claim.id}
-                documentIds={selectedDocumentIds}
-                itemKey={item.key}
-                incidentDate={claim.accident_at}
-                policyStartDate={claim.policies?.start_date}
-                policyEndDate={claim.policies?.end_date}
-                disabled={selectedDocumentIds.length === 0}
-                variant="header"
-              />
-            </div>
-          ) : <StatusBadge tone="slate" label="Pending" />}
-          {item.documents.length ? <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" iconOnly /> : null}
+        <div className="flex shrink-0 items-center gap-0.5">
+          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" iconOnly />
+          {allVerified ? <StatusBadge tone="green" label="Verified" /> : (
+            <VerificationActionButton
+              claimId={claim.id}
+              documentIds={selectedDocumentIds}
+              itemKey={item.key}
+              incidentDate={claim.accident_at}
+              policyStartDate={claim.policies?.start_date}
+              policyEndDate={claim.policies?.end_date}
+              disabled={selectedDocumentIds.length === 0}
+              variant="header"
+              attention={selectableIds.length > 0}
+            />
+          )}
         </div>
       </div>
 
