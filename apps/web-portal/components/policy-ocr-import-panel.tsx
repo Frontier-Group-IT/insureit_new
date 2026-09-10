@@ -91,6 +91,17 @@ export type PolicyOcrImportPanelProps = {
 type ReviewState = "ready" | "review" | "conflict" | "protected";
 type ReviewedField = PolicyOcrField & { currentValue: string; reviewState: ReviewState };
 
+function currentValueForReview(key: string, context: PolicyOcrImportContext) {
+  if (
+    key === "vehicle_registration_status" &&
+    context.mode === "create" &&
+    !(context.currentValues.vehicle_registration_number ?? "").trim()
+  ) {
+    return "";
+  }
+  return context.currentValues[key] ?? "";
+}
+
 export function PolicyOcrImportPanel({ variant = "header", context, onApply, onClearForm }: PolicyOcrImportPanelProps) {
   const [open, setOpen] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -107,7 +118,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
   const reviewedFields = useMemo(() => fields
     .filter((field) => APPLY_FIELDS.has(field.key))
     .map((field): ReviewedField => {
-      const currentValue = context.currentValues[field.key] ?? "";
+      const currentValue = currentValueForReview(field.key, context);
       const protectedField = (context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key);
       const confidence = field.confidence ?? 0;
       const same = valuesEquivalent(field, currentValue);
@@ -117,7 +128,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
         currentValue,
         reviewState: protectedField ? "protected" : conflict ? "conflict" : confidence >= .9 ? "ready" : "review",
       };
-    }), [fields, context.currentValues, context.mode, protectedKeys]);
+    }), [fields, context, protectedKeys]);
 
   const section02 = reviewedFields.filter((field) => SECTION_02_FIELDS.has(field.key));
   const section03 = reviewedFields.filter((field) => SECTION_03_FIELDS.has(field.key));
@@ -179,7 +190,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
         .filter((field) => !IDENTITY_FIELDS.has(field.key))
         .filter((field) => {
           if ((context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key)) return false;
-          const current = context.currentValues[field.key] ?? "";
+          const current = currentValueForReview(field.key, context);
           return !current.trim() || valuesEquivalent(field, current);
         })
         .map((field) => field.key);
