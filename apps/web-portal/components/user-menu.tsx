@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/auth-config";
 import { internalLaunchHome } from "@/lib/launch-scope";
@@ -19,6 +19,7 @@ function initialsFor(name?: string | null, email?: string | null) {
 }
 
 export function UserMenu({ profile, user, homeHref = internalLaunchHome }: UserMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -26,6 +27,18 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome }: UserM
   const [resetMessage, setResetMessage] = useState<string | null>(null);
   const displayName = profile?.full_name || user?.email || "Signed-in user";
   const initials = useMemo(() => initialsFor(profile?.full_name, user?.email), [profile?.full_name, user?.email]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    function handleOutsidePointer(event: PointerEvent) {
+      if (menuRef.current?.contains(event.target as Node)) return;
+      setIsOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handleOutsidePointer);
+    return () => document.removeEventListener("pointerdown", handleOutsidePointer);
+  }, [isOpen]);
 
   async function handleResetPassword() {
     if (!user?.email || isSendingReset) return;
@@ -47,7 +60,7 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome }: UserM
   }
 
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         type="button"
         aria-haspopup="menu"
