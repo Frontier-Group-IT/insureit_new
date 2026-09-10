@@ -56,6 +56,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   );
   const selectableKey = selectableIds.join("|");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     const allowed = new Set(selectableIds);
@@ -70,16 +71,26 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
     .find((verification) => verification && !verification.is_valid);
   const statusTone = allVerified ? "green" : hasRejected || invalidAttempt ? "amber" : "slate";
   const fileLabel = `${item.documents.length} file${item.documents.length === 1 ? "" : "s"}`;
+  const contentId = `claim-document-group-${claim.id}-${item.key}`;
 
   return (
     <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : hasRejected || invalidAttempt ? "border-amber-200" : "border-[#E2EAF4]"}`}>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <DocumentTypeHeaderIcon itemKey={item.key} />
-          <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
-        </div>
-        <div className="flex shrink-0 items-center gap-1">
+      <div className={`flex items-center justify-between gap-2 ${isExpanded ? "mb-2" : ""}`}>
+        <button
+          type="button"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-expanded={isExpanded}
+          aria-controls={contentId}
+          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
+          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 focus-visible:ring-offset-1"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <DocumentTypeHeaderIcon itemKey={item.key} />
+            <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
+          </span>
           {item.documents.length ? <StatusBadge tone={statusTone} label={fileLabel} /> : null}
+        </button>
+        <div className="flex shrink-0 items-center gap-1">
           {allVerified ? <StatusBadge tone="green" label="Verified" /> : item.documents.length ? (
             <div className="w-[64px]">
               <VerificationActionButton
@@ -98,39 +109,41 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
         </div>
       </div>
 
-      {item.documents.length ? (
-        <div className="space-y-2">
-          {item.documents.map((document) => {
-            const verification = latestVerificationForDocument(document, verifications);
-            const verified = isDocumentVerified(document, verifications);
-            const rejected = document.verification_status === "rejected";
-            const selected = selectedIds.has(document.id);
-            return (
-              <DocumentFileRow
-                key={document.id}
-                item={item}
-                claim={claim}
-                document={document}
-                verification={verification}
-                verified={verified}
-                rejected={rejected}
-                selected={selected}
-                onSelectedChange={(checked) => setSelectedIds((previous) => {
-                  const next = new Set(previous);
-                  if (checked) next.add(document.id);
-                  else next.delete(document.id);
-                  return next;
-                })}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="flex min-h-11 items-center gap-2">
-          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div>
-          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" />
-        </div>
-      )}
+      <div id={contentId} className={isExpanded ? "block" : "hidden"}>
+        {item.documents.length ? (
+          <div className="space-y-2">
+            {item.documents.map((document) => {
+              const verification = latestVerificationForDocument(document, verifications);
+              const verified = isDocumentVerified(document, verifications);
+              const rejected = document.verification_status === "rejected";
+              const selected = selectedIds.has(document.id);
+              return (
+                <DocumentFileRow
+                  key={document.id}
+                  item={item}
+                  claim={claim}
+                  document={document}
+                  verification={verification}
+                  verified={verified}
+                  rejected={rejected}
+                  selected={selected}
+                  onSelectedChange={(checked) => setSelectedIds((previous) => {
+                    const next = new Set(previous);
+                    if (checked) next.add(document.id);
+                    else next.delete(document.id);
+                    return next;
+                  })}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex min-h-11 items-center gap-2">
+            <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div>
+            <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" />
+          </div>
+        )}
+      </div>
     </article>
   );
 }
