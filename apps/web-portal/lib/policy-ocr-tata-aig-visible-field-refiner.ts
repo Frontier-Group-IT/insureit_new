@@ -42,10 +42,11 @@ export function refineTataAigVisibleFields(pages: string[], parsed: ParsedPolicy
   const insured = findInsuredName(cleanPages);
   if (insured) setField(fields, "insured_name", insured.value, .99, insured.page, insured.evidence);
 
-  const phone = findFullInsuredPhone(cleanPages);
+  const maskedInsuredPhone = hasMaskedInsuredPhone(cleanPages);
+  const phone = maskedInsuredPhone ? null : findFullInsuredPhone(cleanPages);
   if (phone) {
     setField(fields, "insured_phone", phone.value, .98, phone.page, phone.evidence);
-  } else if (hasMaskedInsuredPhone(cleanPages)) {
+  } else if (maskedInsuredPhone) {
     warnings.push("TATA AIG insured mobile is masked on the policy copy, so Phone number was intentionally left blank.");
   }
 
@@ -111,10 +112,10 @@ function findFullInsuredPhone(pages: string[]): TextHit | null {
   for (let index = 0; index < Math.min(pages.length, 3); index += 1) {
     const lines = pages[index].split("\n");
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-      if (!/Contact\s+No\.?/i.test(lines[lineIndex])) continue;
+      if (!/^Contact\s+No\.?/i.test(lines[lineIndex].trim())) continue;
       const block = lines.slice(lineIndex, lineIndex + 2).join(" ");
       if (/\*/.test(block)) continue;
-      const match = block.match(/Contact\s+No\.?\s*[:\-]?\s*(?:\+?91[ -]?)?([6-9][0-9 -]{9,13})/i);
+      const match = block.match(/^Contact\s+No\.?\s*[:\-]?\s*(?:\+?91[ -]?)?([6-9][0-9 -]{9,13})/i);
       if (!match?.[1]) continue;
       const digits = match[1].replace(/\D/g, "").slice(-10);
       if (/^[6-9]\d{9}$/.test(digits)) return { value: digits, page: index + 1, evidence: block };
@@ -124,7 +125,7 @@ function findFullInsuredPhone(pages: string[]): TextHit | null {
 }
 
 function hasMaskedInsuredPhone(pages: string[]) {
-  return pages.slice(0, 3).some((page) => /Contact\s+No\.?[\s\S]{0,50}\*/i.test(page));
+  return pages.slice(0, 3).some((page) => /(?:^|\n)Contact\s+No\.?[\s\S]{0,50}\*/i.test(page));
 }
 
 function findRtoLocation(pages: string[]): TextHit | null {
