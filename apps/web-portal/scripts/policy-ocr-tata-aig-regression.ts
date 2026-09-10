@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { refineTataAigBundledTwoWheelerPolicy } from "../lib/policy-ocr-tata-aig-refiner.ts";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
 import { guardTataAigPolicyNumber } from "../lib/policy-ocr-tata-aig-policy-number-guard.ts";
+// @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
+import { refineTataAigVisibleFields } from "../lib/policy-ocr-tata-aig-visible-field-refiner.ts";
+// @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
+import { buildPolicyOcrOnboardingUpdate } from "../lib/policy-ocr-onboarding-apply.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 
 function base(): ParsedPolicyResult {
@@ -15,7 +19,8 @@ function base(): ParsedPolicyResult {
 }
 
 function run(pages: string[]) {
-  return guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, base()));
+  const tata = guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, base()));
+  return refineTataAigVisibleFields(pages, tata);
 }
 
 function field(result: ParsedPolicyResult, key: string): string | undefined {
@@ -25,6 +30,10 @@ function field(result: ParsedPolicyResult, key: string): string | undefined {
 const trainedShape = [
   `TATA AIG GENERAL INSURANCE COMPANY LIMITED
 Bundled Auto Secure - Two Wheeler Policy (1 Year Term for Own Damage & 5 Years for Third Party)
+Insured Details - Key Information for You
+Name Mr. Example Rider
+Address Sample Colony BARAN, RAJASTHAN, 325205
+Contact No. +91 85**07**71
 Policy No. 7000001234 00 00
 Period of Insurance & Premium
 Coverage Details Valid From Valid Till
@@ -35,6 +44,7 @@ Premium Amount (Including GST) ₹ 8572`,
   `Certificate of Insurance Cum Policy Schedule
 Vehicle Details
 Policy No. 7000001234 00 00
+Insured Name Mr. Example Rider
 Registration No. NEW
 Make / Model / Variant BAJAJ/CHETAK/C35 03
 Fuel Type BATTERY
@@ -77,6 +87,8 @@ Total Policy Premium ₹ 8,572.00`,
 const trained = run(trainedShape);
 assert.equal(trained.parserId, "tata_aig_motor_v1");
 assert.match(trained.parserVersion, /tata_aig_tw_bundled_v1/);
+assert.equal(field(trained, "insured_name"), "Mr. Example Rider");
+assert.equal(field(trained, "insured_phone"), undefined, "masked customer mobile must never be guessed");
 assert.equal(field(trained, "insurer_name"), "TATA AIG General Insurance Company Limited");
 assert.equal(field(trained, "policy_product"), "Bundled");
 assert.equal(field(trained, "policy_number"), "70000012340000");
@@ -86,18 +98,19 @@ assert.equal(field(trained, "vehicle_registration_status"), "registration_pendin
 assert.equal(field(trained, "vehicle_registration_number"), undefined);
 assert.equal(field(trained, "vehicle_make"), "BAJAJ");
 assert.equal(field(trained, "vehicle_model"), "CHETAK");
-assert.equal(field(trained, "vehicle_fuel_type"), "Battery");
+assert.equal(field(trained, "vehicle_fuel_type"), "Electric");
 assert.equal(field(trained, "vehicle_engine_number"), "E20SYN88775");
 assert.equal(field(trained, "vehicle_chassis_number"), "MD2SYN20XTAE84481");
 assert.equal(field(trained, "vehicle_class"), "Scooter");
 assert.equal(field(trained, "vehicle_capacity"), "4");
 assert.equal(field(trained, "vehicle_manufacturing_year"), "2026");
 assert.equal(field(trained, "vehicle_rto_name"), "BARAN");
+assert.equal(field(trained, "vehicle_rto_state"), "Rajasthan");
 assert.equal(field(trained, "idv"), "117949");
 assert.equal(field(trained, "od_premium"), "3616.24");
 assert.equal(field(trained, "tp_premium"), "3273");
 assert.equal(field(trained, "cpa_opted"), "Yes");
-assert.equal(field(trained, "cpa_premium"), "375");
+assert.equal(field(trained, "cpa_premium"), "375", "CPA must come from the owner-driver row, not the 589.75 depreciation add-on");
 assert.equal(field(trained, "total_premium"), "7264");
 assert.equal(field(trained, "tax_amount"), "1308");
 assert.equal(field(trained, "gross_premium"), "8572");
@@ -105,11 +118,14 @@ assert.equal(field(trained, "gross_premium"), "8572");
 const siblingShape = [
   `TATA AIG General Insurance Company Limited
 Bundled Auto Secure - Two Wheeler Policy (1 Year Term for Own Damage & 5 Years for Third Party)
+Name Ms. Sample Owner
+Address Example Road JAIPUR, RAJASTHAN, 302001
+Contact No. +91 98765 43210
 Policy No. 8111222333 11 22
 Period of Insurance & Premium
 Own Damage Cover 03/09/2026 (09:30 Hrs) 02/09/2027 (Midnight)
 Third-Party Cover 03/09/2026 (09:30 Hrs) 02/09/2031 (Midnight)
-Premium Amount (Including GST) ₹ 9000`,
+Premium Amount (Including GST) ₹ 8437`,
   `Vehicle Details
 Registration No. NEW
 Make / Model / Variant EXAMPLE/EVRIDE/X2
@@ -138,11 +154,15 @@ Total Policy Premium ₹ 8,437.00`,
 ];
 
 const sibling = run(siblingShape);
+assert.equal(field(sibling, "insured_name"), "Ms. Sample Owner");
+assert.equal(field(sibling, "insured_phone"), "9876543210");
 assert.equal(field(sibling, "policy_number"), "81112223331122");
 assert.equal(field(sibling, "policy_end_date"), "2027-09-02");
 assert.equal(field(sibling, "vehicle_make"), "EXAMPLE");
 assert.equal(field(sibling, "vehicle_model"), "EVRIDE");
+assert.equal(field(sibling, "vehicle_fuel_type"), "Electric");
 assert.equal(field(sibling, "vehicle_engine_number"), "EVSYN20002");
+assert.equal(field(sibling, "vehicle_rto_state"), "Rajasthan");
 assert.equal(field(sibling, "idv"), "145000");
 assert.equal(field(sibling, "od_premium"), "3350");
 assert.equal(field(sibling, "tp_premium"), "3400");
@@ -150,6 +170,49 @@ assert.equal(field(sibling, "cpa_premium"), "400");
 assert.equal(field(sibling, "total_premium"), "7150");
 assert.equal(field(sibling, "tax_amount"), "1287");
 assert.equal(field(sibling, "gross_premium"), "8437");
+
+const onboarding = buildPolicyOcrOnboardingUpdate({
+  mode: "create",
+  registrationMode: "registered",
+  current: {
+    registrationNo: "",
+    insuredName: "",
+    phoneNo: "",
+    vehicleClass: "TWP",
+    make: "",
+    model: "",
+    fuelType: "",
+    manufacturingYear: "",
+    capacity: "",
+    chassisNo: "",
+    engineNo: "",
+    rtoState: "",
+    rtoName: "",
+    policyProduct: "",
+    idv: "",
+    od: "",
+    tp: "",
+    cpa: "",
+    policyNo: "",
+    insurerId: "",
+    validFrom: "",
+    validUpto: "",
+  },
+  fields: sibling.fields.map(({ key, label, value }) => ({ key, label, value })),
+  manufacturers: ["EXAMPLE"],
+  insurers: [{ value: "tata-aig", label: "TATA AIG General Insurance Company Limited" }],
+  rcVerified: false,
+});
+assert.equal(onboarding.next.insuredName, "Ms. Sample Owner");
+assert.equal(onboarding.next.phoneNo, "9876543210");
+assert.equal(onboarding.next.fuelType, "Electric");
+assert.equal(onboarding.next.rtoState, "Rajasthan");
+assert.equal(onboarding.next.rtoName, "JAIPUR");
+assert.equal(onboarding.next.od, "3350");
+assert.equal(onboarding.next.tp, "3400");
+assert.equal(onboarding.next.cpa, "400");
+assert.equal(onboarding.next.validFrom, "2026-09-03");
+assert.equal(onboarding.next.validUpto, "2027-09-02");
 
 const mismatchShape = [...trainedShape];
 mismatchShape[2] = mismatchShape[2].replace("Net Premium (A+B+C) ₹ 7,264.00", "Net Premium (A+B+C) ₹ 7,999.00");
@@ -165,4 +228,4 @@ const unrelated = run(unrelatedPages);
 assert.equal(unrelated.parserId, "generic_motor_v1");
 assert.equal(unrelated.fields.length, 0);
 
-console.log("TATA AIG bundled two-wheeler OCR regression: trained shape + fresh sibling + reconciliation guard passed.");
+console.log("TATA AIG bundled two-wheeler OCR regression: visible fields, identity safety, premiums, validity and onboarding mapping passed.");

@@ -6,6 +6,8 @@ export type OcrImportField = {
 
 export type OcrOperationalState = {
   registrationNo: string;
+  insuredName?: string;
+  phoneNo?: string;
   vehicleClass: string;
   make: string;
   model: string;
@@ -48,6 +50,8 @@ export type OcrApplyResult = {
 const SECTION_02 = new Set([
   "vehicle_registration_status",
   "vehicle_registration_number",
+  "insured_name",
+  "insured_phone",
   "vehicle_class",
   "vehicle_make",
   "vehicle_model",
@@ -103,11 +107,23 @@ function fuel(raw: string) {
   if (value.includes("PETROL")) return "Petrol";
   if (value.includes("DIESEL")) return "Diesel";
   if (value.includes("CNG")) return "CNG";
-  if (value.includes("ELECTRIC")) return "Electric";
+  if (value.includes("ELECTRIC") || value.includes("BATTERY")) return "Electric";
   if (value.includes("HYBRID")) return "Hybrid";
   if (value.includes("BI-FUEL") || value.includes("BI FUEL")) return "Bi-Fuel";
   if (value.trim() === "OTHER") return "Other";
   return "";
+}
+
+function insuredName(raw: string) {
+  const value = raw.replace(/\s+/g, " ").trim();
+  if (value.length < 2 || value.length > 120 || /^(NA|N\/A|NAME)$/i.test(value)) return "";
+  return value;
+}
+
+function insuredPhone(raw: string) {
+  if (raw.includes("*")) return "";
+  const digits = raw.replace(/\D/g, "").slice(-10);
+  return /^[6-9]\d{9}$/.test(digits) ? digits : "";
 }
 
 function manufacturer(raw: string, options: string[]) {
@@ -238,6 +254,9 @@ export function buildPolicyOcrOnboardingUpdate(input: OcrApplyInput): OcrApplyRe
     if (section02Protected || registrationMode === "unregistered") skip("vehicle_registration_number");
     else setText("vehicle_registration_number", (value) => { next.registrationNo = value; }, registration);
   }
+
+  setText("insured_name", (value) => { next.insuredName = value; }, insuredName);
+  setText("insured_phone", (value) => { next.phoneNo = value; }, insuredPhone);
 
   const classField = byKey.get("vehicle_class");
   if (classField) {
