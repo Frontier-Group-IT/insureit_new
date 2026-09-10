@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { uploadSpotSurveyMedia } from "@/app/claims/[id]/spot-survey-actions";
+import { uploadSpotSurveyMedia } from "@/app/claims/[id]/claim-document-upload-actions";
 
 type Result = { ok: boolean; message?: string };
 
@@ -29,16 +29,22 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
           <form
-            action={(formData) => {
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
               startTransition(async () => {
-                formData.set("claimId", claimId);
-                formData.delete("files");
-                files.forEach((file) => formData.append("files", file));
-                const response = await uploadSpotSurveyMedia(formData);
-                setResult(response);
-                if (response.ok) {
-                  setFiles([]);
-                  router.refresh();
+                try {
+                  formData.set("claimId", claimId);
+                  formData.delete("files");
+                  files.forEach((file) => formData.append("files", file));
+                  const response = await uploadSpotSurveyMedia(formData);
+                  setResult(response);
+                  if (response.ok) {
+                    setFiles([]);
+                    router.refresh();
+                  }
+                } catch {
+                  setResult({ ok: false, message: "Upload failed. Please try again." });
                 }
               });
             }}
@@ -69,7 +75,7 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
                 <span>
                   <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#EAF3FF] text-[28px] text-[#174EA6]">☁</span>
                   <span className="mt-2 block text-[13px] font-semibold text-[#071D49]">Select photos and videos</span>
-                  <span className="mt-1 block text-[10px] text-[#68758A]">JPG, PNG, WEBP, HEIC, MP4, MOV, WEBM · up to 20MB per file</span>
+                  <span className="mt-1 block text-[10px] text-[#68758A]">JPG, PNG, WEBP, HEIC, MP4, MOV, WEBM · photos up to 20MB · videos up to 50MB</span>
                 </span>
               </label>
 
