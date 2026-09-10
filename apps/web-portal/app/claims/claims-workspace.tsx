@@ -1,6 +1,7 @@
 "use client";
 
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
+import { FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
@@ -47,13 +48,18 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
   const activeRows = activeMode === "external" ? externalRows : internalRows;
   const assistanceRequested = externalRows.filter((claim) => claim.claim_service_mode === "self_managed" && claim.assistance_status === "requested").length;
   return <>
-    <div className="mb-2 grid grid-cols-[250px_minmax(0,1fr)] items-center gap-4 max-lg:grid-cols-1">
-      <div className="min-w-0"><p className="text-[12px] font-medium leading-tight text-[#071D49]">Total {activeMode === "external" ? "External" : "Internal"} Claims <span className="text-[11px] font-normal text-[#5C6878]">(All claim stages)</span></p><p className="mt-1 text-[28px] font-semibold leading-none tracking-tight text-[#003A83]">{activeRows.length}</p></div>
-      <form onSubmit={(event) => event.preventDefault()} className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer, vehicle no., claim no., policy no., control no." aria-label="Search claims" className="h-10 min-w-0 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100" />
-        <select value={selectedStage || "all"} onChange={(event) => { setSelectedStage(event.target.value === "all" ? "" : event.target.value); setSelectedStatus(""); }} aria-label="Filter by claim stage" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All claim stages</option>{workflowStages.map((stage) => <option key={stage.key} value={stage.key}>{stage.label}</option>)}</select>
-        {canAddClaim ? <Link prefetch={false} href="/claims/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#003A83] px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#073E83] max-md:w-full"><span aria-hidden="true" className="text-[16px] leading-none">+</span><span>Add Claim</span></Link> : null}
-      </form>
+    <div className="mb-2 border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3 sm:px-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex shrink-0 items-center gap-2.5">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]"><FileText className="h-5 w-5" /></span>
+          <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">Claim Portfolio</h2>
+        </div>
+        <form onSubmit={(event) => event.preventDefault()} className="flex min-w-0 flex-1 items-center gap-2 max-md:flex-col max-md:items-stretch lg:justify-end">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer, vehicle no., claim no., policy no., control no." aria-label="Search claims" className="h-10 min-w-0 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100 lg:max-w-[520px]" />
+          <select value={selectedStage || "all"} onChange={(event) => { setSelectedStage(event.target.value === "all" ? "" : event.target.value); setSelectedStatus(""); }} aria-label="Filter by claim stage" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full"><option value="all">All claim stages</option>{workflowStages.map((stage) => <option key={stage.key} value={stage.key}>{stage.label}</option>)}</select>
+          {canAddClaim ? <Link prefetch={false} href="/claims/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#003A83] px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#073E83] max-md:w-full"><span aria-hidden="true" className="text-[16px] leading-none">+</span><span>Add Claim</span></Link> : null}
+        </form>
+      </div>
     </div>
     <nav aria-label="Claim type" className="mb-2 flex w-fit max-w-full items-center gap-0.5 rounded-lg border border-[#DCE5F1] bg-[#F8FAFD] p-0.5">
       <button type="button" onClick={() => setActiveMode("internal")} aria-current={activeMode === "internal" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "internal" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
