@@ -5,3 +5,19 @@
 .scope section[class*="border-[#E5DDFC]"] > div:first-child {
   background: #ffffff !important;
 }
+
+.scope section[class*="border-[#FFDCA5]"] {
+  background: #ffffff !important;
+}
+
+.scope section[class*="border-[#FFDCA5]"] > div:first-child {
+  background: #ffffff !important;
+}
+
+.scope > div > section:first-of-type > div > div:first-child button {
+  background: #0d356a !important;
+}
+
+.scope > div > section:last-of-type > div:nth-child(2) > div:first-child > div:last-child {
+  display: none !important;
+}
