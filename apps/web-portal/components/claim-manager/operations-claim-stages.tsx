@@ -56,6 +56,7 @@ const stageCompletionTargets: Partial<Record<StageKey, ClaimStatus>> = {
 };
 
 const completedExternalMilestoneStatuses = new Set(["completed", "not_applicable"]);
+const internalSpotStatusSurveyorFields = new Set(["surveyor_name", "surveyor_email", "surveyor_phone"]);
 
 // Keep these labels in sync with the Customer app's managed claim stage screens.
 const fields: StageFields = {
@@ -344,14 +345,16 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <div className={`grid gap-3 sm:grid-cols-2 ${selected.key === "work_approval" ? "lg:grid-cols-5" : selected.key === "repair_ri" || selected.key === "delivery_order" ? "lg:grid-cols-3" : selected.key === "billing" ? "lg:grid-cols-2" : selected.key === "vehicle_delivery" ? "lg:grid-cols-2" : selected.key === "payment_encashment" ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
               {fields[selected.key].map((field) => {
                 const value = field.name === "insurer_claim_no" ? insurerClaimNo ?? fieldValue(selectedDetails, field.name) : fieldValue(selectedDetails, field.name);
-                const required = requiredFields[selected.key]?.includes(field.name);
+                const internalStageTwoSurveyorField = selected.key === "spot_status" && !hasExternalVisualProgress && internalSpotStatusSurveyorFields.has(field.name);
+                const required = requiredFields[selected.key]?.includes(field.name) || internalStageTwoSurveyorField;
+                const displayLabel = internalStageTwoSurveyorField ? field.label.replace(" (Optional)", "") : field.label;
                 if (field.type === "yesno") {
                   const yesChecked = value === "true" || value === "yes";
                   const noChecked = value === "false" || value === "no";
                   return (
                     <fieldset key={field.name} className="min-w-0 max-w-xl">
                       <legend className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
-                        {field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
+                        {displayLabel}{required ? <span className="ml-1 text-rose-600">*</span> : null}
                       </legend>
                       <div className="mt-1 grid grid-cols-2 gap-2">
                         <label className="flex h-9 cursor-pointer items-center justify-center rounded-md border border-[#D9E3F0] bg-white text-[12px] font-semibold normal-case tracking-normal text-[#071D49] has-[:checked]:border-[#174EA6] has-[:checked]:bg-[#EEF4FF]">
@@ -367,7 +370,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
                 const useAppDatePicker = field.type === "date" && ((selected.key === "billing" && field.name === "bill_date") || (selected.key === "delivery_order" && field.name === "do_date") || selected.key === "vehicle_delivery" || selected.key === "payment_encashment");
                 return (
                   <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">
-                    {field.label}{required && !field.label.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
+                    {displayLabel}{required && !displayLabel.includes("*") ? <span className="ml-1 text-rose-600">*</span> : null}
                     {useAppDatePicker ? (
                       <AppStyleDateInput name={field.name} value={value} required={required} />
                     ) : field.type === "select" ? (
