@@ -181,6 +181,9 @@ jobs:
             fi
             schema_workflow="apply-external-claim-canonical-operations.yml"
             echo "External Claim canonical Operations/Customer migrations detected. Waiting for their schema workflow..."
+          elif grep -qx 'supabase/migrations/20260910113000_external_claim_immediate_document_draft.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-external-claim-immediate-document-draft.yml"
+            echo "External Claim immediate document draft migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
