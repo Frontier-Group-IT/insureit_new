@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 
+import { StartupSkeleton } from '@/components/startup-skeleton';
+import { Screen, Button, Message } from '@/components/ui';
 import { getCurrentSession, getRestoredSession } from '@/lib/auth';
 import { logStartupDiagnostic } from '@/lib/startup-diagnostics';
 import { routeRestoredUser } from '@/lib/startup-routing';
-import { Screen, Button, LoadingState, Message } from '@/components/ui';
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function IndexScreen() {
   if (loading) {
     return (
       <Screen title="InsureIT" subtitle="Opening your account." showTitleHeader={false} showBackNavigation={false}>
-        <LoadingState label="Opening InsureIT" />
+        <StartupSkeleton />
       </Screen>
     );
   }
