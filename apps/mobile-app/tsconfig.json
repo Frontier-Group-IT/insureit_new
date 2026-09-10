@@ -5,6 +5,9 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
+      "@/components/ui": [
+        "./components/customer-aware-ui"
+      ],
       "@/*": [
         "./*"
       ]
