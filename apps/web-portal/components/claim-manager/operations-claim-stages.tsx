@@ -61,8 +61,10 @@ const internalSpotStatusSurveyorFields = new Set(["surveyor_name", "surveyor_ema
 // Keep these labels in sync with the Customer app's managed claim stage screens.
 const fields: StageFields = {
   spot_intimation: [
-    { name: "incident_at", label: "Accident date and time", type: "datetime-local" },
-    { name: "spot_intimation_at", label: "Spot Intimation date and time", type: "datetime-local" },
+    { name: "incident_at", label: "Accident date", type: "date" },
+    { name: "incident_time", label: "Accident time", type: "time" },
+    { name: "spot_intimation_at", label: "Spot Intimation date", type: "date" },
+    { name: "spot_intimation_time", label: "Spot Intimation time", type: "time" },
     { name: "driver_name", label: "Driver name" },
     { name: "driver_phone", label: "Driver number", type: "tel" },
     { name: "location", label: "Location" },
@@ -116,7 +118,7 @@ const fields: StageFields = {
 };
 
 const requiredFields: Record<string, string[]> = {
-  spot_intimation: ["incident_at", "spot_intimation_at", "driver_name", "driver_phone", "location"],
+  spot_intimation: ["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time", "driver_name", "driver_phone", "location"],
   spot_status: ["spot_survey_done_date"],
   claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
@@ -475,6 +477,10 @@ function formatDisplayDate(value: string) {
 
 function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, spotIntimationAt, formAction, state, standalone = false, onSubmitStart }: { stage: (typeof stages)[number]; active: (typeof stages)[number]; detail: StageDetail | undefined; spotDetails?: InternalSpotIntimationDetails | null; next?: ClaimStatus; accidentAt?: string | null; spotIntimationAt?: string | null; formAction: (formData: FormData) => void; state: ActionState; standalone?: boolean; onSubmitStart?: () => void }) {
   const [location, setLocation] = useState(spotDetails?.location ?? "");
+  const storedIncidentAt = detail?.details?.incident_at;
+  const storedSpotIntimationAt = detail?.details?.spot_intimation_at;
+  const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
+  const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
 
   return (
     <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
@@ -486,10 +492,10 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {fields[stage.key].map((field) => {
             const storedValue = detail?.details?.[field.name];
-            const value = field.name === "incident_at"
-              ? spotDetails?.incident_at ?? accidentAt ?? (typeof storedValue === "string" ? storedValue : "")
-              : field.name === "spot_intimation_at"
-                ? spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedValue === "string" ? storedValue : "")
+            const value = field.name === "incident_at" || field.name === "incident_time"
+              ? incidentValue
+              : field.name === "spot_intimation_at" || field.name === "spot_intimation_time"
+                ? spotIntimationValue
                 : field.name === "driver_name"
                   ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "")
                   : field.name === "driver_phone"
@@ -519,9 +525,12 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
 }
 
 function toDateTimeLocal(value: string, type?: string) {
-  if (type !== "datetime-local" || !value) return value;
+  if (!value) return value;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   const pad = (part: number) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  if (type === "date") return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  if (type === "time") return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  if (type === "datetime-local") return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return value;
 }
