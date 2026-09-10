@@ -26,7 +26,7 @@
     "remaining-register-prefetch:regression": "node scripts/remaining-register-prefetch-regression.mjs",
     "backoffice-register-prefetch:regression": "node scripts/backoffice-register-prefetch-regression.mjs",
     "server-auth-claims:regression": "node scripts/server-auth-claims-regression.mjs",
-    "claim-spot-multi-upload:regression": "node scripts/claim-spot-multi-upload-regression.mjs",
+    "claim-spot-multi-upload:regression": "node scripts/claim-spot-multi-upload-regression.mjs && node scripts/claim-document-stage-parity-regression.mjs",
     "claim-journey:regression": "node --experimental-strip-types scripts/claim-journey-regression.mjs",
     "auth-phase-observability:regression": "node scripts/auth-phase-observability-regression.mjs",
     "dashboard-performance:regression": "node scripts/dashboard-performance-regression.mjs",
