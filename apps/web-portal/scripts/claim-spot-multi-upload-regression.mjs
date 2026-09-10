@@ -32,6 +32,15 @@ assert.match(actions, /document_type: file\.type\.startsWith\("video\/"\) \? "Ac
 assert.match(actions, /\.insert\(rows\)/, "Spot media metadata must be inserted as one batch.");
 assert.match(actions, /storage\.from\(bucketName\)\.remove\(uploadedPaths\)/, "Failed multi-upload must clean up uploaded storage objects.");
 
+const loadClaimFunction = actions.match(/async function loadClaim\([\s\S]*?\n\}/)?.[0];
+assert.ok(loadClaimFunction, "Claim verification must keep a dedicated claim loader.");
+assert.match(loadClaimFunction, /createSupabaseAdminClient\(\)/, "Claim verification lookup must not depend on a narrower authenticated SELECT policy after the application permission check.");
+assert.match(loadClaimFunction, /canAccessCustomer\(profile\.id, profile\.role, data\.customer_id, "manage_claims"\)/, "Privileged claim lookup must be followed by the explicit manage_claims customer-scope check.");
+assert.match(loadClaimFunction, /claim_service_mode !== "broker_managed"/, "Privileged lookup must preserve the broker-managed Operations boundary.");
+assert.doesNotMatch(loadClaimFunction, /createServerSupabaseClient\(\)/, "Claim existence lookup must not regress to the RLS-filtered authenticated client.");
+assert.doesNotMatch(actions, /loadClaim\(claimId\);/, "Claim actions must pass the already-authorized profile into the scoped claim loader.");
+assert.match(actions, /supabase\.rpc\("advance_initial_documents_verified"/, "Initial-document advancement must continue through the existing secure RPC.");
+
 assert.match(insuranceCapacity, /vehicleClassCode === "PCP" \|\| vehicleClassCode === "TWP"/, "PCP and TWP insurance verification must resolve capacity from engine CC.");
 assert.match(insuranceCapacity, /vehicleClassCode === "GCV"/, "GCV insurance verification must retain GVW capacity.");
 assert.match(insuranceCapacity, /vehicleClassCode === "PCV"/, "PCV insurance verification must use seating capacity.");
@@ -60,4 +69,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot multi-upload, intimation and insurance capacity regression passed.");
+console.log("Claim spot multi-upload, intimation, insurance capacity and authorized verification regression passed.");
