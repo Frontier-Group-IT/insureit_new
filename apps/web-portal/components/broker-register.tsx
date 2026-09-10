@@ -216,7 +216,7 @@ export function RegisterViewTabs({
             disabled={option.disabled}
             title={option.title}
             onClick={() => onChange(option.value)}
-            className={`h-8 shrink-0 rounded-lg px-3 text-[10.5px] font-bold transition ${option.disabled ? "cursor-not-allowed text-[#A8B1BF] opacity-60" : active ? "bg-[#17365D] text-white shadow-sm" : "text-[#53627A] hover:bg-white"}`}
+            className={`h-8 shrink-0 whitespace-nowrap rounded-lg px-3 text-[10.5px] font-bold transition ${option.disabled ? "cursor-not-allowed text-[#A8B1BF] opacity-60" : active ? "bg-[#17365D] text-white shadow-sm" : "text-[#53627A] hover:bg-white"}`}
           >
             {option.label}{typeof option.count === "number" ? <span className={active ? "ml-1 text-white/75" : "ml-1 text-[#94A3B8]"}>{option.count}</span> : null}
           </button>
