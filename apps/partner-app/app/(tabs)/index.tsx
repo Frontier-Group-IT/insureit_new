@@ -68,6 +68,9 @@ const GeneratedDashboardAssets = {
   renewalAdd: require('../../assets/generated-dashboard/renewal-add.png'),
   policyVerified: require('../../assets/generated-dashboard/policy-verified.png'),
   renewalDue: require('../../assets/generated-dashboard/renewal-due.png'),
+  homeHeader: require('../../assets/generated-dashboard/home-header-insurance.jpg'),
+  pendingTasks: require('../../assets/generated-dashboard/pending-tasks-illustration.jpg'),
+  pendingDocument: require('../../assets/generated-dashboard/pending-document-alert.png'),
 } as const;
 
 export default function PartnerHomeDashboard() {
@@ -142,9 +145,9 @@ export default function PartnerHomeDashboard() {
       >
         <View style={styles.hero}>
           <Image
-            source={require('../../assets/partner-home-banner.png')}
+            source={GeneratedDashboardAssets.homeHeader}
             style={styles.heroBackdrop}
-            resizeMode="cover"
+            resizeMode="contain"
           />
           <View style={styles.heroTopRow}>
             <Image
@@ -312,13 +315,18 @@ export default function PartnerHomeDashboard() {
               {pendingItems.length ? (
                 <PartnerEnter delay={100}>
                   <View style={styles.pendingCard}>
+                    <Image
+                      source={GeneratedDashboardAssets.pendingTasks}
+                      style={styles.pendingBackdrop}
+                      resizeMode="contain"
+                    />
                     <View style={styles.sectionHeaderRow}>
                       <View>
                         <Text style={styles.sectionTitle}>Pending Tasks</Text>
                         <Text style={styles.sectionHint}>Keep up with important actions.</Text>
                       </View>
                       <Image
-                        source={GeneratedDashboardAssets.policyVerified}
+                        source={GeneratedDashboardAssets.pendingDocument}
                         style={styles.pendingHeroAsset}
                         resizeMode="contain"
                       />
@@ -531,7 +539,7 @@ function MiniBusinessChart() {
 }
 
 function attentionAsset(kind: PartnerHomeData['today'][number]['kind']) {
-  if (kind === 'intake_attention') return GeneratedDashboardAssets.policyAdd;
+  if (kind === 'intake_attention') return GeneratedDashboardAssets.pendingDocument;
   if (kind === 'renewal') return GeneratedDashboardAssets.renewalDue;
   return GeneratedDashboardAssets.policyVerified;
 }
@@ -610,7 +618,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.78 },
 
   hero: { height: 106, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },
-  heroBackdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, width: '100%', height: '100%', opacity: 0.28 },
+  heroBackdrop: { position: 'absolute', top: -3, right: -18, width: 330, height: 110, opacity: 0.42 },
   heroTopRow: { zIndex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -667,7 +675,8 @@ const styles = StyleSheet.create({
   quickImageAsset: { width: 42, height: 42 },
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
-  pendingCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
+  pendingCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
+  pendingBackdrop: { position: 'absolute', top: -2, right: -38, width: 235, height: 112, opacity: 0.42 },
   pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
   pendingHeroAsset: { width: 48, height: 48 },
   pendingList: { marginTop: 2, paddingRight: 2 },
