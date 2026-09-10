@@ -24,6 +24,10 @@ import { refineProductionRound8Fresh20Precision } from "./policy-ocr-production-
 import { refineProductionRound9Fresh20Recovery } from "./policy-ocr-production-round9-fresh20-recovery.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineTataAigBundledTwoWheelerPolicy } from "./policy-ocr-tata-aig-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { guardTataAigPolicyNumber } from "./policy-ocr-tata-aig-policy-number-guard.ts";
 
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -32,6 +36,10 @@ export function refineApprovedMotorPolicyLayout(
 ): ParsedPolicyResult {
   const approved = refineApprovedMotorPolicyLayoutBase(pages, tables, parsed);
   const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 140).join(" ");
+
+  if (/TATA\s+AIG\s+GENERAL\s+INSURANCE/i.test(header)) {
+    return guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, approved));
+  }
 
   if (/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(header)) {
     const make = approved.fields.find((field) => field.key === "vehicle_make")?.value?.trim() ?? "";
