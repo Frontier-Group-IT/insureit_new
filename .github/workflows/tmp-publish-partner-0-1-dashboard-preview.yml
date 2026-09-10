@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_DASHBOARD_COMMIT: d052394c1fb05aff454a93be62f8e3d546170508
+      EXPECTED_DASHBOARD_COMMIT: 06a0583502428cba121dff03dee9064f4799c8c4
 
     steps:
       - name: Checkout exact branch snapshot
@@ -119,7 +119,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish generated dashboard banners and distinct icons OTA to existing Partner preview channel
+      - name: Publish visible banners and distinct quick icons OTA to existing Partner preview channel
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -127,7 +127,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 generated banners and distinct dashboard icons ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 visible banners and distinct quick icons ${EXPECTED_DASHBOARD_COMMIT}" \
             --non-interactive \
             --json > partner-dashboard-preview-update.json
           cat partner-dashboard-preview-update.json
@@ -145,14 +145,14 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 generated-dashboard-assets OTA'
+            echo '## Partner 0.1.0 visible-banner OTA'
             echo
             echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
             echo "- Verified dashboard source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
             echo '- Runtime required: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- App delta: verified Home/Search/logo/banner plus generated dashboard icon and illustration assets'
-            echo '- Generated banners: insurance-family header and Pending Tasks checklist illustration'
-            echo '- Distinct assets: Policy Intake, Renewals, Claims, Pending Tasks, Policies Sold, Commission Earned, Renewal Due'
+            echo '- Header banner: full-width cover treatment with controlled overlay'
+            echo '- Pending Tasks: visible right-side generated illustration'
+            echo '- Quick Actions: distinct semantic vector icons for Intake, Renewals, Claims, Customers'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
