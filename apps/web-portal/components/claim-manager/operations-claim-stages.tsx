@@ -480,6 +480,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
   const storedSpotIntimationAt = detail?.details?.spot_intimation_at;
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
+  const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
 
   return (
     <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
@@ -488,20 +489,29 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
       <div className="p-4">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[0.72fr_0.62fr_0.72fr_0.62fr_1fr_0.70fr_1.15fr]">
-          {fields[stage.key].map((field) => {
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1.5fr_1.5fr_1fr_0.70fr_1.15fr]">
+          <fieldset className="min-w-0">
+            <legend className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
+            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] gap-1.5">
+              <input aria-label="Accident date" name="incident_at" type="date" defaultValue={toDateTimeLocal(incidentValue, "date")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+              <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+            </div>
+          </fieldset>
+          <fieldset className="min-w-0">
+            <legend className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
+            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] gap-1.5">
+              <input aria-label="Spot Intimation date" name="spot_intimation_at" type="date" defaultValue={toDateTimeLocal(spotIntimationValue, "date")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+              <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+            </div>
+          </fieldset>
+          {fields[stage.key].filter((field) => !groupedFieldNames.has(field.name)).map((field) => {
             const storedValue = detail?.details?.[field.name];
-            const value = field.name === "incident_at" || field.name === "incident_time"
-              ? incidentValue
-              : field.name === "spot_intimation_at" || field.name === "spot_intimation_time"
-                ? spotIntimationValue
-                : field.name === "driver_name"
-                  ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "")
-                  : field.name === "driver_phone"
-                    ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "")
-                    : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
+            const value = field.name === "driver_name"
+              ? spotDetails?.driver_name ?? (typeof storedValue === "string" ? storedValue : "")
+              : field.name === "driver_phone"
+                ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "")
+                : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
             const required = requiredFields[stage.key]?.includes(field.name);
-            const compactDateTimeField = field.name === "incident_at" || field.name === "incident_time" || field.name === "spot_intimation_at" || field.name === "spot_intimation_time";
             if (field.name === "location") {
               return (
                 <div key={field.name} className="min-w-0">
@@ -513,7 +523,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
             return (
               <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">
                 {field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
-                <input name={field.name} type={field.type ?? "text"} defaultValue={toDateTimeLocal(value, field.type)} required={required} className={`mt-1.5 w-full rounded-lg border border-[#CEDBEC] bg-white font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED] ${compactDateTimeField ? "h-8 px-1.5 text-[11px]" : "h-9 px-2.5 text-[12px]"}`} />
+                <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-9 w-full rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
               </label>
             );
           })}
