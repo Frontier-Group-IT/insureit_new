@@ -44,6 +44,10 @@ assert.match(uploader, /uploadToSignedUrl/, "Spot media file bytes must upload d
 assert.match(uploader, /finalizeSpotSurveyMediaUpload/, "Spot media metadata must be finalized only after direct storage upload succeeds.");
 assert.match(uploader, /cancelClaimDocumentUploads/, "Spot media direct upload failures must request cleanup of incomplete objects.");
 assert.match(uploader, /Upload failed\. Please try again\./, "Spot media upload must surface a safe client-side failure instead of crashing the claim page.");
+assert.match(uploader, /async function bestEffortCancelClaimDocumentUploads\([\s\S]*?try \{[\s\S]*?await cancelClaimDocumentUploads\(claimId, paths\);[\s\S]*?\} catch \{[\s\S]*?\}/, "Spot media cleanup transport failures must be contained and must not escape the upload error handler.");
+assert.match(uploader, /if \(uploadedPaths\.length\) await bestEffortCancelClaimDocumentUploads\(claimId, uploadedPaths\);/, "Spot media upload catch path must use best-effort cleanup.");
+assert.doesNotMatch(uploader, /if \(uploadedPaths\.length\) await cancelClaimDocumentUploads\(claimId, uploadedPaths\);/, "Spot media upload catch path must not call cleanup without a crash guard.");
+assert.match(uploader, /Finalization owns these objects now\.[\s\S]*?uploadedPaths\.length = 0;/, "Successful spot media finalization must clear cleanup candidates before later UI work.");
 assert.doesNotMatch(uploader, /formData\.append\("files"/, "Spot media file bodies must not be routed through the Next.js Server Action request body.");
 
 assert.match(replacementUploader, /claim-document-upload-actions/, "Single document uploads must use the dedicated authorized upload actions.");
@@ -52,6 +56,10 @@ assert.match(replacementUploader, /uploadToSignedUrl/, "Single document file byt
 assert.match(replacementUploader, /finalizeClaimDocumentUpload/, "Single document metadata must be finalized after direct storage upload.");
 assert.match(replacementUploader, /cancelClaimDocumentUploads/, "Single document direct upload failures must request cleanup.");
 assert.match(replacementUploader, /Upload failed\. Please try again\./, "Single document uploads must surface a safe client-side failure instead of crashing the claim page.");
+assert.match(replacementUploader, /async function bestEffortCancelClaimDocumentUploads\([\s\S]*?try \{[\s\S]*?await cancelClaimDocumentUploads\(claimId, paths\);[\s\S]*?\} catch \{[\s\S]*?\}/, "Single-document cleanup transport failures must be contained and must not escape the upload error handler.");
+assert.match(replacementUploader, /if \(uploadedPath\) await bestEffortCancelClaimDocumentUploads\(claimId, \[uploadedPath\]\);/, "Single-document upload catch path must use best-effort cleanup.");
+assert.doesNotMatch(replacementUploader, /if \(uploadedPath\) await cancelClaimDocumentUploads\(claimId, \[uploadedPath\]\);/, "Single-document upload catch path must not call cleanup without a crash guard.");
+assert.match(replacementUploader, /Finalization owns the object now\.[\s\S]*?uploadedPath = null;/, "Successful single-document finalization must clear the cleanup candidate before later UI work.");
 assert.doesNotMatch(replacementUploader, /new FormData/, "Single document file bytes must not be submitted through a Server Action FormData body.");
 assert.match(replacementUploader, /documentId\?: string/, "Replace control must accept an exact existing document id.");
 assert.match(replacementUploader, /iconOnly\?: boolean/, "Single document uploader must support a compact icon-only Upload New trigger.");
@@ -159,4 +167,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot upload, selectable bulk verification, signed direct storage, icon-only upload-new, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot upload, selectable bulk verification, signed direct storage, cleanup crash guard, icon-only upload-new, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
