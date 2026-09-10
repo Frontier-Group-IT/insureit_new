@@ -5,7 +5,9 @@ import { hasEffectiveCapability, hasAnyEffectiveCapability } from "@/lib/effecti
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { matchesRequiredDocument, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
+import { canAccessCustomer } from "@/lib/employee-access-scope";
 import { canVerifyClaimDocuments } from "@/lib/roles";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const bucketName = "claim-documents";
 const maxDocumentSizeBytes = 5 * 1024 * 1024;
@@ -25,14 +27,15 @@ type VerificationType = "rc" | "insurance" | "document" | "detail";
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) throw new Error("You do not have permission to verify claim documents.");
+  if (!profile?.id || !(await hasEffectiveCapability(profile, "manage_claims", "edit"))) throw new Error("You do not have permission to verify claim documents.");
   return profile;
 }
 
-async function loadClaim(claimId: string) {
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode").eq("id", claimId).maybeSingle<ClaimForVerification>();
+async function loadClaim(claimId: string, profile: NonNullable<Awaited<ReturnType<typeof currentProfile>>>) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("claims").select("id, customer_id, current_status, accident_at, claim_service_mode").eq("id", claimId).maybeSingle<ClaimForVerification>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
+  if (!(await canAccessCustomer(profile.id, profile.role, data.customer_id, "manage_claims"))) throw new Error("You do not have permission to verify claim documents.");
   if (data.claim_service_mode !== "broker_managed") throw new Error("Operations can process this claim only after assistance is accepted.");
   return data;
 }
@@ -199,7 +202,7 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     const claimId = String(formData.get("claimId") ?? "").trim();
     if (!documentId || !claimId) throw new Error("Missing claim or document id.");
     const profile = await currentProfile();
-    const claim = await loadClaim(claimId);
+    const claim = await loadClaim(claimId, profile);
     const supabase = await createServerSupabaseClient();
     const rawDetails = collectVerificationDetails(formData);
     const incidentDate = incidentDateOnly(claim.accident_at);
@@ -234,7 +237,7 @@ export async function finalizeInitialDocumentVerification(claimId: string): Prom
   try {
     if (!claimId.trim()) throw new Error("Missing claim id.");
     const profile = await currentProfile();
-    const claim = await loadClaim(claimId);
+    const claim = await loadClaim(claimId, profile);
     const advanced = await advanceAfterInitialDocumentsVerified(claim, "", profile?.id ?? null);
     if (!advanced) throw new Error("This claim is not eligible for initial document finalization.");
     revalidatePath(`/claims/${claimId}`);
@@ -254,7 +257,7 @@ export async function requestSpotSurveyDocumentReupload(formData: FormData): Pro
     const reason = String(formData.get("reason") ?? "Document reupload requested by claim manager.").trim() || "Document reupload requested by claim manager.";
     if (!documentId || !claimId) throw new Error("Missing claim or document id.");
     const profile = await currentProfile();
-    const claim = await loadClaim(claimId);
+    const claim = await loadClaim(claimId, profile);
     const supabase = await createServerSupabaseClient();
     const { data: document, error: documentError } = await supabase.from("claim_documents").select("id, document_type, file_name").eq("id", documentId).eq("claim_id", claimId).maybeSingle<{ id: string; document_type: string; file_name: string }>();
     if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
@@ -284,7 +287,7 @@ export async function verifySpotSurveyDetail(formData: FormData): Promise<Action
     const detailValue = String(formData.get("detailValue") ?? "").trim();
     if (!claimId || !detailKey) throw new Error("Missing claim or detail id.");
     const profile = await currentProfile();
-    const claim = await loadClaim(claimId);
+    const claim = await loadClaim(claimId, profile);
     const supabase = await createServerSupabaseClient();
     const detailPayload = { verification_type: "spot_survey_detail", spot_survey_detail_key: detailKey, label: detailLabel, value: detailValue, verified: true, verified_at: new Date().toISOString() };
     const { error: detailError } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailPayload, created_by: profile?.id ?? null });
@@ -322,7 +325,7 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
     }
 
     const profile = await currentProfile();
-    const claim = await loadClaim(claimId);
+    const claim = await loadClaim(claimId, profile);
     const supabase = await createServerSupabaseClient();
     const uploadedPaths: string[] = [];
     const rows: Array<{ claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: "pending" }> = [];
@@ -379,7 +382,7 @@ export async function classifySpotSurveyAttachment(formData: FormData): Promise<
     if (!claimId || !documentId || !allowedTypes.has(documentType)) throw new Error("Choose a valid document category.");
 
     const profile = await currentProfile();
-    const claim = await loadClaim(claimId);
+    const claim = await loadClaim(claimId, profile);
     const supabase = await createServerSupabaseClient();
     const { data: document, error: documentError } = await supabase
       .from("claim_documents")
@@ -437,7 +440,7 @@ export async function replaceSpotSurveyDocument(formData: FormData): Promise<Act
       ? /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name)
       : /\.(jpg|jpeg|png|webp|pdf)$/i.test(file.name);
     if (file.type && !allowedTypes.includes(file.type) && !extensionAllowed) throw new Error("Unsupported document format.");
-    const profile = await currentProfile(); await loadClaim(claimId); const supabase = await createServerSupabaseClient();
+    const profile = await currentProfile(); await loadClaim(claimId, profile); const supabase = await createServerSupabaseClient();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_"); const storagePath = `${claimId}/${Date.now()}-${safeName}`;
     const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
     if (uploadError) throw new Error(uploadError.message);
