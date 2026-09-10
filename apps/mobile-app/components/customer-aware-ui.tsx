@@ -4,7 +4,18 @@ import { isValidElement, type ComponentProps } from 'react';
 import { CustomerPageSkeleton } from '@/components/customer-page-skeleton';
 import { LoadingState as BaseLoadingState, Screen as BaseScreen } from './ui';
 
-export * from './ui';
+export {
+  Button,
+  Card,
+  EmptyState,
+  Message,
+  NavLink,
+  Row,
+  TextField,
+  UniversalBottomTabs,
+  colors,
+  styles,
+} from './ui';
 
 type LoadingStateProps = ComponentProps<typeof BaseLoadingState>;
 type ScreenProps = ComponentProps<typeof BaseScreen>;
