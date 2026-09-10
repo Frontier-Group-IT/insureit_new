@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_DASHBOARD_COMMIT: 34eb5364747f079142b6a3c9de9b9f33aa5d8d5a
+      EXPECTED_DASHBOARD_COMMIT: d052394c1fb05aff454a93be62f8e3d546170508
 
     steps:
       - name: Checkout exact branch snapshot
@@ -47,6 +47,9 @@ jobs:
             'apps/partner-app/app/(tabs)/index.tsx' \
             'apps/partner-app/app/search.tsx' \
             'apps/partner-app/assets/generated-dashboard/commission-earned.png' \
+            'apps/partner-app/assets/generated-dashboard/home-header-insurance.jpg' \
+            'apps/partner-app/assets/generated-dashboard/pending-document-alert.png' \
+            'apps/partner-app/assets/generated-dashboard/pending-tasks-illustration.jpg' \
             'apps/partner-app/assets/generated-dashboard/policy-add.png' \
             'apps/partner-app/assets/generated-dashboard/policy-sold.png' \
             'apps/partner-app/assets/generated-dashboard/policy-verified.png' \
@@ -116,7 +119,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish generated dashboard assets OTA to existing Partner preview channel
+      - name: Publish generated dashboard banners and distinct icons OTA to existing Partner preview channel
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -124,7 +127,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 generated dashboard assets ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 generated banners and distinct dashboard icons ${EXPECTED_DASHBOARD_COMMIT}" \
             --non-interactive \
             --json > partner-dashboard-preview-update.json
           cat partner-dashboard-preview-update.json
@@ -148,7 +151,8 @@ jobs:
             echo "- Verified dashboard source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
             echo '- Runtime required: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- App delta: verified Home/Search/logo/banner plus six optimized generated dashboard icon assets'
-            echo '- Generated assets: Policy Intake, Policies Sold, Commission Earned, Renewals, verified/Claims, Renewal Due'
+            echo '- App delta: verified Home/Search/logo/banner plus generated dashboard icon and illustration assets'
+            echo '- Generated banners: insurance-family header and Pending Tasks checklist illustration'
+            echo '- Distinct assets: Policy Intake, Renewals, Claims, Pending Tasks, Policies Sold, Commission Earned, Renewal Due'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
