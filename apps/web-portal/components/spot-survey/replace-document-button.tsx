@@ -12,6 +12,10 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/auth";
 
 const bucketName = "claim-documents";
+const maxDocumentSizeBytes = 5 * 1024 * 1024;
+const maxVideoSizeBytes = 50 * 1024 * 1024;
+const documentMimeTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const videoMimeTypes = new Set(["video/mp4", "video/quicktime", "video/webm", "video/x-matroska", "video/x-msvideo"]);
 
 async function bestEffortCancelClaimDocumentUploads(claimId: string, paths: string[]) {
   if (!paths.length) return;
@@ -27,10 +31,32 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message?: string } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [isPending, startTransition] = useTransition();
   const previewUrl = useMemo(() => selectedFile && selectedFile.type.startsWith("image/") ? URL.createObjectURL(selectedFile) : null, [selectedFile]);
   const isReplaceAction = actionLabel === "Replace";
   const isUploadAction = actionLabel === "Upload";
+  const isVideoDocument = documentType.toLowerCase().includes("video");
+  const acceptedFileTypes = isVideoDocument
+    ? "video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.mp4,.mov,.webm,.mkv,.avi"
+    : "image/jpeg,image/png,image/webp,application/pdf";
+
+  const selectFile = (file: File | null) => {
+    setResult(null);
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    const validationError = validateSelectedFile(documentType, file);
+    if (validationError) {
+      setSelectedFile(null);
+      setResult({ ok: false, message: validationError });
+      return;
+    }
+
+    setSelectedFile(file);
+  };
 
   const modal = open && typeof document !== "undefined" ? createPortal(
     <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/55 px-4 py-5">
@@ -100,21 +126,47 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
         </div>
 
         <div className="space-y-4 px-5 pb-5">
-          <label className="grid min-h-[140px] cursor-pointer place-items-center rounded-xl border border-dashed border-[#8BA0BC] bg-[#F8FBFF] px-4 text-center transition hover:border-[#174EA6]">
+          <label
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = "copy";
+              setIsDragging(true);
+            }}
+            onDragLeave={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              const files = Array.from(event.dataTransfer.files);
+              if (files.length !== 1) {
+                setSelectedFile(null);
+                setResult({ ok: false, message: "Please drop one file at a time." });
+                return;
+              }
+              selectFile(files[0] ?? null);
+            }}
+            className={`grid min-h-[140px] cursor-pointer place-items-center rounded-xl border border-dashed px-4 text-center transition ${isDragging ? "border-[#174EA6] bg-[#EAF3FF]" : "border-[#8BA0BC] bg-[#F8FBFF] hover:border-[#174EA6]"}`}
+          >
             <input
               name="file"
               type="file"
-              accept={documentType.toLowerCase().includes("video") ? "video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.mp4,.mov,.webm,.mkv,.avi" : "image/jpeg,image/png,image/webp,application/pdf"}
+              accept={acceptedFileTypes}
               className="hidden"
               required
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+              onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
             />
             <span>
               <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#EAF3FF] text-[30px] text-[#174EA6]">☁</span>
-              <span className="mt-2 block text-[13px] font-semibold text-[#071D49]">Drag &amp; drop file here</span>
+              <span className="mt-2 block text-[13px] font-semibold text-[#071D49]">{isDragging ? "Drop file here" : "Drag & drop file here"}</span>
               <span className="block text-[12px] text-[#68758A]">or</span>
               <span className="mt-1 inline-flex h-8 items-center rounded-md bg-[#071D49] px-5 text-[12px] font-semibold text-white">Select File</span>
-              <span className="mt-2 block text-[10px] text-[#68758A]">{documentType.toLowerCase().includes("video") ? "Supported formats: MP4, MOV, WEBM, MKV, AVI (Max size 50MB)" : "Supported formats: JPG, PNG, PDF (Max size 5MB)"}</span>
+              <span className="mt-2 block text-[10px] text-[#68758A]">{isVideoDocument ? "Supported formats: MP4, MOV, WEBM, MKV, AVI (Max size 50MB)" : "Supported formats: JPG, PNG, PDF (Max size 5MB)"}</span>
             </span>
           </label>
 
@@ -146,7 +198,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
         </div>
 
         <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">
-          <button type="button" onClick={() => { setSelectedFile(null); setResult(null); setOpen(false); }} className="h-10 rounded-md border border-[#B8C5D6] px-8 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button>
+          <button type="button" onClick={() => { setSelectedFile(null); setResult(null); setIsDragging(false); setOpen(false); }} className="h-10 rounded-md border border-[#B8C5D6] px-8 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button>
           <button type="submit" disabled={!selectedFile || isPending || Boolean(result?.ok) || (isReplaceAction && !documentId)} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55">{isPending ? (isReplaceAction ? "Replacing..." : "Uploading...") : (isReplaceAction ? "Replace" : "Upload")}</button>
         </div>
       </form>
@@ -161,7 +213,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
       <button
         type="button"
         disabled={isReplaceAction && !documentId}
-        onClick={() => { setResult(null); setOpen(true); }}
+        onClick={() => { setResult(null); setIsDragging(false); setOpen(true); }}
         {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : { "data-document-action": iconOnly ? "upload-new" : "upload", "aria-label": uploadLabel, title: uploadLabel })}
         className={isReplaceAction
           ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30 disabled:cursor-not-allowed disabled:opacity-40"
@@ -174,6 +226,33 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
       {modal}
     </>
   );
+}
+
+function validateSelectedFile(documentType: string, file: File) {
+  if (!file.name.trim() || !Number.isFinite(file.size) || file.size <= 0) {
+    return "Invalid file. Please choose another file.";
+  }
+
+  const expectedVideo = documentType.toLowerCase().includes("video");
+  const actualVideo = file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name);
+  if (expectedVideo !== actualVideo) {
+    return expectedVideo ? "Please upload a supported video file." : "Video files are not allowed for this document type.";
+  }
+
+  const maxSize = expectedVideo ? maxVideoSizeBytes : maxDocumentSizeBytes;
+  if (file.size > maxSize) {
+    return `The selected file exceeds the ${expectedVideo ? "50 MB" : "5 MB"} limit.`;
+  }
+
+  const extensionAllowed = expectedVideo
+    ? /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name)
+    : /\.(jpg|jpeg|png|webp|pdf)$/i.test(file.name);
+  const typeAllowed = expectedVideo ? videoMimeTypes.has(file.type) : documentMimeTypes.has(file.type);
+  if (file.type ? !typeAllowed && !extensionAllowed : !extensionAllowed) {
+    return "Unsupported document format.";
+  }
+
+  return null;
 }
 
 function formatSize(size: number) {
