@@ -5,6 +5,8 @@ import { InsuranceVerificationModalButton } from "./insurance-verification-modal
 import { VerifyDocumentButton } from "./verify-buttons";
 
 const verifyHoverOnlyClass = "[&_button]:!rounded-none [&_button]:!border-transparent [&_button]:!bg-transparent [&_button]:transition-colors [&_button:hover]:!rounded-md [&_button:hover]:!border-green-200 [&_button:hover]:!bg-[#F2FBF7]";
+const verifyHeaderPillClass = "[&_button]:!h-auto [&_button]:!w-auto [&_button]:!rounded-full [&_button]:!border [&_button]:!border-slate-200 [&_button]:!bg-slate-100 [&_button]:!px-1.5 [&_button]:!py-0.5 [&_button]:!text-[9px] [&_button]:!font-semibold [&_button]:!text-slate-600 [&_button:hover]:!bg-slate-100";
+const verifyHeaderDisabledClass = "h-auto w-auto rounded-full border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-semibold text-slate-600";
 
 type Props = {
   claimId: string;
@@ -22,7 +24,7 @@ export function VerificationActionButton({ claimId, documentId, documentIds, ite
   const targetIds = Array.from(new Set((documentIds?.length ? documentIds : documentId ? [documentId] : []).map((id) => id.trim()).filter(Boolean)));
 
   if (disabled || targetIds.length === 0) {
-    return <button type="button" disabled className="h-8 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] font-semibold text-slate-400">Verify</button>;
+    return <button type="button" disabled className={variant === "header" ? verifyHeaderDisabledClass : "h-8 w-full rounded-md border border-slate-200 bg-slate-50 px-3 text-[11px] font-semibold text-slate-400"}>Verify</button>;
   }
 
   const targetDocumentId = targetIds.join(",");
@@ -42,5 +44,5 @@ export function VerificationActionButton({ claimId, documentId, documentIds, ite
     action = <VerifyDocumentButton claimId={claimId} documentId={targetDocumentId} />;
   }
 
-  return <div className={variant === "row" ? verifyHoverOnlyClass : "min-w-[62px]"}>{action}</div>;
+  return <div className={variant === "row" ? verifyHoverOnlyClass : verifyHeaderPillClass}>{action}</div>;
 }
