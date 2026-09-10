@@ -21,13 +21,13 @@ jobs:
           ref: partner/generated-assets-dashboard
           fetch-depth: 0
 
-      - name: Install generated icon pack and patch dashboard
+      - name: Patch dashboard with generated icon assets
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p apps/partner-app/assets/generated-dashboard
-          unzip -o -j _tmp/partner-generated-icons.zip -d apps/partner-app/assets/generated-dashboard
-          rm -f _tmp/partner-generated-icons.zip
+          for icon in policy-add policy-sold commission-earned renewal-add policy-verified renewal-due; do
+            test -f "apps/partner-app/assets/generated-dashboard/${icon}.png"
+          done
 
           python <<'PY'
           from pathlib import Path
@@ -35,8 +35,7 @@ jobs:
           path = Path('apps/partner-app/app/(tabs)/index.tsx')
           text = path.read_text()
 
-          marker = "type DashboardIconName =\n"
-          if marker not in text:
+          if 'type DashboardIconName =' not in text:
               raise SystemExit('DashboardIconName marker missing')
 
           assets = """const GeneratedDashboardAssets = {\n  policyAdd: require('../../assets/generated-dashboard/policy-add.png'),\n  policySold: require('../../assets/generated-dashboard/policy-sold.png'),\n  commissionEarned: require('../../assets/generated-dashboard/commission-earned.png'),\n  renewalAdd: require('../../assets/generated-dashboard/renewal-add.png'),\n  policyVerified: require('../../assets/generated-dashboard/policy-verified.png'),\n  renewalDue: require('../../assets/generated-dashboard/renewal-due.png'),\n} as const;\n\n"""
@@ -54,10 +53,9 @@ jobs:
               ('''                          <View style={styles.pendingIconWrap}>\n                            <Feather name={attentionIcon(item.kind)} size={17} color={partnerTheme.colors.brandStrong} />\n                          </View>''', '''                          <Image\n                            source={attentionAsset(item.kind)}\n                            style={styles.pendingRowAsset}\n                            resizeMode="contain"\n                          />'''),
               ('''                    <View style={styles.renewalIconWrap}>\n                      <Feather name="refresh-cw" size={20} color={partnerTheme.colors.brandStrong} />\n                    </View>''', '''                    <Image\n                      source={GeneratedDashboardAssets.renewalDue}\n                      style={styles.renewalIconAsset}\n                      resizeMode="contain"\n                    />'''),
           ]
-
           for old, new in replacements:
               if old not in text:
-                  raise SystemExit(f'Expected dashboard block missing:\n{old[:100]}')
+                  raise SystemExit(f'Expected dashboard block missing: {old[:100]}')
               text = text.replace(old, new, 1)
 
           old_quick = '''function QuickAction({ icon, label, onPress }: { icon: DashboardIconName; label: string; onPress: () => void }) {'''
@@ -99,13 +97,6 @@ jobs:
           path.write_text(text)
           PY
 
-          test -f apps/partner-app/assets/generated-dashboard/policy-add.png
-          test -f apps/partner-app/assets/generated-dashboard/policy-sold.png
-          test -f apps/partner-app/assets/generated-dashboard/commission-earned.png
-          test -f apps/partner-app/assets/generated-dashboard/renewal-add.png
-          test -f apps/partner-app/assets/generated-dashboard/policy-verified.png
-          test -f apps/partner-app/assets/generated-dashboard/renewal-due.png
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -137,9 +128,9 @@ jobs:
           set -euo pipefail
           git config user.name 'chatgpt[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add apps/partner-app/app/'(tabs)'/index.tsx apps/partner-app/assets/generated-dashboard _tmp/partner-generated-icons.zip
+          git add apps/partner-app/app/'(tabs)'/index.tsx
           if git diff --cached --quiet; then
-            echo 'No app changes to commit.'
+            echo 'No app source changes to commit.'
             exit 1
           fi
           git commit -m 'Use generated Partner dashboard icon assets'
