@@ -105,7 +105,7 @@ export function IntermediaryGroupWorkspace({
   const [employeeFilter, setEmployeeFilter] = useState("all");
   const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>("all");
   const [viewMode, setViewMode] = useState<WorkspaceView>("board");
-  const [openEmployees, setOpenEmployees] = useState<Set<string>>(() => new Set(employees.map((employee) => employee.id)));
+  const [openEmployees, setOpenEmployees] = useState<Set<string>>(() => new Set());
   const [createOpen, setCreateOpen] = useState(false);
   const [createSelectionOwnerId, setCreateSelectionOwnerId] = useState<string | null>(null);
   const [drawerGroupId, setDrawerGroupId] = useState<string | null>(null);
@@ -299,7 +299,7 @@ export function IntermediaryGroupWorkspace({
               <p className="mt-0.5 text-[8.5px] font-medium text-[#7B899B]">Employee → Groups → Partners</p>
             </div>
             <div className="flex items-center gap-3 text-[8.5px]">
-              <span className="font-medium text-[#8A98A9]">{openEmployees.size} of {visibleEmployees.length} employees expanded</span>
+              <span className="font-medium text-[#8A98A9]">{visibleEmployees.filter((employee) => openEmployees.has(employee.id)).length} of {visibleEmployees.length} employees expanded</span>
               <button type="button" onClick={() => setOpenEmployees(new Set(visibleEmployees.map((employee) => employee.id)))} className="font-bold text-[#315FEA] hover:text-[#244ED0]">Expand all</button>
               <button type="button" onClick={() => setOpenEmployees(new Set())} className="font-bold text-[#7A8797] hover:text-[#334A64]">Collapse all</button>
             </div>
@@ -317,7 +317,7 @@ export function IntermediaryGroupWorkspace({
                 groupById={groupById}
                 normalizedQuery={normalizedQuery}
                 assignmentFilter={assignmentFilter}
-                isOpen={openEmployees.has(employee.id) || Boolean(normalizedQuery)}
+                isOpen={openEmployees.has(employee.id)}
                 onToggle={() => toggleEmployee(employee.id)}
                 canManage={canManage}
                 selectedPartnerIds={selectedPartnerIds}
