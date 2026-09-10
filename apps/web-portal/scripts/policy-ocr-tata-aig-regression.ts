@@ -110,10 +110,106 @@ assert.equal(field(trained, "idv"), "117949");
 assert.equal(field(trained, "od_premium"), "3616.24");
 assert.equal(field(trained, "tp_premium"), "3273");
 assert.equal(field(trained, "cpa_opted"), "Yes");
-assert.equal(field(trained, "cpa_premium"), "375", "CPA must come from the owner-driver row, not the 589.75 depreciation add-on");
+assert.equal(field(trained, "cpa_premium"), "375", "CPA must come from the owner-driver row, not an add-on value");
 assert.equal(field(trained, "total_premium"), "7264");
 assert.equal(field(trained, "tax_amount"), "1308");
 assert.equal(field(trained, "gross_premium"), "8572");
+
+const liveDocumentAiShape = [
+  `TATA AIG GENERAL INSURANCE COMPANY LIMITED
+Bundled Auto Secure - Two Wheeler Policy (1 Year Term for Own Damage & 5 Years for Third Party)
+Name Mr. Example Rider
+Address
+Sample Colony
+BARAN, RAJASTHAN, 325205
+Contact No.
++91 85**07**71
+Agent / POSP Contact No. 7340662133
+Policy No. 7000001234 00 00
+Own Damage Cover
+25/08/2026 (11:09 Hrs)
+24/08/2027 (Midnight)`,
+  `Certificate of Insurance Cum Policy Schedule
+Vehicle Details
+Registration No.
+NEW
+Make / Model / Variant
+BAJAJ/CHETAK/C35 03
+Fuel Type
+BATTERY
+Engine No. / Motor No. (For EV)
+E20SYN88775
+Chassis No.
+Vehicle identifiers
+MD2SYN20XTAE84481
+Body Type SCOOTER
+CC / KW 4
+Mfg. Year 2026
+RTO Location
+BARAN
+Seating Capacity (Including Driver)
+2
+Total IDV
+1
+117949
+0
+0
+117949.00`,
+  `Schedule of Premium
+Section - I Loss Of Or Damage To The Vehicle Insured (A)
+Total Own Damage Premium (A)
+₹ 1,976.83
+Section - I Add On Covers
+TA 16 Depreciation Allowance
+₹ 589.75
+TA 17 Return to Invoice
+₹ 271.28
+TA 18 Consumable Expenses
+₹ 54.26
+Total Add-On Premium (C)
+₹ 1639.41
+Section - II Liability to Third-Parties (B)
+Basic TP Premium
+₹ 3,273.00
+Personal Accident (PA) Benefits
+Compulsory Personal Accident Cover for Owner Driver
+CSI
+₹ 1,500,000
+Premium
+₹ 375.00
+Total Liability Premium (B)
+₹ 3,648.00
+Net Premium (A+B+C)
+₹ 7,264.00
+SGST 9% ₹ 654.00
+CGST 9% ₹ 654.00
+Total Policy Premium ₹ 8,572.00`,
+];
+
+const live = run(liveDocumentAiShape);
+assert.equal(field(live, "insured_phone"), undefined, "POSP contact must not leak into insured phone when customer number is masked");
+assert.equal(field(live, "vehicle_rto_name"), "BARAN");
+assert.equal(field(live, "vehicle_rto_state"), "Rajasthan");
+assert.equal(field(live, "vehicle_chassis_number"), "MD2SYN20XTAE84481");
+assert.equal(field(live, "cpa_premium"), "375", "TA 16 must never become CPA amount");
+assert.equal(field(live, "od_premium"), "3616.24");
+assert.equal(field(live, "tp_premium"), "3273");
+assert.equal(field(live, "policy_start_date"), "2026-08-25");
+assert.equal(field(live, "policy_end_date"), "2027-08-24");
+
+const contaminated: ParsedPolicyResult = {
+  ...base(),
+  parserId: "tata_aig_motor_v1",
+  fields: [
+    { key: "insured_phone", label: "Phone number", value: "7340662133", confidence: .8, page: 2, evidence: "POSP Contact" },
+    { key: "vehicle_rto_state", label: "RTO state", value: "Seating Capacity", confidence: .8, page: 2, evidence: "generic spill" },
+    { key: "cpa_premium", label: "CPA amount", value: "16", confidence: .8, page: 3, evidence: "TA 16" },
+  ],
+};
+const cleaned = refineTataAigVisibleFields(liveDocumentAiShape, contaminated);
+assert.equal(field(cleaned, "insured_phone"), undefined);
+assert.equal(field(cleaned, "vehicle_rto_state"), "Rajasthan");
+assert.equal(field(cleaned, "cpa_premium"), "375");
 
 const siblingShape = [
   `TATA AIG General Insurance Company Limited
@@ -203,6 +299,7 @@ const onboarding = buildPolicyOcrOnboardingUpdate({
   insurers: [{ value: "tata-aig", label: "TATA AIG General Insurance Company Limited" }],
   rcVerified: false,
 });
+assert.equal(onboarding.registrationMode, "unregistered");
 assert.equal(onboarding.next.insuredName, "Ms. Sample Owner");
 assert.equal(onboarding.next.phoneNo, "9876543210");
 assert.equal(onboarding.next.fuelType, "Electric");
@@ -219,7 +316,7 @@ mismatchShape[2] = mismatchShape[2].replace("Net Premium (A+B+C) ₹ 7,264.00", 
 const mismatch = run(mismatchShape);
 assert.equal(field(mismatch, "od_premium"), undefined);
 assert.equal(field(mismatch, "tp_premium"), undefined);
-assert.match(mismatch.warnings.join(" "), /did not reconcile/i);
+assert.match(mismatch.warnings.join(" "), /did not reconcile|withheld/i);
 
 const unrelatedPages = [
   "EXAMPLE GENERAL INSURANCE COMPANY\nBundled Auto Secure - Two Wheeler Policy",
@@ -228,4 +325,4 @@ const unrelated = run(unrelatedPages);
 assert.equal(unrelated.parserId, "generic_motor_v1");
 assert.equal(unrelated.fields.length, 0);
 
-console.log("TATA AIG bundled two-wheeler OCR regression: visible fields, identity safety, premiums, validity and onboarding mapping passed.");
+console.log("TATA AIG bundled two-wheeler OCR regression: live-shape contamination, visible fields, identity safety, premiums, validity and onboarding mapping passed.");
