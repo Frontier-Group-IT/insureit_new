@@ -17,9 +17,9 @@ const rcRows = [
   { dateName: "fitness_valid_upto", statusName: "fitness_status", label: "Fitness Valid Upto" },
   { dateName: "tax_valid_upto", statusName: "tax_status", label: "Tax Valid Upto" },
   { dateName: "insurance_valid_upto", statusName: "insurance_status", label: "Insurance Valid Upto" },
-  { dateName: "pucc_valid_upto", statusName: "pucc_status", label: "PUCC Valid Upto" },
+  { dateName: "pucc_valid_upto", statusName: "pucc_status", label: "PUCC Valid Upto", optional: true },
   { dateName: "local_permit_valid_upto", statusName: "local_permit_status", label: "Local Permit Valid Upto" },
-  { dateName: "national_permit_valid_upto", statusName: "national_permit_status", label: "National Permit Valid Upto" }
+  { dateName: "national_permit_valid_upto", statusName: "national_permit_status", label: "National Permit Valid Upto", optional: true }
 ];
 
 export function DocumentVerificationModalButton({ claimId, documentId, modalType, incidentDate, policyStartDate, policyEndDate }: { claimId: string; documentId: string; modalType: ModalType; incidentDate?: string | null; policyStartDate?: string | null; policyEndDate?: string | null }) {
@@ -38,8 +38,8 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
   const incident = toDateOnly(incidentDate);
 
   const spotComplete = Boolean(spot.axleStatus && spot.overturned);
-  const rcComplete = rcRows.every((row) => Boolean(rcDates[row.dateName]));
-  const rcValid = rcRows.every((row) => getStatus(rcDates[row.dateName], incident) === "Valid");
+  const rcComplete = rcRows.filter((row) => !row.optional).every((row) => Boolean(rcDates[row.dateName]));
+  const rcValid = rcRows.every((row) => !rcDates[row.dateName] || getStatus(rcDates[row.dateName], incident) === "Valid");
   const insuranceStatus = getStatus(insurance.end, incident);
   const dateOrderInvalid = Boolean(insurance.start && insurance.end && insurance.start > insurance.end);
   const policyDatesAvailable = Boolean(insurance.start && insurance.end);
@@ -59,9 +59,9 @@ export function DocumentVerificationModalButton({ claimId, documentId, modalType
       return "Spot photo verification details are complete.";
     }
     if (modalType === "rc") {
-      if (!rcComplete) return "Enter all six RC expiry dates.";
-      if (!rcValid) return "One or more RC fields are invalid. Verification is blocked.";
-      return "All RC fields are valid.";
+      if (!rcComplete) return "Enter all required RC expiry dates.";
+      if (!rcValid) return "One or more entered RC fields are invalid. Verification is blocked.";
+      return "All required RC fields are valid.";
     }
     if (modalType === "insurance") {
       if (!policyDatesAvailable) return "Policy start and end date are not available in customer policy details.";
@@ -122,8 +122,8 @@ function SpotRadioRow({ number, title, description, name, value, onChange }: { n
   return <div className="grid grid-cols-[1fr_86px_86px] border-t border-[#E6EEF7] text-[#071D49]"><div className="px-3 py-3"><p className="text-[13px] font-semibold">{number}. {title}</p><p className="mt-1 text-[11px] font-medium text-[#526178]">{description}</p></div><label className="grid cursor-pointer place-items-center border-l border-[#E6EEF7] py-3"><span className="text-[21px] text-green-600">⚐</span><input name={name} type="radio" value="Yes" checked={value === "Yes"} onChange={() => onChange("Yes")} className="mt-1 h-4 w-4" /></label><label className="grid cursor-pointer place-items-center border-l border-[#E6EEF7] py-3"><span className="text-[21px] text-red-600">⚐</span><input name={name} type="radio" value="No" checked={value === "No"} onChange={() => onChange("No")} className="mt-1 h-4 w-4" /></label></div>;
 }
 
-function RcRows({ incidentDate, values, onChange }: { incidentDate: string | null; values: Record<string, string>; onChange: (key: string, value: string) => void }) { return <div className="divide-y divide-[#E6EEF7]">{rcRows.map((row, index) => <DateRow key={row.dateName} number={index + 1} label={row.label} dateName={row.dateName} statusName={row.statusName} value={values[row.dateName] ?? ""} incidentDate={incidentDate} onChange={(value) => onChange(row.dateName, value)} />)}</div>; }
-function DateRow({ number, label, dateName, statusName, value, incidentDate, onChange }: { number: number; label: string; dateName: string; statusName: string; value: string; incidentDate: string | null; onChange: (value: string) => void }) { const status = getStatus(value, incidentDate); return <div className={`grid grid-cols-[52px_1fr_170px_170px] items-center gap-4 px-6 py-4 ${status === "Invalid" ? "bg-red-50/25" : ""}`}><NumberBadge number={number} /><p className="text-[14px] font-semibold text-[#071D49]">{label}</p><label><span className="mb-1 block text-[10px] font-semibold text-[#071D49]">Valid Upto</span><input name={dateName} type="date" value={value} onChange={(event) => onChange(event.target.value)} className={`h-10 w-full rounded-md border bg-white px-3 text-[13px] text-[#071D49] ${status === "Invalid" ? "border-red-300" : status === "Valid" ? "border-green-300" : "border-[#C9D4E3]"}`} /></label><div><span className="mb-1 block text-[10px] font-semibold text-[#071D49]">Status</span><StatusBox status={status} /><input type="hidden" name={statusName} value={status} /></div></div>; }
+function RcRows({ incidentDate, values, onChange }: { incidentDate: string | null; values: Record<string, string>; onChange: (key: string, value: string) => void }) { return <div className="divide-y divide-[#E6EEF7]">{rcRows.map((row, index) => <DateRow key={row.dateName} number={index + 1} label={row.label} dateName={row.dateName} statusName={row.statusName} value={values[row.dateName] ?? ""} incidentDate={incidentDate} optional={Boolean(row.optional)} onChange={(value) => onChange(row.dateName, value)} />)}</div>; }
+function DateRow({ number, label, dateName, statusName, value, incidentDate, optional = false, onChange }: { number: number; label: string; dateName: string; statusName: string; value: string; incidentDate: string | null; optional?: boolean; onChange: (value: string) => void }) { const status = getStatus(value, incidentDate); return <div className={`grid grid-cols-[52px_1fr_170px_170px] items-center gap-4 px-6 py-4 ${status === "Invalid" ? "bg-red-50/25" : ""}`}><NumberBadge number={number} /><p className="text-[14px] font-semibold text-[#071D49]">{label}{optional ? <span className="ml-1.5 text-[10px] font-medium text-[#7B8798]">(Optional)</span> : null}</p><label><span className="mb-1 block text-[10px] font-semibold text-[#071D49]">Valid Upto</span><input name={dateName} type="date" value={value} onChange={(event) => onChange(event.target.value)} className={`h-10 w-full rounded-md border bg-white px-3 text-[13px] text-[#071D49] ${status === "Invalid" ? "border-red-300" : status === "Valid" ? "border-green-300" : "border-[#C9D4E3]"}`} /></label><div><span className="mb-1 block text-[10px] font-semibold text-[#071D49]">Status</span><StatusBox status={status} /><input type="hidden" name={statusName} value={status} /></div></div>; }
 
 function InsuranceRows({ incidentDate, values, setValues }: { incidentDate: string | null; values: InsuranceState; setValues: (next: InsuranceState | ((prev: InsuranceState) => InsuranceState)) => void }) {
   const endStatus = getStatus(values.end, incidentDate); const dateOrderInvalid = Boolean(values.start && values.end && values.start > values.end);
