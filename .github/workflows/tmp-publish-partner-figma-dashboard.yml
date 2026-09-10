@@ -11,7 +11,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
     steps:
       - name: Checkout merged Partner branch
         uses: actions/checkout@v4
@@ -27,7 +30,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
           cache: npm
 
       - name: Install dependencies
@@ -45,9 +48,19 @@ jobs:
           npm run lint:partner
           npm run build:partner:web
 
+      - name: Verify Partner Expo access
+        working-directory: apps/partner-app
+        run: |
+          npx eas-cli@latest whoami
+          npx eas-cli@latest project:info --non-interactive
+
       - name: Publish Partner OTA to preview
         working-directory: apps/partner-app
-        run: npx eas-cli@latest update --channel preview --message "Partner dashboard synced to approved Figma design" --non-interactive
+        run: npx eas-cli@latest update --channel preview --environment preview --message "Partner dashboard synced to approved Figma design" --non-interactive --json > partner-preview-update.json
+
+      - name: Show published update
+        working-directory: apps/partner-app
+        run: cat partner-preview-update.json
 
       - name: Verify latest preview update metadata
         working-directory: apps/partner-app
