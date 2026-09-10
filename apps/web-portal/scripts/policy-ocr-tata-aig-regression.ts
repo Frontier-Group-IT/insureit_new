@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
 import { refineTataAigBundledTwoWheelerPolicy } from "../lib/policy-ocr-tata-aig-refiner.ts";
+// @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
+import { guardTataAigPolicyNumber } from "../lib/policy-ocr-tata-aig-policy-number-guard.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 
 function base(): ParsedPolicyResult {
@@ -10,6 +12,10 @@ function base(): ParsedPolicyResult {
     fields: [],
     warnings: ["This insurer format is not fully supported yet. Verify every value manually."],
   };
+}
+
+function run(pages: string[]) {
+  return guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, base()));
 }
 
 function field(result: ParsedPolicyResult, key: string): string | undefined {
@@ -68,7 +74,7 @@ CGST 9% ₹ 654.00
 Total Policy Premium ₹ 8,572.00`,
 ];
 
-const trained = refineTataAigBundledTwoWheelerPolicy(trainedShape, base());
+const trained = run(trainedShape);
 assert.equal(trained.parserId, "tata_aig_motor_v1");
 assert.match(trained.parserVersion, /tata_aig_tw_bundled_v1/);
 assert.equal(field(trained, "insurer_name"), "TATA AIG General Insurance Company Limited");
@@ -131,7 +137,7 @@ CGST 9% ₹ 643.50
 Total Policy Premium ₹ 8,437.00`,
 ];
 
-const sibling = refineTataAigBundledTwoWheelerPolicy(siblingShape, base());
+const sibling = run(siblingShape);
 assert.equal(field(sibling, "policy_number"), "81112223331122");
 assert.equal(field(sibling, "policy_end_date"), "2027-09-02");
 assert.equal(field(sibling, "vehicle_make"), "EXAMPLE");
@@ -147,14 +153,15 @@ assert.equal(field(sibling, "gross_premium"), "8437");
 
 const mismatchShape = [...trainedShape];
 mismatchShape[2] = mismatchShape[2].replace("Net Premium (A+B+C) ₹ 7,264.00", "Net Premium (A+B+C) ₹ 7,999.00");
-const mismatch = refineTataAigBundledTwoWheelerPolicy(mismatchShape, base());
+const mismatch = run(mismatchShape);
 assert.equal(field(mismatch, "od_premium"), undefined);
 assert.equal(field(mismatch, "tp_premium"), undefined);
 assert.match(mismatch.warnings.join(" "), /did not reconcile/i);
 
-const unrelated = refineTataAigBundledTwoWheelerPolicy([
+const unrelatedPages = [
   "EXAMPLE GENERAL INSURANCE COMPANY\nBundled Auto Secure - Two Wheeler Policy",
-], base());
+];
+const unrelated = run(unrelatedPages);
 assert.equal(unrelated.parserId, "generic_motor_v1");
 assert.equal(unrelated.fields.length, 0);
 
