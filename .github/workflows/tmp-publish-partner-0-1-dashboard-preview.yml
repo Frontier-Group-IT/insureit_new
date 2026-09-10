@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_RELEASE_COMMIT: 0815a5f433b029cc48ac18e6454a71dbf392875b
+      EXPECTED_RELEASE_COMMIT: d3960ab9b32b8e27539f61f21ce0420730f2cca4
 
     steps:
       - name: Checkout exact branch snapshot
@@ -121,7 +121,7 @@ jobs:
           npx eas-cli project:info --non-interactive
           npx eas-cli channel:view preview --json --non-interactive
 
-      - name: Publish dashboard and reliable OTA activation to Partner preview
+      - name: Publish Partner dashboard banner and icon polish to preview
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -129,7 +129,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 dashboard + reliable OTA activation ${EXPECTED_RELEASE_COMMIT}" \
+            --message "Partner 0.1.0 dashboard banner + icon polish ${EXPECTED_RELEASE_COMMIT}" \
             --non-interactive \
             --json > partner-preview-update.json
           cat partner-preview-update.json
@@ -141,7 +141,7 @@ jobs:
           set -euo pipefail
           npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json
           cat latest-preview.json
-          grep -q 'Partner 0.1.0 dashboard + reliable OTA activation' latest-preview.json
+          grep -q 'Partner 0.1.0 dashboard banner + icon polish' latest-preview.json
           grep -q '"runtimeVersion": "0.1.0"' latest-preview.json
 
       - name: Summary
@@ -149,13 +149,14 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 dashboard + OTA activation release'
+            echo '## Partner 0.1.0 dashboard banner + icon polish release'
             echo
             echo "- Verified release commit: \`${EXPECTED_RELEASE_COMMIT}\`"
             echo '- Runtime: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- Dashboard: visible generated banner and distinct actions retained'
-            echo '- OTA activation: explicit startup and foreground check/fetch/reload'
-            echo '- Settings: runtime/channel/update-source diagnostics'
+            echo '- Header: taller generated insurance banner'
+            echo '- Quick Actions: custom generated image assets'
+            echo '- Pending Tasks: larger visible illustration'
+            echo '- OTA activation: startup and foreground check/fetch/reload retained'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
