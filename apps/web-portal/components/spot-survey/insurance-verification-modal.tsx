@@ -72,22 +72,25 @@ export function InsuranceVerificationModalButton({
     };
   }, [open, claimId, capacity]);
 
-  const insuranceStatus = getStatus(insurance.end, incident);
+  const insuranceStatus = getStatus(insurance.start, insurance.end, incident);
   const dateOrderInvalid = Boolean(insurance.start && insurance.end && insurance.start > insurance.end);
   const policyDatesAvailable = Boolean(insurance.start && insurance.end);
+  const incidentAvailable = Boolean(incident);
   const insuranceComplete = Boolean(
-    policyDatesAvailable && insurance.ncb && insurance.policy && insurance.capacity.trim(),
+    policyDatesAvailable && incidentAvailable && insurance.ncb && insurance.policy && insurance.capacity.trim(),
   );
-  const insuranceValid = Boolean(policyDatesAvailable && !dateOrderInvalid && insuranceStatus === "Valid");
+  const insuranceValid = Boolean(policyDatesAvailable && incidentAvailable && !dateOrderInvalid && insuranceStatus === "Valid");
   const canSave = insuranceComplete && insuranceValid;
 
   const message = useMemo(() => {
     if (!policyDatesAvailable) return "Policy start and end date are not available in customer policy details.";
+    if (!incidentAvailable) return "Accident date is required to verify policy validity.";
+    if (dateOrderInvalid) return "Policy start date is after the policy end date. Verification is blocked.";
     if (capacityLoading && !insurance.capacity) return "Loading the selected vehicle class and capacity.";
     if (!insuranceComplete) return "Enter all required insurance details.";
-    if (!insuranceValid) return "Insurance date validity is invalid. Verification is blocked.";
+    if (!insuranceValid) return "Accident date falls outside the insurance policy period. Verification is blocked.";
     return "Insurance details are valid.";
-  }, [policyDatesAvailable, capacityLoading, insurance.capacity, insuranceComplete, insuranceValid]);
+  }, [policyDatesAvailable, incidentAvailable, dateOrderInvalid, capacityLoading, insurance.capacity, insuranceComplete, insuranceValid]);
 
   const modal = (
     <div className="fixed inset-0 z-[100] grid min-h-screen place-items-center overflow-y-auto bg-black/55 p-4">
@@ -176,22 +179,32 @@ function InsuranceRows({
   capacityLoading: boolean;
   capacityError: string;
 }) {
-  const endStatus = getStatus(values.end, incidentDate);
+  const policyStatus = getStatus(values.start, values.end, incidentDate);
   const dateOrderInvalid = Boolean(values.start && values.end && values.start > values.end);
+  const incidentBeforeStart = Boolean(incidentDate && values.start && incidentDate < values.start);
+  const incidentAfterEnd = Boolean(incidentDate && values.end && incidentDate > values.end);
+  const policyDatesAvailable = Boolean(values.start && values.end);
   const capacityLabel = capacity?.label ?? "Vehicle Capacity";
   const classDisplay = capacity?.vehicleClassDescription
     ? `${capacity.vehicleClassDescription}${capacity.vehicleClassCode ? ` (${capacity.vehicleClassCode})` : ""}`
     : capacity?.vehicleClassCode || "Vehicle class unavailable";
+  const validityLabel = dateOrderInvalid
+    ? "Invalid - start date is after end date"
+    : !policyDatesAvailable
+      ? "Policy date unavailable"
+      : !incidentDate
+        ? "Accident date required"
+        : policyStatus;
 
   return (
     <div className="divide-y divide-[#E6EEF7]">
       <div className="grid grid-cols-[52px_1fr_210px_210px] items-center gap-4 px-6 py-4">
         <NumberBadge number={1} />
         <p className="text-[14px] font-semibold text-[#071D49]">Insurance Policy Period</p>
-        <ReadonlyDateInput label="Start Date" name="insurance_start_date" value={values.start} invalid={dateOrderInvalid || !values.start} />
-        <ReadonlyDateInput label="End Date" name="insurance_end_date" value={values.end} invalid={endStatus === "Invalid" || dateOrderInvalid || !values.end} valid={endStatus === "Valid" && !dateOrderInvalid} />
+        <ReadonlyDateInput label="Start Date" name="insurance_start_date" value={values.start} invalid={dateOrderInvalid || incidentBeforeStart || !values.start} valid={policyStatus === "Valid" && !dateOrderInvalid} />
+        <ReadonlyDateInput label="End Date" name="insurance_end_date" value={values.end} invalid={dateOrderInvalid || incidentAfterEnd || !values.end} valid={policyStatus === "Valid" && !dateOrderInvalid} />
       </div>
-      <input type="hidden" name="policy_status" value={dateOrderInvalid ? "Invalid" : endStatus} />
+      <input type="hidden" name="policy_status" value={dateOrderInvalid ? "Invalid" : policyStatus} />
 
       <InsuranceRow number={2} label="NCB Verification">
         <select name="ncb_verified" value={values.ncb} onChange={(event) => setValues((previous) => ({ ...previous, ncb: event.target.value }))} className="h-10 w-full rounded-md border border-[#C9D4E3] bg-white px-3 text-[13px] text-[#071D49]">
@@ -229,7 +242,7 @@ function InsuranceRows({
       </InsuranceRow>
 
       <div className="px-6 py-3">
-        <div className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${endStatus === "Invalid" || dateOrderInvalid ? "border-red-200 bg-red-50 text-red-700" : endStatus === "Valid" ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>Insurance validity status: {dateOrderInvalid ? "Invalid - start date is after end date" : endStatus || "Policy date unavailable"}</div>
+        <div className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${dateOrderInvalid || policyStatus === "Invalid" ? "border-red-200 bg-red-50 text-red-700" : policyStatus === "Valid" ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>Insurance validity status: {validityLabel}</div>
       </div>
     </div>
   );
@@ -251,9 +264,9 @@ function NumberBadge({ number }: { number: number }) {
   return <span className="grid h-8 w-8 place-items-center rounded-md bg-[#EEF4FF] text-[16px] font-semibold text-[#071D49]">{number}</span>;
 }
 
-function getStatus(date: string, incidentDate: string | null): Status {
-  if (!date || !incidentDate) return "";
-  return date < incidentDate ? "Invalid" : "Valid";
+function getStatus(startDate: string, endDate: string, incidentDate: string | null): Status {
+  if (!startDate || !endDate || !incidentDate) return "";
+  return incidentDate < startDate || incidentDate > endDate ? "Invalid" : "Valid";
 }
 
 function toDateOnly(value?: string | null) {
