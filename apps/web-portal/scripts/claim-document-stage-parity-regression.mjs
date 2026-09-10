@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const stage1Group = await readFile(new URL("../components/spot-survey/bulk-document-verification-group.tsx", import.meta.url), "utf8");
 const stage3Group = await readFile(new URL("../components/final-documents/stage3-document-verification-group.tsx", import.meta.url), "utf8");
+const collapsedStatus = await readFile(new URL("../components/claim-manager/claim-document-collapsed-status.tsx", import.meta.url), "utf8");
 const stage3Workspace = await readFile(new URL("../components/final-documents/final-documents-workspace-v2.tsx", import.meta.url), "utf8");
 const stage3Loader = await readFile(new URL("../components/final-documents/final-document-verification-data-actions.ts", import.meta.url), "utf8");
 const claimPage = await readFile(new URL("../app/claims/[id]/page.tsx", import.meta.url), "utf8");
@@ -16,8 +17,19 @@ for (const source of [stage1Group, stage3Group]) {
   assert.match(source, /<RequestReuploadButton claimId=\{claim\.id\} documentId=\{document\.id\}/, "Each file must keep its row-specific Reupload action.");
   assert.match(source, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Each file must keep exact-row Replace behavior.");
   assert.match(source, /item\.documents\.length > 1/, "Multiple files must use the compact collapsed category state.");
-  assert.match(source, /FILES ARE UPLOADED/, "Collapsed multi-file cards must show the uploaded-file count.");
+  assert.match(source, /ClaimDocumentCollapsedStatus/, "Collapsed multi-file cards must use the shared compact reference summary.");
+  assert.match(source, /verifiedFileCount/, "Collapsed multi-file cards must calculate the verified-file count.");
+  assert.match(source, /pendingFileCount/, "Collapsed multi-file cards must calculate the pending/unverified-file count.");
+  assert.doesNotMatch(source, /FILES ARE UPLOADED/, "Collapsed multi-file cards must not restore the old large uploaded-file text.");
 }
+
+assert.match(collapsedStatus, /CheckCircle2/, "Compact collapsed summary must use the green outlined check icon from the reference.");
+assert.match(collapsedStatus, /Clock/, "Compact collapsed summary must use the orange clock icon from the reference.");
+assert.match(collapsedStatus, /text-\[#16A34A\]/, "Verified count icon must retain the reference green treatment.");
+assert.match(collapsedStatus, /text-\[#F97316\]/, "Pending count icon must retain the reference orange treatment.");
+assert.match(collapsedStatus, /h-4 w-px bg-\[#D9E3F0\]/, "Verified and pending counts must remain separated by the compact vertical divider.");
+assert.match(collapsedStatus, /data-claim-document-collapsed-status="true"/, "Shared summary must retain an explicit regression marker.");
+assert.doesNotMatch(collapsedStatus, /rounded-(?:lg|xl|full)|border border|bg-white/, "The compact status summary itself must not introduce a pill, card background or enclosing border.");
 
 assert.match(stage3Workspace, /Stage3DocumentVerificationGroup/, "Stage 3 must render through the parity document-card engine.");
 assert.match(stage3Workspace, /loadFinalDocumentVerificationData\(claimId\)/, "Stage 3 must load live document and verification state for the shared controls.");
@@ -43,4 +55,4 @@ assert.doesNotMatch(verifiedStatusFunction, /Final Documents Verification Pendin
 assert.doesNotMatch(verifiedStatusFunction, /Final Documents Submitted/, "Stage 3 verification must remain on the explicit Claim Intimation Save Details workflow.");
 assert.match(claimWorkflow, /advance_initial_documents_verified RPC/, "The Stage 3 RPC boundary must be documented beside the status guard.");
 
-console.log("Claim document Stage 1/Stage 3 Internal/External parity and workflow-boundary regression passed.");
+console.log("Claim document Stage 1/Stage 3 Internal/External parity, compact collapsed status summary and workflow-boundary regression passed.");
