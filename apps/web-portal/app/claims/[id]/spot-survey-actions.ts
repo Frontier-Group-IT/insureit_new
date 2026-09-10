@@ -150,9 +150,10 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
   const type = verificationTypeForDocument(documentType);
   const requiredFields = requiredFieldsForDocument(documentType);
   const missingFields = requiredFields.filter((key) => !details[key]);
-  const dateStatusPairs = [["fitness_valid_upto", "fitness_status"], ["tax_valid_upto", "tax_status"], ["insurance_valid_upto", "insurance_status"], ["pucc_valid_upto", "pucc_status"], ["local_permit_valid_upto", "local_permit_status"], ["national_permit_valid_upto", "national_permit_status"], ["insurance_end_date", "policy_status"]] as const;
+  const dateStatusPairs = [["fitness_valid_upto", "fitness_status"], ["tax_valid_upto", "tax_status"], ["insurance_valid_upto", "insurance_status"], ["pucc_valid_upto", "pucc_status"], ["local_permit_valid_upto", "local_permit_status"], ["national_permit_valid_upto", "national_permit_status"]] as const;
   const invalidFields: string[] = [];
   const finalDetails = { ...details };
+  let missingInsuranceIncidentDate = false;
 
   if (isSpotDocument(documentType)) {
     finalDetails.spot_photo_status = missingFields.length === 0 ? "Verified" : "Incomplete";
@@ -165,7 +166,24 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
     if (autoStatus === "Invalid") invalidFields.push(dateKey);
   }
 
-  if (type === "insurance" && details.insurance_start_date && details.insurance_end_date && details.insurance_start_date > details.insurance_end_date) invalidFields.push("insurance_start_date");
+  if (type === "insurance") {
+    const startDate = details.insurance_start_date;
+    const endDate = details.insurance_end_date;
+    missingInsuranceIncidentDate = !incidentDate;
+
+    if (startDate && endDate && startDate > endDate) {
+      invalidFields.push("insurance_start_date");
+      finalDetails.policy_status = "Invalid";
+    } else if (startDate && endDate && incidentDate) {
+      const incidentBeforeStart = incidentDate < startDate;
+      const incidentAfterEnd = incidentDate > endDate;
+      if (incidentBeforeStart) invalidFields.push("insurance_start_date");
+      if (incidentAfterEnd) invalidFields.push("insurance_end_date");
+      finalDetails.policy_status = incidentBeforeStart || incidentAfterEnd ? "Invalid" : "Valid";
+    } else {
+      finalDetails.policy_status = "";
+    }
+  }
 
   if (isDlDocument(documentType)) {
     const dlStatus = statusFromExpiry(details.licence_valid_upto, incidentDate);
@@ -190,10 +208,11 @@ function applyAutomaticValidity(details: Record<string, string>, incidentDate: s
     if (calculatedDifference < 0 || submittedDifference !== calculatedDifference) invalidFields.push("load_difference_kg");
   }
 
-  const isValid = missingFields.length === 0 && invalidFields.length === 0;
+  const isValid = missingFields.length === 0 && !missingInsuranceIncidentDate && invalidFields.length === 0;
   const messages: string[] = [];
+  if (missingInsuranceIncidentDate) messages.push("Accident date is required to verify policy validity.");
   if (missingFields.length) messages.push(`Please enter required fields: ${missingFields.map(formatFieldName).join(", ")}.`);
-  if (invalidFields.length) messages.push(`Cannot verify document. Invalid field/value found for: ${invalidFields.map(formatFieldName).join(", ")}.`);
+  if (invalidFields.length) messages.push(`Cannot verify document. Invalid field/value found for: ${Array.from(new Set(invalidFields)).map(formatFieldName).join(", ")}.`);
   const invalidReason = messages.length ? messages.join(" ") : null;
   return { finalDetails, isValid, invalidReason };
 }
