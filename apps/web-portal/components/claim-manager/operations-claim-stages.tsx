@@ -325,7 +325,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             <div className="mt-3 flex justify-end">
               <FormSubmitButton
                 form="spot-intimation-form"
-                label={spotCurrentEditable ? `Save & move to ${managerNext}` : "Save Details"}
+                label="Save Details"
                 pendingLabel="Saving..."
                 forcePending={spotSubmitting}
                 className="rounded-lg bg-[#071D49] px-4 py-2 text-[11px] font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
