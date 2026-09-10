@@ -83,6 +83,9 @@ jobs:
       - name: Mobile lint
         run: npm run lint:mobile
 
+      - name: Customer skeleton loading regression
+        run: node apps/mobile-app/scripts/customer-skeleton-loading-regression.mjs
+
       - name: Customer notification bell panel regression
         run: node apps/mobile-app/scripts/customer-notification-panel-regression.mjs
 
@@ -128,6 +131,7 @@ jobs:
             echo "- Commit: \`${GITHUB_SHA}\`"
             echo "- Dependency lockfile: must remain synchronized"
             echo "- Static checks: TypeScript typecheck and Expo lint"
+            echo "- Customer loading regression: normal Customer page loading resolves through route-aware dashboard/list/detail/form skeletons while non-Customer loader behavior is preserved"
             echo "- Add Vehicle regression: Policy Type is absent from the Customer Add Vehicle UI while vehicle-linked policy creation remains Motor-backed"
             echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
             echo "- Internal claim video regression: multi-select, 3-way concurrency, verification/re-upload guards, 50 MB limit and resumable upload contract remain intact"

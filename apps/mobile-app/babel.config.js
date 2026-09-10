@@ -11,6 +11,7 @@ module.exports = function (api) {
           root: ['./'],
 
           alias: {
+            '^@/components/ui$': './components/customer-aware-ui',
             '@': './',
             '^expo-document-picker$': './lib/claim-video-document-picker',
           },
