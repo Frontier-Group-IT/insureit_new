@@ -17,7 +17,21 @@ type ClaimForUpload = {
   id: string;
   customer_id: string;
   current_status: ClaimStatus;
+  accident_at: string | null;
   claim_service_mode: "broker_managed" | "self_managed";
+};
+
+type ExistingClaimDocument = {
+  id: string;
+  customer_id: string;
+  document_type: string;
+  file_name: string;
+  storage_bucket: string;
+  storage_path: string;
+  verification_status: string;
+  rejection_reason: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
 };
 
 export type ClaimUploadFileMetadata = {
@@ -37,6 +51,7 @@ export type ClaimSignedUpload = {
 type FinalizeUpload = Pick<ClaimSignedUpload, "path" | "fileName" | "documentType">;
 type ActionResult = { ok: boolean; message?: string };
 type PrepareResult = ActionResult & { uploads?: ClaimSignedUpload[] };
+type VerificationType = "rc" | "insurance" | "document";
 
 async function currentProfile() {
   const accessToken = await getServerAccessToken();
@@ -54,7 +69,7 @@ async function loadClaimForUpload(
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("claims")
-    .select("id, customer_id, current_status, claim_service_mode")
+    .select("id, customer_id, current_status, accident_at, claim_service_mode")
     .eq("id", claimId)
     .maybeSingle<ClaimForUpload>();
 
@@ -65,6 +80,19 @@ async function loadClaimForUpload(
   if (data.claim_service_mode !== "broker_managed") {
     throw new Error("Operations can process this claim only after assistance is accepted.");
   }
+  return data;
+}
+
+async function loadExistingClaimDocument(claim: ClaimForUpload, documentId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("claim_documents")
+    .select("id, customer_id, document_type, file_name, storage_bucket, storage_path, verification_status, rejection_reason, verified_by, verified_at")
+    .eq("id", documentId)
+    .eq("claim_id", claim.id)
+    .eq("customer_id", claim.customer_id)
+    .maybeSingle<ExistingClaimDocument>();
+  if (error || !data) throw new Error(error?.message ?? "Document not found.");
   return data;
 }
 
@@ -141,6 +169,19 @@ function assertCanonicalUploadPath(claim: ClaimForUpload, path: string, spot: bo
   if (!spot && path.startsWith(`${normalPrefix}spot/`)) {
     throw new Error("Invalid claim document upload path.");
   }
+}
+
+function verificationTypeForDocument(documentType: string): VerificationType {
+  const normalized = documentType.toLowerCase();
+  if (normalized.includes("registration") || normalized.includes("rc")) return "rc";
+  if (normalized.includes("policy") || normalized.includes("insurance")) return "insurance";
+  return "document";
+}
+
+function incidentDateOnly(value?: string | null) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
 }
 
 async function createSignedUpload(
@@ -243,16 +284,20 @@ export async function finalizeSpotSurveyMediaUpload(
 export async function prepareClaimDocumentUpload(
   claimId: string,
   documentType: string,
-  file: ClaimUploadFileMetadata
+  file: ClaimUploadFileMetadata,
+  documentId?: string
 ): Promise<PrepareResult> {
   try {
     if (!claimId.trim()) throw new Error("Missing claim id.");
-    validateSingleDocumentFile(documentType, file);
     const profile = await currentProfile();
     const claim = await loadClaimForUpload(claimId, profile);
+    const existingDocument = documentId ? await loadExistingClaimDocument(claim, documentId) : null;
+    const persistedDocumentType = existingDocument?.document_type ?? documentType;
+    validateSingleDocumentFile(persistedDocumentType, file);
+
     const fileName = safeFileName(file.name);
     const path = `${claim.customer_id}/${claim.id}/${Date.now()}-${randomUUID()}-${fileName}`;
-    const upload = await createSignedUpload(path, fileName, documentType, file.type);
+    const upload = await createSignedUpload(path, fileName, persistedDocumentType, file.type);
     return { ok: true, uploads: [upload] };
   } catch (error) {
     console.error("prepareClaimDocumentUpload failed", error);
@@ -263,45 +308,129 @@ export async function prepareClaimDocumentUpload(
 export async function finalizeClaimDocumentUpload(
   claimId: string,
   documentType: string,
-  upload: FinalizeUpload
+  upload: FinalizeUpload,
+  documentId?: string
 ): Promise<ActionResult> {
   try {
-    if (!claimId.trim() || !documentType.trim()) throw new Error("Missing replacement document details.");
+    if (!claimId.trim() || !documentType.trim()) throw new Error("Missing claim document details.");
     const profile = await currentProfile();
     const claim = await loadClaimForUpload(claimId, profile);
     assertCanonicalUploadPath(claim, upload.path, false);
-    if (upload.documentType !== documentType) throw new Error("Invalid claim document upload type.");
 
-    const supabase = await createServerSupabaseClient();
-    const { error: insertError } = await supabase.from("claim_documents").insert({
-      claim_id: claim.id,
-      customer_id: claim.customer_id,
-      document_type: documentType,
+    if (!documentId) {
+      if (upload.documentType !== documentType) throw new Error("Invalid claim document upload type.");
+      const supabase = await createServerSupabaseClient();
+      const { error: insertError } = await supabase.from("claim_documents").insert({
+        claim_id: claim.id,
+        customer_id: claim.customer_id,
+        document_type: documentType,
+        file_name: safeFileName(upload.fileName),
+        storage_bucket: bucketName,
+        storage_path: upload.path,
+        verification_status: "pending"
+      });
+      if (insertError) {
+        await cleanupPaths([upload.path]);
+        throw new Error(insertError.message);
+      }
+
+      revalidatePath(`/claims/${claim.id}`);
+      revalidatePath("/claims");
+      revalidatePath("/dashboard");
+      return { ok: true, message: "Document uploaded successfully." };
+    }
+
+    const existingDocument = await loadExistingClaimDocument(claim, documentId);
+    if (upload.documentType !== existingDocument.document_type) throw new Error("Invalid replacement document type.");
+
+    const admin = createSupabaseAdminClient();
+    const replacedAt = new Date().toISOString();
+    const replacementPayload = {
       file_name: safeFileName(upload.fileName),
       storage_bucket: bucketName,
       storage_path: upload.path,
-      verification_status: "pending"
-    });
-    if (insertError) {
+      verification_status: "pending" as const,
+      rejection_reason: null,
+      verified_by: null,
+      verified_at: null
+    };
+    const { data: updatedDocument, error: updateError } = await admin
+      .from("claim_documents")
+      .update(replacementPayload)
+      .eq("id", documentId)
+      .eq("claim_id", claim.id)
+      .eq("customer_id", claim.customer_id)
+      .select("id")
+      .maybeSingle<{ id: string }>();
+
+    if (updateError || !updatedDocument) {
       await cleanupPaths([upload.path]);
-      throw new Error(insertError.message);
+      throw new Error(updateError?.message ?? "Document replacement could not be saved.");
     }
 
-    await supabase.from("claim_status_history").insert({
+    const invalidReason = "Document replaced; re-verification required.";
+    const { error: verificationError } = await admin.from("claim_document_verifications").insert({
       claim_id: claim.id,
-      from_status: null,
-      to_status: null,
-      notes: `${documentType} replaced by claim manager.`,
+      document_id: existingDocument.id,
+      document_type: existingDocument.document_type,
+      verification_type: verificationTypeForDocument(existingDocument.document_type),
+      incident_date: incidentDateOnly(claim.accident_at),
+      is_valid: false,
+      invalid_reason: invalidReason,
+      details: {
+        verification_type: "document_replacement",
+        document_type: existingDocument.document_type,
+        document_id: existingDocument.id,
+        replacement_requires_reverification: true,
+        replaced_at: replacedAt
+      },
+      verified_by: profile.id
+    });
+
+    if (verificationError) {
+      const { error: rollbackError } = await admin
+        .from("claim_documents")
+        .update({
+          file_name: existingDocument.file_name,
+          storage_bucket: existingDocument.storage_bucket,
+          storage_path: existingDocument.storage_path,
+          verification_status: existingDocument.verification_status,
+          rejection_reason: existingDocument.rejection_reason,
+          verified_by: existingDocument.verified_by,
+          verified_at: existingDocument.verified_at
+        })
+        .eq("id", documentId)
+        .eq("claim_id", claim.id)
+        .eq("customer_id", claim.customer_id);
+
+      if (!rollbackError) await cleanupPaths([upload.path]);
+      throw new Error(rollbackError
+        ? "Replacement could not be completed safely. Refresh the claim before continuing."
+        : verificationError.message);
+    }
+
+    const { error: historyError } = await admin.from("claim_status_history").insert({
+      claim_id: claim.id,
+      from_status: claim.current_status,
+      to_status: claim.current_status,
+      notes: `${existingDocument.document_type} replaced by claim manager; re-verification required.`,
       changed_by: profile.id
     });
+    if (historyError) console.error("Claim document replacement history write failed.");
+
+    if (existingDocument.storage_path && existingDocument.storage_path !== upload.path) {
+      const oldBucket = existingDocument.storage_bucket || bucketName;
+      const { error: cleanupError } = await admin.storage.from(oldBucket).remove([existingDocument.storage_path]);
+      if (cleanupError) console.error("Previous claim document cleanup failed after successful replacement.");
+    }
 
     revalidatePath(`/claims/${claim.id}`);
     revalidatePath("/claims");
     revalidatePath("/dashboard");
-    return { ok: true, message: "Document replaced successfully." };
+    return { ok: true, message: "Document replaced. Re-verification required." };
   } catch (error) {
-    console.error("finalizeClaimDocumentUpload failed", error);
-    return { ok: false, message: error instanceof Error ? error.message : "Document replacement failed." };
+    console.error("finalizeClaimDocumentUpload failed", error instanceof Error ? error.message : "Unknown document upload error");
+    return { ok: false, message: error instanceof Error ? error.message : "Document upload failed." };
   }
 }
 
