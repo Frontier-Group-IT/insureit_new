@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { advanceClaimWorkflow, saveSpotIntimationDetails } from "@/app/actions";
+import { advanceInternalSpotIntimation, saveInternalSpotIntimationDetails } from "@/app/claims/internal-spot-intimation-actions";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { FormSubmitButton } from "@/components/form-submit-button";
@@ -115,7 +115,7 @@ const fields: StageFields = {
 };
 
 const requiredFields: Record<string, string[]> = {
-  spot_intimation: ["incident_at", "spot_intimation_at"],
+  spot_intimation: ["incident_at", "spot_intimation_at", "driver_name", "driver_phone", "location"],
   spot_status: ["spot_survey_done_date"],
   claim_intimation: ["insurer_claim_no", "dealership_name", "dealership_location", "estimate_amount"],
   work_approval: ["approval_received_date", "cashless"],
@@ -216,7 +216,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
             nextStageKey: nextStageKeyFor(milestoneKey),
           };
         }
-        await advanceClaimWorkflow(claimId, formData);
+        await advanceInternalSpotIntimation(claimId, formData);
         setSuccessNotice("Claim stage updated.");
         return { ok: true, message: "Claim stage updated.", advanced: true, nextStageKey: "spot_status" };
       } catch (error) {
@@ -231,7 +231,7 @@ export function OperationsClaimStages({ claimId, currentStatus, insurerClaimNo, 
   const [spotState, spotFormAction] = useActionState(
     async (_previous: { ok: boolean; message: string }, formData: FormData) => {
       try {
-        await saveSpotIntimationDetails(claimId, formData);
+        await saveInternalSpotIntimationDetails(claimId, formData);
         setSuccessNotice("Spot Intimation details saved.");
         return { ok: true, message: "Spot Intimation details saved." };
       } catch (error) {
@@ -496,8 +496,8 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
             if (field.name === "location") {
               return (
                 <div key={field.name} className="min-w-0">
-                  <label htmlFor="spot-intimation-location" className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}</label>
-                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                  <label htmlFor="spot-intimation-location" className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
+                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
                 </div>
               );
             }

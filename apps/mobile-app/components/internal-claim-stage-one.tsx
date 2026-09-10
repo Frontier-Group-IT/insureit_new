@@ -448,7 +448,7 @@ export default function InternalClaimStageOne() {
     if (!selectedVehicle || !selectedPolicy || !selectedContext || saving || uploadingDocuments || voiceRecording) return;
     setMessage('');
     setValidationMessage('');
-    const missingMandatoryFields = [!incidentDate ? 'Accident Date' : '', !incidentTime ? 'Accident Time' : '', !intimationDate ? 'Spot Intimation Date' : '', !intimationTime ? 'Spot Intimation Time' : ''].filter(Boolean);
+    const missingMandatoryFields = [!incidentDate ? 'Accident Date' : '', !incidentTime ? 'Accident Time' : '', !intimationDate ? 'Spot Intimation Date' : '', !intimationTime ? 'Spot Intimation Time' : '', !driver.trim() ? 'Driver Name' : '', !phone.trim() ? 'Driver Number' : '', !location.trim() ? 'Location' : ''].filter(Boolean);
     if (missingMandatoryFields.length) return setValidationMessage(`Please complete the required Stage 1 fields: ${missingMandatoryFields.join(', ')}.`);
     const incidentAt = parseDateTime(incidentDate, incidentTime);
     const spotIntimationAt = parseDateTime(intimationDate, intimationTime);
@@ -515,12 +515,12 @@ export default function InternalClaimStageOne() {
         <AppDatePicker label="Spot Intimation Date *" value={intimationDate} onChange={setIntimationDate} maxDate={todayIsoDate()} />
         <TimePickerField label="Spot Intimation Time *" value={intimationTime} onPress={() => setTimeTarget('intimation')} />
         <View style={styles.gap} />
-        <TextField label="Driver Name (Optional)" value={driver} onChangeText={setDriver} />
+        <TextField label="Driver Name *" value={driver} onChangeText={setDriver} />
         <View style={styles.gap} />
-        <TextField label="Driver Number (Optional)" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+        <TextField label="Driver Number *" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
         <View style={styles.gap} />
         <View style={styles.locationFieldWrap}>
-          <TextField label="Location (Optional)" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(null); }} />
+          <TextField label="Location *" value={location} onChangeText={(value) => { setLocation(value); setLocationNotice(null); }} />
           <Pressable accessibilityRole="button" accessibilityLabel={locating ? 'Locating current location' : 'Use current location'} accessibilityState={{ disabled: locating }} hitSlop={8} disabled={locating} onPress={() => void captureCurrentLocation()} style={({ pressed }) => [styles.gpsLocationInlineAction, locating && styles.gpsLocationButtonDisabled, pressed && !locating && styles.gpsLocationInlineActionPressed]}><MaterialCommunityIcons name="crosshairs-gps" size={16} color="#0A43A3" /><Text style={styles.gpsLocationInlineText}>Use Current Location</Text></Pressable>
         </View>
         {locationNotice ? <View style={[styles.locationNotice, locationNotice.tone === 'error' && styles.locationNoticeError]}><MaterialCommunityIcons name={locationNotice.tone === 'error' ? 'alert-circle-outline' : 'check-circle-outline'} size={15} color={locationNotice.tone === 'error' ? '#B42318' : '#16764B'} /><Text style={[styles.locationNoticeText, locationNotice.tone === 'error' && styles.locationNoticeTextError]}>{locationNotice.text}</Text></View> : null}
