@@ -65,31 +65,32 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
 
   const selectedDocumentIds = selectableIds.filter((id) => selectedIds.has(id));
   const allVerified = item.documents.length > 0 && item.documents.every((document) => isDocumentVerified(document, verifications));
-  const hasRejected = item.documents.some((document) => document.verification_status === "rejected");
-  const invalidAttempt = item.documents
-    .map((document) => latestVerificationForDocument(document, verifications))
-    .find((verification) => verification && !verification.is_valid);
-  const statusTone = allVerified ? "green" : hasRejected || invalidAttempt ? "amber" : "slate";
-  const fileLabel = `${item.documents.length} file${item.documents.length === 1 ? "" : "s"}`;
+  const hasSingleFile = item.documents.length === 1;
+  const hasMultipleFiles = item.documents.length > 1;
+  const showDocumentRows = hasSingleFile || isExpanded;
   const contentId = `claim-document-group-${claim.id}-${item.key}`;
 
   return (
-    <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : hasRejected || invalidAttempt ? "border-amber-200" : "border-[#E2EAF4]"}`}>
-      <div className={`flex items-center justify-between gap-2 ${isExpanded ? "mb-2" : ""}`}>
-        <button
-          type="button"
-          onClick={() => setIsExpanded((expanded) => !expanded)}
-          aria-expanded={isExpanded}
-          aria-controls={contentId}
-          aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
-          className="flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 focus-visible:ring-offset-1"
-        >
-          <span className="flex min-w-0 items-center gap-2">
+    <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"}`}>
+      <div className={`flex items-center justify-between gap-2 ${showDocumentRows || (!item.documents.length && isExpanded) ? "mb-2" : ""}`}>
+        {hasSingleFile ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <DocumentTypeHeaderIcon itemKey={item.key} />
             <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
-          </span>
-          {item.documents.length ? <StatusBadge tone={statusTone} label={fileLabel} /> : null}
-        </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsExpanded((expanded) => !expanded)}
+            aria-expanded={isExpanded}
+            aria-controls={contentId}
+            aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
+            className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 focus-visible:ring-offset-1"
+          >
+            <DocumentTypeHeaderIcon itemKey={item.key} />
+            <h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2>
+          </button>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           {allVerified ? <StatusBadge tone="green" label="Verified" /> : item.documents.length ? (
             <div className="w-[64px]">
@@ -109,9 +110,9 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
         </div>
       </div>
 
-      <div id={contentId} className={isExpanded ? "block" : "hidden"}>
-        {item.documents.length ? (
-          <div className="space-y-2">
+      {item.documents.length ? (
+        showDocumentRows ? (
+          <div id={contentId} className="space-y-2">
             {item.documents.map((document) => {
               const verification = latestVerificationForDocument(document, verifications);
               const verified = isDocumentVerified(document, verifications);
@@ -137,13 +138,19 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
               );
             })}
           </div>
-        ) : (
+        ) : hasMultipleFiles ? (
+          <div id={contentId} className="flex min-h-11 items-center justify-center rounded-lg border border-[#E2EAF4] bg-[#F8FBFF] px-3 py-2 text-center">
+            <p className="text-[11px] font-semibold tracking-[0.04em] text-[#526178]">{item.documents.length} FILES ARE UPLOADED</p>
+          </div>
+        ) : null
+      ) : (
+        <div id={contentId} className={isExpanded ? "block" : "hidden"}>
           <div className="flex min-h-11 items-center gap-2">
             <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div>
             <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </article>
   );
 }
