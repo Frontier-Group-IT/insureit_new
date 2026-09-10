@@ -2,11 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { uploadSpotSurveyMedia } from "@/app/claims/[id]/spot-survey-actions";
+import {
+  cancelClaimDocumentUploads,
+  finalizeSpotSurveyMediaUpload,
+  prepareSpotSurveyMediaUpload
+} from "@/app/claims/[id]/claim-document-upload-actions";
+import { createSupabaseBrowserClient } from "@/lib/auth";
 
 type Result = { ok: boolean; message?: string };
 
-const acceptedTypes = "image/jpeg,image/png,image/webp,image/heic,video/mp4,video/quicktime,video/webm";
+const bucketName = "claim-documents";
+const acceptedTypes = "image/jpeg,image/png,image/webp,image/heic,video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.jpg,.jpeg,.png,.webp,.heic,.mp4,.mov,.webm,.mkv,.avi";
 
 export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
   const router = useRouter();
@@ -29,16 +35,55 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/55 px-4">
           <form
-            action={(formData) => {
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!files.length) return;
+              const selectedFiles = [...files];
+
               startTransition(async () => {
-                formData.set("claimId", claimId);
-                formData.delete("files");
-                files.forEach((file) => formData.append("files", file));
-                const response = await uploadSpotSurveyMedia(formData);
-                setResult(response);
-                if (response.ok) {
-                  setFiles([]);
-                  router.refresh();
+                const uploadedPaths: string[] = [];
+                try {
+                  const prepared = await prepareSpotSurveyMediaUpload(
+                    claimId,
+                    selectedFiles.map((file) => ({ name: file.name, size: file.size, type: file.type }))
+                  );
+                  const uploads = prepared.uploads;
+                  if (!prepared.ok || !uploads || uploads.length !== selectedFiles.length) {
+                    setResult({ ok: false, message: prepared.message ?? "Could not prepare upload." });
+                    return;
+                  }
+
+                  const supabase = createSupabaseBrowserClient();
+                  for (const [index, file] of selectedFiles.entries()) {
+                    const upload = uploads[index];
+                    const fileOptions = file.type ? { cacheControl: "3600", contentType: file.type } : { cacheControl: "3600" };
+                    const { error: uploadError } = await supabase.storage
+                      .from(bucketName)
+                      .uploadToSignedUrl(upload.path, upload.token, file, fileOptions);
+                    if (uploadError) throw new Error(uploadError.message);
+                    uploadedPaths.push(upload.path);
+                  }
+
+                  const response = await finalizeSpotSurveyMediaUpload(
+                    claimId,
+                    uploads.map((upload) => ({
+                      path: upload.path,
+                      fileName: upload.fileName,
+                      documentType: upload.documentType
+                    }))
+                  );
+                  if (!response.ok) {
+                    await cancelClaimDocumentUploads(claimId, uploadedPaths);
+                    uploadedPaths.length = 0;
+                  }
+                  setResult(response);
+                  if (response.ok) {
+                    setFiles([]);
+                    router.refresh();
+                  }
+                } catch {
+                  if (uploadedPaths.length) await cancelClaimDocumentUploads(claimId, uploadedPaths);
+                  setResult({ ok: false, message: "Upload failed. Please try again." });
                 }
               });
             }}
@@ -69,7 +114,7 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
                 <span>
                   <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[#EAF3FF] text-[28px] text-[#174EA6]">☁</span>
                   <span className="mt-2 block text-[13px] font-semibold text-[#071D49]">Select photos and videos</span>
-                  <span className="mt-1 block text-[10px] text-[#68758A]">JPG, PNG, WEBP, HEIC, MP4, MOV, WEBM · up to 20MB per file</span>
+                  <span className="mt-1 block text-[10px] text-[#68758A]">JPG, PNG, WEBP, HEIC, MP4, MOV, WEBM, MKV, AVI · photos up to 20MB · videos up to 50MB</span>
                 </span>
               </label>
 
@@ -84,7 +129,7 @@ export function SpotMediaUploadButton({ claimId }: { claimId: string }) {
                       <div key={`${file.name}-${file.size}-${index}`} className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2">
                         <div className="min-w-0">
                           <p className="truncate text-[12px] font-semibold text-[#071D49]">{file.name}</p>
-                          <p className="text-[10px] text-[#68758A]">{file.type.startsWith("video/") ? "Video" : "Photo"} · {formatSize(file.size)}</p>
+                          <p className="text-[10px] text-[#68758A]">{file.type.startsWith("video/") || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name) ? "Video" : "Photo"} · {formatSize(file.size)}</p>
                         </div>
                         <button type="button" onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="shrink-0 text-[16px] font-semibold text-[#C43D3D]" aria-label={`Remove ${file.name}`}>×</button>
                       </div>
