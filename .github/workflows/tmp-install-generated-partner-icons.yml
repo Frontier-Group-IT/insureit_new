@@ -1,0 +1,146 @@
+name: Temporary install generated Partner dashboard icons
+
+on:
+  push:
+    branches:
+      - partner/generated-assets-dashboard
+    paths:
+      - '.github/workflows/tmp-install-generated-partner-icons.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: partner/generated-assets-dashboard
+          fetch-depth: 0
+
+      - name: Install generated icon pack and patch dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p apps/partner-app/assets/generated-dashboard
+          unzip -o -j _tmp/partner-generated-icons.zip -d apps/partner-app/assets/generated-dashboard
+          rm -f _tmp/partner-generated-icons.zip
+
+          python <<'PY'
+          from pathlib import Path
+
+          path = Path('apps/partner-app/app/(tabs)/index.tsx')
+          text = path.read_text()
+
+          marker = "type DashboardIconName =\n"
+          if marker not in text:
+              raise SystemExit('DashboardIconName marker missing')
+
+          assets = """const GeneratedDashboardAssets = {\n  policyAdd: require('../../assets/generated-dashboard/policy-add.png'),\n  policySold: require('../../assets/generated-dashboard/policy-sold.png'),\n  commissionEarned: require('../../assets/generated-dashboard/commission-earned.png'),\n  renewalAdd: require('../../assets/generated-dashboard/renewal-add.png'),\n  policyVerified: require('../../assets/generated-dashboard/policy-verified.png'),\n  renewalDue: require('../../assets/generated-dashboard/renewal-due.png'),\n} as const;\n\n"""
+          if 'const GeneratedDashboardAssets =' not in text:
+              idx = text.index('export default function PartnerHomeDashboard()')
+              text = text[:idx] + assets + text[idx:]
+
+          replacements = [
+              ('''                    <DashboardMetric\n                      icon="file-text"\n                      value={currentMonth?.policies ?? data.business.policies_this_month}\n                      label="Policies Sold"\n                    />''', '''                    <DashboardMetric\n                      asset={GeneratedDashboardAssets.policySold}\n                      value={currentMonth?.policies ?? data.business.policies_this_month}\n                      label="Policies Sold"\n                    />'''),
+              ('''                    <DashboardMetric\n                      icon="credit-card"\n                      value={currentMonth?.commission_available\n                        ? formatCompactIndianAmount(currentMonth.commission_earned)\n                        : '—'}\n                      label="Commission Earned"\n                    />''', '''                    <DashboardMetric\n                      asset={GeneratedDashboardAssets.commissionEarned}\n                      value={currentMonth?.commission_available\n                        ? formatCompactIndianAmount(currentMonth.commission_earned)\n                        : '—'}\n                      label="Commission Earned"\n                    />'''),
+              ('''                    <QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />''', '''                    <QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />'''),
+              ('''                    <QuickAction icon="refresh-cw" label="Renewals" onPress={() => router.push('/renewals')} />''', '''                    <QuickAction asset={GeneratedDashboardAssets.renewalAdd} label="Renewals" onPress={() => router.push('/renewals')} />'''),
+              ('''                    <QuickAction icon="shield" label="Claims" onPress={() => router.push('/(tabs)/claims')} />''', '''                    <QuickAction asset={GeneratedDashboardAssets.policyVerified} label="Claims" onPress={() => router.push('/(tabs)/claims')} />'''),
+              ('''                      <View style={styles.pendingHeroIcon}>\n                        <Feather name="clipboard" size={23} color={partnerTheme.colors.brandStrong} />\n                      </View>''', '''                      <Image\n                        source={GeneratedDashboardAssets.policyVerified}\n                        style={styles.pendingHeroAsset}\n                        resizeMode="contain"\n                      />'''),
+              ('''                          <View style={styles.pendingIconWrap}>\n                            <Feather name={attentionIcon(item.kind)} size={17} color={partnerTheme.colors.brandStrong} />\n                          </View>''', '''                          <Image\n                            source={attentionAsset(item.kind)}\n                            style={styles.pendingRowAsset}\n                            resizeMode="contain"\n                          />'''),
+              ('''                    <View style={styles.renewalIconWrap}>\n                      <Feather name="refresh-cw" size={20} color={partnerTheme.colors.brandStrong} />\n                    </View>''', '''                    <Image\n                      source={GeneratedDashboardAssets.renewalDue}\n                      style={styles.renewalIconAsset}\n                      resizeMode="contain"\n                    />'''),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected dashboard block missing:\n{old[:100]}')
+              text = text.replace(old, new, 1)
+
+          old_quick = '''function QuickAction({ icon, label, onPress }: { icon: DashboardIconName; label: string; onPress: () => void }) {'''
+          new_quick = '''function QuickAction({ icon, asset, label, onPress }: { icon?: DashboardIconName; asset?: number; label: string; onPress: () => void }) {'''
+          if old_quick not in text:
+              raise SystemExit('QuickAction signature missing')
+          text = text.replace(old_quick, new_quick, 1)
+
+          old_quick_icon = '''        <View style={styles.quickIconCircle}>\n          <Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />\n        </View>'''
+          new_quick_icon = '''        {asset ? (\n          <Image source={asset} style={styles.quickImageAsset} resizeMode="contain" />\n        ) : icon ? (\n          <View style={styles.quickIconCircle}>\n            <Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />\n          </View>\n        ) : null}'''
+          if old_quick_icon not in text:
+              raise SystemExit('QuickAction icon block missing')
+          text = text.replace(old_quick_icon, new_quick_icon, 1)
+
+          old_metric = '''function DashboardMetric({ icon, value, label }: { icon: DashboardIconName; value: string | number; label: string }) {\n  return (\n    <View accessibilityLabel={`${label}. ${String(value)}`} style={styles.statVisualCell}>\n      <View style={styles.statIconWrap}>\n        <Feather name={icon} size={18} color={partnerTheme.colors.brandStrong} />\n      </View>'''
+          new_metric = '''function DashboardMetric({ icon, asset, value, label }: { icon?: DashboardIconName; asset?: number; value: string | number; label: string }) {\n  return (\n    <View accessibilityLabel={`${label}. ${String(value)}`} style={styles.statVisualCell}>\n      {asset ? (\n        <Image source={asset} style={styles.statImageAsset} resizeMode="contain" />\n      ) : icon ? (\n        <View style={styles.statIconWrap}>\n          <Feather name={icon} size={18} color={partnerTheme.colors.brandStrong} />\n        </View>\n      ) : null}'''
+          if old_metric not in text:
+              raise SystemExit('DashboardMetric block missing')
+          text = text.replace(old_metric, new_metric, 1)
+
+          old_attention = '''function attentionIcon(kind: PartnerHomeData['today'][number]['kind']): DashboardIconName {\n  if (kind === 'intake_attention') return 'alert-circle';\n  if (kind === 'renewal') return 'refresh-cw';\n  return 'shield';\n}'''
+          new_attention = '''function attentionAsset(kind: PartnerHomeData['today'][number]['kind']) {\n  if (kind === 'intake_attention') return GeneratedDashboardAssets.policyAdd;\n  if (kind === 'renewal') return GeneratedDashboardAssets.renewalDue;\n  return GeneratedDashboardAssets.policyVerified;\n}'''
+          if old_attention not in text:
+              raise SystemExit('attentionIcon helper missing')
+          text = text.replace(old_attention, new_attention, 1)
+
+          style_replacements = [
+              ('''  quickIconCircle: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },''', '''  quickIconCircle: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },\n  quickImageAsset: { width: 42, height: 42 },'''),
+              ('''  pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },''', '''  pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },\n  pendingHeroAsset: { width: 48, height: 48 },'''),
+              ('''  pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },''', '''  pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },\n  pendingRowAsset: { width: 30, height: 30 },'''),
+              ('''  statIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF6FF' },''', '''  statIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF6FF' },\n  statImageAsset: { width: 38, height: 38 },'''),
+              ('''  renewalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF4FF' },''', '''  renewalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF4FF' },\n  renewalIconAsset: { width: 44, height: 44 },'''),
+          ]
+          for old, new in style_replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected style missing: {old[:80]}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+          PY
+
+          test -f apps/partner-app/assets/generated-dashboard/policy-add.png
+          test -f apps/partner-app/assets/generated-dashboard/policy-sold.png
+          test -f apps/partner-app/assets/generated-dashboard/commission-earned.png
+          test -f apps/partner-app/assets/generated-dashboard/renewal-add.png
+          test -f apps/partner-app/assets/generated-dashboard/policy-verified.png
+          test -f apps/partner-app/assets/generated-dashboard/renewal-due.png
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify Partner source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --exit-code -- package-lock.json
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:uat
+          npm run typecheck:partner
+          npm run lint:partner
+          npm run build:partner:web
+
+      - name: Commit verified generated icon integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'chatgpt[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/partner-app/app/'(tabs)'/index.tsx apps/partner-app/assets/generated-dashboard _tmp/partner-generated-icons.zip
+          if git diff --cached --quiet; then
+            echo 'No app changes to commit.'
+            exit 1
+          fi
+          git commit -m 'Use generated Partner dashboard icon assets'
+          git push origin HEAD:partner/generated-assets-dashboard
