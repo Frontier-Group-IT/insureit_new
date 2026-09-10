@@ -481,6 +481,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
+  const groupedInputClassName = "h-8 min-w-0 w-full border-0 bg-transparent px-2 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
     <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
@@ -492,16 +493,16 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1.5fr_1.5fr_1fr_0.70fr_1.15fr]">
           <fieldset className="min-w-0">
             <legend className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] gap-1.5">
-              <input aria-label="Accident date" name="incident_at" type="date" defaultValue={toDateTimeLocal(incidentValue, "date")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
-              <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+              <input aria-label="Accident date" name="incident_at" type="date" defaultValue={toDateTimeLocal(incidentValue, "date")} required className={groupedInputClassName} />
+              <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
           <fieldset className="min-w-0">
             <legend className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] gap-1.5">
-              <input aria-label="Spot Intimation date" name="spot_intimation_at" type="date" defaultValue={toDateTimeLocal(spotIntimationValue, "date")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
-              <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className="h-8 min-w-0 w-full rounded-lg border border-[#CEDBEC] bg-white px-1.5 text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+              <input aria-label="Spot Intimation date" name="spot_intimation_at" type="date" defaultValue={toDateTimeLocal(spotIntimationValue, "date")} required className={groupedInputClassName} />
+              <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
           {fields[stage.key].filter((field) => !groupedFieldNames.has(field.name)).map((field) => {
