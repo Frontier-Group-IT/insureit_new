@@ -488,7 +488,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
       <div className="p-4">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[0.72fr_0.62fr_0.72fr_0.62fr_1fr_1fr_1.15fr]">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[0.72fr_0.62fr_0.72fr_0.62fr_1fr_0.70fr_1.15fr]">
           {fields[stage.key].map((field) => {
             const storedValue = detail?.details?.[field.name];
             const value = field.name === "incident_at" || field.name === "incident_time"
