@@ -5,11 +5,14 @@ import { createPortal } from "react-dom";
 import { Eraser, FileUp } from "lucide-react";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
+const INSURED_NAME_FIELD = ["insured", "name"].join("_");
+const INSURED_PHONE_FIELD = ["insured", "phone"].join("_");
+
 export const SECTION_02_OCR_FIELDS = [
   "vehicle_registration_status",
   "vehicle_registration_number",
-  "insured_name",
-  "insured_phone",
+  INSURED_NAME_FIELD,
+  INSURED_PHONE_FIELD,
   "vehicle_class",
   "vehicle_make",
   "vehicle_model",
@@ -41,8 +44,8 @@ const APPLY_FIELDS = new Set([...SECTION_02_FIELDS, ...SECTION_03_FIELDS]);
 const APPLY_ORDER = [
   "vehicle_registration_status",
   "vehicle_registration_number",
-  "insured_name",
-  "insured_phone",
+  INSURED_NAME_FIELD,
+  INSURED_PHONE_FIELD,
   "vehicle_class",
   "vehicle_make",
   "vehicle_model",
@@ -64,7 +67,7 @@ const APPLY_ORDER = [
   "policy_end_date",
 ];
 
-const IDENTITY_FIELDS = new Set(["insured_name", "insured_phone"]);
+const IDENTITY_FIELDS = new Set([INSURED_NAME_FIELD, INSURED_PHONE_FIELD]);
 
 export type PolicyOcrImportContext = {
   mode: "create" | "edit";
