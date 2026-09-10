@@ -386,9 +386,9 @@ export default function InternalClaimStageOneTracker() {
         <View style={styles.subsection}><Text style={styles.subsectionTitle}>Spot Intimation</Text></View>
         <ReadOnlyField label="Spot Intimation Date *" value={intimation && !Number.isNaN(intimation.getTime()) ? formatDate(intimation) : ''} />
         <ReadOnlyField label="Spot Intimation Time *" value={intimation && !Number.isNaN(intimation.getTime()) ? formatTime(intimation) : ''} icon="clock-outline" />
-        <ReadOnlyField label="Driver Name (Optional)" value={parsedDriver.name} />
-        <ReadOnlyField label="Driver Number (Optional)" value={parsedDriver.phone} />
-        <ReadOnlyField label="Location (Optional)" value={claim.accident_location ?? ''} />
+        <ReadOnlyField label="Driver Name *" value={parsedDriver.name} />
+        <ReadOnlyField label="Driver Number *" value={parsedDriver.phone} />
+        <ReadOnlyField label="Location *" value={claim.accident_location ?? ''} />
       </ClaimFormSection>
 
       <View style={styles.documentCard}>
