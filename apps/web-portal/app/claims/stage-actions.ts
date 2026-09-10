@@ -82,6 +82,7 @@ const requiredFields: Record<OperationsStageKey, readonly string[]> = {
   payment_encashment: ["depreciation_slip_submitted", "satisfaction_voucher_submitted", "payment_received_date", "payment_received_amount"],
 };
 
+const internalSpotStatusSurveyorFields = ["surveyor_name", "surveyor_email", "surveyor_phone"] as const;
 const completedExternalMilestoneStatuses = new Set(["completed", "not_applicable"]);
 
 function textValue(formData: FormData, name: string) {
@@ -176,6 +177,14 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   if (claimError || !claim) throw new Error(claimError?.message ?? "Claim not found.");
   if (claim.claim_service_mode !== "broker_managed") throw new Error("Operations can update only managed claims.");
   if (!isClaimStatus(claim.current_status)) throw new Error("The claim has an unsupported workflow status.");
+
+  if (stageKey === "spot_status" && claim.policy_service_source !== "external") {
+    for (const field of internalSpotStatusSurveyorFields) {
+      if (!textValue(formData, field)) {
+        throw new Error("Surveyor Name, Surveyor Email and Surveyor Number are mandatory for Internal Claim Stage 2.");
+      }
+    }
+  }
 
   const activeKey = currentStageKey(claim.current_status);
   const targetIndex = orderedStageKeys.indexOf(stageKey);
