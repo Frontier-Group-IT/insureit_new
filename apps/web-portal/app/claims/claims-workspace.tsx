@@ -80,7 +80,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
 
 function ClaimSection({ title, count, tone, assistanceRequested = 0, children }: { title: string; count: number; tone: "primary" | "secondary"; assistanceRequested?: number; children: ReactNode }) {
   const sectionClass = tone === "primary" ? "border-[#D8E3F2] bg-white" : assistanceRequested ? "border-amber-200 bg-amber-50/35" : "border-[#E1E7F0] bg-[#FBFCFE]";
-  return <section className={`overflow-hidden rounded-xl border ${sectionClass}`}><div className="flex flex-wrap items-center justify-between gap-2 border-b border-inherit px-3 py-2.5"><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
+  return <section className={`overflow-hidden rounded-xl border ${sectionClass}`}><div className={`flex flex-wrap items-center gap-2 border-b border-inherit px-3 py-2.5 ${tone === "primary" ? "justify-start" : "justify-between"}`}><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
 }
 
 function LocalClaimQueueTable({ rows, page, onPageChange }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void }) {
