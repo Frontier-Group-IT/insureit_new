@@ -17,15 +17,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
       - name: Inspect Partner EAS build and update provenance
         working-directory: apps/partner-app
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           [ -n "${EXPO_TOKEN:-}" ] || { echo "::error::EXPO_TOKEN_PARTNER is missing"; exit 1; }
           npx eas-cli whoami
           echo '=== Recent Android builds ==='
-          npx eas-cli build:list --platform android --limit 10 --json --non-interactive
+          npx eas-cli build:list --platform android --limit 20 --json --non-interactive || true
           echo '=== Preview channel ==='
           npx eas-cli channel:view preview --json --non-interactive || true
           echo '=== Production channel ==='
