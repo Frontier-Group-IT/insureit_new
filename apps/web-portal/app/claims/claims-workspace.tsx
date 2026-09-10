@@ -55,12 +55,12 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
         {canAddClaim ? <Link prefetch={false} href="/claims/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#003A83] px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#073E83] max-md:w-full"><span aria-hidden="true" className="text-[16px] leading-none">+</span><span>Add Claim</span></Link> : null}
       </form>
     </div>
-    <nav aria-label="Claim type" className="mb-3 flex items-center gap-1 rounded-xl border border-[#D8E3F2] bg-[#F5F8FC] p-1">
-      <button type="button" onClick={() => setActiveMode("internal")} aria-current={activeMode === "internal" ? "page" : undefined} className={`flex-1 rounded-lg px-4 py-2 text-left text-[12px] font-semibold transition ${activeMode === "internal" ? "bg-[#003A83] text-white shadow-sm" : "text-[#5C6878] hover:bg-white hover:text-[#071D49]"}`}>
-        Internal claims <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeMode === "internal" ? "bg-white/15 text-white" : "bg-[#E7F0FC] text-[#003A83]"}`}>{internalRows.length}</span>
+    <nav aria-label="Claim type" className="mb-2 flex w-fit max-w-full items-center gap-0.5 rounded-lg border border-[#DCE5F1] bg-[#F8FAFD] p-0.5">
+      <button type="button" onClick={() => setActiveMode("internal")} aria-current={activeMode === "internal" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "internal" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
+        Internal claims <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeMode === "internal" ? "bg-[#D5E7FA] text-[#003A83]" : "bg-[#EEF3F9] text-[#5C6878]"}`}>{internalRows.length}</span>
       </button>
-      <button type="button" onClick={() => setActiveMode("external")} aria-current={activeMode === "external" ? "page" : undefined} className={`flex-1 rounded-lg px-4 py-2 text-left text-[12px] font-semibold transition ${activeMode === "external" ? "bg-[#003A83] text-white shadow-sm" : "text-[#5C6878] hover:bg-white hover:text-[#071D49]"}`}>
-        External claims <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] ${activeMode === "external" ? "bg-white/15 text-white" : assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#E7F0FC] text-[#003A83]"}`}>{externalRows.length}</span>
+      <button type="button" onClick={() => setActiveMode("external")} aria-current={activeMode === "external" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "external" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
+        External claims <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeMode === "external" ? "bg-[#D5E7FA] text-[#003A83]" : assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF3F9] text-[#5C6878]"}`}>{externalRows.length}</span>
       </button>
     </nav>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
@@ -72,7 +72,7 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
 
 function ClaimSection({ title, count, tone, assistanceRequested = 0, children }: { title: string; count: number; tone: "primary" | "secondary"; assistanceRequested?: number; children: ReactNode }) {
   const sectionClass = tone === "primary" ? "border-[#D8E3F2] bg-white" : assistanceRequested ? "border-amber-200 bg-amber-50/35" : "border-[#E1E7F0] bg-[#FBFCFE]";
-  return <section className={`mt-4 overflow-hidden rounded-xl border ${sectionClass}`}><div className="flex flex-wrap items-center justify-between gap-2 border-b border-inherit px-3 py-2.5"><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
+  return <section className={`overflow-hidden rounded-xl border ${sectionClass}`}><div className="flex flex-wrap items-center justify-between gap-2 border-b border-inherit px-3 py-2.5"><h2 className="text-[14px] font-semibold text-[#071D49]">{title}</h2><span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold ${assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF4FC] text-[#174EA6]"}`}>{count} claim{count === 1 ? "" : "s"}{assistanceRequested ? ` • ${assistanceRequested} assistance` : ""}</span></div>{children}</section>;
 }
 
 function LocalClaimQueueTable({ rows, page, onPageChange }: { rows: QueueClaimRow[]; page: number; onPageChange: (page: number) => void }) {
