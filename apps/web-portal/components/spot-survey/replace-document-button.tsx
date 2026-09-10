@@ -4,7 +4,7 @@ import { FilePenLine } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { replaceSpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
+import { replaceSpotSurveyDocument } from "@/app/claims/[id]/claim-document-upload-actions";
 
 export function ReplaceDocumentButton({ claimId, customerId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
   const router = useRouter();
@@ -25,13 +25,17 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
           startTransition(async () => {
-            const response = await replaceSpotSurveyDocument(formData);
-            setResult(response);
-            if (response.ok) {
-              setSelectedFile(null);
-              setOpen(false);
-              // Keep the modal responsive while the authoritative row refreshes.
-              setTimeout(() => router.refresh(), 0);
+            try {
+              const response = await replaceSpotSurveyDocument(formData);
+              setResult(response);
+              if (response.ok) {
+                setSelectedFile(null);
+                setOpen(false);
+                // Keep the modal responsive while the authoritative row refreshes.
+                setTimeout(() => router.refresh(), 0);
+              }
+            } catch {
+              setResult({ ok: false, message: "Upload failed. Please try again." });
             }
           });
         }}
