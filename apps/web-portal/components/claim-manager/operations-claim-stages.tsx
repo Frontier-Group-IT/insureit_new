@@ -481,7 +481,8 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
   const incidentValue = spotDetails?.incident_at ?? accidentAt ?? (typeof storedIncidentAt === "string" ? storedIncidentAt : "");
   const spotIntimationValue = spotDetails?.spot_intimation_at ?? spotIntimationAt ?? (typeof storedSpotIntimationAt === "string" ? storedSpotIntimationAt : "");
   const groupedFieldNames = new Set(["incident_at", "incident_time", "spot_intimation_at", "spot_intimation_time"]);
-  const groupedInputClassName = "h-8 min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
+  const stageOneLabelClassName = "block h-4 text-[10px] font-semibold uppercase leading-4 tracking-[0.07em] text-[#174EA6]";
+  const groupedInputClassName = "h-full min-w-0 w-full border-0 bg-transparent pl-2 pr-[10%] text-[11px] font-semibold normal-case tracking-normal text-[#071D49] outline-none";
 
   return (
     <form id="spot-intimation-form" action={formAction} onSubmit={onSubmitStart} className="mt-3 overflow-hidden rounded-2xl border border-[#BFD7F6] bg-white shadow-[0_8px_20px_rgba(23,78,166,0.05)]">
@@ -490,17 +491,17 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
       <div className="p-4">
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[1.05fr_1.05fr_1fr_0.70fr_1.15fr]">
+        <div className="grid items-start gap-2 sm:grid-cols-2 xl:grid-cols-[1.05fr_1.05fr_1fr_0.70fr_1.15fr]">
           <fieldset className="min-w-0">
-            <legend className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+            <legend className={stageOneLabelClassName}>Accident date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
+            <div className="mt-1.5 grid h-9 grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
               <input aria-label="Accident date" name="incident_at" type="date" defaultValue={toDateTimeLocal(incidentValue, "date")} required className={groupedInputClassName} />
               <input aria-label="Accident time" name="incident_time" type="time" defaultValue={toDateTimeLocal(incidentValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
           </fieldset>
           <fieldset className="min-w-0">
-            <legend className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
-            <div className="mt-1.5 grid grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
+            <legend className={stageOneLabelClassName}>Spot Intimation date &amp; time<span className="ml-1 text-rose-600">*</span></legend>
+            <div className="mt-1.5 grid h-9 grid-cols-[1.15fr_0.85fr] overflow-hidden rounded-lg border border-[#CEDBEC] bg-white focus-within:border-[#2F80ED]">
               <input aria-label="Spot Intimation date" name="spot_intimation_at" type="date" defaultValue={toDateTimeLocal(spotIntimationValue, "date")} required className={groupedInputClassName} />
               <input aria-label="Spot Intimation time" name="spot_intimation_time" type="time" defaultValue={toDateTimeLocal(spotIntimationValue, "time")} required className={`${groupedInputClassName} border-l border-[#CEDBEC]`} />
             </div>
@@ -516,14 +517,14 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
             if (field.name === "location") {
               return (
                 <div key={field.name} className="min-w-0">
-                  <label htmlFor="spot-intimation-location" className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
+                  <label htmlFor="spot-intimation-location" className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
                   <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-9 w-full rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
                 </div>
               );
             }
             return (
-              <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">
-                {field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
+              <label key={field.name} className="min-w-0">
+                <span className={stageOneLabelClassName}>{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</span>
                 <input name={field.name} type={field.type ?? "text"} defaultValue={value} required={required} className="mt-1.5 h-9 w-full rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
               </label>
             );
