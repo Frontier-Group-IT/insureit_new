@@ -460,3 +460,13 @@ the immediately preceding row is a known zero-valued IFFCO add-on row, and its
 trailing positive amount is a plausible CPA premium. The final OD/TP/CPA set
 must still reconcile to printed net. Do not generalize this into an
 unrestricted previous-line numeric fallback.
+
+A second live replay after PR `#1552` still withheld OD/TP/CPA, proving that
+Google did not reliably preserve even that adjacent amount. The safer
+layout-level recovery is the printed accounting relationship: when the current
+schedule contains an explicit owner-driver CPA label plus independently read
+Net(B), Basic TP and legal-driver liability, derive CPA only as
+`Net(B) - Basic TP - legal-driver liability`. Accept only a plausible positive
+CPA residual and still require the complete OD + portal TP + CPA reconciliation
+to printed net. This avoids depending on unstable row placement without
+guessing from an unrelated nearby number.

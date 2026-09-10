@@ -85,7 +85,20 @@ function refineIffco(fields: Fields, tables: StructuredPolicyTable[], pages: str
   repairVehicleFromHeaderRows(fields, tables, "iffco");
   if (!goodVehicleText(fields.get("vehicle_make")?.value) && /\bJCB\b/i.test(text)) set(fields, "vehicle_make", "JCB", .99, 1, "JCB current vehicle schedule marker");
 
-  const cpa = ownerDriverCpa(tables, text, 4);
+  let cpa = ownerDriverCpa(tables, text, 4);
+  const basicTp = exactMoney(tables, pages, /BASIC\s+(?:TP|THIRD[-\s]*PARTY)(?:\s+PREMIUM)?/i, 100, 100000, "largest", 4);
+  const legalDriver = exactMoney(tables, pages, /LEGAL\s+LIABILITY\s+TO\s+(?:PAID\s+)?DRIVER/i, 1, 5000, "largest", 4);
+  if (!cpa && basicTp && hasExplicitOwnerDriverLabel(tables, text, 4)) {
+    const netB = exactMoney(tables, pages, /NET\s*\(\s*B\s*\)/i, 100, 100000, "largest", 4);
+    const residual = netB ? round4(netB.value - basicTp.value - (legalDriver?.value ?? 0)) : 0;
+    if (netB && residual >= 100 && residual <= 5000) {
+      cpa = {
+        value: residual,
+        page: netB.page,
+        evidence: "Explicit owner-driver CPA row reconciled from Net(B) less Basic TP and legal-driver liability",
+      };
+    }
+  }
   const cpaValue = cpa && cpa.value >= 100 ? cpa.value : 0;
   if (cpaValue > 0) {
     set(fields, "cpa_opted", "Yes", .995, cpa!.page, cpa!.evidence);
@@ -95,8 +108,6 @@ function refineIffco(fields: Fields, tables: StructuredPolicyTable[], pages: str
     set(fields, "cpa_premium", "0", .995, cpa?.page ?? 1, cpa?.evidence ?? "No explicit payable owner-driver CPA row");
   }
 
-  const basicTp = exactMoney(tables, pages, /BASIC\s+(?:TP|THIRD[-\s]*PARTY)(?:\s+PREMIUM)?/i, 100, 100000, "largest", 4);
-  const legalDriver = exactMoney(tables, pages, /LEGAL\s+LIABILITY\s+TO\s+(?:PAID\s+)?DRIVER/i, 1, 5000, "largest", 4);
   const tp = basicTp
     ? {
         ...basicTp,
@@ -231,6 +242,14 @@ function shiftedOwnerDriverPremium(previous: string, ownerDriverRow: string) {
   if (!values.includes(0)) return null;
   const candidate = [...values].reverse().find((value) => value >= 100);
   return candidate ?? null;
+}
+
+function hasExplicitOwnerDriverLabel(tables: StructuredPolicyTable[], text: string, maxPage: number) {
+  if (OWNER_DRIVER_ROW.test(text)) return true;
+  return tables.some((table) =>
+    table.page <= maxPage
+    && table.rows.some((row) => OWNER_DRIVER_ROW.test(clean(row.join(" | ")))),
+  );
 }
 
 function exactMoney(tables: StructuredPolicyTable[], pages: string[], label: RegExp, min: number, max: number, mode: "smallest" | "largest", maxPage: number): MoneyHit | null {

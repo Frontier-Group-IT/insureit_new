@@ -119,12 +119,12 @@ function values(result: ParsedPolicyResult) { return Object.fromEntries(result.f
 }
 
 {
-  const pages = ["IFFCO-TOKIO General Insurance Company Limited\nCOMMERCIAL VEHICLE PACKAGE POLICY\nJCB BACKHOE LOADER\nBasic OD Premium 4058.00 Basic TP Premium (Including TPPD) 7267.00\nBi Fuel Kit (IMT 25) 0.00 Geographical Area Extension (IMT 1) 330.00\nPA Owner Driver CSI Rs 1500000\nFiber Glass Fuel Tank 0.00 Legal Liability to Driver (IMT 28) 50.00\nNet (A) 4667.00 Net (B) 7647.00"];
+  const pages = ["IFFCO-TOKIO General Insurance Company Limited\nCOMMERCIAL VEHICLE PACKAGE POLICY\nJCB BACKHOE LOADER\nBasic OD Premium 4058.00 Basic TP Premium (Including TPPD) 7267.00\nBi Fuel Kit (IMT 25) 0.00 Geographical Area Extension (IMT 1)\nPA Owner Driver CSI Rs 1500000\nFiber Glass Fuel Tank 0.00 Legal Liability to Driver (IMT 28) 50.00\nNet (A) 4667.00 Net (B) 7647.00"];
   const tables: StructuredPolicyTable[] = [{ page: 1, rows: [
     ["Make of Vehicle", "Model of Vehicle", "Fuel Type", "Year of Manufacture", "CC"],
     ["JCB", "3DX PLUS BACKHOE LOADER", "DIESEL", "2026", "4765"],
     ["Basic TP Premium (Including TPPD)", "7267.00"],
-    ["Bi Fuel Kit (IMT 25)", "0.00", "Geographical Area Extension (IMT 1)", "330.00"],
+    ["Bi Fuel Kit (IMT 25)", "0.00", "Geographical Area Extension (IMT 1)", ""],
     ["PA Owner Driver CSI Rs 1500000", ""],
     ["Legal Liability to Driver (IMT 28)", "50.00"],
     ["Net (A)", "4667.00", "Net (B)", "7647.00"],
