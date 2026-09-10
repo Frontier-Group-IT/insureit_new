@@ -71,7 +71,7 @@ const GeneratedDashboardAssets = {
   homeHeader: require('../../assets/generated-dashboard/home-header-insurance.jpg'),
   pendingTasks: require('../../assets/generated-dashboard/pending-tasks-illustration.jpg'),
   pendingDocument: require('../../assets/generated-dashboard/pending-document-alert.png'),
-  customerAction: require('../../assets/partner/actions/customer-register.png'),
+  customerAction: require('../../assets/partner/actions/add-customer.png'),
 } as const;
 
 export default function PartnerHomeDashboard() {
@@ -152,11 +152,27 @@ export default function PartnerHomeDashboard() {
           />
           <View style={styles.heroBackdropShade} />
           <View style={styles.heroTopRow}>
-            <Image
-              source={require('../../assets/insureit-partner-official.png')}
-              style={styles.heroLogo}
-              resizeMode="contain"
-            />
+            <View style={styles.heroBrand}>
+
+              <Image
+
+                source={require('../../assets/insureit-partner-official.png')}
+
+                style={styles.heroLogo}
+
+                resizeMode="contain"
+
+              />
+
+              <Text style={styles.heroBrandText} accessibilityLabel="insureit Partner">
+
+                <Text style={styles.heroBrandInsureit}>insureit</Text>
+
+                <Text style={styles.heroBrandPartner}> Partner</Text>
+
+              </Text>
+
+            </View>
             <View style={styles.heroActions}>
               <Pressable
                 accessibilityRole="button"
@@ -320,7 +336,7 @@ export default function PartnerHomeDashboard() {
                     <Image
                       source={GeneratedDashboardAssets.pendingTasks}
                       style={styles.pendingBackdrop}
-                      resizeMode="contain"
+                      resizeMode="cover"
                     />
                     <View style={styles.sectionHeaderRow}>
                       <View>
@@ -615,17 +631,21 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 152, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 10 },
-  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.94 },
-  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.22)' },
-  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  hero: { height: 174, overflow: 'hidden', backgroundColor: '#062D5F', paddingTop: 10 },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.97 },
+  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.16)' },
+  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
+  heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, maxWidth: '66%' },
   heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },
+  heroBrandText: { flexShrink: 1, fontSize: 16.5, lineHeight: 21, fontWeight: '800', letterSpacing: -0.2 },
+  heroBrandInsureit: { color: '#FFFFFF' },
+  heroBrandPartner: { color: '#F7B267' },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
   heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroGreeting: { zIndex: 2, marginTop: 5, maxWidth: '84%' },
-  heroGreetingText: { color: '#FFFFFF', fontSize: 15.5, lineHeight: 20, fontWeight: '400', letterSpacing: -0.05 },
+  heroGreeting: { zIndex: 2, position: 'absolute', left: 20, right: 92, bottom: 13 },
+  heroGreetingText: { color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
   body: { marginTop: -13, paddingHorizontal: 16 },
   searchShell: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
@@ -675,9 +695,9 @@ const styles = StyleSheet.create({
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
   pendingCard: { marginTop: 11, minHeight: 154, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 10, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
-  pendingBackdrop: { position: 'absolute', right: -8, top: 0, width: 190, height: 154, opacity: 1 },
-  pendingHeaderSpacer: { width: 154, height: 1 },
-  pendingList: { marginTop: 4, paddingRight: 150 },
+  pendingBackdrop: { position: 'absolute', right: 9, top: 9, width: 172, height: 136, borderRadius: 14, opacity: 1 },
+  pendingHeaderSpacer: { width: 166, height: 1 },
+  pendingList: { marginTop: 4, paddingRight: 166 },
   pendingRow: { minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D3E1EF' },
   pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },
