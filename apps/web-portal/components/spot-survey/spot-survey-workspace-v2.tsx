@@ -1,14 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Camera, ContactRound, FileText, Mic, ShieldCheck, Truck, Video } from "lucide-react";
 import type { ReactNode } from "react";
-import { DocumentVerificationDetailsButton } from "./document-verification-details-button";
-import { ReplaceDocumentButton } from "./replace-document-button";
-import { RequestReuploadButton } from "./request-reupload-button";
+import { BulkDocumentVerificationGroup, type BulkDocumentGroupItem } from "./bulk-document-verification-group";
 import { SurveyDoneButton } from "./survey-done-button";
 import { SurveyorDeputationForm } from "./surveyor-deputation-form";
 import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-document-verification-button";
-import { VerificationActionButton } from "./verification-action-button";
 import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
@@ -62,7 +58,6 @@ export type SurveyorDetails = {
   deputedAt?: string | null;
 };
 
-type Item = { key: string; number: number; title: string; icon: string; accent: string; documentType: string; document?: SpotSurveyDocument | null; documents: SpotSurveyDocument[] };
 type BrandLogo = { src: string; label: string };
 
 const aliases = {
@@ -134,7 +129,9 @@ export function SpotSurveyWorkspace({ claim, documents, verifications = [], surv
             <span className="text-[12px] font-semibold text-[#071D49]">{verifiedCount} / {items.length}</span>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{items.map((item) => <DocumentCard key={item.key} item={item} claim={claim} verification={latestVerificationForItem(item, verifications)} verifications={verifications} />)}</div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => <BulkDocumentVerificationGroup key={item.key} item={item} claim={claim} verifications={verifications} />)}
+        </div>
         {allDocumentsVerified ? (
           claim.current_status === "Surveyor Appointed" ? <SurveyorAssignedNotice claimId={claim.id} details={surveyorDetails} /> :
           claim.current_status === "Initial Documents Verified" || claim.current_status === "Claim Intimated" ? <SurveyorDeputationForm claimId={claim.id} /> :
@@ -165,7 +162,12 @@ function SurveyorAssignedNotice({ claimId, details }: { claimId: string; details
   );
 }
 
-function SurveyorColumn({ label, value, href, last = false }: { label: string; value: string; href?: string; last?: boolean }) { const content = <><span className="block text-[10px] font-semibold uppercase tracking-[0.11em] text-[#68758A]">{label}</span><span className="mt-1 block truncate text-[15px] font-semibold tracking-[-0.01em] text-[#071D49]">{value}</span></>; const className = `min-w-0 px-4 py-3 ${last ? "" : "border-b border-[#E6EEF7] md:border-b-0 md:border-r"}`; return href ? <a href={href} className={`${className} transition hover:bg-[#F7FAFF]`}>{content}</a> : <div className={className}>{content}</div>; }
+function SurveyorColumn({ label, value, href, last = false }: { label: string; value: string; href?: string; last?: boolean }) {
+  const content = <><span className="block text-[10px] font-semibold uppercase tracking-[0.11em] text-[#68758A]">{label}</span><span className="mt-1 block truncate text-[15px] font-semibold tracking-[-0.01em] text-[#071D49]">{value}</span></>;
+  const className = `min-w-0 px-4 py-3 ${last ? "" : "border-b border-[#E6EEF7] md:border-b-0 md:border-r"}`;
+  return href ? <a href={href} className={`${className} transition hover:bg-[#F7FAFF]`}>{content}</a> : <div className={className}>{content}</div>;
+}
+
 function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
   const customerName = claim.customers?.company_name || claim.customers?.contact_name || "-";
   const insurer = claim.insurance_companies?.name || "-";
@@ -177,11 +179,31 @@ function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
   const spotAt = claim.spotIntimationAt ?? claim.created_at;
   return <section className="overflow-hidden rounded-2xl border border-[#17355E] bg-[#071D49] shadow-[0_8px_22px_rgba(7,29,73,0.16)]"><div className="grid md:grid-cols-3 xl:grid-cols-5"><Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} /><Info label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.vehicle} alt="Vehicle" />} /><Info label="Make & Model" title={makeModel} logo={<ManufacturerLogo name={make} />} /><Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} /><Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} last /></div><div className="grid border-t border-white/15 md:grid-cols-3 xl:grid-cols-5"><Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} /><Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} /><Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} /><Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} /><Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} last /></div><div className="grid gap-x-4 gap-y-1 border-t border-white/15 px-3 py-1 text-[9px] sm:grid-cols-2 lg:grid-cols-4"><PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} /><PolicyMeta label="Cover dates" value={`${formatDateShort(claim.policies?.start_date)} - ${formatDateShort(claim.policies?.end_date)}`} /><PolicyMeta label="Premium / IDV" value={`${formatAmount(claim.policies?.premium_amount)} / ${formatAmount(claim.policies?.insured_declared_value)}`} />{claim.policyCopy?.signedUrl ? <Link href={claim.policyCopy.signedUrl} target="_blank" className="min-w-0 truncate font-semibold text-[#C7D9F7]">Policy copy: {claim.policyCopy.fileName}</Link> : <PolicyMeta label="Policy copy" value="Not available" />}</div></section>;
 }
-function PolicyMeta({ label, value }: { label: string; value: string }) { return <div className="min-w-0"><span className="mr-1 uppercase tracking-[0.08em] text-[#AFC3E5]">{label}:</span><span className="font-semibold text-white">{value}</span></div>; }
-function formatAmount(value: number | null | undefined) { return typeof value === "number" ? value.toLocaleString("en-IN") : "Not available"; }
-function Info({ icon, label, title, subtitle, logo, last = false }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode; last?: boolean }) { return <div className={`flex min-h-[58px] items-start gap-2 px-3 py-2 ${last ? "" : "border-b border-white/15 md:border-b-0 md:border-r"}`}><div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center text-[18px]">{logo ?? icon}</div><div className="min-w-0 flex-1"><p className="text-[9px] font-medium uppercase tracking-[0.04em] leading-3.5 text-[#9FC5FF]">{label}</p><p className="mt-0.5 whitespace-normal break-words text-[13px] font-semibold leading-4 text-white">{title}</p>{subtitle ? <p className="whitespace-normal break-words text-[11px] leading-3.5 text-[#DCE6F5]">{subtitle}</p> : null}</div></div>; }
-function SpotSurveyDetailsPanel({ driverName, driverMobile, lossLocation }: { driverName: string | null; driverMobile: string | null; lossLocation: string | null }) { const mapHref = lossLocation ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lossLocation)}` : null; return <section className="grid min-h-[42px] items-center overflow-hidden rounded-xl border border-[#DFE8F4] bg-white shadow-[0_4px_12px_rgba(7,29,73,0.025)] lg:grid-cols-[220px_220px_1fr]"><StripDetail icon="👤" label="Driver" value={driverName || "Not available"} /><StripDetail icon="☎" label="Mobile" value={driverMobile || "Not available"} href={driverMobile ? `tel:${driverMobile}` : undefined} /><StripDetail icon="📍" label="Loss Location" value={lossLocation || "Not available"} href={mapHref ?? undefined} isLocation /></section>; }
-function StripDetail({ icon, label, value, href, isLocation = false }: { icon: string; label: string; value: string; href?: string; isLocation?: boolean }) { const content = <><span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#EEF4FC] text-[13px]">{icon}</span><span className="min-w-0 flex-1"><span className="mr-1 inline text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{label}:</span><span className={`text-[12px] font-semibold leading-4 text-[#071D49] ${isLocation ? "whitespace-normal break-words" : "truncate"}`}>{value}</span></span>{isLocation ? <span className="ml-2 shrink-0 rounded-full border border-[#BFD3F7] bg-[#EEF4FF] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">Map</span> : null}</>; const className = "flex min-h-[42px] items-center gap-2 border-b border-[#E8EFF8] px-3 py-1.5 transition last:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0"; if (href) return <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined} className={`${className} ${isLocation ? "cursor-pointer bg-[#F8FBFF] hover:bg-[#F1F7FF]" : "hover:bg-[#F8FBFF]"}`}>{content}</a>; return <div className={className}>{content}</div>; }
+
+function PolicyMeta({ label, value }: { label: string; value: string }) {
+  return <div className="min-w-0"><span className="mr-1 uppercase tracking-[0.08em] text-[#AFC3E5]">{label}:</span><span className="font-semibold text-white">{value}</span></div>;
+}
+
+function formatAmount(value: number | null | undefined) {
+  return typeof value === "number" ? value.toLocaleString("en-IN") : "Not available";
+}
+
+function Info({ icon, label, title, subtitle, logo, last = false }: { icon?: string; label: string; title: string; subtitle?: string | null; logo?: ReactNode; last?: boolean }) {
+  return <div className={`flex min-h-[58px] items-start gap-2 px-3 py-2 ${last ? "" : "border-b border-white/15 md:border-b-0 md:border-r"}`}><div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center text-[18px]">{logo ?? icon}</div><div className="min-w-0 flex-1"><p className="text-[9px] font-medium uppercase tracking-[0.04em] leading-3.5 text-[#9FC5FF]">{label}</p><p className="mt-0.5 whitespace-normal break-words text-[13px] font-semibold leading-4 text-white">{title}</p>{subtitle ? <p className="whitespace-normal break-words text-[11px] leading-3.5 text-[#DCE6F5]">{subtitle}</p> : null}</div></div>;
+}
+
+function SpotSurveyDetailsPanel({ driverName, driverMobile, lossLocation }: { driverName: string | null; driverMobile: string | null; lossLocation: string | null }) {
+  const mapHref = lossLocation ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lossLocation)}` : null;
+  return <section className="grid min-h-[42px] items-center overflow-hidden rounded-xl border border-[#DFE8F4] bg-white shadow-[0_4px_12px_rgba(7,29,73,0.025)] lg:grid-cols-[220px_220px_1fr]"><StripDetail icon="👤" label="Driver" value={driverName || "Not available"} /><StripDetail icon="☎" label="Mobile" value={driverMobile || "Not available"} href={driverMobile ? `tel:${driverMobile}` : undefined} /><StripDetail icon="📍" label="Loss Location" value={lossLocation || "Not available"} href={mapHref ?? undefined} isLocation /></section>;
+}
+
+function StripDetail({ icon, label, value, href, isLocation = false }: { icon: string; label: string; value: string; href?: string; isLocation?: boolean }) {
+  const content = <><span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-[#EEF4FC] text-[13px]">{icon}</span><span className="min-w-0 flex-1"><span className="mr-1 inline text-[9px] font-semibold uppercase tracking-[0.08em] text-[#68758A]">{label}:</span><span className={`text-[12px] font-semibold leading-4 text-[#071D49] ${isLocation ? "whitespace-normal break-words" : "truncate"}`}>{value}</span></span>{isLocation ? <span className="ml-2 shrink-0 rounded-full border border-[#BFD3F7] bg-[#EEF4FF] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#174EA6]">Map</span> : null}</>;
+  const className = "flex min-h-[42px] items-center gap-2 border-b border-[#E8EFF8] px-3 py-1.5 transition last:border-b-0 lg:border-b-0 lg:border-r lg:last:border-r-0";
+  if (href) return <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel={href.startsWith("http") ? "noreferrer" : undefined} className={`${className} ${isLocation ? "cursor-pointer bg-[#F8FBFF] hover:bg-[#F1F7FF]" : "hover:bg-[#F8FBFF]"}`}>{content}</a>;
+  return <div className={className}>{content}</div>;
+}
+
 function UnclassifiedAttachments({ claimId, documents }: { claimId: string; documents: SpotSurveyDocument[] }) {
   const categories = ["Accident Photo", "Accident Video", "RC Copy", "Insurance Copy", "Driver Licence", "GR / Load Bill", "Incident Voice Note"];
   return (
@@ -212,67 +234,88 @@ function UnclassifiedAttachments({ claimId, documents }: { claimId: string; docu
   );
 }
 
-function DocumentTypeHeaderIcon({ itemKey }: { itemKey: string }) {
-  const baseClassName = "h-5 w-5 shrink-0";
-  if (itemKey === "spot") return <Camera aria-hidden="true" className={`${baseClassName} text-[#F037A5]`} strokeWidth={2.2} />;
-  if (itemKey === "rc") return <FileText aria-hidden="true" className={`${baseClassName} text-[#16A36A]`} strokeWidth={2.2} />;
-  if (itemKey === "insurance") return <ShieldCheck aria-hidden="true" className={`${baseClassName} text-[#2563EB]`} strokeWidth={2.2} />;
-  if (itemKey === "dl") return <ContactRound aria-hidden="true" className={`${baseClassName} text-[#9333EA]`} strokeWidth={2.2} />;
-  if (itemKey === "gr") return <Truck aria-hidden="true" className={`${baseClassName} text-[#EA7A16]`} strokeWidth={2.2} />;
-  if (itemKey === "video") return <Video aria-hidden="true" className={`${baseClassName} text-[#EF233C]`} strokeWidth={2.2} />;
-  if (itemKey === "audio") return <Mic aria-hidden="true" className={`${baseClassName} text-[#0A43A3]`} strokeWidth={2.2} />;
-  return <FileText aria-hidden="true" className={`${baseClassName} text-[#071D49]`} strokeWidth={2.2} />;
-}
-
-function DocumentCard({ item, claim, verification, verifications }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification; verifications: SpotSurveyVerification[] }) {
-  const status = item.document?.verification_status ?? "pending";
-  const persistedVerified = Boolean(verification?.is_valid) || status === "verified";
-  const reuploadRequested = status === "rejected";
-  const invalidAttempt = verification && !verification.is_valid ? verification : undefined;
-  const statusTone = persistedVerified ? "green" : reuploadRequested || invalidAttempt ? "amber" : "slate";
-  const firstDocument = item.documents[0];
-  const remainingDocuments = item.documents.slice(1);
-  return (
-    <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${persistedVerified ? "border-green-200" : reuploadRequested || invalidAttempt ? "border-amber-200" : "border-[#E2EAF4]"}`}>
-      <div className="mb-2 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><DocumentTypeHeaderIcon itemKey={item.key} /><h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><StatusBadge tone={statusTone} label={item.documents.length > 1 ? `${item.documents.length} files` : persistedVerified ? "Verified" : reuploadRequested ? "Reupload Needed" : invalidAttempt ? "Invalid" : statusLabel(status)} /></div>
-      {firstDocument ? <DocumentFileRow item={item} claim={claim} document={firstDocument} verifications={verifications} /> : <div className="flex min-h-11 items-center gap-2"><div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div><ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" /></div>}
-      {remainingDocuments.length ? <details className="mt-2 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF]"><summary className="cursor-pointer px-3 py-2 text-[11px] font-semibold text-[#174EA6]">Show all {item.documents.length} files</summary><div className="space-y-2 border-t border-[#DCE7F5] p-2">{remainingDocuments.map((document) => <DocumentFileRow key={document.id} item={item} claim={claim} document={document} verifications={verifications} />)}</div></details> : null}
-    </article>
-  );
-}
-
-function DocumentFileRow({ item, claim, document, verifications }: { item: Item; claim: SpotSurveyClaim; document: SpotSurveyDocument; verifications: SpotSurveyVerification[] }) {
-  const documentVerification = latestVerificationForDocument(document, verifications);
-  const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
-  const documentStatus = normalizedDocumentType.includes("intimation attachment") ? "pending" : document.verification_status ?? "pending";
-  return <div className="grid grid-cols-[32px_1fr] items-start gap-2 rounded-lg border border-[#E2EAF4] bg-white/80 p-2"><div className="grid h-8 w-8 place-items-center"><DocumentTypeHeaderIcon itemKey={item.key} /></div><div className="min-w-0"><p className="flex min-h-8 items-center truncate text-[11px] font-semibold text-[#071D49]">{document.file_name}</p><div className="mt-1 flex flex-wrap items-center gap-1"><span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{item.documentType}</span>{document.signedUrl ? <Link href={document.signedUrl} target="_blank" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</Link> : null}<span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{statusLabel(documentStatus)}</span></div>{documentStatus === "rejected" ? <p className="mt-1 text-[9px] font-semibold text-amber-700">{document.rejection_reason ?? "Customer reupload requested."}</p> : null}<div className="mt-2 grid grid-cols-3 gap-1.5">{documentStatus === "verified" || documentVerification?.is_valid ? <DocumentVerificationDetailsButton document={document} verification={documentVerification ?? fallbackVerification(claim, item, document)} title={item.title} /> : <VerificationActionButton claimId={claim.id} documentId={document.id} itemKey={item.key} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} />}<RequestReuploadButton claimId={claim.id} documentId={document.id} documentTitle={item.title} /><ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentId={document.id} documentType={item.documentType} label={item.title} actionLabel="Replace" /></div></div></div>;
-}
-function StatusBadge({ tone, label }: { tone: "green" | "amber" | "slate"; label: string }) { const className = tone === "green" ? "border-green-200 bg-green-100 text-green-700" : tone === "amber" ? "border-amber-200 bg-amber-100 text-amber-700" : "border-slate-200 bg-slate-100 text-slate-600"; return <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${className}`}>{label}</span>; }
-function buildDocumentItems(documents: SpotSurveyDocument[]): Item[] {
-  const matches = (key: keyof typeof aliases) => documents.filter((d) => { const documentType = d.document_type?.toLowerCase() ?? ""; return aliases[key].some((alias) => documentType.includes(alias)); });
-  const item = (key: keyof typeof aliases, number: number, title: string, icon: string, accent: string, documentType: string): Item => { const matching = matches(key); return { key, number, title, icon, accent, documentType, documents: matching, document: matching.find((d) => d.verification_status !== "rejected") ?? matching[0] ?? null }; };
-  const baseItems = [item("spot", 1, "Accident Photo", "📷", "bg-[#EAF4FF]", "Accident Photo"), item("rc", 2, "RC Copy", "📄", "bg-[#F1ECFF]", "RC Copy"), item("insurance", 3, "Insurance Copy", "📃", "bg-[#FFF3D9]", "Insurance Copy"), item("dl", 4, "Driver Licence", "🪪", "bg-[#EAF8EF]", "Driver Licence"), item("gr", 5, "GR / Load Bill", "🚚", "bg-[#FFF1E6]", "GR / Load Bill"), item("video", 6, "Accident Video", "🎥", "bg-[#F2EEFF]", "Accident Video")];
+function buildDocumentItems(documents: SpotSurveyDocument[]): BulkDocumentGroupItem[] {
+  const matches = (key: keyof typeof aliases) => documents.filter((document) => {
+    const documentType = document.document_type?.toLowerCase() ?? "";
+    return aliases[key].some((alias) => documentType.includes(alias));
+  });
+  const item = (key: keyof typeof aliases, number: number, title: string, icon: string, accent: string, documentType: string): BulkDocumentGroupItem => {
+    const matching = matches(key);
+    return { key, number, title, icon, accent, documentType, documents: matching, document: matching.find((document) => document.verification_status !== "rejected") ?? matching[0] ?? null };
+  };
+  const baseItems = [
+    item("spot", 1, "Accident Photo", "📷", "bg-[#EAF4FF]", "Accident Photo"),
+    item("rc", 2, "RC Copy", "📄", "bg-[#F1ECFF]", "RC Copy"),
+    item("insurance", 3, "Insurance Copy", "📃", "bg-[#FFF3D9]", "Insurance Copy"),
+    item("dl", 4, "Driver Licence", "🪪", "bg-[#EAF8EF]", "Driver Licence"),
+    item("gr", 5, "GR / Load Bill", "🚚", "bg-[#FFF1E6]", "GR / Load Bill"),
+    item("video", 6, "Accident Video", "🎥", "bg-[#F2EEFF]", "Accident Video")
+  ];
   const audioItem = item("audio", 7, "Audio", "🎙️", "bg-[#EEF4FF]", "Incident Voice Note");
   return audioItem.documents.length ? [...baseItems, audioItem] : baseItems;
 }
-/*
-function DocumentCard({ item, claim, verification }: { item: Item; claim: SpotSurveyClaim; verification?: SpotSurveyVerification }) { const status = item.document?.verification_status ?? "pending"; const persistedVerified = Boolean(verification?.is_valid) || status === "verified"; const reuploadRequested = status === "rejected"; const invalidAttempt = verification && !verification.is_valid ? verification : undefined; const statusTone = persistedVerified ? "green" : reuploadRequested || invalidAttempt ? "amber" : "slate"; const currentStatus = persistedVerified ? "Verified" : reuploadRequested ? "Reupload requested" : invalidAttempt ? "Invalid" : statusLabel(status); const effectiveVerification = persistedVerified && item.document ? verification ?? fallbackVerification(claim, item, item.document) : verification; return <article className={`rounded-xl border p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${persistedVerified ? "border-green-200 bg-green-50/35" : reuploadRequested || invalidAttempt ? "border-amber-200 bg-amber-50/25" : "border-[#E2EAF4] bg-white"}`}><div className="mb-2 flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[11px] font-semibold text-[#071D49]">{item.number}</span><h2 className="truncate text-[13px] font-semibold leading-tight text-[#071D49]">{item.title}</h2></div><StatusBadge tone={statusTone} label={persistedVerified ? "Verified" : reuploadRequested ? "Reupload Needed" : invalidAttempt ? "Invalid" : statusLabel(status)} /></div><div className="grid grid-cols-[44px_1fr] gap-2"><div className={`grid h-11 w-11 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div><div className="min-w-0"><p className="truncate text-[11px] font-semibold text-[#071D49]">{item.key === "spot" && (item.documentCount ?? 0) > 1 ? `${item.documentCount} photos/videos uploaded` : item.document?.file_name ?? "Document not uploaded"}</p><div className="mt-1 flex flex-wrap items-center gap-1"><span className="rounded bg-[#F4F7FC] px-1.5 py-0.5 text-[9px] font-semibold text-[#526178]">{item.documentType}</span>{item.document?.signedUrl ? <Link href={item.document.signedUrl} target="_blank" className="rounded bg-[#EAF7F0] px-1.5 py-0.5 text-[9px] font-semibold text-[#00875A]">Preview</Link> : null}</div><div className="mt-1.5 grid grid-cols-2 gap-1 text-[9px] leading-4 text-[#4B596B]"><span>Uploaded</span><span className="text-right font-semibold text-[#071D49]">{formatDateShort(item.document?.created_at)}</span><span>Status</span><span className="text-right font-semibold text-[#071D49]">{currentStatus}</span></div>{persistedVerified ? <p className="mt-1 text-[9px] font-semibold text-green-700">Details saved</p> : reuploadRequested ? <p className="mt-1 line-clamp-2 text-[9px] font-semibold text-amber-700">{item.document?.rejection_reason ?? "Customer reupload requested."}</p> : invalidAttempt ? <p className="mt-1 line-clamp-2 text-[9px] font-semibold text-amber-700">{invalidAttempt.invalid_reason}</p> : null}</div></div>{persistedVerified ? <div className="mt-2 grid grid-cols-1 gap-2"><DocumentVerificationDetailsButton document={item.document!} verification={effectiveVerification!} title={item.title} /></div> : reuploadRequested ? <div className="mt-2 rounded-md border border-amber-200 bg-white px-3 py-2 text-center text-[11px] font-semibold text-amber-700">Reupload requested</div> : <div className="mt-2 grid grid-cols-3 gap-1.5">{item.document ? <VerificationActionButton claimId={claim.id} documentId={item.document.id} itemKey={item.key} incidentDate={claim.accident_at} policyStartDate={claim.policies?.start_date} policyEndDate={claim.policies?.end_date} /> : <button disabled className="h-8 rounded-md border border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-400">Verify</button>}{item.document ? <RequestReuploadButton claimId={claim.id} documentId={item.document.id} documentTitle={item.title} /> : <button disabled className="h-8 rounded-md border border-slate-200 bg-slate-50 px-2 text-[10px] font-semibold text-slate-400">Reupload</button>}{item.key === "spot" ? <SpotMediaUploadButton claimId={claim.id} /> : <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} />}</div>}</article>; }
-function StatusBadge({ tone, label }: { tone: "green" | "amber" | "slate"; label: string }) { const className = tone === "green" ? "border-green-200 bg-green-100 text-green-700" : tone === "amber" ? "border-amber-200 bg-amber-100 text-amber-700" : "border-slate-200 bg-slate-100 text-slate-600"; return <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-semibold ${className}`}>{label}</span>; }
-function buildDocumentItems(documents: SpotSurveyDocument[]): Item[] { const matches = (key: keyof typeof aliases) => documents.filter((d) => aliases[key].some((alias) => d.document_type.toLowerCase().includes(alias))); const doc = (key: keyof typeof aliases) => matches(key).find((d) => d.verification_status !== "rejected") ?? matches(key)[0] ?? null; const spotDocuments = matches("spot"); return [{ key: "spot", number: 1, title: "Spot Photo", icon: "📷", accent: "bg-[#EAF4FF]", documentType: "Spot Photo", document: doc("spot"), documentCount: spotDocuments.length }, { key: "rc", number: 2, title: "RC Copy", icon: "📄", accent: "bg-[#F1ECFF]", documentType: "Registration certificate", document: doc("rc") }, { key: "insurance", number: 3, title: "Insurance Copy", icon: "📃", accent: "bg-[#FFF3D9]", documentType: "Policy copy", document: doc("insurance") }, { key: "dl", number: 4, title: "Driving Licence", icon: "🪪", accent: "bg-[#EAF8EF]", documentType: "Driving licence", document: doc("dl") }, { key: "gr", number: 5, title: "GR / Load Challan", icon: "🚚", accent: "bg-[#FFF1E6]", documentType: "GR Copy / Load Challan", document: doc("gr"), documentCount: spotDocuments.length }]; }
-*/
-function fallbackVerification(claim: SpotSurveyClaim, item: Item, document: SpotSurveyDocument): SpotSurveyVerification { return { id: `fallback-${document.id}`, claim_id: claim.id, document_id: document.id, document_type: document.document_type || item.documentType, verification_type: item.key === "rc" ? "rc" : item.key === "insurance" ? "insurance" : "document", incident_date: claim.accident_at ?? null, is_valid: true, invalid_reason: null, details: { document_type: document.document_type || item.documentType, document_id: document.id, file_name: document.file_name, verified: true, note: "This document is verified, but detailed fields were not found in verification history." }, created_at: document.created_at ?? new Date().toISOString() }; }
-function HeaderIcon({ src, alt }: { src: string; alt: string }) { return <Image src={src} alt={alt} width={26} height={26} className="h-[26px] w-[26px] object-contain" />; }
-function ManufacturerLogo({ name }: { name: string }) { const brand = findBrand(name, vehicleBrandLogos); if (!brand) return <span className="text-[14px] font-bold text-[#003A83]">{name && name !== "-" ? name.charAt(0).toUpperCase() : "V"}</span>; return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />; }
-function InsurerLogo({ name }: { name: string }) { const brand = findBrand(name, insurerBrandLogos); if (!brand) return <span className="text-[8px] font-bold uppercase text-[#003A83]">ins</span>; return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />; }
-function findBrand(name: string, logos: Record<string, BrandLogo>) { const normalized = name.toLowerCase(); return Object.entries(logos).find(([key]) => normalized.includes(key))?.[1] ?? null; }
-function latestVerificationForDocument(document: SpotSurveyDocument, verifications: SpotSurveyVerification[]) { return verifications.find((verification) => verification.document_id === document.id); }
-function latestVerificationForItem(item: Item, verifications: SpotSurveyVerification[]) { return item.documents.map((document) => latestVerificationForDocument(document, verifications)).find(Boolean); }
-function isItemVerified(item: Item, verifications: SpotSurveyVerification[]) { const verification = latestVerificationForItem(item, verifications); return Boolean(verification?.is_valid) || item.document?.verification_status === "verified"; }
-function isUnclassifiedSpotAttachment(document: SpotSurveyDocument) { const normalized = document.document_type?.trim().toLowerCase() ?? ""; return normalized === "spot intimation attachment" || normalized === "bulk upload" || normalized === "bulk attachment" || normalized === "spot attachment"; }
-function statusLabel(status: SpotSurveyDocument["verification_status"]) { if (status === "verified") return "Verified"; if (status === "rejected") return "Rejected"; return "Pending"; }
-function formatDateShort(value?: string | null) { if (!value) return "-"; const date = new Date(value); if (Number.isNaN(date.getTime())) return "-"; return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date); }
-function formatIntimationDate(value?: string | null) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" }).format(date); }
-function formatIntimationTime(value?: string | null) { if (!value) return "-"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(date); }
 
-function extractDriverName(description?: string | null) { if (!description) return null; const match = description.match(/driver\s*[:\-]\s*([^,;\n]+)/i) ?? description.match(/driver name\s*[:\-]\s*([^,;\n]+)/i); return match?.[1]?.trim() ?? null; }
-function extractDriverMobile(description?: string | null) { if (!description) return null; const match = description.match(/(?:mobile|phone|contact)\s*[:\-]\s*(\+?\d[\d\s-]{7,})/i) ?? description.match(/\b(\+?91[-\s]?)?[6-9]\d{9}\b/); return match?.[0]?.replace(/^(mobile|phone|contact)\s*[:\-]\s*/i, "").trim() ?? null; }
+function HeaderIcon({ src, alt }: { src: string; alt: string }) {
+  return <Image src={src} alt={alt} width={26} height={26} className="h-[26px] w-[26px] object-contain" />;
+}
+
+function ManufacturerLogo({ name }: { name: string }) {
+  const brand = findBrand(name, vehicleBrandLogos);
+  if (!brand) return <span className="text-[14px] font-bold text-[#003A83]">{name && name !== "-" ? name.charAt(0).toUpperCase() : "V"}</span>;
+  return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
+}
+
+function InsurerLogo({ name }: { name: string }) {
+  const brand = findBrand(name, insurerBrandLogos);
+  if (!brand) return <span className="text-[8px] font-bold uppercase text-[#003A83]">ins</span>;
+  return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
+}
+
+function findBrand(name: string, logos: Record<string, BrandLogo>) {
+  const normalized = name.toLowerCase();
+  return Object.entries(logos).find(([key]) => normalized.includes(key))?.[1] ?? null;
+}
+
+function latestVerificationForDocument(document: SpotSurveyDocument, verifications: SpotSurveyVerification[]) {
+  return verifications.find((verification) => verification.document_id === document.id);
+}
+
+function isItemVerified(item: BulkDocumentGroupItem, verifications: SpotSurveyVerification[]) {
+  return item.documents.length > 0 && item.documents.every((document) => document.verification_status === "verified" || Boolean(latestVerificationForDocument(document, verifications)?.is_valid));
+}
+
+function isUnclassifiedSpotAttachment(document: SpotSurveyDocument) {
+  const normalized = document.document_type?.trim().toLowerCase() ?? "";
+  return normalized === "spot intimation attachment" || normalized === "bulk upload" || normalized === "bulk attachment" || normalized === "spot attachment";
+}
+
+function formatDateShort(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).format(date);
+}
+
+function formatIntimationDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Kolkata" }).format(date);
+}
+
+function formatIntimationTime(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(date);
+}
+
+function extractDriverName(description?: string | null) {
+  if (!description) return null;
+  const match = description.match(/driver\s*[:\-]\s*([^,;\n]+)/i) ?? description.match(/driver name\s*[:\-]\s*([^,;\n]+)/i);
+  return match?.[1]?.trim() ?? null;
+}
+
+function extractDriverMobile(description?: string | null) {
+  if (!description) return null;
+  const match = description.match(/(?:mobile|phone|contact)\s*[:\-]\s*(\+?\d[\d\s-]{7,})/i) ?? description.match(/\b(\+?91[-\s]?)?[6-9]\d{9}\b/);
+  return match?.[0]?.replace(/^(mobile|phone|contact)\s*[:\-]\s*/i, "").trim() ?? null;
+}
