@@ -136,6 +136,11 @@ assert.match(actions, /families\.size !== 1/, "Bulk verification must reject a m
 assert.match(actions, /documents\.some\(\(document\) => document\.verification_status === "rejected"\)/, "Bulk verification must reject unresolved reupload files.");
 assert.match(actions, /\.in\("id", idsToVerify\)/, "Selected document statuses must be updated in one claim-scoped batch.");
 assert.match(actions, /matchingDocuments\.length > 0 && matchingDocuments\.every\(\(document\) => document\.verification_status === "verified"\)/, "Claim-stage advancement must wait until every current file in each required document category is verified.");
+assert.match(actions, /missingInsuranceIncidentDate = !incidentDate/, "Server-side insurance verification must fail closed when the claim Accident Date is unavailable.");
+assert.match(actions, /incidentBeforeStart = incidentDate < startDate/, "Server-side insurance verification must reject an Accident Date before policy inception.");
+assert.match(actions, /incidentAfterEnd = incidentDate > endDate/, "Server-side insurance verification must reject an Accident Date after policy expiry.");
+assert.match(actions, /finalDetails\.policy_status = incidentBeforeStart \|\| incidentAfterEnd \? "Invalid" : "Valid"/, "Server-side insurance policy status must use the full start/end period.");
+assert.match(actions, /Accident date is required to verify policy validity\./, "Server-side insurance verification must report the missing Accident Date explicitly.");
 
 assert.match(insuranceCapacity, /vehicleClassCode === "PCP" \|\| vehicleClassCode === "TWP"/, "PCP and TWP insurance verification must resolve capacity from engine CC.");
 assert.match(insuranceCapacity, /vehicleClassCode === "GCV"/, "GCV insurance verification must retain GVW capacity.");
@@ -149,6 +154,13 @@ assert.match(verificationAction, /documentIds\?: string\[\]/, "Verification acti
 assert.match(verificationAction, /targetIds\.join\(","\)/, "Selected document ids must be sent through the existing verification modal as one bounded target set.");
 assert.match(insuranceModal, /vehicle_capacity_value/, "New insurance verifications must persist explicit class-aware capacity metadata.");
 assert.match(insuranceModal, /formData\.set\("gvw_kg", capacityValue\)/, "Class-aware verification must preserve the existing gvw_kg server contract for backward compatibility.");
+assert.match(insuranceModal, /const insuranceStatus = getStatus\(insurance\.start, insurance\.end, incident\)/, "Insurance modal must validate Accident Date against both policy boundaries.");
+assert.match(insuranceModal, /const incidentAvailable = Boolean\(incident\)/, "Insurance modal must treat Accident Date availability separately from policy date availability.");
+assert.match(insuranceModal, /Accident date is required to verify policy validity\./, "Missing Accident Date must have a specific user-facing validation message.");
+assert.match(insuranceModal, /Accident date falls outside the insurance policy period\. Verification is blocked\./, "Out-of-period Accident Date must have a specific user-facing validation message.");
+assert.match(insuranceModal, /function getStatus\(startDate: string, endDate: string, incidentDate: string \| null\)/, "Insurance validity helper must accept policy start, policy end and Accident Date.");
+assert.match(insuranceModal, /incidentDate < startDate \|\| incidentDate > endDate \? "Invalid" : "Valid"/, "Insurance validity helper must enforce start <= accident <= end.");
+assert.match(insuranceModal, /"Accident date required"/, "Validity status row must distinguish a missing Accident Date from missing policy dates.");
 assert.match(insuranceModal, /<option>Hazardous<\/option>/, "Hazardous policy selection must remain available.");
 assert.match(insuranceModal, /<option>Non Hazardous<\/option>/, "Non Hazardous policy selection must remain available.");
 assert.doesNotMatch(insuranceModal, /Not Mentioned/, "Removed Not Mentioned policy option must not be reintroduced.");
@@ -167,4 +179,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot upload, selectable bulk verification, signed direct storage, cleanup crash guard, icon-only upload-new, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot upload, selectable bulk verification, signed direct storage, cleanup crash guard, icon-only upload-new, exact row replacement, intimation, insurance capacity, accident-date policy-period validation and authorized verification regression passed.");
