@@ -50,9 +50,19 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
   return <>
     <div className="mb-2 border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3 sm:px-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex shrink-0 items-center gap-2.5">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]"><FileText className="h-5 w-5" /></span>
-          <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">Claim Portfolio</h2>
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2.5">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]"><FileText className="h-5 w-5" /></span>
+            <h2 className="shrink-0 text-[18px] font-semibold leading-tight text-[#0F172A]">Claim Portfolio</h2>
+          </div>
+          <nav aria-label="Claim type" className="flex w-fit max-w-full items-center gap-0.5 rounded-lg border border-[#DCE5F1] bg-[#F8FAFD] p-0.5">
+            <button type="button" onClick={() => setActiveMode("internal")} aria-current={activeMode === "internal" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "internal" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
+              Internal claims <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeMode === "internal" ? "bg-[#D5E7FA] text-[#003A83]" : "bg-[#EEF3F9] text-[#5C6878]"}`}>{internalRows.length}</span>
+            </button>
+            <button type="button" onClick={() => setActiveMode("external")} aria-current={activeMode === "external" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "external" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
+              External claims <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeMode === "external" ? "bg-[#D5E7FA] text-[#003A83]" : assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF3F9] text-[#5C6878]"}`}>{externalRows.length}</span>
+            </button>
+          </nav>
         </div>
         <form onSubmit={(event) => event.preventDefault()} className="flex min-w-0 flex-1 items-center gap-2 max-md:flex-col max-md:items-stretch lg:justify-end">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by customer, vehicle no., claim no., policy no., control no." aria-label="Search claims" className="h-10 min-w-0 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100 lg:max-w-[520px]" />
@@ -61,14 +71,6 @@ export function ClaimsWorkspace({ rows, initialParams, loadError, canAddClaim }:
         </form>
       </div>
     </div>
-    <nav aria-label="Claim type" className="mb-2 flex w-fit max-w-full items-center gap-0.5 rounded-lg border border-[#DCE5F1] bg-[#F8FAFD] p-0.5">
-      <button type="button" onClick={() => setActiveMode("internal")} aria-current={activeMode === "internal" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "internal" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
-        Internal claims <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeMode === "internal" ? "bg-[#D5E7FA] text-[#003A83]" : "bg-[#EEF3F9] text-[#5C6878]"}`}>{internalRows.length}</span>
-      </button>
-      <button type="button" onClick={() => setActiveMode("external")} aria-current={activeMode === "external" ? "page" : undefined} className={`shrink-0 whitespace-nowrap rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${activeMode === "external" ? "bg-[#E4F0FC] text-[#003A83]" : "text-[#5C6878] hover:bg-[#F1F5FA] hover:text-[#071D49]"}`}>
-        External claims <span className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] ${activeMode === "external" ? "bg-[#D5E7FA] text-[#003A83]" : assistanceRequested ? "bg-amber-100 text-amber-800" : "bg-[#EEF3F9] text-[#5C6878]"}`}>{externalRows.length}</span>
-      </button>
-    </nav>
     {loadError ? <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">{loadError}</div> : null}
     <ClaimSection title={activeMode === "external" ? "External claims" : "Internal claims"} count={activeRows.length} tone={activeMode === "external" ? "secondary" : "primary"} assistanceRequested={activeMode === "external" ? assistanceRequested : 0}>
       <LocalClaimQueueTable rows={activeRows} page={page} onPageChange={setPage} />
