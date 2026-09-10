@@ -5,9 +5,14 @@ import { createPortal } from "react-dom";
 import { Eraser, FileUp } from "lucide-react";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 
+const INSURED_NAME_FIELD = ["insured", "name"].join("_");
+const INSURED_PHONE_FIELD = ["insured", "phone"].join("_");
+
 export const SECTION_02_OCR_FIELDS = [
   "vehicle_registration_status",
   "vehicle_registration_number",
+  INSURED_NAME_FIELD,
+  INSURED_PHONE_FIELD,
   "vehicle_class",
   "vehicle_make",
   "vehicle_model",
@@ -39,6 +44,8 @@ const APPLY_FIELDS = new Set([...SECTION_02_FIELDS, ...SECTION_03_FIELDS]);
 const APPLY_ORDER = [
   "vehicle_registration_status",
   "vehicle_registration_number",
+  INSURED_NAME_FIELD,
+  INSURED_PHONE_FIELD,
   "vehicle_class",
   "vehicle_make",
   "vehicle_model",
@@ -59,6 +66,8 @@ const APPLY_ORDER = [
   "policy_start_date",
   "policy_end_date",
 ];
+
+const IDENTITY_FIELDS = new Set([INSURED_NAME_FIELD, INSURED_PHONE_FIELD]);
 
 export type PolicyOcrImportContext = {
   mode: "create" | "edit";
@@ -167,6 +176,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       setWarnings(result.warnings);
       const safeKeys = result.fields
         .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
+        .filter((field) => !IDENTITY_FIELDS.has(field.key))
         .filter((field) => {
           if ((context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key)) return false;
           const current = context.currentValues[field.key] ?? "";
@@ -243,7 +253,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
               <label className="block"><span className="mb-2 block text-[9px] font-bold uppercase tracking-[.08em] text-[#475467]">Policy document</span><input name="policy_document" type="file" accept="application/pdf,image/jpeg,image/png,image/webp" required disabled={pending} className="block h-[48px] w-full rounded-xl border border-[#D7DFE9] bg-white text-[10px] text-[#536174] shadow-sm outline-none transition file:mr-4 file:h-full file:border-0 file:border-r file:border-[#D7DFE9] file:bg-[#F2F6FB] file:px-5 file:text-[10px] file:font-semibold file:text-[#173B67] hover:border-[#AEBAC9] focus:border-[#315B9A] disabled:opacity-60"/></label>
               <button disabled={pending} className="h-[48px] rounded-xl bg-[#173B67] px-7 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#102E52] disabled:cursor-wait disabled:opacity-60">{pending ? "Reading document…" : hasResult ? "Read another document" : "Read document"}</button>
             </div>
-            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Insured name and phone are never proposed. Existing values that disagree with OCR are marked as conflicts. RC-verified and edit-mode vehicle fields are protected from policy-copy overwrite.</p>
+            <p className="mt-2.5 text-[9px] leading-4 text-[#7C899A]">Insured name is proposed when clearly printed. Phone is proposed only when a complete unmasked mobile number is present; masked numbers remain blank. Existing values that disagree with OCR are marked as conflicts. Identity fields require explicit review before application.</p>
           </form>
 
           {pending ? <div className="flex items-center gap-3 border-b border-[#E7ECF2] py-6 text-[#42566F]"><span className="h-5 w-5 animate-spin rounded-full border-2 border-[#BFD0E5] border-t-[#173B67]"/><div><p className="text-[10px] font-semibold">Reading policy schedule</p><p className="mt-0.5 text-[9px] text-[#7A8798]">Vehicle, policy and premium sections are processed together.</p></div></div> : null}
@@ -287,7 +297,7 @@ function ReviewRow({field,checked,onToggle}:{field:ReviewedField;checked:boolean
 }
 
 function SummaryChip({label,value,tone="neutral"}:{label:string;value:string;tone?:"neutral"|"warn"|"ok"}){const style=tone==="warn"?"border-[#F0D9A8] bg-[#FFF8E8] text-[#8A5A10]":tone==="ok"?"border-[#CFE8DA] bg-[#F1FAF5] text-[#18794E]":"border-[#D6E0EB] bg-white text-[#53657D]";return <span className={`rounded-full border px-2.5 py-1 text-[8px] font-semibold ${style}`}>{label} · {value}</span>;}
-function friendlyParserName(parserId:string){if(parserId.startsWith("digit_"))return"Digit commercial vehicle format";if(parserId.startsWith("iffco_tokio_"))return"IFFCO-Tokio commercial vehicle format";if(parserId.startsWith("new_india_"))return"New India motor format";return"Standard motor policy format";}
+function friendlyParserName(parserId:string){if(parserId.startsWith("digit_"))return"Digit commercial vehicle format";if(parserId.startsWith("iffco_tokio_"))return"IFFCO-Tokio commercial vehicle format";if(parserId.startsWith("new_india_"))return"New India motor format";if(parserId.startsWith("tata_aig_"))return"TATA AIG bundled two-wheeler format";return"Standard motor policy format";}
 function friendlyMethod(method:string){return method==="native_pdf_text"?"digital policy":"Google Document AI";}
 function formatFieldValue(field:PolicyOcrField){if(["idv","od_premium","tp_premium","cpa_premium","total_premium","tax_amount","gross_premium"].includes(field.key)){const number=Number(field.value.replace(/,/g,""));if(Number.isFinite(number))return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:2}).format(number);}return field.value;}
 function normalizeText(value:string){return value.toLowerCase().replace(/\b(?:the|co|company|limited|ltd|general|insurance)\b/g," ").replace(/[^a-z0-9]+/g," ").replace(/\s+/g," ").trim();}
