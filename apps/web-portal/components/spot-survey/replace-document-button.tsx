@@ -166,7 +166,7 @@ export function ReplaceDocumentButton({ claimId, documentId, documentType, label
         className={isReplaceAction
           ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30 disabled:cursor-not-allowed disabled:opacity-40"
           : iconOnly
-            ? "grid h-7 w-7 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#2563EB] transition hover:bg-[#EEF4FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/25"
+            ? "grid h-7 w-7 shrink-0 place-items-center p-0 text-[#2563EB] transition-colors hover:text-[#174EA6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
             : "min-w-0 flex-1 cursor-pointer rounded-none px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49] transition-colors hover:rounded-md hover:bg-[#F4F8FF] hover:text-[#174EA6] focus-visible:rounded-md focus-visible:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25"}
       >
         {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : iconOnly ? <FilePlus2 aria-hidden="true" size={16} strokeWidth={2} /> : isUploadAction ? "Document not uploaded" : actionLabel}
