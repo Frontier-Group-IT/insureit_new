@@ -32,12 +32,16 @@ assert(quickLinks.includes('hover:bg-[#EEF2F7]'), "Policy Intake quick links mus
 assert(quickLinks.includes('hover:shadow-sm hover:ring-1 hover:ring-inset hover:ring-[#CBD5E1]'), "Policy Intake quick links must reveal a rounded outlined hover surface");
 assert(quickLinks.includes("rounded-xl px-2.5 transition-[background-color,box-shadow] duration-150"), "Policy Intake quick links must retain rounded hit targets without a permanent card treatment");
 assert(quickLinks.includes('className="ml-auto shrink-0 text-[15px] font-black leading-4 tabular-nums"'), "Policy Intake quick-link counts must sit on the far right of each rounded hover target");
+assert(quickLinks.includes("function PolicyIntakeQuickLink({ href, label, count }"), "Policy Intake quick links must render from label and count only");
+assert(!quickLinks.includes("AlertTriangle"), "Action Required must not render an icon");
+assert(!quickLinks.includes("Clock3"), "In Review must not render an icon");
+assert(!quickLinks.includes("icon={<"), "Policy Intake quick-link calls must not pass icon content");
+assert(!quickLinks.includes("{icon}</span>"), "Policy Intake quick links must not reserve an icon slot");
+assert(!quickLinks.includes("ReactNode"), "Policy Intake quick links must not retain an unused icon type");
 assert(!quickLinks.includes("ChevronRight"), "Policy Intake quick links must not render chevrons");
 assert(!quickLinks.includes("tone=\"danger\""), "Policy Intake quick links must not use the reverted highlighted danger-card treatment");
 assert(!quickLinks.includes("tone=\"review\""), "Policy Intake quick links must not use the reverted highlighted review-card treatment");
 assert(!quickLinks.includes("rounded-2xl border"), "Policy Intake quick links must not render permanent bordered cards");
-assert(!quickLinks.includes('bg-[#FEE2E2]'), "Policy Intake quick-link icons must remain flat without red icon tiles");
-assert(!quickLinks.includes('bg-[#FEF0C7]'), "Policy Intake quick-link icons must remain flat without amber icon tiles");
 assert(!quickLinks.includes("hover:-translate-y-0.5"), "Policy Intake quick links must not use raised card hover motion");
 
 const intakePage = read("app/policy-intakes/page.tsx");
