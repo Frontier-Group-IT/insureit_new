@@ -3,7 +3,9 @@ import { readFile } from "node:fs/promises";
 
 const workspace = await readFile(new URL("../components/spot-survey/spot-survey-workspace-v2.tsx", import.meta.url), "utf8");
 const uploader = await readFile(new URL("../components/spot-survey/spot-media-upload-button.tsx", import.meta.url), "utf8");
+const replacementUploader = await readFile(new URL("../components/spot-survey/replace-document-button.tsx", import.meta.url), "utf8");
 const actions = await readFile(new URL("../app/claims/[id]/spot-survey-actions.ts", import.meta.url), "utf8");
+const uploadActions = await readFile(new URL("../app/claims/[id]/claim-document-upload-actions.ts", import.meta.url), "utf8");
 const insuranceCapacity = await readFile(new URL("../lib/insurance-verification-capacity.ts", import.meta.url), "utf8");
 const insuranceCapacityAction = await readFile(new URL("../app/claims/[id]/insurance-verification-actions.ts", import.meta.url), "utf8");
 const insuranceModal = await readFile(new URL("../components/spot-survey/insurance-verification-modal.tsx", import.meta.url), "utf8");
@@ -25,12 +27,30 @@ assert.match(uploader, /video\/mp4/, "Spot media selector must accept MP4 video.
 assert.match(uploader, /video\/quicktime/, "Spot media selector must accept MOV video.");
 assert.match(uploader, /formData\.delete\("files"\)/, "Removed selections must not be submitted.");
 assert.match(uploader, /formData\.append\("files", file\)/, "Selected files must be submitted explicitly.");
+assert.match(uploader, /claim-document-upload-actions/, "Spot media uploads must use the dedicated authorized upload action.");
+assert.match(uploader, /onSubmit=\{\(event\)/, "Spot media upload must use explicit submit handling instead of an inline React form action callback.");
+assert.match(uploader, /Upload failed\. Please try again\./, "Spot media upload must surface a safe client-side failure instead of crashing the claim page.");
+assert.match(replacementUploader, /claim-document-upload-actions/, "Single document uploads must use the dedicated authorized upload action.");
+assert.match(replacementUploader, /Upload failed\. Please try again\./, "Single document uploads must surface a safe client-side failure instead of crashing the claim page.");
 
-assert.match(actions, /formData\.getAll\("files"\)/, "Server action must process all selected spot media files.");
-assert.match(actions, /20 \* 1024 \* 1024/, "Server action must enforce the per-file size limit.");
-assert.match(actions, /document_type: file\.type\.startsWith\("video\/"\) \? "Accident Video" : "Accident Photo"/, "Uploaded spot media must preserve photo/video categories.");
-assert.match(actions, /\.insert\(rows\)/, "Spot media metadata must be inserted as one batch.");
-assert.match(actions, /storage\.from\(bucketName\)\.remove\(uploadedPaths\)/, "Failed multi-upload must clean up uploaded storage objects.");
+assert.match(uploadActions, /formData\.getAll\("files"\)/, "Server upload action must process all selected spot media files.");
+assert.match(uploadActions, /20 \* 1024 \* 1024/, "Server upload action must enforce the per-file photo size limit.");
+assert.match(uploadActions, /50 \* 1024 \* 1024/, "Server upload action must preserve the 50 MB video size limit.");
+assert.match(uploadActions, /document_type: isVideoFile\(file\) \? "Accident Video" : "Accident Photo"/, "Uploaded spot media must preserve photo/video categories including extension-based video detection.");
+assert.match(uploadActions, /\.insert\(rows\)/, "Spot media metadata must be inserted as one batch.");
+assert.match(uploadActions, /storageAdmin\.storage\.from\(bucketName\)\.remove\(uploadedPaths\)/, "Failed multi-upload must clean up privileged storage objects.");
+assert.match(uploadActions, /storageAdmin\.storage\.from\(bucketName\)\.remove\(\[storagePath\]\)/, "Failed single-document metadata writes must clean up the uploaded storage object.");
+assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/spot/${Date.now()}-${index}-${safeName}`"), "Spot photo/video uploads must use the canonical customer/claim storage prefix.");
+assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/${Date.now()}-${safeName}`"), "Single document uploads must use the canonical customer/claim storage prefix.");
+assert.doesNotMatch(uploadActions, /formData\.get\("customerId"\)/, "Upload authorization must not trust a browser-supplied customer id.");
+assert.match(uploadActions, /customer_id: claim\.customer_id/, "Upload metadata must use the customer id loaded from the authorized claim.");
+assert.match(uploadActions, /createSupabaseAdminClient\(\)/, "Authorized claim uploads must use the server-only privileged storage client after application authorization.");
+
+const loadUploadClaimFunction = uploadActions.match(/async function loadClaimForUpload\([\s\S]*?\n\}/)?.[0];
+assert.ok(loadUploadClaimFunction, "Claim uploads must keep a dedicated authorized claim loader.");
+assert.match(loadUploadClaimFunction, /createSupabaseAdminClient\(\)/, "Claim upload lookup must not depend on a narrower authenticated SELECT policy.");
+assert.match(loadUploadClaimFunction, /canAccessCustomer\(profile\.id, profile\.role, data\.customer_id, "manage_claims"\)/, "Privileged upload lookup must be followed by the explicit manage_claims customer-scope check.");
+assert.match(loadUploadClaimFunction, /claim_service_mode !== "broker_managed"/, "Privileged upload lookup must preserve the broker-managed Operations boundary.");
 
 const loadClaimFunction = actions.match(/async function loadClaim\([\s\S]*?\n\}/)?.[0];
 assert.ok(loadClaimFunction, "Claim verification must keep a dedicated claim loader.");
@@ -69,4 +89,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot multi-upload, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot multi-upload, canonical storage, intimation, insurance capacity and authorized verification regression passed.");
