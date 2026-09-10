@@ -31,7 +31,9 @@ assert(quickLinks.includes('active ? "text-[#C62828]" : "text-[#64748B]"'), "Pos
 assert(quickLinks.includes('hover:bg-[#EEF2F7]'), "Policy Intake quick links must reveal a clearly visible hover background");
 assert(quickLinks.includes('hover:shadow-sm hover:ring-1 hover:ring-inset hover:ring-[#CBD5E1]'), "Policy Intake quick links must reveal a rounded outlined hover surface");
 assert(quickLinks.includes("rounded-xl px-2.5 transition-[background-color,box-shadow] duration-150"), "Policy Intake quick links must retain rounded hit targets without a permanent card treatment");
-assert(quickLinks.includes('className="ml-auto shrink-0 text-[15px] font-black leading-4 tabular-nums"'), "Policy Intake quick-link counts must sit on the far right of each rounded hover target");
+assert(quickLinks.includes('className="shrink-0 text-[15px] font-black leading-4 tabular-nums"'), "Policy Intake quick-link counts must sit immediately to the right of each label");
+assert(!quickLinks.includes("min-w-[122px]"), "Policy Intake quick links must not reserve unused width between labels and counts");
+assert(!quickLinks.includes('className="ml-auto shrink-0 text-[15px] font-black leading-4 tabular-nums"'), "Policy Intake quick-link counts must not be pushed to the far right");
 assert(quickLinks.includes("function PolicyIntakeQuickLink({ href, label, count }"), "Policy Intake quick links must render from label and count only");
 assert(!quickLinks.includes("AlertTriangle"), "Action Required must not render an icon");
 assert(!quickLinks.includes("Clock3"), "In Review must not render an icon");
