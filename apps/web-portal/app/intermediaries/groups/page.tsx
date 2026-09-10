@@ -13,6 +13,7 @@ import {
   type GroupWorkspaceMembership,
   type GroupWorkspacePartner,
 } from "./intermediary-group-workspace";
+import { SingleEmployeeAccordion } from "./single-employee-accordion";
 import styles from "./intermediary-groups-reference.module.css";
 
 export const dynamic = "force-dynamic";
@@ -140,18 +141,20 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
   return (
     <AppShell title="Intermediary Groups" backHref="/intermediaries">
       <div className={styles.referenceUi}>
-        <IntermediaryGroupWorkspace
-          employees={employees ?? []}
-          groups={groups ?? []}
-          partners={partners}
-          memberships={memberships ?? []}
-          canManage={Boolean(manager)}
-          canTransfer={Boolean(transferManager)}
-          defaultOwnerEmployeeId={profile.employee_id ?? ""}
-          success={query.success}
-          error={query.error}
-          loadError={Boolean(groupLoadError || partnerLoadError)}
-        />
+        <SingleEmployeeAccordion>
+          <IntermediaryGroupWorkspace
+            employees={employees ?? []}
+            groups={groups ?? []}
+            partners={partners}
+            memberships={memberships ?? []}
+            canManage={Boolean(manager)}
+            canTransfer={Boolean(transferManager)}
+            defaultOwnerEmployeeId={profile.employee_id ?? ""}
+            success={query.success}
+            error={query.error}
+            loadError={Boolean(groupLoadError || partnerLoadError)}
+          />
+        </SingleEmployeeAccordion>
       </div>
     </AppShell>
   );
