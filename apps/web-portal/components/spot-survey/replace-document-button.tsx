@@ -2,17 +2,23 @@
 
 import { FilePenLine } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { replaceSpotSurveyDocument } from "@/app/claims/[id]/claim-document-upload-actions";
+import {
+  cancelClaimDocumentUploads,
+  finalizeClaimDocumentUpload,
+  prepareClaimDocumentUpload
+} from "@/app/claims/[id]/claim-document-upload-actions";
+import { createSupabaseBrowserClient } from "@/lib/auth";
 
-export function ReplaceDocumentButton({ claimId, customerId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
+const bucketName = "claim-documents";
+
+export function ReplaceDocumentButton({ claimId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [result, setResult] = useState<{ ok: boolean; message?: string } | null>(null);
   const [isPending, startTransition] = useTransition();
-  const formRef = useRef<HTMLFormElement>(null);
   const previewUrl = useMemo(() => selectedFile && selectedFile.type.startsWith("image/") ? URL.createObjectURL(selectedFile) : null, [selectedFile]);
   const isReplaceAction = actionLabel === "Replace";
   const isUploadAction = actionLabel === "Upload";
@@ -20,31 +26,56 @@ export function ReplaceDocumentButton({ claimId, customerId, documentType, label
   const modal = open && typeof document !== "undefined" ? createPortal(
     <div className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-black/55 px-4 py-5">
       <form
-        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
-          const formData = new FormData(event.currentTarget);
+          const file = selectedFile;
+          if (!file) return;
+
           startTransition(async () => {
+            let uploadedPath: string | null = null;
             try {
-              const response = await replaceSpotSurveyDocument(formData);
+              const prepared = await prepareClaimDocumentUpload(claimId, documentType, {
+                name: file.name,
+                size: file.size,
+                type: file.type
+              });
+              const upload = prepared.uploads?.[0];
+              if (!prepared.ok || !upload) {
+                setResult({ ok: false, message: prepared.message ?? "Could not prepare upload." });
+                return;
+              }
+
+              const supabase = createSupabaseBrowserClient();
+              const fileOptions = file.type ? { cacheControl: "3600", contentType: file.type } : { cacheControl: "3600" };
+              const { error: uploadError } = await supabase.storage
+                .from(bucketName)
+                .uploadToSignedUrl(upload.path, upload.token, file, fileOptions);
+              if (uploadError) throw new Error(uploadError.message);
+              uploadedPath = upload.path;
+
+              const response = await finalizeClaimDocumentUpload(claimId, documentType, {
+                path: upload.path,
+                fileName: upload.fileName,
+                documentType: upload.documentType
+              });
+              if (!response.ok) {
+                await cancelClaimDocumentUploads(claimId, [upload.path]);
+                uploadedPath = null;
+              }
               setResult(response);
               if (response.ok) {
                 setSelectedFile(null);
                 setOpen(false);
-                // Keep the modal responsive while the authoritative row refreshes.
                 setTimeout(() => router.refresh(), 0);
               }
             } catch {
+              if (uploadedPath) await cancelClaimDocumentUploads(claimId, [uploadedPath]);
               setResult({ ok: false, message: "Upload failed. Please try again." });
             }
           });
         }}
         className="w-[min(520px,calc(100vw-32px))] overflow-hidden rounded-xl bg-white shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
       >
-        <input type="hidden" name="claimId" value={claimId} />
-        <input type="hidden" name="customerId" value={customerId} />
-        <input type="hidden" name="documentType" value={documentType} />
-
         <div className="flex items-start justify-between gap-4 px-5 py-4">
           <div className="flex items-start gap-3">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[28px]">📄</div>
