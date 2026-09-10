@@ -6,6 +6,7 @@ const LABELS: Record<string, string> = {
   vehicle_fuel_type: "Fuel type",
   vehicle_rto_state: "RTO state",
   vehicle_rto_name: "RTO name",
+  vehicle_chassis_number: "Chassis number",
   od_premium: "OD premium",
   tp_premium: "Third party premium",
   cpa_opted: "CPA opted",
@@ -15,10 +16,13 @@ const LABELS: Record<string, string> = {
 };
 
 type Fields = Map<string, ParsedPolicyField>;
-
 type MoneyHit = { value: number; page: number; evidence: string };
-
 type PeriodHit = { from: string; upto: string; page: number; evidence: string };
+type TextHit = { value: string; page: number; evidence: string };
+
+const INDIAN_STATES = [
+  "ANDHRA PRADESH", "ARUNACHAL PRADESH", "ASSAM", "BIHAR", "CHHATTISGARH", "GOA", "GUJARAT", "HARYANA", "HIMACHAL PRADESH", "JHARKHAND", "KARNATAKA", "KERALA", "MADHYA PRADESH", "MAHARASHTRA", "MANIPUR", "MEGHALAYA", "MIZORAM", "NAGALAND", "ODISHA", "PUNJAB", "RAJASTHAN", "SIKKIM", "TAMIL NADU", "TELANGANA", "TRIPURA", "UTTAR PRADESH", "UTTARAKHAND", "WEST BENGAL", "DELHI", "JAMMU AND KASHMIR", "LADAKH", "PUDUCHERRY", "CHANDIGARH",
+];
 
 export function refineTataAigVisibleFields(pages: string[], parsed: ParsedPolicyResult): ParsedPolicyResult {
   const cleanPages = pages.map(sanitize);
@@ -27,22 +31,36 @@ export function refineTataAigVisibleFields(pages: string[], parsed: ParsedPolicy
   if (!/BUNDLED\s+AUTO\s+SECURE\s*-?\s*TWO\s+WHEELER|TWO\s+WHEELER\s+POLICY/i.test(cleanPages.join("\n"))) return parsed;
 
   const fields: Fields = new Map(parsed.fields.map((field) => [field.key, field]));
+  const warnings = [...parsed.warnings];
+
+  // These values must be owned by the Tata layout. Generic OCR must never leak
+  // POSP/agent numbers, add-on codes or unrelated table values into the form.
+  for (const key of ["insured_phone", "vehicle_rto_state", "vehicle_rto_name", "vehicle_chassis_number", "od_premium", "tp_premium", "cpa_opted", "cpa_premium"]) {
+    fields.delete(key);
+  }
 
   const insured = findInsuredName(cleanPages);
   if (insured) setField(fields, "insured_name", insured.value, .99, insured.page, insured.evidence);
 
-  const phone = findFullInsuredPhone(cleanPages);
-  if (phone) setField(fields, "insured_phone", phone.value, .98, phone.page, phone.evidence);
+  const maskedInsuredPhone = hasMaskedInsuredPhone(cleanPages);
+  const phone = maskedInsuredPhone ? null : findFullInsuredPhone(cleanPages);
+  if (phone) {
+    setField(fields, "insured_phone", phone.value, .98, phone.page, phone.evidence);
+  } else if (maskedInsuredPhone) {
+    warnings.push("TATA AIG insured mobile is masked on the policy copy, so Phone number was intentionally left blank.");
+  }
 
   const fuel = findText(cleanPages, /Fuel\s+Type\s*[:\-]?\s*(BATTERY|ELECTRIC)/i);
   if (fuel) setField(fields, "vehicle_fuel_type", "Electric", .99, fuel.page, fuel.evidence);
 
-  const rto = findText(cleanPages, /RTO\s+Location\s*[:\-]?\s*([^\n|]{2,50})/i);
-  if (rto) {
-    setField(fields, "vehicle_rto_name", cleanText(rto.value), .98, rto.page, rto.evidence);
-    const state = findRtoStateFromMatchingAddress(cleanPages, cleanText(rto.value));
-    if (state) setField(fields, "vehicle_rto_state", state.value, .95, state.page, state.evidence);
-  }
+  const rto = findRtoLocation(cleanPages);
+  if (rto) setField(fields, "vehicle_rto_name", rto.value, .99, rto.page, rto.evidence);
+
+  const state = findInsuredAddressState(cleanPages, rto?.value ?? "");
+  if (state) setField(fields, "vehicle_rto_state", state.value, .97, state.page, state.evidence);
+
+  const chassis = findVehicleIdentifierAfterLabel(cleanPages, /Chassis\s+No\.?/i);
+  if (chassis) setField(fields, "vehicle_chassis_number", chassis.value, .99, chassis.page, chassis.evidence);
 
   const period = findOwnDamagePeriod(cleanPages);
   if (period) {
@@ -51,14 +69,16 @@ export function refineTataAigVisibleFields(pages: string[], parsed: ParsedPolicy
   }
 
   const cpa = findScheduleOwnerDriverPremium(cleanPages);
-  const baseOd = findMoney(cleanPages, /Total\s+Own\s+Damage\s+Premium\s*\(A\)\s*₹?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
-  const addOn = findMoney(cleanPages, /Total\s+Add[-\s]*On\s+Premium\s*\(C\)\s*₹?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
-  const basicTp = findMoney(cleanPages, /Basic\s+TP\s+Premium\s*₹?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
-  const net = findMoney(cleanPages, /Net\s+Premium\s*\(A\s*\+\s*B\s*\+\s*C\)\s*₹?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
+  const baseOd = findLabeledMoney(cleanPages, /Total\s+Own\s+Damage\s+Premium\s*\(A\)/i);
+  const addOn = findLabeledMoney(cleanPages, /Total\s+Add[-\s]*On\s+Premium\s*\(C\)/i);
+  const basicTp = findLabeledMoney(cleanPages, /Basic\s+TP\s+Premium/i);
+  const net = findLabeledMoney(cleanPages, /Net\s+Premium\s*\(A\s*\+\s*B\s*\+\s*C\)/i);
 
   if (cpa) {
-    setField(fields, "cpa_opted", cpa.value > 0 ? "Yes" : "No", .99, cpa.page, cpa.evidence);
+    setField(fields, "cpa_opted", "Yes", .99, cpa.page, cpa.evidence);
     setField(fields, "cpa_premium", money(cpa.value), .99, cpa.page, cpa.evidence);
+  } else {
+    warnings.push("TATA AIG CPA amount was withheld because an exact Owner Driver premium row could not be proven.");
   }
 
   if (baseOd && basicTp && net && cpa) {
@@ -66,13 +86,17 @@ export function refineTataAigVisibleFields(pages: string[], parsed: ParsedPolicy
     if (Math.abs(round2(od + basicTp.value + cpa.value) - net.value) <= 1) {
       setField(fields, "od_premium", money(od), .99, baseOd.page, addOn ? `${baseOd.evidence} | ${addOn.evidence}` : baseOd.evidence);
       setField(fields, "tp_premium", money(basicTp.value), .99, basicTp.page, basicTp.evidence);
+    } else {
+      warnings.push("TATA AIG OD/TP values were withheld because OD + add-ons + TP + CPA did not reconcile to printed net premium.");
     }
+  } else {
+    warnings.push("TATA AIG OD/TP values require review because one or more labeled premium rows were not proven.");
   }
 
-  return { ...parsed, fields: [...fields.values()] };
+  return { ...parsed, fields: [...fields.values()], warnings: dedupe(warnings) };
 }
 
-function findInsuredName(pages: string[]) {
+function findInsuredName(pages: string[]): TextHit | null {
   for (let index = 0; index < Math.min(pages.length, 6); index += 1) {
     const page = pages[index];
     const match = page.match(/(?:^|\n)(?:Insured\s+Name|Name(?:\s*\(Registered owner of the Motor Vehicle\))?)\s*[:\-]?\s*(Mr\.?|Mrs\.?|Ms\.?)?\s*([^\n|]{2,80})/im);
@@ -84,29 +108,78 @@ function findInsuredName(pages: string[]) {
   return null;
 }
 
-function findFullInsuredPhone(pages: string[]) {
+function findFullInsuredPhone(pages: string[]): TextHit | null {
   for (let index = 0; index < Math.min(pages.length, 3); index += 1) {
-    const page = pages[index];
-    const match = page.match(/Contact\s+No\.?\s*[:\-]?\s*(\+?91[ -]?)?([6-9][0-9 -]{9,13})/i);
-    if (!match?.[2] || match[0].includes("*")) continue;
-    const digits = match[2].replace(/\D/g, "").slice(-10);
-    if (/^[6-9]\d{9}$/.test(digits)) return { value: digits, page: index + 1, evidence: match[0] };
+    const lines = pages[index].split("\n");
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      if (!/^Contact\s+No\.?/i.test(lines[lineIndex].trim())) continue;
+      const block = lines.slice(lineIndex, lineIndex + 2).join(" ");
+      if (/\*/.test(block)) continue;
+      const match = block.match(/^Contact\s+No\.?\s*[:\-]?\s*(?:\+?91[ -]?)?([6-9][0-9 -]{9,13})/i);
+      if (!match?.[1]) continue;
+      const digits = match[1].replace(/\D/g, "").slice(-10);
+      if (/^[6-9]\d{9}$/.test(digits)) return { value: digits, page: index + 1, evidence: block };
+    }
   }
   return null;
 }
 
-function findRtoStateFromMatchingAddress(pages: string[], rtoName: string) {
-  const states = [
-    "ANDHRA PRADESH", "ARUNACHAL PRADESH", "ASSAM", "BIHAR", "CHHATTISGARH", "GOA", "GUJARAT", "HARYANA", "HIMACHAL PRADESH", "JHARKHAND", "KARNATAKA", "KERALA", "MADHYA PRADESH", "MAHARASHTRA", "MANIPUR", "MEGHALAYA", "MIZORAM", "NAGALAND", "ODISHA", "PUNJAB", "RAJASTHAN", "SIKKIM", "TAMIL NADU", "TELANGANA", "TRIPURA", "UTTAR PRADESH", "UTTARAKHAND", "WEST BENGAL", "DELHI", "JAMMU AND KASHMIR", "LADAKH", "PUDUCHERRY", "CHANDIGARH"
-  ];
-  const rto = escapeRegExp(rtoName);
-  for (let index = 0; index < Math.min(pages.length, 6); index += 1) {
+function hasMaskedInsuredPhone(pages: string[]) {
+  return pages.slice(0, 3).some((page) => /(?:^|\n)Contact\s+No\.?[\s\S]{0,50}\*/i.test(page));
+}
+
+function findRtoLocation(pages: string[]): TextHit | null {
+  const stop = /^(?:Registration|Make|Model|Variant|Fuel|Engine|Motor|Chassis|Body|CC|KW|Mfg|Seating|Insured|Policy|Zone|IDV|Total|Address)\b/i;
+  for (let index = 0; index < Math.min(pages.length, 5); index += 1) {
+    const lines = pages[index].split("\n").map((line) => line.trim()).filter(Boolean);
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      const line = lines[lineIndex];
+      const label = line.match(/RTO\s+Location\s*[:\-]?\s*(.*)$/i);
+      if (!label) continue;
+      const sameLine = cleanRto(label[1] ?? "");
+      if (isPlausibleRto(sameLine)) return { value: sameLine, page: index + 1, evidence: line };
+      for (let offset = 1; offset <= 3; offset += 1) {
+        const candidate = cleanRto(lines[lineIndex + offset] ?? "");
+        if (!candidate || stop.test(candidate)) continue;
+        if (isPlausibleRto(candidate)) return { value: candidate, page: index + 1, evidence: `${line} | ${lines[lineIndex + offset]}` };
+      }
+    }
+  }
+  return null;
+}
+
+function cleanRto(value: string) {
+  return cleanText(value).replace(/\b(?:Seating Capacity|Registration Date|Hypothecation|Total IDV|Policy Year).*$/i, "").trim();
+}
+
+function isPlausibleRto(value: string) {
+  return value.length >= 2 && value.length <= 30 && /^[A-Z][A-Z .-]*$/i.test(value) && !/^(STATE|NA|N\/A|SEATING|CAPACITY|VEHICLE|DETAILS)$/i.test(value);
+}
+
+function findInsuredAddressState(pages: string[], rtoName: string): TextHit | null {
+  for (let index = 0; index < Math.min(pages.length, 4); index += 1) {
     const page = pages[index];
-    const address = page.match(new RegExp(`(?:Address(?:\\s+for\\s+Communication)?[^\\n]*\\n?[^\\n]{0,180}${rto}[^\\n]{0,120})`, "i"));
-    if (!address) continue;
-    const upper = address[0].toUpperCase();
-    const state = states.find((candidate) => upper.includes(candidate));
-    if (state) return { value: titleCase(state), page: index + 1, evidence: address[0] };
+    const addressIndex = page.search(/(?:^|\n)Address(?:\s+for\s+Communication)?\b/i);
+    if (addressIndex < 0) continue;
+    const block = page.slice(addressIndex, addressIndex + 650);
+    const upper = block.toUpperCase();
+    if (rtoName && !upper.includes(rtoName.toUpperCase())) continue;
+    const state = INDIAN_STATES.find((candidate) => upper.includes(candidate));
+    if (state) return { value: titleCase(state), page: index + 1, evidence: block.slice(0, 300) };
+  }
+  return null;
+}
+
+function findVehicleIdentifierAfterLabel(pages: string[], label: RegExp): TextHit | null {
+  for (let index = 0; index < Math.min(pages.length, 5); index += 1) {
+    const page = pages[index];
+    const match = label.exec(page);
+    if (!match || match.index === undefined) continue;
+    const block = page.slice(match.index + match[0].length, match.index + match[0].length + 180);
+    const candidates = [...block.matchAll(/\b[A-Z0-9]{14,25}\b/g)]
+      .map((entry) => entry[0].toUpperCase())
+      .filter((value) => /[A-Z]/.test(value) && /\d/.test(value));
+    if (candidates.length) return { value: candidates[0], page: index + 1, evidence: `${match[0]} ${block.slice(0, 100)}` };
   }
   return null;
 }
@@ -114,10 +187,33 @@ function findRtoStateFromMatchingAddress(pages: string[], rtoName: string) {
 function findScheduleOwnerDriverPremium(pages: string[]): MoneyHit | null {
   for (let index = 0; index < pages.length; index += 1) {
     const page = pages[index];
-    if (!/Schedule\s+of\s+Premium/i.test(page) || !/Total\s+Liability\s+Premium/i.test(page)) continue;
-    const match = page.match(/Compulsory\s+Personal\s+Accident\s+Cover\s+for\s+Owner\s*Driver[\s\S]{0,120}?₹?\s*([0-9][0-9,]{5,}(?:\.[0-9]{1,2})?)[\s\S]{0,80}?₹?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
-    const value = parseMoney(match?.[2]);
-    if (match && value !== null && value >= 0 && value <= 100000) return { value, page: index + 1, evidence: match[0] };
+    if (!/Schedule\s+of\s+Premium/i.test(page)) continue;
+    const anchor = page.search(/Compulsory\s+Personal\s+Accident\s+Cover\s+for\s+Owner\s*Driver/i);
+    if (anchor < 0) continue;
+    const tail = page.slice(anchor, anchor + 360);
+    const stopIndex = tail.search(/Total\s+Liability\s+Premium|Net\s+Premium/i);
+    const block = stopIndex > 0 ? tail.slice(0, stopIndex) : tail;
+    const values = [...block.matchAll(/(?:₹|Rs\.?|INR)?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/gi)]
+      .map((match) => ({ raw: match[0], value: parseMoney(match[1]) }))
+      .filter((item): item is { raw: string; value: number } => item.value !== null)
+      .filter((item) => item.value >= 100 && item.value <= 100000);
+    if (!values.length) continue;
+    const selected = values[values.length - 1];
+    if (selected.value < 100 || selected.value > 5000) continue;
+    return { value: selected.value, page: index + 1, evidence: block };
+  }
+  return null;
+}
+
+function findLabeledMoney(pages: string[], label: RegExp): MoneyHit | null {
+  for (let index = 0; index < pages.length; index += 1) {
+    const page = pages[index];
+    const match = label.exec(page);
+    if (!match || match.index === undefined) continue;
+    const after = page.slice(match.index + match[0].length, match.index + match[0].length + 140);
+    const moneyMatch = after.match(/(?:₹|Rs\.?|INR)?\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/i);
+    const value = parseMoney(moneyMatch?.[1]);
+    if (value !== null) return { value, page: index + 1, evidence: `${match[0]} ${after.slice(0, 90)}` };
   }
   return null;
 }
@@ -125,8 +221,8 @@ function findScheduleOwnerDriverPremium(pages: string[]): MoneyHit | null {
 function findOwnDamagePeriod(pages: string[]): PeriodHit | null {
   const date = "([0-9]{1,2}[/-][0-9]{1,2}[/-][0-9]{2,4})";
   const patterns = [
-    new RegExp(`Own\\s+Damage\\s+Cover\\s+${date}[\\s\\S]{0,60}?${date}`, "i"),
-    new RegExp(`Own\\s+Damage\\s+Cover\\s+Period\\s*:\\s*From\\s+${date}[\\s\\S]{0,60}?To\\s+${date}`, "i"),
+    new RegExp(`Own\\s+Damage\\s+Cover\\s+${date}[\\s\\S]{0,90}?${date}`, "i"),
+    new RegExp(`Own\\s+Damage\\s+Cover\\s+Period\\s*:\\s*From\\s+${date}[\\s\\S]{0,90}?To\\s+${date}`, "i"),
   ];
   for (let index = 0; index < pages.length; index += 1) {
     for (const pattern of patterns) {
@@ -140,19 +236,10 @@ function findOwnDamagePeriod(pages: string[]): PeriodHit | null {
   return null;
 }
 
-function findText(pages: string[], pattern: RegExp) {
+function findText(pages: string[], pattern: RegExp): TextHit | null {
   for (let index = 0; index < pages.length; index += 1) {
     const match = pages[index].match(pattern);
     if (match?.[1]) return { value: match[1], page: index + 1, evidence: match[0] };
-  }
-  return null;
-}
-
-function findMoney(pages: string[], pattern: RegExp): MoneyHit | null {
-  for (let index = 0; index < pages.length; index += 1) {
-    const match = pages[index].match(pattern);
-    const value = parseMoney(match?.[1]);
-    if (match && value !== null) return { value, page: index + 1, evidence: match[0] };
   }
   return null;
 }
@@ -197,10 +284,10 @@ function titleCase(value: string) {
   return value.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
 function sanitize(value: string) {
   return value.replace(/\u00ad/g, "").replace(/[–—]/g, "-").replace(/\r/g, "").split("\n").map((line) => line.replace(/[ \t]+/g, " ").trim()).filter(Boolean).join("\n");
+}
+
+function dedupe(values: string[]) {
+  return Array.from(new Set(values));
 }
