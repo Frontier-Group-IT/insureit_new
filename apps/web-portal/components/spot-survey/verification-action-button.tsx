@@ -15,9 +15,10 @@ type Props = {
   policyStartDate?: string | null;
   policyEndDate?: string | null;
   disabled?: boolean;
+  variant?: "row" | "header";
 };
 
-export function VerificationActionButton({ claimId, documentId, documentIds, itemKey, incidentDate, policyStartDate, policyEndDate, disabled = false }: Props) {
+export function VerificationActionButton({ claimId, documentId, documentIds, itemKey, incidentDate, policyStartDate, policyEndDate, disabled = false, variant = "row" }: Props) {
   const targetIds = Array.from(new Set((documentIds?.length ? documentIds : documentId ? [documentId] : []).map((id) => id.trim()).filter(Boolean)));
 
   if (disabled || targetIds.length === 0) {
@@ -41,5 +42,5 @@ export function VerificationActionButton({ claimId, documentId, documentIds, ite
     action = <VerifyDocumentButton claimId={claimId} documentId={targetDocumentId} />;
   }
 
-  return <div className={verifyHoverOnlyClass}>{action}</div>;
+  return <div className={variant === "row" ? verifyHoverOnlyClass : "min-w-[62px]"}>{action}</div>;
 }
