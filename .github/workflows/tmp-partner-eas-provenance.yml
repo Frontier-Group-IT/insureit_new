@@ -1,0 +1,36 @@
+name: Temporary Partner EAS provenance
+
+on:
+  push:
+    branches:
+      - diagnostic/partner-eas-provenance-20260910
+    paths:
+      - .github/workflows/tmp-partner-eas-provenance.yml
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Inspect Partner EAS build and update provenance
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "::error::EXPO_TOKEN_PARTNER is missing"; exit 1; }
+          npx eas-cli whoami
+          echo '=== Recent Android builds ==='
+          npx eas-cli build:list --platform android --limit 10 --json --non-interactive
+          echo '=== Preview channel ==='
+          npx eas-cli channel:view preview --json --non-interactive || true
+          echo '=== Production channel ==='
+          npx eas-cli channel:view production --json --non-interactive || true
+          echo '=== Preview branch updates ==='
+          npx eas-cli update:list --branch preview --limit 10 --json --non-interactive || true
+          echo '=== Production branch updates ==='
+          npx eas-cli update:list --branch production --limit 10 --json --non-interactive || true
