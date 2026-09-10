@@ -26,6 +26,8 @@ import { refineProductionRound9Fresh20Recovery } from "./policy-ocr-production-r
 import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineTataAigBundledTwoWheelerPolicy } from "./policy-ocr-tata-aig-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { guardTataAigPolicyNumber } from "./policy-ocr-tata-aig-policy-number-guard.ts";
 
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -36,7 +38,7 @@ export function refineApprovedMotorPolicyLayout(
   const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 140).join(" ");
 
   if (/TATA\s+AIG\s+GENERAL\s+INSURANCE/i.test(header)) {
-    return refineTataAigBundledTwoWheelerPolicy(pages, approved);
+    return guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, approved));
   }
 
   if (/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(header)) {
