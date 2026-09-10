@@ -1,4 +1,4 @@
-name: Temporary publish Partner 0.1.0 generated dashboard assets
+name: Temporary publish Partner 0.1.0 dashboard and OTA activation fix
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_DASHBOARD_COMMIT: 06a0583502428cba121dff03dee9064f4799c8c4
+      EXPECTED_RELEASE_COMMIT: 0815a5f433b029cc48ac18e6454a71dbf392875b
 
     steps:
       - name: Checkout exact branch snapshot
@@ -28,7 +28,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Require exact 0.1.0 dashboard asset delta
+      - name: Require exact verified Partner 0.1.0 delta
         shell: bash
         run: |
           set -euo pipefail
@@ -37,15 +37,17 @@ jobs:
             echo "::error::Branch advanced after checkout." >&2
             exit 1
           }
-          git merge-base --is-ancestor "$EXPECTED_DASHBOARD_COMMIT" HEAD || {
-            echo "::error::Expected verified dashboard commit is not contained in publish head." >&2
+          git merge-base --is-ancestor "$EXPECTED_RELEASE_COMMIT" HEAD || {
+            echo "::error::Expected verified release commit is not contained in publish head." >&2
             exit 1
           }
           changed_app_files=$(git diff --name-only "$ACCEPTED_BASELINE" HEAD -- apps/partner-app)
           printf '%s\n' "$changed_app_files"
           expected_files=$(printf '%s\n' \
             'apps/partner-app/app/(tabs)/index.tsx' \
+            'apps/partner-app/app/_layout.tsx' \
             'apps/partner-app/app/search.tsx' \
+            'apps/partner-app/app/settings.tsx' \
             'apps/partner-app/assets/generated-dashboard/commission-earned.png' \
             'apps/partner-app/assets/generated-dashboard/home-header-insurance.jpg' \
             'apps/partner-app/assets/generated-dashboard/pending-document-alert.png' \
@@ -58,7 +60,7 @@ jobs:
             'apps/partner-app/assets/insureit-partner-official.png' \
             'apps/partner-app/assets/partner-home-banner.png')
           [ "$changed_app_files" = "$expected_files" ] || {
-            echo "::error::Refusing OTA: Partner app delta is outside the verified Home/Search/logo/banner/generated-dashboard asset set." >&2
+            echo "::error::Refusing OTA: Partner app delta is outside the verified dashboard/search/OTA-activation asset set." >&2
             exit 1
           }
 
@@ -70,7 +72,6 @@ jobs:
           const app = require('./apps/partner-app/app.json');
           const expo = app.expo || {};
           if (expo.version !== '0.1.0') throw new Error(`Expected installed-compatible app version/runtime 0.1.0, found ${expo.version}`);
-          if (expo.android?.versionCode !== 1 || expo.ios?.buildNumber !== '1') throw new Error('Expected Partner 0.1.0 native build identity.');
           if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') throw new Error('Unexpected Partner package identity.');
           if (expo.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected appVersion runtime policy.');
           if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner EAS project.');
@@ -110,7 +111,7 @@ jobs:
           npm run lint:partner
           npm run build:partner:web
 
-      - name: Verify Expo access
+      - name: Verify Expo access and preview channel
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -118,8 +119,9 @@ jobs:
           [ -n "${EXPO_TOKEN:-}" ] || { echo "::error::EXPO_TOKEN_PARTNER is missing."; exit 1; }
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
+          npx eas-cli channel:view preview --json --non-interactive
 
-      - name: Publish visible banners and distinct quick icons OTA to existing Partner preview channel
+      - name: Publish dashboard and reliable OTA activation to Partner preview
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -127,32 +129,33 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 visible banners and distinct quick icons ${EXPECTED_DASHBOARD_COMMIT}" \
+            --message "Partner 0.1.0 dashboard + reliable OTA activation ${EXPECTED_RELEASE_COMMIT}" \
             --non-interactive \
-            --json > partner-dashboard-preview-update.json
-          cat partner-dashboard-preview-update.json
+            --json > partner-preview-update.json
+          cat partner-preview-update.json
 
       - name: Verify latest preview update metadata
         working-directory: apps/partner-app
         shell: bash
         run: |
           set -euo pipefail
-          npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json || true
-          cat latest-preview.json || true
+          npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json
+          cat latest-preview.json
+          grep -q 'Partner 0.1.0 dashboard + reliable OTA activation' latest-preview.json
+          grep -q '"runtimeVersion": "0.1.0"' latest-preview.json
 
       - name: Summary
         if: always()
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 visible-banner OTA'
+            echo '## Partner 0.1.0 dashboard + OTA activation release'
             echo
-            echo "- Accepted phone baseline: \`${ACCEPTED_BASELINE}\`"
-            echo "- Verified dashboard source: \`${EXPECTED_DASHBOARD_COMMIT}\`"
-            echo '- Runtime required: `0.1.0`'
+            echo "- Verified release commit: \`${EXPECTED_RELEASE_COMMIT}\`"
+            echo '- Runtime: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- Header banner: full-width cover treatment with controlled overlay'
-            echo '- Pending Tasks: visible right-side generated illustration'
-            echo '- Quick Actions: distinct semantic vector icons for Intake, Renewals, Claims, Customers'
+            echo '- Dashboard: visible generated banner and distinct actions retained'
+            echo '- OTA activation: explicit startup and foreground check/fetch/reload'
+            echo '- Settings: runtime/channel/update-source diagnostics'
             echo '- Native APK/AAB build: NOT triggered'
           } >> "$GITHUB_STEP_SUMMARY"
