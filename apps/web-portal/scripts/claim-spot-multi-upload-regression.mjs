@@ -25,26 +25,44 @@ assert.match(workspace, /documentCount: spotDocuments\.length/, "Spot Photo card
 assert.match(uploader, /type="file"[\s\S]*multiple/, "Spot media selector must allow multiple files.");
 assert.match(uploader, /video\/mp4/, "Spot media selector must accept MP4 video.");
 assert.match(uploader, /video\/quicktime/, "Spot media selector must accept MOV video.");
-assert.match(uploader, /formData\.delete\("files"\)/, "Removed selections must not be submitted.");
-assert.match(uploader, /formData\.append\("files", file\)/, "Selected files must be submitted explicitly.");
-assert.match(uploader, /claim-document-upload-actions/, "Spot media uploads must use the dedicated authorized upload action.");
+assert.match(uploader, /video\/x-matroska/, "Spot media selector must accept MKV video.");
+assert.match(uploader, /video\/x-msvideo/, "Spot media selector must accept AVI video.");
+assert.match(uploader, /claim-document-upload-actions/, "Spot media uploads must use the dedicated authorized upload actions.");
 assert.match(uploader, /onSubmit=\{\(event\)/, "Spot media upload must use explicit submit handling instead of an inline React form action callback.");
+assert.match(uploader, /prepareSpotSurveyMediaUpload/, "Spot media upload must request signed upload instructions without sending file bodies through a Server Action.");
+assert.match(uploader, /uploadToSignedUrl/, "Spot media file bytes must upload directly to storage using a signed upload token.");
+assert.match(uploader, /finalizeSpotSurveyMediaUpload/, "Spot media metadata must be finalized only after direct storage upload succeeds.");
+assert.match(uploader, /cancelClaimDocumentUploads/, "Spot media direct upload failures must request cleanup of incomplete objects.");
 assert.match(uploader, /Upload failed\. Please try again\./, "Spot media upload must surface a safe client-side failure instead of crashing the claim page.");
-assert.match(replacementUploader, /claim-document-upload-actions/, "Single document uploads must use the dedicated authorized upload action.");
-assert.match(replacementUploader, /Upload failed\. Please try again\./, "Single document uploads must surface a safe client-side failure instead of crashing the claim page.");
+assert.doesNotMatch(uploader, /formData\.append\("files"/, "Spot media file bodies must not be routed through the Next.js Server Action request body.");
 
-assert.match(uploadActions, /formData\.getAll\("files"\)/, "Server upload action must process all selected spot media files.");
-assert.match(uploadActions, /20 \* 1024 \* 1024/, "Server upload action must enforce the per-file photo size limit.");
-assert.match(uploadActions, /50 \* 1024 \* 1024/, "Server upload action must preserve the 50 MB video size limit.");
-assert.match(uploadActions, /document_type: isVideoFile\(file\) \? "Accident Video" : "Accident Photo"/, "Uploaded spot media must preserve photo/video categories including extension-based video detection.");
-assert.match(uploadActions, /\.insert\(rows\)/, "Spot media metadata must be inserted as one batch.");
-assert.match(uploadActions, /storageAdmin\.storage\.from\(bucketName\)\.remove\(uploadedPaths\)/, "Failed multi-upload must clean up privileged storage objects.");
-assert.match(uploadActions, /storageAdmin\.storage\.from\(bucketName\)\.remove\(\[storagePath\]\)/, "Failed single-document metadata writes must clean up the uploaded storage object.");
-assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/spot/${Date.now()}-${index}-${safeName}`"), "Spot photo/video uploads must use the canonical customer/claim storage prefix.");
-assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/${Date.now()}-${safeName}`"), "Single document uploads must use the canonical customer/claim storage prefix.");
-assert.doesNotMatch(uploadActions, /formData\.get\("customerId"\)/, "Upload authorization must not trust a browser-supplied customer id.");
+assert.match(replacementUploader, /claim-document-upload-actions/, "Single document uploads must use the dedicated authorized upload actions.");
+assert.match(replacementUploader, /prepareClaimDocumentUpload/, "Single document upload must request a signed upload instruction from the authorized server action.");
+assert.match(replacementUploader, /uploadToSignedUrl/, "Single document file bytes must upload directly to storage.");
+assert.match(replacementUploader, /finalizeClaimDocumentUpload/, "Single document metadata must be finalized after direct storage upload.");
+assert.match(replacementUploader, /cancelClaimDocumentUploads/, "Single document direct upload failures must request cleanup.");
+assert.match(replacementUploader, /Upload failed\. Please try again\./, "Single document uploads must surface a safe client-side failure instead of crashing the claim page.");
+assert.doesNotMatch(replacementUploader, /new FormData/, "Single document file bytes must not be submitted through a Server Action FormData body.");
+
+assert.match(uploadActions, /20 \* 1024 \* 1024/, "Server preparation must enforce the per-file photo size limit.");
+assert.match(uploadActions, /50 \* 1024 \* 1024/, "Server preparation must preserve the 50 MB video size limit.");
+assert.match(uploadActions, /createSignedUploadUrl/, "Authorized server preparation must issue signed direct-upload tokens instead of proxying file bytes through Vercel.");
+assert.match(uploadActions, /prepareSpotSurveyMediaUpload/, "Dedicated signed upload preparation must exist for spot media.");
+assert.match(uploadActions, /finalizeSpotSurveyMediaUpload/, "Dedicated spot media metadata finalization must exist.");
+assert.match(uploadActions, /prepareClaimDocumentUpload/, "Dedicated signed upload preparation must exist for single claim documents.");
+assert.match(uploadActions, /finalizeClaimDocumentUpload/, "Dedicated single document metadata finalization must exist.");
+assert.match(uploadActions, /cancelClaimDocumentUploads/, "Incomplete signed uploads must have an authorized cleanup action.");
+assert.match(uploadActions, /expectedVideo !== actualVideo/, "Single-document upload validation must reject videos submitted to non-video document slots and vice versa.");
+assert.match(uploadActions, /Video files are not allowed for this document type\./, "Non-video document slots must explicitly reject video content.");
+assert.match(uploadActions, /documentType = isVideoMetadata\(file\) \? "Accident Video" : "Accident Photo"/, "Uploaded spot media must preserve photo/video categories including extension-based video detection.");
+assert.match(uploadActions, /\.insert\(rows\)/, "Spot media metadata must still be inserted as one batch after upload.");
+assert.match(uploadActions, /cleanupPaths\(uploads\.map\(\(upload\) => upload\.path\)\)/, "Failed spot metadata persistence must clean up uploaded storage objects.");
+assert.match(uploadActions, /cleanupPaths\(\[upload\.path\]\)/, "Failed single-document metadata persistence must clean up the uploaded storage object.");
+assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/spot/${batchId}-${index}-${fileName}`"), "Spot photo/video uploads must use the canonical customer/claim storage prefix.");
+assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/${Date.now()}-${randomUUID()}-${fileName}`"), "Single document uploads must use the canonical customer/claim storage prefix.");
+assert.doesNotMatch(uploadActions, /customerId/, "Upload authorization and persistence must not trust a browser-supplied customer id.");
 assert.match(uploadActions, /customer_id: claim\.customer_id/, "Upload metadata must use the customer id loaded from the authorized claim.");
-assert.match(uploadActions, /createSupabaseAdminClient\(\)/, "Authorized claim uploads must use the server-only privileged storage client after application authorization.");
+assert.doesNotMatch(uploadActions, /\.upload\(storagePath, file/, "Server actions must not proxy claim file bytes through the Vercel function body.");
 
 const loadUploadClaimFunction = uploadActions.match(/async function loadClaimForUpload\([\s\S]*?\n\}/)?.[0];
 assert.ok(loadUploadClaimFunction, "Claim uploads must keep a dedicated authorized claim loader.");
@@ -89,4 +107,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot multi-upload, canonical storage, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot multi-upload, signed direct storage, intimation, insurance capacity and authorized verification regression passed.");
