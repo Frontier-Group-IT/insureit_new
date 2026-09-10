@@ -1,0 +1,54 @@
+name: Temporary publish Partner Figma dashboard OTA
+
+on:
+  push:
+    branches:
+      - partner/preview-0.1.0-dashboard-refresh
+    paths:
+      - .github/workflows/tmp-publish-partner-figma-dashboard.yml
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Checkout merged Partner branch
+        uses: actions/checkout@v4
+        with:
+          ref: partner/preview-0.1.0-dashboard-refresh
+          fetch-depth: 0
+
+      - name: Guard expected merged dashboard commit
+        run: |
+          git merge-base --is-ancestor 28bd95f04ad1d19e5231724016793cfbc68be67c HEAD
+          node -e "const a=require('./apps/partner-app/app.json'); if(a.expo.version!=='0.1.0') throw new Error('Expected Partner app version 0.1.0'); const r=a.expo.runtimeVersion; if(!(r&&r.policy==='appVersion')) throw new Error('Expected runtimeVersion policy appVersion');"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner source
+        run: |
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:uat
+          npm run typecheck:partner
+          npm run lint:partner
+          npm run build:partner:web
+
+      - name: Publish Partner OTA to preview
+        working-directory: apps/partner-app
+        run: npx eas-cli@latest update --channel preview --message "Partner dashboard synced to approved Figma design" --non-interactive
+
+      - name: Verify latest preview update metadata
+        working-directory: apps/partner-app
+        run: npx eas-cli@latest update:list --channel preview --limit 1 --json --non-interactive
