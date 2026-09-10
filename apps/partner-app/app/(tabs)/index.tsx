@@ -62,16 +62,16 @@ type DashboardIconName =
   | 'x-circle';
 
 const GeneratedDashboardAssets = {
-  policyAdd: require('../../assets/generated-dashboard/policy-add.png'),
-  policySold: require('../../assets/generated-dashboard/policy-sold.png'),
+  policyAdd: require('../../assets/figma-dashboard/quick-policy-intake.png'),
+  policySold: require('../../assets/generated-dashboard/policy-verified.png'),
   commissionEarned: require('../../assets/generated-dashboard/commission-earned.png'),
-  renewalAdd: require('../../assets/generated-dashboard/renewal-add.png'),
-  policyVerified: require('../../assets/generated-dashboard/policy-verified.png'),
-  renewalDue: require('../../assets/generated-dashboard/renewal-due.png'),
-  homeHeader: require('../../assets/generated-dashboard/home-header-insurance.jpg'),
-  pendingTasks: require('../../assets/generated-dashboard/pending-tasks-illustration.jpg'),
+  renewalAdd: require('../../assets/figma-dashboard/quick-renewals.png'),
+  policyVerified: require('../../assets/figma-dashboard/quick-claims.png'),
+  renewalDue: require('../../assets/figma-dashboard/renewal-due.png'),
+  homeHeader: require('../../assets/figma-dashboard/hero-banner.jpg'),
+  pendingTasks: require('../../assets/figma-dashboard/pending-tasks.png'),
   pendingDocument: require('../../assets/generated-dashboard/pending-document-alert.png'),
-  customerAction: require('../../assets/partner/actions/add-customer.png'),
+  customerAction: require('../../assets/figma-dashboard/quick-customers.png'),
 } as const;
 
 export default function PartnerHomeDashboard() {
@@ -164,13 +164,10 @@ export default function PartnerHomeDashboard() {
 
               />
 
-              <Text style={styles.heroBrandText} accessibilityLabel="insureit Partner">
-
+              <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
                 <Text style={styles.heroBrandInsureit}>insureit</Text>
-
-                <Text style={styles.heroBrandPartner}> Partner</Text>
-
-              </Text>
+                <Text style={styles.heroBrandPartner}>Partner</Text>
+              </View>
 
             </View>
             <View style={styles.heroActions}>
@@ -533,20 +530,16 @@ function DashboardMetric({ icon, asset, value, label }: { icon?: DashboardIconNa
 }
 
 function MiniBusinessChart() {
-  const bars = [13, 19, 27, 35, 43, 52];
+  const bars = [18, 26, 36, 47];
   return (
     <View accessible={false} importantForAccessibility="no-hide-descendants" style={styles.businessChart}>
-      <View style={styles.businessChartBaseline} />
-      <View style={styles.businessBars}>
-        {bars.map((height, index) => (
-          <View
-            key={height}
-            style={[
-              styles.businessBar,
-              { height, opacity: 0.46 + index * 0.085 },
-            ]}
-          />
-        ))}
+      <View style={styles.businessChartPanel}>
+        <View style={styles.businessBars}>
+          {bars.map((height, index) => (
+            <View key={height} style={[styles.businessBar, { height, opacity: 0.55 + index * 0.14 }]} />
+          ))}
+        </View>
+        <Feather name="trending-up" size={48} color="#1579E6" style={styles.businessTrendGlyph} />
       </View>
     </View>
   );
@@ -631,24 +624,24 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 174, overflow: 'hidden', backgroundColor: '#062D5F', paddingTop: 10 },
-  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.97 },
-  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.16)' },
-  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 9, maxWidth: '66%' },
-  heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },
-  heroBrandText: { flexShrink: 1, fontSize: 16.5, lineHeight: 21, fontWeight: '800', letterSpacing: -0.2 },
-  heroBrandInsureit: { color: '#FFFFFF' },
-  heroBrandPartner: { color: '#F7B267' },
+  hero: { height: 152, overflow: 'hidden', backgroundColor: '#054D9E', paddingTop: 9 },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 1 },
+  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.06)' },
+  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 14 },
+  heroBrand: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, maxWidth: '60%' },
+  heroLogo: { width: 33, height: 39, tintColor: '#FFFFFF' },
+  heroBrandCopy: { paddingTop: 1 },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 16, lineHeight: 18, fontWeight: '800', letterSpacing: -0.15 },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 16, lineHeight: 18, fontWeight: '800', letterSpacing: -0.15 },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
   heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroGreeting: { zIndex: 2, position: 'absolute', left: 20, right: 92, bottom: 13 },
-  heroGreetingText: { color: '#FFFFFF', fontSize: 16, lineHeight: 21, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },
+  heroGreetingText: { color: '#FFFFFF', fontSize: 15, lineHeight: 19, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
-  body: { marginTop: -13, paddingHorizontal: 16 },
-  searchShell: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 14, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
+  body: { marginTop: -10, paddingHorizontal: 14 },
+  searchShell: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 13, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   searchInput: { flex: 1, minWidth: 0, paddingVertical: 11, color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 17 },
   searchDivider: { width: StyleSheet.hairlineWidth, height: 27, backgroundColor: '#D9E1EC' },
   searchAction: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 2 },
@@ -656,7 +649,7 @@ const styles = StyleSheet.create({
   searchActionDisabled: { color: '#B6BFCC' },
   refreshWarning: { marginTop: 10 },
 
-  businessCard: { marginTop: 10, padding: 12, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
+  businessCard: { marginTop: 8, minHeight: 166, padding: 10, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E1EAF5', shadowColor: '#12355E', shadowOpacity: 0.04, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   sectionTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   periodLabelWrap: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   periodLabel: { color: '#123E83', fontFamily: Platform.select({ ios: 'Avenir Next', android: 'sans-serif-medium', default: undefined }), fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
@@ -667,10 +660,11 @@ const styles = StyleSheet.create({
   businessPremium: { marginTop: 2, color: '#0D2855', fontSize: 29.5, lineHeight: 34, fontWeight: '800', letterSpacing: -0.65 },
   businessPremiumFraction: { fontSize: 17, lineHeight: 21, fontWeight: '700' },
   businessCaption: { marginTop: 0, color: '#53647A', fontSize: 10, lineHeight: 13.5, fontWeight: '500' },
-  businessChart: { width: 118, height: 64, justifyContent: 'flex-end', paddingHorizontal: 5, paddingBottom: 4 },
-  businessChartBaseline: { position: 'absolute', left: 4, right: 4, bottom: 4, height: StyleSheet.hairlineWidth, backgroundColor: '#DCE8F5' },
-  businessBars: { height: 56, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  businessBar: { width: 13, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: '#8BB6E7' },
+  businessChart: { width: 86, height: 76, alignItems: 'center', justifyContent: 'center' },
+  businessChartPanel: { width: 72, height: 68, borderRadius: 12, backgroundColor: '#EEF7FF', overflow: 'hidden', justifyContent: 'flex-end', paddingHorizontal: 10, paddingBottom: 9 },
+  businessBars: { height: 50, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  businessBar: { width: 8, borderRadius: 3, backgroundColor: '#1784EB' },
+  businessTrendGlyph: { position: 'absolute', left: 12, top: 4, transform: [{ rotate: '-4deg' }] },
   trend: { marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
   trendText: { fontSize: 10, lineHeight: 13.5, fontWeight: '600' },
   trendNeutral: { marginTop: 5, color: partnerTheme.colors.inkMuted, fontSize: 10, lineHeight: 13.5 },
@@ -686,18 +680,18 @@ const styles = StyleSheet.create({
   sectionHeaderRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   sectionTitle: { color: '#102E62', fontSize: 14, lineHeight: 19, fontWeight: '800' },
   sectionHint: { marginTop: 1, color: '#617188', fontSize: 10, lineHeight: 14 },
-  quickSection: { marginTop: 11, paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF4' },
+  quickSection: { marginTop: 8, paddingHorizontal: 9, paddingTop: 8, paddingBottom: 9, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#E4EBF4' },
   quickGrid: { flexDirection: 'row', gap: 5 },
-  quickActionTouch: { flex: 1, minHeight: 88 },
-  quickAction: { flex: 1, minHeight: 88, alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 2, borderRadius: 13, backgroundColor: '#F3F8FF' },
-  quickIconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
-  quickImageAsset: { width: 46, height: 46 },
+  quickActionTouch: { flex: 1, minHeight: 74 },
+  quickAction: { flex: 1, minHeight: 74, alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 5, paddingHorizontal: 2, borderRadius: 11, backgroundColor: '#F5FAFF' },
+  quickIconCircle: { width: 35, height: 35, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
+  quickImageAsset: { width: 38, height: 38 },
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
-  pendingCard: { marginTop: 11, minHeight: 154, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 10, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
-  pendingBackdrop: { position: 'absolute', right: 9, top: 9, width: 172, height: 136, borderRadius: 14, opacity: 1 },
-  pendingHeaderSpacer: { width: 166, height: 1 },
-  pendingList: { marginTop: 4, paddingRight: 166 },
+  pendingCard: { marginTop: 8, minHeight: 134, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E3F2FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
+  pendingBackdrop: { position: 'absolute', right: -2, top: -9, width: 207, height: 156, opacity: 0.68 },
+  pendingHeaderSpacer: { width: 185, height: 1 },
+  pendingList: { marginTop: 2, paddingRight: 178 },
   pendingRow: { minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D3E1EF' },
   pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },
@@ -707,7 +701,7 @@ const styles = StyleSheet.create({
   pendingTitle: { color: '#17345F', fontSize: 11, lineHeight: 15, fontWeight: '700' },
   pendingSubtitle: { marginTop: 1, color: '#6B7B90', fontSize: 9.5, lineHeight: 13 },
 
-  renewalStrip: { marginTop: 11, minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE8F5' },
+  renewalStrip: { marginTop: 8, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 15, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE8F5' },
   renewalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF4FF' },
   renewalIconAsset: { width: 44, height: 44 },
   renewalCopy: { flex: 1, minWidth: 0 },
