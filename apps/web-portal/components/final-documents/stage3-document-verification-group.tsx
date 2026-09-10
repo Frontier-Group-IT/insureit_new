@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Camera, Check, ContactRound, FileText, Mic, ShieldCheck, Truck, Video } from "lucide-react";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { ClaimDocumentCollapsedStatus } from "@/components/claim-manager/claim-document-collapsed-status";
 import { DocumentVerificationDetailsButton } from "@/components/spot-survey/document-verification-details-button";
 import { ReplaceDocumentButton } from "@/components/spot-survey/replace-document-button";
 import { RequestReuploadButton } from "@/components/spot-survey/request-reupload-button";
@@ -42,7 +43,9 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   }, [selectableKey]);
 
   const selectedDocumentIds = selectableIds.filter((id) => selectedIds.has(id));
-  const allVerified = item.documents.length > 0 && item.documents.every((document) => isDocumentVerified(document, verifications));
+  const verifiedFileCount = item.documents.filter((document) => isDocumentVerified(document, verifications)).length;
+  const pendingFileCount = item.documents.length - verifiedFileCount;
+  const allVerified = item.documents.length > 0 && verifiedFileCount === item.documents.length;
   const hasNoFiles = item.documents.length === 0;
   const hasSingleFile = item.documents.length === 1;
   const hasMultipleFiles = item.documents.length > 1;
@@ -132,9 +135,8 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
             })}
           </div>
         ) : hasMultipleFiles ? (
-          <div id={contentId} className="flex min-h-11 items-center gap-2">
-            <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div>
-            <p className="min-w-0 flex-1 px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49]">{item.documents.length} FILES ARE UPLOADED</p>
+          <div id={contentId}>
+            <ClaimDocumentCollapsedStatus verifiedCount={verifiedFileCount} pendingCount={pendingFileCount} />
           </div>
         ) : null
       ) : (
