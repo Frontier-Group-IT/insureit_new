@@ -45,6 +45,7 @@ type DocumentTileState = 'idle' | 'ready' | 'saved';
 type DeleteTarget = { key: DocumentKey; title: string } | null;
 type DocumentTileIconName = keyof typeof MaterialCommunityIcons.glyphMap;
 type LocationNotice = { tone: 'info' | 'error'; text: string } | null;
+type UploadClaimTarget = { id: string; controlNo: string };
 
 const MAX_UPLOAD_SIZE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
@@ -79,6 +80,8 @@ export default function SelfManagedClaimScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [insurerName, setInsurerName] = useState('Insurance company');
   const [claimNo, setClaimNo] = useState('');
+  const [draftClaimId, setDraftClaimId] = useState('');
+  const [draftClaimNo, setDraftClaimNo] = useState('');
   const [incidentDate, setIncidentDate] = useState('');
   const [incidentTime, setIncidentTime] = useState('');
   const [intimationDate, setIntimationDate] = useState('');
@@ -185,7 +188,39 @@ export default function SelfManagedClaimScreen() {
     return () => { active = false; };
   }, [claimId, editing, externalPolicyId]);
 
+  async function ensureUploadClaim(): Promise<UploadClaimTarget | null> {
+    if (!policy) {
+      setMessage('The external policy is not ready yet. Please try again.');
+      return null;
+    }
+
+    if (editing) return { id: claimId, controlNo: claimNo };
+    if (draftClaimId) return { id: draftClaimId, controlNo: draftClaimNo };
+
+    const { data, error } = await (supabase.rpc as any)('ensure_self_managed_external_claim_draft', {
+      p_customer_id: policy.customer_id,
+      p_vehicle_id: policy.vehicle_id,
+      p_external_policy_id: policy.id,
+    });
+    if (error) {
+      setMessage(error.message || 'We could not prepare this claim for document upload.');
+      return null;
+    }
+
+    const draft = Array.isArray(data) ? data[0] : data;
+    if (!draft?.claim_id) {
+      setMessage('We could not prepare this claim for document upload. Please try again.');
+      return null;
+    }
+
+    const nextControlNo = typeof draft.claim_no === 'string' ? draft.claim_no.trim() : '';
+    setDraftClaimId(draft.claim_id);
+    setDraftClaimNo(nextControlNo);
+    return { id: draft.claim_id, controlNo: nextControlNo };
+  }
+
   async function pickDocument(key: Exclude<DocumentKey, 'bulk'>) {
+    if (uploadingDocuments) return;
     setMessage('');
     const multiMedia = isMultiMediaKey(key);
     const pickerTypes = key === 'accident_video' ? ['video/*'] : key === 'accident_photo' ? ['image/*'] : ['application/pdf', 'image/*'];
@@ -199,29 +234,31 @@ export default function SelfManagedClaimScreen() {
     const unsupported = pickedFiles.map((file) => resolveClaimUploadDescriptor(file)).find((descriptor) => !descriptor.ok);
     if (unsupported && !unsupported.ok) return setMessage(unsupported.message);
 
-    if (editing && policy) {
-      setUploadingDocuments(true);
-      const uploadedDocuments: ClaimDocument[] = [];
-      let firstFailureMessage = '';
-      for (const picked of pickedFiles) {
-        const uploaded = await uploadClaimDocument(claimId, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
-        if (uploaded.ok && uploaded.document) uploadedDocuments.push(uploaded.document);
-        else if (!firstFailureMessage) firstFailureMessage = uploaded.message;
-      }
+    setUploadingDocuments(true);
+    const target = await ensureUploadClaim();
+    if (!target || !policy) {
       setUploadingDocuments(false);
-      if (uploadedDocuments.length) {
-        setSavedDocuments((current) => [...uploadedDocuments, ...current]);
-        setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
-      }
-      if (uploadedDocuments.length !== pickedFiles.length) setMessage(`${uploadedDocuments.length} of ${pickedFiles.length} files were saved. ${firstFailureMessage || 'Please retry the remaining files.'}`);
-      setDocuments((current) => ({ ...current, [key]: [] }));
       return;
     }
 
-    setDocuments((current) => ({ ...current, [key]: multiMedia ? [...current[key], ...pickedFiles] : [pickedFiles[0]] }));
+    const uploadedDocuments: ClaimDocument[] = [];
+    let firstFailureMessage = '';
+    for (const picked of pickedFiles) {
+      const uploaded = await uploadClaimDocument(target.id, policy.customer_id, DOCUMENT_TYPE_BY_KEY[key], picked);
+      if (uploaded.ok && uploaded.document) uploadedDocuments.push(uploaded.document);
+      else if (!firstFailureMessage) firstFailureMessage = uploaded.message;
+    }
+    setUploadingDocuments(false);
+    if (uploadedDocuments.length) {
+      setSavedDocuments((current) => [...uploadedDocuments, ...current]);
+      setSavedDocumentTypes((current) => [...current.filter((type) => type !== DOCUMENT_TYPE_BY_KEY[key]), DOCUMENT_TYPE_BY_KEY[key]]);
+    }
+    if (uploadedDocuments.length !== pickedFiles.length) setMessage(`${uploadedDocuments.length} of ${pickedFiles.length} files were saved. ${firstFailureMessage || 'Please retry the remaining files.'}`);
+    setDocuments((current) => ({ ...current, [key]: [] }));
   }
 
   async function pickBulkDocuments() {
+    if (uploadingDocuments) return;
     setMessage('');
     const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/*'], multiple: true, copyToCacheDirectory: true });
     if (result.canceled || !result.assets?.length) return;
@@ -231,30 +268,33 @@ export default function SelfManagedClaimScreen() {
     const unsupported = additions.map((file) => resolveClaimUploadDescriptor(file)).find((descriptor) => !descriptor.ok);
     if (unsupported && !unsupported.ok) return setMessage(unsupported.message);
 
-    if (editing && policy) {
-      setUploadingDocuments(true);
-      let successCount = 0;
-      let firstFailureMessage = '';
-      for (const file of additions) {
-        const uploaded = await uploadClaimDocument(claimId, policy.customer_id, BULK_DOCUMENT_TYPE, file);
-        if (uploaded.ok) successCount += 1;
-        else if (!firstFailureMessage) firstFailureMessage = uploaded.message;
-      }
+    setUploadingDocuments(true);
+    const target = await ensureUploadClaim();
+    if (!target || !policy) {
       setUploadingDocuments(false);
-      if (successCount !== additions.length) setMessage(`${successCount} of ${additions.length} documents were saved. ${firstFailureMessage || 'Please retry the remaining files.'}`);
-      if (successCount) setSavedBulkCount((current) => current + successCount);
       return;
     }
 
-    setDocuments((current) => ({ ...current, bulk: [...current.bulk, ...additions] }));
+    let successCount = 0;
+    let firstFailureMessage = '';
+    for (const file of additions) {
+      const uploaded = await uploadClaimDocument(target.id, policy.customer_id, BULK_DOCUMENT_TYPE, file);
+      if (uploaded.ok) successCount += 1;
+      else if (!firstFailureMessage) firstFailureMessage = uploaded.message;
+    }
+    setUploadingDocuments(false);
+    if (successCount !== additions.length) setMessage(`${successCount} of ${additions.length} documents were saved. ${firstFailureMessage || 'Please retry the remaining files.'}`);
+    if (successCount) setSavedBulkCount((current) => current + successCount);
+    setDocuments((current) => ({ ...current, bulk: [] }));
   }
 
   async function removeSavedDocuments(documentType: string) {
-    if (!editing || uploadingDocuments) return true;
+    const targetClaimId = editing ? claimId : draftClaimId;
+    if (!targetClaimId || uploadingDocuments) return true;
     setMessage('');
     setUploadingDocuments(true);
     try {
-      const { data, error } = await (supabase as any).from('claim_documents').select('id,storage_bucket,storage_path').eq('claim_id', claimId).eq('document_type', documentType);
+      const { data, error } = await (supabase as any).from('claim_documents').select('id,storage_bucket,storage_path').eq('claim_id', targetClaimId).eq('document_type', documentType);
       if (error) {
         setMessage('We could not load the saved document for removal. Please try again.');
         return false;
@@ -286,12 +326,13 @@ export default function SelfManagedClaimScreen() {
   }
 
   async function removeSavedDocument(document: ClaimDocument) {
-    if (!editing || uploadingDocuments) return false;
+    const targetClaimId = editing ? claimId : draftClaimId;
+    if (!targetClaimId || uploadingDocuments) return false;
     setMessage('');
     setSuccessMessage('');
     setUploadingDocuments(true);
     try {
-      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', document.id).eq('claim_id', claimId);
+      const removeRecord = await (supabase as any).from('claim_documents').delete().eq('id', document.id).eq('claim_id', targetClaimId);
       if (removeRecord.error) {
         setMessage('We could not remove the document from this claim. Please try again.');
         return false;
@@ -639,11 +680,16 @@ export default function SelfManagedClaimScreen() {
       return;
     }
 
-    const { data, error } = await (supabase.rpc as any)('create_self_managed_external_claim', {
-      p_customer_id: policy.customer_id,
-      p_vehicle_id: policy.vehicle_id,
-      p_external_policy_id: policy.id,
+    const draft = await ensureUploadClaim();
+    if (!draft) {
+      setSaving(false);
+      return;
+    }
+
+    const { data, error } = await (supabase.rpc as any)('finalize_self_managed_external_claim_draft', {
+      p_claim_id: draft.id,
       p_accident_at: incidentAt.toISOString(),
+      p_spot_intimation_at: spotIntimationAt.toISOString(),
       p_driver_name: driver.trim() || null,
       p_driver_phone: phone.trim() || null,
       p_location: location.trim() || null,
@@ -652,25 +698,11 @@ export default function SelfManagedClaimScreen() {
     const created = Array.isArray(data) ? data[0] : data;
     if (!created?.claim_id) { setSaving(false); return setMessage('The claim was not created. Please try again.'); }
 
-    const session = await getCurrentSession();
-    const existingResult = await (supabase as any).from('claim_milestones').select('*').eq('claim_id', created.claim_id).eq('milestone_key', 'spot_intimation').maybeSingle();
-    const existing = existingResult.data as ClaimMilestone | null;
-    const milestoneResult = await (supabase as any).from('claim_milestones').upsert({
-      claim_id: created.claim_id,
-      milestone_key: 'spot_intimation',
-      milestone_status: 'completed',
-      details: { ...detailRecord(existing?.details), ...details },
-      completed_at: existing?.completed_at ?? new Date().toISOString(),
-      recorded_by: session?.user?.id ?? existing?.recorded_by ?? null,
-      recorded_by_actor: 'customer',
-    }, { onConflict: 'claim_id,milestone_key' });
-    if (milestoneResult.error) { setSaving(false); return setMessage('The claim was created, but the Spot Intimation event time could not be saved. Open the claim and update Spot Intimation before continuing.'); }
-
     const persisted = await persistPendingDocuments(created.claim_id, policy.customer_id);
     setSaving(false);
     if (persisted.saved !== persisted.total) setMessage(`${persisted.saved} of ${persisted.total} selected documents were saved to the claim. ${persisted.firstFailureMessage || 'The saved documents are available in Claim Tracker.'}`);
 
-    let controlNo = typeof created.claim_no === 'string' ? created.claim_no.trim() : '';
+    let controlNo = typeof created.claim_no === 'string' ? created.claim_no.trim() : draft.controlNo || draftClaimNo;
     if (!controlNo) {
       const claimResult = await (supabase as any).from('claims').select('claim_no').eq('id', created.claim_id).maybeSingle();
       controlNo = typeof claimResult.data?.claim_no === 'string' ? claimResult.data.claim_no.trim() : '';
@@ -767,7 +799,7 @@ export default function SelfManagedClaimScreen() {
               : <Image source={require('../../assets/claims/claim-documents.png')} style={styles.bulkUploadIconArtwork} resizeMode="contain" />}
             <View style={styles.bulkUploadCopy}>
               <Text style={styles.bulkUploadTitle}>Upload multiple documents</Text>
-              <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · They will be saved when the claim starts` : 'Select several files now, or tap again later to add more.'}</Text>
+              <Text style={styles.bulkUploadText}>{savedBulkCount > 0 ? `${savedBulkCount} file${savedBulkCount === 1 ? '' : 's'} saved · Tap again to add more` : documents.bulk.length > 0 ? `${documents.bulk.length} file${documents.bulk.length === 1 ? '' : 's'} ready · Retry upload before continuing` : 'Select several files now, or tap again later to add more.'}</Text>
             </View>
             {!documents.bulk.length && !savedBulkCount ? <MaterialCommunityIcons name="plus-circle-outline" size={21} color="#0A43A3" /> : null}
           </Pressable>
@@ -793,7 +825,7 @@ export default function SelfManagedClaimScreen() {
       <ClaimActionBar
         primaryDisabled={saving || uploadingDocuments || voiceRecording || !policy}
         primaryIcon="arrow-right"
-        primaryLabel={voiceRecording ? 'Stop recording first' : saving || uploadingDocuments ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
+        primaryLabel={voiceRecording ? 'Stop recording first' : uploadingDocuments ? 'Uploading...' : saving ? 'Saving...' : editing ? 'Save & Continue' : 'Start Claim & Continue'}
         onPrimary={() => void submit()}
         onAssistance={() => editing ? router.push({ pathname: '/customer/request-claim-assistance', params: { id: claimId, returnStage: 'spot_intimation' } }) : router.push('/customer/support')}
       />

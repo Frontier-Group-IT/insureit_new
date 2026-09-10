@@ -1,0 +1,84 @@
+name: Apply External Claim immediate document draft
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260910113000_external_claim_immediate_document_draft.sql'
+      - '.github/workflows/apply-external-claim-immediate-document-draft.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply External Claim immediate document draft
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260910113000_external_claim_immediate_document_draft.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply External Claim immediate document draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query --linked --file supabase/migrations/20260910113000_external_claim_immediate_document_draft.sql
+
+      - name: Record migration as applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration repair --linked --status applied 20260910113000
+
+      - name: Verify External Claim upload draft contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.ensure_self_managed_external_claim_draft(uuid,uuid,uuid)') is not null as ensure_draft_ready,
+              to_regprocedure('public.finalize_self_managed_external_claim_draft(uuid,timestamptz,timestamptz,text,text,text)') is not null as finalize_draft_ready,
+              position(
+                '''Draft''::public.claim_status'
+                in pg_get_functiondef('public.ensure_self_managed_external_claim_draft(uuid,uuid,uuid)'::regprocedure)
+              ) > 0 as draft_state_ready,
+              position(
+                '''spot_intimation''::public.claim_milestone_key'
+                in pg_get_functiondef('public.finalize_self_managed_external_claim_draft(uuid,timestamptz,timestamptz,text,text,text)'::regprocedure)
+              ) > 0 as spot_finalization_ready,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20260910113000'
+              ) as migration_recorded
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"ensure_draft_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"finalize_draft_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"draft_state_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"spot_finalization_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"migration_recorded"[[:space:]]*:[[:space:]]*true'
