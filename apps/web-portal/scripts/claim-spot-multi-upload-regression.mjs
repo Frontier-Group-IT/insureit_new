@@ -23,6 +23,7 @@ assert.match(workspace, /<SpotMediaUploadButton claimId=\{claim\.id\}/, "Spot Ph
 assert.match(workspace, /documentCount: spotDocuments\.length/, "Spot Photo card must retain awareness of multiple uploaded media records.");
 assert.match(workspace, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Each row-level Replace control must target the exact existing document id.");
 assert.match(workspace, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentType=\{item\.documentType\}[\s\S]*?actionLabel="Upload"/, "Missing-document Upload must remain separate from row replacement and must not require an existing document id.");
+assert.match(workspace, /firstDocument \? <ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentType=\{item\.documentType\} label=\{item\.title\} actionLabel="Upload" iconOnly \/>/, "A populated document category must expose one icon-only Upload New action in its header.");
 
 assert.match(uploader, /type="file"[\s\S]*multiple/, "Spot media selector must allow multiple files.");
 assert.match(uploader, /video\/mp4/, "Spot media selector must accept MP4 video.");
@@ -46,6 +47,11 @@ assert.match(replacementUploader, /cancelClaimDocumentUploads/, "Single document
 assert.match(replacementUploader, /Upload failed\. Please try again\./, "Single document uploads must surface a safe client-side failure instead of crashing the claim page.");
 assert.doesNotMatch(replacementUploader, /new FormData/, "Single document file bytes must not be submitted through a Server Action FormData body.");
 assert.match(replacementUploader, /documentId\?: string/, "Replace control must accept an exact existing document id.");
+assert.match(replacementUploader, /iconOnly\?: boolean/, "Single document uploader must support a compact icon-only Upload New trigger.");
+assert.match(replacementUploader, /FilePlus2/, "Upload New must use a dedicated add-file icon rather than visible text.");
+assert.match(replacementUploader, /iconOnly \? <FilePlus2/, "The compact Upload New trigger must render only the add-file icon.");
+assert.match(replacementUploader, /"data-document-action": iconOnly \? "upload-new" : "upload"/, "Upload New must expose an explicit accessible action marker.");
+assert.match(replacementUploader, /const uploadLabel = iconOnly \? `Upload new \$\{label\}`/, "Icon-only Upload New must retain an accessible label and tooltip.");
 assert.match(replacementUploader, /prepareClaimDocumentUpload\([\s\S]*?documentId\)/, "Signed upload preparation must receive the exact document id for replacement.");
 assert.match(replacementUploader, /finalizeClaimDocumentUpload\([\s\S]*?documentId\)/, "Signed upload finalization must receive the exact document id for replacement.");
 assert.match(replacementUploader, /isReplaceAction && !documentId/, "Replace must fail closed when the row-specific document id is missing.");
@@ -138,4 +144,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot multi-upload, signed direct storage, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot multi-upload, signed direct storage, icon-only upload-new, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
