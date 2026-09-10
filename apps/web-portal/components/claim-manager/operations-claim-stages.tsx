@@ -58,7 +58,6 @@ const stageCompletionTargets: Partial<Record<StageKey, ClaimStatus>> = {
 const completedExternalMilestoneStatuses = new Set(["completed", "not_applicable"]);
 const internalSpotStatusSurveyorFields = new Set(["surveyor_name", "surveyor_email", "surveyor_phone"]);
 
-// Keep these labels in sync with the Customer app's managed claim stage screens.
 const fields: StageFields = {
   spot_intimation: [
     { name: "incident_at", label: "Accident date", type: "date" },
@@ -489,7 +488,7 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
         <h3 className="text-[16px] font-semibold tracking-[-0.01em] text-[#071D49]">Accident &amp; Spot Intimation Details</h3>
       </div>
       <div className="p-4">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-[0.72fr_0.62fr_0.72fr_0.62fr_1fr_1fr_1.15fr]">
           {fields[stage.key].map((field) => {
             const storedValue = detail?.details?.[field.name];
             const value = field.name === "incident_at" || field.name === "incident_time"
@@ -502,18 +501,19 @@ function StageOneForm({ stage, active, detail, spotDetails, next, accidentAt, sp
                     ? spotDetails?.driver_phone ?? (typeof storedValue === "string" ? storedValue : "")
                     : field.name === "location" ? location : typeof storedValue === "string" || typeof storedValue === "number" ? String(storedValue) : "";
             const required = requiredFields[stage.key]?.includes(field.name);
+            const compactDateTimeField = field.name === "incident_at" || field.name === "incident_time" || field.name === "spot_intimation_at" || field.name === "spot_intimation_time";
             if (field.name === "location") {
               return (
                 <div key={field.name} className="min-w-0">
                   <label htmlFor="spot-intimation-location" className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">{field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}</label>
-                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                  <input id="spot-intimation-location" name={field.name} value={location} onChange={(event) => setLocation(event.target.value)} required={required} className="mt-1.5 h-9 w-full rounded-lg border border-[#CEDBEC] bg-white px-2.5 text-[12px] font-semibold text-[#071D49] outline-none focus:border-[#2F80ED]" />
                 </div>
               );
             }
             return (
-              <label key={field.name} className="text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">
+              <label key={field.name} className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.07em] text-[#174EA6]">
                 {field.label}{required ? <span className="ml-1 text-rose-600">*</span> : null}
-                <input name={field.name} type={field.type ?? "text"} defaultValue={toDateTimeLocal(value, field.type)} required={required} className="mt-1.5 h-10 w-full rounded-lg border border-[#CEDBEC] bg-white px-3 text-[12px] font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED]" />
+                <input name={field.name} type={field.type ?? "text"} defaultValue={toDateTimeLocal(value, field.type)} required={required} className={`mt-1.5 w-full rounded-lg border border-[#CEDBEC] bg-white font-semibold normal-case tracking-normal text-[#071D49] outline-none focus:border-[#2F80ED] ${compactDateTimeField ? "h-8 px-1.5 text-[11px]" : "h-9 px-2.5 text-[12px]"}`} />
               </label>
             );
           })}
