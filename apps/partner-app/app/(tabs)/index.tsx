@@ -147,8 +147,9 @@ export default function PartnerHomeDashboard() {
           <Image
             source={GeneratedDashboardAssets.homeHeader}
             style={styles.heroBackdrop}
-            resizeMode="contain"
+            resizeMode="cover"
           />
+          <View style={styles.heroBackdropShade} />
           <View style={styles.heroTopRow}>
             <Image
               source={require('../../assets/insureit-partner-official.png')}
@@ -304,9 +305,9 @@ export default function PartnerHomeDashboard() {
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                   </View>
                   <View style={styles.quickGrid}>
-                    <QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-                    <QuickAction asset={GeneratedDashboardAssets.renewalAdd} label="Renewals" onPress={() => router.push('/renewals')} />
-                    <QuickAction asset={GeneratedDashboardAssets.policyVerified} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+                    <QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+                    <QuickAction icon="refresh-cw" label="Renewals" onPress={() => router.push('/renewals')} />
+                    <QuickAction icon="shield" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
                     <QuickAction icon="users" label="Customers" onPress={() => router.push('/customers')} />
                   </View>
                 </View>
@@ -325,11 +326,7 @@ export default function PartnerHomeDashboard() {
                         <Text style={styles.sectionTitle}>Pending Tasks</Text>
                         <Text style={styles.sectionHint}>Keep up with important actions.</Text>
                       </View>
-                      <Image
-                        source={GeneratedDashboardAssets.pendingDocument}
-                        style={styles.pendingHeroAsset}
-                        resizeMode="contain"
-                      />
+                      <View style={styles.pendingHeaderSpacer} />
                     </View>
                     <View style={styles.pendingList}>
                       {pendingItems.map((item, index) => (
@@ -491,7 +488,7 @@ function QuickAction({ icon, asset, label, onPress }: { icon?: DashboardIconName
           <Image source={asset} style={styles.quickImageAsset} resizeMode="contain" />
         ) : icon ? (
           <View style={styles.quickIconCircle}>
-            <Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />
+            <Feather name={icon} size={23} color={partnerTheme.colors.brandStrong} />
           </View>
         ) : null}
         <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
@@ -617,15 +614,16 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { height: 106, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },
-  heroBackdrop: { position: 'absolute', top: -3, right: -18, width: 330, height: 110, opacity: 0.42 },
-  heroTopRow: { zIndex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  hero: { height: 112, overflow: 'hidden', backgroundColor: '#062D5F', paddingHorizontal: 20, paddingTop: 7 },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', opacity: 0.82 },
+  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.34)' },
+  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroLogo: { width: 36, height: 43, tintColor: '#FFFFFF' },
   heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
   heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroGreeting: { zIndex: 1, marginTop: 5, maxWidth: '84%' },
+  heroGreeting: { zIndex: 2, marginTop: 5, maxWidth: '84%' },
   heroGreetingText: { color: '#FFFFFF', fontSize: 15.5, lineHeight: 20, fontWeight: '400', letterSpacing: -0.05 },
 
   body: { marginTop: -13, paddingHorizontal: 16 },
@@ -671,15 +669,14 @@ const styles = StyleSheet.create({
   quickGrid: { flexDirection: 'row', gap: 5 },
   quickActionTouch: { flex: 1, minHeight: 88 },
   quickAction: { flex: 1, minHeight: 88, alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 2, borderRadius: 13, backgroundColor: '#F3F8FF' },
-  quickIconCircle: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
+  quickIconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
   quickImageAsset: { width: 42, height: 42 },
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
-  pendingCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
-  pendingBackdrop: { position: 'absolute', top: -2, right: -38, width: 235, height: 112, opacity: 0.42 },
-  pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
-  pendingHeroAsset: { width: 48, height: 48 },
-  pendingList: { marginTop: 2, paddingRight: 2 },
+  pendingCard: { marginTop: 11, minHeight: 142, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, overflow: 'hidden', backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
+  pendingBackdrop: { position: 'absolute', right: 4, bottom: 4, width: 132, height: 132, opacity: 0.9 },
+  pendingHeaderSpacer: { width: 122, height: 1 },
+  pendingList: { marginTop: 2, paddingRight: 118 },
   pendingRow: { minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D3E1EF' },
   pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },
