@@ -61,6 +61,15 @@ type DashboardIconName =
   | 'users'
   | 'x-circle';
 
+const GeneratedDashboardAssets = {
+  policyAdd: require('../../assets/generated-dashboard/policy-add.png'),
+  policySold: require('../../assets/generated-dashboard/policy-sold.png'),
+  commissionEarned: require('../../assets/generated-dashboard/commission-earned.png'),
+  renewalAdd: require('../../assets/generated-dashboard/renewal-add.png'),
+  policyVerified: require('../../assets/generated-dashboard/policy-verified.png'),
+  renewalDue: require('../../assets/generated-dashboard/renewal-due.png'),
+} as const;
+
 export default function PartnerHomeDashboard() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
@@ -270,13 +279,13 @@ export default function PartnerHomeDashboard() {
 
                   <View style={styles.businessStats}>
                     <DashboardMetric
-                      icon="file-text"
+                      asset={GeneratedDashboardAssets.policySold}
                       value={currentMonth?.policies ?? data.business.policies_this_month}
                       label="Policies Sold"
                     />
                     <View style={styles.statVisualDivider} />
                     <DashboardMetric
-                      icon="credit-card"
+                      asset={GeneratedDashboardAssets.commissionEarned}
                       value={currentMonth?.commission_available
                         ? formatCompactIndianAmount(currentMonth.commission_earned)
                         : '—'}
@@ -292,9 +301,9 @@ export default function PartnerHomeDashboard() {
                     <Text style={styles.sectionTitle}>Quick Actions</Text>
                   </View>
                   <View style={styles.quickGrid}>
-                    <QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
-                    <QuickAction icon="refresh-cw" label="Renewals" onPress={() => router.push('/renewals')} />
-                    <QuickAction icon="shield" label="Claims" onPress={() => router.push('/(tabs)/claims')} />
+                    <QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />
+                    <QuickAction asset={GeneratedDashboardAssets.renewalAdd} label="Renewals" onPress={() => router.push('/renewals')} />
+                    <QuickAction asset={GeneratedDashboardAssets.policyVerified} label="Claims" onPress={() => router.push('/(tabs)/claims')} />
                     <QuickAction icon="users" label="Customers" onPress={() => router.push('/customers')} />
                   </View>
                 </View>
@@ -308,9 +317,11 @@ export default function PartnerHomeDashboard() {
                         <Text style={styles.sectionTitle}>Pending Tasks</Text>
                         <Text style={styles.sectionHint}>Keep up with important actions.</Text>
                       </View>
-                      <View style={styles.pendingHeroIcon}>
-                        <Feather name="clipboard" size={23} color={partnerTheme.colors.brandStrong} />
-                      </View>
+                      <Image
+                        source={GeneratedDashboardAssets.policyVerified}
+                        style={styles.pendingHeroAsset}
+                        resizeMode="contain"
+                      />
                     </View>
                     <View style={styles.pendingList}>
                       {pendingItems.map((item, index) => (
@@ -321,9 +332,11 @@ export default function PartnerHomeDashboard() {
                           onPress={() => router.push(item.route as never)}
                           style={({ pressed }) => [styles.pendingRow, index < pendingItems.length - 1 && styles.rowBorder, pressed && styles.pressed]}
                         >
-                          <View style={styles.pendingIconWrap}>
-                            <Feather name={attentionIcon(item.kind)} size={17} color={partnerTheme.colors.brandStrong} />
-                          </View>
+                          <Image
+                            source={attentionAsset(item.kind)}
+                            style={styles.pendingRowAsset}
+                            resizeMode="contain"
+                          />
                           <Text style={styles.pendingCount}>{item.count}</Text>
                           <View style={styles.pendingCopy}>
                             <Text numberOfLines={1} style={styles.pendingTitle}>{item.title}</Text>
@@ -345,9 +358,11 @@ export default function PartnerHomeDashboard() {
                     onPress={() => router.push('/renewals')}
                     style={({ pressed }) => [styles.renewalStrip, pressed && styles.pressed]}
                   >
-                    <View style={styles.renewalIconWrap}>
-                      <Feather name="refresh-cw" size={20} color={partnerTheme.colors.brandStrong} />
-                    </View>
+                    <Image
+                      source={GeneratedDashboardAssets.renewalDue}
+                      style={styles.renewalIconAsset}
+                      resizeMode="contain"
+                    />
                     <View style={styles.renewalCopy}>
                       <Text style={styles.renewalTitle}>Renewals Due Soon</Text>
                       <Text style={styles.renewalText}>{data.business.renewals_30_days} policies expiring within 30 days</Text>
@@ -443,7 +458,7 @@ function HomeSkeleton() {
   );
 }
 
-function QuickAction({ icon, label, onPress }: { icon: DashboardIconName; label: string; onPress: () => void }) {
+function QuickAction({ icon, asset, label, onPress }: { icon?: DashboardIconName; asset?: number; label: string; onPress: () => void }) {
   const scale = useState(() => new Animated.Value(1))[0];
   const animate = (pressed: boolean) => {
     Animated.spring(scale, {
@@ -464,21 +479,29 @@ function QuickAction({ icon, label, onPress }: { icon: DashboardIconName; label:
       style={styles.quickActionTouch}
     >
       <Animated.View style={[styles.quickAction, { transform: [{ scale }] }]}>
-        <View style={styles.quickIconCircle}>
-          <Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />
-        </View>
+        {asset ? (
+          <Image source={asset} style={styles.quickImageAsset} resizeMode="contain" />
+        ) : icon ? (
+          <View style={styles.quickIconCircle}>
+            <Feather name={icon} size={20} color={partnerTheme.colors.brandStrong} />
+          </View>
+        ) : null}
         <Text numberOfLines={2} style={styles.quickLabel}>{label}</Text>
       </Animated.View>
     </Pressable>
   );
 }
 
-function DashboardMetric({ icon, value, label }: { icon: DashboardIconName; value: string | number; label: string }) {
+function DashboardMetric({ icon, asset, value, label }: { icon?: DashboardIconName; asset?: number; value: string | number; label: string }) {
   return (
     <View accessibilityLabel={`${label}. ${String(value)}`} style={styles.statVisualCell}>
-      <View style={styles.statIconWrap}>
-        <Feather name={icon} size={18} color={partnerTheme.colors.brandStrong} />
-      </View>
+      {asset ? (
+        <Image source={asset} style={styles.statImageAsset} resizeMode="contain" />
+      ) : icon ? (
+        <View style={styles.statIconWrap}>
+          <Feather name={icon} size={18} color={partnerTheme.colors.brandStrong} />
+        </View>
+      ) : null}
       <View style={styles.statCopy}>
         <Text numberOfLines={1} style={styles.statValue}>{value}</Text>
         <Text numberOfLines={1} style={styles.statLabel}>{label}</Text>
@@ -507,10 +530,10 @@ function MiniBusinessChart() {
   );
 }
 
-function attentionIcon(kind: PartnerHomeData['today'][number]['kind']): DashboardIconName {
-  if (kind === 'intake_attention') return 'alert-circle';
-  if (kind === 'renewal') return 'refresh-cw';
-  return 'shield';
+function attentionAsset(kind: PartnerHomeData['today'][number]['kind']) {
+  if (kind === 'intake_attention') return GeneratedDashboardAssets.policyAdd;
+  if (kind === 'renewal') return GeneratedDashboardAssets.renewalDue;
+  return GeneratedDashboardAssets.policyVerified;
 }
 
 function activityIcon(kind: PartnerActivityData['items'][number]['kind']): DashboardIconName {
@@ -628,6 +651,7 @@ const styles = StyleSheet.create({
   statVisualCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 0 },
   statVisualDivider: { width: 1.5, height: 42, marginHorizontal: 9, backgroundColor: '#B7C6DA' },
   statIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF6FF' },
+  statImageAsset: { width: 38, height: 38 },
   statCopy: { flex: 1, minWidth: 0 },
   statValue: { color: '#112D5F', fontSize: 16, lineHeight: 20, fontWeight: '800' },
   statLabel: { marginTop: 1, color: '#66758B', fontSize: 9.5, lineHeight: 12.5 },
@@ -640,14 +664,17 @@ const styles = StyleSheet.create({
   quickActionTouch: { flex: 1, minHeight: 88 },
   quickAction: { flex: 1, minHeight: 88, alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 7, paddingHorizontal: 2, borderRadius: 13, backgroundColor: '#F3F8FF' },
   quickIconCircle: { width: 39, height: 39, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F3FF' },
+  quickImageAsset: { width: 42, height: 42 },
   quickLabel: { width: '100%', color: '#10243F', textAlign: 'center', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
 
   pendingCard: { marginTop: 11, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 8, borderRadius: 18, backgroundColor: '#EAF5FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },
   pendingHeroIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
+  pendingHeroAsset: { width: 48, height: 48 },
   pendingList: { marginTop: 2, paddingRight: 2 },
   pendingRow: { minHeight: 53, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#D3E1EF' },
   pendingIconWrap: { width: 29, height: 29, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F7FBFF' },
+  pendingRowAsset: { width: 30, height: 30 },
   pendingCount: { minWidth: 22, color: '#D84D43', fontSize: 13, lineHeight: 17, fontWeight: '800', textAlign: 'center' },
   pendingCopy: { flex: 1, minWidth: 0 },
   pendingTitle: { color: '#17345F', fontSize: 11, lineHeight: 15, fontWeight: '700' },
@@ -655,6 +682,7 @@ const styles = StyleSheet.create({
 
   renewalStrip: { marginTop: 11, minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, paddingVertical: 9, borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#DDE8F5' },
   renewalIconWrap: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: '#EAF4FF' },
+  renewalIconAsset: { width: 44, height: 44 },
   renewalCopy: { flex: 1, minWidth: 0 },
   renewalTitle: { color: '#16366D', fontSize: 12, lineHeight: 16, fontWeight: '800' },
   renewalText: { marginTop: 2, color: '#D65349', fontSize: 9.5, lineHeight: 13, fontWeight: '600' },
