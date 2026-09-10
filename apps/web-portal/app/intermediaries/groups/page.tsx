@@ -15,6 +15,7 @@ import {
 } from "./intermediary-group-workspace";
 import { SingleEmployeeAccordion } from "./single-employee-accordion";
 import styles from "./intermediary-groups-reference.module.css";
+import panelStyles from "./intermediary-groups-panel-polish.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -140,8 +141,8 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
 
   return (
     <AppShell title="Intermediary Groups" backHref="/intermediaries">
-      <div className={styles.referenceUi}>
-        <SingleEmployeeAccordion>
+      <SingleEmployeeAccordion>
+        <div className={`${styles.referenceUi} ${panelStyles.scope}`}>
           <IntermediaryGroupWorkspace
             employees={employees ?? []}
             groups={groups ?? []}
@@ -154,8 +155,8 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
             error={query.error}
             loadError={Boolean(groupLoadError || partnerLoadError)}
           />
-        </SingleEmployeeAccordion>
-      </div>
+        </div>
+      </SingleEmployeeAccordion>
     </AppShell>
   );
 }
