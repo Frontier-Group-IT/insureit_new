@@ -13,7 +13,7 @@ import { createSupabaseBrowserClient } from "@/lib/auth";
 
 const bucketName = "claim-documents";
 
-export function ReplaceDocumentButton({ claimId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
+export function ReplaceDocumentButton({ claimId, documentId, documentType, label, actionLabel = "Replace" }: { claimId: string; customerId: string; documentId?: string; documentType: string; label: string; actionLabel?: "Upload" | "Replace" }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -29,7 +29,7 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
         onSubmit={(event) => {
           event.preventDefault();
           const file = selectedFile;
-          if (!file) return;
+          if (!file || (isReplaceAction && !documentId)) return;
 
           startTransition(async () => {
             let uploadedPath: string | null = null;
@@ -38,7 +38,7 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
                 name: file.name,
                 size: file.size,
                 type: file.type
-              });
+              }, documentId);
               const upload = prepared.uploads?.[0];
               if (!prepared.ok || !upload) {
                 setResult({ ok: false, message: prepared.message ?? "Could not prepare upload." });
@@ -57,7 +57,7 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
                 path: upload.path,
                 fileName: upload.fileName,
                 documentType: upload.documentType
-              });
+              }, documentId);
               if (!response.ok) {
                 await cancelClaimDocumentUploads(claimId, [upload.path]);
                 uploadedPath = null;
@@ -70,7 +70,7 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
               }
             } catch {
               if (uploadedPath) await cancelClaimDocumentUploads(claimId, [uploadedPath]);
-              setResult({ ok: false, message: "Upload failed. Please try again." });
+              setResult({ ok: false, message: isReplaceAction ? "Replacement failed. Please try again." : "Upload failed. Please try again." });
             }
           });
         }}
@@ -80,8 +80,8 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
           <div className="flex items-start gap-3">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-[#F0E9FF] text-[28px]">📄</div>
             <div>
-              <h2 className="text-[18px] font-semibold leading-tight text-[#071D49]">Upload Valid {label}</h2>
-              <p className="mt-2 max-w-[330px] text-[12px] leading-5 text-[#4B596B]">Please upload clear and valid {label}.</p>
+              <h2 className="text-[18px] font-semibold leading-tight text-[#071D49]">{isReplaceAction ? `Replace ${label}` : `Upload Valid ${label}`}</h2>
+              <p className="mt-2 max-w-[330px] text-[12px] leading-5 text-[#4B596B]">{isReplaceAction ? `Select a new ${label} file. The existing file will be replaced and must be verified again.` : `Please upload clear and valid ${label}.`}</p>
             </div>
           </div>
           <button type="button" onClick={() => setOpen(false)} className="text-[28px] leading-none text-[#071D49]">×</button>
@@ -130,12 +130,12 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
               </div>
             ) : <p className="mt-2 rounded-lg border border-[#DCE7F5] bg-[#F8FBFF] px-3 py-3 text-[12px] text-[#8B98A9]">No file selected.</p>}
           </div>
-          {result ? <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? (result.ok ? "Upload completed." : "Upload failed.")}</p> : null}
+          {result ? <p className={`rounded-lg border px-3 py-2 text-[12px] font-semibold ${result.ok ? "border-green-200 bg-green-50 text-green-700" : "border-red-200 bg-red-50 text-red-700"}`}>{result.message ?? (result.ok ? (isReplaceAction ? "Replacement completed." : "Upload completed.") : (isReplaceAction ? "Replacement failed." : "Upload failed."))}</p> : null}
         </div>
 
         <div className="flex items-center justify-between border-t border-[#E6EEF7] px-5 py-4">
           <button type="button" onClick={() => { setSelectedFile(null); setResult(null); setOpen(false); }} className="h-10 rounded-md border border-[#B8C5D6] px-8 text-[13px] font-semibold text-[#071D49]">{result?.ok ? "Close" : "Cancel"}</button>
-          <button type="submit" disabled={!selectedFile || isPending || Boolean(result?.ok)} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55">{isPending ? "Uploading..." : "Upload"}</button>
+          <button type="submit" disabled={!selectedFile || isPending || Boolean(result?.ok) || (isReplaceAction && !documentId)} className="h-10 rounded-md bg-[#071D49] px-10 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-55">{isPending ? (isReplaceAction ? "Replacing..." : "Uploading...") : (isReplaceAction ? "Replace" : "Upload")}</button>
         </div>
       </form>
     </div>,
@@ -146,10 +146,11 @@ export function ReplaceDocumentButton({ claimId, documentType, label, actionLabe
     <>
       <button
         type="button"
+        disabled={isReplaceAction && !documentId}
         onClick={() => { setResult(null); setOpen(true); }}
         {...(isReplaceAction ? { "data-document-action": "replace", "aria-label": "Replace document", title: "Replace document" } : { "aria-label": `Upload ${label}`, title: `Upload ${label}` })}
         className={isReplaceAction
-          ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30"
+          ? "grid h-8 w-8 shrink-0 place-items-center rounded-md border border-transparent bg-transparent text-[#C43D3D] transition hover:bg-[#FFF5F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D15B5B]/30 disabled:cursor-not-allowed disabled:opacity-40"
           : "min-w-0 flex-1 cursor-pointer rounded-none px-2 py-1.5 text-left text-[11px] font-semibold text-[#071D49] transition-colors hover:rounded-md hover:bg-[#F4F8FF] hover:text-[#174EA6] focus-visible:rounded-md focus-visible:bg-[#F4F8FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174EA6]/25"}
       >
         {isReplaceAction ? <FilePenLine aria-hidden="true" size={16} strokeWidth={2} /> : isUploadAction ? "Document not uploaded" : actionLabel}
