@@ -92,6 +92,11 @@ label {
   @apply text-sm font-medium text-slate-700;
 }
 
+/* Match the Internal Claim Stage 1 Location label box model to the sibling Driver labels. */
+label[for="spot-intimation-location"] {
+  display: block;
+}
+
 button,
 a,
 input,
