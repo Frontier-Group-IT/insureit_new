@@ -177,12 +177,11 @@ export function submittedStatusFor(status: ClaimStatus) {
 }
 
 export function verifiedStatusFor(status: ClaimStatus) {
-  // Verifying the final Stage 1 document must not skip the explicit
-  // "Save & move to Initial Documents Submitted" transition. Only claims
-  // that have already entered the Stage 2 document-review states may be
-  // auto-finalized as Initial Documents Verified.
+  // The shared verification action may render in Stage 1 and Stage 3.
+  // Only initial-document review states are allowed to use the dedicated
+  // advance_initial_documents_verified RPC. Stage 3 remains on its explicit
+  // Save Details / claim-intimation workflow after document verification.
   if (["Initial Documents Verification Pending", "Initial Documents Submitted", "Documents Submitted"].includes(status)) return "Initial Documents Verified" as ClaimStatus;
-  if (["Final Documents Verification Pending", "Final Documents Submitted"].includes(status)) return "Final Documents Verified" as ClaimStatus;
   return status;
 }
 
