@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Camera, Check, ContactRound, FileText, Mic, ShieldCheck, Truck, Video } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { DocumentVerificationDetailsButton } from "./document-verification-details-button";
 import { ReplaceDocumentButton } from "./replace-document-button";
 import { RequestReuploadButton } from "./request-reupload-button";
@@ -70,14 +70,29 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
   const hasMultipleFiles = item.documents.length > 1;
   const showDocumentRows = hasSingleFile || (hasMultipleFiles && isExpanded);
   const contentId = `claim-document-group-${claim.id}-${item.key}`;
+  const toggleExpanded = () => {
+    if (hasMultipleFiles) setIsExpanded((expanded) => !expanded);
+  };
+  const handleCardClick = (event: MouseEvent<HTMLElement>) => {
+    if (!hasMultipleFiles) return;
+    const target = event.target;
+    if (target instanceof Element && target.closest("button, a, input, label, select, textarea")) return;
+    toggleExpanded();
+  };
 
   return (
-    <article className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"}`}>
+    <article
+      onClick={handleCardClick}
+      className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
+    >
       <div className={`flex items-center justify-between gap-2 ${showDocumentRows || hasNoFiles ? "mb-2" : ""}`}>
         {hasMultipleFiles ? (
           <button
             type="button"
-            onClick={() => setIsExpanded((expanded) => !expanded)}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleExpanded();
+            }}
             aria-expanded={isExpanded}
             aria-controls={contentId}
             aria-label={`${isExpanded ? "Collapse" : "Expand"} ${item.title}`}
@@ -140,7 +155,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
             })}
           </div>
         ) : hasMultipleFiles ? (
-          <div id={contentId} className="flex min-h-11 items-center justify-center rounded-lg border border-[#E2EAF4] bg-[#F8FBFF] px-3 py-2 text-center">
+          <div id={contentId} className="flex min-h-8 items-center justify-center px-1 py-1 text-center">
             <p className="text-[11px] font-semibold tracking-[0.04em] text-[#526178]">{item.documents.length} FILES ARE UPLOADED</p>
           </div>
         ) : null
