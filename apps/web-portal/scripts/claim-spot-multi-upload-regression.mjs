@@ -21,6 +21,8 @@ assert.match(workspace, /formatIntimationDate\(spotAt\)/, "Spot intimation date 
 assert.match(workspace, /formatIntimationTime\(spotAt\)/, "Spot intimation time must use the resolved persisted timestamp.");
 assert.match(workspace, /<SpotMediaUploadButton claimId=\{claim\.id\}/, "Spot Photo card must expose the multi-upload action.");
 assert.match(workspace, /documentCount: spotDocuments\.length/, "Spot Photo card must retain awareness of multiple uploaded media records.");
+assert.match(workspace, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentId=\{document\.id\}[\s\S]*?actionLabel="Replace"/, "Each row-level Replace control must target the exact existing document id.");
+assert.match(workspace, /<ReplaceDocumentButton claimId=\{claim\.id\} customerId=\{claim\.customer_id\} documentType=\{item\.documentType\}[\s\S]*?actionLabel="Upload"/, "Missing-document Upload must remain separate from row replacement and must not require an existing document id.");
 
 assert.match(uploader, /type="file"[\s\S]*multiple/, "Spot media selector must allow multiple files.");
 assert.match(uploader, /video\/mp4/, "Spot media selector must accept MP4 video.");
@@ -43,6 +45,11 @@ assert.match(replacementUploader, /finalizeClaimDocumentUpload/, "Single documen
 assert.match(replacementUploader, /cancelClaimDocumentUploads/, "Single document direct upload failures must request cleanup.");
 assert.match(replacementUploader, /Upload failed\. Please try again\./, "Single document uploads must surface a safe client-side failure instead of crashing the claim page.");
 assert.doesNotMatch(replacementUploader, /new FormData/, "Single document file bytes must not be submitted through a Server Action FormData body.");
+assert.match(replacementUploader, /documentId\?: string/, "Replace control must accept an exact existing document id.");
+assert.match(replacementUploader, /prepareClaimDocumentUpload\([\s\S]*?documentId\)/, "Signed upload preparation must receive the exact document id for replacement.");
+assert.match(replacementUploader, /finalizeClaimDocumentUpload\([\s\S]*?documentId\)/, "Signed upload finalization must receive the exact document id for replacement.");
+assert.match(replacementUploader, /isReplaceAction && !documentId/, "Replace must fail closed when the row-specific document id is missing.");
+assert.match(replacementUploader, /existing file will be replaced and must be verified again/, "Replace dialog must tell Operations that the replacement requires re-verification.");
 
 assert.match(uploadActions, /20 \* 1024 \* 1024/, "Server preparation must enforce the per-file photo size limit.");
 assert.match(uploadActions, /50 \* 1024 \* 1024/, "Server preparation must preserve the 50 MB video size limit.");
@@ -63,6 +70,30 @@ assert.ok(uploadActions.includes("`${claim.customer_id}/${claim.id}/${Date.now()
 assert.doesNotMatch(uploadActions, /customerId/, "Upload authorization and persistence must not trust a browser-supplied customer id.");
 assert.match(uploadActions, /customer_id: claim\.customer_id/, "Upload metadata must use the customer id loaded from the authorized claim.");
 assert.doesNotMatch(uploadActions, /\.upload\(storagePath, file/, "Server actions must not proxy claim file bytes through the Vercel function body.");
+
+const loadExistingDocumentFunction = uploadActions.match(/async function loadExistingClaimDocument\([\s\S]*?\n\}/)?.[0];
+assert.ok(loadExistingDocumentFunction, "Row replacement must load the existing claim document before preparing or finalizing replacement.");
+assert.match(loadExistingDocumentFunction, /\.eq\("id", documentId\)/, "Existing-document lookup must target the exact selected row.");
+assert.match(loadExistingDocumentFunction, /\.eq\("claim_id", claim\.id\)/, "Existing-document lookup must remain scoped to the authorized claim.");
+assert.match(loadExistingDocumentFunction, /\.eq\("customer_id", claim\.customer_id\)/, "Existing-document lookup must remain scoped to the authorized customer.");
+
+const replacementBranch = uploadActions.match(/const existingDocument = await loadExistingClaimDocument\(claim, documentId\);[\s\S]*?return \{ ok: true, message: "Document replaced\. Re-verification required\." \};/)?.[0];
+assert.ok(replacementBranch, "Finalization must contain a distinct row-specific replacement branch.");
+assert.match(replacementBranch, /\.update\(replacementPayload\)/, "Replace must update the existing claim_documents row rather than insert a new one.");
+assert.doesNotMatch(replacementBranch, /claim_documents"\)\.insert\(/, "Row-specific replacement must never create an additional claim_documents row.");
+assert.match(replacementBranch, /verification_status: "pending"/, "Replacement must reset the selected document to Pending.");
+assert.match(replacementBranch, /rejection_reason: null/, "Replacement must clear any previous rejection state.");
+assert.match(replacementBranch, /verified_by: null/, "Replacement must clear the previous verifier.");
+assert.match(replacementBranch, /verified_at: null/, "Replacement must clear the previous verification timestamp.");
+assert.match(replacementBranch, /claim_document_verifications"\)\.insert\(/, "Replacement must append auditable verification invalidation evidence.");
+assert.match(replacementBranch, /is_valid: false/, "Replacement invalidation must prevent an old verification from remaining current.");
+assert.match(replacementBranch, /replacement_requires_reverification: true/, "Replacement evidence must explicitly require re-verification.");
+assert.match(replacementBranch, /admin\.storage\.from\(oldBucket\)\.remove\(\[existingDocument\.storage_path\]\)/, "Successful replacement must remove the superseded storage object.");
+assert.match(replacementBranch, /rollbackError/, "Replacement must attempt metadata rollback if verification invalidation cannot be persisted.");
+
+const missingDocumentUploadBranch = uploadActions.match(/if \(!documentId\) \{[\s\S]*?return \{ ok: true, message: "Document uploaded successfully\." \};[\s\S]*?\}/)?.[0];
+assert.ok(missingDocumentUploadBranch, "Missing-document Upload must retain its own insert branch.");
+assert.match(missingDocumentUploadBranch, /claim_documents"\)\.insert\(/, "Missing-document Upload must continue creating a new document row.");
 
 const loadUploadClaimFunction = uploadActions.match(/async function loadClaimForUpload\([\s\S]*?\n\}/)?.[0];
 assert.ok(loadUploadClaimFunction, "Claim uploads must keep a dedicated authorized claim loader.");
@@ -107,4 +138,4 @@ assert.match(customerClaimDetail, /projectInternalClaim\(claim\?\.current_status
 assert.match(customerClaimDetail, /index < internalProjection\.completedStageCount/, "Customer claim tracker must render completed stages from the shared projection.");
 assert.match(customerClaimDetail, /index === currentStageIndex/, "Customer claim tracker must render the projected stage as current.");
 
-console.log("Claim spot multi-upload, signed direct storage, intimation, insurance capacity and authorized verification regression passed.");
+console.log("Claim spot multi-upload, signed direct storage, exact row replacement, intimation, insurance capacity and authorized verification regression passed.");
