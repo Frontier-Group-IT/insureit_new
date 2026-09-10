@@ -1,0 +1,7 @@
+.scope section[class*="border-[#E5DDFC]"] {
+  background: #ffffff !important;
+}
+
+.scope section[class*="border-[#E5DDFC]"] > div:first-child {
+  background: #ffffff !important;
+}
