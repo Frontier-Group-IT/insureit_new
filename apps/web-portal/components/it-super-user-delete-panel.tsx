@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChevronDown, Search, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { deleteMasterRecord, type DeletableMasterEntity } from "@/app/master-record-delete-actions";
@@ -32,6 +32,7 @@ const entityLabels: Record<DeletableMasterEntity, string> = {
 
 export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   const router = useRouter();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [confirmationMode, setConfirmationMode] = useState<ConfirmationMode>(null);
@@ -55,6 +56,7 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   const isPolicyIntake = entity === "policy_intake";
   const isPolicyPairConfirmation = confirmationMode === "policy_pair";
   const requiredConfirmation = isPolicyPairConfirmation ? "DELETE BOTH" : "DELETE";
+  const controlsId = `it-super-user-${entity}-delete-controls`;
 
   function resetDeleteFeedback() {
     setMessage(null);
@@ -118,60 +120,77 @@ export function ItSuperUserDeletePanel({ entity, title, records }: Props) {
   return (
     <>
       <section className="mx-auto mb-3 max-w-[1440px] rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-amber-50 p-3 shadow-[0_12px_30px_rgba(127,29,29,.06)]">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
-          <div className="min-w-0 xl:w-[310px]">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-red-100 text-red-700"><AlertTriangle className="h-4 w-4" /></span>
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-red-700">IT Super User only</p>
-                <p className="text-[12px] font-semibold text-[#1E293B]">{title}</p>
+        <button
+          type="button"
+          onClick={() => setIsExpanded((expanded) => !expanded)}
+          aria-expanded={isExpanded}
+          aria-controls={controlsId}
+          className="flex w-full items-center justify-between gap-3 rounded-xl text-left outline-none transition hover:bg-white/60 focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:ring-offset-2"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-red-100 text-red-700"><AlertTriangle className="h-4 w-4" /></span>
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.06em] text-red-700">IT Super User only</span>
+              <span className="block truncate text-[12px] font-semibold text-[#1E293B]">{title}</span>
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-semibold text-red-700">
+            {isExpanded ? "Collapse" : "Expand"}
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} aria-hidden="true" />
+          </span>
+        </button>
+
+        {isExpanded ? (
+          <div id={controlsId} className="mt-3 border-t border-red-100 pt-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+              <div className="min-w-0 xl:w-[310px]">
+                <p className="text-[10px] leading-4 text-[#64748B]">
+                  {isClaim
+                    ? "Permanent claim deletion also removes claim-linked workflow rows through the database cascade. Linked claim document files are cleaned from storage after deletion."
+                    : isCustomerApplication
+                      ? "Permanent deletion removes this onboarding application, its application contacts and document metadata, and attempts to clean its uploaded files. Any customer already created from the application remains intact."
+                      : isPolicyIntake
+                        ? "Permanent deletion removes this policy intake, its intake workflow/document metadata, and attempts to clean its uploaded intake files. Deletion is blocked once a final policy or official policy document is linked."
+                        : `Permanent deletion is blocked when this ${entityLabel} still has dependent master or claim records.`}
+                </p>
               </div>
+
+              <label className="relative min-w-0 flex-1">
+                <span className="mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[#64748B]">Find record</span>
+                <Search className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-[#94A3B8]" />
+                <input value={query} onChange={(event) => { setQuery(event.target.value); resetDeleteFeedback(); }} placeholder={`Search ${entityLabel}...`} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-[11px]" />
+              </label>
+
+              <label className="min-w-0 flex-[1.35]">
+                <span className="mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[#64748B]">Select exact record</span>
+                <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); resetDeleteFeedback(); }} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px]">
+                  <option value="">Choose a {entityLabel}</option>
+                  {filtered.map((record) => <option key={record.id} value={record.id}>{record.label}{record.detail ? ` — ${record.detail}` : ""}</option>)}
+                </select>
+              </label>
+
+              <button type="button" disabled={!selected || isPending} onClick={() => { resetDeleteFeedback(); setConfirmationMode("single"); }} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-600 px-4 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">
+                <Trash2 className="h-4 w-4" />Delete {entityLabel}
+              </button>
             </div>
-            <p className="mt-2 text-[10px] leading-4 text-[#64748B]">
-              {isClaim
-                ? "Permanent claim deletion also removes claim-linked workflow rows through the database cascade. Linked claim document files are cleaned from storage after deletion."
-                : isCustomerApplication
-                  ? "Permanent deletion removes this onboarding application, its application contacts and document metadata, and attempts to clean its uploaded files. Any customer already created from the application remains intact."
-                  : isPolicyIntake
-                    ? "Permanent deletion removes this policy intake, its intake workflow/document metadata, and attempts to clean its uploaded intake files. Deletion is blocked once a final policy or official policy document is linked."
-                    : `Permanent deletion is blocked when this ${entityLabel} still has dependent master or claim records.`}
-            </p>
-          </div>
 
-          <label className="relative min-w-0 flex-1">
-            <span className="mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[#64748B]">Find record</span>
-            <Search className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 text-[#94A3B8]" />
-            <input value={query} onChange={(event) => { setQuery(event.target.value); resetDeleteFeedback(); }} placeholder={`Search ${entityLabel}...`} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white pl-9 pr-3 text-[11px]" />
-          </label>
-
-          <label className="min-w-0 flex-[1.35]">
-            <span className="mb-1 block text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[#64748B]">Select exact record</span>
-            <select value={selectedId} onChange={(event) => { setSelectedId(event.target.value); resetDeleteFeedback(); }} className="h-10 w-full rounded-xl border border-[#CBD5E1] bg-white px-3 text-[11px]">
-              <option value="">Choose a {entityLabel}</option>
-              {filtered.map((record) => <option key={record.id} value={record.id}>{record.label}{record.detail ? ` — ${record.detail}` : ""}</option>)}
-            </select>
-          </label>
-
-          <button type="button" disabled={!selected || isPending} onClick={() => { resetDeleteFeedback(); setConfirmationMode("single"); }} className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-600 px-4 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40">
-            <Trash2 className="h-4 w-4" />Delete {entityLabel}
-          </button>
-        </div>
-
-        {message ? (
-          <div className={`mt-3 rounded-xl border px-3 py-2 text-[10.5px] font-medium ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <span>{message.text}</span>
-              {message.type === "error" && offerPolicyPairCleanup && selected ? (
-                <button
-                  type="button"
-                  onClick={() => { setConfirmationText(""); setConfirmationMode("policy_pair"); }}
-                  disabled={isPending}
-                  className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-3 text-[10px] font-bold text-white hover:bg-red-800 disabled:opacity-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />Delete Policy + Intake
-                </button>
-              ) : null}
-            </div>
+            {message ? (
+              <div className={`mt-3 rounded-xl border px-3 py-2 text-[10.5px] font-medium ${message.type === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-red-200 bg-red-50 text-red-700"}`}>
+                <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <span>{message.text}</span>
+                  {message.type === "error" && offerPolicyPairCleanup && selected ? (
+                    <button
+                      type="button"
+                      onClick={() => { setConfirmationText(""); setConfirmationMode("policy_pair"); }}
+                      disabled={isPending}
+                      className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-3 text-[10px] font-bold text-white hover:bg-red-800 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />Delete Policy + Intake
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
