@@ -65,45 +65,47 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   return (
     <PartnerPortalShell title="My Business">
       <div className="space-y-4 pb-3">
-        <section className="relative isolate overflow-hidden rounded-xl bg-gradient-to-r from-[#0A2F7A] via-[#0758BE] to-[#4A7BF0] px-5 py-2.5 text-white shadow-[0_6px_18px_rgba(20,61,130,0.12)]">
+        <section className="relative isolate overflow-hidden rounded-xl bg-gradient-to-r from-[#0C55B9] via-[#0876D5] to-[#42A5F5] px-5 text-white shadow-[0_6px_18px_rgba(20,61,130,0.12)]">
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <div className="absolute -left-16 top-0 h-full w-[46%] rounded-r-[48%] bg-[#074BAA]/70" />
-            <div className="absolute right-[25%] top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
-            <div className="absolute inset-y-0 right-0 w-[33%] bg-gradient-to-l from-[#7F73F6]/25 to-transparent" />
+            <div className="absolute -left-[9%] -top-[70%] h-[230%] w-[47%] rounded-[48%] bg-gradient-to-r from-[#0A43A2] via-[#0C59BC] to-[#06A7EA] opacity-90" />
+            <div className="absolute left-[30%] top-[-40%] h-[185%] w-[27%] rotate-[15deg] rounded-[48%] bg-cyan-300/34 blur-[1px]" />
+            <div className="absolute left-[43%] top-0 h-full w-[22%] bg-gradient-to-r from-cyan-200/22 via-cyan-100/12 to-transparent" />
+            <div className="absolute inset-y-0 right-0 w-[34%] bg-gradient-to-l from-[#586EEA]/28 to-transparent" />
           </div>
 
-          <div className="relative z-10 flex min-h-[78px] items-center justify-between gap-4">
-            <div className="max-w-[43%]">
-              <p className="text-[7.5px] font-black uppercase tracking-[0.15em] text-white/72">{humanize(performance.scope_mode)} Scope</p>
+          <div className="relative z-10 flex min-h-[100px] items-center justify-between gap-4">
+            <div className="max-w-[42%] py-3">
+              <p className="text-[7.5px] font-black uppercase tracking-[0.15em] text-white/78">{humanize(performance.scope_mode)} Scope</p>
               <h1 className="mt-0.5 text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-white">Business performance</h1>
-              <p className="mt-0.5 text-[9.5px] font-medium leading-4 text-white/80">Review your business performance at a glance.</p>
+              <p className="mt-0.5 text-[9.5px] font-medium leading-4 text-white/86">Review your business performance at a glance.</p>
             </div>
 
-            <div className="pointer-events-none absolute bottom-0 left-[54%] hidden h-[92px] w-[150px] -translate-x-1/2 items-end justify-center lg:flex" aria-hidden="true">
+            <div className="pointer-events-none absolute bottom-[-2px] left-[55%] hidden h-[106px] w-[250px] -translate-x-1/2 items-end justify-center lg:flex" aria-hidden="true">
+              <div className="absolute bottom-1 h-7 w-44 rounded-[50%] bg-sky-100/25 blur-xl" />
               <Image
                 src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
                 alt=""
                 width={128}
                 height={128}
-                className="h-[88px] w-[104px] object-contain drop-shadow-[0_9px_14px_rgba(0,22,72,0.3)]"
+                className="relative h-[104px] w-[174px] object-contain drop-shadow-[0_10px_16px_rgba(0,31,82,0.35)]"
                 priority
               />
             </div>
 
-            <form className="relative z-10 flex flex-wrap items-center gap-1.5 rounded-full border border-[#D5E4F8] bg-[#E2EEFE] p-1.5 pl-2.5 shadow-sm backdrop-blur-sm" action="/partner/business">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#F8FBFF] text-[#3156B8]">
+            <form className="relative z-10 flex items-center gap-1.5 rounded-full border border-white/55 bg-white/88 p-1.5 pl-2.5 shadow-[0_3px_12px_rgba(19,56,125,0.14)] backdrop-blur-md" action="/partner/business">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white text-[#3156B8] shadow-sm">
                 <CalendarRange className="h-3.5 w-3.5" />
               </span>
               <label className="grid gap-0">
-                <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">From</span>
-                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-5 w-[112px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
+                <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7586A0]">From</span>
+                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-5 w-[102px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <div className="h-6 w-px bg-[#C7D7ED]" />
+              <div className="h-6 w-px bg-[#D5DFEC]" />
               <label className="grid gap-0">
-                <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">To</span>
-                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-5 w-[112px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
+                <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7586A0]">To</span>
+                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-5 w-[102px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <button type="submit" className="inline-flex h-8 items-center rounded-full bg-[#0A3D93] px-3.5 text-[8.5px] font-extrabold text-white transition hover:bg-[#082F72] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+              <button type="submit" className="inline-flex h-8 items-center rounded-full bg-[#0D3F99] px-3.5 text-[8.5px] font-extrabold text-white transition hover:bg-[#082F72] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
                 Apply
               </button>
             </form>
