@@ -71,9 +71,17 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
             </div>
             <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
           </div>
-          <div className="min-w-0 border-t border-[#E5EBF2] px-1 py-3.5 sm:border-l sm:border-t-0 sm:px-4 sm:py-4 xl:border-l">
-            <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">Active</p>
-            <div className="mt-1.5 break-words text-[18px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746] sm:text-[20px]">{summary.active_customers}</div>
+          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#D8F0E3] bg-[#F2FBF6] px-4 py-3 shadow-[0_4px_12px_rgba(16,185,129,0.04)]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#DDF7E9] text-[#16A36A]">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m7 12 3 3 7-7" />
+              </svg>
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">Active</p>
+              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.active_customers}</div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
           </div>
           <div className="min-w-0 border-t border-[#E5EBF2] px-1 py-3.5 sm:border-l sm:border-t-0 sm:border-l-0 sm:px-4 sm:py-4 xl:border-l">
             <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">With Phone</p>
