@@ -110,7 +110,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
           </div>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
           {metrics.map((metric) => (
             <BusinessMetricCard key={metric.label} {...metric} />
           ))}
@@ -226,23 +226,25 @@ type MetricTone = "blue" | "green" | "purple" | "orange";
 type IconType = typeof Crown;
 
 const metricToneClasses: Record<MetricTone, { card: string; icon: string }> = {
-  blue: { card: "border-[#D4E4F8] bg-gradient-to-br from-[#F7FBFF] to-[#EAF6FF]", icon: "bg-[#1089E8] text-white" },
-  green: { card: "border-[#D4EBDD] bg-gradient-to-br from-[#F7FCFA] to-[#E8F8EF]", icon: "bg-[#1DAE78] text-white" },
-  purple: { card: "border-[#E1D9F6] bg-gradient-to-br from-[#FBFAFF] to-[#F1EBFF]", icon: "bg-[#8252DF] text-white" },
-  orange: { card: "border-[#F1E1C4] bg-gradient-to-br from-[#FFFDF9] to-[#FFF2DD]", icon: "bg-[#F28A1B] text-white" },
+  blue: { card: "border-[#D4E4F8] bg-gradient-to-br from-[#F7FBFF] to-[#EAF6FF]", icon: "bg-[#E9F0FF] text-[#356BE8]" },
+  green: { card: "border-[#D4EBDD] bg-gradient-to-br from-[#F7FCFA] to-[#E8F8EF]", icon: "bg-[#DCF7EA] text-[#20B879]" },
+  purple: { card: "border-[#E1D9F6] bg-gradient-to-br from-[#FBFAFF] to-[#F1EBFF]", icon: "bg-[#EEE6FF] text-[#7C4DDC]" },
+  orange: { card: "border-[#F1E1C4] bg-gradient-to-br from-[#FFFDF9] to-[#FFF2DD]", icon: "bg-[#FFF0D7] text-[#F59A18]" },
 };
 
 function BusinessMetricCard({ label, value, meta, tone, icon: Icon }: { label: string; value: number | string; meta: string; tone: MetricTone; icon: IconType }) {
   const classes = metricToneClasses[tone];
   return (
-    <div className={`relative min-h-[108px] overflow-hidden rounded-xl border px-4 py-3.5 shadow-[0_4px_14px_rgba(28,53,95,0.05)] ${classes.card}`}>
-      <div className="pointer-events-none absolute -bottom-10 -right-8 h-24 w-24 rotate-45 bg-white/25" aria-hidden="true" />
-      <div className="relative flex items-center gap-2.5">
-        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-sm ${classes.icon}`}><Icon className="h-4 w-4" /></span>
-        <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#50637F]">{label}</p>
+    <div className="relative flex min-h-[84px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
+      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${classes.icon}`}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[16px] font-black leading-none tracking-[-0.025em] text-[#142A50]">{value}</p>
+        <p className="mt-1.5 text-[7.5px] font-black uppercase tracking-[0.08em] text-[#50637F]">{label}</p>
+        <p className="mt-1 text-[8px] font-medium text-[#7A899E]">{meta}</p>
       </div>
-      <p className="relative mt-2 text-[21px] font-black leading-none tracking-[-0.035em] text-[#142A50]">{value}</p>
-      <p className="relative mt-2 text-[9px] font-medium text-[#687A93]">{meta}</p>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96]" />
     </div>
   );
 }
