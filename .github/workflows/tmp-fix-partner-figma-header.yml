@@ -1,93 +1,37 @@
-name: Fix Partner Figma header alignment
-
+name: Partner header fix
 on:
   push:
-    branches:
-      - partner/preview-0.1.0-dashboard-refresh
-    paths:
-      - .github/workflows/tmp-fix-partner-figma-header.yml
-
+    branches: [partner/preview-0.1.0-dashboard-refresh]
+    paths: [.github/workflows/tmp-fix-partner-figma-header.yml]
 permissions:
   contents: write
-
 jobs:
-  fix-header:
+  apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
-      - name: Checkout Partner preview branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: partner/preview-0.1.0-dashboard-refresh
           fetch-depth: 0
-
-      - name: Apply Figma header alignment
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('apps/partner-app/app/(tabs)/index.tsx')
-          s = p.read_text()
-          s = s.replace('resizeMode="cover"\n          />\n          <View style={styles.heroBackdropShade} />\n          <View style={styles.heroTopRow}>', 'resizeMode="stretch"\n          />\n          <View style={styles.heroBackdropShade} />\n          <Image\n            source={require(\'../../assets/insureit-partner-official.png\')}\n            style={styles.heroWatermark}\n            resizeMode="contain"\n            pointerEvents="none"\n          />\n          <View style={styles.heroTopRow}>', 1)
-          start = s.index('            <View style={styles.heroBrand}>')
-          end = s.index('            <View style={styles.heroActions}>', start)
-          brand = '''            <View style={styles.heroBrandCentered}>
-              <Image
-                source={require('../../assets/insureit-partner-official.png')}
-                style={styles.heroLogoCentered}
-                resizeMode="contain"
-              />
-              <View style={styles.heroBrandWordmark} accessibilityLabel="insureit Partner">
-                <Text style={styles.heroBrandInsureit}>insureit</Text>
-                <Text style={styles.heroBrandPartner}>Partner</Text>
-              </View>
-            </View>
-'''
-          s = s[:start] + brand + s[end:]
-          old = "  hero: { height: 152, overflow: 'hidden', backgroundColor: '#054D9E', paddingTop: 9 },"
-          if old not in s: raise SystemExit('hero style not found')
-          s = s.replace(old, "  hero: { height: 188, overflow: 'hidden', backgroundColor: '#073A78', paddingTop: 8 },", 1)
-          replacements = {
-            "  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 1 },": "  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.9 },",
-            "  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.06)' },": "  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,30,68,0.16)' },\n  heroWatermark: { position: 'absolute', width: 300, height: 230, left: '50%', top: 10, marginLeft: -150, opacity: 0.07, tintColor: '#FFFFFF' },",
-            "  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 14 },": "  heroTopRow: { zIndex: 2, minHeight: 116, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 4, paddingHorizontal: 14 },",
-            "  heroBrand: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, maxWidth: '60%' },": "  heroBrandCentered: { alignItems: 'center', justifyContent: 'flex-start' },",
-            "  heroLogo: { width: 33, height: 39, tintColor: '#FFFFFF' },": "  heroLogoCentered: { width: 66, height: 74 },",
-            "  heroBrandCopy: { paddingTop: 1 },": "  heroBrandWordmark: { marginTop: -2, flexDirection: 'row', alignItems: 'baseline', gap: 4 },",
-            "  heroBrandInsureit: { color: '#FFFFFF', fontSize: 16, lineHeight: 18, fontWeight: '800', letterSpacing: -0.15 },": "  heroBrandInsureit: { color: '#FFFFFF', fontSize: 17, lineHeight: 21, fontWeight: '800', letterSpacing: -0.2 },",
-            "  heroBrandPartner: { color: '#F5AB2E', fontSize: 16, lineHeight: 18, fontWeight: '800', letterSpacing: -0.15 },": "  heroBrandPartner: { color: '#F5AB2E', fontSize: 17, lineHeight: 21, fontWeight: '800', letterSpacing: -0.2 },",
-            "  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },": "  heroActions: { position: 'absolute', top: 7, right: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },",
-            "  heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },": "  heroGreeting: { zIndex: 2, position: 'absolute', left: 18, right: 18, bottom: 18, alignItems: 'center' },",
-            "  heroGreetingText: { color: '#FFFFFF', fontSize: 15, lineHeight: 19, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },": "  heroGreetingText: { color: '#FFFFFF', textAlign: 'center', fontSize: 19, lineHeight: 24, fontWeight: '700', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.24)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },",
-            "  body: { marginTop: -10, paddingHorizontal: 14 },": "  body: { marginTop: -16, paddingHorizontal: 14 },",
-          }
-          for a,b in replacements.items():
-              if a not in s: raise SystemExit('missing expected style: ' + a[:40])
-              s = s.replace(a,b,1)
-          p.write_text(s)
-          PY
-
-      - name: Install dependencies
-        run: npm ci --no-audit --no-fund
-
-      - name: Verify Partner source
-        run: |
-          npm --workspace apps/partner-app run verify:routes
-          npm --workspace apps/partner-app run verify:phase5
-          npm --workspace apps/partner-app run verify:visual
-          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
-          npm --workspace apps/partner-app run verify:pre-apk
-          npm --workspace apps/partner-app run verify:uat
-          npm run typecheck:partner
-          npm run lint:partner
-          npm run build:partner:web
-
-      - name: Commit header alignment fix
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - run: python scripts/tmp_fix_partner_header.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm --workspace apps/partner-app run verify:routes
+      - run: npm --workspace apps/partner-app run verify:phase5
+      - run: npm --workspace apps/partner-app run verify:visual
+      - run: node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+      - run: npm --workspace apps/partner-app run verify:pre-apk
+      - run: npm --workspace apps/partner-app run verify:uat
+      - run: npm run typecheck:partner
+      - run: npm run lint:partner
+      - run: npm run build:partner:web
+      - run: |
+          git config user.name github-actions-bot
+          git config user.email github-actions-bot@users.noreply.github.com
           git add 'apps/partner-app/app/(tabs)/index.tsx'
-          git diff --cached --quiet && exit 0
-          git commit -m "Align Partner dashboard header with Figma"
+          git diff --cached --quiet || git commit -m 'Align Partner dashboard header with Figma'
           git push origin HEAD:partner/preview-0.1.0-dashboard-refresh
