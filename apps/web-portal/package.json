@@ -42,7 +42,7 @@
     "policy-ocr:digit-regression": "node --experimental-strip-types scripts/policy-ocr-digit-regression.ts",
     "policy-ocr:new-india-regression": "node --experimental-strip-types scripts/policy-ocr-new-india-regression.ts",
     "policy-ocr:additional-regression": "node --experimental-strip-types scripts/policy-ocr-additional-regression.ts",
-    "policy-ocr:tata-aig-regression": "node --experimental-strip-types scripts/policy-ocr-tata-aig-regression.ts",
+    "policy-ocr:tata-aig-regression": "node --experimental-strip-types scripts/policy-ocr-tata-aig-regression.ts && node --experimental-strip-types scripts/policy-ocr-tata-aig-structured-regression.ts",
     "policy-ocr:approved-layout-regression": "node --experimental-strip-types scripts/policy-ocr-approved-layout-regression.ts",
     "policy-ocr:rerun-refinement-regression": "node --experimental-strip-types scripts/policy-ocr-rerun-refinement-regression.ts",
     "policy-ocr:production-benchmark-regression": "node --experimental-strip-types scripts/policy-ocr-production-benchmark-regression.ts",
