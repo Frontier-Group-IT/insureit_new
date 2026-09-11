@@ -108,11 +108,23 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
         </div>
 
         <section>
-          <PartnerSectionHeading
-            title={q ? "Search results for “" + q + "”" : "Customer Register"}
-            description={total + " customer" + (total === 1 ? "" : "s")}
-            action={q ? <Link href="/partner/customers" className="text-[10px] font-bold text-[#3156B8]">Clear search</Link> : null}
-          />
+          {q ? (
+            <PartnerSectionHeading
+              title={"Search results for “" + q + "”"}
+              description={total + " customer" + (total === 1 ? "" : "s")}
+              action={<Link href="/partner/customers" className="text-[10px] font-bold text-[#3156B8]">Clear search</Link>}
+            />
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]">
+                <UsersRound className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[15px] font-extrabold leading-5 text-[#172846]">Customer Register</h2>
+                <p className="mt-0.5 text-[10.5px] font-medium leading-4 text-[#74839A]">{total} customers</p>
+              </div>
+            </div>
+          )}
           <div className="mt-3 border-y border-[#DCE4ED]">
 
           {rows.length ? (
