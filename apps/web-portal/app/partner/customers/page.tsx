@@ -45,20 +45,22 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
   return (
     <PartnerPortalShell title="Customers">
       <div className="space-y-7">
-        <PartnerPageHeader
-          eyebrow="Customer Book"
-          title="Your customers"
-          description="View and search your customers."
-          action={
-            <form action="/partner/customers" className="flex w-full gap-2 sm:max-w-[430px]">
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-              </div>
-              <button type="submit" className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
-            </form>
-          }
-        />
+        <div className="contents [&>div>div:first-child>p:first-child]:inline-flex [&>div>div:first-child>p:first-child]:rounded-md [&>div>div:first-child>p:first-child]:bg-[#EAF2FF] [&>div>div:first-child>p:first-child]:px-2 [&>div>div:first-child>p:first-child]:py-1 [&>div>div:first-child>p:first-child]:text-[#2563EB]">
+          <PartnerPageHeader
+            eyebrow="Customer Book"
+            title="Your customers"
+            description="View and search your customers."
+            action={
+              <form action="/partner/customers" className="flex w-full gap-2 sm:max-w-[430px]">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                  <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+                </div>
+                <button type="submit" className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
+              </form>
+            }
+          />
+        </div>
 
         <PartnerMetricStrip
           items={[
@@ -128,4 +130,3 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
     </PartnerPortalShell>
   );
 }
-
