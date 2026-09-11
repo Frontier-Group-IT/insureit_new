@@ -13,7 +13,9 @@ jobs:
         with:
           ref: partner/preview-0.1.0-dashboard-refresh
           fetch-depth: 0
-      - run: python scripts/tmp_fix_partner_header.py
+      - run: |
+          python scripts/tmp_fix_partner_header.py
+          sed -i '/pointerEvents="none"/d' 'apps/partner-app/app/(tabs)/index.tsx'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
