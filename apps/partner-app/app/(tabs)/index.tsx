@@ -9,7 +9,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -79,8 +78,7 @@ export default function PartnerHomeDashboard() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
   const [searchQuery, setSearchQuery] = useState('');
-  const { width: screenWidth } = useWindowDimensions();
-  const heroHeight = Math.min(116, Math.max(104, screenWidth * 0.29));
+  const heroHeight = 90;
 
   const fetchHomeWorkspace = useCallback(async (): Promise<HomeWorkspace> => {
     const today = new Date();
@@ -643,7 +641,7 @@ const styles = StyleSheet.create({
   heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },
   heroGreetingText: { color: '#FFFFFF', fontSize: 15, lineHeight: 19, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
-  body: { marginTop: -10, paddingHorizontal: 14 },
+  body: { marginTop: -18, paddingHorizontal: 14 },
   searchShell: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 13, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D8E4F2', shadowColor: '#173B6C', shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   searchInput: { flex: 1, minWidth: 0, paddingVertical: 11, color: partnerTheme.colors.ink, fontSize: 12, lineHeight: 17 },
   searchDivider: { width: StyleSheet.hairlineWidth, height: 27, backgroundColor: '#D9E1EC' },
