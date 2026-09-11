@@ -1,7 +1,19 @@
+import Image from "next/image";
 import Link from "next/link";
-import { AlertCircle, ArrowRight, BriefcaseBusiness, CalendarClock, ClipboardList, FileInput, RefreshCw, ShieldCheck, UsersRound } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  BarChart3,
+  CalendarDays,
+  Crown,
+  Ellipsis,
+  FileText,
+  Megaphone,
+  RefreshCw,
+  ShieldCheck,
+  UsersRound,
+} from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerDivider, PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebHome, getPartnerWebSession } from "@/lib/partner-web";
 import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
 
@@ -33,109 +45,206 @@ export default async function PartnerHomePage() {
 
   return (
     <PartnerPortalShell title="Home">
-      <div className="space-y-7">
-        <PartnerPageHeader
-          eyebrow="Partner Overview"
-          title={"Welcome, " + name}
-          description="Your current business, renewals and service activity in one workspace."
-          action={
-            <Link href="/partner/business" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
-              View My Business <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          }
-        />
+      <div className="space-y-4 pb-3">
+        <section className="relative isolate min-h-[148px] overflow-hidden rounded-xl bg-gradient-to-r from-[#0A327B] via-[#0754B4] to-[#08357F] px-7 py-6 text-white shadow-[0_8px_24px_rgba(20,61,130,0.13)]">
+          <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
+            <div className="absolute -right-16 -top-28 h-72 w-72 rotate-[24deg] border border-white/15" />
+            <div className="absolute right-28 -top-24 h-72 w-72 rotate-[24deg] border border-white/10" />
+            <div className="absolute inset-y-0 right-[24%] w-52 bg-gradient-to-r from-transparent via-[#2C8BFF]/10 to-transparent" />
+          </div>
 
-        <PartnerMetricStrip
-          items={[
-            { label: "Gross Premium", value: formatIndianCurrency(home.business.premium_this_month), meta: "This month" },
-            { label: "Policies", value: home.business.policies_this_month, meta: home.business.active_policies + " active" },
-            { label: "Customers", value: home.business.total_customers, meta: home.business.customers_this_month + " added this month" },
-            { label: "Renewals", value: home.business.renewals_30_days, meta: "Due in 30 days" },
-          ]}
-        />
+          <div className="relative z-10 max-w-[62%]">
+            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/75">Partner Overview</p>
+            <h1 className="mt-2 text-[23px] font-extrabold tracking-[-0.03em] text-white sm:text-[26px]">Welcome, {name}</h1>
+            <p className="mt-1.5 text-[11px] font-medium text-white/78">Your current business, renewals and service activity in one place.</p>
+          </div>
 
-        <Link href="/partner/renewals/external" prefetch={false} className="group flex items-center gap-3 rounded-xl border border-[#D7E2F4] bg-[#F6F9FF] px-4 py-3.5 transition hover:border-[#C8D8F0] hover:bg-[#F1F5FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EAF1FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[11px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
-            <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74839A]">External policies expiring within 30 days</span>
+          <div className="pointer-events-none absolute bottom-0 right-[19%] hidden h-[138px] w-[190px] items-end justify-center md:flex" aria-hidden="true">
+            <Image
+              src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
+              alt=""
+              width={128}
+              height={128}
+              className="h-[124px] w-[124px] object-contain drop-shadow-[0_12px_16px_rgba(0,22,72,0.35)]"
+              priority
+            />
+          </div>
+
+          <Link
+            href="/partner/business"
+            prefetch={false}
+            className="absolute bottom-1/2 right-5 z-10 hidden min-h-9 translate-y-1/2 items-center gap-2 rounded-full border border-white/35 bg-[#08275E]/65 px-5 text-[10.5px] font-extrabold text-white shadow-sm backdrop-blur-sm transition hover:bg-[#061F4F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:inline-flex"
+          >
+            View My Business <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </section>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard
+            label="Gross Premium"
+            value={formatIndianCurrency(home.business.premium_this_month)}
+            meta="This month"
+            tone="blue"
+            icon={Crown}
+          />
+          <MetricCard
+            label="Policies"
+            value={home.business.policies_this_month}
+            meta={`${home.business.active_policies} active`}
+            tone="green"
+            icon={FileText}
+          />
+          <MetricCard
+            label="Customers"
+            value={home.business.total_customers}
+            meta={`${home.business.customers_this_month} added this month`}
+            tone="purple"
+            icon={UsersRound}
+          />
+          <MetricCard
+            label="Renewals"
+            value={home.business.renewals_30_days}
+            meta="Due in 30 days"
+            tone="orange"
+            icon={RefreshCw}
+          />
+        </section>
+
+        <Link
+          href="/partner/renewals/external"
+          prefetch={false}
+          className="group relative flex min-h-[76px] items-center gap-4 overflow-hidden rounded-xl border border-[#CCDAF6] bg-gradient-to-r from-[#EAF1FF] via-[#EDF3FF] to-[#DCE8FF] px-5 py-3.5 shadow-[0_4px_14px_rgba(50,86,150,0.06)] transition hover:border-[#B9CDF4] hover:shadow-[0_7px_18px_rgba(50,86,150,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/25"
+        >
+          <span className="absolute -left-5 -top-9 h-32 w-32 rounded-full border-[12px] border-white/45" aria-hidden="true" />
+          <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#3571EB] text-white shadow-[0_5px_12px_rgba(53,113,235,0.25)]">
+            <CalendarDays className="h-5 w-5" />
           </span>
-          <span className="text-[20px] font-extrabold tracking-[-0.03em] text-[#162746]">{externalRenewals.due_30_count}</span>
-          <ArrowRight className="h-4 w-4 text-[#8794A7] transition group-hover:translate-x-0.5" />
+          <span className="relative min-w-0 flex-1">
+            <span className="block text-[12px] font-extrabold text-[#17315C]">External Renewal Opportunities</span>
+            <span className="mt-1 block text-[9.5px] font-medium text-[#62789A]">External policies expiring within 30 days</span>
+          </span>
+          <span className="relative text-[28px] font-black tracking-[-0.04em] text-[#102A59]">{externalRenewals.due_30_count}</span>
+          <ArrowRight className="relative h-5 w-5 text-[#2F69DC] transition group-hover:translate-x-0.5" />
         </Link>
 
-        <section className="grid gap-8 xl:grid-cols-[1.18fr_.82fr]">
-          <div>
-            <PartnerSectionHeading eyebrow="Needs Your Attention" title="Priority work" />
-            <div className="mt-3 divide-y divide-[#E0E7EF] border-y border-[#DCE4ED]">
-              {home.today.length ? home.today.slice(0, 6).map((item, index) => (
-                <Link key={item.kind + "-" + index} href={todayHref(item.kind)} prefetch={false} className="group flex items-center gap-3 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EEF3F8] text-[#3156B8]">
-                    {item.kind === "intake_attention" ? <FileInput className="h-4 w-4" /> : item.kind === "renewal" ? <RefreshCw className="h-4 w-4" /> : <ClipboardList className="h-4 w-4" />}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block break-words text-[11px] font-bold leading-4 text-[#182947]">{item.title}</span>
-                    <span className="mt-0.5 block break-words text-[9.5px] font-medium leading-4 text-[#7A899F]">{item.subtitle}</span>
-                  </span>
-                  <span className="text-[11px] font-extrabold text-[#23395D]">{item.count}</span>
-                  <ArrowRight className="h-4 w-4 text-[#8794A7] transition group-hover:translate-x-0.5" />
-                </Link>
-              )) : (
-                <div className="py-8">
-                  <div className="flex items-center gap-3 text-[#5B6F89]">
-                    <AlertCircle className="h-4 w-4" />
-                    <p className="text-[10.5px] font-semibold">No priority actions right now.</p>
-                  </div>
+        <section className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
+          <DashboardPanel
+            icon={<Megaphone className="h-4 w-4" />}
+            eyebrow="Needs Your Attention"
+            title="Priority work"
+          >
+            <div className="px-4 pb-4">
+              {home.today.length ? (
+                <div className="space-y-2">
+                  {home.today.slice(0, 6).map((item, index) => (
+                    <Link
+                      key={`${item.kind}-${index}`}
+                      href={todayHref(item.kind)}
+                      prefetch={false}
+                      className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EAF1FF] text-[#3471E9]">
+                        {item.kind === "renewal" ? <RefreshCw className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11px] font-extrabold leading-4 text-[#183057]">{item.title}</span>
+                        <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74849C]">{item.subtitle}</span>
+                      </span>
+                      <span className="grid min-w-6 place-items-center rounded-full bg-[#FFF0F5] px-2 py-1 text-[9px] font-black text-[#E34578]">{item.count}</span>
+                      <ArrowRight className="h-4 w-4 text-[#3471E9] transition group-hover:translate-x-0.5" />
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-4 text-[#62738D]">
+                  <AlertCircle className="h-4 w-4" />
+                  <p className="text-[10.5px] font-semibold">No priority actions right now.</p>
                 </div>
               )}
             </div>
-          </div>
+          </DashboardPanel>
 
-          <div>
-            <PartnerSectionHeading eyebrow="Service Snapshot" title="Current workload" />
-            <div className="mt-3 grid grid-cols-2 border-y border-[#DCE4ED]">
-              <Snapshot label="Active Claims" value={home.service.active_claims} href="/partner/claims" />
-              <Snapshot label="Claims Attention" value={home.service.claims_need_attention} href="/partner/claims" right />
-              <Snapshot label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" top />
-              <Snapshot label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" top right />
+          <DashboardPanel
+            icon={<BarChart3 className="h-4 w-4" />}
+            eyebrow="Service Snapshot"
+            title="Current workload"
+          >
+            <div className="grid grid-cols-2 gap-2 px-4 pb-4">
+              <SnapshotCard label="Active Claims" value={home.service.active_claims} href="/partner/claims" tone="blue" icon={ShieldCheck} />
+              <SnapshotCard label="Claims Attention" value={home.service.claims_need_attention} href="/partner/claims" tone="red" icon={AlertCircle} />
+              <SnapshotCard label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" tone="green" icon={FileText} />
+              <SnapshotCard label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" tone="purple" icon={RefreshCw} />
             </div>
-          </div>
-        </section>
-
-        <PartnerDivider />
-
-        <section>
-          <PartnerSectionHeading eyebrow="Quick Actions" title="Open a workspace" />
-          <div className="mt-3 grid divide-y divide-[#E0E7EF] border-y border-[#DCE4ED] sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4">
-            <QuickAction href="/partner/policy-intakes" title="Policy Intake" subtitle="Create or track policy intake" icon={FileInput} />
-            <QuickAction href="/partner/customers" title="Customers" subtitle="Search your customer book" icon={UsersRound} />
-            <QuickAction href="/partner/policies" title="Policies" subtitle="Open your policy register" icon={ShieldCheck} />
-            <QuickAction href="/partner/claims" title="Claims" subtitle="Track active claim work" icon={ClipboardList} />
-          </div>
+          </DashboardPanel>
         </section>
       </div>
     </PartnerPortalShell>
   );
 }
 
-function Snapshot({ label, value, href, top = false, right = false }: { label: string; value: number; href: string; top?: boolean; right?: boolean }) {
+type MetricTone = "blue" | "green" | "purple" | "orange";
+
+type IconType = typeof ShieldCheck;
+
+const metricToneClasses: Record<MetricTone, { card: string; icon: string }> = {
+  blue: { card: "border-[#D8E3F8] bg-gradient-to-br from-[#F8FAFF] to-[#EAF1FF]", icon: "bg-[#3674F4] text-white" },
+  green: { card: "border-[#D5EDE6] bg-gradient-to-br from-[#F8FCFB] to-[#E8F8F2]", icon: "bg-[#28BE82] text-white" },
+  purple: { card: "border-[#E3DCF7] bg-gradient-to-br from-[#FBFAFF] to-[#F0EBFF]", icon: "bg-[#8252DF] text-white" },
+  orange: { card: "border-[#F2E2BE] bg-gradient-to-br from-[#FFFDF9] to-[#FFF4DC]", icon: "bg-[#FFAD23] text-white" },
+};
+
+function MetricCard({ label, value, meta, tone, icon: Icon }: { label: string; value: number | string; meta: string; tone: MetricTone; icon: IconType }) {
+  const classes = metricToneClasses[tone];
   return (
-    <Link href={href} prefetch={false} className={"min-h-[76px] px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 " + (top ? "border-t border-[#E0E7EF] " : "") + (right ? "border-l border-[#E0E7EF]" : "")}>
-      <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#7A899F]">{label}</p>
-      <p className="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em] text-[#162746]">{value}</p>
-    </Link>
+    <div className={`relative min-h-[116px] overflow-hidden rounded-xl border px-4 py-3.5 shadow-[0_4px_14px_rgba(28,53,95,0.05)] ${classes.card}`}>
+      <div className="pointer-events-none absolute -bottom-10 -right-8 h-24 w-24 rotate-45 bg-white/22" aria-hidden="true" />
+      <div className="relative flex items-center gap-2.5">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-sm ${classes.icon}`}><Icon className="h-4 w-4" /></span>
+        <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#50637F]">{label}</p>
+      </div>
+      <p className="relative mt-2 text-[22px] font-black leading-none tracking-[-0.035em] text-[#142A50]">{value}</p>
+      <p className="relative mt-2 text-[9.5px] font-medium text-[#687A93]">{meta}</p>
+    </div>
   );
 }
 
-function QuickAction({ href, title, subtitle, icon: Icon }: { href: string; title: string; subtitle: string; icon: typeof ShieldCheck }) {
+function DashboardPanel({ icon, eyebrow, title, children }: { icon: React.ReactNode; eyebrow: string; title: string; children: React.ReactNode }) {
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[72px] items-center gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#111A35] text-white"><Icon className="h-4 w-4" /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block break-words text-[11px] font-extrabold leading-4 text-[#172846]">{title}</span>
-        <span className="mt-0.5 block break-words text-[9.5px] font-medium leading-4 text-[#7A899F]">{subtitle}</span>
+    <div className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-[#F8FAFD] shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
+      <div className="flex items-start gap-2.5 px-4 pb-3 pt-3.5">
+        <span className="mt-0.5 text-[#2F70E5]">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#6685B4]">{eyebrow}</p>
+          <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">{title}</h2>
+        </div>
+        <Ellipsis className="h-4 w-4 text-[#2F70E5]" aria-hidden="true" />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+type SnapshotTone = "blue" | "red" | "green" | "purple";
+
+const snapshotToneClasses: Record<SnapshotTone, string> = {
+  blue: "bg-[#E9F1FF] text-[#3474EB]",
+  red: "bg-[#FFE8EE] text-[#ED4E6B]",
+  green: "bg-[#E6F8F1] text-[#28B980]",
+  purple: "bg-[#F0E9FF] text-[#8252DF]",
+};
+
+function SnapshotCard({ label, value, href, tone, icon: Icon }: { label: string; value: number; href: string; tone: SnapshotTone; icon: IconType }) {
+  return (
+    <Link
+      href={href}
+      prefetch={false}
+      className="flex min-h-[66px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+    >
+      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${snapshotToneClasses[tone]}`}><Icon className="h-4 w-4" /></span>
+      <span className="min-w-0">
+        <span className="block text-[8px] font-black uppercase tracking-[0.06em] text-[#77869C]">{label}</span>
+        <span className="mt-1 block text-[18px] font-black leading-none text-[#142A50]">{value}</span>
       </span>
-      <ArrowRight className="h-4 w-4 text-[#8794A7] transition group-hover:translate-x-0.5" />
     </Link>
   );
 }
