@@ -95,9 +95,15 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
             </div>
             <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
           </div>
-          <div className="min-w-0 border-t border-[#E5EBF2] px-1 py-3.5 sm:border-l sm:border-t-0 sm:px-4 sm:py-4">
-            <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">With Email</p>
-            <div className="mt-1.5 break-words text-[18px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746] sm:text-[20px]">{summary.with_email}</div>
+          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#F7E3C8] bg-[#FFF8EF] px-4 py-3 shadow-[0_4px_12px_rgba(245,158,11,0.04)]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE9CC] text-[#F59E0B]">
+              <Mail className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">With Email</p>
+              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.with_email}</div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
           </div>
         </div>
 
