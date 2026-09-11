@@ -3,9 +3,10 @@ import { CheckCircle2, Clock } from "lucide-react";
 type ClaimDocumentCollapsedStatusProps = {
   verifiedCount: number;
   pendingCount: number;
+  showLabels?: boolean;
 };
 
-export function ClaimDocumentCollapsedStatus({ verifiedCount, pendingCount }: ClaimDocumentCollapsedStatusProps) {
+export function ClaimDocumentCollapsedStatus({ verifiedCount, pendingCount, showLabels = false }: ClaimDocumentCollapsedStatusProps) {
   return (
     <div
       className="flex min-h-11 items-center gap-2 px-1 py-1.5"
@@ -17,14 +18,14 @@ export function ClaimDocumentCollapsedStatus({ verifiedCount, pendingCount }: Cl
         aria-label={`${verifiedCount} verified files`}
       >
         <CheckCircle2 aria-hidden="true" size={17} strokeWidth={2.4} className="text-[#16A34A]" />
-        <span className="text-[12px] font-semibold leading-none">{verifiedCount}</span>
+        <span className="text-[12px] font-semibold leading-none">{verifiedCount}{showLabels ? " Verified" : ""}</span>
       </span>
       <span
         className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#FFF6EA] px-2.5 text-[#071D49]"
         aria-label={`${pendingCount} pending files`}
       >
         <Clock aria-hidden="true" size={17} strokeWidth={2.4} className="text-[#F97316]" />
-        <span className="text-[12px] font-semibold leading-none">{pendingCount}</span>
+        <span className="text-[12px] font-semibold leading-none">{pendingCount}{showLabels ? " Pending" : ""}</span>
       </span>
     </div>
   );
