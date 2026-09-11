@@ -6,6 +6,7 @@ import {
   Ellipsis,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getPartnerWebHome, getPartnerWebSession } from "@/lib/partner-web";
 import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
 
@@ -63,11 +64,19 @@ function ProfessionalIcon({ src, alt = "", size = 24 }: { src: string; alt?: str
   return <Image src={src} alt={alt} width={size} height={size} className="h-auto w-auto object-contain" />;
 }
 
+async function getPartnerWebNetPremiumThisMonth() {
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_web_net_premium_this_month");
+  if (error || data === null) throw new Error(error?.message ?? "Partner net premium is unavailable.");
+  return data as number | string;
+}
+
 export default async function PartnerHomePage() {
-  const [{ identity }, home, externalRenewals] = await Promise.all([
+  const [{ identity }, home, externalRenewals, netPremiumThisMonth] = await Promise.all([
     getPartnerWebSession(),
     getPartnerWebHome(),
     getPartnerExternalRenewalSummary(),
+    getPartnerWebNetPremiumThisMonth(),
   ]);
   const name = identity.display_name?.trim() || "Partner";
   const updatedTime = formatUpdatedTime(new Date());
@@ -99,8 +108,8 @@ export default async function PartnerHomePage() {
 
         <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            label="Gross Premium"
-            value={formatIndianCurrency(home.business.premium_this_month)}
+            label="Net Premium"
+            value={formatIndianCurrency(netPremiumThisMonth)}
             meta="This month"
             iconSrc={homeIcons.premium}
           />
