@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -47,31 +48,47 @@ export default async function PartnerHomePage() {
       <div className="space-y-4 pb-3">
         <section
           data-partner-home-reference-hero="true"
-          className="relative isolate min-h-[132px] overflow-hidden rounded-xl bg-[linear-gradient(98deg,#08275F_0%,#07489E_35%,#0966C8_58%,#08397F_78%,#07275F_100%)] px-6 py-5 text-white shadow-[0_7px_20px_rgba(20,61,130,0.14)] sm:px-7"
+          className="relative isolate h-[104px] overflow-hidden rounded-lg bg-[linear-gradient(96deg,#07317B_0%,#075DBE_38%,#1895F1_69%,#4F85F4_100%)] px-5 py-3.5 text-white shadow-[0_5px_16px_rgba(22,76,161,0.16)] sm:px-6"
         >
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <div className="absolute inset-y-0 left-0 w-[38%] bg-gradient-to-r from-[#061F51]/38 to-transparent" />
-            <div className="absolute inset-y-0 right-0 w-[35%] bg-gradient-to-l from-[#061E51]/38 to-transparent" />
-            <div className="absolute -right-10 -top-40 h-[330px] w-[180px] rotate-[25deg] border-l border-cyan-200/25" />
-            <div className="absolute right-[9%] -top-40 h-[330px] w-[170px] rotate-[25deg] border-l border-cyan-200/20" />
-            <div className="absolute right-[21%] -top-40 h-[330px] w-[155px] rotate-[25deg] border-l border-blue-100/15" />
-            <div className="absolute bottom-0 right-[23%] h-[75%] w-[25%] bg-[linear-gradient(120deg,transparent_12%,rgba(55,176,255,0.12)_50%,transparent_74%)]" />
+            <div className="absolute inset-y-0 left-0 w-[34%] bg-gradient-to-r from-[#062967]/55 to-transparent" />
+            <div className="absolute inset-y-0 left-[27%] w-[26%] bg-[linear-gradient(112deg,transparent_4%,rgba(41,218,255,0.20)_48%,transparent_80%)]" />
+            <div className="absolute -top-24 left-[22%] h-[220px] w-[86px] rotate-[-28deg] bg-cyan-200/10" />
+            <div className="absolute -top-24 left-[30%] h-[220px] w-[64px] rotate-[-28deg] bg-white/7" />
+            <div className="absolute inset-y-0 right-0 w-[28%] bg-gradient-to-l from-[#4C7CF1]/38 to-transparent" />
+            <div className="absolute bottom-0 left-[31%] right-[27%] h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
           </div>
 
-          <div className="relative z-20 max-w-[60%] pt-0.5 sm:max-w-[54%]">
-            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/75">Partner Overview</p>
-            <h1 className="mt-1.5 text-[22px] font-extrabold tracking-[-0.03em] text-white sm:text-[25px]">Welcome, {name}</h1>
-            <p className="mt-1 text-[10.5px] font-medium text-white/80">Your current business, renewals and service activity in one place.</p>
+          <div className="relative z-20 flex h-full max-w-[44%] flex-col justify-center sm:max-w-[42%]">
+            <p className="text-[7px] font-black uppercase tracking-[0.16em] text-white/80">Partner Overview</p>
+            <h1 className="mt-1 text-[17px] font-extrabold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">Welcome, {name}</h1>
+            <p className="mt-1 text-[8px] font-medium leading-3 text-white/88 sm:text-[8.5px]">Your current business, renewals and service activity in one place.</p>
+          </div>
+
+          <div
+            data-partner-home-truck-art="true"
+            className="pointer-events-none absolute inset-y-0 left-[42%] right-[26%] hidden items-end justify-center md:flex"
+            aria-hidden="true"
+          >
+            <div className="absolute bottom-[7px] left-[8%] h-[12px] w-[84%] rounded-full bg-[#053575]/22 blur-md" />
+            <Image
+              src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
+              alt=""
+              width={128}
+              height={128}
+              className="relative bottom-[-5px] h-[112px] w-[150px] object-contain drop-shadow-[0_10px_11px_rgba(1,31,82,0.36)]"
+              priority
+            />
           </div>
 
           <Link
             href="/partner/business"
             prefetch={false}
             data-partner-home-reference-cta="true"
-            className="absolute right-5 top-1/2 z-20 hidden h-[38px] w-[166px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-[#072A63]/72 px-4 text-[10px] font-extrabold text-white shadow-[0_4px_12px_rgba(4,22,62,0.15)] backdrop-blur-sm transition hover:border-white/45 hover:bg-[#061F4F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:inline-flex"
+            className="absolute right-3.5 top-1/2 z-20 hidden h-[34px] w-[150px] -translate-y-1/2 items-center justify-center rounded-full border border-white/55 bg-white/12 px-3.5 text-[9px] font-extrabold text-white shadow-[0_4px_10px_rgba(4,22,62,0.12)] backdrop-blur-sm transition hover:border-white/75 hover:bg-white/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:inline-flex"
           >
             <span className="leading-none">View My Business</span>
-            <ArrowRight className="absolute right-3.5 h-3.5 w-3.5" />
+            <ArrowRight className="absolute right-3 h-3.5 w-3.5" />
           </Link>
         </section>
 
