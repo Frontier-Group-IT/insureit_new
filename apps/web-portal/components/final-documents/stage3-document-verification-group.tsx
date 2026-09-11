@@ -136,7 +136,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
           </div>
         ) : hasMultipleFiles ? (
           <div id={contentId}>
-            <ClaimDocumentCollapsedStatus verifiedCount={verifiedFileCount} pendingCount={pendingFileCount} />
+            <ClaimDocumentCollapsedStatus verifiedCount={verifiedFileCount} pendingCount={pendingFileCount} showLabels />
           </div>
         ) : null
       ) : (
