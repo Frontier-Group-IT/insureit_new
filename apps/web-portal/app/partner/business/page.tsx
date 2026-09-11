@@ -65,43 +65,46 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   return (
     <PartnerPortalShell title="My Business">
       <div className="space-y-4 pb-3">
-        <section className="relative isolate overflow-hidden rounded-xl bg-gradient-to-r from-[#0A2F7A] via-[#0758BE] to-[#4A7BF0] px-6 py-5 text-white shadow-[0_8px_24px_rgba(20,61,130,0.13)]">
+        <section className="relative isolate overflow-hidden rounded-xl bg-gradient-to-r from-[#0A2F7A] via-[#0758BE] to-[#4A7BF0] px-5 py-2.5 text-white shadow-[0_6px_18px_rgba(20,61,130,0.12)]">
           <div className="pointer-events-none absolute inset-0" aria-hidden="true">
             <div className="absolute -left-16 top-0 h-full w-[46%] rounded-r-[48%] bg-[#074BAA]/70" />
             <div className="absolute right-[25%] top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
             <div className="absolute inset-y-0 right-0 w-[33%] bg-gradient-to-l from-[#7F73F6]/25 to-transparent" />
           </div>
 
-          <div className="relative z-10 flex min-h-[112px] items-center justify-between gap-5">
-            <div className="max-w-[44%]">
-              <p className="text-[8.5px] font-black uppercase tracking-[0.16em] text-white/72">{humanize(performance.scope_mode)} Scope</p>
-              <h1 className="mt-1.5 text-[24px] font-extrabold tracking-[-0.03em] text-white">Business performance</h1>
-              <p className="mt-1.5 text-[10.5px] font-medium text-white/80">Review your business performance at a glance.</p>
+          <div className="relative z-10 flex min-h-[78px] items-center justify-between gap-4">
+            <div className="max-w-[43%]">
+              <p className="text-[7.5px] font-black uppercase tracking-[0.15em] text-white/72">{humanize(performance.scope_mode)} Scope</p>
+              <h1 className="mt-0.5 text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-white">Business performance</h1>
+              <p className="mt-0.5 text-[9.5px] font-medium leading-4 text-white/80">Review your business performance at a glance.</p>
             </div>
 
-            <div className="pointer-events-none absolute bottom-0 left-1/2 hidden h-[122px] w-[190px] -translate-x-1/2 items-end justify-center lg:flex" aria-hidden="true">
+            <div className="pointer-events-none absolute bottom-0 left-[54%] hidden h-[92px] w-[150px] -translate-x-1/2 items-end justify-center lg:flex" aria-hidden="true">
               <Image
                 src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
                 alt=""
                 width={128}
                 height={128}
-                className="h-[112px] w-[112px] object-contain drop-shadow-[0_12px_18px_rgba(0,22,72,0.35)]"
+                className="h-[88px] w-[104px] object-contain drop-shadow-[0_9px_14px_rgba(0,22,72,0.3)]"
                 priority
               />
             </div>
 
-            <form className="relative z-10 flex flex-wrap items-end gap-2 rounded-full border border-white/25 bg-white/90 p-2 pl-3 shadow-sm backdrop-blur-sm" action="/partner/business">
-              <label className="grid gap-0.5">
-                <span className="text-[7.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">From</span>
-                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-7 w-[132px] border-0 bg-transparent px-0 text-[9.5px] font-bold text-[#203653] outline-none" />
+            <form className="relative z-10 flex flex-wrap items-center gap-1.5 rounded-full border border-white/25 bg-white/92 p-1.5 pl-2.5 shadow-sm backdrop-blur-sm" action="/partner/business">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#EDF4FF] text-[#3156B8]">
+                <CalendarRange className="h-3.5 w-3.5" />
+              </span>
+              <label className="grid gap-0">
+                <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">From</span>
+                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-5 w-[112px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <div className="h-8 w-px bg-[#D8E0EB]" />
-              <label className="grid gap-0.5">
-                <span className="text-[7.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">To</span>
-                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-7 w-[132px] border-0 bg-transparent px-0 text-[9.5px] font-bold text-[#203653] outline-none" />
+              <div className="h-6 w-px bg-[#D8E0EB]" />
+              <label className="grid gap-0">
+                <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">To</span>
+                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-5 w-[112px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#0A3D93] px-4 text-[9.5px] font-extrabold text-white transition hover:bg-[#082F72] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
-                <CalendarRange className="h-3.5 w-3.5" /> Apply
+              <button type="submit" className="inline-flex h-8 items-center rounded-full bg-[#0A3D93] px-3.5 text-[8.5px] font-extrabold text-white transition hover:bg-[#082F72] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                Apply
               </button>
             </form>
           </div>
