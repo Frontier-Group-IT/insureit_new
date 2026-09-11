@@ -32,9 +32,7 @@ export default async function PartnerNetworkPage() {
     <PartnerPortalShell title="Network">
       <div className="space-y-7">
         <PartnerPageHeader
-          eyebrow="My Network"
           title="Commercial relationships"
-          description="View your Partner network."
         />
 
         <div className="grid overflow-hidden rounded-xl border border-[#E3EAF3] bg-white shadow-[0_8px_24px_rgba(49,86,184,0.06)] sm:grid-cols-2 xl:grid-cols-4">
