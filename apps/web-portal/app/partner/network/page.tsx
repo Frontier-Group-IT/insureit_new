@@ -1,4 +1,4 @@
-import { ArrowRight, Building2, FileText, Layers3, Network, Target, UserRound, UsersRound } from "lucide-react";
+import { ArrowRight, BarChart3, Building2, FileText, Layers3, Network, RefreshCcw, ShieldCheck, Target, UserRound, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
@@ -109,7 +109,7 @@ export default async function PartnerNetworkPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid border-y border-[#DCE4ED] sm:grid-cols-2 xl:grid-cols-5">
+                  <div className="mt-4 grid gap-2 rounded-xl border border-[#E4EAF2] bg-white p-2 shadow-[0_5px_18px_rgba(49,86,184,0.035)] sm:grid-cols-2 xl:grid-cols-5">
                     <MiniStat label="Policies" value={row.metrics.total_policies} />
                     <MiniStat label="Customers" value={row.metrics.total_customers} />
                     <MiniStat label="This Month" value={row.metrics.policies_this_month} />
@@ -158,5 +158,24 @@ export default async function PartnerNetworkPage() {
 }
 
 function MiniStat({ label, value }: { label: string; value: number }) {
-  return <div className="border-r border-[#E0E7EF] px-3 py-3 text-center last:border-r-0"><p className="text-[15px] font-extrabold text-[#162746]">{value}</p><p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.08em] text-[#75849A]">{label}</p></div>;
+  const styles = {
+    Policies: { Icon: FileText, wrap: "bg-[#F6F9FF] border-[#E1EAFA]", icon: "bg-[#E5F0FF] text-[#2563EB]" },
+    Customers: { Icon: UsersRound, wrap: "bg-[#F5FBF8] border-[#DDEFE5]", icon: "bg-[#DCF6E8] text-[#13A36B]" },
+    "This Month": { Icon: BarChart3, wrap: "bg-[#FAF7FF] border-[#EBE2FA]", icon: "bg-[#EFE5FF] text-[#7C3AED]" },
+    "Renewals 30d": { Icon: RefreshCcw, wrap: "bg-[#FFF9F3] border-[#F4E5D5]", icon: "bg-[#FFE9D3] text-[#F28A18]" },
+    "Active Claims": { Icon: ShieldCheck, wrap: "bg-[#FFF7FA] border-[#F6E1E8]", icon: "bg-[#FFE3EC] text-[#E93D68]" },
+  } as const;
+
+  const style = styles[label as keyof typeof styles] ?? styles.Policies;
+  const Icon = style.Icon;
+
+  return (
+    <div className={`flex min-w-0 items-center gap-3 rounded-lg border px-3 py-3 ${style.wrap}`}>
+      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${style.icon}`}><Icon className="h-4 w-4" /></span>
+      <div className="min-w-0">
+        <p className="text-[15px] font-extrabold leading-none text-[#162746]">{value}</p>
+        <p className="mt-1 text-[8.5px] font-bold uppercase tracking-[0.06em] text-[#75849A]">{label}</p>
+      </div>
+    </div>
+  );
 }
