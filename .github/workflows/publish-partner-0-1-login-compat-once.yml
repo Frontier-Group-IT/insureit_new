@@ -1,0 +1,114 @@
+name: Publish Partner 0.1.0 login compatibility OTA once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-partner-0-1-login-compat-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      COMPAT_SHA: a12d16af444ad937280611ac3f6480ca1eb7f830
+
+    steps:
+      - name: Check out exact Partner 0.1.0 compatibility commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMPAT_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact compatibility source and runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "$(git rev-parse HEAD)" = "$COMPAT_SHA" ] || {
+            echo "Refusing OTA: checkout is not the approved compatibility commit." >&2
+            exit 1
+          }
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.1.0') {
+            console.error(`Refusing OTA: expected Partner app version/runtime 0.1.0, found ${expo.version ?? 'missing'}.`);
+            process.exit(1);
+          }
+          if (expo?.runtimeVersion?.policy !== 'appVersion') {
+            console.error('Refusing OTA: expected appVersion runtime policy.');
+            process.exit(1);
+          }
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') {
+            console.error('Refusing OTA: unexpected Partner EAS project ID.');
+            process.exit(1);
+          }
+          console.log(`Confirmed Partner runtime ${expo.version}; project ${expo.extra.eas.projectId}`);
+          NODE
+          grep -q 'YOUR SAFETY, OUR PROMISE' apps/partner-app/app/login.tsx
+          grep -q "partner-login-logo.png" apps/partner-app/app/login.tsx
+          test -f apps/partner-app/assets/partner-login-logo.png
+
+      - name: Require Expo token
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN_PARTNER is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies from 0.1.0 baseline
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner app typecheck
+        working-directory: apps/partner-app
+        run: npx tsc --noEmit
+
+      - name: Verify Expo token and project
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Publish exact 0.1.0-compatible Partner OTA
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Partner 0.1.0 login compatibility ${COMPAT_SHA}" \
+            --non-interactive \
+            --json > partner-0-1-login-compat-update.json
+          cat partner-0-1-login-compat-update.json
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Partner 0.1.0 login compatibility OTA"
+            echo
+            echo "- Native baseline: 71cc1d03b43d8526e02d06a6f7b59798ef458470"
+            echo "- Compatibility source: $COMPAT_SHA"
+            echo "- Channel: preview"
+            echo "- Runtime: 0.1.0"
+            echo "- Scope: login branding + keyboard-safe layout only"
+          } >> "$GITHUB_STEP_SUMMARY"
