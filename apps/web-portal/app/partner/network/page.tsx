@@ -117,18 +117,21 @@ export default async function PartnerNetworkPage() {
                     <MiniStat label="Active Claims" value={row.metrics.active_claims} />
                   </div>
 
-                  <div className="mt-3 border-t border-[#DCE4ED] pt-3">
+                  <div className="mt-3 rounded-xl border border-[#E4EAF2] bg-white p-3 shadow-[0_5px_18px_rgba(49,86,184,0.035)]">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#6E8099]">Partner Family Structure</p>
+                      <div className="flex items-center gap-2">
+                        <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#2563EB]"><Network className="h-4 w-4" /></span>
+                        <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#536987]">Partner Family Structure</p>
+                      </div>
                       <div className="flex gap-2 text-[9px] font-semibold text-[#74839A]">
                         <span>{row.posp_count} POSP</span><span>·</span><span>{row.misp_count} MISP</span>
                       </div>
                     </div>
 
                     {row.children.length ? (
-                      <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="mt-2 grid gap-2 rounded-lg border border-[#DFEAF8] bg-[#F5F9FF] p-2.5 md:grid-cols-2 xl:grid-cols-3">
                         {row.children.map((child) => (
-                          <div key={child.intermediary_id} className="flex items-center gap-3 border-b border-[#E0E7EF] py-2.5 last:border-b-0">
+                          <div key={child.intermediary_id} className="flex items-center gap-3 rounded-lg bg-white/70 px-3 py-2.5">
                             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]">{child.type === "posp" ? <UserRound className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}</span>
                             <div className="min-w-0">
                               <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{child.name}</p>
@@ -138,7 +141,10 @@ export default async function PartnerNetworkPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-2 border-y border-[#E0E7EF] py-2.5 text-[9.5px] font-semibold text-[#667892]">Standalone Partner family — no POSP or MISP child is attached.</p>
+                      <div className="mt-2 flex min-h-[78px] flex-col items-center justify-center rounded-lg border border-[#DFEAF8] bg-[#F5F9FF] px-4 py-3 text-center">
+                        <Network className="h-5 w-5 text-[#6E84A5]" />
+                        <p className="mt-2 text-[9.5px] font-semibold text-[#667892]">Standalone Partner family — no POSP or MISP child is attached.</p>
+                      </div>
                     )}
                   </div>
                 </div>
