@@ -90,15 +90,15 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
               />
             </div>
 
-            <form className="relative z-10 flex flex-wrap items-center gap-1.5 rounded-full border border-white/25 bg-white/92 p-1.5 pl-2.5 shadow-sm backdrop-blur-sm" action="/partner/business">
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#EDF4FF] text-[#3156B8]">
+            <form className="relative z-10 flex flex-wrap items-center gap-1.5 rounded-full border border-[#D5E4F8] bg-[#E2EEFE] p-1.5 pl-2.5 shadow-sm backdrop-blur-sm" action="/partner/business">
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#F8FBFF] text-[#3156B8]">
                 <CalendarRange className="h-3.5 w-3.5" />
               </span>
               <label className="grid gap-0">
                 <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">From</span>
                 <input name="from" type="date" defaultValue={query.from ?? ""} className="h-5 w-[112px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <div className="h-6 w-px bg-[#D8E0EB]" />
+              <div className="h-6 w-px bg-[#C7D7ED]" />
               <label className="grid gap-0">
                 <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">To</span>
                 <input name="to" type="date" defaultValue={query.to ?? ""} className="h-5 w-[112px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
