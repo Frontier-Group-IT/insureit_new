@@ -30,13 +30,13 @@ export default async function PartnerNetworkPage() {
 
   return (
     <PartnerPortalShell title="Network">
-      <div className="space-y-7">
+      <div className="space-y-4">
         <PartnerPageHeader
           title="Commercial relationships"
         />
 
         <div className="grid overflow-hidden rounded-xl border border-[#E3EAF3] bg-white shadow-[0_8px_24px_rgba(49,86,184,0.06)] sm:grid-cols-2 xl:grid-cols-4">
-          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3.5 sm:border-r xl:border-b-0">
+          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3 sm:border-r xl:border-b-0">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]">
               <UsersRound className="h-5 w-5" />
             </span>
@@ -46,7 +46,7 @@ export default async function PartnerNetworkPage() {
             </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3.5 xl:border-b-0 xl:border-r">
+          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3 xl:border-b-0 xl:border-r">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E7F8EF] text-[#13A36B]">
               <Layers3 className="h-5 w-5" />
             </span>
@@ -56,7 +56,7 @@ export default async function PartnerNetworkPage() {
             </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3.5 sm:border-r sm:border-b-0 xl:border-r">
+          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3 sm:border-r sm:border-b-0 xl:border-r">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F4EAFE] text-[#8B3FE8]">
               <FileText className="h-5 w-5" />
             </span>
@@ -66,7 +66,7 @@ export default async function PartnerNetworkPage() {
             </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-3 px-4 py-3.5">
+          <div className="flex min-w-0 items-center gap-3 px-4 py-3">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFF0DF] text-[#F28A18]">
               <Target className="h-5 w-5" />
             </span>
@@ -79,7 +79,7 @@ export default async function PartnerNetworkPage() {
 
         {sections.length ? sections.map((section) => (
           <section key={section.key}>
-            <div className="flex flex-col gap-2 rounded-xl border border-[#E3EAF3] bg-white px-4 py-3.5 shadow-[0_6px_20px_rgba(49,86,184,0.05)] sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 rounded-xl border border-[#E3EAF3] bg-white px-4 py-3 shadow-[0_6px_20px_rgba(49,86,184,0.05)] sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]"><Building2 className="h-4 w-4" /></span>
                 <div>
@@ -92,8 +92,8 @@ export default async function PartnerNetworkPage() {
 
             <div className="divide-y divide-[#E8EDF4]">
               {section.rows.map((row) => (
-                <div key={row.partner_id} className="py-5">
-                  <div className="flex flex-col gap-4 rounded-xl border border-[#E6EDF6] bg-[#FBFDFF] px-4 py-4 shadow-[0_5px_18px_rgba(49,86,184,0.04)] xl:flex-row xl:items-center xl:justify-between">
+                <div key={row.partner_id} className="py-3">
+                  <div className="flex flex-col gap-3 rounded-xl border border-[#E6EDF6] bg-[#FBFDFF] px-4 py-3 shadow-[0_5px_18px_rgba(49,86,184,0.04)] xl:flex-row xl:items-center xl:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#2563EB]"><UserRound className="h-5 w-5" /></span>
                       <div className="min-w-0">
@@ -109,7 +109,7 @@ export default async function PartnerNetworkPage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-2 rounded-xl border border-[#E4EAF2] bg-white p-2 shadow-[0_5px_18px_rgba(49,86,184,0.035)] sm:grid-cols-2 xl:grid-cols-5">
+                  <div className="mt-3 grid gap-2 rounded-xl border border-[#E4EAF2] bg-white p-1.5 shadow-[0_5px_18px_rgba(49,86,184,0.035)] sm:grid-cols-2 xl:grid-cols-5">
                     <MiniStat label="Policies" value={row.metrics.total_policies} />
                     <MiniStat label="Customers" value={row.metrics.total_customers} />
                     <MiniStat label="This Month" value={row.metrics.policies_this_month} />
@@ -117,7 +117,7 @@ export default async function PartnerNetworkPage() {
                     <MiniStat label="Active Claims" value={row.metrics.active_claims} />
                   </div>
 
-                  <div className="mt-5 border-t border-[#DCE4ED] pt-4">
+                  <div className="mt-3 border-t border-[#DCE4ED] pt-3">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#6E8099]">Partner Family Structure</p>
                       <div className="flex gap-2 text-[9px] font-semibold text-[#74839A]">
@@ -126,9 +126,9 @@ export default async function PartnerNetworkPage() {
                     </div>
 
                     {row.children.length ? (
-                      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="mt-2 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                         {row.children.map((child) => (
-                          <div key={child.intermediary_id} className="flex items-center gap-3 border-b border-[#E0E7EF] py-3 last:border-b-0">
+                          <div key={child.intermediary_id} className="flex items-center gap-3 border-b border-[#E0E7EF] py-2.5 last:border-b-0">
                             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]">{child.type === "posp" ? <UserRound className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}</span>
                             <div className="min-w-0">
                               <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{child.name}</p>
@@ -138,7 +138,7 @@ export default async function PartnerNetworkPage() {
                         ))}
                       </div>
                     ) : (
-                      <p className="mt-3 border-y border-[#E0E7EF] py-3 text-[9.5px] font-semibold text-[#667892]">Standalone Partner family — no POSP or MISP child is attached.</p>
+                      <p className="mt-2 border-y border-[#E0E7EF] py-2.5 text-[9.5px] font-semibold text-[#667892]">Standalone Partner family — no POSP or MISP child is attached.</p>
                     )}
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default async function PartnerNetworkPage() {
             </div>
           </section>
         )) : (
-          <section className="border-y border-[#DCE4ED] px-1 py-14 text-center sm:px-4">
+          <section className="border-y border-[#DCE4ED] px-1 py-10 text-center sm:px-4">
             <Network className="mx-auto h-7 w-7 text-[#9AABC0]" />
             <p className="mt-3 text-[12px] font-bold text-[#23395D]">No commercial network available</p>
             <p className="mt-1 text-[10.5px] text-[#7A899F]">No Partner families are currently visible in this authorized scope.</p>
@@ -170,7 +170,7 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   const Icon = style.Icon;
 
   return (
-    <div className={`flex min-w-0 items-center gap-3 rounded-lg border px-3 py-3 ${style.wrap}`}>
+    <div className={`flex min-w-0 items-center gap-3 rounded-lg border px-3 py-2.5 ${style.wrap}`}>
       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${style.icon}`}><Icon className="h-4 w-4" /></span>
       <div className="min-w-0">
         <p className="text-[15px] font-extrabold leading-none text-[#162746]">{value}</p>
