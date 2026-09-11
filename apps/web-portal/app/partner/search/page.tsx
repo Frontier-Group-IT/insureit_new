@@ -35,7 +35,6 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
     <PartnerPortalShell title="Search" headerVariant="breadcrumb">
       <div className="space-y-7">
         <PartnerPageHeader
-          eyebrow="Universal Search"
           title="Search your business"
           description="Search customers, policies and claims."
         />
