@@ -8,7 +8,6 @@ import {
   Ellipsis,
   FileText,
   Megaphone,
-  Plus,
   RefreshCw,
   ShieldCheck,
   UsersRound,
@@ -29,6 +28,17 @@ function formatIndianCurrency(value: number | string) {
   }).format(Number.isFinite(amount) ? amount : 0);
 }
 
+function formatUpdatedTime(value: Date) {
+  return new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  })
+    .format(value)
+    .toLowerCase();
+}
+
 function todayHref(kind: "intake_attention" | "renewal" | "claim") {
   if (kind === "intake_attention") return "/partner/policy-intakes";
   if (kind === "renewal") return "/partner/renewals";
@@ -42,6 +52,7 @@ export default async function PartnerHomePage() {
     getPartnerExternalRenewalSummary(),
   ]);
   const name = identity.display_name?.trim() || "Partner";
+  const updatedTime = formatUpdatedTime(new Date());
 
   return (
     <PartnerPortalShell title="Home">
@@ -54,15 +65,18 @@ export default async function PartnerHomePage() {
             <h1 className="text-[24px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[26px]">Welcome, {name}</h1>
           </div>
 
-          <Link
-            href="/partner/business"
-            prefetch={false}
-            data-partner-home-reference-cta="true"
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 bg-[#163968] px-5 text-[12px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            <span>View My Business</span>
-          </Link>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
+            <Link
+              href="/partner/business"
+              prefetch={false}
+              data-partner-home-reference-cta="true"
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 bg-[#163968] px-4 text-[11px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
+            >
+              <span>View My Business</span>
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
         </section>
 
         <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
