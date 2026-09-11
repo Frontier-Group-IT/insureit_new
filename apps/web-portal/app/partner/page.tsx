@@ -185,7 +185,6 @@ export default async function PartnerHomePage() {
 
           <DashboardPanel
             iconSrc={homeIcons.workload}
-            eyebrow="Service Snapshot"
             title="Current workload"
           >
             <div className="grid grid-cols-2 gap-2 px-4 pb-4">
@@ -245,10 +244,8 @@ function SnapshotCard({ label, value, href, iconSrc }: { label: string; value: n
       <span className="grid h-9 w-9 shrink-0 place-items-center">
         <ProfessionalIcon src={iconSrc} size={24} />
       </span>
-      <span className="min-w-0">
-        <span className="block text-[8px] font-black uppercase tracking-[0.06em] text-[#77869C]">{label}</span>
-        <span className="mt-1 block text-[18px] font-black leading-none text-[#142A50]">{value}</span>
-      </span>
+      <span className="min-w-0 flex-1 text-[8px] font-black uppercase tracking-[0.06em] text-[#77869C]">{label}</span>
+      <span className="shrink-0 text-[18px] font-black leading-none text-[#142A50]">{value}</span>
     </Link>
   );
 }
