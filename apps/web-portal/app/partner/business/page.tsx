@@ -1,7 +1,17 @@
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, CalendarRange, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarRange,
+  Crown,
+  FileText,
+  TrendingDown,
+  TrendingUp,
+  UsersRound,
+  WalletCards,
+} from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerDivider, PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerMetricStrip, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebBusinessPerformance, getPartnerWebBusinessRange } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -45,41 +55,66 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   const change = Number(performance.premium_change_percent || 0);
   const maxTrend = Math.max(1, ...performance.trend.map((item) => Number(item.premium || 0)));
 
+  const metrics = [
+    { label: "Gross Premium", value: currency(premiumNow), meta: monthLabel(performance.current_month), tone: "blue" as const, icon: Crown },
+    { label: "Policies", value: performance.policies_this_month, meta: performance.total_policies + " lifetime", tone: "green" as const, icon: FileText },
+    { label: "Customers", value: performance.total_customers, meta: "Scoped customer book", tone: "purple" as const, icon: UsersRound },
+    { label: "Lifetime Premium", value: currency(performance.lifetime_gross_premium), meta: "Recorded business", tone: "orange" as const, icon: WalletCards },
+  ];
+
   return (
     <PartnerPortalShell title="My Business">
-      <div className="space-y-7">
-        <PartnerPageHeader
-          eyebrow={humanize(performance.scope_mode) + " Scope"}
-          title="Business performance"
-          description="Review your business performance."
-          action={
-            <form className="flex flex-wrap items-end gap-2" action="/partner/business">
-              <label className="grid gap-1">
-                <span className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#74839A]">From</span>
-                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+      <div className="space-y-4 pb-3">
+        <section className="relative isolate overflow-hidden rounded-xl bg-gradient-to-r from-[#0A2F7A] via-[#0758BE] to-[#4A7BF0] px-6 py-5 text-white shadow-[0_8px_24px_rgba(20,61,130,0.13)]">
+          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+            <div className="absolute -left-16 top-0 h-full w-[46%] rounded-r-[48%] bg-[#074BAA]/70" />
+            <div className="absolute right-[25%] top-0 h-full w-[24%] bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
+            <div className="absolute inset-y-0 right-0 w-[33%] bg-gradient-to-l from-[#7F73F6]/25 to-transparent" />
+          </div>
+
+          <div className="relative z-10 flex min-h-[112px] items-center justify-between gap-5">
+            <div className="max-w-[44%]">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.16em] text-white/72">{humanize(performance.scope_mode)} Scope</p>
+              <h1 className="mt-1.5 text-[24px] font-extrabold tracking-[-0.03em] text-white">Business performance</h1>
+              <p className="mt-1.5 text-[10.5px] font-medium text-white/80">Review your business performance at a glance.</p>
+            </div>
+
+            <div className="pointer-events-none absolute bottom-0 left-1/2 hidden h-[122px] w-[190px] -translate-x-1/2 items-end justify-center lg:flex" aria-hidden="true">
+              <Image
+                src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
+                alt=""
+                width={128}
+                height={128}
+                className="h-[112px] w-[112px] object-contain drop-shadow-[0_12px_18px_rgba(0,22,72,0.35)]"
+                priority
+              />
+            </div>
+
+            <form className="relative z-10 flex flex-wrap items-end gap-2 rounded-full border border-white/25 bg-white/90 p-2 pl-3 shadow-sm backdrop-blur-sm" action="/partner/business">
+              <label className="grid gap-0.5">
+                <span className="text-[7.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">From</span>
+                <input name="from" type="date" defaultValue={query.from ?? ""} className="h-7 w-[132px] border-0 bg-transparent px-0 text-[9.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <label className="grid gap-1">
-                <span className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#74839A]">To</span>
-                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-9 rounded-lg border border-[#CCD7E4] bg-white px-2.5 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+              <div className="h-8 w-px bg-[#D8E0EB]" />
+              <label className="grid gap-0.5">
+                <span className="text-[7.5px] font-black uppercase tracking-[0.08em] text-[#7786A0]">To</span>
+                <input name="to" type="date" defaultValue={query.to ?? ""} className="h-7 w-[132px] border-0 bg-transparent px-0 text-[9.5px] font-bold text-[#203653] outline-none" />
               </label>
-              <button type="submit" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
+              <button type="submit" className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#0A3D93] px-4 text-[9.5px] font-extrabold text-white transition hover:bg-[#082F72] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
                 <CalendarRange className="h-3.5 w-3.5" /> Apply
               </button>
             </form>
-          }
-        />
+          </div>
+        </section>
 
-        <PartnerMetricStrip
-          items={[
-            { label: "Gross Premium", value: currency(premiumNow), meta: monthLabel(performance.current_month) },
-            { label: "Policies", value: performance.policies_this_month, meta: performance.total_policies + " lifetime" },
-            { label: "Customers", value: performance.total_customers, meta: "Scoped customer book" },
-            { label: "Lifetime Premium", value: currency(performance.lifetime_gross_premium), meta: "Recorded business" },
-          ]}
-        />
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((metric) => (
+            <BusinessMetricCard key={metric.label} {...metric} />
+          ))}
+        </section>
 
-        <div className="flex items-center gap-3">
-          <span className={"grid h-8 w-8 place-items-center rounded-xl " + (change >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
+        <div className="flex items-center gap-3 rounded-xl border border-[#E5EAF1] bg-white px-4 py-3 shadow-[0_3px_12px_rgba(24,52,90,0.04)]">
+          <span className={"grid h-8 w-8 shrink-0 place-items-center rounded-full " + (change >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
             {change >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
           </span>
           <div>
@@ -91,7 +126,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
         </div>
 
         {range ? (
-          <section>
+          <section className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
             <PartnerSectionHeading
               eyebrow="Selected Range"
               title={range.from_date + " to " + range.to_date}
@@ -112,56 +147,68 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
           </section>
         ) : null}
 
-        <PartnerDivider />
+        <section className="grid gap-4 xl:grid-cols-[1.18fr_.82fr]">
+          <div className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#6685B4]">Business Trend</p>
+                <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">Last six months</h2>
+              </div>
+              <div className="rounded-full border border-[#E0E7F0] bg-[#FAFBFD] px-3 py-1.5 text-[8.5px] font-bold text-[#61728A]">Gross Premium</div>
+            </div>
 
-        <div className="grid gap-8 xl:grid-cols-[1.15fr_.85fr]">
-          <section>
-            <PartnerSectionHeading eyebrow="Business Trend" title="Last six months" />
-            <div className="mt-4 flex min-h-[220px] items-end gap-3 overflow-x-auto border-b border-[#DCE4ED] pb-4">
+            <div className="mt-3 flex min-h-[205px] items-end gap-2 overflow-x-auto border-t border-[#EEF2F6] pt-3">
               {performance.trend.map((item) => {
                 const premium = Number(item.premium || 0);
-                const height = Math.max(18, Math.round((premium / maxTrend) * 150));
+                const height = Math.max(8, Math.round((premium / maxTrend) * 128));
                 return (
-                  <div key={item.month} className="flex min-w-[74px] flex-1 flex-col items-center">
-                    <p className="mb-2 text-center text-[8.5px] font-bold text-[#667892]">{currency(premium)}</p>
-                    <div className="flex h-[154px] w-full items-end justify-center px-2">
-                      <div className="w-full max-w-[34px] rounded-t-md bg-[#3156B8]" style={{ height }} />
+                  <div key={item.month} className="flex min-w-[66px] flex-1 flex-col items-center">
+                    <p className="mb-1.5 text-center text-[8px] font-extrabold text-[#526B91]">{currency(premium)}</p>
+                    <div className="flex h-[132px] w-full items-end justify-center px-2">
+                      <div className="w-full max-w-[34px] rounded-t-md bg-gradient-to-t from-[#176FE5] to-[#6A39EE] shadow-[0_5px_10px_rgba(58,86,185,0.16)]" style={{ height }} />
                     </div>
-                    <p className="mt-2 text-[9.5px] font-bold text-[#223755]">{shortMonth(item.month)}</p>
-                    <p className="text-[8.5px] text-[#8190A5]">{item.policies} policies</p>
+                    <p className="mt-1.5 text-[9px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
+                    <p className="text-[7.5px] text-[#8190A5]">{item.policies} policies</p>
                   </div>
                 );
               })}
             </div>
-          </section>
+          </div>
 
-          <section>
-            <PartnerSectionHeading eyebrow="Business Mix" title="Current month" />
-            <div className="mt-4 divide-y divide-[#E0E7EF] border-y border-[#DCE4ED]">
+          <div className="rounded-xl border border-[#D8EADF] bg-gradient-to-br from-[#F7FCFA] to-[#EDF9F4] p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
+            <div className="flex items-start gap-2.5">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]">
+                <TrendingUp className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#5C8D79]">Business Mix</p>
+                <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">Current month</h2>
+              </div>
+            </div>
+
+            <div className="mt-3 space-y-2">
               {performance.business_mix.length ? performance.business_mix.slice(0, 6).map((item) => {
                 const premium = Number(item.premium || 0);
                 const percent = premiumNow > 0 ? Math.min(100, (premium / premiumNow) * 100) : 0;
                 return (
-                  <div key={item.label} className="py-3">
+                  <div key={item.label} className="rounded-lg border border-[#E2E9F1] bg-white px-3 py-2.5 shadow-[0_2px_8px_rgba(25,50,90,0.03)]">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="break-words text-[10.5px] font-bold leading-4 text-[#203653]">{humanize(item.label)}</p>
-                      <p className="shrink-0 text-[9.5px] font-semibold text-[#677A94]">{currency(premium)} · {item.policies}</p>
+                      <p className="break-words text-[10px] font-extrabold leading-4 text-[#203653]">{humanize(item.label)}</p>
+                      <p className="shrink-0 text-[9px] font-bold text-[#627692]">{currency(premium)} · {item.policies}</p>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
-                      <div className="h-full rounded-full bg-[#3156B8]" style={{ width: String(percent) + "%" }} />
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#4D45E5] to-[#1592E7]" style={{ width: String(percent) + "%" }} />
                     </div>
                   </div>
                 );
-              }) : <p className="py-8 text-center text-[10.5px] font-medium text-[#74839A]">No business mix recorded for this month.</p>}
+              }) : <p className="rounded-lg border border-[#E2E9F1] bg-white py-8 text-center text-[10px] font-medium text-[#74839A]">No business mix recorded for this month.</p>}
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
-        <PartnerDivider />
-
-        <section>
+        <section className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
           <PartnerSectionHeading eyebrow="Workspaces" title="Continue working" />
-          <div className="mt-3 grid divide-y divide-[#E0E7EF] border-y border-[#DCE4ED] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
             <Action href="/partner/customers" title="Customer Book" subtitle="Open scoped customers" />
             <Action href="/partner/policies" title="Policy Register" subtitle="Review policy portfolio" />
             <Action href="/partner/renewals" title="Renewal Pipeline" subtitle="Open due and overdue business" />
@@ -172,12 +219,37 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   );
 }
 
+type MetricTone = "blue" | "green" | "purple" | "orange";
+type IconType = typeof Crown;
+
+const metricToneClasses: Record<MetricTone, { card: string; icon: string }> = {
+  blue: { card: "border-[#D4E4F8] bg-gradient-to-br from-[#F7FBFF] to-[#EAF6FF]", icon: "bg-[#1089E8] text-white" },
+  green: { card: "border-[#D4EBDD] bg-gradient-to-br from-[#F7FCFA] to-[#E8F8EF]", icon: "bg-[#1DAE78] text-white" },
+  purple: { card: "border-[#E1D9F6] bg-gradient-to-br from-[#FBFAFF] to-[#F1EBFF]", icon: "bg-[#8252DF] text-white" },
+  orange: { card: "border-[#F1E1C4] bg-gradient-to-br from-[#FFFDF9] to-[#FFF2DD]", icon: "bg-[#F28A1B] text-white" },
+};
+
+function BusinessMetricCard({ label, value, meta, tone, icon: Icon }: { label: string; value: number | string; meta: string; tone: MetricTone; icon: IconType }) {
+  const classes = metricToneClasses[tone];
+  return (
+    <div className={`relative min-h-[108px] overflow-hidden rounded-xl border px-4 py-3.5 shadow-[0_4px_14px_rgba(28,53,95,0.05)] ${classes.card}`}>
+      <div className="pointer-events-none absolute -bottom-10 -right-8 h-24 w-24 rotate-45 bg-white/25" aria-hidden="true" />
+      <div className="relative flex items-center gap-2.5">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full shadow-sm ${classes.icon}`}><Icon className="h-4 w-4" /></span>
+        <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#50637F]">{label}</p>
+      </div>
+      <p className="relative mt-2 text-[21px] font-black leading-none tracking-[-0.035em] text-[#142A50]">{value}</p>
+      <p className="relative mt-2 text-[9px] font-medium text-[#687A93]">{meta}</p>
+    </div>
+  );
+}
+
 function Action({ href, title, subtitle }: { href: string; title: string; subtitle: string }) {
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[68px] items-center justify-between gap-3 px-1 py-3 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4">
+    <Link href={href} prefetch={false} className="group flex min-h-[58px] items-center justify-between gap-3 rounded-lg border border-[#E2E8F0] bg-[#FAFBFD] px-3 py-2.5 transition hover:border-[#CAD6E5] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
       <span>
-        <span className="block break-words text-[11px] font-extrabold leading-4 text-[#172846]">{title}</span>
-        <span className="mt-0.5 block break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{subtitle}</span>
+        <span className="block break-words text-[10.5px] font-extrabold leading-4 text-[#172846]">{title}</span>
+        <span className="mt-0.5 block break-words text-[9px] font-medium leading-4 text-[#74839A]">{subtitle}</span>
       </span>
       <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
     </Link>
