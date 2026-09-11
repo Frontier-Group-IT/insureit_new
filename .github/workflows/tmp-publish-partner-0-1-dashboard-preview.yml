@@ -48,6 +48,13 @@ jobs:
             'apps/partner-app/app/_layout.tsx' \
             'apps/partner-app/app/search.tsx' \
             'apps/partner-app/app/settings.tsx' \
+            'apps/partner-app/assets/figma-dashboard/hero-banner.jpg' \
+            'apps/partner-app/assets/figma-dashboard/pending-tasks.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-claims.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-customers.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-policy-intake.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-renewals.png' \
+            'apps/partner-app/assets/figma-dashboard/renewal-due.png' \
             'apps/partner-app/assets/generated-dashboard/commission-earned.png' \
             'apps/partner-app/assets/generated-dashboard/home-header-insurance.jpg' \
             'apps/partner-app/assets/generated-dashboard/pending-document-alert.png' \
