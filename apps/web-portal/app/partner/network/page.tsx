@@ -1,6 +1,6 @@
-import { Building2, Network, UserRound } from "lucide-react";
+import { Building2, FileText, Layers3, Network, Target, UserRound, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerMetricStrip, PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -37,14 +37,47 @@ export default async function PartnerNetworkPage() {
           description="View your Partner network."
         />
 
-        <PartnerMetricStrip
-          items={[
-            { label: "Partner Families", value: data.total_partners },
-            { label: "Groups", value: data.total_groups },
-            { label: "POSP / MISP", value: childCount },
-            { label: "Scope", value: humanize(data.scope_mode) },
-          ]}
-        />
+        <div className="grid overflow-hidden rounded-xl border border-[#E3EAF3] bg-white shadow-[0_8px_24px_rgba(49,86,184,0.06)] sm:grid-cols-2 xl:grid-cols-4">
+          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3.5 sm:border-r xl:border-b-0">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]">
+              <UsersRound className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#6E8099]">Partner Families</p>
+              <p className="mt-1 text-[18px] font-extrabold leading-none text-[#162746]">{data.total_partners}</p>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3.5 xl:border-b-0 xl:border-r">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#E7F8EF] text-[#13A36B]">
+              <Layers3 className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#6E8099]">Groups</p>
+              <p className="mt-1 text-[18px] font-extrabold leading-none text-[#162746]">{data.total_groups}</p>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3.5 sm:border-r sm:border-b-0 xl:border-r">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F4EAFE] text-[#8B3FE8]">
+              <FileText className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#6E8099]">POSP / MISP</p>
+              <p className="mt-1 text-[18px] font-extrabold leading-none text-[#162746]">{childCount}</p>
+            </div>
+          </div>
+
+          <div className="flex min-w-0 items-center gap-3 px-4 py-3.5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFF0DF] text-[#F28A18]">
+              <Target className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.09em] text-[#6E8099]">Scope</p>
+              <p className="mt-1 truncate text-[15px] font-extrabold leading-none text-[#162746]">{humanize(data.scope_mode)}</p>
+            </div>
+          </div>
+        </div>
 
         {sections.length ? sections.map((section) => (
           <section key={section.key} className="overflow-hidden border-y border-[#DCE4ED]">
