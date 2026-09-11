@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -78,6 +79,8 @@ export default function PartnerHomeDashboard() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
   const [searchQuery, setSearchQuery] = useState('');
+  const { width: screenWidth } = useWindowDimensions();
+  const heroHeight = Math.min(116, Math.max(104, screenWidth * 0.29));
 
   const fetchHomeWorkspace = useCallback(async (): Promise<HomeWorkspace> => {
     const today = new Date();
@@ -144,7 +147,7 @@ export default function PartnerHomeDashboard() {
           />
         }
       >
-        <View style={styles.hero}>
+        <View style={[styles.hero, { height: heroHeight }]}>
           <Image
             source={GeneratedDashboardAssets.homeHeader}
             style={styles.heroBackdrop}
@@ -624,7 +627,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 104 },
   pressed: { opacity: 0.78 },
 
-  hero: { width: '100%', aspectRatio: 720 / 300, overflow: 'hidden', backgroundColor: '#054D9E', paddingTop: 9 },
+  hero: { width: '100%', overflow: 'hidden', backgroundColor: '#054D9E', paddingTop: 9 },
   heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 1 },
   heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.06)' },
   heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 14 },
