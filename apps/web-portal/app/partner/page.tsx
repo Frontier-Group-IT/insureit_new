@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -65,35 +64,14 @@ export default async function PartnerHomePage() {
             <p className="mt-1 text-[10.5px] font-medium text-white/80">Your current business, renewals and service activity in one place.</p>
           </div>
 
-          <div
-            data-partner-home-truck-art="true"
-            className="pointer-events-none absolute inset-y-0 left-[45%] right-[17%] hidden items-end justify-center md:flex"
-            aria-hidden="true"
-          >
-            <Image
-              src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
-              alt=""
-              width={128}
-              height={128}
-              className="absolute bottom-[-22px] left-[-34px] h-[174px] w-[174px] scale-[1.12] object-contain opacity-[0.13] saturate-0 brightness-125 blur-[0.3px]"
-            />
-            <div className="absolute bottom-[-6px] left-[26%] h-[105px] w-[175px] rounded-[5px] border border-cyan-100/15 bg-gradient-to-r from-[#0A4F9B]/20 via-[#1D7CCC]/10 to-transparent opacity-75" />
-            <Image
-              src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
-              alt=""
-              width={128}
-              height={128}
-              className="relative bottom-[-15px] z-10 h-[158px] w-[158px] scale-[1.16] object-contain drop-shadow-[0_14px_18px_rgba(0,20,62,0.42)]"
-              priority
-            />
-          </div>
-
           <Link
             href="/partner/business"
             prefetch={false}
-            className="absolute bottom-1/2 right-4 z-20 hidden min-h-[36px] min-w-[154px] translate-y-1/2 items-center justify-between gap-3 rounded-full border border-white/35 bg-[#08275E]/72 px-4.5 text-[10px] font-extrabold text-white shadow-[0_4px_12px_rgba(4,22,62,0.16)] backdrop-blur-sm transition hover:border-white/50 hover:bg-[#061F4F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:inline-flex"
+            data-partner-home-reference-cta="true"
+            className="absolute right-5 top-1/2 z-20 hidden h-[38px] w-[166px] -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-[#072A63]/72 px-4 text-[10px] font-extrabold text-white shadow-[0_4px_12px_rgba(4,22,62,0.15)] backdrop-blur-sm transition hover:border-white/45 hover:bg-[#061F4F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:inline-flex"
           >
-            View My Business <ArrowRight className="h-3.5 w-3.5" />
+            <span className="leading-none">View My Business</span>
+            <ArrowRight className="absolute right-3.5 h-3.5 w-3.5" />
           </Link>
         </section>
 
