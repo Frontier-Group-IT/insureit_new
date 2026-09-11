@@ -54,6 +54,14 @@ for (const route of requiredRoutes) {
   assert(fs.existsSync(path.join(root, route)), "missing required Partner route: " + route);
 }
 
+const homePage = read("app/partner/page.tsx");
+assert(homePage.includes('data-partner-home-reference-hero="true"'), "Partner Home must retain the approved reference hero treatment");
+assert(homePage.includes('data-partner-home-truck-art="true"'), "Partner Home hero must retain integrated truck artwork");
+assert(homePage.includes('/assets/Custom-Icons/optimized-128/fleet-vehicle.png'), "Partner Home hero must use the approved fleet vehicle asset");
+assert(homePage.includes('href="/partner/business"'), "Partner Home hero CTA must continue to open My Business");
+assert(homePage.includes("Welcome, {name}"), "Partner Home hero must keep the dynamic Partner display name");
+assert(homePage.includes("View My Business"), "Partner Home hero must keep the My Business CTA label");
+
 const guardedSurface = [
   ...walk("app/partner"),
   ...walk("components/partner-portal"),
