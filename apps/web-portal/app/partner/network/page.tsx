@@ -93,11 +93,11 @@ export default async function PartnerNetworkPage() {
             <div className="divide-y divide-[#E8EDF4]">
               {section.rows.map((row) => (
                 <div key={row.partner_id} className="py-5">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                  <div className="flex flex-col gap-4 rounded-xl border border-[#E6EDF6] bg-[#FBFDFF] px-4 py-4 shadow-[0_5px_18px_rgba(49,86,184,0.04)] xl:flex-row xl:items-center xl:justify-between">
                     <div className="flex min-w-0 items-start gap-3">
-                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><UserRound className="h-4 w-4" /></span>
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#2563EB]"><UserRound className="h-5 w-5" /></span>
                       <div className="min-w-0">
-                        <p className="break-words text-[12px] font-extrabold leading-4 text-[#1B2F4E]">{row.partner_name}</p>
+                        <p className="break-words text-[12px] font-extrabold leading-4 text-[#172846]">{row.partner_name}</p>
                         <p className="mt-0.5 text-[9.5px] font-medium text-[#74839A]">{row.partner_code} · {humanize(row.partner_kind)}</p>
                         {row.owner.name ? <p className="mt-1 text-[9px] text-[#8190A5]">Sales owner: {row.owner.name}{row.owner.employee_code ? " · " + row.owner.employee_code : ""}</p> : null}
                       </div>
@@ -105,7 +105,7 @@ export default async function PartnerNetworkPage() {
 
                     <div className="min-w-[190px] xl:text-right">
                       <p className="text-[9px] font-black uppercase tracking-[0.09em] text-[#75849A]">Premium This Month</p>
-                      <p className="mt-1 text-[18px] font-extrabold text-[#162746]">{currency(row.metrics.premium_this_month)}</p>
+                      <p className="mt-1 text-[18px] font-extrabold text-[#2563EB]">{currency(row.metrics.premium_this_month)}</p>
                     </div>
                   </div>
 
