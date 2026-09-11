@@ -45,7 +45,7 @@ export default async function PartnerHomePage() {
 
   return (
     <PartnerPortalShell title="Home">
-      <div className="space-y-4 pb-3">
+      <div className="space-y-0 pb-3">
         <section
           data-partner-home-reference-hero="true"
           className="relative isolate h-[104px] overflow-hidden rounded-lg bg-[linear-gradient(96deg,#07317B_0%,#075DBE_38%,#1895F1_69%,#4F85F4_100%)] px-5 py-3.5 text-white shadow-[0_5px_16px_rgba(22,76,161,0.16)] sm:px-6"
