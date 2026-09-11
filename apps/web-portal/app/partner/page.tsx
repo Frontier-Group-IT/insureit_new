@@ -51,8 +51,7 @@ export default async function PartnerHomePage() {
           className="flex min-h-[88px] items-end justify-between gap-5 border-b border-[#D7DEE8] px-1 pb-3 pt-2 sm:px-0"
         >
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#718099]">Partner Overview</p>
-            <h1 className="mt-1 text-[30px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[34px]">Welcome, {name}</h1>
+            <h1 className="text-[24px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[26px]">Welcome, {name}</h1>
           </div>
 
           <Link
@@ -97,57 +96,53 @@ export default async function PartnerHomePage() {
           />
         </section>
 
-        <Link
-          href="/partner/renewals/external"
-          prefetch={false}
-          className="group relative flex min-h-[76px] items-center gap-4 overflow-hidden rounded-xl border border-[#CCDAF6] bg-gradient-to-r from-[#EAF1FF] via-[#EDF3FF] to-[#DCE8FF] px-5 py-3.5 shadow-[0_4px_14px_rgba(50,86,150,0.06)] transition hover:border-[#B9CDF4] hover:shadow-[0_7px_18px_rgba(50,86,150,0.10)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/25"
-        >
-          <span className="absolute -left-5 -top-9 h-32 w-32 rounded-full border-[12px] border-white/45" aria-hidden="true" />
-          <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#3571EB] text-white shadow-[0_5px_12px_rgba(53,113,235,0.25)]">
-            <CalendarDays className="h-5 w-5" />
-          </span>
-          <span className="relative min-w-0 flex-1">
-            <span className="block text-[12px] font-extrabold text-[#17315C]">External Renewal Opportunities</span>
-            <span className="mt-1 block text-[9.5px] font-medium text-[#62789A]">External policies expiring within 30 days</span>
-          </span>
-          <span className="relative text-[28px] font-black tracking-[-0.04em] text-[#102A59]">{externalRenewals.due_30_count}</span>
-          <ArrowRight className="relative h-5 w-5 text-[#2F69DC] transition group-hover:translate-x-0.5" />
-        </Link>
-
         <section className="grid gap-4 xl:grid-cols-[1.05fr_.95fr]">
           <DashboardPanel
             icon={<Megaphone className="h-4 w-4" />}
-            eyebrow="Needs Your Attention"
             title="Priority work"
           >
-            <div className="px-4 pb-4">
+            <div className="space-y-2 px-4 pb-4">
               {home.today.length ? (
-                <div className="space-y-2">
-                  {home.today.slice(0, 6).map((item, index) => (
-                    <Link
-                      key={`${item.kind}-${index}`}
-                      href={todayHref(item.kind)}
-                      prefetch={false}
-                      className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
-                    >
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EAF1FF] text-[#3471E9]">
-                        {item.kind === "renewal" ? <RefreshCw className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[11px] font-extrabold leading-4 text-[#183057]">{item.title}</span>
-                        <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74849C]">{item.subtitle}</span>
-                      </span>
-                      <span className="grid min-w-6 place-items-center rounded-full bg-[#FFF0F5] px-2 py-1 text-[9px] font-black text-[#E34578]">{item.count}</span>
-                      <ArrowRight className="h-4 w-4 text-[#3471E9] transition group-hover:translate-x-0.5" />
-                    </Link>
-                  ))}
-                </div>
+                home.today.slice(0, 6).map((item, index) => (
+                  <Link
+                    key={`${item.kind}-${index}`}
+                    href={todayHref(item.kind)}
+                    prefetch={false}
+                    className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+                  >
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EAF1FF] text-[#3471E9]">
+                      {item.kind === "renewal" ? <RefreshCw className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[11px] font-extrabold leading-4 text-[#183057]">{item.title}</span>
+                      <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74849C]">{item.subtitle}</span>
+                    </span>
+                    <span className="grid min-w-6 place-items-center rounded-full bg-[#FFF0F5] px-2 py-1 text-[9px] font-black text-[#E34578]">{item.count}</span>
+                    <ArrowRight className="h-4 w-4 text-[#3471E9] transition group-hover:translate-x-0.5" />
+                  </Link>
+                ))
               ) : (
                 <div className="flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-4 text-[#62738D]">
                   <AlertCircle className="h-4 w-4" />
                   <p className="text-[10.5px] font-semibold">No priority actions right now.</p>
                 </div>
               )}
+
+              <Link
+                href="/partner/renewals/external"
+                prefetch={false}
+                className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+              >
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EAF1FF] text-[#3471E9]">
+                  <CalendarDays className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] font-extrabold leading-4 text-[#183057]">External Renewal Opportunities</span>
+                  <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74849C]">External policies expiring within 30 days</span>
+                </span>
+                <span className="text-[18px] font-black tracking-[-0.03em] text-[#102A59]">{externalRenewals.due_30_count}</span>
+                <ArrowRight className="h-4 w-4 text-[#3471E9] transition group-hover:translate-x-0.5" />
+              </Link>
             </div>
           </DashboardPanel>
 
@@ -196,14 +191,14 @@ function MetricCard({ label, value, meta, tone, icon: Icon }: { label: string; v
   );
 }
 
-function DashboardPanel({ icon, eyebrow, title, children }: { icon: React.ReactNode; eyebrow: string; title: string; children: React.ReactNode }) {
+function DashboardPanel({ icon, eyebrow, title, children }: { icon: React.ReactNode; eyebrow?: string; title: string; children: React.ReactNode }) {
   return (
     <div className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-[#F8FAFD] shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
       <div className="flex items-start gap-2.5 px-4 pb-3 pt-3.5">
         <span className="mt-0.5 text-[#2F70E5]">{icon}</span>
         <div className="min-w-0 flex-1">
-          <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#6685B4]">{eyebrow}</p>
-          <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">{title}</h2>
+          {eyebrow ? <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#6685B4]">{eyebrow}</p> : null}
+          <h2 className={`${eyebrow ? "mt-0.5" : ""} text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]`}>{title}</h2>
         </div>
         <Ellipsis className="h-4 w-4 text-[#2F70E5]" aria-hidden="true" />
       </div>
