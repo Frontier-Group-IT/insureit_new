@@ -41,12 +41,14 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
         />
 
         <section>
-          <form action="/partner/search" className="flex max-w-2xl gap-2">
+          <form action="/partner/search" className="flex w-full gap-2 rounded-2xl bg-[#F7FBFF] p-3 shadow-[0_8px_24px_rgba(49,86,184,0.08)]">
             <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-              <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+              <span className="pointer-events-none absolute left-4 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]">
+                <Search className="h-4 w-4" />
+              </span>
+              <input name="q" defaultValue={q} autoFocus placeholder="Customer, policy, claim, vehicle or insurer" className="h-12 w-full rounded-xl border border-[#BFD7FF] bg-white pl-14 pr-4 text-[11px] font-semibold text-[#213653] shadow-[0_2px_10px_rgba(49,86,184,0.06)] outline-none transition focus:border-[#7EB6FF] focus:ring-2 focus:ring-[#7EB6FF]/20" />
             </div>
-            <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
+            <button type="submit" className="h-12 rounded-xl bg-[#0B2B56] px-7 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(11,43,86,0.14)] transition hover:bg-[#103766] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
           </form>
 
           {failed ? <div className="mt-4 rounded-lg border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3 text-[10px] font-semibold text-[#80511A]">{failed} search section{failed === 1 ? "" : "s"} could not be refreshed. Available results are shown below.</div> : null}
