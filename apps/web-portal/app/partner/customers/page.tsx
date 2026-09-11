@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Mail, MapPin, Phone, Search, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -60,14 +60,30 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
           }
         />
 
-        <PartnerMetricStrip
-          items={[
-            { label: "Total Customers", value: summary.total_customers },
-            { label: "Active", value: summary.active_customers },
-            { label: "With Phone", value: summary.with_phone },
-            { label: "With Email", value: summary.with_email },
-          ]}
-        />
+        <div className="grid border-y border-[#DCE4ED] sm:grid-cols-2 xl:grid-cols-4">
+          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#D7E5F6] bg-[#F3F8FF] px-4 py-3 shadow-[0_4px_12px_rgba(49,86,184,0.05)]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#DCEBFF] text-[#2563EB]">
+              <UsersRound className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">Total Customers</p>
+              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.total_customers}</div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
+          </div>
+          <div className="min-w-0 border-t border-[#E5EBF2] px-1 py-3.5 sm:border-l sm:border-t-0 sm:px-4 sm:py-4 xl:border-l">
+            <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">Active</p>
+            <div className="mt-1.5 break-words text-[18px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746] sm:text-[20px]">{summary.active_customers}</div>
+          </div>
+          <div className="min-w-0 border-t border-[#E5EBF2] px-1 py-3.5 sm:border-l sm:border-t-0 sm:border-l-0 sm:px-4 sm:py-4 xl:border-l">
+            <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">With Phone</p>
+            <div className="mt-1.5 break-words text-[18px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746] sm:text-[20px]">{summary.with_phone}</div>
+          </div>
+          <div className="min-w-0 border-t border-[#E5EBF2] px-1 py-3.5 sm:border-l sm:border-t-0 sm:px-4 sm:py-4">
+            <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#7A899F]">With Email</p>
+            <div className="mt-1.5 break-words text-[18px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746] sm:text-[20px]">{summary.with_email}</div>
+          </div>
+        </div>
 
         <section>
           <PartnerSectionHeading
@@ -128,4 +144,3 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
     </PartnerPortalShell>
   );
 }
-
