@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -9,6 +8,7 @@ import {
   Ellipsis,
   FileText,
   Megaphone,
+  Plus,
   RefreshCw,
   ShieldCheck,
   UsersRound,
@@ -48,47 +48,21 @@ export default async function PartnerHomePage() {
       <div className="space-y-2 pb-3">
         <section
           data-partner-home-reference-hero="true"
-          className="relative isolate h-[104px] overflow-hidden rounded-lg bg-[linear-gradient(96deg,#07317B_0%,#075DBE_38%,#1895F1_69%,#4F85F4_100%)] px-5 py-3.5 text-white shadow-[0_5px_16px_rgba(22,76,161,0.16)] sm:px-6"
+          className="flex min-h-[88px] items-end justify-between gap-5 border-b border-[#D7DEE8] bg-white px-1 pb-3 pt-2 sm:px-0"
         >
-          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-            <div className="absolute inset-y-0 left-0 w-[34%] bg-gradient-to-r from-[#062967]/55 to-transparent" />
-            <div className="absolute inset-y-0 left-[27%] w-[26%] bg-[linear-gradient(112deg,transparent_4%,rgba(41,218,255,0.20)_48%,transparent_80%)]" />
-            <div className="absolute -top-24 left-[22%] h-[220px] w-[86px] rotate-[-28deg] bg-cyan-200/10" />
-            <div className="absolute -top-24 left-[30%] h-[220px] w-[64px] rotate-[-28deg] bg-white/7" />
-            <div className="absolute inset-y-0 right-0 w-[28%] bg-gradient-to-l from-[#4C7CF1]/38 to-transparent" />
-            <div className="absolute bottom-0 left-[31%] right-[27%] h-px bg-gradient-to-r from-transparent via-white/35 to-transparent" />
-          </div>
-
-          <div className="relative z-20 flex h-full max-w-[44%] flex-col justify-center sm:max-w-[42%]">
-            <p className="text-[7px] font-black uppercase tracking-[0.16em] text-white/80">Partner Overview</p>
-            <h1 className="mt-1 text-[17px] font-extrabold leading-tight tracking-[-0.025em] text-white sm:text-[18px]">Welcome, {name}</h1>
-            <p className="mt-1 text-[8px] font-medium leading-3 text-white/88 sm:text-[8.5px]">Your current business, renewals and service activity in one place.</p>
-          </div>
-
-          <div
-            data-partner-home-truck-art="true"
-            className="pointer-events-none absolute inset-y-0 left-[42%] right-[26%] hidden items-end justify-center md:flex"
-            aria-hidden="true"
-          >
-            <div className="absolute bottom-[7px] left-[8%] h-[12px] w-[84%] rounded-full bg-[#053575]/22 blur-md" />
-            <Image
-              src="/assets/Custom-Icons/optimized-128/fleet-vehicle.png"
-              alt=""
-              width={128}
-              height={128}
-              className="relative bottom-[-5px] h-[112px] w-[150px] object-contain drop-shadow-[0_10px_11px_rgba(1,31,82,0.36)]"
-              priority
-            />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#718099]">Partner Overview</p>
+            <h1 className="mt-1 text-[30px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[34px]">Welcome, {name}</h1>
           </div>
 
           <Link
             href="/partner/business"
             prefetch={false}
             data-partner-home-reference-cta="true"
-            className="absolute right-3.5 top-1/2 z-20 hidden h-[34px] w-[150px] -translate-y-1/2 items-center justify-center rounded-full border border-white/55 bg-white/12 px-3.5 text-[9px] font-extrabold text-white shadow-[0_4px_10px_rgba(4,22,62,0.12)] backdrop-blur-sm transition hover:border-white/75 hover:bg-white/18 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 sm:inline-flex"
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 bg-[#163968] px-5 text-[12px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
           >
-            <span className="leading-none">View My Business</span>
-            <ArrowRight className="absolute right-3 h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            <span>View My Business</span>
           </Link>
         </section>
 
