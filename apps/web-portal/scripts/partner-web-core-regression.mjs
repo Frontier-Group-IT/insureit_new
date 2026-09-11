@@ -64,7 +64,7 @@ assert(homePage.includes('bg-[#163968]'), "Partner Home CTA must retain the appr
 assert(homePage.includes('href="/partner/business"'), "Partner Home header CTA must continue to open My Business");
 assert(homePage.includes("Welcome, {name}"), "Partner Home header must keep the dynamic Partner display name");
 assert(homePage.includes("View My Business"), "Partner Home header must keep the My Business CTA label");
-assert(homePage.includes("Partner Overview"), "Partner Home header must keep the Partner Overview label");
+assert(!homePage.includes("Partner Overview"), "Partner Home header must keep the approved compact layout without the Partner Overview eyebrow");
 
 const guardedSurface = [
   ...walk("app/partner"),
