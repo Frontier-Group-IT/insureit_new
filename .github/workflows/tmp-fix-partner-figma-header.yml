@@ -1,0 +1,180 @@
+name: Fix Partner Figma header alignment
+
+on:
+  push:
+    branches:
+      - partner/preview-0.1.0-dashboard-refresh
+    paths:
+      - .github/workflows/tmp-fix-partner-figma-header.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+    steps:
+      - name: Checkout Partner preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: partner/preview-0.1.0-dashboard-refresh
+          fetch-depth: 0
+
+      - name: Apply Figma header alignment
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('apps/partner-app/app/(tabs)/index.tsx')
+          s = p.read_text()
+
+          old = '''          <Image
+            source={GeneratedDashboardAssets.homeHeader}
+            style={styles.heroBackdrop}
+            resizeMode="cover"
+          />
+          <View style={styles.heroBackdropShade} />
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroBrand}>
+
+              <Image
+
+                source={require('../../assets/insureit-partner-official.png')}
+
+                style={styles.heroLogo}
+
+                resizeMode="contain"
+
+              />
+
+              <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
+                <Text style={styles.heroBrandInsureit}>insureit</Text>
+                <Text style={styles.heroBrandPartner}>Partner</Text>
+              </View>
+
+            </View>
+            <View style={styles.heroActions}>'''
+          new = '''          <Image
+            source={GeneratedDashboardAssets.homeHeader}
+            style={styles.heroBackdrop}
+            resizeMode="stretch"
+          />
+          <View style={styles.heroBackdropShade} />
+          <Image
+            source={require('../../assets/insureit-partner-official.png')}
+            style={styles.heroWatermark}
+            resizeMode="contain"
+            pointerEvents="none"
+          />
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroBrandCentered}>
+              <Image
+                source={require('../../assets/insureit-partner-official.png')}
+                style={styles.heroLogoCentered}
+                resizeMode="contain"
+              />
+              <View style={styles.heroBrandWordmark} accessibilityLabel="insureit Partner">
+                <Text style={styles.heroBrandInsureit}>insureit</Text>
+                <Text style={styles.heroBrandPartner}>Partner</Text>
+              </View>
+            </View>
+            <View style={styles.heroActions}>'''
+          if old not in s:
+              raise SystemExit('Expected hero JSX block not found')
+          s = s.replace(old, new, 1)
+
+          old_styles = '''  hero: { height: 152, overflow: 'hidden', backgroundColor: '#054D9E', paddingTop: 9 },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 1 },
+  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.06)' },
+  heroTopRow: { zIndex: 2, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 14 },
+  heroBrand: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, maxWidth: '60%' },
+  heroLogo: { width: 33, height: 39, tintColor: '#FFFFFF' },
+  heroBrandCopy: { paddingTop: 1 },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 16, lineHeight: 18, fontWeight: '800', letterSpacing: -0.15 },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 16, lineHeight: 18, fontWeight: '800', letterSpacing: -0.15 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
+  heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
+  heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
+  heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },
+  heroGreetingText: { color: '#FFFFFF', fontSize: 15, lineHeight: 19, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+
+  body: { marginTop: -10, paddingHorizontal: 14 },'''
+          new_styles = '''  hero: { height: 188, overflow: 'hidden', backgroundColor: '#073A78', paddingTop: 8 },
+  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 0.9 },
+  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,30,68,0.16)' },
+  heroWatermark: { position: 'absolute', width: 300, height: 230, left: '50%', top: 10, marginLeft: -150, opacity: 0.07, tintColor: '#FFFFFF' },
+  heroTopRow: { zIndex: 2, minHeight: 116, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 4, paddingHorizontal: 14 },
+  heroBrandCentered: { alignItems: 'center', justifyContent: 'flex-start' },
+  heroLogoCentered: { width: 66, height: 74 },
+  heroBrandWordmark: { marginTop: -2, flexDirection: 'row', alignItems: 'baseline', gap: 4 },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 17, lineHeight: 21, fontWeight: '800', letterSpacing: -0.2, textTransform: 'lowercase' },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 17, lineHeight: 21, fontWeight: '800', letterSpacing: -0.2 },
+  heroActions: { position: 'absolute', top: 7, right: 14, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
+  heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
+  heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
+  heroGreeting: { zIndex: 2, position: 'absolute', left: 18, right: 18, bottom: 18, alignItems: 'center' },
+  heroGreetingText: { color: '#FFFFFF', textAlign: 'center', fontSize: 19, lineHeight: 24, fontWeight: '700', letterSpacing: -0.2, textShadowColor: 'rgba(0,0,0,0.24)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+
+  body: { marginTop: -16, paddingHorizontal: 14 },'''
+          if old_styles not in s:
+              raise SystemExit('Expected hero style block not found')
+          s = s.replace(old_styles, new_styles, 1)
+          p.write_text(s)
+          PY
+
+      - name: Verify Partner source
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:uat
+          npm run typecheck:partner
+          npm run lint:partner
+          npm run build:partner:web
+
+      - name: Commit header fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'apps/partner-app/app/(tabs)/index.tsx'
+          if git diff --cached --quiet; then
+            echo "No source change to commit"
+          else
+            git commit -m "Align Partner dashboard header with Figma"
+            git push origin HEAD:partner/preview-0.1.0-dashboard-refresh
+          fi
+
+      - name: Verify Partner Expo access
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli@latest whoami
+          npx eas-cli@latest project:info --non-interactive
+
+      - name: Publish Partner OTA to preview
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli@latest update --channel preview --message "Align Partner dashboard header with Figma" --non-interactive --json > /tmp/partner-header-update.json
+          cat /tmp/partner-header-update.json
+
+      - name: Verify latest preview update metadata
+        working-directory: apps/partner-app
+        run: npx eas-cli@latest update:list --channel preview --limit 1 --json --non-interactive
