@@ -147,7 +147,14 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
                   <p className="flex min-w-0 items-center gap-1.5 text-[10px] font-semibold text-[#536680]"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{[row.city, row.state].filter(Boolean).join(", ") || "Location not recorded"}</span></p>
 
                   <div className="min-w-0">
-                    <span className="inline-flex rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.customer_status)}</span>
+                    {statusLabel(row.customer_status) === "Active" ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E8F8EF] px-2.5 py-1 text-[9px] font-bold text-[#148A5A]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#13A36B]" aria-hidden="true" />
+                        Active
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.customer_status)}</span>
+                    )}
                   </div>
 
                   <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 lg:block" />
