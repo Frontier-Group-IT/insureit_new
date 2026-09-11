@@ -48,7 +48,7 @@ export default async function PartnerHomePage() {
       <div className="space-y-2 pb-3">
         <section
           data-partner-home-reference-hero="true"
-          className="flex min-h-[88px] items-end justify-between gap-5 border-b border-[#D7DEE8] bg-white px-1 pb-3 pt-2 sm:px-0"
+          className="flex min-h-[88px] items-end justify-between gap-5 border-b border-[#D7DEE8] px-1 pb-3 pt-2 sm:px-0"
         >
           <div className="min-w-0 flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#718099]">Partner Overview</p>
