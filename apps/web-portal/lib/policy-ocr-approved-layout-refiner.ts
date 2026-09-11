@@ -30,6 +30,8 @@ import { refineTataAigBundledTwoWheelerPolicy } from "./policy-ocr-tata-aig-refi
 import { guardTataAigPolicyNumber } from "./policy-ocr-tata-aig-policy-number-guard.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineTataAigVisibleFields } from "./policy-ocr-tata-aig-visible-field-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineTataAigStructuredLayout } from "./policy-ocr-tata-aig-structured-refiner.ts";
 
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -41,7 +43,8 @@ export function refineApprovedMotorPolicyLayout(
 
   if (/TATA\s+AIG\s+GENERAL\s+INSURANCE/i.test(header)) {
     const tata = guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, approved));
-    return refineTataAigVisibleFields(pages, tata);
+    const visible = refineTataAigVisibleFields(pages, tata);
+    return refineTataAigStructuredLayout(pages, tables, visible);
   }
 
   if (/MAGMA\s+GENERAL\s+INSURANCE|MAGMAINSURANCE\.COM/i.test(header)) {
