@@ -40,7 +40,6 @@ new_brand = '''          <Image
             source={require('../../assets/insureit-partner-official.png')}
             style={styles.heroWatermark}
             resizeMode="contain"
-            pointerEvents="none"
           />
           <View style={styles.heroTopRow}>
             <View style={styles.heroBrandCentered}>
