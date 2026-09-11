@@ -158,7 +158,11 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
           </div>
         ) : hasMultipleFiles ? (
           <div id={contentId}>
-            <ClaimDocumentCollapsedStatus verifiedCount={verifiedFileCount} pendingCount={pendingFileCount} />
+            <ClaimDocumentCollapsedStatus
+              verifiedCount={verifiedFileCount}
+              pendingCount={pendingFileCount}
+              showLabels={item.key === "spot" || item.key === "insurance"}
+            />
           </div>
         ) : null
       ) : (
