@@ -102,28 +102,24 @@ export default async function PartnerHomePage() {
             label="Gross Premium"
             value={formatIndianCurrency(home.business.premium_this_month)}
             meta="This month"
-            tone="blue"
             iconSrc={homeIcons.premium}
           />
           <MetricCard
             label="Policies"
             value={home.business.policies_this_month}
             meta={`${home.business.active_policies} active`}
-            tone="green"
             iconSrc={homeIcons.policies}
           />
           <MetricCard
             label="Customers"
             value={home.business.total_customers}
             meta={`${home.business.customers_this_month} added this month`}
-            tone="purple"
             iconSrc={homeIcons.customers}
           />
           <MetricCard
             label="Renewals"
             value={home.business.renewals_30_days}
             meta="Due in 30 days"
-            tone="orange"
             iconSrc={homeIcons.renewals}
           />
         </section>
@@ -142,7 +138,7 @@ export default async function PartnerHomePage() {
                     prefetch={false}
                     className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
                   >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EEF4FF]">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center">
                       <ProfessionalIcon src={todayIcon(item.kind)} size={24} />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -165,7 +161,7 @@ export default async function PartnerHomePage() {
                 prefetch={false}
                 className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
               >
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EEF4FF]">
+                <span className="grid h-9 w-9 shrink-0 place-items-center">
                   <ProfessionalIcon src={homeIcons.renewals} size={24} />
                 </span>
                 <span className="min-w-0 flex-1">
@@ -184,10 +180,10 @@ export default async function PartnerHomePage() {
             title="Current workload"
           >
             <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-              <SnapshotCard label="Active Claims" value={home.service.active_claims} href="/partner/claims" tone="blue" iconSrc={homeIcons.claims} />
-              <SnapshotCard label="Claims Attention" value={home.service.claims_need_attention} href="/partner/claims" tone="red" iconSrc={homeIcons.claimsAttention} />
-              <SnapshotCard label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" tone="green" iconSrc={homeIcons.intakeAttention} />
-              <SnapshotCard label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" tone="purple" iconSrc={homeIcons.overduePolicies} />
+              <SnapshotCard label="Active Claims" value={home.service.active_claims} href="/partner/claims" iconSrc={homeIcons.claims} />
+              <SnapshotCard label="Claims Attention" value={home.service.claims_need_attention} href="/partner/claims" iconSrc={homeIcons.claimsAttention} />
+              <SnapshotCard label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" iconSrc={homeIcons.intakeAttention} />
+              <SnapshotCard label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" iconSrc={homeIcons.overduePolicies} />
             </div>
           </DashboardPanel>
         </section>
@@ -196,19 +192,10 @@ export default async function PartnerHomePage() {
   );
 }
 
-type MetricTone = "blue" | "green" | "purple" | "orange";
-
-const metricToneClasses: Record<MetricTone, string> = {
-  blue: "bg-[#E9F0FF]",
-  green: "bg-[#DCF7EA]",
-  purple: "bg-[#EEE6FF]",
-  orange: "bg-[#FFF0D7]",
-};
-
-function MetricCard({ label, value, meta, tone, iconSrc }: { label: string; value: number | string; meta: string; tone: MetricTone; iconSrc: string }) {
+function MetricCard({ label, value, meta, iconSrc }: { label: string; value: number | string; meta: string; iconSrc: string }) {
   return (
     <div className="relative flex min-h-[84px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
-      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${metricToneClasses[tone]}`}>
+      <span className="grid h-9 w-9 shrink-0 place-items-center">
         <ProfessionalIcon src={iconSrc} size={25} />
       </span>
       <div className="min-w-0 flex-1">
@@ -239,23 +226,14 @@ function DashboardPanel({ iconSrc, eyebrow, title, children }: { iconSrc: string
   );
 }
 
-type SnapshotTone = "blue" | "red" | "green" | "purple";
-
-const snapshotToneClasses: Record<SnapshotTone, string> = {
-  blue: "bg-[#E9F1FF]",
-  red: "bg-[#FFE8EE]",
-  green: "bg-[#E6F8F1]",
-  purple: "bg-[#F0E9FF]",
-};
-
-function SnapshotCard({ label, value, href, tone, iconSrc }: { label: string; value: number; href: string; tone: SnapshotTone; iconSrc: string }) {
+function SnapshotCard({ label, value, href, iconSrc }: { label: string; value: number; href: string; iconSrc: string }) {
   return (
     <Link
       href={href}
       prefetch={false}
       className="flex min-h-[66px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
     >
-      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${snapshotToneClasses[tone]}`}>
+      <span className="grid h-9 w-9 shrink-0 place-items-center">
         <ProfessionalIcon src={iconSrc} size={24} />
       </span>
       <span className="min-w-0">
