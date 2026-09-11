@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_RELEASE_COMMIT: f00a8743559b8b81704b60a776e42d4aad931a46
+      EXPECTED_RELEASE_COMMIT: 5f7cab1a56fb56f8b3d20fd33ae4aab8e4bcd7b1
 
     steps:
       - name: Checkout exact branch snapshot
@@ -128,7 +128,7 @@ jobs:
           npx eas-cli project:info --non-interactive
           npx eas-cli channel:view preview --json --non-interactive
 
-      - name: Publish Partner Figma hero dimensions to preview
+      - name: Publish compact Partner hero sizing to preview
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -136,7 +136,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 Figma hero dimensions ${EXPECTED_RELEASE_COMMIT}" \
+            --message "Partner 0.1.0 compact hero sizing ${EXPECTED_RELEASE_COMMIT}" \
             --non-interactive \
             --json > partner-preview-update.json
           cat partner-preview-update.json
@@ -148,7 +148,7 @@ jobs:
           set -euo pipefail
           npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json
           cat latest-preview.json
-          grep -q 'Partner 0.1.0 Figma hero dimensions' latest-preview.json
+          grep -q 'Partner 0.1.0 compact hero sizing' latest-preview.json
           grep -q '"runtimeVersion": "0.1.0"' latest-preview.json
 
       - name: Summary
@@ -156,12 +156,12 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 Figma hero dimensions release'
+            echo '## Partner 0.1.0 compact hero sizing release'
             echo
             echo "- Verified release commit: \`${EXPECTED_RELEASE_COMMIT}\`"
             echo '- Runtime: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- Home hero dimensions: exact Figma 720:300 aspect ratio'
+            echo '- Home hero height: responsive compact `104–116dp`; background remains cover-cropped'
             echo '- Other dashboard layout/content: unchanged by this release slice'
             echo '- OTA activation: startup and foreground check/fetch/reload retained'
             echo '- Native APK/AAB build: NOT triggered'
