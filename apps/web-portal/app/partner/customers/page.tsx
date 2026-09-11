@@ -118,7 +118,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
           {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
               {rows.map((row) => (
-                <Link key={row.customer_id} href={"/partner/customers/" + encodeURIComponent(row.customer_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(180px,.8fr)_minmax(140px,.65fr)_auto] lg:items-center">
+                <Link key={row.customer_id} href={"/partner/customers/" + encodeURIComponent(row.customer_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(180px,.75fr)_minmax(160px,.55fr)_minmax(90px,.35fr)_auto] lg:items-center">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><UsersRound className="h-5 w-5" /></span>
                     <div className="min-w-0">
@@ -132,9 +132,10 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
                     {row.email ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[10px] font-semibold leading-4 text-[#536680]"><Mail className="h-3 w-3" />{row.email}</p> : null}
                   </div>
 
-                  <div>
-                    <p className="flex items-center gap-1.5 text-[10px] font-semibold text-[#536680]"><MapPin className="h-3 w-3" />{[row.city, row.state].filter(Boolean).join(", ") || "Location not recorded"}</p>
-                    <span className="mt-1.5 inline-flex rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.customer_status)}</span>
+                  <p className="flex min-w-0 items-center gap-1.5 text-[10px] font-semibold text-[#536680]"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{[row.city, row.state].filter(Boolean).join(", ") || "Location not recorded"}</span></p>
+
+                  <div className="min-w-0">
+                    <span className="inline-flex rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.customer_status)}</span>
                   </div>
 
                   <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 lg:block" />
