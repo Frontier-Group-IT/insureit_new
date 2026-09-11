@@ -21,17 +21,17 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
       <div className="lg:pl-[268px]">
         <header
           data-partner-header-variant={headerVariant}
-          className="sticky top-0 z-40 border-b border-[#C9D8E8] bg-[linear-gradient(90deg,#DCEBFA_0%,#EEF5FC_48%,#F7FAFD_100%)]"
+          className="sticky top-0 z-40 border-b border-[#BFCDE0]/65 bg-[linear-gradient(90deg,#C7D8EC_0%,#D6E3F2_48%,#E8EEF6_100%)]"
         >
           <div className="flex min-h-[66px] items-center justify-between gap-2 px-2.5 py-2 sm:px-4 lg:px-6">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
               <PartnerMobileNavigation />
-              <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#526C91]/60 to-transparent sm:block lg:hidden" />
+              <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#6E84A0]/35 to-transparent sm:block lg:hidden" />
               <div className="min-w-0 flex-1 overflow-hidden">
                 <PartnerBreadcrumbs title={title} />
               </div>
             </div>
-            <div className="shrink-0 border-l border-[#526C91]/35 pl-2 sm:pl-4">
+            <div className="shrink-0 border-l border-[#71859E]/25 pl-2 sm:pl-4">
               <UserMenu
                 profile={profile}
                 user={user ? { id: user.id, email: user.email } : null}
