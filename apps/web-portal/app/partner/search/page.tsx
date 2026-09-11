@@ -32,7 +32,7 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
   const hasResults = customers.length + policies.length + claims.length > 0;
 
   return (
-    <PartnerPortalShell title="Search">
+    <PartnerPortalShell title="Search" headerVariant="breadcrumb">
       <div className="space-y-7">
         <PartnerPageHeader
           eyebrow="Universal Search"
