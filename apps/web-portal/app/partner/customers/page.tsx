@@ -100,7 +100,12 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
                     {row.email ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[10px] font-semibold leading-4 text-[#536680]"><Mail className="h-3 w-3" />{row.email}</p> : null}
                   </div>
 
-                  <p className="flex min-w-0 items-center gap-1.5 text-[10px] font-semibold text-[#536680]"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{[row.city, row.state].filter(Boolean).join(", ") || "Location not recorded"}</span></p>
+                  <p className="flex min-w-0 items-center gap-2 text-[10px] font-semibold text-[#536680]">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]">
+                      <MapPin className="h-3 w-3" />
+                    </span>
+                    <span className="truncate">{[row.city, row.state].filter(Boolean).join(", ") || "Location not recorded"}</span>
+                  </p>
 
                   <div className="min-w-0">
                     {statusLabel(row.customer_status) === "Active" ? (
