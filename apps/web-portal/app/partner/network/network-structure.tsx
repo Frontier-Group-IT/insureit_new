@@ -102,8 +102,9 @@ export function PartnerNetworkStructure({ rows, totalGroups }: { rows: PartnerNe
         <div className="p-3">
           {sections.length ? <div className="space-y-2">{sections.map((section) => {
             const hideUngroupedHeader = section.key.startsWith("ungrouped:") && totalGroups === 0 && section.label.trim().toLowerCase() === "ungrouped";
+            const hidePromotedGroupHeader = totalGroups === 1 && !section.key.startsWith("ungrouped:") && section.label === rootLabel;
             return <div key={section.key} className="overflow-hidden rounded-lg border border-[#E1E8F2] bg-white">
-              {!hideUngroupedHeader ? <div className="flex items-center justify-between gap-3 bg-[#F8FBFF] px-3.5 py-2.5">
+              {!hideUngroupedHeader && !hidePromotedGroupHeader ? <div className="flex items-center justify-between gap-3 bg-[#F8FBFF] px-3.5 py-2.5">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E9F1FF] text-[#2563EB]"><Building2 className="h-4 w-4" /></span>
                   <div className="min-w-0"><p className="truncate text-[10.5px] font-extrabold text-[#183057]">{section.label}</p><p className="mt-0.5 text-[8.5px] font-medium text-[#7A899F]">{section.rows.length} Partner {section.rows.length === 1 ? "family" : "families"}{section.owner ? ` · ${section.owner}` : ""}</p></div>
