@@ -48,9 +48,7 @@ export default async function PartnerActivityPage() {
     <PartnerPortalShell title="Activity">
       <div className="space-y-7">
         <PartnerPageHeader
-          eyebrow="Activity"
           title="What changed"
-          description="Recent policy, claim and service activity."
         />
 
         {data.attention.length ? (
