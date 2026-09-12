@@ -166,6 +166,7 @@ export const config = {
     "/timeline/:path*",
     "/tasks/:path*",
     "/reports/:path*",
+    "/development/:path*",
     "/organization/:path*",
     "/employees/:path*",
     "/users/:path*",
