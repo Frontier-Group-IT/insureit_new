@@ -31,6 +31,22 @@ export function isPolicyIntakeOcrRetryable(input: { status: string; ocrStatus: s
   return Number.isFinite(created) && now - created >= STALE_OCR_MS;
 }
 
+export async function getPolicyIntakeOcrRetryState(id: string) {
+  await requirePolicyIntakeReviewer();
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("policy_intake_requests")
+    .select("status,ocr_status,created_at")
+    .eq("id", id)
+    .maybeSingle<{ status: string; ocr_status: string; created_at: string }>();
+  if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
+  return {
+    ok: true as const,
+    retryable: isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
+    ocrStatus: data.ocr_status,
+  };
+}
+
 export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntakeOcrResult> {
   await requirePolicyIntakeReviewer();
   const admin = createSupabaseAdminClient();
