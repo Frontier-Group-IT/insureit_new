@@ -168,8 +168,9 @@ async function buildLearningContext() {
 export async function POST(request: Request) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
+  const profileId = profile?.id;
 
-  if (!isAuthorizedProfile(profile)) {
+  if (!isAuthorizedProfile(profile) || !profileId) {
     return NextResponse.json({ error: "An active INSUREIT staff or Partner login is required for the voice lab." }, { status: 403 });
   }
 
@@ -192,7 +193,7 @@ export async function POST(request: Request) {
   const { data: labSession, error: sessionError } = await supabase
     .from("renewal_voice_agent_sessions")
     .insert({
-      created_by: profile.id,
+      created_by: profileId,
       model,
       voice,
       agent_type: agentType,
