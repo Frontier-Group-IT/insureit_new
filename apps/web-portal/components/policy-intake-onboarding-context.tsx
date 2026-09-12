@@ -1,26 +1,38 @@
 "use client";
 
 import { ExternalLink, FileText } from "lucide-react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { loadPolicyIntakeOnboardingContext, openPolicyIntakeDocument, type PolicyIntakeOnboardingContext } from "@/app/policy-intakes/actions";
+import { verifyPolicyIntakeCurrentPolicyCopy } from "@/app/policy-intakes/policy-copy-state-actions";
 
-const KEY="insureit:policy-intake:pending:v1";
 const RESET_EVENT="insureit:policy-onboarding:reset";
 const FOOTER_TARGET_ID="policy-intake-footer-left-target";
 
 export function PolicyIntakeOnboardingContextCard(){
+  const pathname=usePathname();
+  const searchParams=useSearchParams();
+  const intakeId=pathname==="/policies/new"?searchParams.get("intake_id")?.trim()??"":"";
   const[context,setContext]=useState<PolicyIntakeOnboardingContext|null>(null);
   const[error,setError]=useState<string|null>(null);
   const[opening,setOpening]=useState(false);
   const[footerTarget,setFooterTarget]=useState<HTMLElement|null>(null);
 
   useEffect(()=>{
-    let pending:{id?:string;savedAt?:number}|null=null;
-    try{pending=JSON.parse(sessionStorage.getItem(KEY)||"null");}catch{}
-    if(!pending?.id||!pending.savedAt||Date.now()-pending.savedAt>8*60*60*1000)return;
-    void loadPolicyIntakeOnboardingContext(pending.id).then(result=>{if(result.ok)setContext(result.context);});
-  },[]);
+    let cancelled=false;
+    setContext(null);setError(null);setOpening(false);
+    if(!intakeId)return()=>{cancelled=true;};
+
+    void verifyPolicyIntakeCurrentPolicyCopy(intakeId).then(async copyState=>{
+      if(cancelled||!copyState.ok)return;
+      const result=await loadPolicyIntakeOnboardingContext(copyState.intakeId);
+      if(cancelled||!result.ok)return;
+      setContext(result.context);
+    }).catch(()=>undefined);
+
+    return()=>{cancelled=true;};
+  },[intakeId]);
 
   useEffect(()=>{
     const clear=()=>{setContext(null);setError(null);setOpening(false);};
@@ -29,7 +41,7 @@ export function PolicyIntakeOnboardingContextCard(){
   },[]);
 
   useEffect(()=>{
-    if(!context)return;
+    if(!context||context.id!==intakeId)return;
     let frame=0;
     let attempts=0;
 
@@ -58,19 +70,28 @@ export function PolicyIntakeOnboardingContextCard(){
       cancelAnimationFrame(frame);
       const target=document.getElementById(FOOTER_TARGET_ID);
       target?.remove();
+      setFooterTarget(null);
     };
-  },[context]);
+  },[context,intakeId]);
 
   async function openCopy(){
-    if(!context)return;
+    if(!context||context.id!==intakeId)return;
     setOpening(true);setError(null);
-    const result=await openPolicyIntakeDocument(context.id);
+
+    const copyState=await verifyPolicyIntakeCurrentPolicyCopy(context.id);
+    if(!copyState.ok){
+      setOpening(false);
+      setContext(null);
+      return;
+    }
+
+    const result=await openPolicyIntakeDocument(copyState.intakeId);
     setOpening(false);
     if(!result.ok){setError(result.error);return;}
     window.open(result.url,"_blank","noopener,noreferrer");
   }
 
-  if(!context)return null;
+  if(!context||context.id!==intakeId)return null;
 
   const action=<div className="flex min-w-0 flex-col items-start">
     <button type="button" onClick={openCopy} disabled={opening} className="flex h-9 items-center gap-2 rounded-xl border border-[#CFE0F2] bg-[#F4F8FC] px-3.5 text-[9px] font-bold text-[#244C73] transition hover:bg-[#EDF5FC] disabled:opacity-60">
