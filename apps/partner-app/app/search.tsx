@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
@@ -28,12 +28,19 @@ const EMPTY_RESULTS: SearchResults = { customers: [], policies: [], claims: [] }
 
 export default function SearchScreen() {
   const router = useRouter();
-  const [query, setQuery] = useState(savedUniversalQuery);
+  const params = useLocalSearchParams<{ q?: string | string[] }>();
+  const incomingQuery = Array.isArray(params.q) ? params.q[0] : params.q;
+  const [query, setQuery] = useState(() => incomingQuery?.trim() || savedUniversalQuery);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [loading, setLoading] = useState(false);
   const [partialError, setPartialError] = useState('');
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!incomingQuery?.trim()) return;
+    setQuery(incomingQuery.trim());
+  }, [incomingQuery]);
 
   useEffect(() => {
     savedUniversalQuery = query;

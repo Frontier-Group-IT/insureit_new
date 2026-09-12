@@ -1,0 +1,169 @@
+name: Temporary publish Partner 0.1.0 dashboard and OTA activation fix
+
+on:
+  push:
+    branches:
+      - partner/preview-0.1.0-dashboard-refresh
+    paths:
+      - '.github/workflows/tmp-publish-partner-0-1-dashboard-preview.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
+      EXPECTED_RELEASE_COMMIT: e54dace1ca1f11d26c2d18550059059569b72482
+
+    steps:
+      - name: Checkout exact branch snapshot
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require exact verified Partner 0.1.0 delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin partner/preview-0.1.0-dashboard-refresh
+          [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/partner/preview-0.1.0-dashboard-refresh)" ] || {
+            echo "::error::Branch advanced after checkout." >&2
+            exit 1
+          }
+          git merge-base --is-ancestor "$EXPECTED_RELEASE_COMMIT" HEAD || {
+            echo "::error::Expected verified release commit is not contained in publish head." >&2
+            exit 1
+          }
+          changed_app_files=$(git diff --name-only "$ACCEPTED_BASELINE" HEAD -- apps/partner-app)
+          printf '%s\n' "$changed_app_files"
+          expected_files=$(printf '%s\n' \
+            'apps/partner-app/app/(tabs)/index.tsx' \
+            'apps/partner-app/app/_layout.tsx' \
+            'apps/partner-app/app/search.tsx' \
+            'apps/partner-app/app/settings.tsx' \
+            'apps/partner-app/assets/figma-dashboard/hero-banner.webp' \
+            'apps/partner-app/assets/figma-dashboard/pending-tasks.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-claims.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-customers.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-policy-intake.png' \
+            'apps/partner-app/assets/figma-dashboard/quick-renewals.png' \
+            'apps/partner-app/assets/figma-dashboard/renewal-due.png' \
+            'apps/partner-app/assets/generated-dashboard/commission-earned.png' \
+            'apps/partner-app/assets/generated-dashboard/home-header-insurance.jpg' \
+            'apps/partner-app/assets/generated-dashboard/pending-document-alert.png' \
+            'apps/partner-app/assets/generated-dashboard/pending-tasks-illustration.jpg' \
+            'apps/partner-app/assets/generated-dashboard/policy-add.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-sold.png' \
+            'apps/partner-app/assets/generated-dashboard/policy-verified.png' \
+            'apps/partner-app/assets/generated-dashboard/renewal-add.png' \
+            'apps/partner-app/assets/generated-dashboard/renewal-due.png' \
+            'apps/partner-app/assets/insureit-partner-official.png' \
+            'apps/partner-app/assets/partner-home-banner.png')
+          [ "$changed_app_files" = "$expected_files" ] || {
+            echo "::error::Refusing OTA: Partner app delta is outside the verified dashboard/search/OTA-activation asset set." >&2
+            exit 1
+          }
+
+      - name: Validate installed-runtime identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.1.0') throw new Error(`Expected installed-compatible app version/runtime 0.1.0, found ${expo.version}`);
+          if (expo.android?.package !== 'com.insureit.partner' || expo.ios?.bundleIdentifier !== 'com.insureit.partner') throw new Error('Unexpected Partner package identity.');
+          if (expo.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected appVersion runtime policy.');
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner EAS project.');
+          if (expo?.updates?.url !== 'https://u.expo.dev/8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner update URL.');
+          NODE
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Require synchronized dependency lockfile
+        shell: bash
+        run: |
+          if ! git diff --quiet -- package-lock.json; then
+            echo "::error::package-lock.json is out of sync."
+            git diff -- package-lock.json
+            exit 1
+          fi
+
+      - name: Verify Partner 0.1.0 source before OTA
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --workspace apps/partner-app run verify:routes
+          npm --workspace apps/partner-app run verify:phase5
+          npm --workspace apps/partner-app run verify:visual
+          node apps/partner-app/scripts/verify-policy-intake-source-contract.mjs
+          npm --workspace apps/partner-app run verify:pre-apk
+          npm --workspace apps/partner-app run verify:uat
+          npm run typecheck:partner
+          npm run lint:partner
+          npm run build:partner:web
+
+      - name: Verify Expo access and preview channel
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "::error::EXPO_TOKEN_PARTNER is missing."; exit 1; }
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+          npx eas-cli channel:view preview --json --non-interactive
+
+      - name: Publish Partner hero size and image quality to preview
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Partner 0.1.0 hero size and image quality ${EXPECTED_RELEASE_COMMIT}" \
+            --non-interactive \
+            --json > partner-preview-update.json
+          cat partner-preview-update.json
+
+      - name: Verify latest preview update metadata
+        working-directory: apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json
+          cat latest-preview.json
+          grep -q 'Partner 0.1.0 hero size and image quality' latest-preview.json
+          grep -q '"runtimeVersion": "0.1.0"' latest-preview.json
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '## Partner 0.1.0 hero size and image quality release'
+            echo
+            echo "- Verified release commit: \`${EXPECTED_RELEASE_COMMIT}\`"
+            echo '- Runtime: `0.1.0`'
+            echo '- Channel: `preview`'
+            echo '- Home hero: fixed `120dp` container with verified `900x300` WebP artwork and cover rendering'
+            echo '- Search overlap: `18dp`'
+            echo '- Other dashboard layout/content: unchanged by this release slice'
+            echo '- OTA activation: startup and foreground check/fetch/reload retained'
+            echo '- Native APK/AAB build: NOT triggered'
+          } >> "$GITHUB_STEP_SUMMARY"
