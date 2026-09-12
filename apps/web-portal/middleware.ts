@@ -100,6 +100,7 @@ function continueRequest(request: NextRequest, session?: RefreshedSession | null
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isRenewalVoiceLab = pathname === "/partner/renewals/voice-lab";
   let accessToken = request.cookies.get(accessTokenCookie)?.value;
   const refreshToken = request.cookies.get(refreshTokenCookie)?.value;
   const cachedRole = request.cookies.get(sessionRoleCookie)?.value;
@@ -136,13 +137,13 @@ export async function middleware(request: NextRequest) {
     if (check.role === "intermediary" && !pathname.startsWith("/partner") && !pathname.startsWith("/intermediary-portal")) {
       return redirect(request, "/partner", refreshedSession, check.role);
     }
-    if (check.role !== "intermediary" && (pathname.startsWith("/partner") || pathname.startsWith("/intermediary-portal"))) {
+    if (!isRenewalVoiceLab && check.role !== "intermediary" && (pathname.startsWith("/partner") || pathname.startsWith("/intermediary-portal"))) {
       return redirect(request, internalLaunchHome, refreshedSession, check.role);
     }
 
     if (isIntermediaryOnlyLaunch && check.role !== "intermediary") {
       if (!hasCapability(check.role, "view_intermediaries")) return redirect(request, "/access-denied", refreshedSession, check.role);
-      if (!isIntermediaryLaunchPath(pathname)) return redirect(request, internalLaunchHome, refreshedSession, check.role);
+      if (!isRenewalVoiceLab && !isIntermediaryLaunchPath(pathname)) return redirect(request, internalLaunchHome, refreshedSession, check.role);
     }
 
     return continueRequest(request, refreshedSession, check.role);
