@@ -56,7 +56,7 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
     .from("policy_intake_requests")
     .update({ ocr_status: "pending", ocr_warnings: [] })
     .eq("id", id)
-    .eq("status", "processing");
+    .eq("status", intake.status);
 
   if (intake.ocr_status === "failed") {
     claim = claim.eq("ocr_status", "failed");
@@ -73,12 +73,12 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
   revalidatePath("/policy-intakes");
   revalidatePath(`/policy-intakes/${id}`);
   after(async () => {
-    await processRetry(id, intake.storage_path);
+    await processRetry(id, intake.storage_path, intake.status);
   });
   return { ok: true, status: "processing" };
 }
 
-async function processRetry(id: string, expectedStoragePath: string) {
+async function processRetry(id: string, expectedStoragePath: string, expectedWorkflowStatus: string) {
   const admin = createSupabaseAdminClient();
   const { data: intake } = await admin
     .from("policy_intake_requests")
@@ -86,13 +86,13 @@ async function processRetry(id: string, expectedStoragePath: string) {
     .eq("id", id)
     .maybeSingle<Omit<RetryableIntake, "created_at">>();
 
-  if (!intake || intake.status !== "processing" || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
+  if (!intake || intake.status !== expectedWorkflowStatus || intake.ocr_status !== "pending" || intake.storage_path !== expectedStoragePath) return;
 
   const { data: started } = await admin
     .from("policy_intake_requests")
     .update({ ocr_status: "processing" })
     .eq("id", id)
-    .eq("status", "processing")
+    .eq("status", expectedWorkflowStatus)
     .eq("ocr_status", "pending")
     .eq("storage_path", expectedStoragePath)
     .select("id")
@@ -101,7 +101,7 @@ async function processRetry(id: string, expectedStoragePath: string) {
 
   const { data: blob, error: downloadError } = await admin.storage.from(intake.storage_bucket).download(intake.storage_path);
   if (downloadError || !blob) {
-    await markRetryFailure(id, expectedStoragePath, "The stored policy copy could not be read automatically.");
+    await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, "The stored policy copy could not be read automatically.");
     return;
   }
 
@@ -111,14 +111,14 @@ async function processRetry(id: string, expectedStoragePath: string) {
     formData.set("policy_document", file);
     const ocr = await extractPolicyIntakeDocumentTrusted(formData);
     if (!ocr.ok) {
-      await markRetryFailure(id, expectedStoragePath, ocr.error);
+      await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, ocr.error);
       return;
     }
 
     await admin
       .from("policy_intake_requests")
       .update({
-        status: "ready_for_review",
+        status: expectedWorkflowStatus === "in_review" ? "in_review" : "ready_for_review",
         ocr_status: "completed",
         ocr_fields: ocr.fields,
         ocr_parser_id: ocr.parserId,
@@ -127,22 +127,22 @@ async function processRetry(id: string, expectedStoragePath: string) {
         attention_reason: null,
       })
       .eq("id", id)
-      .eq("status", "processing")
+      .eq("status", expectedWorkflowStatus)
       .eq("storage_path", expectedStoragePath);
   } catch {
-    await markRetryFailure(id, expectedStoragePath, "Automatic detail fetch failed again. You can retry or continue with manual review.");
+    await markRetryFailure(id, expectedStoragePath, expectedWorkflowStatus, "Automatic detail fetch failed again. You can retry or continue with manual review.");
   } finally {
     revalidatePath("/policy-intakes");
     revalidatePath(`/policy-intakes/${id}`);
   }
 }
 
-async function markRetryFailure(id: string, storagePath: string, message: string) {
+async function markRetryFailure(id: string, storagePath: string, expectedWorkflowStatus: string, message: string) {
   const admin = createSupabaseAdminClient();
   await admin
     .from("policy_intake_requests")
     .update({ ocr_status: "failed", ocr_warnings: [message] })
     .eq("id", id)
-    .eq("status", "processing")
+    .eq("status", expectedWorkflowStatus)
     .eq("storage_path", storagePath);
 }
