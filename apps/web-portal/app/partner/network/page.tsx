@@ -79,16 +79,18 @@ export default async function PartnerNetworkPage() {
 
         {sections.length ? sections.map((section) => (
           <section key={section.key}>
-            <div className="flex flex-col gap-2 rounded-xl border border-[#E3EAF3] bg-white px-4 py-3 shadow-[0_6px_20px_rgba(49,86,184,0.05)] sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]"><Building2 className="h-4 w-4" /></span>
-                <div>
-                  <p className="text-[12px] font-extrabold text-[#172846]">{section.label}</p>
-                  <p className="mt-0.5 text-[9.5px] font-medium text-[#7A899F]">{section.rows.length} Partner {section.rows.length === 1 ? "family" : "families"}{section.owner ? " · " + section.owner : ""}</p>
+            {section.key.startsWith("ungrouped:") && data.total_groups === 0 ? null : (
+              <div className="flex flex-col gap-2 rounded-xl border border-[#E3EAF3] bg-white px-4 py-3 shadow-[0_6px_20px_rgba(49,86,184,0.05)] sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]"><Building2 className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-[12px] font-extrabold text-[#172846]">{section.label}</p>
+                    <p className="mt-0.5 text-[9.5px] font-medium text-[#7A899F]">{section.rows.length} Partner {section.rows.length === 1 ? "family" : "families"}{section.owner ? " · " + section.owner : ""}</p>
+                  </div>
                 </div>
+                <ArrowRight className="hidden h-4 w-4 shrink-0 text-[#6E8099] sm:block" />
               </div>
-              <ArrowRight className="hidden h-4 w-4 shrink-0 text-[#6E8099] sm:block" />
-            </div>
+            )}
 
             <div className="divide-y divide-[#E8EDF4]">
               {section.rows.map((row) => (
