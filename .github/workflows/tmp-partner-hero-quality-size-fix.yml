@@ -26,14 +26,36 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p apps/partner-app/assets/figma-dashboard
-          cat .tmp/partner-hero/part*.txt | base64 -d > apps/partner-app/assets/figma-dashboard/hero-banner.webp
-          hero='apps/partner-app/assets/figma-dashboard/hero-banner.webp'
-          [ "$(stat -c%s "$hero")" = '45312' ] || { echo "::error::Unexpected hero asset size."; exit 1; }
-          echo '38653cc36ed69567f106bfc6870175eb7ecc29f0812e32e353022b38c6df1707  apps/partner-app/assets/figma-dashboard/hero-banner.webp' | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+          parts = sorted(Path('.tmp/partner-hero').glob('part*.txt'))
+          expected_lengths = [15500, 15500, 15500, 13916]
+          if len(parts) != 4:
+              raise SystemExit(f'Expected 4 hero chunks, found {len(parts)}')
+          encoded = ''
+          for path, expected in zip(parts, expected_lengths):
+              text = path.read_text()
+              print(f'{path}: {len(text)} chars')
+              if len(text) != expected:
+                  raise SystemExit(f'Unexpected chunk length for {path}: {len(text)}')
+              encoded += text
+          print(f'combined base64 chars={len(encoded)}')
+          data = base64.b64decode(encoded, validate=True)
+          print(f'decoded hero bytes={len(data)}')
+          digest = hashlib.sha256(data).hexdigest()
+          print(f'sha256={digest}')
+          if len(data) != 45312:
+              raise SystemExit(f'Unexpected hero asset size: {len(data)}')
+          if digest != '38653cc36ed69567f106bfc6870175eb7ecc29f0812e32e353022b38c6df1707':
+              raise SystemExit('Unexpected hero asset digest')
+          Path('apps/partner-app/assets/figma-dashboard/hero-banner.webp').write_bytes(data)
+          PY
           python - <<'PY'
           from PIL import Image
           path='apps/partner-app/assets/figma-dashboard/hero-banner.webp'
           with Image.open(path) as image:
+              print(f'hero dimensions={image.size}, format={image.format}')
               if image.size != (900, 300):
                   raise SystemExit(f'Expected 900x300 hero, got {image.size}')
               if image.format != 'WEBP':
