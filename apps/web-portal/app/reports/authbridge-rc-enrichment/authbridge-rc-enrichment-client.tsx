@@ -38,6 +38,7 @@ const FAILED = new Set<LookupStatus>(["provider_error", "request_error"]);
 
 export default function AuthbridgeRcEnrichmentClient() {
   const workbookRef = useRef<XLSX.WorkBook | null>(null);
+  const stopRequestedRef = useRef(false);
   const [loaded, setLoaded] = useState<LoadedSheet | null>(null);
   const [results, setResults] = useState<Record<string, LookupResult>>({});
   const [running, setRunning] = useState<"test" | "all" | "failed" | null>(null);
@@ -57,6 +58,7 @@ export default function AuthbridgeRcEnrichmentClient() {
   }, [results]);
 
   async function handleFile(file: File | null) {
+    stopRequestedRef.current = false;
     setMessage("");
     setResults({});
     setTestPassed(false);
@@ -110,6 +112,7 @@ export default function AuthbridgeRcEnrichmentClient() {
     if (!loaded || running) return;
     const sample = loaded.validUnique.slice(0, TEST_SIZE);
     if (!sample.length) return;
+    stopRequestedRef.current = false;
     setRunning("test");
     setRunProgress({ current: 0, total: sample.length, failed: 0 });
     setMessage(`Running a controlled ${sample.length}-vehicle AuthBridge test...`);
@@ -117,11 +120,24 @@ export default function AuthbridgeRcEnrichmentClient() {
     let failed = 0;
     try {
       for (let index = 0; index < sample.length; index += 1) {
+        if (stopRequestedRef.current) {
+          setTestPassed(false);
+          setMessage(`Test stopped by user after ${index.toLocaleString("en-IN")} of ${sample.length.toLocaleString("en-IN")} RCs. Completed RCs are retained.`);
+          return;
+        }
+
         const registrationNumber = sample[index];
         const result = await lookupOneSafely(registrationNumber);
         mergeResults([result]);
         if (FAILED.has(result.status)) failed += 1;
-        setRunProgress({ current: index + 1, total: sample.length, failed });
+        const current = index + 1;
+        setRunProgress({ current, total: sample.length, failed });
+
+        if (stopRequestedRef.current) {
+          setTestPassed(false);
+          setMessage(`Test stopped by user after ${current.toLocaleString("en-IN")} of ${sample.length.toLocaleString("en-IN")} RCs. Completed RCs are retained.`);
+          return;
+        }
 
         if (index < sample.length - 1 && result.source === "authbridge") {
           await sleep(CLIENT_PROVIDER_SPACING_MS);
@@ -138,6 +154,7 @@ export default function AuthbridgeRcEnrichmentClient() {
       setTestPassed(false);
       setMessage(error instanceof Error ? error.message : "The test batch failed.");
     } finally {
+      stopRequestedRef.current = false;
       setRunning(null);
       setRunProgress(null);
     }
@@ -157,6 +174,7 @@ export default function AuthbridgeRcEnrichmentClient() {
       return;
     }
 
+    stopRequestedRef.current = false;
     setRunning(mode === "failed" ? "failed" : "all");
     setRunProgress({ current: 0, total: candidates.length, failed: 0 });
     setMessage(
@@ -170,6 +188,11 @@ export default function AuthbridgeRcEnrichmentClient() {
 
     try {
       for (let index = 0; index < candidates.length; index += 1) {
+        if (stopRequestedRef.current) {
+          setMessage(`Fetching stopped by user after ${index.toLocaleString("en-IN")} of ${candidates.length.toLocaleString("en-IN")} RCs in this pass. Completed RCs are retained; use Run all remaining to continue later.`);
+          return;
+        }
+
         const registrationNumber = candidates[index];
         const result = await lookupOneSafely(registrationNumber);
         mergeResults([result]);
@@ -179,6 +202,12 @@ export default function AuthbridgeRcEnrichmentClient() {
 
         const current = index + 1;
         setRunProgress({ current, total: candidates.length, failed: failedThisRun });
+
+        if (stopRequestedRef.current) {
+          setMessage(`Fetching stopped by user after ${current.toLocaleString("en-IN")} of ${candidates.length.toLocaleString("en-IN")} RCs in this pass. The RC already in progress was allowed to finish safely. Completed RCs are retained; use Run all remaining to continue later.`);
+          return;
+        }
+
         setMessage(
           `Bulk enrichment running: ${current.toLocaleString("en-IN")} of ${candidates.length.toLocaleString("en-IN")} attempted this pass${failedThisRun ? `; ${failedThisRun.toLocaleString("en-IN")} need retry` : ""}.`,
         );
@@ -201,9 +230,16 @@ export default function AuthbridgeRcEnrichmentClient() {
           : "Bulk processing completed. Download the enriched workbook.",
       );
     } finally {
+      stopRequestedRef.current = false;
       setRunning(null);
       setRunProgress(null);
     }
+  }
+
+  function requestStop() {
+    if (!running) return;
+    stopRequestedRef.current = true;
+    setMessage("Stop requested. The RC currently in progress will finish safely, then fetching will pause before the next RC.");
   }
 
   async function lookupOneSafely(registrationNumber: string): Promise<LookupResult> {
@@ -352,6 +388,15 @@ export default function AuthbridgeRcEnrichmentClient() {
               {running === "failed" ? `Retrying ${progressText ?? ""}…` : `Retry failed only (${counts.failed.toLocaleString("en-IN")})`}
             </button>
           ) : null}
+          {running ? (
+            <button
+              type="button"
+              onClick={requestStop}
+              className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100"
+            >
+              Stop fetching
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={!loaded || !Object.keys(results).length || Boolean(running)}
@@ -365,7 +410,7 @@ export default function AuthbridgeRcEnrichmentClient() {
       </section>
 
       <p className="text-xs text-slate-500">
-        Full processing remains locked until the five-vehicle test completes cleanly. Success and billable no-data responses are cached; isolated provider errors no longer stop the remaining RCs, while repeated gateway/transport failures pause the run after three consecutive failures.
+        Full processing remains locked until the five-vehicle test completes cleanly. Success and billable no-data responses are cached; isolated provider errors no longer stop the remaining RCs, while repeated gateway/transport failures pause the run after three consecutive failures. Stop fetching finishes the RC already in progress, then pauses before the next RC so completed work remains safely resumable.
       </p>
     </main>
   );
