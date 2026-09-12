@@ -57,8 +57,9 @@ export function PartnerNetworkStructure({ rows, totalGroups }: { rows: PartnerNe
   const rootLabel = useMemo(() => {
     const namedGroups = sections.filter((section) => !section.key.startsWith("ungrouped:"));
     if (totalGroups === 1 && namedGroups.length === 1) return namedGroups[0].label;
-    return "Partner Family";
-  }, [sections, totalGroups]);
+    if (rows.length === 1) return rows[0].partner_name;
+    return "Partner Network";
+  }, [rows, sections, totalGroups]);
 
   return (
     <section className="overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-[0_8px_24px_rgba(49,86,184,0.05)]">
