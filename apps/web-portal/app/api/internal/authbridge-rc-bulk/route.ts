@@ -16,10 +16,11 @@ import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MAX_BATCH_SIZE = 5;
-const PROVIDER_SPACING_MS = 1_600;
+const MAX_BATCH_SIZE = 1;
+const RECOMMENDED_CLIENT_SPACING_MS = 1_600;
+const BULK_PROVIDER_TIMEOUT_MS = 45_000;
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const BULK_MAPPER_VERSION = "2026-09-12-bulk-v1";
+const BULK_MAPPER_VERSION = "2026-09-13-bulk-v2";
 
 type CacheRow = {
   registration_number_normalized: string;
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
   )].slice(0, MAX_BATCH_SIZE);
 
   if (!registrationNumbers.length) {
-    return NextResponse.json({ error: "Provide at least one registration number." }, { status: 400 });
+    return NextResponse.json({ error: "Provide one registration number." }, { status: 400 });
   }
 
   const admin = createSupabaseAdminClient();
@@ -84,7 +85,6 @@ export async function POST(request: NextRequest) {
   }
 
   const results: BulkResult[] = [];
-  let liveCalls = 0;
 
   for (const registrationNumber of registrationNumbers) {
     if (!isValidVehicleRegistrationNumber(registrationNumber)) {
@@ -119,11 +119,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (liveCalls > 0) await sleep(PROVIDER_SPACING_MS);
-    liveCalls += 1;
-
     try {
-      const response = await lookupAuthbridgeRc(registrationNumber);
+      const response = await lookupAuthbridgeRc(registrationNumber, { timeoutMs: BULK_PROVIDER_TIMEOUT_MS });
       const raw = response.data;
       const outcome = classifyAuthbridgeResponse(raw);
       const providerCode = getAuthbridgeBusinessCode(raw);
@@ -177,12 +174,12 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({
     results,
-    limits: { maxBatchSize: MAX_BATCH_SIZE, providerSpacingMs: PROVIDER_SPACING_MS },
+    limits: {
+      maxBatchSize: MAX_BATCH_SIZE,
+      recommendedClientSpacingMs: RECOMMENDED_CLIENT_SPACING_MS,
+      providerTimeoutMs: BULK_PROVIDER_TIMEOUT_MS,
+    },
   });
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function normalizeTimestamp(value: string | undefined) {
@@ -194,6 +191,6 @@ function normalizeTimestamp(value: string | undefined) {
 function safeErrorMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "Vehicle lookup failed.";
   if (/unauthorized|configuration|not configured/i.test(message)) return "AuthBridge gateway configuration error.";
-  if (/timeout/i.test(message)) return "AuthBridge request timed out. Retry this vehicle later.";
+  if (/timeout|aborted/i.test(message)) return "AuthBridge request timed out. Retry this vehicle later.";
   return "AuthBridge lookup failed. Retry this vehicle later.";
 }

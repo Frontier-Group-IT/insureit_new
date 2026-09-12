@@ -13,6 +13,14 @@ export type AuthbridgeRcLookupResponse = {
   data?: unknown;
 };
 
+export type AuthbridgeRcLookupOptions = {
+  timeoutMs?: number;
+};
+
+const DEFAULT_TIMEOUT_MS = 65_000;
+const MIN_TIMEOUT_MS = 1_000;
+const MAX_TIMEOUT_MS = 65_000;
+
 function configuration() {
   const gatewayUrl = process.env.ICALL_GATEWAY_URL?.trim().replace(/\/$/, "");
   const gatewaySecret = process.env.ICALL_GATEWAY_SECRET?.trim();
@@ -23,11 +31,17 @@ function configuration() {
   return { gatewayUrl, gatewaySecret };
 }
 
-export async function lookupAuthbridgeRc(registrationNumber: string): Promise<AuthbridgeRcLookupResponse> {
+export async function lookupAuthbridgeRc(
+  registrationNumber: string,
+  options: AuthbridgeRcLookupOptions = {},
+): Promise<AuthbridgeRcLookupResponse> {
   const normalized = normalizeVehicleRegistrationNumber(registrationNumber);
   if (!isValidVehicleRegistrationNumber(normalized)) {
     throw new Error("Enter a valid vehicle registration number.");
   }
+
+  const requestedTimeout = Number.isFinite(options.timeoutMs) ? Number(options.timeoutMs) : DEFAULT_TIMEOUT_MS;
+  const timeoutMs = Math.min(Math.max(Math.trunc(requestedTimeout), MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
 
   const { gatewayUrl, gatewaySecret } = configuration();
   const response = await fetch(`${gatewayUrl}/authbridge/rc-verification`, {
@@ -39,7 +53,7 @@ export async function lookupAuthbridgeRc(registrationNumber: string): Promise<Au
     },
     body: JSON.stringify({ registrationNumber: normalized }),
     cache: "no-store",
-    signal: AbortSignal.timeout(65_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   const text = await response.text();
