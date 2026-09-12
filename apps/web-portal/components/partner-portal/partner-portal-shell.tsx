@@ -6,6 +6,7 @@ import { PartnerNavigation } from "./partner-navigation";
 import { PartnerMobileNavigation } from "./partner-mobile-navigation";
 import { PartnerBottomNavigation } from "./partner-bottom-navigation";
 import { PartnerBreadcrumbs } from "./partner-breadcrumbs";
+import { PartnerBusinessTrendResponsiveFix } from "./partner-business-trend-responsive-fix";
 
 export async function PartnerPortalShell({ title, children, headerVariant = "default" }: { title: string; children: ReactNode; headerVariant?: "default" | "breadcrumb" }) {
   const accessToken = await getServerAccessToken();
@@ -47,6 +48,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
       </div>
 
       <PartnerBottomNavigation />
+      <PartnerBusinessTrendResponsiveFix />
     </div>
   );
 }
