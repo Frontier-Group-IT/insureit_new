@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Mail, MapPin, Phone, Search, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -45,66 +45,22 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
   return (
     <PartnerPortalShell title="Customers">
       <div className="space-y-7">
-        <div className="contents [&>div>div:first-child>p:first-child]:inline-flex [&>div>div:first-child>p:first-child]:rounded-md [&>div>div:first-child>p:first-child]:bg-[#EAF2FF] [&>div>div:first-child>p:first-child]:px-2 [&>div>div:first-child>p:first-child]:py-1 [&>div>div:first-child>p:first-child]:text-[#2563EB]">
-          <PartnerPageHeader
-            eyebrow="Customer Book"
-            title="Your customers"
-            description="View and search your customers."
-            action={
-              <form action="/partner/customers" className="flex w-full gap-2 sm:max-w-[430px]">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                  <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-                </div>
-                <button type="submit" className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
-              </form>
-            }
-          />
+        <div className="flex flex-col gap-4 border-b border-[#D7DEE8] pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="text-[24px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[26px]">Your customers</h1>
+          <form action="/partner/customers" className="flex w-full gap-2 sm:max-w-[620px] lg:max-w-[720px]">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+              <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-10 pr-4 text-[10.5px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+            </div>
+            <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-5 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
+          </form>
         </div>
 
-        <div className="grid border-y border-[#DCE4ED] sm:grid-cols-2 xl:grid-cols-4">
-          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#D7E5F6] bg-[#F3F8FF] px-4 py-3 shadow-[0_4px_12px_rgba(49,86,184,0.05)]">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#DCEBFF] text-[#2563EB]">
-              <UsersRound className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">Total Customers</p>
-              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.total_customers}</div>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
-          </div>
-          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#D8F0E3] bg-[#F2FBF6] px-4 py-3 shadow-[0_4px_12px_rgba(16,185,129,0.04)]">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#DDF7E9] text-[#16A36A]">
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m7 12 3 3 7-7" />
-              </svg>
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">Active</p>
-              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.active_customers}</div>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
-          </div>
-          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#E7D9F8] bg-[#FAF6FF] px-4 py-3 shadow-[0_4px_12px_rgba(147,51,234,0.04)]">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#F0E4FF] text-[#9333EA]">
-              <Phone className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">With Phone</p>
-              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.with_phone}</div>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
-          </div>
-          <div className="m-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#F7E3C8] bg-[#FFF8EF] px-4 py-3 shadow-[0_4px_12px_rgba(245,158,11,0.04)]">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#FFE9CC] text-[#F59E0B]">
-              <Mail className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[8.5px] font-black uppercase tracking-[0.1em] text-[#6D7F98]">With Email</p>
-              <div className="mt-1 break-words text-[20px] font-extrabold leading-tight tracking-[-0.025em] text-[#162746]">{summary.with_email}</div>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#7D8DA4]" />
-          </div>
+        <div className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryMetric label="Total Customers" value={summary.total_customers} icon={<UsersRound className="h-5 w-5 text-[#3156B8]" />} />
+          <SummaryMetric label="Active" value={summary.active_customers} icon={<span className="text-[20px] font-bold leading-none text-[#16A36A]">✓</span>} />
+          <SummaryMetric label="With Phone" value={summary.with_phone} icon={<Phone className="h-5 w-5 text-[#6D42D8]" />} />
+          <SummaryMetric label="With Email" value={summary.with_email} icon={<Mail className="h-5 w-5 text-[#F59E0B]" />} />
         </div>
 
         <section>
@@ -184,5 +140,18 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
         </section>
       </div>
     </PartnerPortalShell>
+  );
+}
+
+function SummaryMetric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+  return (
+    <div className="relative flex min-h-[84px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
+      <span className="grid h-9 w-9 shrink-0 place-items-center">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[16px] font-black leading-none tracking-[-0.025em] text-[#142A50]">{value}</p>
+        <p className="mt-1.5 text-[7.5px] font-black uppercase tracking-[0.08em] text-[#50637F]">{label}</p>
+      </div>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96]" />
+    </div>
   );
 }
