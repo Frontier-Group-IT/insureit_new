@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  BadgePercent,
   Ellipsis,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
@@ -18,6 +19,7 @@ import {
   getPartnerWebSession,
 } from "@/lib/partner-web";
 import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
+import { getPartnerWebActiveScheme } from "@/lib/partner-schemes";
 import { PartnerHomeTrendPeriodFilter } from "./partner-home-trend-period-filter";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +81,25 @@ function formatUpdatedTime(value: Date) {
   })
     .format(value)
     .toLowerCase();
+}
+
+function formatSchemeDeadline(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return { date: value, time: "" };
+  return {
+    date: new Intl.DateTimeFormat("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    }).format(parsed),
+    time: new Intl.DateTimeFormat("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+    }).format(parsed),
+  };
 }
 
 function currentKolkataIsoDate(value = new Date()) {
@@ -177,6 +198,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     businessPerformance,
     claimOutstanding,
     renewalSummary,
+    activeScheme,
   ] = await Promise.all([
     getPartnerWebSession(),
     getPartnerWebHome(),
@@ -188,6 +210,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     getPartnerWebBusinessPerformance(),
     getPartnerWebClaimOutstanding(),
     getPartnerWebRenewalSummary(),
+    getPartnerWebActiveScheme(),
   ]);
 
   const today = currentKolkataIsoDate();
@@ -232,6 +255,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
 
   const name = identity.display_name?.trim() || "Partner";
   const updatedTime = formatUpdatedTime(new Date());
+  const schemeDeadline = activeScheme ? formatSchemeDeadline(activeScheme.ends_at) : null;
   const payoutValue = payout.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";
   const payoutMeta = payout.available ? `${payout.paid_count} paid records` : "Commercial visibility restricted";
   const payoutOutstandingValue = payout.available ? formatIndianCurrency(payout.pending_amount) : "Restricted";
@@ -252,13 +276,29 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
       <div className="space-y-2 pb-3">
         <section
           data-partner-home-reference-hero="true"
-          className="flex items-center justify-between gap-5 border-b border-[#D7DEE8] px-1 py-1 sm:px-0"
+          className="flex items-center justify-between gap-5 overflow-x-auto border-b border-[#D7DEE8] px-1 py-1 sm:px-0"
         >
           <div className="min-w-0 flex-1">
-            <h1 className="text-[24px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[26px]">Welcome, {name}</h1>
+            <h1 className="whitespace-nowrap text-[24px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[26px]">Welcome, {name}</h1>
           </div>
 
           <div className="flex shrink-0 items-center gap-3">
+            {activeScheme && schemeDeadline ? (
+              <Link
+                href="/partner/schemes"
+                prefetch={false}
+                data-partner-active-scheme="true"
+                className="group inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[9.5px] font-semibold text-[#405A7B] transition hover:bg-[#EEF4FC] hover:text-[#1F5EC7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+              >
+                <BadgePercent className="h-3.5 w-3.5 shrink-0 text-[#2E6CD5]" aria-hidden="true" />
+                <span className="max-w-[220px] truncate font-extrabold text-[#203A61]">{activeScheme.name}</span>
+                <span className="text-[#9AA7B8]">·</span>
+                <span>Valid till {schemeDeadline.date}</span>
+                <span className="text-[#9AA7B8]">·</span>
+                <span>{schemeDeadline.time}</span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#2E6CD5] transition group-hover:translate-x-0.5" aria-hidden="true" />
+              </Link>
+            ) : null}
             <span className="whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
           </div>
         </section>
@@ -517,7 +557,6 @@ function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; pe
               const y = plotTop + (plotHeight / 3) * grid;
               return <line key={grid} x1="14" x2="586" y1={y} y2={y} stroke="#E7EDF5" strokeWidth="1" />;
             })}
-
             {points.map((point, index) => {
               const x = points.length > 1 ? plotLeft + index * slotWidth : 300;
               const premium = Number(point.premium ?? 0);
