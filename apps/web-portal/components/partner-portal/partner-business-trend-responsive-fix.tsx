@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 
-const SOURCE_WIDTH = 600;
 const SOURCE_HEIGHT = 190;
 const SOURCE_PLOT_LEFT = 24;
 const SOURCE_PLOT_RIGHT = 576;
@@ -54,7 +53,6 @@ export function PartnerBusinessTrendResponsiveFix() {
         if (originalY1 !== null) line.setAttribute("y1", String(originalY1 * yScale));
         if (originalY2 !== null) line.setAttribute("y2", String(originalY2 * yScale));
 
-        // BusinessTrend only renders horizontal grid lines as <line> elements.
         line.setAttribute("x1", "8");
         line.setAttribute("x2", String(Math.max(8, width - 8)));
       });
