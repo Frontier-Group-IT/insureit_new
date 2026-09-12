@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireAnyCapability, requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
@@ -156,19 +157,33 @@ export async function addVehicleMaster(formData: FormData) {
 
 export async function saveVehicleMaster(id: string, formData: FormData) {
   const profile = await requireCapability("view_vehicles", "edit");
+  const accessibleCustomerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_vehicles");
+  if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) redirect("/access-denied");
+
   const admin = createSupabaseAdminClient();
   const parsed = vehiclePayload(formData);
   if (!parsed.payload) redirect(errorUrl(`/vehicles/${id}/edit`, parsed.error ?? "Vehicle details are incomplete."));
   const payload = parsed.payload;
 
-  const { data: currentVehicle, error: currentError } = await admin
+  let currentVehicleRequest = admin
     .from("vehicles")
-    .select("id,vehicle_no,vehicle_no_normalized,registration_status,registration_date")
-    .eq("id", id)
-    .maybeSingle<{ id: string; vehicle_no: string; vehicle_no_normalized: string | null; registration_status: string | null; registration_date: string | null }>();
-  if (currentError || !currentVehicle) {
-    redirect(errorUrl(`/vehicles/${id}/edit`, currentError?.message ?? "The vehicle record no longer exists."));
+    .select("id,customer_id,vehicle_no,vehicle_no_normalized,registration_status,registration_date")
+    .eq("id", id);
+  if (accessibleCustomerIds !== null) currentVehicleRequest = currentVehicleRequest.in("customer_id", accessibleCustomerIds);
+  const { data: currentVehicle, error: currentError } = await currentVehicleRequest.maybeSingle<{
+    id: string;
+    customer_id: string;
+    vehicle_no: string;
+    vehicle_no_normalized: string | null;
+    registration_status: string | null;
+    registration_date: string | null;
+  }>();
+  if (currentError) {
+    redirect(errorUrl(`/vehicles/${id}/edit`, currentError.message));
   }
+  if (!currentVehicle) redirect("/access-denied");
+
+  if (accessibleCustomerIds !== null && !accessibleCustomerIds.includes(payload.customer_id)) redirect("/access-denied");
 
   const wasPending = isPendingVehicle(currentVehicle);
   const willBePending = payload.registration_status === "registration_pending";
