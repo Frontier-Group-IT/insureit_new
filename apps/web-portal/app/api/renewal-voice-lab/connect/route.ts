@@ -38,8 +38,8 @@ export async function POST(request: Request) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
 
-  if (!profile?.id || profile.role !== "intermediary" || !profile.is_active) {
-    return NextResponse.json({ error: "Partner authentication is required for the voice lab." }, { status: 403 });
+  if (!profile?.id || !profile.is_active) {
+    return NextResponse.json({ error: "An active INSUREIT login is required for the voice lab." }, { status: 403 });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
