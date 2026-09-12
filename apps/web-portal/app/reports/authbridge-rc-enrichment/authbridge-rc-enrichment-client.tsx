@@ -24,16 +24,26 @@ type LoadedSheet = {
   duplicateRowCount: number;
 };
 
-const BATCH_SIZE = 5;
+type RunProgress = {
+  current: number;
+  total: number;
+  failed: number;
+};
+
+const TEST_SIZE = 5;
+const CLIENT_PROVIDER_SPACING_MS = 1_600;
+const MAX_CONSECUTIVE_REQUEST_FAILURES = 3;
 const TERMINAL = new Set<LookupStatus>(["success", "no_data"]);
+const FAILED = new Set<LookupStatus>(["provider_error", "request_error"]);
 
 export default function AuthbridgeRcEnrichmentClient() {
   const workbookRef = useRef<XLSX.WorkBook | null>(null);
   const [loaded, setLoaded] = useState<LoadedSheet | null>(null);
   const [results, setResults] = useState<Record<string, LookupResult>>({});
-  const [running, setRunning] = useState<"test" | "all" | null>(null);
+  const [running, setRunning] = useState<"test" | "all" | "failed" | null>(null);
   const [message, setMessage] = useState<string>("");
   const [testPassed, setTestPassed] = useState(false);
+  const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
 
   const counts = useMemo(() => {
     const values = Object.values(results);
@@ -41,7 +51,7 @@ export default function AuthbridgeRcEnrichmentClient() {
       processed: values.filter((item) => TERMINAL.has(item.status)).length,
       success: values.filter((item) => item.status === "success").length,
       noData: values.filter((item) => item.status === "no_data").length,
-      failed: values.filter((item) => item.status === "provider_error" || item.status === "request_error").length,
+      failed: values.filter((item) => FAILED.has(item.status)).length,
       cache: values.filter((item) => item.source === "cache").length,
     };
   }, [results]);
@@ -51,6 +61,7 @@ export default function AuthbridgeRcEnrichmentClient() {
     setResults({});
     setTestPassed(false);
     setLoaded(null);
+    setRunProgress(null);
     workbookRef.current = null;
     if (!file) return;
 
@@ -97,52 +108,112 @@ export default function AuthbridgeRcEnrichmentClient() {
 
   async function runTest() {
     if (!loaded || running) return;
-    const sample = loaded.validUnique.slice(0, BATCH_SIZE);
+    const sample = loaded.validUnique.slice(0, TEST_SIZE);
     if (!sample.length) return;
     setRunning("test");
+    setRunProgress({ current: 0, total: sample.length, failed: 0 });
     setMessage(`Running a controlled ${sample.length}-vehicle AuthBridge test...`);
+
+    let failed = 0;
     try {
-      const batch = await lookupBatch(sample);
-      mergeResults(batch);
-      const hasTransportOrProviderFailure = batch.some((item) => item.status === "request_error" || item.status === "provider_error");
-      setTestPassed(!hasTransportOrProviderFailure && batch.length === sample.length);
+      for (let index = 0; index < sample.length; index += 1) {
+        const registrationNumber = sample[index];
+        const result = await lookupOneSafely(registrationNumber);
+        mergeResults([result]);
+        if (FAILED.has(result.status)) failed += 1;
+        setRunProgress({ current: index + 1, total: sample.length, failed });
+
+        if (index < sample.length - 1 && result.source === "authbridge") {
+          await sleep(CLIENT_PROVIDER_SPACING_MS);
+        }
+      }
+
+      setTestPassed(failed === 0);
       setMessage(
-        hasTransportOrProviderFailure
-          ? "The test found an AuthBridge/provider error. Full processing remains locked until the test is clean."
-          : "Controlled test completed cleanly. Review the counts, then Run All when ready.",
+        failed > 0
+          ? `The test completed with ${failed} AuthBridge/provider error${failed === 1 ? "" : "s"}. Full processing remains locked until the test is clean.`
+          : "Controlled test completed cleanly. Review the counts, then Run All Remaining when ready.",
       );
     } catch (error) {
       setTestPassed(false);
       setMessage(error instanceof Error ? error.message : "The test batch failed.");
     } finally {
       setRunning(null);
+      setRunProgress(null);
     }
   }
 
-  async function runAll() {
+  async function runAll(mode: "remaining" | "failed" = "remaining") {
     if (!loaded || running || !testPassed) return;
-    setRunning("all");
-    setMessage("Bulk enrichment is running. Keep this tab open; completed vehicles are cached and can be resumed safely.");
+
+    const candidates = loaded.validUnique.filter((registrationNumber) => {
+      const result = results[registrationNumber];
+      if (mode === "failed") return Boolean(result && FAILED.has(result.status));
+      return !result || !TERMINAL.has(result.status);
+    });
+
+    if (!candidates.length) {
+      setMessage(mode === "failed" ? "There are no failed RC lookups to retry." : "All supported RCs are already processed.");
+      return;
+    }
+
+    setRunning(mode === "failed" ? "failed" : "all");
+    setRunProgress({ current: 0, total: candidates.length, failed: 0 });
+    setMessage(
+      mode === "failed"
+        ? `Retrying ${candidates.length.toLocaleString("en-IN")} failed RC lookup${candidates.length === 1 ? "" : "s"}...`
+        : `Bulk enrichment is running for ${candidates.length.toLocaleString("en-IN")} RCs. Keep this tab open; completed vehicles are cached and the run will continue past individual RC errors.`,
+    );
+
+    let failedThisRun = 0;
+    let consecutiveRequestFailures = 0;
+
     try {
-      const alreadyTerminal = new Set(
-        Object.values(results).filter((item) => TERMINAL.has(item.status)).map((item) => item.registrationNumber),
-      );
-      const pending = loaded.validUnique.filter((registrationNumber) => !alreadyTerminal.has(registrationNumber));
-      for (let index = 0; index < pending.length; index += BATCH_SIZE) {
-        const batchNumbers = pending.slice(index, index + BATCH_SIZE);
-        const batch = await lookupBatch(batchNumbers);
-        mergeResults(batch);
-        const hardFailure = batch.some((item) => item.status === "provider_error" || item.status === "request_error");
-        if (hardFailure) {
-          setMessage("Bulk processing paused after an API/provider error. Successful vehicles are retained; use Run All again to retry remaining vehicles.");
+      for (let index = 0; index < candidates.length; index += 1) {
+        const registrationNumber = candidates[index];
+        const result = await lookupOneSafely(registrationNumber);
+        mergeResults([result]);
+
+        if (FAILED.has(result.status)) failedThisRun += 1;
+        consecutiveRequestFailures = result.status === "request_error" ? consecutiveRequestFailures + 1 : 0;
+
+        const current = index + 1;
+        setRunProgress({ current, total: candidates.length, failed: failedThisRun });
+        setMessage(
+          `Bulk enrichment running: ${current.toLocaleString("en-IN")} of ${candidates.length.toLocaleString("en-IN")} attempted this pass${failedThisRun ? `; ${failedThisRun.toLocaleString("en-IN")} need retry` : ""}.`,
+        );
+
+        if (consecutiveRequestFailures >= MAX_CONSECUTIVE_REQUEST_FAILURES && current < candidates.length) {
+          setMessage(
+            `Bulk processing paused after ${MAX_CONSECUTIVE_REQUEST_FAILURES} consecutive gateway/transport failures to avoid repeatedly calling an unhealthy service. Completed RCs are retained; retry the failed/remaining RCs after the gateway recovers.`,
+          );
           return;
         }
+
+        if (current < candidates.length && result.source === "authbridge") {
+          await sleep(CLIENT_PROVIDER_SPACING_MS);
+        }
       }
-      setMessage("Bulk processing completed. Download the enriched workbook.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Bulk processing stopped unexpectedly. Completed vehicles remain retained.");
+
+      setMessage(
+        failedThisRun > 0
+          ? `Bulk pass completed. ${failedThisRun.toLocaleString("en-IN")} RC lookup${failedThisRun === 1 ? "" : "s"} failed while the rest continued automatically. Use Retry Failed Only to retry them without reprocessing successful RCs.`
+          : "Bulk processing completed. Download the enriched workbook.",
+      );
     } finally {
       setRunning(null);
+      setRunProgress(null);
+    }
+  }
+
+  async function lookupOneSafely(registrationNumber: string): Promise<LookupResult> {
+    try {
+      const batch = await lookupBatch([registrationNumber]);
+      return batch[0] ?? requestErrorResult(registrationNumber, "The bulk RC endpoint returned no result for this vehicle.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Bulk RC request failed.";
+      if (/HTTP (401|403)|Unauthorized|development access/i.test(message)) throw error;
+      return requestErrorResult(registrationNumber, message);
     }
   }
 
@@ -154,7 +225,9 @@ export default function AuthbridgeRcEnrichmentClient() {
       body: JSON.stringify({ registrationNumbers }),
     });
     const body = await response.json().catch(() => ({})) as { error?: string; results?: LookupResult[] };
-    if (!response.ok) throw new Error(body.error || `Bulk RC endpoint returned HTTP ${response.status}.`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${body.error || "Bulk RC request failed."}`);
+    }
     return Array.isArray(body.results) ? body.results : [];
   }
 
@@ -210,13 +283,17 @@ export default function AuthbridgeRcEnrichmentClient() {
     XLSX.writeFile(output, `${stripExtension(loaded.fileName)} - AuthBridge enriched.xlsx`, { compression: true });
   }
 
+  const progressText = runProgress
+    ? `${runProgress.current.toLocaleString("en-IN")} / ${runProgress.total.toLocaleString("en-IN")}`
+    : null;
+
   return (
     <main className="mx-auto w-full max-w-6xl space-y-5 px-5 py-6">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Internal operations tool</p>
         <h1 className="mt-1 text-2xl font-semibold text-slate-950">AuthBridge RC bulk enrichment</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-600">
-          Upload the vehicle workbook, run a five-vehicle validation batch first, then process the remaining unique RCs. Provider payload values are not displayed on this page; they are written only to the downloaded workbook and the protected RC cache.
+          Upload the vehicle workbook, run a five-vehicle validation test first, then process all remaining unique RCs continuously. Individual RC errors are retained for retry and do not stop the rest of the run.
         </p>
       </div>
 
@@ -255,16 +332,26 @@ export default function AuthbridgeRcEnrichmentClient() {
             onClick={() => void runTest()}
             className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {running === "test" ? "Testing…" : "Run 5-vehicle test"}
+            {running === "test" ? `Testing${progressText ? ` ${progressText}` : ""}…` : "Run 5-vehicle test"}
           </button>
           <button
             type="button"
             disabled={!loaded || Boolean(running) || !testPassed}
-            onClick={() => void runAll()}
+            onClick={() => void runAll("remaining")}
             className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {running === "all" ? "Processing…" : "Run all remaining"}
+            {running === "all" ? `Processing ${progressText ?? ""}…` : "Run all remaining"}
           </button>
+          {counts.failed > 0 ? (
+            <button
+              type="button"
+              disabled={!loaded || Boolean(running) || !testPassed}
+              onClick={() => void runAll("failed")}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {running === "failed" ? `Retrying ${progressText ?? ""}…` : `Retry failed only (${counts.failed.toLocaleString("en-IN")})`}
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={!loaded || !Object.keys(results).length || Boolean(running)}
@@ -278,10 +365,23 @@ export default function AuthbridgeRcEnrichmentClient() {
       </section>
 
       <p className="text-xs text-slate-500">
-        Full processing is intentionally locked until the five-vehicle test completes without transport/provider errors. Billable no-data responses are treated as terminal and cached to avoid unnecessary repeat calls.
+        Full processing remains locked until the five-vehicle test completes cleanly. Success and billable no-data responses are cached; isolated provider errors no longer stop the remaining RCs, while repeated gateway/transport failures pause the run after three consecutive failures.
       </p>
     </main>
   );
+}
+
+function requestErrorResult(registrationNumber: string, message: string): LookupResult {
+  return {
+    registrationNumber,
+    status: "request_error",
+    source: "authbridge",
+    providerCode: null,
+    message: message.slice(0, 300),
+    transactionId: null,
+    lookedUpAt: null,
+    fields: {},
+  };
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
@@ -307,4 +407,8 @@ function isValidRegistration(value: string) {
 
 function stripExtension(value: string) {
   return value.replace(/\.(xlsx|xls)$/i, "");
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
