@@ -1,0 +1,68 @@
+name: Temporary Partner hero size patch
+
+on:
+  push:
+    branches:
+      - ui/partner-hero-quality-size-fix
+    paths:
+      - '.github/workflows/tmp-partner-hero-quality-size-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ui/partner-hero-quality-size-fix
+          fetch-depth: 0
+
+      - name: Verify upgraded hero asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset='apps/partner-app/assets/figma-dashboard/hero-banner.jpg'
+          bytes=$(stat -c%s "$asset")
+          echo "hero bytes=$bytes"
+          [ "$bytes" -gt 100000 ] || { echo "::error::Hero asset is still over-compressed."; exit 1; }
+          file "$asset"
+          file "$asset" | grep -q '900x300' || { echo "::error::Expected 900x300 high-quality hero asset."; exit 1; }
+
+      - name: Apply compact larger header geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('apps/partner-app/app/(tabs)/index.tsx')
+          s = p.read_text()
+          old_height = 'const heroHeight = 90;'
+          new_height = 'const heroHeight = 120;'
+          old_greeting = "heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },"
+          new_greeting = "heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 26 },"
+          if s.count(old_height) != 1:
+              raise SystemExit(f'Expected exactly one {old_height!r}, found {s.count(old_height)}')
+          if s.count(old_greeting) != 1:
+              raise SystemExit(f'Expected exactly one hero greeting style, found {s.count(old_greeting)}')
+          s = s.replace(old_height, new_height).replace(old_greeting, new_greeting)
+          p.write_text(s)
+          PY
+          grep -F 'const heroHeight = 120;' 'apps/partner-app/app/(tabs)/index.tsx'
+          grep -F "heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 26 }," 'apps/partner-app/app/(tabs)/index.tsx'
+          grep -F "body: { marginTop: -18, paddingHorizontal: 14 }," 'apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Remove temporary workflow and commit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm '.github/workflows/tmp-partner-hero-quality-size-fix.yml'
+          git config user.name 'insureit-actions'
+          git config user.email 'actions@users.noreply.github.com'
+          git add 'apps/partner-app/app/(tabs)/index.tsx' '.github/workflows/tmp-partner-hero-quality-size-fix.yml'
+          git diff --cached --check
+          git commit -m 'Increase Partner hero visibility with crisp asset'
+          git push origin HEAD:ui/partner-hero-quality-size-fix
