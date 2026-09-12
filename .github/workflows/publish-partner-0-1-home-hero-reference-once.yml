@@ -1,6 +1,12 @@
 name: Publish Partner 0.1.0 home hero reference OTA once
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-partner-0-1-home-hero-reference-once.yml'
+      - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
   workflow_dispatch:
 
 permissions:
@@ -58,16 +64,17 @@ jobs:
           }
           NODE
 
-      - name: Apply exact mockup hero composition patch
+      - name: Apply final mockup hero tuning
         shell: bash
         run: |
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-home-hero-reference.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "edges={\[\]}" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q 'Feather name="clock"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "hero: { height: 168" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "body: { marginTop: -16" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "searchShell: { minHeight: 54" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "hero: { height: 158" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "body: { marginTop: -10" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "searchShell: { minHeight: 49" 'compat/apps/partner-app/app/(tabs)/index.tsx'
 
       - name: Require Expo token
         shell: bash
@@ -98,7 +105,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish Partner 0.1.0 exact hero OTA
+      - name: Publish Partner 0.1.0 final hero tuning OTA
         working-directory: compat/apps/partner-app
         shell: bash
         run: |
@@ -106,7 +113,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 exact compact hero reference" \
+            --message "Partner 0.1.0 final hero crop and proportion tuning" \
             --non-interactive \
             --json > partner-0-1-home-hero-reference-update.json
           cat partner-0-1-home-hero-reference-update.json
@@ -116,11 +123,11 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Partner 0.1.0 exact hero reference OTA"
+            echo "## Partner 0.1.0 final hero tuning OTA"
             echo
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Scope: top hero, activity control, greeting positioning and compact overlapping search only"
+            echo "- Scope: artwork focal crop, compact brand/actions, greeting spacing and lighter search overlap"
             echo "- Business cards and dashboard data logic: unchanged"
           } >> "$GITHUB_STEP_SUMMARY"
