@@ -64,12 +64,13 @@ jobs:
           }
           NODE
 
-      - name: Apply final mockup hero tuning
+      - name: Apply hero tuning with safe status strip
         shell: bash
         run: |
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-home-hero-reference.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "edges={\[\]}" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "edges={\['top'\]}" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "safeArea: { flex: 1, backgroundColor: '#F4F6F9' }" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "hero: { height: 158" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
@@ -105,7 +106,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish Partner 0.1.0 final hero tuning OTA
+      - name: Publish Partner 0.1.0 status strip OTA
         working-directory: compat/apps/partner-app
         shell: bash
         run: |
@@ -113,7 +114,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 final hero crop and proportion tuning" \
+            --message "Partner 0.1.0 safe notification status strip above hero" \
             --non-interactive \
             --json > partner-0-1-home-hero-reference-update.json
           cat partner-0-1-home-hero-reference-update.json
@@ -123,11 +124,11 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Partner 0.1.0 final hero tuning OTA"
+            echo "## Partner 0.1.0 safe status strip OTA"
             echo
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Scope: artwork focal crop, compact brand/actions, greeting spacing and lighter search overlap"
+            echo "- Scope: restore device-aware top safe area only; preserve hero crop, controls, greeting and search composition"
             echo "- Business cards and dashboard data logic: unchanged"
           } >> "$GITHUB_STEP_SUMMARY"
