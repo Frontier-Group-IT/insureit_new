@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Mail, MapPin, Phone, Search, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -45,17 +44,6 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
   return (
     <PartnerPortalShell title="Customers">
       <div className="space-y-7">
-        <div className="flex flex-col gap-4 border-b border-[#D7DEE8] pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="text-[24px] font-medium leading-none tracking-[-0.035em] text-[#142746] sm:text-[26px]">Your customers</h1>
-          <form action="/partner/customers" className="flex w-full gap-2 sm:max-w-[620px] lg:max-w-[720px]">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-              <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-10 pr-4 text-[10.5px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-            </div>
-            <button type="submit" className="h-10 rounded-lg bg-[#111A35] px-5 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">Search</button>
-          </form>
-        </div>
-
         <div className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
           <SummaryMetric label="Total Customers" value={summary.total_customers} icon={<UsersRound className="h-5 w-5 text-[#3156B8]" />} />
           <SummaryMetric label="Active" value={summary.active_customers} icon={<span className="text-[20px] font-bold leading-none text-[#16A36A]">✓</span>} />
@@ -64,23 +52,24 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
         </div>
 
         <section>
-          {q ? (
-            <PartnerSectionHeading
-              title={"Search results for “" + q + "”"}
-              description={total + " customer" + (total === 1 ? "" : "s")}
-              action={<Link href="/partner/customers" className="text-[10px] font-bold text-[#3156B8]">Clear search</Link>}
-            />
-          ) : (
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex shrink-0 items-center gap-3">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]">
                 <UsersRound className="h-5 w-5" />
               </span>
-              <div className="min-w-0">
-                <h2 className="text-[15px] font-extrabold leading-5 text-[#172846]">Customer Register</h2>
-                <p className="mt-0.5 text-[10.5px] font-medium leading-4 text-[#74839A]">{total} customers</p>
-              </div>
+              <h2 className="text-[15px] font-extrabold leading-5 text-[#172846]">Customer Register</h2>
             </div>
-          )}
+
+            <form action="/partner/customers" className="w-full sm:ml-3 sm:max-w-[620px]">
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-10 w-full rounded-lg border border-[#CCD7E4] bg-white pl-10 pr-4 text-[10.5px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+              </div>
+            </form>
+
+            <p className="shrink-0 text-[10.5px] font-medium text-[#74839A] sm:ml-auto">{total} customers</p>
+          </div>
+
           <div className="mt-3 border-y border-[#DCE4ED]">
 
           {rows.length ? (
