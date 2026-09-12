@@ -10,6 +10,7 @@ import {
   RegisterStatusPill,
   RegisterViewTabs,
 } from "@/components/broker-register";
+import { PolicyIntakeOcrRetryButton } from "@/components/policy-intake-ocr-retry-button";
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 
 export type PolicyIntakeWorkspaceRow = {
@@ -31,6 +32,7 @@ export type PolicyIntakeWorkspaceRow = {
 export type PolicyIntakeViewKey = "action" | "in_review" | "mine" | "processing" | "completed" | "duplicate" | "rejected" | "all";
 type ViewKey = PolicyIntakeViewKey;
 const PAGE_SIZE = 15;
+const STALE_OCR_MS = 5 * 60 * 1000;
 
 const rowTones: Record<string, string> = {
   processing: "bg-blue-50/55 hover:bg-blue-50/85",
@@ -46,6 +48,13 @@ function field(row: PolicyIntakeWorkspaceRow, key: string) {
 }
 function isDuplicate(row: PolicyIntakeWorkspaceRow) {
   return row.status.toLowerCase() === "duplicate";
+}
+function canRetryOcr(row: PolicyIntakeWorkspaceRow) {
+  if (row.status !== "processing") return false;
+  if (row.ocr_status === "failed") return true;
+  if (!new Set(["pending", "processing"]).has(row.ocr_status)) return false;
+  const created = new Date(row.created_at).getTime();
+  return Number.isFinite(created) && Date.now() - created >= STALE_OCR_MS;
 }
 function statusLabel(row: PolicyIntakeWorkspaceRow) {
   if (row.status === "processing" && row.ocr_status === "failed") return "Manual review required";
@@ -160,7 +169,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
     if (view === "processing") return row.status === "processing" && row.ocr_status !== "failed";
     if (view === "duplicate") return isDuplicate(row);
     return row.status === view;
-  }), [baseFiltered, view]);
+  }), [baseFiltered, view, currentProfileId]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -219,11 +228,11 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
       </div>
     </div>
 
-    <div className="p-3 md:hidden">{pageRows.map((row) => <Link key={row.id} href={`/policy-intakes/${row.id}`} className={`mb-2 block rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><div className="flex items-start justify-between gap-2"><div><p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">OCR:</span> {ocrLabel(row.ocr_status)}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted by:</span> <span className="font-semibold text-[#334155]">{row.submitted_by_name}</span> · {formatDateTime(row.created_at)}</p></div></Link>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
+    <div className="p-3 md:hidden">{pageRows.map((row) => <div key={row.id} className={`mb-2 rounded-xl border border-[#E2E8F0] p-3 ${rowTones[row.status] ?? "bg-white"}`}><Link href={`/policy-intakes/${row.id}`} className="block"><div className="flex items-start justify-between gap-2"><div><p className="text-[10px] font-bold text-[#17365D]">{row.intake_number}</p><p className="mt-1 text-[9px] text-[#475569]">{field(row, "vehicle_registration_number") || row.customer_mobile}</p></div><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></div><div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[8.5px] text-[#64748B]"><p><span className="font-semibold text-[#334155]">Source:</span> {row.lead_source_name}</p><p><span className="font-semibold text-[#334155]">OCR:</span> {ocrLabel(row.ocr_status)}</p><p className="col-span-2"><span className="font-semibold text-[#334155]">Submitted by:</span> <span className="font-semibold text-[#334155]">{row.submitted_by_name}</span> · {formatDateTime(row.created_at)}</p></div></Link>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact className="mt-2" /> : null}</div>)}{!pageRows.length ? <RegisterEmpty title="No matching policy intakes" description="Adjust the filters or status view." /> : null}</div>
 
     <div className="hidden overflow-x-auto md:block">
-      <table className="w-full min-w-[1240px] table-fixed text-left text-[10px] text-[#334155]">
-        <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]"><tr><th className="w-[142px] px-3 py-2">Intake</th><th className="w-[160px] px-2.5 py-2">Customer</th><th className="w-[190px] px-2.5 py-2">Lead Source</th><th className="w-[170px] px-2.5 py-2">Vehicle</th><th className="w-[220px] px-2.5 py-2">Policy / Insurer</th><th className="w-[170px] px-2.5 py-2">Submitted</th><th className="w-[118px] px-2.5 py-2">OCR</th><th className="w-[160px] px-2.5 py-2">Status</th></tr></thead>
+      <table className="w-full min-w-[1280px] table-fixed text-left text-[10px] text-[#334155]">
+        <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]"><tr><th className="w-[142px] px-3 py-2">Intake</th><th className="w-[160px] px-2.5 py-2">Customer</th><th className="w-[190px] px-2.5 py-2">Lead Source</th><th className="w-[170px] px-2.5 py-2">Vehicle</th><th className="w-[220px] px-2.5 py-2">Policy / Insurer</th><th className="w-[170px] px-2.5 py-2">Submitted</th><th className="w-[168px] px-2.5 py-2">OCR</th><th className="w-[150px] px-2.5 py-2">Status</th></tr></thead>
         <tbody className="divide-y divide-[#E8EDF4]">{pageRows.map((row) => <tr key={row.id} className={`h-[58px] transition ${rowTones[row.status] ?? "hover:bg-[#FAFCFF]"}`} onClick={() => { window.location.href = `/policy-intakes/${row.id}`; }} style={{ cursor: "pointer" }}>
           <td className="px-3"><p className="font-bold text-[#17365D]">{row.intake_number}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{row.file_name}</p></td>
           <td className="px-2.5"><p className="font-semibold text-[#334155]">{field(row, "insured_name") || row.customer_mobile}</p>{field(row, "insured_name") ? <p className="mt-0.5 text-[8px] text-[#7A8798]">{row.customer_mobile}</p> : null}</td>
@@ -231,7 +240,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
           <td className="px-2.5"><p className="font-mono font-semibold">{field(row, "vehicle_registration_number") || (row.ocr_status === "completed" ? "—" : "Fetching…")}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{[field(row, "vehicle_make"), field(row, "vehicle_model")].filter(Boolean).join(" · ") || field(row, "vehicle_class") || ""}</p></td>
           <td className="px-2.5"><p className="truncate font-semibold">{field(row, "policy_number") || (row.ocr_status === "completed" ? "—" : "Fetching…")}</p><p className="mt-0.5 truncate text-[8px] text-[#7A8798]">{field(row, "insurer_name")}</p></td>
           <td className="px-2.5"><p className="font-semibold leading-4 text-[#334155]">{row.submitted_by_name}</p><p className="mt-0.5 text-[8px] text-[#7A8798]">{formatDateTime(row.created_at)}</p></td>
-          <td className="px-2.5"><RegisterStatusPill tone={ocrTone(row.ocr_status)}>{ocrLabel(row.ocr_status)}</RegisterStatusPill></td>
+          <td className="px-2.5"><div className="flex items-center gap-1.5"><RegisterStatusPill tone={ocrTone(row.ocr_status)}>{ocrLabel(row.ocr_status)}</RegisterStatusPill>{reviewer && canRetryOcr(row) ? <PolicyIntakeOcrRetryButton id={row.id} compact /> : null}</div></td>
           <td className="px-2.5"><RegisterStatusPill tone={statusTone(row)}>{statusLabel(row)}</RegisterStatusPill></td>
         </tr>)}</tbody>
       </table>
