@@ -1,6 +1,6 @@
 # AuthBridge Detailed RC Integration Handoff
 
-> **Consolidated:** 2026-09-12 IST
+> **Consolidated:** 2026-09-13 IST
 >
 > Source of truth for AuthBridge / TruthScreen Detailed RC service 372, the protected AWS gateway, Customer RC lookup, production credential state, security boundaries, and current production rollout evidence.
 >
@@ -278,3 +278,33 @@ Before further AuthBridge production work:
 6. Do not infer unsupported insurance data.
 7. Verify portal deployment and Customer production OTA separately from merge state.
 8. Complete the three credential rotations without exposing replacement values.
+
+## 12. Bulk RC enrichment workspace — PREPARED IN PR #1754
+
+A reusable internal enrichment tool is prepared in PR **#1754**. Its canonical portal route is:
+
+```text
+/development/authbridge-rc-enrichment
+```
+
+Access model:
+
+- visible in the existing **Development** menu only for the `it_super_user` role
+- requires effective `manage_system` access at `approve` level
+- the page repeats the role/capability check server-side
+- the bulk API repeats the same authorization server-side
+- the legacy `/reports/authbridge-rc-enrichment` route redirects to the canonical Development route
+- `/development/*` is included in the protected portal route catalogue and middleware matcher
+
+Bulk behavior:
+
+- browser-side XLS/XLSX import and RC-column detection
+- a clean five-vehicle test is mandatory before full processing unlocks
+- live provider calls are spaced at 1.6 seconds and limited to five RCs per request
+- fresh 30-day cache entries are reused
+- provider success and billable no-data responses are treated as terminal and cached to reduce repeat billing
+- original source rows and duplicates are preserved in the exported workbook
+- provider-returned fields are not rendered into the workspace UI; they are added to the downloaded workbook
+- no new database migration is required
+
+**PREPARED is not PRODUCTION-LIVE.** Do not describe this page as available in production until PR #1754 is merged and the portal production deployment is directly verified.
