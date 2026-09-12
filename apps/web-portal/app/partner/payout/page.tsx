@@ -47,14 +47,14 @@ type MetricItemProps = {
 
 function PayoutMetric({ label, value, meta, icon: Icon, iconClassName }: MetricItemProps) {
   return (
-    <div className="flex min-h-[98px] items-center gap-4 px-5 py-4 sm:px-6 lg:border-r lg:border-[#DCE5F1] lg:last:border-r-0">
-      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ${iconClassName}`}>
-        <Icon className="h-5 w-5" />
+    <div className="flex min-h-[76px] items-center gap-3 px-4 py-3 sm:px-5 lg:border-r lg:border-[#DCE5F1] lg:last:border-r-0">
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${iconClassName}`}>
+        <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#617596]">{label}</p>
-        <p className="mt-1.5 truncate text-[20px] font-black leading-none tracking-[-0.03em] text-[#10254B]">{value}</p>
-        <p className="mt-2 text-[10px] font-medium text-[#7586A0]">{meta}</p>
+        <p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#617596]">{label}</p>
+        <p className="mt-1 truncate text-[17px] font-black leading-none tracking-[-0.025em] text-[#10254B]">{value}</p>
+        <p className="mt-1.5 text-[9px] font-medium text-[#7586A0]">{meta}</p>
       </div>
     </div>
   );
@@ -67,7 +67,7 @@ export default async function PartnerPayoutPage() {
     <PartnerPortalShell title="Payout">
       {payout.available ? (
         <div className="space-y-4 pb-4">
-          <section className="grid overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_5px_16px_rgba(31,65,115,0.05)] sm:grid-cols-2 lg:grid-cols-4">
+          <section className="grid overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_4px_14px_rgba(31,65,115,0.045)] sm:grid-cols-2 lg:grid-cols-4">
             <PayoutMetric
               label="Recorded"
               value={currency(payout.recorded_amount)}
