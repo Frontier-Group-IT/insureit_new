@@ -35,7 +35,8 @@ function rating(value: unknown) {
 export async function POST(request: Request) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!isAuthorizedProfile(profile)) {
+  const profileId = profile?.id;
+  if (!isAuthorizedProfile(profile) || !profileId) {
     return NextResponse.json({ error: "Active INSUREIT access is required." }, { status: 403 });
   }
 
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
     .from("renewal_voice_agent_sessions")
     .select("id,status")
     .eq("id", body.sessionId)
-    .eq("created_by", profile.id)
+    .eq("created_by", profileId)
     .maybeSingle<{ id: string; status: string }>();
 
   if (sessionError || !session) {
