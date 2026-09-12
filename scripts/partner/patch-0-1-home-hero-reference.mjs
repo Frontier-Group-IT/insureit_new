@@ -14,11 +14,8 @@ const replaceOnce = (before, after, label) => {
   source = source.replace(before, after);
 };
 
-replaceOnce(
-  `<SafeAreaView style={styles.safeArea} edges={['top']}>`,
-  `<SafeAreaView style={styles.safeArea} edges={[]}>`,
-  'safe-area declaration',
-);
+// Keep the native top safe-area inset enabled. This creates a slim, device-aware
+// notification/status strip above the hero without changing the hero composition.
 
 replaceOnce(
   `              accessibilityLabel="View recent activity"\n                onPress={() => router.push('/activity')}\n                style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}\n              >\n                <Feather name="bell" size={20} color="#FFFFFF" />`,
@@ -29,8 +26,8 @@ replaceOnce(
 const styleReplacements = [
   [
     `  safeArea: { flex: 1, backgroundColor: '#073A78' },`,
-    `  safeArea: { flex: 1, backgroundColor: '#0757AE' },`,
-    'safe-area color',
+    `  safeArea: { flex: 1, backgroundColor: '#F4F6F9' },`,
+    'safe-area status strip color',
   ],
   [
     `  hero: { height: 152, overflow: 'hidden', backgroundColor: '#054D9E', paddingTop: 9 },`,
