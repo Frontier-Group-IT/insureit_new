@@ -3,7 +3,6 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
-  ChevronDown,
   Ellipsis,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
@@ -19,6 +18,7 @@ import {
   getPartnerWebSession,
 } from "@/lib/partner-web";
 import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
+import { PartnerHomeTrendPeriodFilter } from "./partner-home-trend-period-filter";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,7 +43,7 @@ const homeIcons = {
 
 type HomeSearchParams = { trend?: string };
 type TrendPeriod = "6m" | "mtd" | "12m";
-type TrendPoint = { month: string; premium: number | string; policies: number };
+type TrendPoint = { month: string; premium: number | string; policies: number; label?: string };
 
 const trendPeriodOptions: { value: TrendPeriod; label: string }[] = [
   { value: "6m", label: "Last 6 Months" },
@@ -111,6 +111,21 @@ function monthRange(value: string, today: string) {
     from: `${value}-01`,
     to: value === today.slice(0, 7) ? today : end,
   };
+}
+
+function mtdWeekRanges(today: string) {
+  const month = today.slice(0, 7);
+  const currentDay = Math.max(1, Number(today.slice(8, 10)) || 1);
+  return Array.from({ length: Math.ceil(currentDay / 7) }, (_, index) => {
+    const startDay = index * 7 + 1;
+    const endDay = Math.min(currentDay, startDay + 6);
+    const pad = (value: number) => String(value).padStart(2, "0");
+    return {
+      from: `${month}-${pad(startDay)}`,
+      to: `${month}-${pad(endDay)}`,
+      label: `Week ${index + 1}`,
+    };
+  });
 }
 
 function resolveTrendPeriod(value?: string): TrendPeriod {
@@ -190,11 +205,28 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
         }),
       )
     : Promise.resolve([]);
-  const [periodSummary, twelveMonthTrend] = await Promise.all([periodSummaryPromise, twelveMonthTrendPromise]);
+  const mtdWeeklyTrendPromise: Promise<TrendPoint[]> = trendPeriod === "mtd"
+    ? Promise.all(
+        mtdWeekRanges(today).map(async (range) => {
+          const summary = await getPartnerWebBusinessRange(range.from, range.to);
+          return {
+            month: currentMonth,
+            premium: summary.premium,
+            policies: summary.policies,
+            label: range.label,
+          };
+        }),
+      )
+    : Promise.resolve([]);
+  const [periodSummary, twelveMonthTrend, mtdWeeklyTrend] = await Promise.all([
+    periodSummaryPromise,
+    twelveMonthTrendPromise,
+    mtdWeeklyTrendPromise,
+  ]);
   const trendPoints: TrendPoint[] = trendPeriod === "12m"
     ? twelveMonthTrend
     : trendPeriod === "mtd"
-      ? [{ month: currentMonth, premium: periodSummary.premium, policies: periodSummary.policies }]
+      ? mtdWeeklyTrend
       : businessPerformance.trend.slice(-6);
   const trendPeriodLabel = trendPeriodOptions.find((option) => option.value === trendPeriod)?.label ?? "Last 6 Months";
 
@@ -464,41 +496,23 @@ function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; pe
         <h2 className="min-w-0 flex-1 text-[14px] font-extrabold tracking-[-0.02em] text-[#142B50]">M/M Business Trend</h2>
         <div className="flex items-center gap-3 text-[8.5px] font-semibold text-[#6F8098]">
           <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#A9CFFF]" />Premium</span>
-          <Link
-            href="/partner/business"
-            prefetch={false}
-            data-partner-home-reference-cta="true"
-            className="inline-flex h-7 shrink-0 items-center justify-center gap-1 bg-[#163968] px-2.5 text-[8.5px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
-          >
-            <span>View My Business</span>
-            <ArrowRight className="h-3 w-3" aria-hidden="true" />
-          </Link>
           <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-[#163968]" />Policies</span>
         </div>
-        <details className="group relative">
-          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-[#DDE5EF] bg-[#F9FBFE] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526784] marker:content-none">
-            <span>{periodLabel}</span>
-            <ChevronDown className="h-3 w-3 transition group-open:rotate-180" aria-hidden="true" />
-          </summary>
-          <div className="absolute right-0 z-30 mt-1.5 w-36 overflow-hidden rounded-lg border border-[#DCE5F1] bg-white p-1 shadow-[0_8px_24px_rgba(25,50,90,0.14)]">
-            {trendPeriodOptions.map((option) => (
-              <Link
-                key={option.value}
-                href={option.value === "6m" ? "/partner" : `/partner?trend=${option.value}`}
-                prefetch={false}
-                className={`block rounded-md px-2.5 py-2 text-[9px] font-semibold transition ${period === option.value ? "bg-[#EEF4FF] text-[#244F9E]" : "text-[#526784] hover:bg-[#F5F8FC]"}`}
-                aria-current={period === option.value ? "page" : undefined}
-              >
-                {option.label}
-              </Link>
-            ))}
-          </div>
-        </details>
+        <PartnerHomeTrendPeriodFilter period={period} label={periodLabel} />
+        <Link
+          href="/partner/business"
+          prefetch={false}
+          data-partner-home-reference-cta="true"
+          className="inline-flex h-7 shrink-0 items-center justify-center gap-1 bg-[#163968] px-2.5 text-[8.5px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
+        >
+          <span>View My Business</span>
+          <ArrowRight className="h-3 w-3" aria-hidden="true" />
+        </Link>
       </div>
 
       {points.length ? (
         <div className="px-3 pb-2 pt-3 sm:px-4">
-          <svg viewBox="0 0 600 190" className="h-[210px] w-full" role="img" aria-label={`Monthly premium and policy trend for ${periodLabel.toLowerCase()}`}>
+          <svg viewBox="0 0 600 190" className="h-[210px] w-full" role="img" aria-label={`Premium and policy trend for ${periodLabel.toLowerCase()}`}>
             {[0, 1, 2, 3].map((grid) => {
               const y = plotTop + (plotHeight / 3) * grid;
               return <line key={grid} x1="14" x2="586" y1={y} y2={y} stroke="#E7EDF5" strokeWidth="1" />;
@@ -518,7 +532,7 @@ function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; pe
                     {formatCompactCurrency(point.premium)}
                   </text>
                   <circle cx={x} cy={policyY} r="4" fill="#163968" />
-                  <text x={x} y="176" textAnchor="middle" fontSize={points.length >= 10 ? "7" : "9"} fontWeight="700" fill="#536987">{monthLabel(point.month)}</text>
+                  <text x={x} y="176" textAnchor="middle" fontSize={points.length >= 10 ? "7" : "9"} fontWeight="700" fill="#536987">{point.label ?? monthLabel(point.month)}</text>
                   <text x={x} y="187" textAnchor="middle" fontSize={points.length >= 10 ? "6" : "7.5"} fontWeight="600" fill="#8391A5">{point.policies} policies</text>
                 </g>
               );
@@ -528,7 +542,7 @@ function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; pe
           </svg>
         </div>
       ) : (
-        <div className="grid min-h-[210px] place-items-center px-4 text-[10px] font-semibold text-[#7A899E]">No monthly trend data available.</div>
+        <div className="grid min-h-[210px] place-items-center px-4 text-[10px] font-semibold text-[#7A899E]">No trend data available.</div>
       )}
     </div>
   );
