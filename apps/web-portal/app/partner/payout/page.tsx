@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   Building2,
-  CheckCircle2,
   Clock3,
   FileText,
   LockKeyhole,
@@ -68,36 +67,6 @@ export default async function PartnerPayoutPage() {
     <PartnerPortalShell title="Payout">
       {payout.available ? (
         <div className="space-y-4 pb-4">
-          <section className="relative isolate min-h-[132px] overflow-hidden rounded-xl border border-[#C9DDF5] bg-[linear-gradient(105deg,#EAF4FF_0%,#DDEEFF_45%,#CFE5FF_100%)] px-5 py-5 shadow-[0_6px_18px_rgba(40,83,145,0.06)] sm:px-6">
-            <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-              <div className="absolute -right-16 -top-20 h-72 w-[42%] rotate-[23deg] border-l-[28px] border-white/30" />
-              <div className="absolute right-[5%] -top-24 h-72 w-[28%] rotate-[23deg] border-l-[24px] border-[#9FC8F7]/35" />
-              <div className="absolute right-[18%] -top-24 h-72 w-[18%] rotate-[23deg] border-l-[18px] border-white/25" />
-            </div>
-
-            <div className="relative z-10 flex min-h-[90px] items-center gap-4 pr-[36%] sm:gap-5">
-              <span className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-white/75 text-[#1771E8] shadow-[0_7px_18px_rgba(40,86,150,0.08)] ring-1 ring-white/70">
-                <ReceiptIndianRupee className="h-8 w-8" />
-              </span>
-              <div className="min-w-0">
-                <h1 className="text-[24px] font-black tracking-[-0.035em] text-[#10234D] sm:text-[27px]">Payout Overview</h1>
-                <p className="mt-1 text-[11px] font-medium text-[#5E7393]">View your payout records.</p>
-              </div>
-            </div>
-
-            <div className="pointer-events-none absolute inset-y-0 right-[3%] hidden w-[26%] items-center justify-center md:flex" aria-hidden="true">
-              <div className="relative">
-                <div className="absolute -left-6 -top-5 h-12 w-28 rounded-xl bg-[#27599E] opacity-85" />
-                <div className="relative grid h-20 w-36 place-items-center rounded-[18px] bg-[linear-gradient(145deg,#0D4C9A,#0A2D70)] text-white shadow-[0_14px_26px_rgba(13,55,120,0.22)]">
-                  <span className="text-[34px] font-black leading-none">₹</span>
-                </div>
-                <span className="absolute -bottom-2 -right-4 grid h-10 w-10 place-items-center rounded-full bg-[#2BC879] text-white shadow-[0_7px_16px_rgba(43,200,121,0.30)]">
-                  <CheckCircle2 className="h-6 w-6" />
-                </span>
-              </div>
-            </div>
-          </section>
-
           <section className="grid overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_5px_16px_rgba(31,65,115,0.05)] sm:grid-cols-2 lg:grid-cols-4">
             <PayoutMetric
               label="Recorded"
