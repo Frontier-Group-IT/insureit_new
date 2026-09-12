@@ -78,22 +78,6 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
   return (
     <PartnerPortalShell title="Renewals">
       <div data-partner-renewals-reference-page="true" className="space-y-3 pb-4">
-        <section
-          data-partner-renewals-reference-hero="true"
-          className="relative isolate overflow-hidden rounded-xl border border-[#CFE1F4] bg-[linear-gradient(105deg,#EEF7FF_0%,#E8F5FF_58%,#E2F0FF_100%)] px-4 py-2.5 shadow-[0_4px_14px_rgba(31,91,158,0.06)] sm:px-5"
-        >
-          <div className="relative z-10 flex min-h-[46px] items-center gap-3 pr-16 sm:pr-24">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#1377EE] text-white shadow-[0_4px_10px_rgba(19,119,238,0.2)]">
-              <CalendarDays className="h-4 w-4" />
-            </span>
-            <h1 className="text-[17px] font-extrabold tracking-[-0.03em] text-[#142B50] sm:text-[18px]">Upcoming and overdue renewals</h1>
-          </div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-[24%] overflow-hidden" aria-hidden="true">
-            <span className="absolute -bottom-10 right-4 h-24 w-24 rounded-full bg-[#C9E8FF]/65" />
-            <Image src="/assets/Custom-Icons/optimized-128/renewal.png" alt="" width={128} height={128} className="absolute bottom-[-18px] right-3 h-[72px] w-[72px] object-contain opacity-90 sm:right-6" priority />
-          </div>
-        </section>
-
         <section data-partner-renewals-reference-metrics="true" className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
           <div className="grid sm:grid-cols-2 xl:grid-cols-4">
             {metricItems.map((item, index) => {
@@ -115,13 +99,13 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
         </section>
 
         <section data-partner-renewals-reference-actions="true" className="grid gap-2 xl:grid-cols-2">
-          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#D8E8F8] bg-[#F1F8FF] px-3.5 py-2 transition hover:border-[#C4DDF5] hover:bg-[#ECF6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#DCE5F0] bg-white px-3.5 py-2 shadow-[0_3px_12px_rgba(37,61,103,0.035)] transition hover:border-[#C4DDF5] hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#DDEEFF] text-[#2F70E5]"><ExternalLink className="h-4 w-4" /></span>
             <span className="min-w-0 flex-1 text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
             <span className="rounded-full bg-[#E6F1FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#2563D8]">Open</span>
             <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
           </Link>
-          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#E7E0F8] bg-[#F8F5FF] px-3.5 py-2 transition hover:border-[#D9CEF4] hover:bg-[#F5F0FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
+          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#DCE5F0] bg-white px-3.5 py-2 shadow-[0_3px_12px_rgba(37,61,103,0.035)] transition hover:border-[#D9CEF4] hover:bg-[#FCFBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEE6FF] text-[#7650D8]"><BarChart3 className="h-4 w-4" /></span>
             <span className="min-w-0 flex-1 text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Reporting</span>
             <span className="rounded-full bg-[#EEE8FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#6E49CF]">View</span>
@@ -130,41 +114,36 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
         </section>
 
         <section data-partner-renewals-reference-worklist="true" className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
-          <div className="border-b border-[#E7EDF4] px-4 py-3">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
-                <div className="min-w-0">
-                  <h2 className="text-[12px] font-extrabold text-[#1B2F4E]">{mode === "expired" ? "Expired Policies" : "Renewal Worklist"}</h2>
-                  <p className="mt-0.5 text-[9px] font-medium text-[#8190A5]">{rows.length} shown · {total} matched</p>
-                </div>
+          <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
+              <div className="min-w-0">
+                <h2 className="text-[12px] font-extrabold text-[#1B2F4E]">{mode === "expired" ? "Expired Policies" : "Renewal Worklist"}</h2>
+                <p className="mt-0.5 text-[9px] font-medium text-[#8190A5]">{rows.length} shown · {total} matched</p>
               </div>
-
-              <form action="/partner/renewals" className="flex w-full gap-2 xl:max-w-[440px]">
-                {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
-                {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                  <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-                </div>
-                <button className="h-9 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25" type="submit">Search</button>
-              </form>
             </div>
 
-            <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
+            <form action="/partner/renewals" className="w-full xl:ml-3 xl:max-w-[430px]">
+              {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
+              {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+              </div>
+            </form>
+
+            <div className="flex flex-wrap items-center gap-1.5 xl:ml-auto xl:justify-end">
               {mode === "due" ? (
-                <div className="flex flex-wrap gap-1.5 lg:mr-1">
+                <>
                   {(["all", "0_7", "8_15", "16_30"] as PartnerRenewalWindow[]).map((value) => (
                     <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (window === value ? "bg-[#E5F0FF] text-[#2866CC]" : "bg-[#F2F5F9] text-[#657792]")}>
                       {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
                     </Link>
                   ))}
-                </div>
+                </>
               ) : null}
-              <div className="inline-flex w-fit gap-2 lg:ml-2">
-                <Link href={hrefFor({ mode: "due", window: "all", page: 1 })} className={"min-w-[64px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "due" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Due</Link>
-                <Link href={hrefFor({ mode: "expired", window: "all", page: 1 })} className={"min-w-[72px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "expired" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Expired</Link>
-              </div>
+              <Link href={hrefFor({ mode: "due", window: "all", page: 1 })} className={"min-w-[64px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "due" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Due</Link>
+              <Link href={hrefFor({ mode: "expired", window: "all", page: 1 })} className={"min-w-[72px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "expired" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Expired</Link>
             </div>
           </div>
 
@@ -193,7 +172,7 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
               ))}
             </div>
           ) : (
-            <div className="relative grid min-h-[190px] place-items-center overflow-hidden px-4 py-8 text-center">
+            <div className="relative grid min-h-[300px] place-items-center overflow-hidden px-4 py-8 text-center">
               <div className="pointer-events-none absolute left-1/2 top-1/2 h-24 w-24 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5FAFF]" aria-hidden="true" />
               <div className="relative z-10">
                 <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#F3F8FF] shadow-[0_5px_16px_rgba(49,86,184,0.08)]">
