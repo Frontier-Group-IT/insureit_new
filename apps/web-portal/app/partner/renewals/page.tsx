@@ -69,110 +69,102 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
   };
 
   const metricItems = [
-    { label: "Overdue", value: summary.overdue_count, meta: currency(summary.overdue_premium), icon: Clock3, card: "border-[#D7E7F8] bg-[#F2F8FF]", iconWrap: "bg-[#DDEEFF] text-[#3156B8]" },
-    { label: "Due 0–7 Days", value: summary.due_0_7_count, meta: currency(summary.due_0_7_premium), icon: CalendarDays, card: "border-[#D8EFE6] bg-[#F1FBF6]", iconWrap: "bg-[#DDF7EB] text-[#1AA572]" },
-    { label: "Due 8–15 Days", value: summary.due_8_15_count, meta: currency(summary.due_8_15_premium), icon: CalendarDays, card: "border-[#E7DFFC] bg-[#F8F4FF]", iconWrap: "bg-[#EEE6FF] text-[#7650D8]" },
-    { label: "Due 16–30 Days", value: summary.due_16_30_count, meta: currency(summary.due_16_30_premium), icon: CalendarDays, card: "border-[#F4E5C8] bg-[#FFF9EE]", iconWrap: "bg-[#FFF0D3] text-[#E99515]" },
+    { label: "Overdue", value: summary.overdue_count, meta: currency(summary.overdue_premium), icon: Clock3, iconWrap: "bg-[#EAF3FF] text-[#3156B8]" },
+    { label: "Due 0–7 Days", value: summary.due_0_7_count, meta: currency(summary.due_0_7_premium), icon: CalendarDays, iconWrap: "bg-[#E7F8F0] text-[#1AA572]" },
+    { label: "Due 8–15 Days", value: summary.due_8_15_count, meta: currency(summary.due_8_15_premium), icon: CalendarDays, iconWrap: "bg-[#F0E9FF] text-[#7650D8]" },
+    { label: "Due 16–30 Days", value: summary.due_16_30_count, meta: currency(summary.due_16_30_premium), icon: CalendarDays, iconWrap: "bg-[#FFF2DD] text-[#E99515]" },
   ];
 
   return (
     <PartnerPortalShell title="Renewals">
-      <div data-partner-renewals-reference-page="true" className="space-y-4 pb-4">
+      <div data-partner-renewals-reference-page="true" className="space-y-3 pb-4">
         <section
           data-partner-renewals-reference-hero="true"
-          className="relative isolate overflow-hidden rounded-xl border border-[#CFE1F4] bg-[linear-gradient(105deg,#E9F5FF_0%,#E8F5FF_54%,#DDEEFF_100%)] px-4 py-4 shadow-[0_5px_16px_rgba(31,91,158,0.07)] sm:px-5"
+          className="relative isolate overflow-hidden rounded-xl border border-[#CFE1F4] bg-[linear-gradient(105deg,#EEF7FF_0%,#E8F5FF_58%,#E2F0FF_100%)] px-4 py-2.5 shadow-[0_4px_14px_rgba(31,91,158,0.06)] sm:px-5"
         >
-          <div className="relative z-10 flex min-h-[72px] items-center gap-4 pr-20 sm:pr-32">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#1377EE] text-white shadow-[0_5px_14px_rgba(19,119,238,0.24)]">
-              <CalendarDays className="h-5 w-5" />
+          <div className="relative z-10 flex min-h-[46px] items-center gap-3 pr-16 sm:pr-24">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#1377EE] text-white shadow-[0_4px_10px_rgba(19,119,238,0.2)]">
+              <CalendarDays className="h-4 w-4" />
             </span>
-            <div className="min-w-0">
-              <p className="inline-flex items-center gap-1.5 text-[8px] font-black uppercase tracking-[0.08em] text-[#2F66C9]">
-                <CalendarDays className="h-3 w-3" /> Renewal Pipeline
-              </p>
-              <h1 className="mt-1 text-[20px] font-extrabold tracking-[-0.03em] text-[#142B50] sm:text-[22px]">Upcoming and overdue renewals</h1>
-              <p className="mt-1 text-[10px] font-medium text-[#687E9E]">Track upcoming and overdue renewals.</p>
-            </div>
+            <h1 className="text-[17px] font-extrabold tracking-[-0.03em] text-[#142B50] sm:text-[18px]">Upcoming and overdue renewals</h1>
           </div>
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-[34%] overflow-hidden" aria-hidden="true">
-            <span className="absolute -bottom-14 right-6 h-36 w-36 rounded-full bg-[#C9E8FF]/70" />
-            <span className="absolute -right-3 top-4 h-16 w-16 rounded-full bg-[#DDF3FF]/80" />
-            <span className="absolute bottom-3 right-24 h-12 w-2 rotate-[24deg] rounded-full bg-[#B7DDF5]/45" />
-            <span className="absolute bottom-4 right-20 h-7 w-2 -rotate-[28deg] rounded-full bg-[#AED8F1]/50" />
-            <Image src="/assets/Custom-Icons/optimized-128/renewal.png" alt="" width={128} height={128} className="absolute bottom-[-14px] right-4 h-[104px] w-[104px] object-contain opacity-95 sm:right-8" priority />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[24%] overflow-hidden" aria-hidden="true">
+            <span className="absolute -bottom-10 right-4 h-24 w-24 rounded-full bg-[#C9E8FF]/65" />
+            <Image src="/assets/Custom-Icons/optimized-128/renewal.png" alt="" width={128} height={128} className="absolute bottom-[-18px] right-3 h-[72px] w-[72px] object-contain opacity-90 sm:right-6" priority />
           </div>
         </section>
 
-        <section data-partner-renewals-reference-metrics="true" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {metricItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className={`flex min-h-[92px] items-center gap-3 rounded-xl border px-4 py-3 shadow-[0_4px_14px_rgba(37,61,103,0.045)] ${item.card}`}>
-                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${item.iconWrap}`}><Icon className="h-[18px] w-[18px]" /></span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[8px] font-black uppercase tracking-[0.07em] text-[#526987]">{item.label}</p>
-                  <p className="mt-1 text-[18px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
-                  <p className="mt-1.5 text-[9px] font-medium text-[#7D8CA1]">{item.meta}</p>
+        <section data-partner-renewals-reference-metrics="true" className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+            {metricItems.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className={`flex min-h-[62px] items-center gap-3 px-4 py-2.5 ${index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}>
+                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${item.iconWrap}`}><Icon className="h-4 w-4" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[7.5px] font-black uppercase tracking-[0.07em] text-[#6A7A90]">{item.label}</p>
+                    <div className="mt-0.5 flex items-baseline gap-2">
+                      <p className="text-[17px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
+                      <p className="truncate text-[8.5px] font-medium text-[#8996A8]">{item.meta}</p>
+                    </div>
+                  </div>
                 </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-[#526987]" />
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </section>
 
-        <section data-partner-renewals-reference-actions="true" className="grid gap-3 xl:grid-cols-2">
-          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[52px] items-center gap-3 rounded-xl border border-[#D8E8F8] bg-[#F1F8FF] px-3.5 py-2 shadow-[0_4px_14px_rgba(37,61,103,0.04)] transition hover:border-[#C4DDF5] hover:bg-[#ECF6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+        <section data-partner-renewals-reference-actions="true" className="grid gap-2 xl:grid-cols-2">
+          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#D8E8F8] bg-[#F1F8FF] px-3.5 py-2 transition hover:border-[#C4DDF5] hover:bg-[#ECF6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#DDEEFF] text-[#2F70E5]"><ExternalLink className="h-4 w-4" /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
-            </span>
+            <span className="min-w-0 flex-1 text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
             <span className="rounded-full bg-[#E6F1FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#2563D8]">Open</span>
             <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
           </Link>
-          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[52px] items-center gap-3 rounded-xl border border-[#E7E0F8] bg-[#F8F5FF] px-3.5 py-2 shadow-[0_4px_14px_rgba(37,61,103,0.04)] transition hover:border-[#D9CEF4] hover:bg-[#F5F0FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
+          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#E7E0F8] bg-[#F8F5FF] px-3.5 py-2 transition hover:border-[#D9CEF4] hover:bg-[#F5F0FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEE6FF] text-[#7650D8]"><BarChart3 className="h-4 w-4" /></span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Reporting</span>
-            </span>
+            <span className="min-w-0 flex-1 text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Reporting</span>
             <span className="rounded-full bg-[#EEE8FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#6E49CF]">View</span>
             <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
           </Link>
         </section>
 
-        <section data-partner-renewals-reference-filters="true" className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="inline-flex w-fit gap-2">
-              <Link href={hrefFor({ mode: "due", window: "all", page: 1 })} className={"min-w-[64px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "due" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Due</Link>
-              <Link href={hrefFor({ mode: "expired", window: "all", page: 1 })} className={"min-w-[72px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "expired" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Expired</Link>
-            </div>
-            <form action="/partner/renewals" className="flex w-full gap-2 xl:max-w-[470px]">
-              {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
-              {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
-              <div className="relative min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-              </div>
-              <button className="h-9 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25" type="submit">Search</button>
-            </form>
-          </div>
-
-          {mode === "due" ? (
-            <div className="flex flex-wrap gap-2">
-              {(["all", "0_7", "8_15", "16_30"] as PartnerRenewalWindow[]).map((value) => (
-                <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (window === value ? "bg-[#E5F0FF] text-[#2866CC]" : "bg-[#F2F5F9] text-[#657792]")}>
-                  {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
-                </Link>
-              ))}
-            </div>
-          ) : null}
-        </section>
-
         <section data-partner-renewals-reference-worklist="true" className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
-          <div className="flex items-center gap-3 border-b border-[#E7EDF4] px-4 py-3.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
-            <div className="min-w-0">
-              <h2 className="text-[12px] font-extrabold text-[#1B2F4E]">{mode === "expired" ? "Expired Policies" : "Renewal Worklist"}</h2>
-              <p className="mt-0.5 text-[9px] font-medium text-[#8190A5]">{rows.length} shown · {total} matched</p>
+          <div className="border-b border-[#E7EDF4] px-4 py-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
+                <div className="min-w-0">
+                  <h2 className="text-[12px] font-extrabold text-[#1B2F4E]">{mode === "expired" ? "Expired Policies" : "Renewal Worklist"}</h2>
+                  <p className="mt-0.5 text-[9px] font-medium text-[#8190A5]">{rows.length} shown · {total} matched</p>
+                </div>
+              </div>
+
+              <form action="/partner/renewals" className="flex w-full gap-2 xl:max-w-[440px]">
+                {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
+                {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
+                <div className="relative min-w-0 flex-1">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                  <input name="q" defaultValue={q} placeholder="Search customer, policy, vehicle or insurer" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+                </div>
+                <button className="h-9 rounded-lg bg-[#111A35] px-4 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25" type="submit">Search</button>
+              </form>
+            </div>
+
+            <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
+              {mode === "due" ? (
+                <div className="flex flex-wrap gap-1.5 lg:mr-1">
+                  {(["all", "0_7", "8_15", "16_30"] as PartnerRenewalWindow[]).map((value) => (
+                    <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (window === value ? "bg-[#E5F0FF] text-[#2866CC]" : "bg-[#F2F5F9] text-[#657792]")}>
+                      {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+              <div className="inline-flex w-fit gap-2 lg:ml-2">
+                <Link href={hrefFor({ mode: "due", window: "all", page: 1 })} className={"min-w-[64px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "due" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Due</Link>
+                <Link href={hrefFor({ mode: "expired", window: "all", page: 1 })} className={"min-w-[72px] rounded-lg px-4 py-2 text-center text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "expired" ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D9E2EC] bg-white text-[#425672]")}>Expired</Link>
+              </div>
             </div>
           </div>
 
