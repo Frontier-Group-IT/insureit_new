@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Search, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, FileText, Search, ShieldAlert } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebClaimSummary, listPartnerWebClaims, type PartnerClaimState } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -62,55 +61,66 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
     return search ? "/partner/claims?" + search : "/partner/claims";
   };
 
+  const metricItems = [
+    { label: "Claims", value: summary.total_claims, icon: FileText, iconWrap: "bg-[#EAF3FF] text-[#3156B8]" },
+    { label: "Active", value: summary.active_claims, icon: CheckCircle2, iconWrap: "bg-[#E7F8F0] text-[#1AA572]" },
+    { label: "Completed", value: summary.completed_claims, icon: CheckCircle2, iconWrap: "bg-[#F0E9FF] text-[#7650D8]" },
+    { label: "Assistance", value: summary.assistance_requested, icon: Clock3, iconWrap: "bg-[#FFF2DD] text-[#E99515]" },
+  ];
+
   return (
     <PartnerPortalShell title="Claims">
-      <div className="space-y-7">
-        <PartnerPageHeader
-          eyebrow="Service"
-          title="Your claims"
-          description="Track active and completed claims."
-        />
-
-        <PartnerMetricStrip
-          items={[
-            { label: "Claims", value: summary.total_claims },
-            { label: "Active", value: summary.active_claims },
-            { label: "Completed", value: summary.completed_claims },
-            { label: "Assistance", value: summary.assistance_requested },
-          ]}
-        />
-
-        <section>
-          <div className="border-y border-[#DCE4ED] py-3">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <form action="/partner/claims" className="flex w-full gap-2 xl:max-w-[500px]">
-                {state !== "all" ? <input type="hidden" name="state" value={state} /> : null}
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                  <input name="q" defaultValue={q} placeholder="Search claim, customer, vehicle or policy" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+      <div className="space-y-4 pb-4">
+        <section className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
+          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+            {metricItems.map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className={`flex min-h-[72px] items-center gap-3 px-4 py-3 ${index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}>
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${item.iconWrap}`}><Icon className="h-[18px] w-[18px]" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[16px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
+                    <p className="mt-1.5 text-[7.5px] font-black uppercase tracking-[0.07em] text-[#6A7A90]">{item.label}</p>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96]" />
                 </div>
-                <button className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25" type="submit">Search</button>
-              </form>
+              );
+            })}
+          </div>
+        </section>
 
-              <div className="flex gap-2">
-                {states.map((item) => (
-                  <Link key={item.value} href={hrefFor({ state: item.value, page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (item.value === state ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>{item.label}</Link>
-                ))}
+        <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
+          <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><FileText className="h-4 w-4" /></span>
+              <h2 className="text-[12px] font-extrabold text-[#1B2F4E]">Your claims</h2>
+            </div>
+
+            <form action="/partner/claims" className="w-full xl:ml-3 xl:max-w-[470px]">
+              {state !== "all" ? <input type="hidden" name="state" value={state} /> : null}
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                <input name="q" defaultValue={q} placeholder="Search claim, customer, vehicle or policy" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
               </div>
+            </form>
+
+            <div className="flex flex-wrap items-center gap-2 xl:ml-auto">
+              {states.map((item) => (
+                <Link key={item.value} href={hrefFor({ state: item.value, page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (item.value === state ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>{item.label}</Link>
+              ))}
+              <span className="ml-1 hidden h-6 w-px bg-[#E1E7EF] sm:block" aria-hidden="true" />
+              <p className="shrink-0 text-[9.5px] font-medium text-[#74839A]">Total recorded <span className="ml-1 text-[13px] font-black text-[#172846]">{total}</span></p>
             </div>
           </div>
-
-          <div className="mt-5"><PartnerSectionHeading title="Claim Register" description={total + " records"} /></div>
-          <div className="mt-3 border-y border-[#DCE4ED]">
 
           {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
               {rows.map((row) => {
                 const amount = row.settlement_amount ?? row.approved_amount ?? row.estimated_loss;
                 return (
-                  <Link key={row.claim_id} href={"/partner/claims/" + encodeURIComponent(row.claim_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(140px,.65fr)_minmax(120px,.55fr)_auto] xl:items-center">
+                  <Link key={row.claim_id} href={"/partner/claims/" + encodeURIComponent(row.claim_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(140px,.65fr)_minmax(120px,.55fr)_auto] xl:items-center">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF6E7] text-[#B56A00]"><ShieldAlert className="h-4 w-4" /></span>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#FFF6E7] text-[#B56A00]"><ShieldAlert className="h-4 w-4" /></span>
                       <div className="min-w-0">
                         <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.claim_no || "Claim"}</p>
                         <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_name}</p>
@@ -125,7 +135,7 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
                       <p className="mt-0.5 text-[9px] text-[#8190A5]">{dateLabel(row.accident_at || row.created_at)}</p>
                     </div>
                     <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{humanize(row.current_status || row.claim_state)}</span>
-                    <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
+                    <ArrowRight className="hidden h-4 w-4 text-[#315A91] transition group-hover:translate-x-0.5 xl:block" />
                   </Link>
                 );
               })}
@@ -139,7 +149,7 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
           )}
 
           {(hasPrevious || hasNext) ? (
-            <div className="flex items-center justify-between border-t border-[#E6ECF3] py-4">
+            <div className="flex items-center justify-between border-t border-[#E6ECF3] px-4 py-3.5">
               <Link href={hasPrevious ? hrefFor({ page: page - 1 }) : "#"} aria-disabled={!hasPrevious} className={"inline-flex min-h-9 items-center gap-2 rounded-lg border px-3 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (hasPrevious ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Previous
               </Link>
@@ -149,10 +159,8 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
               </Link>
             </div>
           ) : null}
-          </div>
         </section>
       </div>
     </PartnerPortalShell>
   );
 }
-
