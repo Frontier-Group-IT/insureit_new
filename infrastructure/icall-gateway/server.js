@@ -12,6 +12,7 @@ const ICALL_BASE_URL = process.env.ICALL_UAT_BASE_URL;
 const ICALL_TOKEN = process.env.ICALL_UAT_AUTH_TOKEN;
 const AUTHBRIDGE_BASE_URL = String(process.env.AUTHBRIDGE_BASE_URL || "https://www.truthscreen.com").replace(/\/$/, "");
 const AUTHBRIDGE_USERNAME = String(process.env.AUTHBRIDGE_USERNAME || "").trim();
+const GATEWAY_ENVIRONMENT = String(process.env.GATEWAY_ENVIRONMENT || "mixed").trim();
 
 if (!RELAY_SECRET || !ICALL_BASE_URL || !ICALL_TOKEN) {
   console.error("Required iCall environment variables are missing.");
@@ -138,7 +139,7 @@ app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     service: "insureit-integration-gateway",
-    environment: "uat",
+    environment: GATEWAY_ENVIRONMENT,
     integrations: {
       icall: "configured",
       authbridge: AUTHBRIDGE_USERNAME ? "configured" : "not_configured",
@@ -222,7 +223,7 @@ app.post("/uat/icall/tcc", requireRelayAuth, async (req, res) => {
   }
 });
 
-app.post("/uat/authbridge/rc-verification", requireRelayAuth, async (req, res) => {
+app.post(["/authbridge/rc-verification", "/uat/authbridge/rc-verification"], requireRelayAuth, async (req, res) => {
   if (!AUTHBRIDGE_USERNAME) {
     return res.status(503).json({ statusCode: 503, status: "failed", message: "AuthBridge is not configured" });
   }
