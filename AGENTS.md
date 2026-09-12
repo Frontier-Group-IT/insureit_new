@@ -9,6 +9,7 @@ Before doing any work in this repository, read all of the following:
 - `docs/PRODUCTION_DOMAIN_HANDOFF.md`
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md`
 - `docs/AUTHBRIDGE_RC_HANDOFF.md`
+- `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md`
 - `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`
 - `docs/INSUREIT_POLICY_OCR_AUTOMATED_TRAINING_SKILL.md`
 - `docs/POLICY_OCR_TRAINING_HANDOFF_2026_08_22.md`
@@ -18,11 +19,36 @@ Before doing any work in this repository, read all of the following:
 
 Do this at the beginning of every new ChatGPT/Codex session connected to the repository. Do not ask the user to repeat information already recorded in those files.
 
-Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/PRODUCTION_DOMAIN_HANDOFF.md` as the source of truth for the canonical production portal domain, GoDaddy DNS, Vercel custom-domain binding, Supabase Auth URL configuration, public portal environment settings, domain-sensitive integration verification, and launch-time DNS safeguards. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, verified UAT state, security incident, and Policy Onboarding vehicle-registration continuation work. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps. Treat `docs/INSUREIT_POLICY_OCR_AUTOMATED_TRAINING_SKILL.md` as the durable method for OCR training, comparison, privacy-safe regression design, insurer/layout parser refinement and evidence-state language. Treat `docs/POLICY_OCR_TRAINING_HANDOFF_2026_08_22.md` as the latest 22-policy training continuation state and lessons. Treat `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md` as the source of truth for speed, caching, navigation, bundle, hydration, data-loading, document-open, route-rendering, and performance regression-prevention rules. Treat `docs/PERFORMANCE_REMEDIATION_PLAN_2026_08_24.md` as the current staged performance-fix plan, safety boundary, audit baseline, and acceptance criteria; it does not authorize a production region, database, RLS, index, storage, or workflow change by itself. Treat `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md` as the source of truth for mobile app changes, Expo preview OTA publishing, runtime/channel compatibility, clean source-state requirements, mobile environment handling, and mandatory installed-device verification.
+Treat `docs/INSUREIT_PROJECT_CONTEXT.md` as the durable technical and business-rule source of truth. Treat `docs/CURRENT_CHAT_HANDOFF.md` as the current conversation continuation state, including active audit findings, selected work, implementation boundaries, and unresolved risks. Treat `docs/PRODUCTION_DOMAIN_HANDOFF.md` as the source of truth for the canonical production portal domain, GoDaddy DNS, Vercel custom-domain binding, Supabase Auth URL configuration, public portal environment settings, domain-sensitive integration verification, and launch-time DNS safeguards. Treat `docs/ICALL_AWS_GATEWAY_HANDOFF.md` as the source of truth for the iCall APIs, AWS Lightsail fixed-IP gateway, Vercel environment, SSO/iframe integration, CSP history, cookie issue, verified state, and immediate continuation steps. Treat `docs/AUTHBRIDGE_RC_HANDOFF.md` as the source of truth for AuthBridge Detailed RC service 372, its three-step encryption/lookup/decryption contract, AWS gateway route, Customer field mapping, security state and current integration boundaries. Treat `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md` as the exact operational record for the 2026-09-12 AuthBridge production credential cutover, Lightsail/Nginx canonical route rollout, verification evidence, merged PRs and still-unverified deployment/OTA steps. Treat `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` as the source of truth for policy OCR scope, Google Document AI, Vercel OIDC federation, insurer parsers, test evidence, deployment state, and continuation steps. Treat `docs/INSUREIT_POLICY_OCR_AUTOMATED_TRAINING_SKILL.md` as the durable method for OCR training, comparison, privacy-safe regression design, insurer/layout parser refinement and evidence-state language. Treat `docs/POLICY_OCR_TRAINING_HANDOFF_2026_08_22.md` as the latest 22-policy training continuation state and lessons. Treat `docs/PERFORMANCE_OPTIMIZATION_HANDOFF.md` as the source of truth for speed, caching, navigation, bundle, hydration, data-loading, document-open, route-rendering, and performance regression-prevention rules. Treat `docs/PERFORMANCE_REMEDIATION_PLAN_2026_08_24.md` as the current staged performance-fix plan, safety boundary, audit baseline, and acceptance criteria; it does not authorize a production region, database, RLS, index, storage, or workflow change by itself. Treat `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md` as the source of truth for mobile app changes, Expo preview OTA publishing, runtime/channel compatibility, clean source-state requirements, mobile environment handling, and mandatory installed-device verification.
 
-Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the production-domain handoff after material production-domain, GoDaddy DNS, Vercel domain, Supabase Auth URL, public-origin, callback/redirect, iframe-origin, or launch-time DNS changes. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff after material provider-contract, gateway, field-mapping, Policy Onboarding, UAT, credential, security, or production changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification. Update the OCR training skill/handoff after a material, verified training lesson changes how future agents should establish ground truth, route insurer/layout families, interpret financials, build regressions or measure live accuracy. Update the performance handoff after material speed, caching, navigation, bundle, hydration, server-rendering, data-loading, route-filtering, signed-document URL, middleware, or route-regression findings. Update the mobile Expo preview handoff after material mobile runtime, channel, branch, build profile, OTA publishing, installed-app verification, or Expo failure-mode findings.
+Update the durable project context after material workflow, schema, constraint, migration or architecture changes. Update or consolidate the current chat handoff after active work is materially implemented, blocked or verified. Update the production-domain handoff after material production-domain, GoDaddy DNS, Vercel domain, Supabase Auth URL, public-origin, callback/redirect, iframe-origin, or launch-time DNS changes. Update the iCall gateway handoff after material iCall API, gateway, domain, IP allowlist, CSP, cookie, SSO, iframe, UAT or production changes. Update the AuthBridge handoff and its production-deployment handoff after material provider-contract, gateway, field-mapping, Customer/Policy Onboarding, credential, security, Lightsail/Nginx, production-route, portal-deployment or Customer-OTA changes. Update the policy OCR handoff after material changes to Google authentication, OCR providers, insurer detection/parsers, Section 03 mapping, testing, deployment, privacy controls, or production verification. Update the OCR training skill/handoff after a material, verified training lesson changes how future agents should establish ground truth, route insurer/layout families, interpret financials, build regressions or measure live accuracy. Update the performance handoff after material speed, caching, navigation, bundle, hydration, server-rendering, data-loading, route-filtering, signed-document URL, middleware, or route-regression findings. Update the mobile Expo preview handoff after material mobile runtime, channel, branch, build profile, OTA publishing, installed-app verification, or Expo failure-mode findings.
 
 Never store secrets, API keys, passwords, tokens, cookies, private keys, full sensitive identity values or MCP credentials in repository context files.
+
+## Real-time implementation continuity protocol
+
+**MANDATORY FOR ALL AGENTS:** every material implementation must leave a concise repository-visible continuity note before the work is considered complete. The user uses multiple ChatGPT/Codex agents and expects any new session to be able to recover the real-time INSUREIT state without relying on chat memory.
+
+For every material implementation, update `AGENTS.md` in the same feature PR or in an immediately following documentation PR with one compact entry in the **Latest implementation ledger** below. Also update the relevant durable handoff/context file when the change belongs to a specific domain.
+
+A material implementation includes any merged feature/fix that changes user-visible behavior, business/accounting rules, workflow state, integration contracts, deployment/runtime configuration, mobile OTA/native behavior, schema/migration behavior, security posture, or production-operational state.
+
+Each ledger entry must contain only:
+
+- date
+- area / implementation
+- PR and merge commit when available
+- exact evidence state: **IMPLEMENTED**, **MERGED**, **APPLIED**, **DEPLOYED**, **VERIFIED**, **BLOCKED** or **UNVERIFIED**
+- one short continuation note or link to the detailed handoff
+
+Do not paste implementation transcripts, raw logs, secrets, private data, giant diffs or speculative plans into `AGENTS.md`. The ledger is a current index, not a conversation archive. If a later change supersedes an entry, edit/replace the stale entry rather than leaving contradictory state.
+
+**Critical state rule:** merge is not deployment; deployment is not runtime application; an OTA publish is not installed-device verification; a migration commit is not an applied migration. Record these states separately.
+
+### Latest implementation ledger
+
+- **2026-09-12 — AuthBridge production route + Customer policy prefill:** PR #1702 merged as `510ffd0b4f1e69bb1c5bce7245292c4082f6af9d`; canonical Lightsail/Nginx `/authbridge/rc-verification` route is **APPLIED + VERIFIED** with gateway health `mixed`, relay auth enforced and protected production service-372 lookup successful. PR #1704 merged as `fb5eaa5fbbd779784cc3b7b8a2084caa4705972e`; insurer, policy number and policy expiry prefill are **IMPLEMENTED IN MAIN**, while the exact Vercel production deployment, Customer production OTA and installed-app end-to-end verification remain **UNVERIFIED**. See `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md`.
+- **2026-09-12 — Projected pay-in cashflow KPI:** PR #1747 merged as `b40d0714e5e93edb39ea03e194f79d25c471d5a6`; dashboard now presents projected net pay-in as the primary cashflow value with projected gross pay-in and projected TDS in the same KPI card, while Partner Payout and Retention remain separate. **MERGED / IMPLEMENTED IN MAIN; production deployment not yet verified.**
 
 ## INSUREIT Partner production-refinement scope control
 
@@ -36,7 +62,7 @@ For INSUREIT Partner refinement work, `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MA
 
 ## Smart context retention and learning policy
 
-Repository context is a curated operational memory, not a transcript archive. **Do not update `AGENTS.md` or a context/handoff file after every chat.** Save information only when it materially improves the correctness, safety or continuity of future work.
+Repository context is a curated operational memory, not a transcript archive. **Do not update `AGENTS.md` after every chat or trivial edit. Do update it after every material implementation under the Real-time implementation continuity protocol above.** Save information only when it materially improves the correctness, safety or continuity of future work.
 
 ### What belongs in durable context
 
@@ -94,12 +120,13 @@ Do not preserve a long failure chronology. Do not state “no changes were made�
 
 ### Context file boundaries
 
-- `AGENTS.md` — stable operating rules for agents and repository work. Do not use it as project history.
+- `AGENTS.md` — stable operating rules plus a compact real-time implementation ledger; do not use it as a transcript or detailed project-history file.
 - `docs/INSUREIT_PROJECT_CONTEXT.md` — durable current business rules, architecture, schema constraints and verified system lessons.
 - `docs/CURRENT_CHAT_HANDOFF.md` — only the active continuation state needed by the next session. Rewrite/consolidate stale sections instead of continuously appending.
 - `docs/PRODUCTION_DOMAIN_HANDOFF.md` — canonical production-domain, DNS, Vercel, Supabase Auth URL, public-origin, iframe-origin and go-live domain state.
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md` — iCall/gateway-specific verified state, blockers and continuation actions.
-- `docs/AUTHBRIDGE_RC_HANDOFF.md` — AuthBridge Detailed RC provider contract, gateway state, Policy Onboarding integration boundaries, security requirements and verification evidence.
+- `docs/AUTHBRIDGE_RC_HANDOFF.md` — AuthBridge Detailed RC provider contract, gateway state, Customer/Policy Onboarding integration boundaries, security requirements and verification evidence.
+- `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md` — exact AuthBridge production rollout evidence, Lightsail/Nginx state, merged PRs, verification status and remaining security/deployment/OTA work.
 - `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md` — Policy OCR scope, Google/Vercel identity configuration, insurer parser architecture, test evidence, deployment state, durable lessons and continuation actions.
 - `docs/INSUREIT_POLICY_OCR_AUTOMATED_TRAINING_SKILL.md` — durable OCR training method: PDF-ground-truth rule, insurer/layout architecture, comparison taxonomy, semantic/accounting safeguards, privacy-safe regression strategy and acceptance criteria.
 - `docs/POLICY_OCR_TRAINING_HANDOFF_2026_08_22.md` — current 22-policy training continuation state, latest implementation landmarks, user-reported live result and next refinement priorities.
@@ -180,6 +207,7 @@ When changing production domains, DNS, Vercel custom domains, Supabase Auth URLs
 - `docs/PRODUCTION_DOMAIN_HANDOFF.md`
 - `docs/ICALL_AWS_GATEWAY_HANDOFF.md` when iCall/iframe behavior is involved
 - `docs/AUTHBRIDGE_RC_HANDOFF.md` when gateway/AuthBridge behavior is involved
+- `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md` when AuthBridge production routing, Lightsail/Nginx, credential or deployment state is involved
 
 Current canonical production application origin is:
 
@@ -244,25 +272,27 @@ Mandatory safeguards:
 
 ## AuthBridge Detailed RC integration protocol
 
-When modifying Policy Onboarding, vehicle registration inputs, vehicle master data, motor-policy forms, RC lookup, or AuthBridge integration code, read and follow:
+When modifying Policy Onboarding, Customer Add Vehicle, vehicle registration inputs, vehicle master data, motor-policy forms, RC lookup, or AuthBridge integration code, read and follow:
 
 - `docs/AUTHBRIDGE_RC_HANDOFF.md`
+- `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md`
 - `apps/web-portal/lib/authbridge-rc-api.ts`
 - `infrastructure/icall-gateway/server.js`
 
 Mandatory safeguards:
 
 - Keep AuthBridge calls server-side. Browser/client components must never call TruthScreen directly or receive the gateway relay secret.
-- Use the protected gateway route `POST /uat/authbridge/rc-verification` through the server-only client.
+- Use the protected canonical gateway route `POST /authbridge/rc-verification` through the server-only client. Retain `/uat/authbridge/rc-verification` only as a temporary compatibility alias until retirement is explicitly verified safe.
 - Never invent provider field names. Map only from a real sanitized decrypted response and the current canonical policy/vehicle schema.
 - Do not perform a lookup on every keystroke. Use an explicit fetch action or another controlled trigger to protect provider credits and avoid duplicate calls.
 - Show a loading state suitable for 5–8 second responses and a controlled timeout path up to 20 seconds.
 - Present returned details for review before applying them. Never silently overwrite manually entered or already-saved vehicle data.
-- Import only fields needed by the Policy Onboarding workflow. Avoid unnecessary owner personal data.
+- Import only fields needed by the approved workflow. Avoid unnecessary owner personal data.
+- Current approved Customer insurance prefill is insurer, policy number and policy expiry/end date only. Do not infer policy start date, IDV, premium or policy copy when the provider did not return them.
 - Do not log or commit decrypted responses, full addresses, phone numbers, chassis numbers, engine numbers, credentials, tokens or encrypted provider payloads.
 - Prefer normalized field-level storage. Do not store raw provider responses without an approved retention, access-control and masking design.
-- Treat successful gateway UAT as proof of the provider path only, not proof that the Policy Onboarding user journey is implemented, deployed or live.
-- The relay secret and iCall token exposed in a setup screenshot must be rotated before production use; never repeat or store the replacement values.
+- Treat successful gateway/provider verification as proof of the provider path only, not proof that the portal deployment, Customer OTA or installed mobile journey is live.
+- The previously exposed relay secret, iCall token and TruthScreen dashboard password must be treated as compromised until each rotation is directly confirmed; never repeat or store replacement values.
 
 ## Production readiness protocol
 
