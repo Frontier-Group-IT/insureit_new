@@ -29,6 +29,22 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const embeddedEditorContentSecurityPolicy = contentSecurityPolicy.replace("frame-ancestors 'none'", "frame-ancestors 'self'");
+const sarvamVoiceAgentContentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+  "frame-src 'self' https://sarvam.ai https://*.sarvam.ai",
+  "object-src 'none'",
+  `script-src 'self' 'unsafe-inline' https://sarvam.ai https://*.sarvam.ai${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
+  "style-src 'self' 'unsafe-inline' https://sarvam.ai https://*.sarvam.ai",
+  "font-src 'self' data: https://sarvam.ai https://*.sarvam.ai",
+  "img-src 'self' data: blob: https:",
+  `connect-src 'self' ${supabaseOrigin} https://sarvam.ai https://*.sarvam.ai wss://sarvam.ai wss://*.sarvam.ai${process.env.NODE_ENV === "production" ? "" : " ws://localhost:* http://localhost:*"}`.trim(),
+  "media-src 'self' blob: https: https://sarvam.ai https://*.sarvam.ai",
+  "worker-src 'self' blob:",
+  ...(process.env.NODE_ENV === "production" ? ["upgrade-insecure-requests"] : [])
+].join("; ");
 
 const securityHeaders = [
   { key: "Content-Security-Policy", value: contentSecurityPolicy },
@@ -42,6 +58,11 @@ const securityHeaders = [
 ];
 
 const voiceLabHeaders = [
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" },
+];
+
+const sarvamVoiceAgentHeaders = [
+  { key: "Content-Security-Policy", value: sarvamVoiceAgentContentSecurityPolicy },
   { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" },
 ];
 
@@ -60,6 +81,10 @@ const nextConfig = {
       {
         source: "/partner/renewals/voice-lab",
         headers: voiceLabHeaders,
+      },
+      {
+        source: "/development/voice-agents/sarvam",
+        headers: sarvamVoiceAgentHeaders,
       },
       {
         source: "/customers/:id/edit",
