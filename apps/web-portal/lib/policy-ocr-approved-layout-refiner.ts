@@ -81,6 +81,35 @@ export function refineApprovedMotorPolicyLayout(
   const round7 = refineProductionRound7UiicPrecision(round6);
   const round8 = refineProductionRound8Fresh20Precision(pages, tables, round7);
   const round9 = refineProductionRound9Fresh20Recovery(pages, round8);
-  const round10 = refineProductionRound10UiicGcvPackage(pages, tables, round9);
+  const round10Raw = refineProductionRound10UiicGcvPackage(pages, tables, round9);
+  const round10 = preserveValidatedUiicFinancials(pages, round9, round10Raw);
   return refineProductionPolicyIdentity(pages, round10);
+}
+
+function preserveValidatedUiicFinancials(
+  pages: string[],
+  before: ParsedPolicyResult,
+  after: ParsedPolicyResult,
+): ParsedPolicyResult {
+  if (before.parserId !== "united_india_motor_v1" || before === after) return after;
+
+  const beforeOdField = before.fields.find((field) => field.key === "od_premium");
+  const beforeTpField = before.fields.find((field) => field.key === "tp_premium");
+  const beforeOd = numeric(beforeOdField?.value);
+  if (beforeOd == null || !beforeTpField) return after;
+
+  const firstTwo = pages.slice(0, 2).join("\n");
+  const grossOdMatch = firstTwo.match(/Gross\s+OD\s*\(A\)[\s\S]{0,80}?((?:\d{1,3}(?:,\d{3})+|\d{2,8})(?:\.\d{1,2})?)/i);
+  const grossOd = numeric(grossOdMatch?.[1]);
+  if (grossOd == null || Math.abs(beforeOd - grossOd) > 1) return after;
+
+  const restored = after.fields.filter((field) => field.key !== "od_premium" && field.key !== "tp_premium");
+  restored.push(beforeOdField, beforeTpField);
+  return { ...after, fields: restored };
+}
+
+function numeric(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value.replace(/,/g, "").trim());
+  return Number.isFinite(parsed) ? parsed : null;
 }
