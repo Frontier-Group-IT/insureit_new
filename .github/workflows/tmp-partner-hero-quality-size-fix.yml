@@ -28,23 +28,30 @@ jobs:
           mkdir -p apps/partner-app/assets/figma-dashboard
           python - <<'PY'
           from pathlib import Path
-          import base64, hashlib
-          parts = sorted(Path('.tmp/partner-hero').glob('part*.txt'))
+          import base64, hashlib, subprocess
+          paths = [f'.tmp/partner-hero/part{i:02d}.txt' for i in range(4)]
           expected_lengths = [15500, 15500, 15500, 13916]
-          if len(parts) != 4:
-              raise SystemExit(f'Expected 4 hero chunks, found {len(parts)}')
-          encoded = ''
-          for path, expected in zip(parts, expected_lengths):
-              text = path.read_text()
-              print(f'{path}: {len(text)} chars')
-              if len(text) != expected:
-                  raise SystemExit(f'Unexpected chunk length for {path}: {len(text)}')
-              encoded += text
-          print(f'combined base64 chars={len(encoded)}')
-          data = base64.b64decode(encoded, validate=True)
-          print(f'decoded hero bytes={len(data)}')
-          digest = hashlib.sha256(data).hexdigest()
-          print(f'sha256={digest}')
+          expected_blob_shas = [
+              '386b4917bd0067a1eba2689b111c88d4ef643724',
+              '676035bfe5c8454c1cb75a610ad216e2694047b2',
+              'b75c15d8ff0dd9b8e949252f021bae7a834ffc44',
+              '52bc8bee34f3c0e084abdd07f05ff582f2c847c5',
+          ]
+          pieces=[]
+          for path, expected_len, expected_sha in zip(paths, expected_lengths, expected_blob_shas):
+              sha=subprocess.check_output(['git','rev-parse',f'HEAD:{path}'], text=True).strip()
+              if sha != expected_sha:
+                  raise SystemExit(f'Unexpected git blob for {path}: {sha}')
+              raw=subprocess.check_output(['git','cat-file','blob',sha])
+              print(f'{path}: blob={sha}, bytes={len(raw)}')
+              if len(raw) != expected_len:
+                  raise SystemExit(f'Unexpected chunk length for {path}: {len(raw)}')
+              pieces.append(raw)
+          encoded=b''.join(pieces)
+          print(f'combined base64 bytes={len(encoded)}, tail={encoded[-24:]!r}')
+          data=base64.b64decode(encoded, validate=True)
+          digest=hashlib.sha256(data).hexdigest()
+          print(f'decoded hero bytes={len(data)}, sha256={digest}')
           if len(data) != 45312:
               raise SystemExit(f'Unexpected hero asset size: {len(data)}')
           if digest != '38653cc36ed69567f106bfc6870175eb7ecc29f0812e32e353022b38c6df1707':
@@ -68,17 +75,17 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
-          p = Path('apps/partner-app/app/(tabs)/index.tsx')
-          s = p.read_text()
-          replacements = {
+          p=Path('apps/partner-app/app/(tabs)/index.tsx')
+          s=p.read_text()
+          replacements={
               "homeHeader: require('../../assets/figma-dashboard/hero-banner.jpg'),": "homeHeader: require('../../assets/figma-dashboard/hero-banner.webp'),",
               'const heroHeight = 90;': 'const heroHeight = 120;',
               "heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },": "heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 26 },",
           }
-          for old, new in replacements.items():
+          for old,new in replacements.items():
               if s.count(old) != 1:
                   raise SystemExit(f'Expected exactly one occurrence of {old!r}, found {s.count(old)}')
-              s = s.replace(old, new)
+              s=s.replace(old,new)
           p.write_text(s)
           PY
           grep -F "homeHeader: require('../../assets/figma-dashboard/hero-banner.webp')," 'apps/partner-app/app/(tabs)/index.tsx'
