@@ -1,0 +1,77 @@
+name: Verify renewal voice learning schema
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260912235900_renewal_voice_agent_learning.sql'
+      - '.github/workflows/verify-renewal-voice-learning-schema.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify renewal voice learning schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify schema configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260912235900_renewal_voice_agent_learning.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Verify renewal voice learning schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.renewal_voice_agent_sessions') is not null as sessions_table_ready,
+              to_regclass('public.renewal_voice_agent_turns') is not null as turns_table_ready,
+              has_table_privilege('authenticated','public.renewal_voice_agent_sessions','SELECT') as sessions_select,
+              has_table_privilege('authenticated','public.renewal_voice_agent_sessions','INSERT') as sessions_insert,
+              has_table_privilege('authenticated','public.renewal_voice_agent_sessions','UPDATE') as sessions_update,
+              has_table_privilege('authenticated','public.renewal_voice_agent_turns','SELECT') as turns_select,
+              has_table_privilege('authenticated','public.renewal_voice_agent_turns','INSERT') as turns_insert
+          ")
+          echo "$result"
+          for key in sessions_table_ready turns_table_ready sessions_select sessions_insert sessions_update turns_select turns_insert; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260912235900
