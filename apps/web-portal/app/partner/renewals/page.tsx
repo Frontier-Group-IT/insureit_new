@@ -121,20 +121,18 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
         </section>
 
         <section data-partner-renewals-reference-actions="true" className="grid gap-3 xl:grid-cols-2">
-          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[66px] items-center gap-3 rounded-xl border border-[#D8E8F8] bg-[#F1F8FF] px-4 py-3 shadow-[0_4px_14px_rgba(37,61,103,0.04)] transition hover:border-[#C4DDF5] hover:bg-[#ECF6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#DDEEFF] text-[#2F70E5]"><ExternalLink className="h-4 w-4" /></span>
+          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[52px] items-center gap-3 rounded-xl border border-[#D8E8F8] bg-[#F1F8FF] px-3.5 py-2 shadow-[0_4px_14px_rgba(37,61,103,0.04)] transition hover:border-[#C4DDF5] hover:bg-[#ECF6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#DDEEFF] text-[#2F70E5]"><ExternalLink className="h-4 w-4" /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
-              <span className="mt-0.5 block text-[9px] font-medium leading-4 text-[#74839A]">Retarget customers with policies held outside INSUREIT.</span>
             </span>
             <span className="rounded-full bg-[#E6F1FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#2563D8]">Open</span>
             <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
           </Link>
-          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[66px] items-center gap-3 rounded-xl border border-[#E7E0F8] bg-[#F8F5FF] px-4 py-3 shadow-[0_4px_14px_rgba(37,61,103,0.04)] transition hover:border-[#D9CEF4] hover:bg-[#F5F0FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEE6FF] text-[#7650D8]"><BarChart3 className="h-4 w-4" /></span>
+          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[52px] items-center gap-3 rounded-xl border border-[#E7E0F8] bg-[#F8F5FF] px-3.5 py-2 shadow-[0_4px_14px_rgba(37,61,103,0.04)] transition hover:border-[#D9CEF4] hover:bg-[#F5F0FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEE6FF] text-[#7650D8]"><BarChart3 className="h-4 w-4" /></span>
             <span className="min-w-0 flex-1">
               <span className="block text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Reporting</span>
-              <span className="mt-0.5 block text-[9px] font-medium leading-4 text-[#74839A]">Review contact, quote, conversion and verified premium results.</span>
             </span>
             <span className="rounded-full bg-[#EEE8FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#6E49CF]">View</span>
             <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
