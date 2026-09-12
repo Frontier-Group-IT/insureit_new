@@ -30,7 +30,7 @@ export async function lookupAuthbridgeRc(registrationNumber: string): Promise<Au
   }
 
   const { gatewayUrl, gatewaySecret } = configuration();
-  const response = await fetch(`${gatewayUrl}/uat/authbridge/rc-verification`, {
+  const response = await fetch(`${gatewayUrl}/authbridge/rc-verification`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

@@ -1,488 +1,225 @@
 # AuthBridge Detailed RC Integration Handoff
 
-> **Consolidated:** 2026-08-05 00:36 IST
+> **Consolidated:** 2026-09-12 IST
 >
-> This is the complete continuation state for the AuthBridge Detailed RC integration, AWS Lightsail gateway activation, verified UAT behavior, repository files, security constraints, and the next implementation step for Policy Onboarding and Vehicle Registration input.
+> Source of truth for AuthBridge / TruthScreen Detailed RC service 372, the protected AWS gateway, Customer RC lookup, production credential state, security boundaries, and production rollout evidence.
 >
 > **Never commit or paste secrets.** Do not store AuthBridge passwords, relay secrets, iCall tokens, vehicle-owner responses, chassis numbers, engine numbers, addresses, phone numbers, or other personal/customer data in GitHub, logs, screenshots, chat, or browser-visible code.
 
-## 1. Provider and service selected
+## 1. Provider contract
 
-Provider:
+Provider: AuthBridge / TruthScreen  
+Service: Detailed RC Verification  
+Service code: `372`  
+Provider base URL: `https://www.truthscreen.com`
 
-```text
-AuthBridge / TruthScreen
-```
+The verified provider flow remains three server-side calls:
 
-Service:
+1. `POST /InstantSearch/encrypted_string`
+2. `POST /api/v2.2/utilitysearch`
+3. `POST /InstantSearch/decrypt_encrypted_string`
 
-```text
-Detailed RC Verification
-```
+Each call uses the AuthBridge account username header. The supplied provider/Postman contract does **not** use the TruthScreen dashboard password in these three API requests. Do not invent password-based API authentication.
 
-Service code:
+Local reference assets remain under `authbridge/` including the PowerShell test script, README, Postman collection, error-code reference and ignored test-output folder.
 
-```text
-372
-```
+## 2. Production credential cutover — VERIFIED 2026-09-12
 
-UAT base URL:
-
-```text
-https://www.truthscreen.com
-```
-
-AuthBridge confirmed:
-
-- Authentication uses token-based encryption/decryption.
-- Detailed RC runs synchronously.
-- IP whitelisting is not required.
-- P95 response time is approximately 5–8 seconds depending on source.
-- A 15–20 second provider timeout is recommended.
-- AuthBridge stated no rate limit from its side.
-- Live registration-number samples may be used in UAT.
-
-The TruthScreen dashboard login was tested separately and Detailed RC lookup worked there before API integration.
-
-## 2. Verified three-request API flow
-
-AuthBridge supplied a Postman collection for Detailed RC. The working flow is:
-
-### Step 1 — encrypt request
-
-```text
-POST https://www.truthscreen.com/InstantSearch/encrypted_string
-```
-
-Headers:
-
-```text
-Content-Type: application/json
-username: <UAT account username>
-```
-
-Plain body:
-
-```json
-{
-  "transID": "UNIQUE_TRANSACTION_ID",
-  "docType": 372,
-  "docNumber": "NORMALIZED_RC_NUMBER"
-}
-```
-
-### Step 2 — submit Detailed RC request
-
-```text
-POST https://www.truthscreen.com/api/v2.2/utilitysearch
-```
-
-Headers:
-
-```text
-Content-Type: application/json
-username: <UAT account username>
-```
-
-Body:
-
-```json
-{
-  "requestData": "ENCRYPTED_VALUE_FROM_STEP_1"
-}
-```
-
-### Step 3 — decrypt response
-
-```text
-POST https://www.truthscreen.com/InstantSearch/decrypt_encrypted_string
-```
-
-Headers:
-
-```text
-Content-Type: application/json
-username: <UAT account username>
-```
-
-Body:
-
-```json
-{
-  "responseData": "ENCRYPTED_RESPONSE_FROM_STEP_2"
-}
-```
-
-The supplied Postman flow does not send the TruthScreen dashboard password in these requests. Do not invent a password-based encryption scheme.
-
-## 3. Local API test assets committed
-
-Folder:
-
-```text
-authbridge/
-```
-
-Files:
-
-```text
-authbridge/Test-AuthBridgeRC.ps1
-authbridge/README.md
-authbridge/Detailed-RC-372.postman_collection.json
-authbridge/Error-Code-RC.csv
-authbridge/.gitignore
-```
-
-Purpose:
-
-- Reproduce the provider flow outside the application.
-- Verify encryption, lookup and decryption.
-- Keep generated response files out of Git.
-
-Relevant commits:
-
-```text
-85641812fe2b5a2268bd6cdd721279464a1c8f5f  Add AuthBridge RC API test script
-a6a96491fd323ba817a14f6bb88f2c0183e45273  Add AuthBridge RC test documentation
-817d76b06afd2b9bf9af7749ceb6a5ae182b6c94  Add AuthBridge Detailed RC Postman collection
-5e88b47e54cdd909a5b071607029615dfc1c7053  Add AuthBridge RC error code reference
-f0ad9aa2be569b90f85ccb2e7b6d9fd772fd3217  Ignore AuthBridge test response output
-```
-
-**VERIFIED:** the PowerShell test completed successfully using a valid RC number.
-
-## 4. Repository implementation
-
-### 4.1 AWS integration gateway
-
-Primary file:
-
-```text
-infrastructure/icall-gateway/server.js
-```
-
-Implemented route:
-
-```text
-POST /uat/authbridge/rc-verification
-```
-
-Route behavior:
-
-- Uses the existing private relay Bearer authentication.
-- Accepts a vehicle registration number from a trusted InsureIt server caller.
-- Normalizes and validates the registration number.
-- Generates a unique transaction ID.
-- Calls AuthBridge encryption, Detailed RC and decryption endpoints server-side.
-- Uses controlled provider timeouts.
-- Does not return credentials or opaque provider-encryption values.
-- Does not log the decrypted vehicle-owner response.
-- Converts provider/network failures into controlled gateway errors.
-
-Gateway commit:
-
-```text
-57f004d331d75f61fa732f685356e9864a1bbfdd
-```
-
-### 4.2 Portal server-only client
-
-File:
-
-```text
-apps/web-portal/lib/authbridge-rc-api.ts
-```
-
-Exports:
-
-```text
-lookupAuthbridgeRc(registrationNumber)
-normalizeVehicleRegistrationNumber(value)
-isValidVehicleRegistrationNumber(value)
-```
-
-The portal client:
-
-- Is intended for server-side use only.
-- Calls the protected AWS gateway, not AuthBridge directly.
-- Uses the existing private gateway URL and relay secret environment variables.
-- Must never be imported into a browser/client component in a way that exposes configuration.
-
-Portal client commit:
-
-```text
-2698c0980816688d6ba61508f5d432bd22ccb585
-```
-
-### 4.3 Nginx reference configuration
-
-File:
-
-```text
-infrastructure/icall-gateway/nginx-authbridge-location.conf
-```
-
-Commit:
-
-```text
-f1f35e313675a1493d0d08619eb429928af24b1f
-```
-
-## 5. Lightsail runtime configuration
-
-Gateway server:
-
-```text
-AWS Lightsail
-Host: insureit.duckdns.org
-Application directory: /opt/insureit-gateway
-Node service: insureit-gateway.service
-Nginx site: /etc/nginx/sites-available/insureit-gateway
-```
-
-Required private environment variables were added to:
+The Lightsail runtime AuthBridge account was changed from the test account to the provider-issued production account in the private file:
 
 ```text
 /opt/insureit-gateway/.env
 ```
 
-Required names:
+Required runtime names remain:
 
 ```text
 AUTHBRIDGE_BASE_URL=https://www.truthscreen.com
 AUTHBRIDGE_USERNAME=<stored privately>
 ```
 
-Do not add angle brackets around the real value. Do not commit `.env`.
+The real username/password must not be committed to this repository. The dashboard password is not required by the verified RC API request contract.
 
-The running `server.js` was updated from GitHub and passed:
+After the private username change:
 
-```bash
-node --check server.js
-```
+- `node --check /opt/insureit-gateway/server.js` passed.
+- `insureit-gateway.service` restarted and remained active.
+- Local `http://127.0.0.1:3001/health` returned HTTP 200.
+- Public `https://insureit.duckdns.org/health` returned HTTP 200.
+- A protected Detailed RC request through the Lightsail gateway returned `statusCode: 200`, `status: success`, `provider: authbridge` and valid service-372 data.
 
-Nginx now proxies:
+**VERIFIED:** the production AuthBridge account works end to end through the protected AWS gateway.
 
-```text
-/uat/authbridge/ -> http://127.0.0.1:3001
-```
+Do not record the test RC number or returned owner/vehicle payload in repository context.
 
-The active HTTPS server contains separate location blocks for:
+## 3. Architecture
 
-```text
-/health
-/uat/authbridge/
-/uat/icall/
-/
-```
-
-Nginx validation passed:
+Customer mobile flow:
 
 ```text
-nginx: configuration file /etc/nginx/nginx.conf test is successful
+Customer App
+→ https://portal.insureit.in/api/customer/rc-lookup
+→ server-only portal AuthBridge client
+→ protected AWS Lightsail integration gateway
+→ TruthScreen/AuthBridge encrypt → RC 372 → decrypt
+→ normalized safe fields back to Customer App
 ```
 
-Systemd was reloaded and the gateway service restarted successfully.
+The Customer App never receives AuthBridge credentials or the gateway relay secret.
 
-## 6. Verified runtime state
-
-### Health endpoint
-
-Verified response from:
+Primary files:
 
 ```text
-GET https://insureit.duckdns.org/health
+apps/mobile-app/lib/customer-rc-lookup.ts
+apps/mobile-app/app/customer/add-vehicle.tsx
+apps/web-portal/app/api/customer/rc-lookup/route.ts
+apps/web-portal/lib/authbridge-rc-api.ts
+infrastructure/icall-gateway/server.js
+infrastructure/icall-gateway/nginx-authbridge-location.conf
 ```
 
-Result:
+The portal cache table is `vehicle_rc_lookup_cache`; successful RC lookups are cached for 30 days and stale cache may be used as a controlled fallback if a live provider request fails.
 
-```json
-{
-  "status": "ok",
-  "service": "insureit-integration-gateway",
-  "environment": "uat",
-  "integrations": {
-    "icall": "configured",
-    "authbridge": "configured"
-  }
-}
-```
+## 4. Production route cleanup
 
-### Public route protection
+Production cleanup PR: **#1702 — Clean up AuthBridge production gateway routing**.
 
-A request without the relay secret to:
+The intended canonical route is:
 
 ```text
-POST https://insureit.duckdns.org/uat/authbridge/rc-verification
+POST /authbridge/rc-verification
 ```
 
-returned:
-
-```json
-{
-  "statusCode": 401,
-  "status": "failed",
-  "message": "Unauthorized"
-}
-```
-
-**VERIFIED:** the AuthBridge gateway route is not publicly usable without the private relay secret.
-
-### Protected end-to-end lookup
-
-A protected request was executed locally from the Lightsail instance using the runtime relay secret and a valid vehicle registration number.
-
-Observed result:
+The previous route remains temporarily as a compatibility alias:
 
 ```text
-"status":"success"
+POST /uat/authbridge/rc-verification
 ```
 
-**VERIFIED:** the live UAT path works end to end:
+The portal server-only client is updated to call the canonical neutral route. The Nginx reference configuration includes both `/authbridge/` and `/uat/authbridge/` proxy locations during transition.
+
+The gateway health response no longer hard-codes the entire gateway as `uat`; `GATEWAY_ENVIRONMENT` is configurable and defaults to `mixed` because the gateway currently hosts integrations at different lifecycle stages.
+
+**Rollout order:**
+
+1. Merge PR #1702 only after the canonical GitHub verification gate is green.
+2. Deploy the merged `infrastructure/icall-gateway/server.js` to `/opt/insureit-gateway/server.js`.
+3. Add the canonical `/authbridge/` Nginx location while retaining `/uat/authbridge/` temporarily.
+4. Run `node --check`, `nginx -t`, restart `insureit-gateway.service`, and reload Nginx if its configuration changed.
+5. Verify `/health` and a protected request through `/authbridge/rc-verification`.
+6. Only then deploy the web portal commit that calls the canonical route.
+7. Keep the legacy route until production portal traffic is verified on the neutral path.
+
+Do not reverse this order; deploying the portal neutral route before the gateway/Nginx route exists can break RC lookup.
+
+## 5. Customer Add Vehicle normalized fields currently exposed
+
+The Customer API currently returns only normalized fields needed by the existing Add Vehicle screen:
 
 ```text
-InsureIt server caller
-→ protected AWS gateway
-→ AuthBridge encryption
-→ Detailed RC service 372
-→ AuthBridge decryption
-→ successful response
+registrationNumber
+registrationDate
+manufacturer
+model
+manufacturingYear
+vehicleClass
+fuelType
+engineCapacityCc
+seatingCapacity
+gvwKg
+chassisNumber
+engineNumber
+fitnessExpiryDate
+pucExpiryDate
+roadTaxExpiryDate
+nationalPermitExpiryDate
+localPermitExpiryDate
 ```
 
-Do not treat this as proof that the final Policy Onboarding or Vehicle Registration UI is implemented. It proves the provider and gateway path only.
+The Customer App currently applies these values to the matching vehicle and compliance fields after a successful lookup.
 
-## 7. Security incident and required rotation
+## 6. Verified provider fields currently not exposed to Customer Add Vehicle
 
-During setup, a screenshot exposed existing runtime secrets, including the gateway relay secret and an iCall token.
+A verified production service-372 response also returned useful fields that are currently stripped by the portal sanitizer, including:
 
-Required action before production use:
-
-1. Rotate the gateway relay secret.
-2. Update the rotated relay secret in Lightsail `.env`.
-3. Update the matching private Vercel environment variable.
-4. Restart the gateway service after changing the Lightsail value.
-5. Rotate the exposed iCall token with the iCall team and update the protected runtime environment.
-6. Never paste the new values into chat, screenshots, GitHub or client-side environment variables.
-
-Until rotation is complete, treat the exposed values as compromised.
-
-## 8. Next implementation target: Policy Onboarding vehicle registration input
-
-The next chat should integrate the verified RC lookup into the Policy Onboarding page at the vehicle registration input.
-
-### Required implementation order
-
-1. Read the current Policy Onboarding implementation and the policy-master Excel mapping before modifying fields.
-2. Identify the canonical vehicle registration-number field and the server-side form/action that owns it.
-3. Add a server action or server-only route that calls:
-
-```ts
-lookupAuthbridgeRc(registrationNumber)
-```
-
-4. Do not call AuthBridge or the AWS gateway directly from browser code.
-5. Trigger lookup only through an explicit user action such as:
+### Policy / insurance
 
 ```text
-Fetch RC details
+Insurance Company
+Policy Number
+Insurance To Date / Insurance Upto
 ```
 
-or after a carefully controlled registration-number completion event. Do not spend a provider credit on every keystroke.
-6. Show a clear loading state because provider responses can take 5–8 seconds and may take up to 20 seconds.
-7. Display the returned data in a review panel before applying it to the policy form.
-8. Require confirmation before overwriting any manually entered or already-saved vehicle data.
-9. Map only fields confirmed by a real sanitized AuthBridge response and by the policy data model. Do not guess provider property names.
-10. Do not automatically store the full raw decrypted response.
+The Customer Add Vehicle Policy Details section already has fields for Insurer, Policy No., Start Date, End Date, IDV, Premium and Policy Copy. For AuthBridge prefill, only the verified provider values above are safe candidates. Do **not** infer policy start date, IDV, premium, or document content when the provider did not return them.
 
-### Recommended UX
+Before applying the provider insurer string, resolve it against the canonical active Insurance Company master/aliases. Do not create a new insurer or silently persist an unmatched provider string.
+
+### Additional vehicle / RC metadata
+
+Provider responses may also include values such as:
 
 ```text
-Registration Number
-[ MP20AB1234 ] [ Fetch RC details ]
+RTO
+RC status
+RC status-as-on date
+vehicle color
+body type
+commercial/private flag
+emission/norms type
+number of cylinders
+unladen weight
+wheel base
+PUCC number
+permit number/type/issue date/valid-from
+national permit number/issued-by
+financed flag
+financer name
+blacklist status
+NOC details
+challan details
 ```
 
-After success:
+These are not currently part of the Customer Add Vehicle normalized response or visible onboarding fields. Add only fields with a confirmed business purpose and data-model destination.
 
-```text
-RC details found
-- Registration number
-- Vehicle class/type
-- Manufacturer
-- Model
-- Fuel type
-- Registration date
-- Manufacturing month/year
-- Chassis and engine values only where genuinely required and appropriately masked
+### Owner/private data
 
-[Use these details] [Cancel]
-```
+TruthScreen may return owner name, relation name and present/permanent address information. These values are intentionally outside the Customer Add Vehicle response and should remain excluded unless a separately approved workflow explicitly requires them. Never expose or persist unnecessary owner PII merely because the provider supplies it.
 
-Only show and import data required by Policy Onboarding. Avoid displaying unnecessary owner personal information.
+## 7. Mapping rules
 
-### Error states to support
+- Normalize RC numbers consistently.
+- Never call TruthScreen directly from browser/mobile code.
+- Never expose the relay secret or AuthBridge account credentials client-side.
+- Resolve provider manufacturer values against the Vehicle Manufacturer Master; unmatched values require user confirmation and must not auto-create master data.
+- Resolve provider insurer values against the Insurance Company master/aliases before selecting a company ID.
+- Do not silently overwrite manually edited values after the user has changed them.
+- Do not log decrypted provider payloads.
+- Return only approved normalized fields to mobile/web clients.
+- Treat cached provider data as stale evidence when the provider cannot be reached; show that state to the user.
 
-- Invalid registration-number format
-- Vehicle not found
-- AuthBridge business error
-- Gateway unauthorized/misconfigured
-- Provider timeout
-- Provider unavailable
-- Malformed provider response
-- User cancels import
-- Existing form data conflicts with returned data
+## 8. Security state
 
-### Data-handling rules
+During earlier setup, a relay secret and iCall token were exposed. During the 2026-09-12 production cutover, the same runtime values and the TruthScreen dashboard password were also pasted into chat.
 
-- Registration numbers should be normalized consistently.
-- Do not log decrypted provider responses.
-- Do not expose full owner address, phone, chassis, engine or other sensitive values unless the business workflow explicitly requires them.
-- Prefer normalized field-level storage over raw provider-payload storage.
-- Record transaction/audit metadata separately if required:
+Required remediation remains:
 
-```text
-provider = authbridge
-service = detailed_rc_372
-provider_transaction_id
-lookup_status
-looked_up_at
-requested_by
-```
+1. Rotate the gateway relay secret and update both Lightsail and matching private Vercel configuration.
+2. Rotate the exposed iCall token with the vendor/team and update the private runtime configuration.
+3. Rotate the TruthScreen dashboard password.
+4. Never paste replacement values into chat, screenshots, GitHub or client-visible environment variables.
 
-- Define retention and access controls before storing raw responses.
+Until each rotation is confirmed, treat the exposed values as compromised.
 
-## 9. Validation required before claiming Policy Onboarding integration complete
+## 9. Deployment state
 
-Test at minimum:
+- Production AuthBridge credentials in Lightsail: **APPLIED**
+- Production AuthBridge service-372 request through current protected gateway route: **VERIFIED**
+- Customer authenticated RC lookup architecture: **IMPLEMENTED**
+- Customer 0.3.0 Add Vehicle AuthBridge lookup: **IMPLEMENTED**
+- Neutral gateway route cleanup PR #1702: **IMPLEMENTED IN PR / NOT YET LIVE**
+- Neutral route on Lightsail + Nginx: **NOT YET VERIFIED**
+- Portal switched live to neutral route: **NOT YET DEPLOYED**
+- AuthBridge insurance fields exposed to Customer App: **NOT YET IMPLEMENTED**
+- Secret rotation after exposure: **REQUIRED**
 
-1. Valid commercial vehicle
-2. Valid private vehicle
-3. Invalid RC format
-4. RC not found
-5. Timeout/provider unavailable
-6. Unauthorized gateway configuration
-7. Successful field mapping
-8. User declines returned details
-9. Existing manual values are not silently overwritten
-10. Duplicate/repeated lookup behavior and provider-credit usage
-11. Mobile and desktop loading/error/review states
-12. Browser network payload contains no relay secret or AuthBridge credential
-13. Server logs contain no decrypted owner response
-14. Saved policy record contains only approved normalized fields
-
-## 9.1 Manufacturer master resolution rule
-
-Policy Onboarding must never push a raw AuthBridge `Maker/Manufacturer` string directly into the constrained Section 02 Make dropdown. Resolve the provider value against the active INSUREIT Vehicle Manufacturer Master first. Exact and safe normalized matches may preselect the canonical master value. If there is no unique match, keep the raw AuthBridge value as review evidence and require the user to select the correct master manufacturer in the RC review before applying the Vehicle identity group. Do not auto-create a master manufacturer and do not silently store the unresolved provider string. The user may uncheck Vehicle identity and continue without applying Make.
-
-
-## 10. Deployment state
-
-- Gateway code: **IMPLEMENTED IN REPOSITORY**
-- Lightsail gateway configuration: **APPLIED AND VERIFIED IN UAT**
-- Protected AuthBridge RC lookup: **VERIFIED SUCCESSFUL IN UAT**
-- Portal server client: **IMPLEMENTED IN REPOSITORY**
-- Policy Onboarding/Vehicle Registration UI integration: **NOT YET IMPLEMENTED**
-- Vercel deployment for the Policy Onboarding integration: **NOT TRIGGERED**
-- Production AuthBridge credentials: **NOT CONFIGURED / NOT VERIFIED**
-- Secret rotation after screenshot exposure: **REQUIRED**
-
-Do not claim the feature is complete or live until the actual Policy Onboarding user journey is implemented, deployed, and directly verified.
+Do not claim the neutral-route cleanup is production-applied until the Lightsail source/Nginx rollout and portal deployment are both directly verified.
