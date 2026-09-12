@@ -9,6 +9,7 @@ import {
   getAuthbridgeBusinessCode,
   getAuthbridgeMessage,
 } from "@/lib/authbridge-rc-bulk";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
@@ -45,8 +46,10 @@ export async function POST(request: NextRequest) {
   if (!auth.user || !auth.profile?.is_active) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (auth.profile.role !== "super_admin") {
-    return NextResponse.json({ error: "Super Admin access is required." }, { status: 403 });
+  const hasDevelopmentAccess = auth.profile.role === "it_super_user"
+    && await hasEffectiveCapability(auth.profile, "manage_system", "approve");
+  if (!hasDevelopmentAccess) {
+    return NextResponse.json({ error: "IT Super User development access is required." }, { status: 403 });
   }
 
   const body = await request.json().catch(() => null) as { registrationNumbers?: unknown } | null;
