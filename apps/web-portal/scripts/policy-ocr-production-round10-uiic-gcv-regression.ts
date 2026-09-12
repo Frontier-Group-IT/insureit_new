@@ -129,7 +129,7 @@ assert.equal(field(siblingResult, "tp_premium"), "31750");
 
 // Financial rows that do not reconcile must be withheld rather than guessed.
 const mismatch = base([
-  { key: "total_premium", label: "Net", value: "39999", confidence: 1, page: 2, evidence: "synthetic" },
+  { key: "total_premium", label: "Net", value: "39990", confidence: 1, page: 2, evidence: "synthetic" },
   { key: "od_premium", label: "OD", value: "111", confidence: 1, page: 2, evidence: "unsafe" },
   { key: "tp_premium", label: "TP", value: "222", confidence: 1, page: 2, evidence: "unsafe" },
 ]);
