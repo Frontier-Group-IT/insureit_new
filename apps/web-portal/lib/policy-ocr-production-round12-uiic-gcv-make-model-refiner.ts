@@ -132,7 +132,7 @@ function findFlattenedMakeModel(vehicle: string): MakeModelHit | null {
 }
 
 function candidateFromText(value: string): { make: string; model: string } | null {
-  let normalized = clean(value)
+  const normalized = clean(value)
     .replace(MAKE_MODEL_LABEL, " ")
     .replace(/\bnull\b/gi, " ")
     .replace(/\s+/g, " ")
