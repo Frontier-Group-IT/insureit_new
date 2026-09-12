@@ -27,6 +27,8 @@ import { refineProductionRound10UiicGcvPackage } from "./policy-ocr-production-r
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineProductionRound11UiicGcvLiveResiduals } from "./policy-ocr-production-round11-uiic-gcv-live-residual-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineProductionRound12UiicGcvMakeModel } from "./policy-ocr-production-round12-uiic-gcv-make-model-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { guardProductionRound5UiicPolicyNumber, guardProductionRound5UiicMakeModel, guardProductionRound5UiicVehicleIds } from "./policy-ocr-production-round5-uiic-policy-guard.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineTataAigBundledTwoWheelerPolicy } from "./policy-ocr-tata-aig-refiner.ts";
@@ -86,7 +88,8 @@ export function refineApprovedMotorPolicyLayout(
   const round10Raw = refineProductionRound10UiicGcvPackage(pages, tables, round9);
   const round10 = preserveValidatedUiicFinancials(pages, round9, round10Raw);
   const round11 = refineProductionRound11UiicGcvLiveResiduals(pages, tables, round10);
-  return refineProductionPolicyIdentity(pages, round11);
+  const round12 = refineProductionRound12UiicGcvMakeModel(pages, tables, round11);
+  return refineProductionPolicyIdentity(pages, round12);
 }
 
 function preserveValidatedUiicFinancials(
