@@ -187,6 +187,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260912093000_partner_web_claim_outstanding.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-web-claim-outstanding.yml"
             echo "Partner web claim outstanding migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260912121000_partner_schemes.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-partner-schemes.yml"
+            echo "Partner schemes migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
@@ -273,6 +276,7 @@ jobs:
               pathlib.Path("apps/web-portal/app/partner"),
               pathlib.Path("apps/web-portal/lib/partner-web.ts"),
               pathlib.Path("apps/web-portal/lib/partner-external-renewals.ts"),
+              pathlib.Path("apps/web-portal/lib/partner-schemes.ts"),
           ]
           names = set()
           pattern = re.compile(r"\.rpc\(\s*['\"]([A-Za-z0-9_]+)['\"]")
