@@ -21,6 +21,12 @@ jobs:
           ref: ui/partner-hero-quality-size-fix
           fetch-depth: 0
 
+      - name: Install image tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-input pillow==11.3.0
+
       - name: Rebuild and verify high-quality mobile hero
         shell: bash
         run: |
