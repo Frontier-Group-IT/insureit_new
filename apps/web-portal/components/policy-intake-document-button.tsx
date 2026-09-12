@@ -13,14 +13,9 @@ export function PolicyIntakeDocumentButton({ id }: { id:string }) {
 
   useEffect(()=>{
     let active=true;
-    startTransition(async()=>{
-      try {
-        const result=await getPolicyIntakeOcrRetryState(id);
-        if(active&&result.ok)setRetryable(result.retryable);
-      } catch {
-        if(active)setRetryable(false);
-      }
-    });
+    void getPolicyIntakeOcrRetryState(id)
+      .then((result)=>{if(active&&result.ok)setRetryable(result.retryable);})
+      .catch(()=>{if(active)setRetryable(false);});
     return()=>{active=false;};
   },[id]);
 
