@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { getAuthenticatedProfile, getServerAccessToken, isAuthorizedProfile } from "@/lib/auth-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -38,8 +38,8 @@ export async function POST(request: Request) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
 
-  if (!profile?.id || !profile.is_active) {
-    return NextResponse.json({ error: "An active INSUREIT login is required for the voice lab." }, { status: 403 });
+  if (!isAuthorizedProfile(profile)) {
+    return NextResponse.json({ error: "An active INSUREIT staff or Partner login is required for the voice lab." }, { status: 403 });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
