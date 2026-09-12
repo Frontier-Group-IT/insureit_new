@@ -3,12 +3,14 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  ChevronDown,
   Ellipsis,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import {
   getPartnerWebBusinessPerformance,
+  getPartnerWebBusinessRange,
   getPartnerWebClaimSummary,
   getPartnerWebHome,
   getPartnerWebNetwork,
@@ -37,6 +39,16 @@ const homeIcons = {
   workload: `${ICON_BASE}/reports-analytics.png`,
   business: `${ICON_BASE}/reports-analytics.png`,
 } as const;
+
+type HomeSearchParams = { trend?: string };
+type TrendPeriod = "6m" | "mtd" | "12m";
+type TrendPoint = { month: string; premium: number | string; policies: number };
+
+const trendPeriodOptions: { value: TrendPeriod; label: string }[] = [
+  { value: "6m", label: "Last 6 Months" },
+  { value: "mtd", label: "MTD" },
+  { value: "12m", label: "Last 12 Months" },
+];
 
 function formatIndianCurrency(value: number | string) {
   const amount = Number(value ?? 0);
@@ -68,10 +80,41 @@ function formatUpdatedTime(value: Date) {
     .toLowerCase();
 }
 
+function currentKolkataIsoDate(value = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-IN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Kolkata",
+  }).formatToParts(value);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function monthLabel(value: string) {
   const parsed = new Date(`${value}-01T00:00:00Z`);
   if (Number.isNaN(parsed.getTime())) return value;
   return new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "UTC" }).format(parsed);
+}
+
+function shiftMonth(value: string, offset: number) {
+  const [year, month] = value.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthRange(value: string, today: string) {
+  const [year, month] = value.split("-").map(Number);
+  const end = new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+  return {
+    from: `${value}-01`,
+    to: value === today.slice(0, 7) ? today : end,
+  };
+}
+
+function resolveTrendPeriod(value?: string): TrendPeriod {
+  if (value === "mtd" || value === "12m") return value;
+  return "6m";
 }
 
 function todayHref(kind: "intake_attention" | "renewal" | "claim") {
@@ -104,7 +147,9 @@ async function getPartnerWebClaimOutstanding() {
   return data as number | string;
 }
 
-export default async function PartnerHomePage() {
+export default async function PartnerHomePage({ searchParams }: { searchParams: Promise<HomeSearchParams> }) {
+  const query = await searchParams;
+  const trendPeriod = resolveTrendPeriod(query.trend);
   const [
     { identity },
     home,
@@ -127,15 +172,37 @@ export default async function PartnerHomePage() {
     getPartnerWebClaimOutstanding(),
   ]);
 
+  const today = currentKolkataIsoDate();
+  const monthCount = trendPeriod === "12m" ? 12 : trendPeriod === "mtd" ? 1 : 6;
+  const currentMonth = businessPerformance.current_month;
+  const selectedStartMonth = shiftMonth(currentMonth, -(monthCount - 1));
+  const selectedFrom = `${selectedStartMonth}-01`;
+  const periodSummaryPromise = getPartnerWebBusinessRange(selectedFrom, today);
+  const twelveMonthTrendPromise: Promise<TrendPoint[]> = trendPeriod === "12m"
+    ? Promise.all(
+        Array.from({ length: 12 }, (_, index) => shiftMonth(currentMonth, index - 11)).map(async (month) => {
+          const range = monthRange(month, today);
+          const summary = await getPartnerWebBusinessRange(range.from, range.to);
+          return { month, premium: summary.premium, policies: summary.policies };
+        }),
+      )
+    : Promise.resolve([]);
+  const [periodSummary, twelveMonthTrend] = await Promise.all([periodSummaryPromise, twelveMonthTrendPromise]);
+  const trendPoints: TrendPoint[] = trendPeriod === "12m"
+    ? twelveMonthTrend
+    : trendPeriod === "mtd"
+      ? [{ month: currentMonth, premium: periodSummary.premium, policies: periodSummary.policies }]
+      : businessPerformance.trend.slice(-6);
+  const trendPeriodLabel = trendPeriodOptions.find((option) => option.value === trendPeriod)?.label ?? "Last 6 Months";
+
   const name = identity.display_name?.trim() || "Partner";
   const updatedTime = formatUpdatedTime(new Date());
   const payoutValue = payout.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";
   const payoutMeta = payout.available ? `${payout.paid_count} paid records` : "Commercial visibility restricted";
   const payoutOutstandingValue = payout.available ? formatIndianCurrency(payout.pending_amount) : "Restricted";
   const payoutOutstandingMeta = payout.available ? `${payout.pending_count} pending records` : "Commercial visibility restricted";
-  const policyCount = businessPerformance.total_policies;
-  const claimRatio = policyCount > 0 ? (claims.total_claims / policyCount) * 100 : 0;
-  const premiumChange = Number(businessPerformance.premium_change_percent ?? 0);
+  const selectedPremiumChange = Number(periodSummary.premium_change_percent ?? 0);
+  const selectedClaimRatio = periodSummary.policies > 0 ? (periodSummary.claims / periodSummary.policies) * 100 : 0;
 
   return (
     <PartnerPortalShell title="Home">
@@ -150,15 +217,6 @@ export default async function PartnerHomePage() {
 
           <div className="flex shrink-0 items-center gap-3">
             <span className="whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
-            <Link
-              href="/partner/business"
-              prefetch={false}
-              data-partner-home-reference-cta="true"
-              className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 bg-[#163968] px-4 text-[11px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
-            >
-              <span>View My Business</span>
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
           </div>
         </section>
 
@@ -232,7 +290,7 @@ export default async function PartnerHomePage() {
         </section>
 
         <section className="grid gap-2 xl:grid-cols-[1.55fr_.75fr]">
-          <BusinessTrend trend={businessPerformance.trend} />
+          <BusinessTrend trend={trendPoints} period={trendPeriod} periodLabel={trendPeriodLabel} />
 
           <div className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
             <div className="flex items-center gap-2.5 border-b border-[#E6ECF3] px-4 py-3">
@@ -245,24 +303,24 @@ export default async function PartnerHomePage() {
             <div className="divide-y divide-[#E8EDF4] px-4">
               <HighlightRow
                 label="Premium change"
-                value={`${premiumChange > 0 ? "+" : ""}${premiumChange.toFixed(1)}%`}
-                meta="vs last month"
-                tone={premiumChange > 0 ? "positive" : premiumChange < 0 ? "negative" : "neutral"}
+                value={`${selectedPremiumChange > 0 ? "+" : ""}${selectedPremiumChange.toFixed(1)}%`}
+                meta={`vs previous ${trendPeriodLabel.toLowerCase()} period`}
+                tone={selectedPremiumChange > 0 ? "positive" : selectedPremiumChange < 0 ? "negative" : "neutral"}
               />
               <HighlightRow
                 label="Customer activity"
-                value={`${home.business.customers_this_month} added`}
-                meta={`${home.business.total_customers} total customers`}
+                value={`${periodSummary.customers} added`}
+                meta={`${home.business.total_customers} total customers · ${trendPeriodLabel}`}
               />
               <HighlightRow
                 label="Policy base"
-                value={`${home.business.active_policies} active`}
-                meta={`${businessPerformance.total_policies} total policies`}
+                value={`${periodSummary.policies} issued`}
+                meta={`${businessPerformance.total_policies} total policies · ${trendPeriodLabel}`}
               />
               <HighlightRow
                 label="Claim ratio"
-                value={`${claimRatio.toFixed(1)}%`}
-                meta={`${claims.total_claims} claims / ${policyCount} policies`}
+                value={`${selectedClaimRatio.toFixed(1)}%`}
+                meta={`${periodSummary.claims} claims / ${periodSummary.policies} policies`}
               />
             </div>
           </div>
@@ -367,24 +425,27 @@ function SummaryCard({
   );
 }
 
-function BusinessTrend({ trend }: { trend: { month: string; premium: number | string; policies: number }[] }) {
-  const points = trend.slice(-6);
+function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; period: TrendPeriod; periodLabel: string }) {
+  const points = trend;
   const maxPremium = Math.max(1, ...points.map((point) => Number(point.premium ?? 0)));
   const maxPolicies = Math.max(1, ...points.map((point) => point.policies));
-  const slotWidth = 100;
+  const plotLeft = 34;
+  const plotRight = 566;
   const plotTop = 28;
   const plotBottom = 150;
   const plotHeight = plotBottom - plotTop;
+  const slotWidth = points.length > 1 ? (plotRight - plotLeft) / (points.length - 1) : 0;
+  const barWidth = points.length >= 10 ? 26 : points.length >= 7 ? 34 : 44;
   const linePoints = points
     .map((point, index) => {
-      const x = 50 + index * slotWidth;
+      const x = points.length > 1 ? plotLeft + index * slotWidth : 300;
       const y = plotBottom - (point.policies / maxPolicies) * plotHeight;
       return `${x},${y}`;
     })
     .join(" ");
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
+    <div className="overflow-visible rounded-xl border border-[#DCE5F1] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
       <div className="flex flex-wrap items-center gap-3 border-b border-[#E6ECF3] px-4 py-3">
         <span className="grid h-6 w-6 place-items-center">
           <ProfessionalIcon src={homeIcons.business} size={20} />
@@ -392,21 +453,48 @@ function BusinessTrend({ trend }: { trend: { month: string; premium: number | st
         <h2 className="min-w-0 flex-1 text-[14px] font-extrabold tracking-[-0.02em] text-[#142B50]">M/M Business Trend</h2>
         <div className="flex items-center gap-3 text-[8.5px] font-semibold text-[#6F8098]">
           <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#A9CFFF]" />Premium</span>
+          <Link
+            href="/partner/business"
+            prefetch={false}
+            data-partner-home-reference-cta="true"
+            className="inline-flex h-7 shrink-0 items-center justify-center gap-1 bg-[#163968] px-2.5 text-[8.5px] font-semibold text-white shadow-none transition hover:bg-[#102F59] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#163968]/30"
+          >
+            <span>View My Business</span>
+            <ArrowRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
           <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-3 bg-[#163968]" />Policies</span>
         </div>
-        <span className="rounded-lg border border-[#DDE5EF] bg-[#F9FBFE] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526784]">Last 6 months</span>
+        <details className="group relative">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-[#DDE5EF] bg-[#F9FBFE] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526784] marker:content-none">
+            <span>{periodLabel}</span>
+            <ChevronDown className="h-3 w-3 transition group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="absolute right-0 z-30 mt-1.5 w-36 overflow-hidden rounded-lg border border-[#DCE5F1] bg-white p-1 shadow-[0_8px_24px_rgba(25,50,90,0.14)]">
+            {trendPeriodOptions.map((option) => (
+              <Link
+                key={option.value}
+                href={option.value === "6m" ? "/partner" : `/partner?trend=${option.value}`}
+                prefetch={false}
+                className={`block rounded-md px-2.5 py-2 text-[9px] font-semibold transition ${period === option.value ? "bg-[#EEF4FF] text-[#244F9E]" : "text-[#526784] hover:bg-[#F5F8FC]"}`}
+                aria-current={period === option.value ? "page" : undefined}
+              >
+                {option.label}
+              </Link>
+            ))}
+          </div>
+        </details>
       </div>
 
       {points.length ? (
         <div className="px-3 pb-2 pt-3 sm:px-4">
-          <svg viewBox="0 0 600 190" className="h-[210px] w-full" role="img" aria-label="Monthly premium and policy trend for the last six months">
+          <svg viewBox="0 0 600 190" className="h-[210px] w-full" role="img" aria-label={`Monthly premium and policy trend for ${periodLabel.toLowerCase()}`}>
             {[0, 1, 2, 3].map((grid) => {
               const y = plotTop + (plotHeight / 3) * grid;
               return <line key={grid} x1="14" x2="586" y1={y} y2={y} stroke="#E7EDF5" strokeWidth="1" />;
             })}
 
             {points.map((point, index) => {
-              const x = 50 + index * slotWidth;
+              const x = points.length > 1 ? plotLeft + index * slotWidth : 300;
               const premium = Number(point.premium ?? 0);
               const barHeight = Math.max(4, (premium / maxPremium) * plotHeight);
               const y = plotBottom - barHeight;
@@ -414,13 +502,13 @@ function BusinessTrend({ trend }: { trend: { month: string; premium: number | st
 
               return (
                 <g key={`${point.month}-${index}`}>
-                  <rect x={x - 22} y={y} width="44" height={barHeight} rx="5" fill={index === points.length - 1 ? "#7CB4FF" : "#C4DEFF"} />
-                  <text x={x} y={Math.max(14, y - 7)} textAnchor="middle" fontSize="8" fontWeight="700" fill="#536987">
+                  <rect x={x - barWidth / 2} y={y} width={barWidth} height={barHeight} rx="5" fill={index === points.length - 1 ? "#7CB4FF" : "#C4DEFF"} />
+                  <text x={x} y={Math.max(14, y - 7)} textAnchor="middle" fontSize={points.length >= 10 ? "6.5" : "8"} fontWeight="700" fill="#536987">
                     {formatCompactCurrency(point.premium)}
                   </text>
                   <circle cx={x} cy={policyY} r="4" fill="#163968" />
-                  <text x={x} y="176" textAnchor="middle" fontSize="9" fontWeight="700" fill="#536987">{monthLabel(point.month)}</text>
-                  <text x={x} y="187" textAnchor="middle" fontSize="7.5" fontWeight="600" fill="#8391A5">{point.policies} policies</text>
+                  <text x={x} y="176" textAnchor="middle" fontSize={points.length >= 10 ? "7" : "9"} fontWeight="700" fill="#536987">{monthLabel(point.month)}</text>
+                  <text x={x} y="187" textAnchor="middle" fontSize={points.length >= 10 ? "6" : "7.5"} fontWeight="600" fill="#8391A5">{point.policies} policies</text>
                 </g>
               );
             })}
