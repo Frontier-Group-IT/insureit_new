@@ -383,13 +383,6 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
 
 function CommercialOperations({ business }: { business: DashboardBusinessData }) {
   const commercial = business.commercial!;
-  const metrics = [
-    { label: "Projected Pay-In", value: formatMoney(commercial.projectedPayin) },
-    { label: "TDS", value: formatMoney(commercial.tdsAmount) },
-    { label: "Pay-In after TDS", value: formatMoney(commercial.payinAfterTds) },
-    { label: "Partner Payout", value: formatMoney(commercial.partnerPayout) },
-    { label: "Retention", value: formatMoney(commercial.retention) },
-  ];
 
   return (
     <section className="mt-6 border-y border-[#D5DEE9] bg-white">
@@ -404,13 +397,24 @@ function CommercialOperations({ business }: { business: DashboardBusinessData })
         <Link prefetch={false} href="/policies/commercial-review" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Open control ↗</Link>
       </div>
 
-      <div className="grid border-t border-[#E7ECF2] md:grid-cols-3 xl:grid-cols-5">
-        {metrics.map((item, index) => (
-          <div key={item.label} className={`${index ? "border-t md:border-l md:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
-            <p className="portal-display text-[22px] font-semibold text-[#153654]">{item.value}</p>
-            <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">{item.label}</p>
+      <div className="grid border-t border-[#E7ECF2] md:grid-cols-3">
+        <div className="border-[#E7ECF2] px-4 py-4 sm:px-5">
+          <p className="portal-display text-[24px] font-semibold text-[#153654]">{formatMoney(commercial.payinAfterTds)}</p>
+          <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">Projected Net Pay-In</p>
+          <p className="mt-1 text-[7.5px] font-semibold text-[#8B97A8]">Projected cash inflow after TDS</p>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#EEF2F6] pt-2.5 text-[8px] font-semibold text-[#6E7C90]">
+            <span>Projected gross <b className="text-[#24344F]">{formatMoney(commercial.projectedPayin)}</b></span>
+            <span>Projected TDS <b className="text-[#24344F]">{formatMoney(commercial.tdsAmount)}</b></span>
           </div>
-        ))}
+        </div>
+        <div className="border-t border-[#E7ECF2] px-4 py-4 md:border-l md:border-t-0 sm:px-5">
+          <p className="portal-display text-[22px] font-semibold text-[#153654]">{formatMoney(commercial.partnerPayout)}</p>
+          <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">Partner Payout</p>
+        </div>
+        <div className="border-t border-[#E7ECF2] px-4 py-4 md:border-l md:border-t-0 sm:px-5">
+          <p className="portal-display text-[22px] font-semibold text-[#153654]">{formatMoney(commercial.retention)}</p>
+          <p className="mt-1.5 text-[7.5px] font-bold uppercase tracking-[.09em] text-[#7D899B]">Retention</p>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#E7ECF2] px-4 py-3 text-[8px] font-semibold text-[#6E7C90] sm:px-5">
