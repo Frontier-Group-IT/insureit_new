@@ -52,21 +52,21 @@ export default async function PartnerActivityPage() {
         />
 
         {data.attention.length ? (
-          <section>
-            <div className="flex items-center gap-2 px-1">
-              <BellRing className="h-4 w-4 text-[#A86809]" />
-              <h3 className="text-[15px] font-extrabold text-[#6F4B12]">Needs attention</h3>
+          <section className="rounded-2xl border border-[#DDE7F1] bg-[#F8FBFF] p-3 shadow-[0_5px_18px_rgba(31,53,89,0.05)]">
+            <div className="flex items-center gap-2 px-1 py-1">
+              <BellRing className="h-7 w-7 rounded-full bg-[#EAF3FF] p-1.5 text-[#2374E1]" />
+              <h3 className="text-[15px] font-extrabold text-[#172B4D]">Needs attention</h3>
             </div>
-            <div className="mt-3 grid border-y border-[#E8D8BC] lg:grid-cols-3">
+            <div className="mt-2 grid overflow-hidden rounded-xl border border-[#DDE6EF] bg-white shadow-[0_2px_8px_rgba(31,53,89,0.04)]">
               {data.attention.slice(0, 3).map((item, index) => (
-                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[74px] items-center gap-3 border-b border-[#F0D7AE] px-1 py-3 transition hover:bg-[#FFF9EF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#A86809]/20 lg:border-b-0 lg:border-r lg:px-4 lg:last:border-r-0">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FFF1D9] text-[#A86809]"><BellRing className="h-4 w-4" /></span>
+                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[66px] items-center gap-3 border-b border-[#E7EDF4] px-3 py-3 transition hover:bg-[#F8FBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2374E1]/20 last:border-b-0">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><BellRing className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10.5px] font-extrabold text-[#6F4B12]">{item.title}</p>
-                    <p className="mt-1 line-clamp-2 text-[9px] font-medium leading-4 text-[#806B52]">{item.subtitle}</p>
+                    <p className="text-[10.5px] font-extrabold text-[#172B4D]">{item.title}</p>
+                    <p className="mt-1 line-clamp-2 text-[9px] font-medium leading-4 text-[#74839A]">{item.subtitle}</p>
                   </div>
-                  <span className="rounded-lg bg-[#FFF6E8] px-2 py-1 text-[9px] font-extrabold text-[#98610D]">{item.count}</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-[#A98E68] transition group-hover:translate-x-0.5" />
+                  <span className="rounded-full bg-[#FFE7F0] px-2.5 py-1 text-[9px] font-extrabold text-[#D62E6E]">{item.count}</span>
+                  <ArrowRight className="h-4 w-4 text-[#2374E1] transition group-hover:translate-x-0.5" />
                 </Link>
               ))}
             </div>
