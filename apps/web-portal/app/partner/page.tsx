@@ -15,6 +15,7 @@ import {
   getPartnerWebHome,
   getPartnerWebNetwork,
   getPartnerWebPayoutSummary,
+  getPartnerWebRenewalSummary,
   getPartnerWebSession,
 } from "@/lib/partner-web";
 import { getPartnerExternalRenewalSummary } from "@/lib/partner-external-renewals";
@@ -160,6 +161,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     payout,
     businessPerformance,
     claimOutstanding,
+    renewalSummary,
   ] = await Promise.all([
     getPartnerWebSession(),
     getPartnerWebHome(),
@@ -170,6 +172,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     getPartnerWebPayoutSummary(),
     getPartnerWebBusinessPerformance(),
     getPartnerWebClaimOutstanding(),
+    getPartnerWebRenewalSummary(),
   ]);
 
   const today = currentKolkataIsoDate();
@@ -203,6 +206,14 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
   const payoutOutstandingMeta = payout.available ? `${payout.pending_count} pending records` : "Commercial visibility restricted";
   const selectedPremiumChange = Number(periodSummary.premium_change_percent ?? 0);
   const selectedClaimRatio = periodSummary.policies > 0 ? (periodSummary.claims / periodSummary.policies) * 100 : 0;
+  const premiumAtRisk = [
+    renewalSummary.due_0_7_premium,
+    renewalSummary.due_8_15_premium,
+    renewalSummary.due_16_30_premium,
+  ].reduce<number>((total, value) => {
+    const amount = Number(value ?? 0);
+    return total + (Number.isFinite(amount) ? amount : 0);
+  }, 0);
 
   return (
     <PartnerPortalShell title="Home">
@@ -243,11 +254,11 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
             iconSrc={homeIcons.policies}
           />
           <SummaryCard
-            label="Claims"
-            value={claims.total_claims}
-            meta={`${claims.active_claims} active`}
-            href="/partner/claims"
-            iconSrc={homeIcons.claims}
+            label="Premium at Risk"
+            value={formatIndianCurrency(premiumAtRisk)}
+            meta="Renewal premium due in 30 days"
+            href="/partner/renewals"
+            iconSrc={homeIcons.renewals}
           />
           <SummaryCard
             label="Business"
