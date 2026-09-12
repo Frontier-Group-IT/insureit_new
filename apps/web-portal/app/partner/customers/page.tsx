@@ -96,7 +96,14 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
                   </div>
 
                   <div className="min-w-0 space-y-1">
-                    {row.phone ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[10px] font-semibold leading-4 text-[#536680]"><Phone className="h-3 w-3" />{row.phone}</p> : null}
+                    {row.phone ? (
+                      <p className="flex min-w-0 items-center gap-2 break-all text-[10px] font-semibold leading-4 text-[#536680]">
+                        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]">
+                          <Phone className="h-3 w-3" />
+                        </span>
+                        {row.phone}
+                      </p>
+                    ) : null}
                     {row.email ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[10px] font-semibold leading-4 text-[#536680]"><Mail className="h-3 w-3" />{row.email}</p> : null}
                   </div>
 
