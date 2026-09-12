@@ -1,0 +1,126 @@
+name: Publish Partner 0.1.0 home hero reference OTA once
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      COMPAT_SHA: 74039199991888777911deb30cf248e8f36cf8a8
+
+    steps:
+      - name: Check out current main tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: tooling
+          fetch-depth: 0
+
+      - name: Check out last known good Partner 0.1.0 source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMPAT_SHA }}
+          path: compat
+          fetch-depth: 0
+
+      - name: Verify exact Partner 0.1.0 compatibility source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd compat
+          [ "$(git rev-parse HEAD)" = "$COMPAT_SHA" ] || {
+            echo "Refusing OTA: compatibility checkout is not the approved source." >&2
+            exit 1
+          }
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.1.0') {
+            console.error(`Refusing OTA: expected Partner runtime 0.1.0, found ${expo.version ?? 'missing'}.`);
+            process.exit(1);
+          }
+          if (expo?.runtimeVersion?.policy !== 'appVersion') {
+            console.error('Refusing OTA: expected appVersion runtime policy.');
+            process.exit(1);
+          }
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') {
+            console.error('Refusing OTA: unexpected Partner EAS project ID.');
+            process.exit(1);
+          }
+          NODE
+
+      - name: Apply exact mockup hero composition patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-home-hero-reference.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "edges={\[\]}" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q 'Feather name="clock"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "hero: { height: 168" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "body: { marginTop: -16" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "searchShell: { minHeight: 54" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Require Expo token
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "${EXPO_TOKEN:-}" ] || { echo "EXPO_TOKEN_PARTNER is missing." >&2; exit 1; }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: compat/package-lock.json
+
+      - name: Install compatibility dependencies
+        working-directory: compat
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner app typecheck
+        working-directory: compat/apps/partner-app
+        run: npx tsc --noEmit
+
+      - name: Verify Expo token and linked Partner project
+        working-directory: compat/apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Publish Partner 0.1.0 exact hero OTA
+        working-directory: compat/apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli update \
+            --channel preview \
+            --environment preview \
+            --message "Partner 0.1.0 exact compact hero reference" \
+            --non-interactive \
+            --json > partner-0-1-home-hero-reference-update.json
+          cat partner-0-1-home-hero-reference-update.json
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Partner 0.1.0 exact hero reference OTA"
+            echo
+            echo "- Source baseline: $COMPAT_SHA"
+            echo "- Channel: preview"
+            echo "- Runtime: 0.1.0"
+            echo "- Scope: top hero, activity control, greeting positioning and compact overlapping search only"
+            echo "- Business cards and dashboard data logic: unchanged"
+          } >> "$GITHUB_STEP_SUMMARY"
