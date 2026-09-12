@@ -11,6 +11,7 @@ export const protectedPortalRoots = [
   "/timeline",
   "/tasks",
   "/reports",
+  "/development",
   "/organization",
   "/users",
   "/notifications",
