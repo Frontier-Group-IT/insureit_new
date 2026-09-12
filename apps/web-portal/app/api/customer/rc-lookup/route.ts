@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-09-07-v2";
+const RC_MAPPER_VERSION = "2026-09-12-v3";
 
 type SafeVehicleDetails = {
   registrationNumber: string;
@@ -27,6 +27,9 @@ type SafeVehicleDetails = {
   roadTaxExpiryDate: string | null;
   nationalPermitExpiryDate: string | null;
   localPermitExpiryDate: string | null;
+  insuranceCompany: string | null;
+  policyNumber: string | null;
+  policyExpiryDate: string | null;
 };
 
 type CacheRow = {
@@ -208,7 +211,8 @@ function repairCachedDetails(cached: CacheRow, registrationNumber: string) {
 
 function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): SafeVehicleDetails {
   const values = flattenPrimitiveValues(raw);
-  const vehicleDetails = getAuthbridgeVehicleDetails(raw);
+  const vehicleDetails = getAuthbridgeSection(raw, "Vehicle Details");
+  const insuranceDetails = getAuthbridgeSection(raw, "Insurance Details");
 
   const manufacturer = cleanText(
     findObjectValue(vehicleDetails, ["Maker/Manufacturer", "Maker Manufacturer", "Manufacturer", "Maker"])
@@ -237,15 +241,27 @@ function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): Safe
     roadTaxExpiryDate: toIsoDate(findValue(values, ["roadtaxexpirydate", "taxupto", "taxvalidupto", "roadtaxupto", "vehicletaxupto"])),
     nationalPermitExpiryDate: toIsoDate(findValue(values, ["nationalpermitexpirydate", "nationalpermitupto", "nationalpermitvalidupto"])),
     localPermitExpiryDate: toIsoDate(findValue(values, ["localpermitexpirydate", "localpermitupto", "localpermitvalidupto", "permitupto", "permitvalidupto"])),
+    insuranceCompany: cleanText(
+      findObjectValue(insuranceDetails, ["Insurance Company", "Insurer", "InsuranceCompany"])
+        ?? findValue(values, ["insurancecompany", "insurer", "insurername"]),
+    ),
+    policyNumber: cleanPolicyNumber(
+      findObjectValue(insuranceDetails, ["Policy Number", "Policy No", "PolicyNo"])
+        ?? findValue(values, ["policynumber", "policyno", "insurancepolicynumber"]),
+    ),
+    policyExpiryDate: toIsoDate(
+      findObjectValue(insuranceDetails, ["Insurance To Date/Insurance Upto", "Insurance To Date", "Insurance Upto", "Policy Expiry Date"])
+        ?? findValue(values, ["insurancetodateinsuranceupto", "insurancetodate", "insuranceupto", "policyexpirydate", "insuranceexpirydate"]),
+    ),
   };
 }
 
-function getAuthbridgeVehicleDetails(raw: unknown): Record<string, unknown> | null {
+function getAuthbridgeSection(raw: unknown, sectionName: string): Record<string, unknown> | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const root = raw as Record<string, unknown>;
   const msg = getObjectValue(root, "msg");
   if (!msg) return null;
-  return getObjectValue(msg, "Vehicle Details");
+  return getObjectValue(msg, sectionName);
 }
 
 function getObjectValue(object: Record<string, unknown>, key: string): Record<string, unknown> | null {
@@ -290,6 +306,9 @@ function sanitizeCachedDetails(raw: unknown, registrationNumber: string): SafeVe
     roadTaxExpiryDate: toIsoDate(toPrimitive(value.roadTaxExpiryDate)),
     nationalPermitExpiryDate: toIsoDate(toPrimitive(value.nationalPermitExpiryDate)),
     localPermitExpiryDate: toIsoDate(toPrimitive(value.localPermitExpiryDate)),
+    insuranceCompany: cleanText(toPrimitive(value.insuranceCompany)),
+    policyNumber: cleanPolicyNumber(toPrimitive(value.policyNumber)),
+    policyExpiryDate: toIsoDate(toPrimitive(value.policyExpiryDate)),
   };
 }
 
@@ -351,6 +370,13 @@ function cleanCode(value: string | null) {
   const next = value.toUpperCase().replace(/[^A-Z0-9]/g, "");
   if (!next || /[*X]{4,}/.test(next)) return null;
   return next.slice(0, 80);
+}
+
+function cleanPolicyNumber(value: string | null) {
+  if (!value) return null;
+  const next = value.replace(/\s+/g, "").trim().toUpperCase();
+  if (!next || next.length > 120) return null;
+  return next;
 }
 
 function cleanNumber(value: string | null) {

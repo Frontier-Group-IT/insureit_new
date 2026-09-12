@@ -177,6 +177,21 @@ export default function AddVehicleScreen() {
         }
       }
 
+      let insurerNeedsConfirmation = false;
+      if (details.insuranceCompany) {
+        const resolvedInsurer = resolveInsuranceCompany(details.insuranceCompany, companies);
+        if (resolvedInsurer) {
+          setSelectedCompanyId(resolvedInsurer.id);
+          setInsurerQuery(resolvedInsurer.name);
+        } else {
+          setSelectedCompanyId('');
+          setInsurerQuery(details.insuranceCompany);
+          insurerNeedsConfirmation = true;
+        }
+      }
+      if (details.policyNumber) setPolicyNo(details.policyNumber.replace(/\s/g, '').toUpperCase());
+      if (details.policyExpiryDate) setPolicyEndDate(details.policyExpiryDate);
+
       if (details.model) setModel(cleanProviderModel(details.model, details.manufacturer));
       if (details.manufacturingYear) setYear(details.manufacturingYear);
       if (details.vehicleClass && vehicleClasses.some((item) => item.value === details.vehicleClass)) setVehicleType(details.vehicleClass);
@@ -195,11 +210,15 @@ export default function AddVehicleScreen() {
       setLastFetchedRc(normalized);
       setRcLookupState('success');
       if (response.isStale) {
-        setRcLookupMessage('Vehicle details found from an earlier lookup. Please review before saving.');
+        setRcLookupMessage('Vehicle and policy details found from an earlier lookup. Please review before saving.');
+      } else if (manufacturerNeedsConfirmation && insurerNeedsConfirmation) {
+        setRcLookupMessage('Vehicle and policy details found. Please confirm the manufacturer and insurer before saving.');
       } else if (manufacturerNeedsConfirmation) {
-        setRcLookupMessage('Vehicle details found. Please confirm the manufacturer before saving.');
+        setRcLookupMessage('Vehicle and policy details found. Please confirm the manufacturer before saving.');
+      } else if (insurerNeedsConfirmation) {
+        setRcLookupMessage('Vehicle and policy details found. Please confirm the insurer before saving.');
       } else {
-        setRcLookupMessage('Vehicle details found. Please review the filled information.');
+        setRcLookupMessage('Vehicle and policy details found. Please review the filled information.');
       }
     } catch (error) {
       setRcLookupState('error');
@@ -400,7 +419,7 @@ export default function AddVehicleScreen() {
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
           <InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate(defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
+            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
             <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
           </View>
           <View style={styles.twoColumnRow}>
@@ -511,6 +530,15 @@ function resolveManufacturer(providerValue: string, manufacturers: string[]) {
   const exact = manufacturers.find((item) => normalizeManufacturer(item) === provider);
   if (exact) return exact;
   const candidates = manufacturers.filter((item) => { const normalized = normalizeManufacturer(item); return normalized.length >= 3 && (provider.includes(normalized) || normalized.includes(provider)); });
+  return candidates.length === 1 ? candidates[0] : null;
+}
+function normalizeInsurer(value: string) { return value.toUpperCase().replace(/&/g, ' AND ').replace(/\b(INSURANCE|GENERAL|COMPANY|CO|LIMITED|LTD)\b/g, ' ').replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function resolveInsuranceCompany(providerValue: string, companies: InsuranceCompany[]) {
+  const provider = normalizeInsurer(providerValue);
+  if (!provider) return null;
+  const exact = companies.find((company) => normalizeInsurer(company.name) === provider);
+  if (exact) return exact;
+  const candidates = companies.filter((company) => { const normalized = normalizeInsurer(company.name); return normalized.length >= 3 && (provider.includes(normalized) || normalized.includes(provider)); });
   return candidates.length === 1 ? candidates[0] : null;
 }
 function cleanProviderModel(model: string, manufacturer: string | null) {
