@@ -75,17 +75,17 @@ export default async function PartnerActivityPage() {
 
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_5px_18px_rgba(31,53,89,0.04)]">
           <div className="flex flex-col gap-3 border-b border-[#E3EAF2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#EEF4FF] text-[#2374E1]"><ShieldCheck className="h-4 w-4" /></span>
-              <h2 className="text-[16px] font-extrabold text-[#172B4D]">Recent timeline</h2>
-            </div>
             <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+              <div className="flex items-center gap-2">
+                <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#EEF4FF] text-[#2374E1]"><ShieldCheck className="h-4 w-4" /></span>
+                <h2 className="whitespace-nowrap text-[16px] font-extrabold text-[#172B4D]">Recent timeline</h2>
+              </div>
               <div className="flex h-10 min-w-[280px] items-center gap-2 rounded-xl border border-[#DCE5EF] bg-white px-3 text-[#8593A8]">
                 <Search className="h-4 w-4 shrink-0" />
                 <span className="truncate text-[10px] font-medium">Search policy, customer, insurer, vehicle, etc.</span>
               </div>
-              <span className="whitespace-nowrap text-[11px] font-bold text-[#42526E]">{data.items.length} records</span>
             </div>
+            <span className="whitespace-nowrap text-[11px] font-bold text-[#42526E]">{data.items.length} records</span>
           </div>
 
           {data.items.length ? (
