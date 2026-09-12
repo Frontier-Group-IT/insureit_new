@@ -472,8 +472,8 @@ function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; pe
   const points = trend;
   const maxPremium = Math.max(1, ...points.map((point) => Number(point.premium ?? 0)));
   const maxPolicies = Math.max(1, ...points.map((point) => point.policies));
-  const plotLeft = 34;
-  const plotRight = 566;
+  const plotLeft = 24;
+  const plotRight = 576;
   const plotTop = 28;
   const plotBottom = 150;
   const plotHeight = plotBottom - plotTop;
@@ -511,11 +511,11 @@ function BusinessTrend({ trend, period, periodLabel }: { trend: TrendPoint[]; pe
       </div>
 
       {points.length ? (
-        <div className="px-3 pb-2 pt-3 sm:px-4">
+        <div className="px-1 pb-2 pt-3">
           <svg viewBox="0 0 600 190" className="h-[210px] w-full" role="img" aria-label={`Premium and policy trend for ${periodLabel.toLowerCase()}`}>
             {[0, 1, 2, 3].map((grid) => {
               const y = plotTop + (plotHeight / 3) * grid;
-              return <line key={grid} x1="14" x2="586" y1={y} y2={y} stroke="#E7EDF5" strokeWidth="1" />;
+              return <line key={grid} x1="8" x2="592" y1={y} y2={y} stroke="#E7EDF5" strokeWidth="1" />;
             })}
 
             {points.map((point, index) => {
