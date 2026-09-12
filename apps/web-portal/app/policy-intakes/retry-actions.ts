@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
+import { POLICY_INTAKE_OCR_STALE_MS, isPolicyIntakeOcrRetryable } from "@/lib/policy-intake-ocr-retry";
 import { requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-
-const STALE_OCR_MS = 5 * 60 * 1000;
 
 type RetryableIntake = {
   id: string;
@@ -22,14 +21,6 @@ type RetryableIntake = {
 export type RetryPolicyIntakeOcrResult =
   | { ok: true; status: "processing" }
   | { ok: false; error: string };
-
-export function isPolicyIntakeOcrRetryable(input: { status: string; ocrStatus: string; createdAt: string }, now = Date.now()) {
-  if (input.status !== "processing") return false;
-  if (input.ocrStatus === "failed") return true;
-  if (!new Set(["pending", "processing"]).has(input.ocrStatus)) return false;
-  const created = new Date(input.createdAt).getTime();
-  return Number.isFinite(created) && now - created >= STALE_OCR_MS;
-}
 
 export async function getPolicyIntakeOcrRetryState(id: string) {
   await requirePolicyIntakeReviewer();
@@ -70,7 +61,7 @@ export async function retryPolicyIntakeOcr(id: string): Promise<RetryPolicyIntak
   if (intake.ocr_status === "failed") {
     claim = claim.eq("ocr_status", "failed");
   } else {
-    const staleBefore = new Date(Date.now() - STALE_OCR_MS).toISOString();
+    const staleBefore = new Date(Date.now() - POLICY_INTAKE_OCR_STALE_MS).toISOString();
     claim = claim.in("ocr_status", ["pending", "processing"]).lte("created_at", staleBefore);
   }
 
