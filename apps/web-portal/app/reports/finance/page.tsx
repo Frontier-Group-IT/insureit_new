@@ -87,14 +87,14 @@ export default async function FinanceReportsPage({ searchParams }: Props) {
       >
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <Metric label="Policies" value={integer(report.summary.policy_count)} />
-          <Metric label="Gross premium" value={currency(report.summary.gross_premium)} />
+          <Metric label="Net premium" value={currency(report.summary.net_premium)} />
           <Metric label="Projected insurer pay-in" value={currency(report.summary.projected_payin)} />
           <Metric label="Partner payout" value={currency(report.summary.gross_payout)} />
           <Metric label="Projected margin" value={currency(projectedMargin)} />
         </section>
 
         <section className="rounded-xl border border-[#DCE6F2] bg-[#F8FAFD] px-4 py-3 text-[9.5px] leading-5 text-[#667085]">
-          Projected insurer pay-in is a commercial expectation, not billed or reconciled insurer income. Partner payout is the actual agreed payout commercial and remains independent of insurer settlement. Actual insurer pay-in will be introduced through the reconciliation workflow.
+          Net premium excludes policy GST. Projected insurer pay-in is a commercial expectation shown before TDS; TDS is tracked separately. Partner payout is the gross agreed payout commercial and remains independent of insurer settlement. Actual insurer pay-in will be introduced through the reconciliation workflow.
         </section>
 
         <section className="grid gap-4 xl:grid-cols-2">
@@ -154,7 +154,7 @@ function href(path: string, f: FinanceFilters, page?: number) {
 
 function emptyReport(): FinanceReport {
   return {
-    summary: { policy_count: 0, gross_premium: 0, projected_payin: 0, payin_after_tds: 0, billed_amount: 0, gross_payout: 0, retention_amount: 0, unbilled_count: 0, billing_incomplete_count: 0, billed_count: 0, pending_payout_count: 0 },
+    summary: { policy_count: 0, net_premium: 0, gross_premium: 0, projected_payin: 0, payin_after_tds: 0, billed_amount: 0, gross_payout: 0, retention_amount: 0, unbilled_count: 0, billing_incomplete_count: 0, billed_count: 0, pending_payout_count: 0 },
     insurers: [], rms: [], billing: [],
     register: { rows: [], total_count: 0, page: 1, page_size: 50 },
     filters: { insurers: [], rms: [], intermediaries: [], billing_statuses: [], categories: [] },
