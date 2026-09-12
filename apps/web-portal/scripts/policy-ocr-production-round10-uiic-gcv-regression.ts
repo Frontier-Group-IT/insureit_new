@@ -24,7 +24,7 @@ MOTOR INSURANCE - GCV PUBLIC CARRIER OTHER THAN 3 WHEELER - PACKAGE POLICY`,
 VEHICLE DETAILS
 Registration Number SYNTH-REG-01
 Chassis Number
-SYNTHENGINE987654321
+AB9CD12E345678901
 Gross vehicle Weight 11990
 RTA Name MP00 SYNTH Vehicle Make & Model
 SYNTH MOTORS LTD / CARGO 1200 TEST
@@ -33,7 +33,7 @@ TILT_CAB_TEST / Diesel
 Registration Date 01/01/2025
 Cubic Capacity / Seating Capacity 3300 / 3
 Engine Number
-SYNTHENGINE987654321
+AB9CD12E345678901
 Year Of Manufacture 2025
 INSURED DECLARED VALUE
 SCHEDULE OF PREMIUM
@@ -60,9 +60,9 @@ const tables: StructuredPolicyTable[] = [{
   page: 2,
   rows: [
     ["Chassis Number", "Gross vehicle Weight", "RTA Name", "Vehicle Make & Model"],
-    ["SYNTHCHASSIS1234567", "11990", "MP00 SYNTH", "SYNTH MOTORS LTD / CARGO 1200 TEST"],
+    ["ZX8CV34B567890123", "11990", "MP00 SYNTH", "SYNTH MOTORS LTD / CARGO 1200 TEST"],
     ["Type Of Body / Fuel Type", "Registration Date", "Cubic Capacity / Seating Capacity", "Engine Number"],
-    ["TILT_CAB_TEST / Diesel", "01/01/2025", "3300 / 3", "SYNTHENGINE987654321"],
+    ["TILT_CAB_TEST / Diesel", "01/01/2025", "3300 / 3", "AB9CD12E345678901"],
     ["Gross OD(A)", "Gross TP(B)", "Premium(A+B)", "TOTAL PAYABLE PREMIUM"],
     ["17,330.00", "27,286.00", "44,616.00", "49,112.00"],
   ],
@@ -75,12 +75,12 @@ const broken = base([
   { key: "od_premium", label: "OD", value: "4487.60", confidence: 1, page: 2, evidence: "basic OD contamination" },
   { key: "tp_premium", label: "TP", value: "27186", confidence: 1, page: 2, evidence: "basic TP contamination" },
   { key: "cpa_premium", label: "CPA", value: "0", confidence: 1, page: 2, evidence: "synthetic" },
-  { key: "vehicle_chassis_number", label: "Chassis", value: "SYNTHENGINE987654321", confidence: 1, page: 2, evidence: "cross-associated" },
+  { key: "vehicle_chassis_number", label: "Chassis", value: "AB9CD12E345678901", confidence: 1, page: 2, evidence: "cross-associated" },
 ]);
 
 const repaired = refineProductionRound10UiicGcvPackage(pages, tables, broken);
-assert.equal(field(repaired, "vehicle_engine_number"), "SYNTHENGINE987654321");
-assert.equal(field(repaired, "vehicle_chassis_number"), "SYNTHCHASSIS1234567");
+assert.equal(field(repaired, "vehicle_engine_number"), "AB9CD12E345678901");
+assert.equal(field(repaired, "vehicle_chassis_number"), "ZX8CV34B567890123");
 assert.equal(field(repaired, "vehicle_fuel_type"), "Diesel");
 assert.equal(field(repaired, "od_premium"), "17330");
 assert.equal(field(repaired, "tp_premium"), "27286");
@@ -94,14 +94,14 @@ GCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY`,
   `GCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY SCHEDULE
 VEHICLE DETAILS
 Chassis Number
-FRESHCASIS76543210
+MN7PQ56R789012345
 Gross vehicle Weight 16200
 Vehicle Make & Model
 EXAMPLE VEHICLES / HAULER 16
 Type Of Body / Fuel Type
 OPEN BODY / CNG
 Engine Number
-FRESHENGINE123456789
+JK6LM78N901234567
 Year Of Manufacture 2024
 INSURED DECLARED VALUE
 SCHEDULE OF PREMIUM
@@ -121,8 +121,8 @@ const sibling = base([
   { key: "total_premium", label: "Net", value: "40000", confidence: 1, page: 2, evidence: "synthetic" },
 ]);
 const siblingResult = refineProductionRound10UiicGcvPackage(siblingPages, [], sibling);
-assert.equal(field(siblingResult, "vehicle_engine_number"), "FRESHENGINE123456789");
-assert.equal(field(siblingResult, "vehicle_chassis_number"), "FRESHCASIS76543210");
+assert.equal(field(siblingResult, "vehicle_engine_number"), "JK6LM78N901234567");
+assert.equal(field(siblingResult, "vehicle_chassis_number"), "MN7PQ56R789012345");
 assert.equal(field(siblingResult, "vehicle_fuel_type"), "CNG");
 assert.equal(field(siblingResult, "od_premium"), "8250");
 assert.equal(field(siblingResult, "tp_premium"), "31750");
@@ -141,12 +141,12 @@ assert.match(mismatchResult.warnings.join(" "), /did not reconcile/i);
 // Missing Chassis evidence must never cause Engine to be copied into Chassis.
 const engineOnlyPages = [
   siblingPages[0],
-  siblingPages[1].replace(/Chassis Number\nFRESHCASIS76543210\n/, ""),
+  siblingPages[1].replace(/Chassis Number\nMN7PQ56R789012345\n/, ""),
 ];
 const engineOnly = refineProductionRound10UiicGcvPackage(engineOnlyPages, [], base([
   { key: "total_premium", label: "Net", value: "40000", confidence: 1, page: 2, evidence: "synthetic" },
 ]));
-assert.equal(field(engineOnly, "vehicle_engine_number"), "FRESHENGINE123456789");
+assert.equal(field(engineOnly, "vehicle_engine_number"), "JK6LM78N901234567");
 assert.equal(field(engineOnly, "vehicle_chassis_number"), undefined);
 
 // Other United India layouts must remain untouched by this refinement.
