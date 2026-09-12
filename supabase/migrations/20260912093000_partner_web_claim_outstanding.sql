@@ -2,39 +2,41 @@ create or replace function public.partner_web_claim_outstanding()
 returns numeric
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $function$
 declare
-  v_scope public.partner_app_commercial_scope_payload;
+  v_scope jsonb;
+  v_actor_kind text;
+  v_scope_mode text;
+  v_intermediary_ids uuid[] := array[]::uuid[];
   v_result numeric;
 begin
   v_scope := public.partner_app_commercial_scope();
-
-  if coalesce(v_scope.scope_mode, 'none') = 'none' then
-    return 0;
+  if v_scope is null then
+    raise exception 'INSUREIT Partner access is unavailable' using errcode='28000';
   end if;
+
+  v_actor_kind := v_scope ->> 'actor_kind';
+  v_scope_mode := coalesce(v_scope ->> 'scope_mode', 'none');
+
+  select coalesce(array_agg(value::uuid), array[]::uuid[])
+  into v_intermediary_ids
+  from jsonb_array_elements_text(coalesce(v_scope -> 'intermediary_ids', '[]'::jsonb)) value;
 
   with scoped_claims as (
     select
-      c.id,
-      c.estimated_loss,
-      c.approved_amount,
-      c.settlement_amount
-    from public.claims c
-    cross join lateral public.partner_app_claim_commercial_tuples(c.id) t
-    where c.completed_at is null
-      and (
-        (coalesce(cardinality(v_scope.partner_ids), 0) > 0 and t.partner_id = any(v_scope.partner_ids))
-        or
-        (coalesce(cardinality(v_scope.employee_ids), 0) > 0 and t.rm_employee_id = any(v_scope.employee_ids))
-        or
-        (coalesce(cardinality(v_scope.intermediary_ids), 0) > 0 and (
-          t.partner_id = any(v_scope.intermediary_ids)
-          or t.posp_id = any(v_scope.intermediary_ids)
-          or t.misp_id = any(v_scope.intermediary_ids)
-        ))
-      )
-    group by c.id, c.estimated_loss, c.approved_amount, c.settlement_amount
+      cl.id,
+      cl.estimated_loss,
+      cl.approved_amount,
+      cl.settlement_amount
+    from public.claims cl
+    join public.customers c on c.id = cl.customer_id
+    where lower(coalesce(cl.current_status::text, '')) <> 'claim complete'
+      and case
+        when v_scope_mode = 'none' then false
+        when v_actor_kind = 'employee' and v_scope_mode = 'organization' then true
+        else c.lead_source_intermediary_id = any(v_intermediary_ids)
+      end
   )
   select coalesce(
     sum(
@@ -56,4 +58,4 @@ revoke all on function public.partner_web_claim_outstanding() from public;
 grant execute on function public.partner_web_claim_outstanding() to authenticated;
 
 comment on function public.partner_web_claim_outstanding() is
-  'Returns scoped outstanding value for active Partner claims for the Partner web dashboard. Uses approved amount when available, estimated loss as fallback, less settlement amount, floored at zero.';
+  'Returns outstanding value for active claims within the same scoped Partner claim set used by the Partner web claim summary/list. Uses approved amount when available, estimated loss as fallback, less settlement amount, floored at zero.';
