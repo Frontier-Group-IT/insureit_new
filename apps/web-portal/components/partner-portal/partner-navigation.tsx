@@ -24,28 +24,30 @@ type PartnerNavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  iconShellClass?: string;
+  iconClass?: string;
 };
 
 const primaryItems: PartnerNavItem[] = [
-  { href: "/partner", label: "Home", icon: Gauge },
-  { href: "/partner/business", label: "My Business", icon: BriefcaseBusiness },
-  { href: "/partner/customers", label: "Customers", icon: UsersRound },
-  { href: "/partner/policies", label: "Policies", icon: ShieldCheck },
-  { href: "/partner/renewals", label: "Renewals", icon: RefreshCw },
-  { href: "/partner/claims", label: "Claims", icon: ClipboardList },
-  { href: "/partner/policy-intakes", label: "Policy Intake", icon: FileInput },
+  { href: "/partner", label: "Home", icon: Gauge, iconShellClass: "bg-[#EAF2FF]", iconClass: "text-[#2F6BFF]" },
+  { href: "/partner/business", label: "My Business", icon: BriefcaseBusiness, iconShellClass: "bg-[#F0ECFF]", iconClass: "text-[#7656E8]" },
+  { href: "/partner/customers", label: "Customers", icon: UsersRound, iconShellClass: "bg-[#E7F8F4]", iconClass: "text-[#18A884]" },
+  { href: "/partner/policies", label: "Policies", icon: ShieldCheck, iconShellClass: "bg-[#EEF4FF]", iconClass: "text-[#386DDC]" },
+  { href: "/partner/renewals", label: "Renewals", icon: RefreshCw, iconShellClass: "bg-[#F2ECFF]", iconClass: "text-[#8A5BE8]" },
+  { href: "/partner/claims", label: "Claims", icon: ClipboardList, iconShellClass: "bg-[#FFF0F4]", iconClass: "text-[#E34D7A]" },
+  { href: "/partner/policy-intakes", label: "Policy Intake", icon: FileInput, iconShellClass: "bg-[#FFF4E7]", iconClass: "text-[#E9902D]" },
 ];
 
 const secondaryItems: PartnerNavItem[] = [
-  { href: "/partner/payout", label: "Payout", icon: BadgeIndianRupee },
-  { href: "/partner/network", label: "Network", icon: Network },
-  { href: "/partner/search", label: "Search", icon: Search },
-  { href: "/partner/activity", label: "Activity", icon: Activity },
+  { href: "/partner/payout", label: "Payout", icon: BadgeIndianRupee, iconShellClass: "bg-[#FFF5DF]", iconClass: "text-[#D89000]" },
+  { href: "/partner/network", label: "Network", icon: Network, iconShellClass: "bg-[#EAF2FF]", iconClass: "text-[#2F6BFF]" },
+  { href: "/partner/search", label: "Search", icon: Search, iconShellClass: "bg-[#E9F8FC]", iconClass: "text-[#2396B5]" },
+  { href: "/partner/activity", label: "Activity", icon: Activity, iconShellClass: "bg-[#EAF8EF]", iconClass: "text-[#2D9A62]" },
 ];
 
 const accountItems: PartnerNavItem[] = [
-  { href: "/partner/account", label: "Account", icon: UserRound },
-  { href: "/partner/support", label: "Support", icon: LifeBuoy },
+  { href: "/partner/account", label: "Account", icon: UserRound, iconShellClass: "bg-[#F1ECFF]", iconClass: "text-[#7656E8]" },
+  { href: "/partner/support", label: "Support", icon: LifeBuoy, iconShellClass: "bg-[#EAF6FF]", iconClass: "text-[#2A83C7]" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -65,12 +67,8 @@ function NavLink({ item }: { item: PartnerNavItem }) {
         active ? "bg-white text-[#141d3b]" : "text-white/88 hover:bg-white/10 hover:text-white"
       }`}
     >
-      <span className={`grid h-8 w-8 place-items-center rounded-xl ${
-        active
-          ? "bg-gradient-to-br from-[#66B5FF] via-[#2F6BFF] to-[#1746C8] text-white"
-          : "bg-white/10 text-white/80"
-      }`}>
-        <Icon className="h-4 w-4" />
+      <span className={`grid h-8 w-8 place-items-center rounded-xl shadow-[0_2px_8px_rgba(6,20,48,0.12)] ${item.iconShellClass ?? "bg-[#EAF2FF]"}`}>
+        <Icon className={`h-4 w-4 ${item.iconClass ?? "text-[#2F6BFF]"}`} />
       </span>
       <span className="flex-1">{item.label}</span>
     </Link>
