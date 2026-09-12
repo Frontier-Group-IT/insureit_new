@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bot, CircleStop, Headphones, Mic, PhoneOff, Play, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
+import { Bot, Headphones, Mic, PhoneOff, Play, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
+import {
+  DEFAULT_RENEWAL_AGENT_TYPE,
+  DEFAULT_RENEWAL_VOICE,
+  RENEWAL_AGENT_TYPES,
+  RENEWAL_VOICE_OPTIONS,
+  type RenewalAgentType,
+  type RenewalVoiceId,
+} from "@/lib/renewal-voice-agent";
 
 type ConnectionState = "idle" | "connecting" | "connected" | "ending" | "error";
 
@@ -33,24 +41,55 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+async function saveInteraction(payload: Record<string, unknown>) {
+  const response = await fetch("/api/renewal-voice-lab/interactions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error || "Could not save the interaction.");
+  }
+}
+
 export function RenewalVoiceLab() {
   const [state, setState] = useState<ConnectionState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>(INITIAL_FEED);
   const [elapsed, setElapsed] = useState(0);
   const [agentSpeaking, setAgentSpeaking] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<RenewalVoiceId>(DEFAULT_RENEWAL_VOICE);
+  const [agentType, setAgentType] = useState<RenewalAgentType>(DEFAULT_RENEWAL_AGENT_TYPE);
+  const [lastSessionId, setLastSessionId] = useState<string | null>(null);
+  const [naturalnessRating, setNaturalnessRating] = useState(4);
+  const [pronunciationRating, setPronunciationRating] = useState(4);
+  const [pacingRating, setPacingRating] = useState(4);
+  const [testerFeedback, setTesterFeedback] = useState("");
+  const [useForLearning, setUseForLearning] = useState(true);
+  const [feedbackState, setFeedbackState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const turnSequenceRef = useRef(0);
+  const elapsedRef = useRef(0);
 
   const isActive = state === "connecting" || state === "connected" || state === "ending";
+  const selectedVoiceMeta = RENEWAL_VOICE_OPTIONS.find((option) => option.id === selectedVoice);
+  const selectedAgentMeta = RENEWAL_AGENT_TYPES.find((option) => option.id === agentType);
 
   const timerLabel = useMemo(() => {
     const minutes = Math.floor(elapsed / 60).toString().padStart(2, "0");
     const seconds = (elapsed % 60).toString().padStart(2, "0");
     return `${minutes}:${seconds}`;
+  }, [elapsed]);
+
+  useEffect(() => {
+    elapsedRef.current = elapsed;
   }, [elapsed]);
 
   useEffect(() => {
@@ -64,7 +103,22 @@ export function RenewalVoiceLab() {
 
   function addFeed(role: FeedItem["role"], text: string) {
     if (!text.trim()) return;
-    setFeed((current) => [...current, { id: makeId(), role, text: text.trim() }].slice(-24));
+    setFeed((current) => [...current, { id: makeId(), role, text: text.trim() }].slice(-36));
+  }
+
+  function persistTurn(role: "agent" | "customer", transcript: string, eventType: string) {
+    const sessionId = sessionIdRef.current;
+    const cleanTranscript = transcript.trim();
+    if (!sessionId || !cleanTranscript) return;
+    turnSequenceRef.current += 1;
+    void saveInteraction({
+      action: "turn",
+      sessionId,
+      sequenceNo: turnSequenceRef.current,
+      role,
+      transcript: cleanTranscript,
+      eventType,
+    }).catch(() => undefined);
   }
 
   function handleRealtimeEvent(raw: string) {
@@ -82,11 +136,13 @@ export function RenewalVoiceLab() {
       if (type === "response.audio_transcript.done" || type === "response.output_audio_transcript.done") {
         const transcript = typeof event.transcript === "string" ? event.transcript : "";
         addFeed("agent", transcript);
+        persistTurn("agent", transcript, type);
       }
 
       if (type === "conversation.item.input_audio_transcription.completed") {
         const transcript = typeof event.transcript === "string" ? event.transcript : "";
         addFeed("customer", transcript);
+        persistTurn("customer", transcript, type);
       }
 
       if (type === "error") {
@@ -102,6 +158,12 @@ export function RenewalVoiceLab() {
     if (isActive) return;
     setError(null);
     setElapsed(0);
+    elapsedRef.current = 0;
+    turnSequenceRef.current = 0;
+    sessionIdRef.current = null;
+    setLastSessionId(null);
+    setFeedbackState("idle");
+    setTesterFeedback("");
     setFeed(INITIAL_FEED);
     setState("connecting");
 
@@ -143,7 +205,7 @@ export function RenewalVoiceLab() {
       dataChannel.onmessage = (event) => handleRealtimeEvent(String(event.data));
       dataChannel.onopen = () => {
         setState("connected");
-        addFeed("system", "Connected. Speak naturally and interrupt the agent whenever you want.");
+        addFeed("system", `Connected with ${selectedVoiceMeta?.label ?? selectedVoice} · ${selectedAgentMeta?.label ?? agentType}.`);
         timerRef.current = setInterval(() => setElapsed((value) => value + 1), 1000);
 
         dataChannel.send(
@@ -151,7 +213,7 @@ export function RenewalVoiceLab() {
             type: "response.create",
             response: {
               instructions:
-                "Begin the browser role-play now. Greet Rajesh Sharma naturally in warm Hinglish, mention that this is regarding the Scorpio N insurance renewal expiring on 24 September 2026, ask permission to continue, and keep the opening under two short sentences.",
+                "Begin the browser role-play now. Greet Rajesh Sharma naturally in warm conversational Hinglish, mention the Scorpio N insurance renewal expiring on 24 September 2026, ask permission to continue, and keep the opening under two short sentences. Speak the sentence naturally; do not perform the punctuation.",
             },
           }),
         );
@@ -164,14 +226,18 @@ export function RenewalVoiceLab() {
 
       const response = await fetch("/api/renewal-voice-lab/connect", {
         method: "POST",
-        headers: { "Content-Type": "application/sdp" },
-        body: sdp,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sdp, voice: selectedVoice, agentType }),
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => null) as { error?: string } | null;
+        const body = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error || `Voice service returned ${response.status}.`);
       }
+
+      const sessionId = response.headers.get("X-Renewal-Voice-Session-Id");
+      if (!sessionId) throw new Error("The voice session started without an interaction log ID.");
+      sessionIdRef.current = sessionId;
 
       const answerSdp = await response.text();
       await peer.setRemoteDescription({ type: "answer", sdp: answerSdp });
@@ -202,8 +268,36 @@ export function RenewalVoiceLab() {
     peerRef.current = null;
     if (audioRef.current) audioRef.current.srcObject = null;
     setAgentSpeaking(false);
+
+    const sessionId = sessionIdRef.current;
+    if (sessionId) {
+      setLastSessionId(sessionId);
+      void saveInteraction({ action: "complete", sessionId, durationSeconds: elapsedRef.current }).catch(() => undefined);
+      sessionIdRef.current = null;
+    }
+
     setState("idle");
-    addFeed("system", "Test ended. Start again to run another role-play.");
+    addFeed("system", "Test ended. Rate the voice below so the next sessions can learn from this interaction.");
+  }
+
+  async function saveFeedback() {
+    if (!lastSessionId || feedbackState === "saving") return;
+    setFeedbackState("saving");
+    try {
+      await saveInteraction({
+        action: "feedback",
+        sessionId: lastSessionId,
+        naturalnessRating,
+        pronunciationRating,
+        pacingRating,
+        feedback: testerFeedback,
+        useForLearning,
+      });
+      setFeedbackState("saved");
+    } catch (caught) {
+      setFeedbackState("error");
+      setError(caught instanceof Error ? caught.message : "Could not save feedback.");
+    }
   }
 
   return (
@@ -218,7 +312,7 @@ export function RenewalVoiceLab() {
             </span>
             <div>
               <h1 className="text-[13px] font-extrabold text-[#172B4D]">AI Renewal Voice Lab</h1>
-              <p className="mt-0.5 text-[9.5px] font-medium text-[#7A8AA0]">Private browser role-play · Hindi / Hinglish / English · no phone call</p>
+              <p className="mt-0.5 text-[9.5px] font-medium text-[#7A8AA0]">Private browser role-play · every transcript turn can become learning evidence</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
@@ -261,6 +355,31 @@ export function RenewalVoiceLab() {
           </aside>
 
           <div className="p-4">
+            <div className="mb-3 grid gap-2 sm:grid-cols-2">
+              <label className="rounded-lg border border-[#DDE6F0] bg-[#FBFCFE] p-2.5">
+                <span className="block text-[8px] font-black uppercase tracking-[0.07em] text-[#718198]">Voice</span>
+                <select
+                  value={selectedVoice}
+                  disabled={isActive}
+                  onChange={(event) => setSelectedVoice(event.target.value as RenewalVoiceId)}
+                  className="mt-1.5 h-8 w-full rounded-md border border-[#D7E1ED] bg-white px-2 text-[10px] font-bold text-[#263B59] disabled:opacity-60"
+                >
+                  {RENEWAL_VOICE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label} — {option.description}</option>)}
+                </select>
+              </label>
+              <label className="rounded-lg border border-[#DDE6F0] bg-[#FBFCFE] p-2.5">
+                <span className="block text-[8px] font-black uppercase tracking-[0.07em] text-[#718198]">Agent type</span>
+                <select
+                  value={agentType}
+                  disabled={isActive}
+                  onChange={(event) => setAgentType(event.target.value as RenewalAgentType)}
+                  className="mt-1.5 h-8 w-full rounded-md border border-[#D7E1ED] bg-white px-2 text-[10px] font-bold text-[#263B59] disabled:opacity-60"
+                >
+                  {RENEWAL_AGENT_TYPES.map((option) => <option key={option.id} value={option.id}>{option.label} — {option.description}</option>)}
+                </select>
+              </label>
+            </div>
+
             <div className="flex min-h-[190px] flex-col items-center justify-center rounded-xl border border-[#E0E7F0] bg-gradient-to-b from-[#FBFDFF] to-[#F6F9FD] px-4 py-6 text-center">
               <div className={`relative grid h-20 w-20 place-items-center rounded-full border ${state === "connected" ? "border-[#B8D1F6] bg-[#EAF2FF]" : "border-[#DDE5EF] bg-white"}`}>
                 {state === "connected" ? <span className="absolute inset-[-8px] animate-pulse rounded-full border border-[#C9DAF5]" /> : null}
@@ -269,8 +388,8 @@ export function RenewalVoiceLab() {
               <h3 className="mt-4 text-[13px] font-extrabold text-[#1A2F50]">
                 {state === "connecting" ? "Connecting secure voice session…" : state === "connected" ? (agentSpeaking ? "Agent is speaking" : "Agent is listening") : "Ready for browser test"}
               </h3>
-              <p className="mt-1 max-w-[520px] text-[9.5px] font-medium leading-4 text-[#74859B]">
-                Use headphones if possible. The agent should let you interrupt naturally, answer in the language you use, and never invent a premium or policy term.
+              <p className="mt-1 max-w-[560px] text-[9.5px] font-medium leading-4 text-[#74859B]">
+                Voice and persona are locked once a session starts. The agent is instructed to use natural thought-group pauses instead of speaking punctuation mechanically.
               </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -293,16 +412,14 @@ export function RenewalVoiceLab() {
             </div>
 
             {error ? (
-              <div className="mt-3 rounded-lg border border-[#F1C8CC] bg-[#FFF7F8] px-3 py-2.5 text-[9.5px] font-semibold leading-4 text-[#9B3540]">
-                {error}
-              </div>
+              <div className="mt-3 rounded-lg border border-[#F1C8CC] bg-[#FFF7F8] px-3 py-2.5 text-[9.5px] font-semibold leading-4 text-[#9B3540]">{error}</div>
             ) : null}
 
             <div className="mt-3 overflow-hidden rounded-xl border border-[#E0E7F0] bg-white">
               <div className="flex items-center justify-between border-b border-[#E8EDF4] px-3.5 py-2.5">
                 <div>
                   <p className="text-[10px] font-extrabold text-[#233A5C]">Conversation monitor</p>
-                  <p className="mt-0.5 text-[8.5px] font-medium text-[#8795A8]">Transcript events appear when the voice service supplies them.</p>
+                  <p className="mt-0.5 text-[8.5px] font-medium text-[#8795A8]">Completed customer and agent transcript turns are stored as interaction-learning evidence.</p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.06em] ${state === "connected" ? "bg-[#EAF8F1] text-[#14815A]" : "bg-[#F0F3F7] text-[#738299]"}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${state === "connected" ? "bg-[#1AA572]" : "bg-[#9AA7B8]"}`} />
@@ -320,15 +437,67 @@ export function RenewalVoiceLab() {
                 ))}
               </div>
             </div>
+
+            {lastSessionId ? (
+              <div className="mt-3 rounded-xl border border-[#D9E5F3] bg-[#F9FBFE] p-3.5">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] font-extrabold text-[#233A5C]">Teach the next session</p>
+                    <p className="mt-0.5 text-[8.5px] font-medium text-[#7B8AA0]">Rate what you actually heard. High-rated agent turns become positive examples; low-rated feedback becomes behavior to avoid.</p>
+                  </div>
+                  {feedbackState === "saved" ? <span className="rounded-full bg-[#EAF8F1] px-2 py-1 text-[8px] font-black text-[#14815A]">Saved for learning</span> : null}
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {[
+                    ["Naturalness", naturalnessRating, setNaturalnessRating],
+                    ["Pronunciation", pronunciationRating, setPronunciationRating],
+                    ["Pacing", pacingRating, setPacingRating],
+                  ].map(([label, value, setter]) => (
+                    <label key={String(label)} className="text-[8.5px] font-bold text-[#5D708B]">
+                      {String(label)}
+                      <select
+                        value={Number(value)}
+                        onChange={(event) => (setter as (value: number) => void)(Number(event.target.value))}
+                        className="mt-1 h-8 w-full rounded-md border border-[#D7E1ED] bg-white px-2 text-[10px] font-bold text-[#263B59]"
+                      >
+                        {[1, 2, 3, 4, 5].map((score) => <option key={score} value={score}>{score} / 5</option>)}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+                <textarea
+                  value={testerFeedback}
+                  onChange={(event) => setTesterFeedback(event.target.value)}
+                  maxLength={2000}
+                  rows={3}
+                  placeholder="Example: Hindi words sound too English; pauses are too long; opening should be warmer; this objection response sounded very natural…"
+                  className="mt-3 w-full resize-y rounded-lg border border-[#D7E1ED] bg-white p-2.5 text-[9.5px] font-medium leading-4 text-[#344B6B] outline-none focus:border-[#8FB1E8]"
+                />
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <label className="inline-flex items-center gap-2 text-[8.5px] font-semibold text-[#5F718A]">
+                    <input type="checkbox" checked={useForLearning} onChange={(event) => setUseForLearning(event.target.checked)} />
+                    Use this interaction to improve future lab sessions
+                  </label>
+                  <button
+                    type="button"
+                    onClick={saveFeedback}
+                    disabled={feedbackState === "saving"}
+                    className="h-8 rounded-lg bg-[#173B70] px-3 text-[9px] font-extrabold text-white disabled:opacity-60"
+                  >
+                    {feedbackState === "saving" ? "Saving…" : feedbackState === "saved" ? "Feedback saved" : "Save feedback"}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>
 
       <section className="grid gap-2 md:grid-cols-3">
         {[
-          ["Human conversation", "Short replies, interruption-friendly pacing and automatic language matching."],
-          ["Safe sandbox", "Uses sample renewal context only. No CRM write, quote generation or customer contact."],
-          ["Next milestone", "After voice quality is approved, connect read-only renewal context and controlled tools."],
+          ["Interaction memory", "Every completed transcript turn is stored with the selected voice, persona, duration and tester feedback."],
+          ["Controlled learning", "Future sessions use high-rated agent turns as examples and low-rated written feedback as explicit behavior to avoid."],
+          ["No raw audio storage", "This first learning loop stores transcripts and ratings only. It does not retain microphone recordings or change CRM data."],
         ].map(([title, text], index) => (
           <div key={title} className="rounded-xl border border-[#DDE6F0] bg-white p-3.5 shadow-[0_3px_12px_rgba(37,61,103,0.035)]">
             <div className="flex items-center gap-2">
