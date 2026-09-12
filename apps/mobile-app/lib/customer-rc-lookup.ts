@@ -18,6 +18,9 @@ export type CustomerRcLookupDetails = {
   roadTaxExpiryDate: string | null;
   nationalPermitExpiryDate: string | null;
   localPermitExpiryDate: string | null;
+  insuranceCompany: string | null;
+  policyNumber: string | null;
+  policyExpiryDate: string | null;
 };
 
 type CustomerRcLookupResponse = {
