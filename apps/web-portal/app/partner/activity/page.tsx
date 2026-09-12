@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, BellRing, BriefcaseBusiness, ClipboardList, FileInput, GraduationCap, Search, ShieldCheck } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, ClipboardList, FileInput, GraduationCap, Search, ShieldCheck } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebActivity, type PartnerActivityData } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -17,14 +16,6 @@ function activityHref(item: PartnerActivityData["items"][number]) {
   if (item.kind === "claim") return "/partner/claims/" + encodeURIComponent(item.entity_id);
   if (item.kind === "intake") return "/partner/policy-intakes/" + encodeURIComponent(item.entity_id);
   return null;
-}
-
-function attentionHref(route: string, kind: string) {
-  const normalized = route.toLowerCase();
-  if (normalized.includes("renewal") || kind.toLowerCase().includes("renewal")) return "/partner/renewals";
-  if (normalized.includes("claim") || kind.toLowerCase().includes("claim")) return "/partner/claims";
-  if (normalized.includes("intake") || kind.toLowerCase().includes("intake")) return "/partner/policy-intakes";
-  return "/partner";
 }
 
 function iconFor(kind: PartnerActivityData["items"][number]["kind"]) {
@@ -47,27 +38,6 @@ export default async function PartnerActivityPage() {
   return (
     <PartnerPortalShell title="Activity">
       <div className="space-y-7">
-        <PartnerPageHeader
-          title="What changed"
-        />
-
-        {data.attention.length ? (
-          <section>
-            <div className="grid overflow-hidden rounded-xl border border-[#FFB9C4] bg-[#FFF8F9] shadow-[0_2px_8px_rgba(214,46,110,0.04)]">
-              {data.attention.slice(0, 3).map((item, index) => (
-                <Link key={item.kind + "-" + item.title + "-" + index} href={attentionHref(item.route, item.kind)} className="group flex min-h-[52px] items-center gap-3 border-b border-[#FFD7DE] px-3 py-2.5 transition hover:bg-[#FFF3F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#F05273]/20 last:border-b-0">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#FFE9ED] text-[#F05273]"><BellRing className="h-4 w-4" /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10.5px] font-extrabold text-[#172B4D]">{item.title}</p>
-                  </div>
-                  <span className="rounded-full bg-[#FFE7EE] px-2.5 py-1 text-[9px] font-extrabold text-[#E33D69]">{item.count}</span>
-                  <ArrowRight className="h-4 w-4 text-[#3156B8] transition group-hover:translate-x-0.5" />
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_5px_18px_rgba(31,53,89,0.04)]">
           <div className="flex flex-col gap-3 border-b border-[#E3EAF2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
