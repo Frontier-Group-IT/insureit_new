@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
 import { refineProductionRound10UiicGcvPackage } from "../lib/policy-ocr-production-round10-uiic-gcv-refiner.ts";
+// @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
+import { refineProductionRound11UiicGcvLiveResiduals } from "../lib/policy-ocr-production-round11-uiic-gcv-live-residual-refiner.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 import type { StructuredPolicyTable } from "../lib/policy-ocr-iffco-structured-refiner.ts";
 
@@ -149,9 +151,69 @@ const engineOnly = refineProductionRound10UiicGcvPackage(engineOnlyPages, [], ba
 assert.equal(field(engineOnly, "vehicle_engine_number"), "JK6LM78N901234567");
 assert.equal(field(engineOnly, "vehicle_chassis_number"), undefined);
 
-// Other United India layouts must remain untouched by this refinement.
+// Post-live residual: Round 10 already fixed TP/CPA/IDs/Fuel, but live review
+// can still arrive without Make/Model and OD. Structured make/model plus the
+// exact UIIC Premium(A+B) identity must recover only those residuals.
+const liveResidual = base([
+  { key: "policy_product", label: "Product", value: "Package", confidence: 1, page: 1, evidence: "synthetic" },
+  { key: "vehicle_class", label: "Class", value: "GCV", confidence: 1, page: 1, evidence: "synthetic" },
+  { key: "total_premium", label: "Net premium", value: "44616", confidence: 1, page: 2, evidence: "synthetic" },
+  { key: "tp_premium", label: "TP premium", value: "27286", confidence: 1, page: 2, evidence: "Round 10 gross TP" },
+  { key: "cpa_premium", label: "CPA amount", value: "0", confidence: 1, page: 2, evidence: "owner-driver CPA removed" },
+  { key: "cpa_opted", label: "CPA opted", value: "No", confidence: 1, page: 2, evidence: "owner-driver CPA removed" },
+]);
+const liveResidualResult = refineProductionRound11UiicGcvLiveResiduals(pages, tables, liveResidual);
+assert.equal(field(liveResidualResult, "vehicle_make"), "SYNTH MOTORS LTD");
+assert.equal(field(liveResidualResult, "vehicle_model"), "CARGO 1200 TEST");
+assert.equal(field(liveResidualResult, "od_premium"), "17330");
+assert.equal(field(liveResidualResult, "tp_premium"), "27286");
+assert.match(liveResidualResult.parserVersion, /prod-r11-uiic_gcv_live_residuals/);
+
+// Fresh residual sibling: no structured table. Text-bound make/model and
+// arithmetic OD recovery must still generalize when the identifiers and money
+// values change.
+const freshResidualPages = [
+  `UNITED INDIA INSURANCE COMPANY LIMITED
+GCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY`,
+  `GCV PUBLIC CARRIER OTHER THAN 3 WHEELER PACKAGE POLICY SCHEDULE
+VEHICLE DETAILS
+Vehicle Make & Model ALPHA TRUCKS LTD / ROADMASTER 1815 X
+Type Of Body / Fuel Type OPEN BODY / CNG
+Engine Number AA1BB22CC33445566
+Year Of Manufacture 2024
+INSURED DECLARED VALUE
+SCHEDULE OF PREMIUM
+Gross TP(B) 31,750.00
+Gross OD & TP: (A) + (B) 40,000.00
+Premium(A+B) 40,000.00
+TOTAL PAYABLE PREMIUM 44,500.00
+TERMS & CONDITIONS`,
+];
+const freshResidual = base([
+  { key: "total_premium", label: "Net", value: "40000", confidence: 1, page: 2, evidence: "synthetic" },
+  { key: "tp_premium", label: "TP", value: "31750", confidence: 1, page: 2, evidence: "synthetic" },
+  { key: "cpa_premium", label: "CPA", value: "0", confidence: 1, page: 2, evidence: "synthetic" },
+]);
+const freshResidualResult = refineProductionRound11UiicGcvLiveResiduals(freshResidualPages, [], freshResidual);
+assert.equal(field(freshResidualResult, "vehicle_make"), "ALPHA TRUCKS LTD");
+assert.equal(field(freshResidualResult, "vehicle_model"), "ROADMASTER 1815 X");
+assert.equal(field(freshResidualResult, "od_premium"), "8250");
+
+// Do not derive OD from arithmetic unless the exact UIIC Gross TP and A+B
+// schedule semantics are present.
+const unsafeResidualPages = [
+  freshResidualPages[0],
+  freshResidualPages[1]
+    .replace(/Gross TP\(B\) 31,750\.00\n/, "Third Party Premium 31,750.00\n")
+    .replace(/Gross OD & TP: \(A\) \+ \(B\) 40,000\.00\nPremium\(A\+B\) 40,000\.00\n/, "Net premium 40,000.00\n"),
+];
+const unsafeResidualResult = refineProductionRound11UiicGcvLiveResiduals(unsafeResidualPages, [], freshResidual);
+assert.equal(field(unsafeResidualResult, "od_premium"), undefined);
+
+// Other United India layouts must remain untouched by both refinements.
 const unrelated = base([{ key: "od_premium", label: "OD", value: "999", confidence: 1, page: 1, evidence: "synthetic" }]);
 const unrelatedPages = ["UNITED INDIA INSURANCE COMPANY LIMITED\nPRIVATE CAR PACKAGE POLICY", "SCHEDULE"];
 assert.deepEqual(refineProductionRound10UiicGcvPackage(unrelatedPages, [], unrelated), unrelated);
+assert.deepEqual(refineProductionRound11UiicGcvLiveResiduals(unrelatedPages, [], unrelated), unrelated);
 
-console.log("Round 10 UIIC GCV Package regression passed.");
+console.log("Round 10 + Round 11 UIIC GCV Package regression passed.");
