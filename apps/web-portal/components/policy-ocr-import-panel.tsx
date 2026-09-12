@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Eraser, FileUp } from "lucide-react";
 import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
+import { filterPolicyOcrUserWarnings } from "@/lib/policy-ocr-user-warnings";
 
 const INSURED_NAME_FIELD = ["insured", "name"].join("_");
 const INSURED_PHONE_FIELD = ["insured", "phone"].join("_");
@@ -184,7 +185,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       }
       setFields(result.fields);
       setParserInfo(`${friendlyParserName(result.parserId)} · ${friendlyMethod(result.extractionMethod)}`);
-      setWarnings(result.warnings);
+      setWarnings(filterPolicyOcrUserWarnings(result.warnings));
       const safeKeys = result.fields
         .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
         .filter((field) => !IDENTITY_FIELDS.has(field.key))
