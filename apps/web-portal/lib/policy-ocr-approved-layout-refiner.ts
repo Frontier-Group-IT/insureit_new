@@ -95,8 +95,9 @@ function preserveValidatedUiicFinancials(
 
   const beforeOdField = before.fields.find((field) => field.key === "od_premium");
   const beforeTpField = before.fields.find((field) => field.key === "tp_premium");
-  const beforeOd = numeric(beforeOdField?.value);
-  if (beforeOd == null || !beforeTpField) return after;
+  if (!beforeOdField || !beforeTpField) return after;
+  const beforeOd = numeric(beforeOdField.value);
+  if (beforeOd == null) return after;
 
   const firstTwo = pages.slice(0, 2).join("\n");
   const grossOdMatch = firstTwo.match(/Gross\s+OD\s*\(A\)[\s\S]{0,80}?((?:\d{1,3}(?:,\d{3})+|\d{2,8})(?:\.\d{1,2})?)/i);
