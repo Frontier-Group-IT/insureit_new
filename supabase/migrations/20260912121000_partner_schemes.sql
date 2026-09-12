@@ -74,21 +74,34 @@ RETURNS TABLE (
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth
 AS $$
 DECLARE
-  v_profile_id uuid;
+  v_scope jsonb;
+  v_actor_kind text;
+  v_scope_mode text;
   v_partner_ids uuid[] := ARRAY[]::uuid[];
   v_group_ids uuid[] := ARRAY[]::uuid[];
 BEGIN
-  SELECT s.profile_id, s.partner_ids, s.group_ids
-  INTO v_profile_id, v_partner_ids, v_group_ids
-  FROM public.partner_app_commercial_scope(auth.uid()) s
-  LIMIT 1;
-
-  IF v_profile_id IS NULL THEN
-    RAISE EXCEPTION 'Partner scope unavailable';
+  v_scope := public.partner_app_commercial_scope();
+  IF v_scope IS NULL THEN
+    RAISE EXCEPTION 'Partner scope unavailable' USING errcode = '28000';
   END IF;
+
+  v_actor_kind := v_scope ->> 'actor_kind';
+  v_scope_mode := COALESCE(v_scope ->> 'scope_mode', 'none');
+
+  IF v_actor_kind <> 'intermediary' OR v_scope_mode = 'none' THEN
+    RAISE EXCEPTION 'Partner scope unavailable' USING errcode = '28000';
+  END IF;
+
+  SELECT COALESCE(array_agg(value::uuid), ARRAY[]::uuid[])
+  INTO v_partner_ids
+  FROM jsonb_array_elements_text(COALESCE(v_scope -> 'partner_ids', '[]'::jsonb)) value;
+
+  SELECT COALESCE(array_agg(value::uuid), ARRAY[]::uuid[])
+  INTO v_group_ids
+  FROM jsonb_array_elements_text(COALESCE(v_scope -> 'group_ids', '[]'::jsonb)) value;
 
   RETURN QUERY
   WITH scoped AS (
@@ -118,8 +131,8 @@ BEGIN
     WHERE psa.is_active
       AND ps.is_active
       AND (
-        psa.partner_id = ANY(COALESCE(v_partner_ids, ARRAY[]::uuid[]))
-        OR psa.group_id = ANY(COALESCE(v_group_ids, ARRAY[]::uuid[]))
+        psa.partner_id = ANY(v_partner_ids)
+        OR psa.group_id = ANY(v_group_ids)
       )
   )
   SELECT
@@ -162,7 +175,7 @@ RETURNS TABLE (
 )
 LANGUAGE sql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, auth
 AS $$
   SELECT
     schemes.id,
