@@ -217,6 +217,99 @@ jobs:
           echo "::error::Timed out waiting for the schema deployment."
           exit 1
 
+      - name: Set up Supabase CLI for production schema parity
+        if: env.VERIFIED_COMMIT != ''
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Verify production schema parity and Partner RPC contract
+        if: env.VERIFIED_COMMIT != ''
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+
+          BASELINE_VERSION="20260912093000"
+
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "::error::SUPABASE_ACCESS_TOKEN is not configured."; exit 1; }
+          test -n "$SUPABASE_DB_PASSWORD" || { echo "::error::SUPABASE_DB_PASSWORD is not configured."; exit 1; }
+          test -n "$SUPABASE_PROJECT_REF" || { echo "::error::SUPABASE_PROJECT_REF is not configured."; exit 1; }
+
+          supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+          local_versions=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' -printf '%f\n' \
+            | sed -nE 's/^([0-9]+)_.*/\1/p' \
+            | awk -v baseline="$BASELINE_VERSION" '$1 >= baseline' \
+            | sort -u)
+
+          remote_json=$(supabase db query --linked --output-format json "
+            select version
+            from supabase_migrations.schema_migrations
+            where version >= '$BASELINE_VERSION'
+            order by version;
+          ")
+          remote_versions=$(jq -r '.[].version // empty' <<<"$remote_json" | sort -u)
+
+          missing_versions=$(comm -23 \
+            <(printf '%s\n' "$local_versions") \
+            <(printf '%s\n' "$remote_versions"))
+
+          if [[ -n "$missing_versions" ]]; then
+            echo "::error::Production Supabase is missing migration version(s) already present on main:"
+            echo "$missing_versions"
+            echo "::error::Blocking Vercel deployment so a later unrelated merge cannot bypass unresolved schema debt."
+            exit 1
+          fi
+
+          partner_rpc_names=$(python - <<'PY'
+          import pathlib
+          import re
+
+          roots = [
+              pathlib.Path("apps/web-portal/app/partner"),
+              pathlib.Path("apps/web-portal/lib/partner-web.ts"),
+              pathlib.Path("apps/web-portal/lib/partner-external-renewals.ts"),
+          ]
+          names = set()
+          pattern = re.compile(r"\.rpc\(\s*['\"]([A-Za-z0-9_]+)['\"]")
+          for root in roots:
+              paths = root.rglob("*.ts*") if root.is_dir() else [root]
+              for path in paths:
+                  if not path.exists() or not path.is_file():
+                      continue
+                  names.update(pattern.findall(path.read_text(encoding="utf-8")))
+          print("\n".join(sorted(names)))
+          PY
+          )
+
+          production_rpc_json=$(supabase db query --linked --output-format json "
+            select distinct p.proname
+            from pg_proc p
+            join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname = 'public'
+              and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+            order by p.proname;
+          ")
+          production_rpc_names=$(jq -r '.[].proname // empty' <<<"$production_rpc_json" | sort -u)
+
+          missing_partner_rpcs=$(comm -23 \
+            <(printf '%s\n' "$partner_rpc_names") \
+            <(printf '%s\n' "$production_rpc_names"))
+
+          if [[ -n "$missing_partner_rpcs" ]]; then
+            echo "::error::Partner web references RPC(s) that are missing or not executable by authenticated users in production:"
+            echo "$missing_partner_rpcs"
+            echo "::error::Blocking Vercel deployment before the Partner portal can reach an incompatible schema."
+            exit 1
+          fi
+
+          echo "Production schema parity verified from migration $BASELINE_VERSION onward."
+          echo "Partner RPC contract verified for all static Partner web RPC references."
+
       - name: Verify deploy hook secret
         if: env.VERIFIED_COMMIT != ''
         shell: bash
