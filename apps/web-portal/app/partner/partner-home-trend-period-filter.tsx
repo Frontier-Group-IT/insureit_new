@@ -46,37 +46,58 @@ export function PartnerHomeTrendPeriodFilter({
   };
 
   return (
-    <div ref={rootRef} className="relative shrink-0">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDE5EF] bg-[#F9FBFE] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526784] transition hover:bg-[#F4F7FB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
-      >
-        <span>{label}</span>
-        <ChevronDown className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
-      </button>
-
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1.5 w-36 overflow-hidden rounded-lg border border-[#DCE5F1] bg-white p-1 shadow-[0_8px_24px_rgba(25,50,90,0.14)]"
+    <>
+      <div ref={rootRef} className="partner-home-trend-period-filter relative shrink-0">
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#DDE5EF] bg-[#F9FBFE] px-2.5 py-1.5 text-[8.5px] font-semibold text-[#526784] transition hover:bg-[#F4F7FB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
         >
-          {OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              role="menuitemradio"
-              aria-checked={period === option.value}
-              onClick={() => selectPeriod(option.value)}
-              className={`block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold transition ${period === option.value ? "bg-[#EEF4FF] text-[#244F9E]" : "text-[#526784] hover:bg-[#F5F8FC]"}`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
+          <span>{label}</span>
+          <ChevronDown className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+        </button>
+
+        {open ? (
+          <div
+            role="menu"
+            className="absolute left-0 z-30 mt-1.5 w-36 overflow-hidden rounded-lg border border-[#DCE5F1] bg-white p-1 shadow-[0_8px_24px_rgba(25,50,90,0.14)]"
+          >
+            {OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                role="menuitemradio"
+                aria-checked={period === option.value}
+                onClick={() => selectPeriod(option.value)}
+                className={`block w-full rounded-md px-2.5 py-2 text-left text-[9px] font-semibold transition ${period === option.value ? "bg-[#EEF4FF] text-[#244F9E]" : "text-[#526784] hover:bg-[#F5F8FC]"}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      <style>{`
+        div:has(> .partner-home-trend-period-filter) > h2 {
+          flex: 0 1 auto !important;
+        }
+
+        div:has(> .partner-home-trend-period-filter) > .partner-home-trend-period-filter {
+          order: 1;
+        }
+
+        div:has(> .partner-home-trend-period-filter) > div:not(.partner-home-trend-period-filter) {
+          order: 2;
+          margin-left: auto;
+        }
+
+        div:has(> .partner-home-trend-period-filter) > a {
+          order: 3;
+        }
+      `}</style>
+    </>
   );
 }
