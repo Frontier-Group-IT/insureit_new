@@ -1,6 +1,6 @@
 param(
     [string]$RcNumber,
-    [string]$Username = "test@insureit.in"
+    [string]$Username = $env:AUTHBRIDGE_USERNAME
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,6 +27,10 @@ function Get-FirstPayloadValue {
 
 if ([string]::IsNullOrWhiteSpace($RcNumber)) {
     $RcNumber = Read-Host "Enter a valid vehicle registration number"
+}
+
+if ([string]::IsNullOrWhiteSpace($Username)) {
+    $Username = Read-Host "Enter the AuthBridge API username"
 }
 
 $RcNumber = ($RcNumber -replace '\s','').ToUpperInvariant()
