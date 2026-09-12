@@ -20,7 +20,7 @@ jobs:
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
       EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
       ACCEPTED_BASELINE: 774ba2932c52678a8851f9eb5ed054e1545017d0
-      EXPECTED_RELEASE_COMMIT: b2af2827e78f0415cf3ba429cb0d4c1314d05be4
+      EXPECTED_RELEASE_COMMIT: e54dace1ca1f11d26c2d18550059059569b72482
 
     steps:
       - name: Checkout exact branch snapshot
@@ -48,7 +48,7 @@ jobs:
             'apps/partner-app/app/_layout.tsx' \
             'apps/partner-app/app/search.tsx' \
             'apps/partner-app/app/settings.tsx' \
-            'apps/partner-app/assets/figma-dashboard/hero-banner.jpg' \
+            'apps/partner-app/assets/figma-dashboard/hero-banner.webp' \
             'apps/partner-app/assets/figma-dashboard/pending-tasks.png' \
             'apps/partner-app/assets/figma-dashboard/quick-claims.png' \
             'apps/partner-app/assets/figma-dashboard/quick-customers.png' \
@@ -128,7 +128,7 @@ jobs:
           npx eas-cli project:info --non-interactive
           npx eas-cli channel:view preview --json --non-interactive
 
-      - name: Publish final compact Partner hero banner to preview
+      - name: Publish Partner hero size and image quality to preview
         working-directory: apps/partner-app
         shell: bash
         run: |
@@ -136,7 +136,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 final compact hero banner ${EXPECTED_RELEASE_COMMIT}" \
+            --message "Partner 0.1.0 hero size and image quality ${EXPECTED_RELEASE_COMMIT}" \
             --non-interactive \
             --json > partner-preview-update.json
           cat partner-preview-update.json
@@ -148,7 +148,7 @@ jobs:
           set -euo pipefail
           npx eas-cli update:list --branch preview --limit 1 --json --non-interactive > latest-preview.json
           cat latest-preview.json
-          grep -q 'Partner 0.1.0 final compact hero banner' latest-preview.json
+          grep -q 'Partner 0.1.0 hero size and image quality' latest-preview.json
           grep -q '"runtimeVersion": "0.1.0"' latest-preview.json
 
       - name: Summary
@@ -156,12 +156,12 @@ jobs:
         shell: bash
         run: |
           {
-            echo '## Partner 0.1.0 final compact hero banner release'
+            echo '## Partner 0.1.0 hero size and image quality release'
             echo
             echo "- Verified release commit: \`${EXPECTED_RELEASE_COMMIT}\`"
             echo '- Runtime: `0.1.0`'
             echo '- Channel: `preview`'
-            echo '- Home hero: fixed `90dp` container with user-approved `720x180` artwork and cover rendering'
+            echo '- Home hero: fixed `120dp` container with verified `900x300` WebP artwork and cover rendering'
             echo '- Search overlap: `18dp`'
             echo '- Other dashboard layout/content: unchanged by this release slice'
             echo '- OTA activation: startup and foreground check/fetch/reload retained'
