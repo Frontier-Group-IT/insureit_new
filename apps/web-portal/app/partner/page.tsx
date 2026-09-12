@@ -30,7 +30,6 @@ const homeIcons = {
   renewals: `${ICON_BASE}/renewal.png`,
   priority: `${ICON_BASE}/tasks-work-queue.png`,
   claims: `${ICON_BASE}/claims.png`,
-  claimsAttention: `${ICON_BASE}/claim-overdue.png`,
   claimOutstanding: `${ICON_BASE}/claim-settlement.png`,
   payout: `${ICON_BASE}/accounts-finance.png`,
   intakeAttention: `${ICON_BASE}/policy-intake-review.png`,
@@ -212,7 +211,7 @@ export default async function PartnerHomePage() {
           <SummaryCard
             label="Claim Outstanding"
             value={formatIndianCurrency(claimOutstanding)}
-            meta={`${claims.active_claims} active claim${claims.active_claims === 1 ? "" : "s"}`}
+            meta="Outstanding claim amount"
             href="/partner/claims"
             iconSrc={homeIcons.claimOutstanding}
           />
@@ -321,13 +320,13 @@ export default async function PartnerHomePage() {
 
           <DashboardPanel
             iconSrc={homeIcons.workload}
-            title="Current workload"
+            title="Operational snapshot"
           >
             <div className="grid grid-cols-2 gap-2 px-4 pb-4">
-              <SnapshotCard label="Active Claims" value={home.service.active_claims} href="/partner/claims" iconSrc={homeIcons.claims} />
-              <SnapshotCard label="Claims Attention" value={home.service.claims_need_attention} href="/partner/claims" iconSrc={homeIcons.claimsAttention} />
               <SnapshotCard label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" iconSrc={homeIcons.intakeAttention} />
               <SnapshotCard label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" iconSrc={homeIcons.overduePolicies} />
+              <SnapshotCard label="Renewals Due 30D" value={home.business.renewals_30_days} href="/partner/renewals" iconSrc={homeIcons.renewals} />
+              <SnapshotCard label="Payout Pending Records" value={payout.available ? payout.pending_count : "—"} href="/partner/payout" iconSrc={homeIcons.payout} />
             </div>
           </DashboardPanel>
         </section>
@@ -478,7 +477,7 @@ function DashboardPanel({ iconSrc, eyebrow, title, children }: { iconSrc: string
   );
 }
 
-function SnapshotCard({ label, value, href, iconSrc }: { label: string; value: number; href: string; iconSrc: string }) {
+function SnapshotCard({ label, value, href, iconSrc }: { label: string; value: number | string; href: string; iconSrc: string }) {
   return (
     <Link
       href={href}
