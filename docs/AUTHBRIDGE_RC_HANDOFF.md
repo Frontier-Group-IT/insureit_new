@@ -2,7 +2,9 @@
 
 > **Consolidated:** 2026-09-12 IST
 >
-> Source of truth for AuthBridge / TruthScreen Detailed RC service 372, the protected AWS gateway, Customer RC lookup, production credential state, security boundaries, and production rollout evidence.
+> Source of truth for AuthBridge / TruthScreen Detailed RC service 372, the protected AWS gateway, Customer RC lookup, production credential state, security boundaries, and current production rollout evidence.
+>
+> For the exact 2026-09-12 Lightsail/Nginx rollout and verification sequence, also read `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md`.
 >
 > **Never commit or paste secrets.** Do not store AuthBridge passwords, relay secrets, iCall tokens, vehicle-owner responses, chassis numbers, engine numbers, addresses, phone numbers, or other personal/customer data in GitHub, logs, screenshots, chat, or browser-visible code.
 
@@ -40,19 +42,18 @@ AUTHBRIDGE_USERNAME=<stored privately>
 
 The real username/password must not be committed to this repository. The dashboard password is not required by the verified RC API request contract.
 
-After the private username change:
+Verified after the private username change:
 
-- `node --check /opt/insureit-gateway/server.js` passed.
-- `insureit-gateway.service` restarted and remained active.
-- Local `http://127.0.0.1:3001/health` returned HTTP 200.
-- Public `https://insureit.duckdns.org/health` returned HTTP 200.
-- A protected Detailed RC request through the Lightsail gateway returned `statusCode: 200`, `status: success`, `provider: authbridge` and valid service-372 data.
+- gateway syntax check passed
+- `insureit-gateway.service` restarted successfully
+- public `https://insureit.duckdns.org/health` returned HTTP 200
+- protected Detailed RC service 372 request succeeded through the gateway
 
-**VERIFIED:** the production AuthBridge account works end to end through the protected AWS gateway.
+**VERIFIED:** the production AuthBridge account works through the protected AWS gateway.
 
 Do not record the test RC number or returned owner/vehicle payload in repository context.
 
-## 3. Architecture
+## 3. Current architecture
 
 Customer mobile flow:
 
@@ -60,6 +61,7 @@ Customer mobile flow:
 Customer App
 → https://portal.insureit.in/api/customer/rc-lookup
 → server-only portal AuthBridge client
+→ https://insureit.duckdns.org/authbridge/rc-verification
 → protected AWS Lightsail integration gateway
 → TruthScreen/AuthBridge encrypt → RC 372 → decrypt
 → normalized safe fields back to Customer App
@@ -80,41 +82,48 @@ infrastructure/icall-gateway/nginx-authbridge-location.conf
 
 The portal cache table is `vehicle_rc_lookup_cache`; successful RC lookups are cached for 30 days and stale cache may be used as a controlled fallback if a live provider request fails.
 
-## 4. Production route cleanup
+## 4. Production route cleanup — MERGED + APPLIED + VERIFIED
 
-Production cleanup PR: **#1702 — Clean up AuthBridge production gateway routing**.
+PR **#1702 — Clean up AuthBridge production gateway routing** was merged on 2026-09-12.
 
-The intended canonical route is:
+Merge commit:
+
+```text
+510ffd0b4f1e69bb1c5bce7245292c4082f6af9d
+```
+
+Canonical route:
 
 ```text
 POST /authbridge/rc-verification
 ```
 
-The previous route remains temporarily as a compatibility alias:
+Temporary compatibility alias retained:
 
 ```text
 POST /uat/authbridge/rc-verification
 ```
 
-The portal server-only client is updated to call the canonical neutral route. The Nginx reference configuration includes both `/authbridge/` and `/uat/authbridge/` proxy locations during transition.
+The portal server-only client calls the canonical neutral route. The gateway health response uses configurable `GATEWAY_ENVIRONMENT`; production Lightsail currently reports `mixed` because the gateway hosts integrations at different lifecycle stages.
 
-The gateway health response no longer hard-codes the entire gateway as `uat`; `GATEWAY_ENVIRONMENT` is configurable and defaults to `mixed` because the gateway currently hosts integrations at different lifecycle stages.
+Lightsail/Nginx rollout was manually applied on 2026-09-12:
 
-**Rollout order:**
+- cleanup gateway source installed at `/opt/insureit-gateway/server.js`
+- canonical Nginx `/authbridge/` proxy added
+- legacy `/uat/authbridge/` proxy retained
+- gateway service restarted
+- Nginx reloaded
+- public `/health` returned `status: ok`, service `insureit-integration-gateway`, environment `mixed`, and both integrations configured
+- unauthenticated request to the canonical route returned HTTP 401 from the gateway auth guard
+- authorized canonical-route request returned successful TruthScreen/AuthBridge service-372 data
 
-1. Merge PR #1702 only after the canonical GitHub verification gate is green.
-2. Deploy the merged `infrastructure/icall-gateway/server.js` to `/opt/insureit-gateway/server.js`.
-3. Add the canonical `/authbridge/` Nginx location while retaining `/uat/authbridge/` temporarily.
-4. Run `node --check`, `nginx -t`, restart `insureit-gateway.service`, and reload Nginx if its configuration changed.
-5. Verify `/health` and a protected request through `/authbridge/rc-verification`.
-6. Only then deploy the web portal commit that calls the canonical route.
-7. Keep the legacy route until production portal traffic is verified on the neutral path.
+**VERIFIED:** canonical production AuthBridge routing is operational at the Lightsail/Nginx/provider layers.
 
-Do not reverse this order; deploying the portal neutral route before the gateway/Nginx route exists can break RC lookup.
+Do not remove the legacy alias until production portal traffic and any remaining callers are confirmed on the canonical route.
 
-## 5. Customer Add Vehicle normalized fields currently exposed
+## 5. Customer Add Vehicle normalized vehicle fields
 
-The Customer API currently returns only normalized fields needed by the existing Add Vehicle screen:
+The Customer API returns normalized vehicle/compliance fields needed by the existing Add Vehicle screen, including:
 
 ```text
 registrationNumber
@@ -136,13 +145,27 @@ nationalPermitExpiryDate
 localPermitExpiryDate
 ```
 
-The Customer App currently applies these values to the matching vehicle and compliance fields after a successful lookup.
+The Customer App applies these values to the matching vehicle and compliance fields after a successful lookup.
 
-## 6. Verified provider fields currently not exposed to Customer Add Vehicle
+## 6. Customer insurance fields — IMPLEMENTED IN MAIN
 
-A verified production service-372 response also returned useful fields that are currently stripped by the portal sanitizer, including:
+PR **#1704 — Prefill Customer Add Vehicle policy details from AuthBridge** was merged on 2026-09-12.
 
-### Policy / insurance
+Merge commit:
+
+```text
+fb5eaa5fbbd779784cc3b7b8a2084caa4705972e
+```
+
+The normalized Customer RC response now supports:
+
+```text
+insuranceCompany
+policyNumber
+policyExpiryDate
+```
+
+Mapping is based only on verified provider insurance fields:
 
 ```text
 Insurance Company
@@ -150,13 +173,29 @@ Policy Number
 Insurance To Date / Insurance Upto
 ```
 
-The Customer Add Vehicle Policy Details section already has fields for Insurer, Policy No., Start Date, End Date, IDV, Premium and Policy Copy. For AuthBridge prefill, only the verified provider values above are safe candidates. Do **not** infer policy start date, IDV, premium, or document content when the provider did not return them.
+Customer Add Vehicle behavior:
 
-Before applying the provider insurer string, resolve it against the canonical active Insurance Company master/aliases. Do not create a new insurer or silently persist an unmatched provider string.
+- insurer is resolved against the active Insurance Company master when there is one safe unique match
+- unmatched provider insurer text requires manual confirmation; no insurer is auto-created
+- policy number is prefilled
+- policy expiry/end date is prefilled
+- an AuthBridge-provided end date is preserved if the customer later selects a policy start date
+- mapper version was bumped so compatible cached raw responses can be remapped without spending another provider lookup
 
-### Additional vehicle / RC metadata
+Do **not** infer:
 
-Provider responses may also include values such as:
+```text
+policy start date
+IDV
+premium
+policy copy
+```
+
+The verified production response did not supply these values.
+
+## 7. Additional provider fields intentionally not exposed
+
+Verified production service-372 responses may also return values such as:
 
 ```text
 RTO
@@ -179,13 +218,11 @@ NOC details
 challan details
 ```
 
-These are not currently part of the Customer Add Vehicle normalized response or visible onboarding fields. Add only fields with a confirmed business purpose and data-model destination.
+These are not automatically part of the Customer Add Vehicle response or UI. Add only fields with a confirmed business purpose and data-model destination.
 
-### Owner/private data
+TruthScreen may also return owner name, relation name, present/permanent address and other private data. These values remain outside the Customer Add Vehicle payload unless a separately approved workflow explicitly requires them.
 
-TruthScreen may return owner name, relation name and present/permanent address information. These values are intentionally outside the Customer Add Vehicle response and should remain excluded unless a separately approved workflow explicitly requires them. Never expose or persist unnecessary owner PII merely because the provider supplies it.
-
-## 7. Mapping rules
+## 8. Mapping and safety rules
 
 - Normalize RC numbers consistently.
 - Never call TruthScreen directly from browser/mobile code.
@@ -197,29 +234,47 @@ TruthScreen may return owner name, relation name and present/permanent address i
 - Return only approved normalized fields to mobile/web clients.
 - Treat cached provider data as stale evidence when the provider cannot be reached; show that state to the user.
 
-## 8. Security state
+## 9. Security state
 
 During earlier setup, a relay secret and iCall token were exposed. During the 2026-09-12 production cutover, the same runtime values and the TruthScreen dashboard password were also pasted into chat.
 
 Required remediation remains:
 
-1. Rotate the gateway relay secret and update both Lightsail and matching private Vercel configuration.
-2. Rotate the exposed iCall token with the vendor/team and update the private runtime configuration.
-3. Rotate the TruthScreen dashboard password.
-4. Never paste replacement values into chat, screenshots, GitHub or client-visible environment variables.
+1. rotate the gateway relay secret and update both Lightsail and matching private Vercel/portal configuration together
+2. rotate the exposed iCall token with the vendor/team and update the private runtime configuration
+3. rotate the TruthScreen dashboard password
+4. never paste replacement values into chat, screenshots, GitHub or client-visible environment variables
 
-Until each rotation is confirmed, treat the exposed values as compromised.
+Until each rotation is directly confirmed, treat the exposed values as compromised.
 
-## 9. Deployment state
+## 10. Current state matrix
 
 - Production AuthBridge credentials in Lightsail: **APPLIED**
-- Production AuthBridge service-372 request through current protected gateway route: **VERIFIED**
-- Customer authenticated RC lookup architecture: **IMPLEMENTED**
-- Customer 0.3.0 Add Vehicle AuthBridge lookup: **IMPLEMENTED**
-- Neutral gateway route cleanup PR #1702: **IMPLEMENTED IN PR / NOT YET LIVE**
-- Neutral route on Lightsail + Nginx: **NOT YET VERIFIED**
-- Portal switched live to neutral route: **NOT YET DEPLOYED**
-- AuthBridge insurance fields exposed to Customer App: **NOT YET IMPLEMENTED**
-- Secret rotation after exposure: **REQUIRED**
+- Production service-372 request through protected gateway: **VERIFIED**
+- Neutral route cleanup PR #1702: **MERGED**
+- Neutral route gateway source on Lightsail: **APPLIED**
+- Canonical `/authbridge/` Nginx route: **APPLIED + VERIFIED**
+- Gateway health environment `mixed`: **APPLIED + VERIFIED**
+- Canonical protected AuthBridge lookup: **VERIFIED**
+- Legacy `/uat/authbridge/` route: **RETAINED FOR COMPATIBILITY**
+- Customer insurance-field PR #1704: **MERGED / IMPLEMENTED IN MAIN**
+- Customer insurer + policy number + expiry mapping: **IMPLEMENTED IN MAIN**
+- Portal Vercel production deployment containing #1702/#1704: **UNVERIFIED IN THIS HANDOFF**
+- Customer production OTA containing #1704: **UNVERIFIED IN THIS HANDOFF**
+- Installed Customer Add Vehicle end-to-end insurance prefill: **UNVERIFIED IN THIS HANDOFF**
+- Secret rotations after exposure: **REQUIRED / UNVERIFIED**
 
-Do not claim the neutral-route cleanup is production-applied until the Lightsail source/Nginx rollout and portal deployment are both directly verified.
+Do not describe merged portal/mobile code as production-live until the exact target deployment/OTA and installed-app journey are directly verified.
+
+## 11. Safe continuation
+
+Before further AuthBridge production work:
+
+1. Read `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md`.
+2. Fetch current `main`; do not continue from historical #1702/#1704 branches.
+3. Preserve the canonical `/authbridge/rc-verification` route and relay authentication.
+4. Preserve the legacy route until retirement is explicitly verified safe.
+5. Keep provider calls server-side and privacy-minimized.
+6. Do not infer unsupported insurance data.
+7. Verify portal deployment and Customer production OTA separately from merge state.
+8. Complete the three credential rotations without exposing replacement values.
