@@ -34,6 +34,61 @@ Hard rules:
 Goal for this test:
 Create a highly natural, interruption-friendly renewal conversation and demonstrate strong discovery and objection handling without fabricating insurance facts.`;
 
+type OpenAIErrorPayload = {
+  error?: {
+    type?: string;
+    code?: string;
+    message?: string;
+  };
+};
+
+function parseOpenAIError(detail: string): OpenAIErrorPayload["error"] | undefined {
+  try {
+    return (JSON.parse(detail) as OpenAIErrorPayload).error;
+  } catch {
+    return undefined;
+  }
+}
+
+function mapOpenAIError(status: number, detail: string) {
+  const error = parseOpenAIError(detail);
+  const code = error?.code ?? "";
+  const type = error?.type ?? "";
+
+  if (code === "credit_balance_exhausted" || type === "insufficient_quota") {
+    return {
+      status: 402,
+      message: "OpenAI API credits are exhausted. Add API billing credits and retry.",
+    };
+  }
+
+  if (status === 401 || code === "invalid_api_key") {
+    return {
+      status: 503,
+      message: "OpenAI API credentials were rejected. Check the server-side OPENAI_API_KEY configuration.",
+    };
+  }
+
+  if (status === 429) {
+    return {
+      status: 429,
+      message: "The realtime voice service is temporarily rate-limited. Wait a moment and retry.",
+    };
+  }
+
+  if (code === "model_not_found") {
+    return {
+      status: 503,
+      message: "The configured realtime voice model is unavailable. Check OPENAI_VOICE_MODEL and retry.",
+    };
+  }
+
+  return {
+    status: 502,
+    message: "The realtime voice service could not start this session.",
+  };
+}
+
 export async function POST(request: Request) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -82,13 +137,18 @@ export async function POST(request: Request) {
 
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => "");
+    const mapped = mapOpenAIError(upstream.status, detail);
+    const parsed = parseOpenAIError(detail);
+
     console.error("renewal_voice_lab_connect_failed", {
       status: upstream.status,
-      detail: detail.slice(0, 500),
+      type: parsed?.type ?? null,
+      code: parsed?.code ?? null,
     });
+
     return NextResponse.json(
-      { error: "The realtime voice service could not start this session." },
-      { status: 502 },
+      { error: mapped.message },
+      { status: mapped.status },
     );
   }
 
