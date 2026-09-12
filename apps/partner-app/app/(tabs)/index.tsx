@@ -68,7 +68,7 @@ const GeneratedDashboardAssets = {
   renewalAdd: require('../../assets/figma-dashboard/quick-renewals.png'),
   policyVerified: require('../../assets/figma-dashboard/quick-claims.png'),
   renewalDue: require('../../assets/figma-dashboard/renewal-due.png'),
-  homeHeader: require('../../assets/figma-dashboard/hero-banner.jpg'),
+  homeHeader: require('../../assets/figma-dashboard/hero-banner.webp'),
   pendingTasks: require('../../assets/figma-dashboard/pending-tasks.png'),
   pendingDocument: require('../../assets/generated-dashboard/pending-document-alert.png'),
   customerAction: require('../../assets/figma-dashboard/quick-customers.png'),
@@ -78,7 +78,7 @@ export default function PartnerHomeDashboard() {
   const router = useRouter();
   const { context, cacheScopeKey } = usePartnerSession();
   const [searchQuery, setSearchQuery] = useState('');
-  const heroHeight = 90;
+  const heroHeight = 120;
 
   const fetchHomeWorkspace = useCallback(async (): Promise<HomeWorkspace> => {
     const today = new Date();
@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
   heroIconButton: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.26)' },
   heroAvatar: { width: 37, height: 37, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E9F1FF' },
   heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
-  heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 8 },
+  heroGreeting: { zIndex: 2, position: 'absolute', left: 14, right: 92, bottom: 26 },
   heroGreetingText: { color: '#FFFFFF', fontSize: 15, lineHeight: 19, fontWeight: '500', letterSpacing: -0.05, textShadowColor: 'rgba(0,0,0,0.28)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
 
   body: { marginTop: -18, paddingHorizontal: 14 },
