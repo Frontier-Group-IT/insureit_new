@@ -41,6 +41,10 @@ const securityHeaders = [
     : [])
 ];
 
+const voiceLabHeaders = [
+  { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=(), payment=(), usb=()" },
+];
+
 const embeddedEditorHeaders = [
   { key: "Content-Security-Policy", value: embeddedEditorContentSecurityPolicy },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -53,6 +57,10 @@ const nextConfig = {
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
+      {
+        source: "/partner/renewals/voice-lab",
+        headers: voiceLabHeaders,
+      },
       {
         source: "/customers/:id/edit",
         has: [{ type: "query", key: "embedded", value: "1" }],
