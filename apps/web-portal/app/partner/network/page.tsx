@@ -79,7 +79,7 @@ export default async function PartnerNetworkPage() {
 
         {sections.length ? sections.map((section) => (
           <section key={section.key}>
-            {section.key.startsWith("ungrouped:") && data.total_groups === 0 ? null : (
+            {section.key.startsWith("ungrouped:") && data.total_groups === 0 && section.label.trim().toLowerCase() === "ungrouped" ? null : (
               <div className="flex flex-col gap-2 rounded-xl border border-[#E3EAF3] bg-white px-4 py-3 shadow-[0_6px_20px_rgba(49,86,184,0.05)] sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 place-items-center rounded-full bg-[#EEF4FF] text-[#2563EB]"><Building2 className="h-4 w-4" /></span>
