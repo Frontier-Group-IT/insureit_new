@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, BellRing, BriefcaseBusiness, ClipboardList, FileInput, GraduationCap, ShieldCheck } from "lucide-react";
+import { ArrowRight, BellRing, BriefcaseBusiness, ClipboardList, FileInput, GraduationCap, Search, ShieldCheck } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerWebActivity, type PartnerActivityData } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -68,45 +68,64 @@ export default async function PartnerActivityPage() {
           </section>
         ) : null}
 
-        <section>
-          <PartnerSectionHeading title="Recent timeline" description={data.items.length + " recorded events"} />
+        <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_5px_18px_rgba(31,53,89,0.04)]">
+          <div className="flex flex-col gap-3 border-b border-[#E3EAF2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+              <div className="flex items-center gap-2">
+                <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#EEF4FF] text-[#2374E1]"><ShieldCheck className="h-4 w-4" /></span>
+                <h2 className="whitespace-nowrap text-[16px] font-extrabold text-[#172B4D]">Recent timeline</h2>
+              </div>
+              <div className="flex h-10 min-w-[280px] items-center gap-2 rounded-xl border border-[#DCE5EF] bg-white px-3 text-[#8593A8]">
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="truncate text-[10px] font-medium">Search policy, customer, insurer, vehicle, etc.</span>
+              </div>
+            </div>
+            <span className="whitespace-nowrap text-[11px] font-bold text-[#42526E]">{data.items.length} records</span>
+          </div>
 
           {data.items.length ? (
-            <div className="mt-3 border-y border-[#DCE4ED] py-5">
-              {data.items.map((item, index) => {
-                const Icon = iconFor(item.kind);
-                const href = activityHref(item);
-                const row = (
-                  <>
-                    <div className="flex flex-col items-center">
-                      <span className="grid h-7 w-7 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-3.5 w-3.5" /></span>
-                      {index < data.items.length - 1 ? <span className="min-h-10 w-px flex-1 bg-[#DDE4ED]" /> : null}
-                    </div>
-                    <div className="pb-5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[8px] font-black uppercase tracking-[0.1em] text-[#3156B8]">{labelFor(item.kind)}</p>
-                        <p className="text-[8.5px] font-medium text-[#8A98AB]">{dateLabel(item.event_at)}</p>
+            <div className="overflow-x-auto">
+              <div className="min-w-[980px]">
+                <div className="grid grid-cols-[150px_170px_240px_240px_minmax(280px,1fr)_64px] border-b border-[#E3EAF2] bg-[#F7FAFD] px-4 py-2 text-[8px] font-extrabold uppercase tracking-[0.06em] text-[#6F7F95]">
+                  <span>Type</span>
+                  <span>Date &amp; time</span>
+                  <span>Policy / reference</span>
+                  <span>Customer</span>
+                  <span>Insurer / details</span>
+                  <span className="text-center">Action</span>
+                </div>
+                {data.items.map((item) => {
+                  const Icon = iconFor(item.kind);
+                  const href = activityHref(item);
+                  const row = (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+                        <span className="text-[10px] font-semibold text-[#213654]">{labelFor(item.kind)}</span>
                       </div>
-                      <p className="mt-1.5 break-words text-[11px] font-extrabold leading-4 text-[#1B2F4E]">{item.title}</p>
-                      <p className="mt-1 break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{item.subtitle}</p>
-                      {item.meta ? <p className="mt-1 text-[8.5px] text-[#8997AA]">{item.meta}</p> : null}
+                      <span className="self-center text-[10px] font-medium text-[#72829A]">{dateLabel(item.event_at)}</span>
+                      <span className="self-center break-words text-[10.5px] font-extrabold text-[#172B4D]">{item.title}</span>
+                      <span className="self-center break-words text-[10px] font-medium text-[#40536F]">{item.subtitle}</span>
+                      <span className="self-center break-words text-[9px] font-medium text-[#7E8CA1]">{item.meta || "—"}</span>
+                      <span className="flex items-center justify-center">
+                        {href ? <ArrowRight className="h-4 w-4 text-[#2374E1] transition group-hover:translate-x-0.5" /> : null}
+                      </span>
+                    </>
+                  );
+                  return href ? (
+                    <Link key={item.kind + "-" + item.entity_id + "-" + item.event_at} href={href} className="group grid min-h-[58px] grid-cols-[150px_170px_240px_240px_minmax(280px,1fr)_64px] border-b border-[#E7EDF4] px-4 py-2.5 transition last:border-b-0 hover:bg-[#F8FBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
+                      {row}
+                    </Link>
+                  ) : (
+                    <div key={item.kind + "-" + item.entity_id + "-" + item.event_at} className="grid min-h-[58px] grid-cols-[150px_170px_240px_240px_minmax(280px,1fr)_64px] border-b border-[#E7EDF4] px-4 py-2.5 last:border-b-0">
+                      {row}
                     </div>
-                    {href ? <ArrowRight className="mt-2 h-4 w-4 text-[#A0ADBE] transition group-hover:translate-x-0.5" /> : <span />}
-                  </>
-                );
-                return href ? (
-                  <Link key={item.kind + "-" + item.entity_id + "-" + item.event_at} href={href} className="group grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3 rounded-lg transition hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
-                    {row}
-                  </Link>
-                ) : (
-                  <div key={item.kind + "-" + item.entity_id + "-" + item.event_at} className="grid grid-cols-[28px_minmax(0,1fr)_auto] gap-3">
-                    {row}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           ) : (
-            <div className="border-y border-[#DCE4ED] py-14 text-center">
+            <div className="py-14 text-center">
               <BriefcaseBusiness className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No recent activity</p>
               <p className="mt-1 text-[10.5px] text-[#7A899F]">New policy, claim and service activity will appear here.</p>
