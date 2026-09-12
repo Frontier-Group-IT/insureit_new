@@ -4,8 +4,6 @@ import AuthbridgeRcEnrichmentClient from "@/app/reports/authbridge-rc-enrichment
 
 const TEMPLATE_ROWS = [
   ["S.No.", "Registration Number", "Customer Name", "Mobile No.", "Branch"],
-  [1, "MP20AB1234", "", "", ""],
-  [2, "MP04CD5678", "", "", ""],
 ];
 
 export default function AuthbridgeRcEnrichmentWorkspace() {
