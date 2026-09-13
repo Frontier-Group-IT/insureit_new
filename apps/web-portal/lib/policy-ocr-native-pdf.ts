@@ -34,7 +34,6 @@ export async function extractNativePdfTextPages(bytes: Uint8Array): Promise<Nati
     const document = await getDocumentProxy(bytes, {
       disableFontFace: true,
       maxImageSize: MAX_IMAGE_SIZE,
-      isEvalSupported: false,
     });
 
     try {
