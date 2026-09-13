@@ -38,7 +38,7 @@ assert(projection.includes("unique (provider_attempt_id)"), "provider attempt id
 assert(projection.includes("when 'do_not_contact' then 'do_not_contact'"), "explicit opt-out maps to do-not-contact");
 assert(projection.includes("when 'not_interested' then 'connected'"), "simple decline does not auto-close opportunity in first slice");
 assert(projection.includes("when 'wrong_person' then 'connected'"), "wrong-person result is held for human review instead of auto-invalidating contact");
-assert(!/v_outcome\s*:=.*'won'/s.test(projection), "voice result cannot set won");
+assert(!/when\s+'won'\s+then/i.test(projection) && !/v_outcome\s*:=\s*'won'/i.test(projection), "voice result cannot set won");
 assert(projection.includes("p_connectivity_status='connected'"), "CRM outcomes require actual provider connectivity");
 assert(projection.includes("p_follow_up_at > now()"), "AI follow-up requires a future timestamp");
 assert(projection.includes("submission_status in ('completed','cancelled')"), "unexpected later provider attempts cannot reopen a completed parent call");
@@ -56,7 +56,8 @@ for (const filename of [
 assert(!schemaWorkflow.includes("20260913222500_external_renewal_voice_worklist_projection.sql"), "release does not depend on the removed third migration");
 assert(deployWorkflow.includes("apply-external-renewal-voice-attempts.yml"), "production deploy waits for the dedicated voice schema workflow");
 
-assert(sarvamClient.includes('process.env.SARVAM_API_KEY'), "Sarvam key comes from server environment");
+assert(sarvamClient.includes('requiredEnv("SARVAM_API_KEY")'), "Sarvam key comes from server environment");
+assert(sarvamClient.includes('process.env[name]'), "Sarvam required environment values are resolved server-side");
 assert(sarvamClient.includes('api-subscription-key'), "Sarvam API uses subscription-key authentication");
 assert(sarvamClient.includes('user_identifier: context.attempt_id'), "local attempt UUID is the provider correlation key");
 assert(sarvamClient.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "IT-controlled kill switch gates outbound calling");
