@@ -114,7 +114,7 @@ jobs:
             echo "Partner renewal pagination migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260903170000_protect_verified_managed_claim_documents.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-managed-claim-document-protection.yml"
-            echo "Managed claim document protection migration detected. Waiting for its schema workflow..."
+            echo "Managed claim document protection detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260903193000_complete_spot_survey_atomically.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-spot-survey-completion-migration.yml"
             echo "Spot survey completion migration detected. Waiting for its schema workflow..."
@@ -151,6 +151,15 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907010000_external_renewal_reporting.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-reporting.yml"
             echo "External renewal reporting migration detected. Waiting for its schema workflow..."
+          elif grep -qxE 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql|supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vxE 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql|supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::External renewal voice release contains an unrelated migration:"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-external-renewal-voice-attempts.yml"
+            echo "External renewal voice migrations detected. Waiting for their schema workflow..."
           elif grep -qxE 'supabase/migrations/20260907130000_policy_ocr_reviewer_tasks.sql|supabase/migrations/20260907150000_policy_ocr_worker_assignment.sql|supabase/migrations/20260907170000_policy_ocr_training_orchestrator.sql|supabase/migrations/20260907180000_fix_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260907190000_simplify_policy_ocr_orchestrator_claim.sql|supabase/migrations/20260908100000_policy_ocr_batch_notifications.sql|supabase/migrations/20260908130000_policy_ocr_refinement_jobs.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-policy-ocr-reviewer-tasks.yml"
             echo "Policy OCR reviewer/orchestrator migration detected. Waiting for its schema workflow..."

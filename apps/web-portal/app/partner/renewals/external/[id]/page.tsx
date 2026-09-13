@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { ArrowLeft, CalendarClock, CheckCircle2, Clock3, FileUp, MessageSquareText, Phone, Send, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, CalendarClock, CheckCircle2, Clock3, FileUp, MessageSquareText, Phone, PhoneCall, Send, UserRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import { getPartnerExternalRenewalDetail, getPartnerExternalRenewalIntakeLink } from "@/lib/partner-external-renewals";
+import { getLatestPartnerExternalRenewalVoiceAttempt } from "@/lib/partner-external-renewal-voice";
+import { isSarvamRenewalCallingEnabled } from "@/lib/sarvam-renewal-call";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const INTAKE_READY_STATUSES = new Set(["connected", "interested", "quote_requested", "quote_shared", "follow_up"]);
 const TERMINAL_STATUSES = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost"]);
+const ACTIVE_VOICE_STATUSES = new Set(["created", "submitted", "queued", "calling"]);
 
 function dateLabel(value: string | null | undefined, withTime = false) {
   if (!value) return "—";
@@ -26,21 +29,36 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function voiceStatusLabel(status: string, connectivity?: string | null) {
+  if (status === "queued" || status === "submitted" || status === "created") return "Queued";
+  if (status === "calling") return "Calling";
+  if (connectivity === "no_answer") return "No Answer";
+  if (connectivity === "busy") return "Busy";
+  if (status === "failed") return "Failed";
+  if (connectivity === "connected") return "Connected";
+  if (status === "completed") return "Completed";
+  return titleCase(status);
+}
+
 export default async function PartnerExternalRenewalDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; error?: string; voice_queued?: string; voice_error?: string }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const [detail, intakeLink] = await Promise.all([
+  const [detail, intakeLink, latestVoiceAttempt] = await Promise.all([
     getPartnerExternalRenewalDetail(id),
     getPartnerExternalRenewalIntakeLink(id),
+    getLatestPartnerExternalRenewalVoiceAttempt(id),
   ]);
   const opportunity = detail.opportunity;
   const isClosed = TERMINAL_STATUSES.has(opportunity.opportunity_status);
   const canStartIntake = !isClosed && !intakeLink?.linked && INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
+  const voiceEnabled = isSarvamRenewalCallingEnabled();
+  const voiceActive = latestVoiceAttempt ? ACTIVE_VOICE_STATUSES.has(latestVoiceAttempt.submission_status) : false;
+  const canVoiceCall = voiceEnabled && !isClosed && !voiceActive && Boolean(opportunity.mobile?.trim());
 
   return (
     <PartnerPortalShell title="External Renewal Opportunity">
@@ -50,7 +68,7 @@ export default async function PartnerExternalRenewalDetailPage({
           title={opportunity.account_name || opportunity.customer_name || opportunity.contact_name || "Customer"}
           description="Track contact attempts and follow-ups without changing verified INSUREIT customer, vehicle or policy records."
           action={
-            <Link href="/partner/renewals/external" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+            <Link href="/partner/renewals/external" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
               <ArrowLeft className="h-3.5 w-3.5" /> Back to Opportunities
             </Link>
           }
@@ -61,8 +79,16 @@ export default async function PartnerExternalRenewalDetailPage({
             <CheckCircle2 className="h-4 w-4" /> Interaction saved.
           </div>
         ) : null}
+        {query.voice_queued === "1" ? (
+          <div className="flex items-center gap-2 rounded-lg border border-[#CFE0F3] bg-[#F4F8FD] px-3 py-2.5 text-[10.5px] font-semibold text-[#31568B]">
+            <PhoneCall className="h-4 w-4" /> AI call queued. The result will return to this opportunity automatically after Sarvam completes the attempt.
+          </div>
+        ) : null}
         {query.error ? (
           <div className="rounded-lg border border-[#F1D2D2] bg-[#FFF7F7] px-3 py-2.5 text-[10.5px] font-semibold text-[#9A3A3A]">{query.error}</div>
+        ) : null}
+        {query.voice_error ? (
+          <div className="rounded-lg border border-[#F1D2D2] bg-[#FFF7F7] px-3 py-2.5 text-[10.5px] font-semibold text-[#9A3A3A]">{query.voice_error}</div>
         ) : null}
 
         <section className="grid gap-7 xl:grid-cols-[1.05fr_.95fr]">
@@ -113,6 +139,46 @@ export default async function PartnerExternalRenewalDetailPage({
               ) : (
                 <p className="text-[9.5px] leading-5 text-[#728198]">Record a connected, interested, quote or follow-up outcome before starting Policy Intake.</p>
               )}
+            </div>
+
+            <div className="mt-4 border-y border-[#DCE4ED] py-3.5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-[#3156B8]" />
+                    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#3156B8]">AI Outreach</p>
+                    {latestVoiceAttempt ? (
+                      <span className="rounded-full bg-[#EEF3F9] px-2 py-1 text-[8.5px] font-bold text-[#536A87]">
+                        {voiceStatusLabel(latestVoiceAttempt.submission_status, latestVoiceAttempt.connectivity_status)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {latestVoiceAttempt?.call_summary ? (
+                    <p className="mt-2 max-w-2xl text-[10px] leading-5 text-[#536680]">{latestVoiceAttempt.call_summary}</p>
+                  ) : latestVoiceAttempt ? (
+                    <p className="mt-2 text-[9.5px] leading-5 text-[#728198]">Latest AI call status is {voiceStatusLabel(latestVoiceAttempt.submission_status, latestVoiceAttempt.connectivity_status).toLowerCase()}.</p>
+                  ) : (
+                    <p className="mt-2 text-[9.5px] leading-5 text-[#728198]">Use INSUREIT AI outreach for this external renewal when calling is available. Provider configuration remains controlled by INSUREIT administration.</p>
+                  )}
+
+                  {latestVoiceAttempt?.follow_up_at ? (
+                    <p className="mt-1 text-[9px] font-semibold text-[#3156B8]">AI follow-up: {dateLabel(latestVoiceAttempt.follow_up_at, true)}</p>
+                  ) : null}
+                </div>
+
+                {canVoiceCall ? (
+                  <form method="post" action={"/api/partner/external-renewals/" + encodeURIComponent(id) + "/voice-call"}>
+                    <button type="submit" className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
+                      <PhoneCall className="h-3.5 w-3.5" /> Call with AI
+                    </button>
+                  </form>
+                ) : (
+                  <span className="inline-flex min-h-9 items-center rounded-lg bg-[#F3F5F8] px-3 text-[9.5px] font-semibold text-[#728198]">
+                    {isClosed ? "Opportunity closed" : voiceActive ? "AI call in progress" : !opportunity.mobile?.trim() ? "Mobile required" : "AI calling unavailable"}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

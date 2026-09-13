@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CalendarClock, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, CalendarClock, Search } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import {
@@ -11,6 +11,8 @@ import {
   type PartnerExternalRenewalStatusFilter,
   type PartnerExternalRenewalWindow,
 } from "@/lib/partner-external-renewals";
+import { getPartnerExternalRenewalVoiceStates } from "@/lib/partner-external-renewal-voice";
+import { isSarvamRenewalCallingEnabled } from "@/lib/sarvam-renewal-call";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -82,6 +84,32 @@ function statusLabel(value: string) {
   return labels[value] ?? value.replaceAll("_", " ");
 }
 
+function voiceStateLabel(value: string) {
+  const labels: Record<string, string> = {
+    available: "Available",
+    queued: "Queued",
+    calling: "Calling",
+    connected: "Connected",
+    interested: "Interested",
+    follow_up: "Follow-up",
+    human_needed: "Human Needed",
+    no_answer: "No Answer",
+    busy: "Busy",
+    failed: "Failed",
+    needs_details: "Needs Details",
+    closed: "Closed",
+  };
+  return labels[value] ?? "Available";
+}
+
+function voiceStateClass(value: string) {
+  if (value === "interested" || value === "connected") return "bg-[#EEF8F1] text-[#2F6B43]";
+  if (value === "human_needed" || value === "failed") return "bg-[#FFF2F1] text-[#9A4540]";
+  if (value === "queued" || value === "calling" || value === "follow_up") return "bg-[#E9F0FF] text-[#3156B8]";
+  if (value === "no_answer" || value === "busy" || value === "needs_details") return "bg-[#FFF7E8] text-[#8A6423]";
+  return "bg-[#F1F4F8] text-[#5A6D86]";
+}
+
 function intakeStatusLabel(value: string | null) {
   if (!value) return "In Policy Intake";
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -106,6 +134,9 @@ export default async function PartnerExternalRenewalsPage({
     getPartnerExternalRenewalSummary(),
     listPartnerExternalRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window, status, followUp, intake }),
   ]);
+  const voiceStates = await getPartnerExternalRenewalVoiceStates(rows.map((row) => row.opportunity_id));
+  const voiceStateByOpportunity = new Map(voiceStates.map((state) => [state.opportunity_id, state]));
+  const voiceEnabled = isSarvamRenewalCallingEnabled();
 
   const total = rows[0]?.total_count ?? 0;
   const hasPrevious = page > 1;
@@ -150,8 +181,8 @@ export default async function PartnerExternalRenewalsPage({
       <div className="space-y-7">
         <PartnerPageHeader
           eyebrow="External Renewal Opportunities"
-          title="Customers to retarget"
-          description="External opportunities stay separate from verified INSUREIT business."
+          title="Renewal outreach"
+          description="Retarget external-policy customers through controlled outreach while keeping opportunities separate from verified INSUREIT business."
           action={
             <Link href="/partner/renewals" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
               <ArrowLeft className="h-3.5 w-3.5" /> Back to Renewals
@@ -167,6 +198,17 @@ export default async function PartnerExternalRenewalsPage({
             { label: "In Policy Intake", value: summary.in_policy_intake_count, meta: "Conversion in progress" },
           ]}
         />
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#DCE4ED] py-3 sm:px-4">
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-[#3156B8]" />
+            <div>
+              <p className="text-[10px] font-extrabold text-[#203653]">AI renewal outreach</p>
+              <p className="mt-0.5 text-[9px] text-[#7A899F]">Single-customer AI calls are controlled from each opportunity. Provider administration is not exposed here.</p>
+            </div>
+          </div>
+          <span className={"rounded-full px-2.5 py-1 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EEF8F1] text-[#2F6B43]" : "bg-[#F1F4F8] text-[#687A91]")}>{voiceEnabled ? "AI calling available" : "AI calling not enabled"}</span>
+        </div>
 
         <section>
           <div className="border-y border-[#DCE4ED] py-3">
@@ -236,37 +278,43 @@ export default async function PartnerExternalRenewalsPage({
           <div className="mt-3 border-y border-[#DCE4ED]">
             {rows.length ? (
               <div className="divide-y divide-[#E8EDF4]">
-                {rows.map((row) => (
-                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(170px,.8fr)_minmax(170px,.8fr)_auto] xl:items-center">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
-                      <div className="min-w-0">
-                        <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.account_name || row.customer_name || row.contact_name || "Customer"}</p>
-                        <p className="mt-0.5 break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{row.contact_name || "Contact not recorded"}{row.mobile ? " · " + row.mobile : ""}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="break-words text-[10px] font-semibold leading-4 text-[#536680]">{row.registration_no || row.chassis_no || "Vehicle"}</p>
-                      <p className="mt-0.5 break-words text-[9.5px] leading-4 text-[#7F8EA4]">{[row.vehicle_make, row.vehicle_model, row.vehicle_lob].filter(Boolean).join(" · ") || "Vehicle details not recorded"}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10.5px] font-extrabold text-[#203653]">Ends {dateLabel(row.policy_end_date)}</p>
-                      <p className="mt-0.5 text-[9px] text-[#8190A5]">{expiryLabel(row.days_to_expiry)}</p>
-                    </div>
-                    <div>
-                      <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.opportunity_status)}</span>
-                      {row.intake_state === "in_progress" ? (
-                        <div className="mt-1.5">
-                          <span className="inline-flex w-fit rounded-lg bg-[#E9F0FF] px-2 py-1 text-[9px] font-bold text-[#3156B8]">In Policy Intake</span>
-                          <p className="mt-1 break-words text-[9px] leading-4 text-[#6E7F98]">{row.intake_number ? row.intake_number + " · " + intakeStatusLabel(row.intake_status) : "Policy Intake already started"}</p>
+                {rows.map((row) => {
+                  const voiceState = voiceStateByOpportunity.get(row.opportunity_id)?.voice_state ?? (row.mobile ? "available" : "needs_details");
+                  return (
+                    <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(170px,.8fr)_minmax(190px,.9fr)_auto] xl:items-center">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
+                        <div className="min-w-0">
+                          <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.account_name || row.customer_name || row.contact_name || "Customer"}</p>
+                          <p className="mt-0.5 break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{row.contact_name || "Contact not recorded"}{row.mobile ? " · " + row.mobile : ""}</p>
                         </div>
-                      ) : (
-                        <p className="mt-1 text-[9px] leading-4 text-[#7D8CA2]">{row.next_follow_up_at ? "Follow-up " + dateTimeLabel(row.next_follow_up_at) : row.last_interaction_at ? "Last contact " + dateTimeLabel(row.last_interaction_at) : "No interaction yet"}</p>
-                      )}
-                    </div>
-                    <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
-                  </Link>
-                ))}
+                      </div>
+                      <div>
+                        <p className="break-words text-[10px] font-semibold leading-4 text-[#536680]">{row.registration_no || row.chassis_no || "Vehicle"}</p>
+                        <p className="mt-0.5 break-words text-[9.5px] leading-4 text-[#7F8EA4]">{[row.vehicle_make, row.vehicle_model, row.vehicle_lob].filter(Boolean).join(" · ") || "Vehicle details not recorded"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10.5px] font-extrabold text-[#203653]">Ends {dateLabel(row.policy_end_date)}</p>
+                        <p className="mt-0.5 text-[9px] text-[#8190A5]">{expiryLabel(row.days_to_expiry)}</p>
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.opportunity_status)}</span>
+                          <span className={"inline-flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-bold " + (voiceEnabled ? voiceStateClass(voiceState) : "bg-[#F1F4F8] text-[#74839A]")}><Bot className="h-3 w-3" /> {voiceEnabled ? voiceStateLabel(voiceState) : "AI Not Enabled"}</span>
+                        </div>
+                        {row.intake_state === "in_progress" ? (
+                          <div className="mt-1.5">
+                            <span className="inline-flex w-fit rounded-lg bg-[#E9F0FF] px-2 py-1 text-[9px] font-bold text-[#3156B8]">In Policy Intake</span>
+                            <p className="mt-1 break-words text-[9px] leading-4 text-[#6E7F98]">{row.intake_number ? row.intake_number + " · " + intakeStatusLabel(row.intake_status) : "Policy Intake already started"}</p>
+                          </div>
+                        ) : (
+                          <p className="mt-1 text-[9px] leading-4 text-[#7D8CA2]">{row.next_follow_up_at ? "Follow-up " + dateTimeLabel(row.next_follow_up_at) : row.last_interaction_at ? "Last contact " + dateTimeLabel(row.last_interaction_at) : "No interaction yet"}</p>
+                        )}
+                      </div>
+                      <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
+                    </Link>
+                  );
+                })}
               </div>
             ) : (
               <div className="py-14 text-center">
