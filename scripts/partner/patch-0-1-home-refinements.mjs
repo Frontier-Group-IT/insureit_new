@@ -46,6 +46,25 @@ replaceOnce(
   'policy intake quick-action asset',
 );
 
+// The generated policy-add PNG has more transparent padding than the other Quick Action assets.
+// Scale only this asset visually so its visible mark matches the surrounding icon sizes without
+// changing the Quick Action card geometry or any of the other icons.
+replaceOnce(
+  `<QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />`,
+  `<QuickAction asset={GeneratedDashboardAssets.policyAdd} imageScale={1.22} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />`,
+  'policy intake quick-action scale',
+);
+replaceOnce(
+  `function QuickAction({ icon, asset, label, onPress }: { icon?: DashboardIconName; asset?: number; label: string; onPress: () => void }) {`,
+  `function QuickAction({ icon, asset, imageScale = 1, label, onPress }: { icon?: DashboardIconName; asset?: number; imageScale?: number; label: string; onPress: () => void }) {`,
+  'QuickAction imageScale prop',
+);
+replaceOnce(
+  `<Image source={asset} style={styles.quickImageAsset} resizeMode="contain" />`,
+  `<Image source={asset} style={[styles.quickImageAsset, imageScale !== 1 && { transform: [{ scale: imageScale }] }]} resizeMode="contain" />`,
+  'QuickAction scaled image rendering',
+);
+
 // Compact Pending Tasks. Keep every task and route; card grows only when multiple rows exist.
 const pendingStyleReplacements = [
   [`  pendingCard: { marginTop: 8, minHeight: 134, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 8, borderRadius: 16, overflow: 'hidden', backgroundColor: '#E3F2FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },`, `  pendingCard: { marginTop: 8, paddingHorizontal: 12, paddingTop: 7, paddingBottom: 6, borderRadius: 15, overflow: 'hidden', backgroundColor: '#E3F2FF', borderWidth: StyleSheet.hairlineWidth, borderColor: '#D3E7FA' },`, 'pending card'],

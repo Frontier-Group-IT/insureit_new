@@ -95,7 +95,8 @@ jobs:
           fi
           grep -q "backgroundColor: 'rgba(3,30,68,0.42)'" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "policyAdd: require('../../assets/generated-dashboard/policy-add.png')" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q '<QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q '<QuickAction asset={GeneratedDashboardAssets.policyAdd} imageScale={1.22} label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q 'imageScale = 1' 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "pendingRow: { minHeight: 40" 'compat/apps/partner-app/app/(tabs)/index.tsx'
 
       - name: Install 0.1-safe Business Report date-filter component
@@ -154,7 +155,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 compact home, matched Policy Intake icon and 70% hero artwork" \
+            --message "Partner 0.1.0 Policy Intake quick-action icon size match" \
             --non-interactive \
             --json > partner-0-1-home-refinements-update.json
           cat partner-0-1-home-refinements-update.json
@@ -169,7 +170,7 @@ jobs:
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Home: hero artwork opacity 70%, strong control/greeting contrast, compact Pending Tasks, Policy Intake image asset, Recent Activity removed, Your Impact removed"
-            echo "- Business Report: JS-only date range drives report metrics without adding a native date-picker dependency"
-            echo "- Hero crop/search overlap/status-strip: preserved"
+            echo "- Home: Policy Intake quick-action visible icon scaled to match the other Quick Action icons; prior hero/compact-home refinements preserved"
+            echo "- Business Report: JS-only date range preserved"
+            echo "- No native build or dependency change"
           } >> "$GITHUB_STEP_SUMMARY"

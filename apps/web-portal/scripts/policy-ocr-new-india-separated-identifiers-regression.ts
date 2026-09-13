@@ -65,7 +65,7 @@ assert.equal(field(result, "vehicle_engine_number"), "ENG9TEST001234");
 assert.equal(field(result, "vehicle_registration_number"), undefined);
 assert.equal(field(result, "tp_premium"), "44667");
 assert.equal(field(result, "od_premium"), "41397");
-assert.match(result.parserVersion, /new-india-separated-vehicle-evidence-v5/);
+assert.match(result.parserVersion, /new-india-separated-vehicle-evidence-v6/);
 
 const wrappedPages = [
   pages[0].replace(
@@ -103,4 +103,41 @@ const structuredWins = refineApprovedMotorPolicyLayout(
 );
 assert.equal(field(structuredWins, "vehicle_manufacturing_year"), "2026", "explicit structured Year cell must override ambiguous flattened year evidence");
 
-console.log("New India structured + flattened separated identifier regression passed.");
+const verticalTables = [{
+  page: 1,
+  rows: [
+    ["Geographical Area / Zone:", "Year of manufacture:", "Type of Commercial Vehicles:", "Sub Type:"],
+    ["India/C", "2026", "A - Goods Carrying", "Other than 3 wheeler - Public Carrier"],
+    ["Name of the Financier:", "Chassis no./Engine no.:", "Type of fuel:", "Gross Vehicle Weight (GVW):"],
+    ["SYNTHETIC FINANCE COMPANY", "ENG9TEST001234", "Diesel", "55000"],
+    ["", "MEC7TEST0TP106204", "", ""],
+    ["Make/Model:", "SYNTHETIC MOTORS/5532", "Registration no.", "RJ-45"],
+  ],
+}];
+const verticalBase = parsePolicyDocument(pages);
+const vertical = refineApprovedMotorPolicyLayout(
+  pages,
+  verticalTables,
+  refineNewIndiaCommercialPolicy(pages, verticalBase),
+);
+assert.equal(field(vertical, "vehicle_manufacturing_year"), "2026", "Year directly below the structured label must be recovered");
+assert.equal(field(vertical, "vehicle_chassis_number"), "MEC7TEST0TP106204", "VIN-shaped value in the local table neighborhood must become chassis");
+assert.equal(field(vertical, "vehicle_engine_number"), "ENG9TEST001234", "other unique identifier in the local table neighborhood must become engine");
+
+const noisyNeighborhoodTables = [{
+  page: 1,
+  rows: [
+    ["Name of the Financier:", "Chassis no./Engine no.:", "Type of fuel:", "Gross Vehicle Weight (GVW):"],
+    ["SYNTHETIC FINANCE COMPANY", "ENG9TEST001234", "Diesel", "55000"],
+    ["", "MEC7TEST0TP106204", "REFERENCE9X12345", ""],
+  ],
+}];
+const noisyBase = parsePolicyDocument(pages);
+const noisy = refineApprovedMotorPolicyLayout(
+  pages,
+  noisyNeighborhoodTables,
+  refineNewIndiaCommercialPolicy(pages, noisyBase),
+);
+assert.notEqual(field(noisy, "vehicle_engine_number"), "REFERENCE9X12345", "ambiguous local identifier evidence must not overwrite engine");
+
+console.log("New India structured + flattened + table-neighborhood identifier regression passed.");
