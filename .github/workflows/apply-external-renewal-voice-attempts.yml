@@ -8,6 +8,7 @@ on:
     paths:
       - 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql'
       - 'supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql'
+      - 'supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql'
       - '.github/workflows/apply-external-renewal-voice-attempts.yml'
 
 permissions:
@@ -47,6 +48,7 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260913220500_external_renewal_voice_attempts.sql
           test -f supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql
+          test -f supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -63,6 +65,8 @@ jobs:
           supabase migration repair --linked --status applied 20260913220500
           supabase db query --linked --file supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql
           supabase migration repair --linked --status applied 20260913221500
+          supabase db query --linked --file supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql
+          supabase migration repair --linked --status applied 20260913222500
 
       - name: Verify voice integration schema contract
         shell: bash
@@ -74,11 +78,13 @@ jobs:
               to_regclass('public.external_renewal_voice_attempt_events') is not null as event_table_ready,
               to_regprocedure('public.partner_app_start_external_renewal_voice_attempt(uuid)') is not null as start_rpc_ready,
               to_regprocedure('public.partner_app_external_renewal_voice_latest(uuid)') is not null as latest_rpc_ready,
+              to_regprocedure('public.partner_app_external_renewal_voice_states(uuid[])') is not null as states_rpc_ready,
               to_regprocedure('public.apply_external_renewal_voice_submission(uuid,text,text,text)') is not null as submission_rpc_ready,
               to_regprocedure('public.fail_external_renewal_voice_submission(uuid,text)') is not null as failure_rpc_ready,
               to_regprocedure('public.apply_external_renewal_voice_result(uuid,text,text,text,text,text,text,text,text,integer,numeric,timestamp with time zone,timestamp with time zone,text,text,boolean,timestamp with time zone,text,text)') is not null as result_rpc_ready,
               has_function_privilege('authenticated','public.partner_app_start_external_renewal_voice_attempt(uuid)','EXECUTE') as partner_start_execute,
               has_function_privilege('authenticated','public.partner_app_external_renewal_voice_latest(uuid)','EXECUTE') as partner_latest_execute,
+              has_function_privilege('authenticated','public.partner_app_external_renewal_voice_states(uuid[])','EXECUTE') as partner_states_execute,
               not has_table_privilege('authenticated','public.external_renewal_voice_attempts','SELECT') as no_direct_authenticated_read,
               not has_table_privilege('authenticated','public.external_renewal_voice_attempts','INSERT') as no_direct_authenticated_insert,
               not has_table_privilege('authenticated','public.external_renewal_voice_attempt_events','SELECT') as no_direct_event_read,
@@ -88,6 +94,6 @@ jobs:
               (select count(*) from public.policies) >= 0 as verified_policy_table_untouched
           ")
           echo "$result"
-          for key in attempt_table_ready event_table_ready start_rpc_ready latest_rpc_ready submission_rpc_ready failure_rpc_ready result_rpc_ready partner_start_execute partner_latest_execute no_direct_authenticated_read no_direct_authenticated_insert no_direct_event_read result_rpc_not_authenticated verified_customer_table_untouched verified_vehicle_table_untouched verified_policy_table_untouched; do
+          for key in attempt_table_ready event_table_ready start_rpc_ready latest_rpc_ready states_rpc_ready submission_rpc_ready failure_rpc_ready result_rpc_ready partner_start_execute partner_latest_execute partner_states_execute no_direct_authenticated_read no_direct_authenticated_insert no_direct_event_read result_rpc_not_authenticated verified_customer_table_untouched verified_vehicle_table_untouched verified_policy_table_untouched; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
           done
