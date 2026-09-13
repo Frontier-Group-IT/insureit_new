@@ -319,11 +319,10 @@ It protects at least:
 
 ## Protected schema release
 
-Phase 2 migrations:
+Phase 2 uses two migrations. The Partner worklist projection RPC is intentionally folded into the second migration so the release has one coherent protected schema gate rather than an unnecessary third migration:
 
 - `20260913220500_external_renewal_voice_attempts.sql`
 - `20260913221500_external_renewal_voice_result_projection.sql`
-- `20260913222500_external_renewal_voice_worklist_projection.sql`
 
 Dedicated workflow:
 
@@ -331,7 +330,7 @@ Dedicated workflow:
 
 Production deployment gate:
 
-- `.github/workflows/deploy-production.yml` must recognize all Phase 2 voice migrations and wait for the dedicated schema workflow before Vercel.
+- `.github/workflows/deploy-production.yml` must recognize both Phase 2 voice migrations and wait for the dedicated schema workflow before Vercel.
 
 A committed migration is **not APPLIED**. A merged PR is **not DEPLOYED**.
 
@@ -350,7 +349,7 @@ A committed migration is **not APPLIED**. A merged PR is **not DEPLOYED**.
 
 ## Next safe continuation
 
-1. keep Phase 2 on the feature branch and complete exact-head CI
+1. open the Phase 2 PR and complete exact-head CI
 2. inspect/fix any typecheck, regression, lint or build failures
 3. do not merge until the user explicitly asks
 4. after merge, confirm protected schema application before any production portal deployment
