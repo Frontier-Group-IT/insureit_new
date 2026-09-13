@@ -33,6 +33,16 @@ export type ExternalRenewalVoiceLatestAttempt = {
   updated_at: string;
 };
 
+export type ExternalRenewalVoiceWorklistState = {
+  opportunity_id: string;
+  voice_state: "available" | "queued" | "calling" | "connected" | "interested" | "follow_up" | "human_needed" | "no_answer" | "busy" | "failed" | "needs_details" | "closed";
+  submission_status: string | null;
+  connectivity_status: string | null;
+  call_disposition: string | null;
+  follow_up_at: string | null;
+  updated_at: string | null;
+};
+
 export async function startPartnerExternalRenewalVoiceAttempt(opportunityId: string) {
   await getPartnerWebSession();
   const supabase = await createServerSupabaseClient();
@@ -88,6 +98,20 @@ export async function getLatestPartnerExternalRenewalVoiceAttempt(opportunityId:
     throw new Error(error.message || "Could not load AI call status.");
   }
   return (data ?? null) as ExternalRenewalVoiceLatestAttempt | null;
+}
+
+export async function getPartnerExternalRenewalVoiceStates(opportunityIds: string[]): Promise<ExternalRenewalVoiceWorklistState[]> {
+  if (!opportunityIds.length) return [];
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_external_renewal_voice_states", {
+    p_opportunity_ids: opportunityIds,
+  });
+  if (error) {
+    if (/function .* does not exist|could not find the function/i.test(error.message ?? "")) return [];
+    throw new Error(error.message || "Could not load AI outreach states.");
+  }
+  return (data ?? []) as ExternalRenewalVoiceWorklistState[];
 }
 
 export type ApplyExternalRenewalVoiceResultInput = {
