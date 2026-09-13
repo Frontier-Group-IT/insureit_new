@@ -57,7 +57,11 @@ const tables = [{
 const base = parsePolicyDocument(pages);
 assert.equal(base.parserId, "new_india_motor_v1");
 const text = refineNewIndiaCommercialPolicy(pages, base);
+const diagnosticLogs: string[] = [];
+const originalInfo = console.info;
+console.info = (...args: unknown[]) => { diagnosticLogs.push(args.map(String).join(" ")); };
 const result = refineApprovedMotorPolicyLayout(pages, tables, text);
+console.info = originalInfo;
 
 assert.equal(field(result, "vehicle_manufacturing_year"), "2026");
 assert.equal(field(result, "vehicle_chassis_number"), "MEC7TEST0TP106204");
@@ -66,6 +70,27 @@ assert.equal(field(result, "vehicle_registration_number"), undefined);
 assert.equal(field(result, "tp_premium"), "44667");
 assert.equal(field(result, "od_premium"), "41397");
 assert.match(result.parserVersion, /new-india-separated-vehicle-evidence-v6/);
+
+const diagnosticLine = diagnosticLogs.find((line) => line.includes("policy_ocr_new_india_diagnostic"));
+assert.ok(diagnosticLine, "New India Enhanced Covers must emit a privacy-safe structural diagnostic");
+const diagnostic = JSON.parse(diagnosticLine);
+assert.match(diagnostic.traceId, /^NI-[a-z0-9]+-[a-z0-9]+$/i);
+assert.equal(diagnostic.enhancedLayoutMatched, true);
+assert.equal(diagnostic.page1.hasVehicleDetails, true);
+assert.equal(diagnostic.page1.hasYearLabel, true);
+assert.equal(diagnostic.page1.yearCandidateCount, 1);
+assert.equal(diagnostic.page1.hasChassisEngineLabel, true);
+assert.equal(diagnostic.page1.vinShapeCount, 1);
+assert.equal(diagnostic.page1.engineShapeCount, 1);
+assert.equal(diagnostic.layout.page1TableCount, 1);
+assert.equal(diagnostic.layout.hasYearLabelCell, true);
+assert.equal(diagnostic.layout.hasChassisEngineLabelCell, true);
+assert.equal(diagnostic.afterResidual.manufacturingYearPresent, true);
+assert.equal(diagnostic.afterResidual.chassisPresent, true);
+assert.equal(diagnostic.afterResidual.enginePresent, true);
+assert.equal(diagnosticLine.includes("MEC7TEST0TP106204"), false, "diagnostic log must not contain chassis values");
+assert.equal(diagnosticLine.includes("ENG9TEST001234"), false, "diagnostic log must not contain engine values");
+assert.equal(diagnosticLine.includes("SYNTHETIC FINANCE COMPANY"), false, "diagnostic log must not contain unrelated document text");
 
 const wrappedPages = [
   pages[0].replace(
