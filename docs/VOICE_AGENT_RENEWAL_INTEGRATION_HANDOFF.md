@@ -2,51 +2,39 @@
 
 > **Last updated:** 2026-09-13
 >
-> Source of truth for the INSUREIT External Renewal Opportunities -> Sarvam outbound voice-agent integration. Read this before changing Partner external-renewal AI outreach, Sarvam campaign/webhook integration, or voice-attempt schema.
+> Source of truth for INSUREIT External Renewal Opportunities -> Sarvam outbound voice-agent integration. Read this before changing Partner external-renewal AI outreach, Sarvam campaign/webhook integration, voice-attempt schema, or the IT Super User voice-integration readiness area.
 
-## Evidence state
+## Current evidence state
 
-### Existing production/main business boundary — VERIFIED IN CURRENT MAIN
+### Production foundation — MERGED + APPLIED + DEPLOYED
 
-- External-renewal opportunities are isolated from verified INSUREIT Customers, Vehicles and Policies.
-- Partner access is derived from authenticated `partner_app_commercial_scope()`; browser-supplied Partner identity is not authoritative.
-- Manual CRM supports call, WhatsApp, note and follow-up interactions.
-- Terminal opportunity states are `won`, `renewed_elsewhere`, `invalid_contact`, `do_not_contact`, and `lost`; terminal opportunities reject further CRM updates.
-- Policy Intake is the conversion boundary. External opportunities become verified INSUREIT business only when the normal Policy Intake lifecycle produces a real final Policy.
-- `won` is never a voice-agent outcome.
+PR #1779 (`Add controlled Sarvam AI renewal calling`) merged to `main` as:
 
-### Sarvam provider contract — VERIFIED FROM CURRENT OFFICIAL DOCS
+`2d64414422dc28700d28c38ac793f17bdc181f17`
 
-- Stream Cohort API: `POST /api/scheduling/v1/orgs/:org_id/workspaces/:workspace_id/campaigns/:campaign_id/cohorts/stream`.
-- A campaign must be Active, Scheduled, or Paused.
-- One to 1000 users can be streamed; every user requires a phone number and may carry `user_identifier` plus configured agent variables.
-- API authentication uses the server-side `api-subscription-key` header.
-- Campaign webhooks are sent after every outbound attempt, connected or not.
-- Webhook fields include `attempt_id`, `campaign_id`, `cohort_id`, `user_identifier`, completion/connectivity state, retry metadata, timestamps, output variables and transcript when connected.
-- Current campaign-webhook docs do not document a cryptographic signature header. The first implementation therefore requires an INSUREIT-controlled webhook secret and validates the expected campaign/app. This has residual URL-secret risk if Sarvam is configured with a query-token URL; replace it with a provider-native signed mechanism if Sarvam adds one.
+Evidence:
 
-### Phase 2 feature branch — IMPLEMENTED, NOT MERGED / NOT APPLIED / NOT DEPLOYED
+- canonical `Verify web portal` run `34770392062` — **VERIFIED / SUCCESS**
+- dedicated schema workflow `34770749149` — **APPLIED + VERIFIED / SUCCESS**
+- production deploy workflow `34770749138` — **DEPLOYED / SUCCESS**
+- Vercel production deployment `dpl_BU9PYzigk5RR3Uf4Zz9fYmfMpMhp` — **READY**
+- production alias includes `https://portal.insureit.in`
 
-Branch: `feat/external-renewal-sarvam-phase2`
+The protected schema workflow confirmed the voice attempt/event tables and Partner/service-role RPC contract in the production Supabase project before Vercel deployment proceeded.
 
-The branch now contains the first single-opportunity closed-loop foundation:
+### Production calling state — NOT YET OPERATIONALLY VERIFIED
 
-- isolated voice-attempt schema
-- retry-safe provider-attempt event/idempotency schema
-- Partner-scoped call-start RPC
-- service-role submission/result RPCs
-- server-only Sarvam Stream Cohort client
-- Partner `Call with AI` route
-- hardened Sarvam outbound webhook route
-- deterministic CRM projection
-- Partner detail-page AI Outreach control/status
-- external-renewal worklist AI status badge/projection
-- dedicated protected schema workflow
-- production schema gate entry
-- focused Partner external-renewal voice regression
-- nested `apps/web-portal/app/partner/renewals/external/AGENTS.md` requiring this handoff for relevant future work
+The code and schema are live, but real Partner-triggered AI customer calling is not considered production-ready until all of the following are verified:
 
-Nothing in this section is production evidence until the PR is merged, migrations are applied by the protected workflow, Vercel deployment is completed, provider environment is configured, and a controlled real call is verified end to end.
+- Sarvam server environment values are configured in production
+- approved Sarvam campaign and committed agent/app version are bound
+- campaign webhook points to INSUREIT and carries the INSUREIT-controlled secret
+- committed Sarvam output variables match the INSUREIT normalization contract
+- operational calling-window/contact-policy/DND/opt-out rule is approved
+- `SARVAM_RENEWAL_CALLING_ENABLED=true` is intentionally enabled
+- one controlled External Renewal opportunity is called end to end and the resulting provider attempt, webhook, CRM projection and Partner UI state are inspected
+
+Do not describe the feature as fully operational merely because PR #1779 is deployed.
 
 ## Durable architecture
 
@@ -66,134 +54,125 @@ External Renewal Opportunity
   -> human follow-up / Policy Intake when appropriate
 ```
 
-Do not correlate a result by phone number. The local INSUREIT attempt UUID is created first and sent to Sarvam as `user_identifier`.
+Never correlate a call result by phone number. INSUREIT creates the local attempt UUID first and sends it to Sarvam as `user_identifier`.
 
-## Role boundary
+## Business boundary
 
-### Partner may see/use
+External Renewal Opportunities remain isolated from verified INSUREIT Customers, Vehicles and Policies.
 
-- AI outreach availability/status
-- `Call with AI` for one eligible external opportunity
-- queued/calling/connected/no-answer/busy/failed/follow-up/interested/human-needed state
-- concise normalized call summary and follow-up information
-- normal manual CRM actions and Policy Intake conversion actions
+- Partner access derives from authenticated `partner_app_commercial_scope()`.
+- Browser-supplied Partner identity is not authoritative.
+- Terminal states are `won`, `renewed_elsewhere`, `invalid_contact`, `do_not_contact`, and `lost`.
+- `won` is never a voice-agent outcome.
+- Policy Intake is the only conversion boundary from an external opportunity into verified INSUREIT business.
+- The voice integration must never create or update verified Customer, Vehicle or Policy masters directly.
 
-### Partner must never receive
+## Production schema
 
-- Sarvam API key
-- telephony credentials
-- webhook secret
-- org/workspace/campaign administration
-- agent/version controls
-- caller-number/retry/concurrency/call-window controls
-- raw provider payloads
-- raw transcripts by default
+### `external_renewal_voice_attempts`
 
-### IT Super User owns
-
-- approved Sarvam agent/version
-- approved outbound campaign
-- managed telephony/caller number
-- retry/call-window/concurrency policy
-- integration enable/disable control
-- webhook/provider configuration
-- diagnostics and future failed-event replay tools
-
-The current first slice uses server environment configuration for this control plane. A dedicated in-app IT Super User administration surface may be added later; Partner pages must not gain these controls.
-
-## Current external-renewal data boundary
-
-### `external_renewal_import_batches`
-
-Source import metadata is Partner-isolated. Published batches are the only source eligible for Partner workflow reads.
-
-### `external_renewal_opportunities`
-
-Important existing rules:
-
-- `policy_start_date = invoice_date`
-- `policy_end_date = invoice_date + 1 calendar year`
-- no FK to verified `customers`, `vehicles`, `policies`
-- direct authenticated table access revoked
-- Partner-scoped RPC access only
-- `do_not_contact` and terminal states must never be called
-
-### `external_renewal_interactions`
-
-Business CRM history remains separate from provider telemetry. AI calls create a normal CRM interaction only after a connected call has a validated normalized outcome.
-
-### `external_renewal_voice_attempts` — Phase 2
-
-Parent dispatch/lifecycle record for one explicit Partner AI call request. Stores only normalized provider identifiers/status/result fields required by the workflow. It does not store raw webhook JSON or raw transcript.
+Parent dispatch/lifecycle record for one explicit Partner AI call request.
 
 Key invariants:
 
 - composite opportunity/Partner FK
 - one active attempt per opportunity
-- direct `authenticated` table privileges revoked
-- service-role result writes only
+- direct authenticated table privileges revoked
 - Partner starts through scoped RPC
+- provider/result writes are service-role controlled
+- normalized provider identifiers/status/result fields only
+- no raw webhook payload or transcript storage
 
-### `external_renewal_voice_attempt_events` — Phase 2
+### `external_renewal_voice_attempt_events`
 
-Minimal per-Sarvam-attempt event table. Sarvam may retry one streamed cohort user and sends a different `attempt_id` for each provider call attempt. This child table makes webhook delivery retry-safe and keeps `provider_attempt_id` unique/idempotent without losing provider retry history.
+Minimal per-provider-attempt retry/idempotency history.
 
-No raw transcript is stored.
+Sarvam may retry one streamed cohort user and produce a distinct provider `attempt_id` for each call attempt. `provider_attempt_id` is unique so duplicate webhook delivery cannot create duplicate CRM outcomes.
 
-## Phase 2 server/API contract
+### Production migrations
 
-### Partner call action
+- `20260913220500_external_renewal_voice_attempts.sql`
+- `20260913221500_external_renewal_voice_result_projection.sql`
+
+Dedicated protected workflow:
+
+- `.github/workflows/apply-external-renewal-voice-attempts.yml`
+
+Production deployment gate:
+
+- `.github/workflows/deploy-production.yml` waits for this schema workflow when either migration is present in the release.
+
+## Partner call contract
+
+Endpoint:
 
 `POST /api/partner/external-renewals/[id]/voice-call`
 
 Flow:
 
-1. requires the existing Partner web session
-2. rejects the request if `SARVAM_RENEWAL_CALLING_ENABLED` is not explicitly `true`
-3. starts the attempt through `partner_app_start_external_renewal_voice_attempt(...)`
-4. database rechecks Partner commercial scope, published/active opportunity, terminal/DNC state, mobile presence and duplicate active attempt
-5. server normalizes the Indian mobile number
-6. server streams one Sarvam cohort user
-7. `user_identifier = local INSUREIT attempt UUID`
-8. only configured/known renewal variables are sent; missing values are omitted rather than invented
-9. server records campaign/cohort submission through service-role RPC
+1. existing Partner session is required
+2. `SARVAM_RENEWAL_CALLING_ENABLED` must be literal `true`
+3. database rechecks Partner commercial scope
+4. opportunity must be published, active, non-terminal and not DNC
+5. mobile must normalize to a valid Indian phone number
+6. no duplicate active AI attempt may exist
+7. INSUREIT creates a local attempt UUID
+8. one Sarvam cohort user is streamed
+9. `user_identifier = local attempt UUID`
+10. only known variables are sent; missing premium/IDV/etc. remain missing
+11. accepted campaign/cohort identifiers are persisted through service-role RPC
 
-If Sarvam definitely rejects the request, the local attempt is failed/released. If Sarvam accepted the cohort but INSUREIT persistence then fails, the attempt is deliberately left active rather than falsely released; the webhook can still reconcile using `user_identifier`.
+If Sarvam definitely rejects the request, the local attempt may be failed/released. Timeout/network ambiguity is intentionally treated as possibly accepted: the local attempt remains protected to avoid duplicate calls until webhook/reconciliation resolves it.
 
-### Sarvam campaign webhook
+## Sarvam webhook contract
+
+Endpoint:
 
 `POST /api/integrations/sarvam/voice-campaign-webhook`
 
-Current first-slice safeguards:
+Safeguards:
 
-- requires `SARVAM_RENEWAL_WEBHOOK_SECRET` through supported header or configured URL query token
+- requires `SARVAM_RENEWAL_WEBHOOK_SECRET` through the supported header or configured URL query token
 - rejects unexpected `SARVAM_RENEWAL_CAMPAIGN_ID`
-- optionally rejects unexpected `SARVAM_RENEWAL_APP_ID`
-- requires a UUID-shaped `user_identifier`
+- may additionally reject unexpected `SARVAM_RENEWAL_APP_ID`
+- requires UUID-shaped `user_identifier`
 - validates known completion/connectivity/disposition values
+- uses provider `attempt_id` idempotently
 - limits declared payload size
 - never logs provider/customer payloads
-- ignores transcript for persistence
-- accepts follow-up timestamps only when explicit ISO-8601 timezone information is present; natural-language callback times are not guessed
-- writes through the service-role result RPC
+- does not persist transcript
+- accepts follow-up timestamps only when explicit timezone-aware ISO-8601 timestamps are supplied
+- writes through service-role result RPC
+
+Current Sarvam campaign webhook docs do not document a cryptographic signature header. INSUREIT therefore uses a high-entropy application-controlled webhook secret plus campaign/app binding. Replace this with provider-native signed verification if Sarvam adds one.
 
 ## Server environment contract
 
-Secrets/configuration stay server-side. Do not expose them with `NEXT_PUBLIC_` names.
+Secrets/configuration stay server-side. Never expose these through `NEXT_PUBLIC_` variables.
 
-- `SARVAM_API_KEY` — secret API subscription key
-- `SARVAM_ORG_ID` — provider organization ID
-- `SARVAM_WORKSPACE_ID` — provider workspace ID
-- `SARVAM_RENEWAL_CAMPAIGN_ID` — IT-approved outbound campaign
-- `SARVAM_RENEWAL_APP_ID` — optional expected agent/app ID for webhook binding
-- `SARVAM_RENEWAL_WEBHOOK_SECRET` — high-entropy INSUREIT webhook secret until provider-native signing is available
-- `SARVAM_RENEWAL_CALLING_ENABLED` — explicit kill switch; only literal `true` enables Partner outbound submission
+Required for a controlled live test:
 
-Never put actual values in repository files.
+- `SARVAM_API_KEY`
+- `SARVAM_ORG_ID`
+- `SARVAM_WORKSPACE_ID`
+- `SARVAM_RENEWAL_CAMPAIGN_ID`
+- `SARVAM_RENEWAL_WEBHOOK_SECRET`
 
-## Agent-variable contract
+Recommended binding:
 
-Input variables currently sent only when known:
+- `SARVAM_RENEWAL_APP_ID`
+
+Kill switch:
+
+- `SARVAM_RENEWAL_CALLING_ENABLED`
+
+Only literal `true` permits Partner outbound submission.
+
+Never put actual secret values in repository files, chat handoffs, logs or UI.
+
+## Agent variable contract
+
+Input variables are sent only when known:
 
 - `customer_name`
 - `vehicle_make_model`
@@ -202,8 +181,6 @@ Input variables currently sent only when known:
 - `policy_expiry_date`
 - `previous_idv`
 - `previous_premium`
-
-External opportunities often do not contain IDV/premium. Missing fields must remain missing; the agent must not infer them.
 
 Expected output variables:
 
@@ -214,49 +191,46 @@ Expected output variables:
 - optional `follow_up_time`
 - optional `customer_objection`
 
-Before production activation, the committed Sarvam agent version must support the dispositions used by the integration, especially explicit opt-out (`do_not_contact`). If the current committed Sarvam version does not expose that output, create/verify a new controlled version before enabling real Partner calls.
+The committed Sarvam agent version must expose the dispositions used by INSUREIT, especially explicit opt-out (`do_not_contact`). Missing fields must never be invented by the agent.
 
-## Deterministic CRM result mapping
+## Deterministic CRM mapping
 
 Provider connectivity is authoritative before conversational disposition.
 
 | Provider/agent result | INSUREIT result |
 | --- | --- |
-| failed / no answer / busy with retry pending | provider event only; parent remains queued; no CRM sales outcome |
-| failed / no answer / busy terminal | parent attempt failed; no Connected/Interested CRM outcome |
+| busy / no answer / failed with retry pending | provider event only; parent remains queued |
+| terminal busy / no answer / failed | parent attempt failed; no sales outcome |
 | connected + no clear decision | `connected` |
 | connected + interested | `interested` |
-| connected + explicit quote request | `quote_requested` |
+| connected + quote request | `quote_requested` |
 | connected + follow-up + valid future timezone-aware timestamp | `follow_up` |
-| follow-up request without safely parseable future timestamp | `connected`; human scheduling required |
+| follow-up without safe future timestamp | `connected`; human scheduling required |
 | already renewed elsewhere | `renewed_elsewhere` |
 | explicit opt-out / stop calling | `do_not_contact` |
-| wrong person | `connected` in first slice; human review required, not auto-terminal |
-| simple not-interested | `connected` in first slice; human review required, not auto-lost |
-| requests human assistance | `connected` + human-needed worklist state |
+| wrong person | `connected` + human review in first slice |
+| simple not interested | `connected` + human review in first slice |
+| human assistance | `connected` + human-needed worklist state |
 
 `won` is prohibited from the voice result function.
 
 ## Partner UI contract
 
-### Worklist `/partner/renewals/external`
+### `/partner/renewals/external`
 
-The page remains a business worklist, not a Sarvam admin console.
+This remains a business worklist, not a Sarvam console.
 
-Current Phase 2 branch changes:
+- compact AI outreach state only
+- batched Partner-scoped voice-state RPC
+- no provider configuration
+- no campaign administration
+- no bulk AI calling yet
 
-- heading reframed to **Renewal outreach**
-- compact AI renewal-outreach strip explains that calls are controlled per opportunity
-- rows show a compact AI state beside the existing CRM status
-- AI state is obtained through one Partner-scoped batch RPC for the current page, not N per-row provider/database requests
-- no bulk call button
-- no campaign/provider configuration
+### `/partner/renewals/external/[id]`
 
-### Detail `/partner/renewals/external/[id]`
+Contains the first-slice single-opportunity `Call with AI` action and latest normalized AI result.
 
-Adds a compact **AI Outreach** section while preserving manual CRM and Policy Intake controls.
-
-Possible normalized states include:
+Possible states include:
 
 - Available
 - Queued
@@ -271,87 +245,100 @@ Possible normalized states include:
 - Needs Details
 - Closed
 
-`Call with AI` appears only when the server-side integration is enabled, the opportunity is non-terminal, a mobile exists, and no active AI attempt is present.
+The action remains hidden/blocked when the server kill switch is off, the opportunity is terminal/DNC, the mobile is unusable, or an active AI attempt already exists.
+
+## IT Super User readiness area
+
+Follow-up branch `feat/voice-integration-readiness` introduces a protected read-only operational readiness page at:
+
+`/system/voice-integration`
+
+Design rules:
+
+- exact `it_super_user` role required
+- `manage_system` at `approve` access also required
+- reports production schema reachability
+- reports presence/missing state of server configuration without rendering secrets
+- may show masked non-secret provider identifier hints
+- reports kill-switch state
+- shows the canonical webhook endpoint
+- shows recent attempt statuses without customer identity, phone number, transcript or raw provider payload
+- does not itself enable calling or edit provider configuration
+
+This page is an IT operational surface only. Partner users must never receive these controls or diagnostics.
 
 ## AuthBridge boundary
 
-AuthBridge enrichment is deliberately **not part of the first closed-loop Sarvam slice**.
+AuthBridge enrichment is intentionally deferred until the base voice lifecycle is proven end to end.
 
-When added later:
+When added:
 
 - server-side only
-- controlled trigger, not on every keystroke/page render
-- cache-first where available
-- use only fields actually returned by the verified provider contract
-- enrich the external opportunity context only
+- controlled trigger
+- cache-first
+- no automatic spend across visible worklist rows
+- approved normalized fields only
+- external-opportunity enrichment only
 - never silently create/update verified Customers, Vehicles or Policies
-- do not bulk-spend provider credits across the whole worklist merely because rows are visible
 
-## Safety/eligibility gates before production activation
+## Production activation gate
 
-Current code already enforces technical eligibility: active/published scoped opportunity, non-terminal/non-DNC, mobile present, no active duplicate attempt, integration kill switch.
+Before enabling real customer calls at scale, verify all of the following:
 
-Before enabling `SARVAM_RENEWAL_CALLING_ENABLED=true` for real customer outreach, INSUREIT must also finalize and verify its operational eligibility rule for consent/DND/contact policy and campaign calling hours. Presence of a phone number alone is not authorization to market by automated call.
+1. Sarvam API/org/workspace/campaign configuration is present server-side.
+2. The approved campaign is Active/Scheduled/Paused as required by the Stream Cohort contract.
+3. The campaign webhook points to `https://portal.insureit.in/api/integrations/sarvam/voice-campaign-webhook` and supplies the INSUREIT webhook secret by the configured mechanism.
+4. The committed agent version uses the approved INSUREIT identity/prompt and output variables.
+5. Explicit opt-out maps to `do_not_contact`.
+6. Approved calling hours/contact-policy/DND handling are in force.
+7. `SARVAM_RENEWAL_CALLING_ENABLED=true` is enabled intentionally only for the controlled test window.
+8. One selected External Renewal opportunity is called.
+9. Verify local parent attempt + provider attempt event.
+10. Verify webhook ingestion is idempotent.
+11. Verify Partner UI state and CRM interaction mapping.
+12. Re-disable the kill switch if any provider/webhook/CRM inconsistency appears.
 
-Do not describe the feature as production-ready until that rule and provider configuration have been verified.
+Do not begin bulk calling after only one successful PSTN connection. The whole INSUREIT closed loop must be verified.
 
 ## Regression contract
 
-`apps/web-portal/scripts/partner-external-renewal-voice-regression.mjs` is pulled into the existing Partner external-renewal CRM regression and therefore into the canonical Partner web verification gate.
+`apps/web-portal/scripts/partner-external-renewal-voice-regression.mjs` runs inside the canonical Partner web verification path and protects:
 
-It protects at least:
-
-- Partner-scope derivation
-- DNC/terminal guard presence
+- Partner scope derivation
+- terminal/DNC guard
 - one-active-attempt invariant
 - provider retry idempotency
 - explicit opt-out mapping
-- simple decline/wrong-person not becoming automatic terminal outcomes
 - no AI `won`
-- connected-only CRM projection
-- future timestamp requirement for AI follow-up
-- server-only Sarvam key
-- local attempt UUID as provider correlation key
-- IT kill switch
-- webhook secret + expected campaign binding
-- no transcript persistence path
-- no verified Customer/Vehicle/Policy writes
+- connected-only CRM outcomes
+- safe future follow-up timestamps
+- server-only provider credentials
+- local attempt UUID correlation
+- kill switch
+- webhook campaign/secret binding
+- no transcript persistence
+- no verified master writes
+- IT Super User readiness role boundary when that page is present
 
-## Protected schema release
-
-Phase 2 uses two migrations. The Partner worklist projection RPC is intentionally folded into the second migration so the release has one coherent protected schema gate rather than an unnecessary third migration:
-
-- `20260913220500_external_renewal_voice_attempts.sql`
-- `20260913221500_external_renewal_voice_result_projection.sql`
-
-Dedicated workflow:
-
-- `.github/workflows/apply-external-renewal-voice-attempts.yml`
-
-Production deployment gate:
-
-- `.github/workflows/deploy-production.yml` must recognize both Phase 2 voice migrations and wait for the dedicated schema workflow before Vercel.
-
-A committed migration is **not APPLIED**. A merged PR is **not DEPLOYED**.
-
-## Explicitly deferred after this slice
+## Deferred until single-call production verification
 
 - bulk/select-many AI calling
 - scheduled autonomous campaigns from INSUREIT
 - automatic AuthBridge enrichment
-- live quote API/tool use
+- quote API/tool use
 - automatic WhatsApp or payment links
 - transcript retention/search
 - human call transfer
 - automatic Policy Intake creation
-- Partner access to provider administration
-- in-app IT Super User campaign/version/telephony editor
+- Partner provider administration
+- editable in-app Sarvam campaign/version/telephony controls
 
 ## Next safe continuation
 
-1. open the Phase 2 PR and complete exact-head CI
-2. inspect/fix any typecheck, regression, lint or build failures
-3. do not merge until the user explicitly asks
-4. after merge, confirm protected schema application before any production portal deployment
-5. keep `SARVAM_RENEWAL_CALLING_ENABLED` off until server secrets/config, Sarvam campaign webhook URL, agent output variables and operational outreach eligibility are verified
-6. first live verification must be a controlled single opportunity, then inspect provider attempt event, CRM projection, UI state and follow-up behavior before considering bulk calling
+1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
+2. use that page to confirm which production configuration values are present without exposing secrets
+3. configure missing Sarvam production values outside the repository
+4. verify the campaign webhook and committed agent output variables
+5. approve the operational DND/contact/calling-window rule
+6. enable the kill switch only for one controlled External Renewal opportunity
+7. inspect the full INSUREIT -> Sarvam -> webhook -> CRM -> Partner UI lifecycle before any bulk-calling work
