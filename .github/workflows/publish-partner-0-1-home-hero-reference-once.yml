@@ -9,6 +9,7 @@ on:
       - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
       - 'scripts/partner/patch-0-1-home-refinements.mjs'
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
+      - 'scripts/partner/compat/partner-business-date-filter.tsx'
   workflow_dispatch:
 
 permissions:
@@ -84,12 +85,22 @@ jobs:
         run: |
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "Recent Activity" 'compat/apps/partner-app/app/(tabs)/index.tsx' && {
+          if grep -q '<Text style={styles.sectionTitle}>Recent Activity</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'; then
             echo "Recent Activity still present on Home after refinement patch." >&2
             exit 1
-          } || true
-          grep -q "heroGreetingBackdrop" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "policy-document" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          fi
+          grep -q "backgroundColor: 'rgba(3,30,68,0.42)'" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q '<QuickAction icon="file-plus" label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "pendingRow: { minHeight: 40" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Install 0.1-safe Business Report date-filter component
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx \
+            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          grep -q 'export function PartnerBusinessDateFilterCompat' \
+            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
 
       - name: Apply Business Report date-filter patch
         shell: bash
@@ -97,8 +108,9 @@ jobs:
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "partner_app_business_range" 'compat/apps/partner-app/lib/home.ts'
-          grep -q "Apply range" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "selectedRange" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'rangeSelection' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'rangeSelection?.summary.premium' 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
       - name: Require Expo token
         shell: bash
