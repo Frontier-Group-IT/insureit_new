@@ -98,7 +98,80 @@ export function refineApprovedMotorPolicyLayout(
   const identified = refineProductionPolicyIdentity(pages, round12);
   const enhanced = refineNewIndiaEnhancedCoversPolicy(pages, tables, identified);
   const residual = refineNewIndiaEnhancedCoversLiveResiduals(pages, tables, enhanced);
-  return refineNewIndiaSeparatedVehicleEvidence(pages, tables, residual);
+  const separated = refineNewIndiaSeparatedVehicleEvidence(pages, tables, residual);
+  logNewIndiaEnhancedDiagnostic(pages, tables, residual, separated);
+  return separated;
+}
+
+function logNewIndiaEnhancedDiagnostic(
+  pages: string[],
+  tables: StructuredPolicyTable[],
+  beforeResidual: ParsedPolicyResult,
+  afterResidual: ParsedPolicyResult,
+) {
+  if (afterResidual.parserId !== "new_india_motor_v1") return;
+
+  const firstTwo = pages.slice(0, 2).join("\n");
+  const page1 = pages[0] ?? "";
+  const vehicle = diagnosticVehicleBlock(page1);
+  const page1Tables = tables.filter((table) => table.page === 1);
+  const page1Cells = page1Tables.flatMap((table) => table.rows.flat()).map((cell) => cell.replace(/\u00a0/g, " ").trim());
+  const ids = diagnosticMixedIds(vehicle);
+  const vinShapeCount = ids.filter((value) => diagnosticLooksLikeVin(value)).length;
+  const engineShapeCount = ids.filter((value) => !diagnosticLooksLikeVin(value)).length;
+  const fieldPresent = (result: ParsedPolicyResult, key: string) => Boolean(result.fields.find((field) => field.key === key)?.value?.trim());
+  const traceId = `NI-${Date.now().toString(36).slice(-6)}-${Math.random().toString(36).slice(2, 6)}`;
+
+  console.info(JSON.stringify({
+    level: "info",
+    message: "policy_ocr_new_india_diagnostic",
+    traceId,
+    parserId: afterResidual.parserId,
+    parserVersion: afterResidual.parserVersion,
+    enhancedLayoutMatched: /COMMERCIAL\s+VEHICLE\s+PACKAGE\s+POLICY[\s\S]{0,40}?ENHANCED\s+COVERS/i.test(firstTwo),
+    page1: {
+      hasVehicleDetails: /VEHICLE\s+DETAILS/i.test(page1),
+      hasYearLabel: /Year\s+of\s+manufacture/i.test(vehicle),
+      yearCandidateCount: new Set(vehicle.match(/\b(?:19|20)\d{2}\b/g) ?? []).size,
+      hasChassisEngineLabel: /Chassis\s*(?:no\.?|number)?\s*\/\s*Engine\s*(?:no\.?|number)?/i.test(vehicle),
+      vinShapeCount,
+      engineShapeCount,
+    },
+    layout: {
+      tableCount: tables.length,
+      page1TableCount: page1Tables.length,
+      hasYearLabelCell: page1Cells.some((cell) => /Year\s+of\s+manufacture/i.test(cell)),
+      hasChassisEngineLabelCell: page1Cells.some((cell) => /Chassis\s*(?:no\.?|number)?\s*\/\s*Engine\s*(?:no\.?|number)?/i.test(cell)),
+    },
+    beforeResidual: {
+      manufacturingYearPresent: fieldPresent(beforeResidual, "vehicle_manufacturing_year"),
+      chassisPresent: fieldPresent(beforeResidual, "vehicle_chassis_number"),
+      enginePresent: fieldPresent(beforeResidual, "vehicle_engine_number"),
+    },
+    afterResidual: {
+      manufacturingYearPresent: fieldPresent(afterResidual, "vehicle_manufacturing_year"),
+      chassisPresent: fieldPresent(afterResidual, "vehicle_chassis_number"),
+      enginePresent: fieldPresent(afterResidual, "vehicle_engine_number"),
+    },
+  }));
+}
+
+function diagnosticVehicleBlock(page: string) {
+  const start = page.search(/VEHICLE\s+DETAILS/i);
+  const source = start >= 0 ? page.slice(start) : page;
+  const end = source.search(/INSURED\s+DECLARED\s+VALUE|SCHEDULE\s+OF\s+PREMIUM/i);
+  return end > 0 ? source.slice(0, end) : source.slice(0, 7000);
+}
+
+function diagnosticMixedIds(block: string) {
+  const candidates = block.match(/[A-Z0-9][A-Z0-9-]{9,23}/gi) ?? [];
+  return [...new Set(candidates
+    .map((value) => value.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+    .filter((value) => value.length >= 10 && value.length <= 24 && /[A-Z]/.test(value) && /\d/.test(value)))];
+}
+
+function diagnosticLooksLikeVin(value: string) {
+  return value.length === 17 && /^[A-Z0-9]{17}$/.test(value) && /[A-Z]/.test(value) && /\d/.test(value);
 }
 
 function preserveValidatedUiicFinancials(
