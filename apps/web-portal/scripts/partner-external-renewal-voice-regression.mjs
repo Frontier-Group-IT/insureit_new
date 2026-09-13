@@ -10,12 +10,15 @@ const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/2026
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
+const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const webhook = fs.readFileSync(path.join(root, "app/api/integrations/sarvam/voice-campaign-webhook/route.ts"), "utf8");
 const detailPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/[id]/page.tsx"), "utf8");
 const worklistPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/page.tsx"), "utf8");
+const readinessPage = fs.readFileSync(path.join(root, "app/system/voice-integration/page.tsx"), "utf8");
 const localAgents = fs.readFileSync(path.join(root, "app/partner/renewals/external/AGENTS.md"), "utf8");
+const adminAgents = fs.readFileSync(path.join(root, "app/system/voice-integration/AGENTS.md"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -65,6 +68,11 @@ assert(sarvamClient.includes("SarvamRenewalSubmissionError"), "provider submissi
 assert(sarvamClient.includes("Await reconciliation before retrying"), "timeouts and ambiguous provider responses prevent unsafe immediate retry");
 assert(!sarvamClient.includes('NEXT_PUBLIC_SARVAM'), "no Sarvam credential/config is exposed as public browser environment");
 
+assert(readinessModel.includes('import "server-only"'), "readiness model is server-only");
+assert(readinessModel.includes('SARVAM_RENEWAL_WEBHOOK_SECRET'), "readiness checks webhook-secret presence");
+assert(readinessModel.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "readiness reports the outbound kill switch");
+assert(!readinessModel.includes('NEXT_PUBLIC_SARVAM'), "readiness does not depend on browser Sarvam configuration");
+
 assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
 assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
 assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
@@ -81,7 +89,15 @@ assert(!detailPage.includes("SARVAM_API_KEY"), "Partner detail page does not exp
 assert(worklistPage.includes("AI renewal outreach"), "Partner worklist explains the controlled AI outreach layer");
 assert(worklistPage.includes("getPartnerExternalRenewalVoiceStates"), "Partner worklist batches voice-state loading");
 
+assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice integration readiness requires exact IT Super User role");
+assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice integration readiness also requires critical system access");
+assert(readinessPage.includes("No customer identity, phone number, transcript or raw provider payload"), "voice admin page explicitly preserves the minimal-data boundary");
+assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
+assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
+
 assert(localAgents.includes("VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md"), "relevant future agents are instructed to read the durable voice handoff");
 assert(localAgents.includes("won"), "local agent instructions preserve Policy Intake as the only win boundary");
+assert(adminAgents.includes("VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md"), "IT voice admin future agents are instructed to read the durable voice handoff");
+assert(adminAgents.includes("it_super_user"), "IT voice admin instructions preserve exact role restriction");
 
 if (!process.exitCode) console.log("External renewal voice integration regression passed.");
