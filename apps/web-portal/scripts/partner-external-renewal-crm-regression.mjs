@@ -58,4 +58,6 @@ if (fs.existsSync(migrationPath)) {
   assert(!migration.includes("references public.policies"), "interaction migration must not reference verified policies");
 }
 
+await import("./partner-external-renewal-voice-regression.mjs");
+
 if (!process.exitCode) console.log("Partner external renewal CRM regression passed.");
