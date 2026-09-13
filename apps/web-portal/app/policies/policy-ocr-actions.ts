@@ -19,6 +19,11 @@ import {
 import { refineNewIndiaCommercialPolicy } from "@/lib/policy-ocr-new-india-refiner";
 import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-structured-refiner";
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
+import {
+  extractNativePdfTextPages,
+  refineNewIndiaNativePdfVehicleEvidence,
+  summarizeNativePdfVehicleEvidence,
+} from "@/lib/policy-ocr-native-pdf";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
 import { loadPolicyOcrTrainingReference } from "@/lib/policy-ocr-training-reference";
 import { ensurePolicyOcrBatchReviewNotification, ensureAutomaticPolicyOcrReview, ensurePolicyOcrSatisfactionTask } from "@/lib/policy-ocr-review-automation";
@@ -130,7 +135,8 @@ async function extractPolicyFile(
 
   try {
     const googleAccessToken = await getGoogleAccessToken(config, subjectToken, controller.signal);
-    const content = Buffer.from(await file.arrayBuffer()).toString("base64");
+    const fileBytes = new Uint8Array(await file.arrayBuffer());
+    const content = Buffer.from(fileBytes).toString("base64");
     const endpoint = `https://${config.location}-documentai.googleapis.com/v1/projects/${encodeURIComponent(config.projectId)}/locations/${encodeURIComponent(config.location)}/processors/${encodeURIComponent(config.processorId)}:process`;
 
     const response = await fetch(endpoint, {
@@ -181,15 +187,39 @@ async function extractPolicyFile(
     }
     parsed = refineApprovedMotorPolicyLayout(pages, tables, parsed);
 
+    let usedNativePdfVehicleEvidence = false;
+    if (file.type === "application/pdf" && parsed.parserId === "new_india_motor_v1" && needsNewIndiaNativeVehicleFallback(parsed)) {
+      try {
+        const nativePages = await extractNativePdfTextPages(fileBytes);
+        const nativeRefined = refineNewIndiaNativePdfVehicleEvidence(nativePages, parsed);
+        usedNativePdfVehicleEvidence = nativeRefined !== parsed;
+        parsed = nativeRefined;
+        console.info(JSON.stringify({
+          level: "info",
+          message: "policy_ocr_new_india_native_pdf_fallback",
+          used: usedNativePdfVehicleEvidence,
+          ...summarizeNativePdfVehicleEvidence(nativePages, parsed),
+        }));
+      } catch (error) {
+        console.warn(JSON.stringify({
+          level: "warning",
+          message: "policy_ocr_new_india_native_pdf_fallback_failed",
+          error: safeErrorName(error),
+        }));
+      }
+    }
+
     if (!parsed.fields.length) return { ok: false, error: "No supported policy details could be read from this document. Please review the file and enter the details manually if needed." };
 
     return {
       ok: true,
       fields: parsed.fields,
-      model: "Google Document AI Enterprise OCR + Layout Parser",
+      model: usedNativePdfVehicleEvidence
+        ? "Google Document AI Enterprise OCR + Layout Parser + native PDF text"
+        : "Google Document AI Enterprise OCR + Layout Parser",
       parserId: parsed.parserId,
       parserVersion: parsed.parserVersion,
-      extractionMethod: "google_document_ai",
+      extractionMethod: usedNativePdfVehicleEvidence ? "google_document_ai+native_pdf_text" : "google_document_ai",
       warnings: parsed.warnings,
     };
   } catch (error) {
@@ -201,6 +231,11 @@ async function extractPolicyFile(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function needsNewIndiaNativeVehicleFallback(parsed: { fields: ParsedPolicyField[] }) {
+  const present = (key: string) => Boolean(parsed.fields.find((field) => field.key === key)?.value?.trim());
+  return !present("vehicle_manufacturing_year") || !present("vehicle_chassis_number") || !present("vehicle_engine_number");
 }
 
 type ClaimedTrainingJob = {
@@ -533,8 +568,6 @@ async function processTrainingJob(job: ClaimedTrainingJob, subjectToken?: string
           iterationNo: context?.iterationNo,
         });
       } catch (error) {
-        // OCR remains ready for review even if the durable notification path
-        // is temporarily unavailable; the next worker run can retry it.
         console.error("Policy OCR automatic review handoff failed", safeErrorName(error));
       }
     }
@@ -651,7 +684,6 @@ async function processLayoutTables(args: {
     }
     return extractDocumentLayoutTables(payload?.document);
   } catch (error) {
-    // Layout tables improve structured extraction but must not make primary OCR unavailable.
     console.error("Google Layout Parser request failed", safeErrorName(error));
     return [];
   }
