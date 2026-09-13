@@ -16,6 +16,16 @@ export type SarvamRenewalCohortResponse = {
   } | null;
 };
 
+export class SarvamRenewalSubmissionError extends Error {
+  definitelyRejected: boolean;
+
+  constructor(message: string, definitelyRejected: boolean) {
+    super(message);
+    this.name = "SarvamRenewalSubmissionError";
+    this.definitelyRejected = definitelyRejected;
+  }
+}
+
 function requiredEnv(name: string) {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} is not configured.`);
@@ -107,30 +117,59 @@ export async function streamExternalRenewalToSarvam(context: ExternalRenewalVoic
     }
 
     if (!response.ok) {
-      const providerMessage =
-        body && typeof body === "object" && "detail" in body
-          ? String((body as { detail?: unknown }).detail ?? "")
-          : "";
-      throw new Error(
-        providerMessage
-          ? `Sarvam rejected the call request (${response.status}): ${providerMessage.slice(0, 180)}`
-          : `Sarvam rejected the call request (${response.status}).`,
+      // An explicit non-2xx response proves Sarvam rejected this request. Do not
+      // expose provider response details to the Partner browser.
+      throw new SarvamRenewalSubmissionError(
+        `Sarvam rejected the AI call request (${response.status}).`,
+        true,
       );
     }
 
-    if (!body || typeof body !== "object") throw new Error("Sarvam returned an invalid cohort response.");
-    const cohortId = String((body as { cohort_id?: unknown }).cohort_id ?? "").trim();
-    if (!cohortId) throw new Error("Sarvam did not return a cohort id.");
+    if (!body || typeof body !== "object") {
+      // A 2xx followed by an unreadable body is ambiguous: the cohort may already
+      // exist. Keep the local active-attempt guard so a retry cannot duplicate it.
+      throw new SarvamRenewalSubmissionError(
+        "Sarvam accepted the request but returned an unexpected response. Await reconciliation before retrying.",
+        false,
+      );
+    }
+
+    const cohort = body as SarvamRenewalCohortResponse;
+    const cohortId = String(cohort.cohort_id ?? "").trim();
+    if (!cohortId) {
+      throw new SarvamRenewalSubmissionError(
+        "Sarvam accepted the request without a cohort id. Await reconciliation before retrying.",
+        false,
+      );
+    }
+
+    // Stream processing can complete synchronously for tiny cohorts. If Sarvam
+    // explicitly reports zero valid records, this single-user submission was
+    // definitively rejected and can safely release the local active-attempt guard.
+    const validRecords = cohort.result?.valid_records;
+    const rejectedRecords = cohort.result?.rejected_records;
+    if (cohort.status === "failed" || (validRecords === 0 && (rejectedRecords ?? 0) > 0)) {
+      throw new SarvamRenewalSubmissionError("Sarvam rejected the cohort record.", true);
+    }
 
     return {
       campaignId,
-      response: body as SarvamRenewalCohortResponse,
+      response: cohort,
     };
   } catch (error) {
+    if (error instanceof SarvamRenewalSubmissionError) throw error;
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error("Sarvam did not accept the call request within 15 seconds.");
+      // Timeout is not proof of rejection. The request may have reached Sarvam and
+      // must remain protected against a duplicate Partner retry.
+      throw new SarvamRenewalSubmissionError(
+        "Sarvam did not confirm the call request within 15 seconds. Await reconciliation before retrying.",
+        false,
+      );
     }
-    throw error;
+    throw new SarvamRenewalSubmissionError(
+      "Sarvam could not confirm the AI call request. Await reconciliation before retrying.",
+      false,
+    );
   } finally {
     clearTimeout(timeout);
   }
