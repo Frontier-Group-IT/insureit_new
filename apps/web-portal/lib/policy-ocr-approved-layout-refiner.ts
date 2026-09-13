@@ -98,7 +98,7 @@ export function refineApprovedMotorPolicyLayout(
   const identified = refineProductionPolicyIdentity(pages, round12);
   const enhanced = refineNewIndiaEnhancedCoversPolicy(pages, tables, identified);
   const residual = refineNewIndiaEnhancedCoversLiveResiduals(pages, tables, enhanced);
-  return refineNewIndiaSeparatedVehicleEvidence(pages, residual);
+  return refineNewIndiaSeparatedVehicleEvidence(pages, tables, residual);
 }
 
 function preserveValidatedUiicFinancials(
