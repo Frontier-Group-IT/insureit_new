@@ -140,9 +140,8 @@ assert.equal(field(sibling, "od_premium"), "12000");
 assert.equal(field(sibling, "tp_premium"), "28000");
 assert.equal(field(sibling, "cpa_premium"), "275");
 
-// Live production residual shape after the first training round: page text did
-// not preserve Year/Chassis/Engine cleanly, while structured layout retained
-// the corresponding table label/value associations.
+// Structured residual shape retained for layouts where Document AI preserves
+// the vehicle table labels and values.
 const liveResidualPages = [
   `THE NEW INDIA ASSURANCE CO. LTD.\nCommercial Vehicle Package Policy - Enhanced Covers\nVEHICLE DETAILS`,
   `SCHEDULE OF PREMIUM`,
@@ -175,11 +174,53 @@ assert.equal(field(liveResidual, "vehicle_chassis_number"), "LIVECHASSIS12345");
 assert.equal(field(liveResidual, "vehicle_engine_number"), "LIVEENG987654");
 assert.equal(field(liveResidual, "vehicle_make"), "SYNTH TRUCKS");
 assert.equal(field(liveResidual, "tp_premium"), "44667");
-assert.match(liveResidual.parserVersion, /live-residual-v1/);
+assert.match(liveResidual.parserVersion, /live-residual-v2/);
+
+// Production replay after PR #1769 proved the live policy can expose the same
+// evidence only in flattened page OCR. No structured tables are supplied here.
+// The Engine identifier is intentionally split across OCR lines and spaces.
+const flatResidualPages = [
+  `THE NEW INDIA ASSURANCE CO. LTD.
+Commercial Vehicle Package Policy - Enhanced Covers
+VEHICLE DETAILS
+Geographical Area / Zone
+India/C
+Year of manufacture:
+2026
+Type of Commercial Vehicles
+A - Goods Carrying
+Sub Type
+Other than 3 wheeler - Public Carrier
+Chassis no./Engine no.:
+FLATCHASSIS12345
+/
+FLAT ENG
+77
+TEST 665544
+Type of fuel
+Diesel
+Gross Vehicle Weight (GVW)
+55000
+Make/Model
+SYNTH TRUCKS/5532
+Registration no.
+RJ-45
+Name of registration authority
+RAJASTHAN
+INSURED DECLARED VALUE (Rs)`,
+  `SCHEDULE OF PREMIUM`,
+];
+const flatResidual = refineNewIndiaEnhancedCoversLiveResiduals(flatResidualPages, [], liveResidualInput);
+assert.equal(field(flatResidual, "vehicle_manufacturing_year"), "2026");
+assert.equal(field(flatResidual, "vehicle_chassis_number"), "FLATCHASSIS12345");
+assert.equal(field(flatResidual, "vehicle_engine_number"), "FLATENG77TEST665544");
+assert.equal(field(flatResidual, "vehicle_make"), "SYNTH TRUCKS");
+assert.equal(field(flatResidual, "tp_premium"), "44667");
+assert.match(flatResidual.parserVersion, /live-residual-v2/);
 
 const preserved = refineNewIndiaEnhancedCoversLiveResiduals(
-  liveResidualPages,
-  liveResidualTables,
+  flatResidualPages,
+  [],
   {
     ...liveResidualInput,
     fields: [
@@ -216,4 +257,4 @@ const unrelatedText = refineNewIndiaCommercialPolicy(unrelatedPages, unrelatedBa
 const unrelatedAfter = refineNewIndiaEnhancedCoversPolicy(unrelatedPages, [], unrelatedText);
 assert.deepEqual(unrelatedAfter, unrelatedText, "non-Enhanced-Covers New India layouts must stay untouched");
 
-console.log("New India Enhanced Covers targeted + live residual regression passed.");
+console.log("New India Enhanced Covers targeted + structured/flat live residual regression passed.");
