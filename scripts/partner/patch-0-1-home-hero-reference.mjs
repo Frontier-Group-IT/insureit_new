@@ -36,8 +36,8 @@ const styleReplacements = [
   ],
   [
     `  heroBackdrop: { ...StyleSheet.absoluteFillObject, opacity: 1 },`,
-    `  heroBackdrop: { position: 'absolute', left: '-6%', top: -8, width: '112%', height: 182, opacity: 1, transform: [{ scale: 0.92 }] },`,
-    'hero artwork framing',
+    `  heroBackdrop: { position: 'absolute', left: '-6%', top: -8, width: '112%', height: 182, opacity: 0.70, transform: [{ scale: 0.92 }] },`,
+    'hero artwork framing and opacity',
   ],
   [
     `  heroBackdropShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(3,34,75,0.06)' },`,
