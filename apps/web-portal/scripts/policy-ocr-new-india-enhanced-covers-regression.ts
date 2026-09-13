@@ -140,8 +140,6 @@ assert.equal(field(sibling, "od_premium"), "12000");
 assert.equal(field(sibling, "tp_premium"), "28000");
 assert.equal(field(sibling, "cpa_premium"), "275");
 
-// Structured residual shape retained for layouts where Document AI preserves
-// the vehicle table labels and values.
 const liveResidualPages = [
   `THE NEW INDIA ASSURANCE CO. LTD.\nCommercial Vehicle Package Policy - Enhanced Covers\nVEHICLE DETAILS`,
   `SCHEDULE OF PREMIUM`,
@@ -174,11 +172,8 @@ assert.equal(field(liveResidual, "vehicle_chassis_number"), "LIVECHASSIS12345");
 assert.equal(field(liveResidual, "vehicle_engine_number"), "LIVEENG987654");
 assert.equal(field(liveResidual, "vehicle_make"), "SYNTH TRUCKS");
 assert.equal(field(liveResidual, "tp_premium"), "44667");
-assert.match(liveResidual.parserVersion, /live-residual-v2/);
+assert.match(liveResidual.parserVersion, /live-residual-v3/);
 
-// Production replay after PR #1769 proved the live policy can expose the same
-// evidence only in flattened page OCR. No structured tables are supplied here.
-// The Engine identifier is intentionally split across OCR lines and spaces.
 const flatResidualPages = [
   `THE NEW INDIA ASSURANCE CO. LTD.
 Commercial Vehicle Package Policy - Enhanced Covers
@@ -216,7 +211,7 @@ assert.equal(field(flatResidual, "vehicle_chassis_number"), "FLATCHASSIS12345");
 assert.equal(field(flatResidual, "vehicle_engine_number"), "FLATENG77TEST665544");
 assert.equal(field(flatResidual, "vehicle_make"), "SYNTH TRUCKS");
 assert.equal(field(flatResidual, "tp_premium"), "44667");
-assert.match(flatResidual.parserVersion, /live-residual-v2/);
+assert.match(flatResidual.parserVersion, /live-residual-v3/);
 
 const preserved = refineNewIndiaEnhancedCoversLiveResiduals(
   flatResidualPages,
