@@ -38,11 +38,12 @@ replaceOnce(
   'hero greeting text contrast',
 );
 
-// Use a clean policy-document glyph instead of the mismatched calculator-like asset.
+// Use the dedicated policy-add asset so Policy Intake is rendered through the same
+// image-based QuickAction treatment as Renewals, Claims and Customers.
 replaceOnce(
-  `<QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />`,
-  `<QuickAction icon="file-plus" label="Policy Intake" onPress={() => router.push('/policy-intake-new')} />`,
-  'policy intake quick action',
+  `  policyAdd: require('../../assets/figma-dashboard/quick-policy-intake.png'),`,
+  `  policyAdd: require('../../assets/generated-dashboard/policy-add.png'),`,
+  'policy intake quick-action asset',
 );
 
 // Compact Pending Tasks. Keep every task and route; card grows only when multiple rows exist.
@@ -64,6 +65,14 @@ replaceRegexOnce(
   /\n\s*\{activity\.length \? \([\s\S]*?<PartnerEnter delay=\{165\}>[\s\S]*?<\/PartnerEnter>\n\s*\) : null\}\n/,
   '\n',
   'Recent Activity home section',
+);
+
+// Your Impact remains available on its dedicated route, but is removed from Home to keep the
+// dashboard focused and compact.
+replaceRegexOnce(
+  /\n\s*<PartnerEnter delay=\{195\}>[\s\S]*?<Text style=\{styles\.sectionTitle\}>Your Impact<\/Text>[\s\S]*?<\/PartnerEnter>\n/,
+  '\n',
+  'Your Impact home section',
 );
 
 fs.writeFileSync(target, source);
