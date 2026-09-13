@@ -82,8 +82,8 @@ export async function getLatestPartnerExternalRenewalVoiceAttempt(opportunityId:
     p_opportunity_id: opportunityId,
   });
   if (error) {
-    // During branch/preview review the migration may not yet be applied. Do not make
-    // the existing external-renewal detail page unavailable solely for that reason.
+    // A preview can render before the migration is applied. The existing CRM page
+    // must remain usable until the protected schema workflow has run.
     if (/function .* does not exist|could not find the function/i.test(error.message ?? "")) return null;
     throw new Error(error.message || "Could not load AI call status.");
   }
@@ -92,12 +92,14 @@ export async function getLatestPartnerExternalRenewalVoiceAttempt(opportunityId:
 
 export type ApplyExternalRenewalVoiceResultInput = {
   attemptId: string;
-  providerAttemptId?: string | null;
+  providerAttemptId: string;
   providerInteractionId?: string | null;
   providerCampaignId?: string | null;
   providerCohortId?: string | null;
   connectivityStatus?: string | null;
   completionStatus?: string | null;
+  nextActionStatus?: string | null;
+  failureReason?: string | null;
   retryAttempt?: number | null;
   durationSeconds?: number | null;
   startedAt?: string | null;
@@ -114,12 +116,14 @@ export async function applyExternalRenewalVoiceResult(input: ApplyExternalRenewa
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin.rpc("apply_external_renewal_voice_result", {
     p_attempt_id: input.attemptId,
-    p_provider_attempt_id: input.providerAttemptId ?? null,
+    p_provider_attempt_id: input.providerAttemptId,
     p_provider_interaction_id: input.providerInteractionId ?? null,
     p_provider_campaign_id: input.providerCampaignId ?? null,
     p_provider_cohort_id: input.providerCohortId ?? null,
     p_connectivity_status: input.connectivityStatus ?? null,
     p_completion_status: input.completionStatus ?? null,
+    p_next_action_status: input.nextActionStatus ?? null,
+    p_failure_reason: input.failureReason ?? null,
     p_retry_attempt: input.retryAttempt ?? 0,
     p_duration_seconds: input.durationSeconds ?? null,
     p_started_at: input.startedAt ?? null,
