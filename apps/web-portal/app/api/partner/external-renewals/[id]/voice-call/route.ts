@@ -8,6 +8,7 @@ import {
 import {
   isSarvamRenewalCallingEnabled,
   normalizeIndiaPhoneForSarvam,
+  SarvamRenewalSubmissionError,
   streamExternalRenewalToSarvam,
 } from "@/lib/sarvam-renewal-call";
 
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   let localAttemptId: string | null = null;
-  let providerAccepted = false;
+  let providerRequestStarted = false;
 
   try {
     const context = await startPartnerExternalRenewalVoiceAttempt(id);
@@ -35,8 +36,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // consume a Sarvam cohort record. The provider client performs the same check.
     normalizeIndiaPhoneForSarvam(context.mobile);
 
+    providerRequestStarted = true;
     const streamed = await streamExternalRenewalToSarvam(context);
-    providerAccepted = true;
 
     await markExternalRenewalVoiceSubmitted({
       attemptId: context.attempt_id,
@@ -48,11 +49,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     target.searchParams.set("voice_queued", "1");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not start the AI renewal call.";
+    const providerDefinitelyRejected =
+      error instanceof SarvamRenewalSubmissionError && error.definitelyRejected;
 
-    // Only release/terminally fail a local attempt when Sarvam definitely did not
-    // accept the cohort. If Sarvam accepted it but persistence failed, keep the
-    // active local attempt so its webhook can still reconcile by user_identifier.
-    if (localAttemptId && !providerAccepted) {
+    // Release the local active-attempt guard only when the request never reached
+    // Sarvam or Sarvam explicitly returned a definitive rejection. Timeout/network/
+    // malformed-success responses remain active because the provider may already
+    // have accepted the cohort and a second click could create a duplicate call.
+    if (localAttemptId && (!providerRequestStarted || providerDefinitelyRejected)) {
       try {
         await markExternalRenewalVoiceSubmissionFailed(localAttemptId, "AI call request was not accepted by the provider.");
       } catch {
