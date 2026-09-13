@@ -10,13 +10,7 @@ const ENHANCED_TITLE = /COMMERCIAL\s+VEHICLE\s+PACKAGE\s+POLICY[\s\S]{0,24}?ENHA
 const NEW_INDIA = /THE\s+NEW\s+INDIA\s+ASSURANCE|NEW\s+INDIA\s+ASSURANCE\s+COMPANY/i;
 const MONEY_RE = /\b\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?\b|\b\d{2,9}(?:\.\d{1,2})?\b/g;
 
-/**
- * Narrow production refinement for New India "Commercial Vehicle Package Policy - Enhanced Covers".
- *
- * This policy family prints Total TP as a complete liability subtotal that already contains
- * owner-driver CPA. The portal must therefore keep the printed Total TP as TP while still
- * surfacing CPA separately. Vehicle fields are recovered from the explicit page-one schedule.
- */
+/** Narrow production refinement for New India Commercial Vehicle Package Policy - Enhanced Covers. */
 export function refineNewIndiaEnhancedCoversPolicy(
   pages: string[],
   tables: StructuredPolicyTable[],
@@ -76,19 +70,10 @@ function refineVehicleFields(pages: string[], tables: StructuredPolicyTable[], f
   const subtypeEvidence = findText(pages, /Sub\s*Type\s*[:\-]?\s*([^\n|]{2,90})/i);
   const combinedClass = `${classEvidence?.value ?? ""} ${subtypeEvidence?.value ?? ""}`;
   if (/GOODS\s+CARRYING|PUBLIC\s+CARRIER/i.test(combinedClass)) {
-    set(
-      fields,
-      "vehicle_class",
-      "Vehicle class",
-      "GCV",
-      .99,
-      classEvidence?.page ?? subtypeEvidence?.page ?? 1,
-      clean(`${classEvidence?.evidence ?? ""} ${subtypeEvidence?.evidence ?? ""}`),
-    );
+    set(fields, "vehicle_class", "Vehicle class", "GCV", .99, classEvidence?.page ?? subtypeEvidence?.page ?? 1,
+      clean(`${classEvidence?.evidence ?? ""} ${subtypeEvidence?.evidence ?? ""}`));
   }
 
-  // A short regional code such as RJ-45 is not a complete registration number.
-  // Never promote it into vehicle_registration_number or infer registration_status.
   const registration = findText(pages, /Registration\s+no\.?\s*[:\-]?\s*([^\n|]{2,40})/i);
   if (registration && !looksCompleteRegistration(registration.value)) {
     fields.delete("vehicle_registration_number");
@@ -96,12 +81,7 @@ function refineVehicleFields(pages: string[], tables: StructuredPolicyTable[], f
   }
 }
 
-function refinePremiumSemantics(
-  pages: string[],
-  tables: StructuredPolicyTable[],
-  fields: Fields,
-  warnings: string[],
-) {
+function refinePremiumSemantics(pages: string[], tables: StructuredPolicyTable[], fields: Fields, warnings: string[]) {
   const od = findLabeledMoney(tables, /Total\s+OD\s+Premium/i)
     ?? findLabeledMoneyText(pages, /Total\s+OD\s+Premium\s*\(Rs\.?\)?/i)
     ?? findLabeledMoney(tables, /Calculated\s+OD\s+Premium/i)
@@ -131,7 +111,8 @@ function refinePremiumSemantics(
 
   const cpa = numeric(fields.get("cpa_premium"));
   if (cpa !== null && cpa > 0) {
-    set(fields, "cpa_opted", "CPA opted", "Yes", .99, fields.get("cpa_premium")?.page ?? tp.page, fields.get("cpa_premium")?.evidence ?? "Owner-driver CPA retained separately from printed TP subtotal.");
+    set(fields, "cpa_opted", "CPA opted", "Yes", .99, fields.get("cpa_premium")?.page ?? tp.page,
+      fields.get("cpa_premium")?.evidence ?? "Owner-driver CPA retained separately from printed TP subtotal.");
   }
 }
 
@@ -229,9 +210,10 @@ function findLabeledMoney(tables: StructuredPolicyTable[], label: RegExp): Money
       const row = table.rows[r].map(clean);
       for (let c = 0; c < row.length; c += 1) {
         const cell = row[c];
-        if (!label.test(cell)) { label.lastIndex = 0; continue; }
-        label.lastIndex = 0;
-        const same = firstMoney(cell.replace(label, " "));
+        const match = cell.match(label);
+        if (!match || match.index === undefined) continue;
+        const after = cell.slice(match.index + match[0].length);
+        const same = firstMoney(after);
         if (same !== null) return { value: same, page: table.page, evidence: safe(row.join(" | ")) };
         for (let nextCell = c + 1; nextCell < row.length; nextCell += 1) {
           const value = firstMoney(row[nextCell]);
@@ -252,9 +234,10 @@ function findLabeledMoneyText(pages: string[], label: RegExp): MoneyHit | null {
     const lines = pages[i].split(/\r?\n/).map(clean).filter(Boolean);
     for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
       const line = lines[lineIndex];
-      if (!label.test(line)) { label.lastIndex = 0; continue; }
-      label.lastIndex = 0;
-      const same = firstMoney(line.replace(label, " "));
+      const match = line.match(label);
+      if (!match || match.index === undefined) continue;
+      const after = line.slice(match.index + match[0].length);
+      const same = firstMoney(after);
       if (same !== null) return { value: same, page: i + 1, evidence: safe(line) };
       for (let next = lineIndex + 1; next <= Math.min(lineIndex + 2, lines.length - 1); next += 1) {
         if (/Total\s+(?:OD|TP)|Calculated\s+(?:OD|TP)|Net\s+Premium|GST|Total\s+Payable/i.test(lines[next])) break;
@@ -292,10 +275,7 @@ function bounded(text: string, start: RegExp, end: RegExp) {
   const endIndex = rest.search(end);
   return endIndex > 0 ? rest.slice(0, endIndex) : rest.slice(0, 5000);
 }
-
-function goodVehicleText(value: string) {
-  return value.length >= 2 && value.length <= 80 && !/^(?:MAKE|MODEL|TYPE|NO|NA|N\/A)$/i.test(value);
-}
+function goodVehicleText(value: string) { return value.length >= 2 && value.length <= 80 && !/^(?:MAKE|MODEL|TYPE|NO|NA|N\/A)$/i.test(value); }
 function compactId(value: string) { return value.toUpperCase().replace(/[^A-Z0-9]/g, ""); }
 function goodVehicleId(value: string, minLength: number) { return value.length >= minLength && value.length <= 30 && /[A-Z]/.test(value) && /\d/.test(value); }
 function looksCompleteRegistration(value: string) {
