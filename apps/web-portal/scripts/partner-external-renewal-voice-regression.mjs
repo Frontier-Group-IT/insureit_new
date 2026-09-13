@@ -53,17 +53,21 @@ for (const filename of [
   assert(schemaWorkflow.includes(filename), `schema workflow applies ${filename}`);
   assert(deployWorkflow.includes(filename), `production deploy gate recognizes ${filename}`);
 }
+assert(!schemaWorkflow.includes("20260913222500_external_renewal_voice_worklist_projection.sql"), "release does not depend on the removed third migration");
 assert(deployWorkflow.includes("apply-external-renewal-voice-attempts.yml"), "production deploy waits for the dedicated voice schema workflow");
 
 assert(sarvamClient.includes('process.env.SARVAM_API_KEY'), "Sarvam key comes from server environment");
 assert(sarvamClient.includes('api-subscription-key'), "Sarvam API uses subscription-key authentication");
 assert(sarvamClient.includes('user_identifier: context.attempt_id'), "local attempt UUID is the provider correlation key");
 assert(sarvamClient.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "IT-controlled kill switch gates outbound calling");
+assert(sarvamClient.includes("SarvamRenewalSubmissionError"), "provider submission distinguishes definitive rejection from ambiguous delivery");
+assert(sarvamClient.includes("Await reconciliation before retrying"), "timeouts and ambiguous provider responses prevent unsafe immediate retry");
 assert(!sarvamClient.includes('NEXT_PUBLIC_SARVAM'), "no Sarvam credential/config is exposed as public browser environment");
 
 assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
 assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
-assert(callRoute.includes("providerAccepted"), "provider-accepted requests are not falsely released after persistence failure");
+assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
+assert(callRoute.includes("providerDefinitelyRejected"), "only definitive provider rejection releases the local active-attempt guard");
 
 assert(webhook.includes("SARVAM_RENEWAL_WEBHOOK_SECRET"), "webhook requires INSUREIT-controlled secret");
 assert(webhook.includes("SARVAM_RENEWAL_CAMPAIGN_ID"), "webhook rejects unexpected campaigns");
