@@ -39,7 +39,7 @@ export function refineNewIndiaSeparatedVehicleEvidence(
 
   return {
     ...parsed,
-    parserVersion: `${parsed.parserVersion}+new-india-separated-vehicle-evidence-v5`,
+    parserVersion: `${parsed.parserVersion}+new-india-separated-vehicle-evidence-v6`,
     fields: [...fields.values()],
   };
 }
@@ -59,15 +59,26 @@ function vehicleYears(vehicle: string) {
 function findStructuredYear(tables: StructuredPolicyTable[]): { value: string; evidence: string } | null {
   const hits: Array<{ value: string; evidence: string }> = [];
   for (const table of tables.filter((entry) => entry.page === 1)) {
-    for (const rawRow of table.rows) {
-      const row = rawRow.map(cleanCell);
+    for (let r = 0; r < table.rows.length; r += 1) {
+      const row = table.rows[r].map(cleanCell);
       for (let c = 0; c < row.length; c += 1) {
         const cell = row[c];
         if (!YEAR_LABEL.test(cell)) continue;
+
         const inline = cell.match(/Year\s+of\s+manufacture\s*[:\-]?\s*((?:19|20)\d{2})/i)?.[1];
-        const adjacent = row.slice(c + 1).map((value) => value.match(/\b((?:19|20)\d{2})\b/)?.[1]).find(Boolean);
-        const value = inline ?? adjacent;
-        if (value) hits.push({ value, evidence: `Structured Vehicle Details row: ${row.join(" | ")}` });
+        if (inline) hits.push({ value: inline, evidence: `Structured Vehicle Details row: ${row.join(" | ")}` });
+
+        for (const value of row.slice(c + 1)) {
+          const year = value.match(/\b((?:19|20)\d{2})\b/)?.[1];
+          if (year) hits.push({ value: year, evidence: `Structured Vehicle Details row: ${row.join(" | ")}` });
+        }
+
+        for (let next = r + 1; next <= Math.min(r + 2, table.rows.length - 1); next += 1) {
+          const nextRow = table.rows[next].map(cleanCell);
+          const sameColumn = nextRow[c] ?? "";
+          const year = sameColumn.match(/^\s*((?:19|20)\d{2})\s*$/)?.[1];
+          if (year) hits.push({ value: year, evidence: `Structured Vehicle Details rows: ${row.join(" | ")} || ${nextRow.join(" | ")}` });
+        }
       }
     }
   }
@@ -86,19 +97,25 @@ function findStructuredPair(tables: StructuredPolicyTable[]): { chassis: string;
         if (!COMBINED_LABEL.test(cell)) continue;
 
         const inline = cell.replace(COMBINED_LABEL, "").replace(/^\s*[:\-]?\s*/, "");
-        const candidates = [inline, ...row.slice(c + 1)];
-        for (const candidate of candidates) {
+        const directCandidates = [inline, ...row.slice(c + 1)];
+        for (const candidate of directCandidates) {
           const parsed = parseLabeledPair(candidate);
           if (parsed) pairs.push({ ...parsed, evidence: `Structured Vehicle Details row: ${row.join(" | ")}` });
         }
 
-        for (let next = r + 1; next <= Math.min(r + 2, table.rows.length - 1); next += 1) {
-          const nextRow = table.rows[next].map(cleanCell);
-          const candidatesBelow = [nextRow[c] ?? "", ...nextRow.slice(c + 1)];
-          for (const candidate of candidatesBelow) {
-            const parsed = parseLabeledPair(candidate);
-            if (parsed) pairs.push({ ...parsed, evidence: `Structured Vehicle Details rows: ${row.join(" | ")} || ${nextRow.join(" | ")}` });
-          }
+        const neighborhoodCells: string[] = [];
+        for (let rr = r; rr <= Math.min(r + 2, table.rows.length - 1); rr += 1) {
+          const neighborRow = table.rows[rr].map(cleanCell);
+          const from = rr === r ? c + 1 : Math.max(0, c - 1);
+          const to = Math.min(neighborRow.length, c + 3);
+          neighborhoodCells.push(...neighborRow.slice(from, to));
+        }
+        const neighborhoodPair = pairFromCells(neighborhoodCells);
+        if (neighborhoodPair) {
+          pairs.push({
+            ...neighborhoodPair,
+            evidence: `Structured Vehicle Details neighborhood near Chassis/Engine label: ${maskNeighborhood(neighborhoodCells)}`,
+          });
         }
       }
     }
@@ -106,6 +123,13 @@ function findStructuredPair(tables: StructuredPolicyTable[]): { chassis: string;
 
   const unique = dedupePairs(pairs);
   return unique.length === 1 ? unique[0] : null;
+}
+
+function pairFromCells(cells: string[]): { chassis: string; engine: string } | null {
+  const ids = [...new Set(cells.flatMap((cell) => extractMixedIds(cell)))];
+  const chassis = ids.filter(looksLikeChassis);
+  const engine = ids.filter((value) => !looksLikeChassis(value));
+  return chassis.length === 1 && engine.length === 1 ? { chassis: chassis[0], engine: engine[0] } : null;
 }
 
 function findSeparatedPair(vehicle: string): { chassis: string; engine: string; evidence: string } | null {
@@ -180,6 +204,16 @@ function dedupePairs(pairs: Array<{ chassis: string; engine: string; evidence: s
     seen.add(key);
     return true;
   });
+}
+
+function maskNeighborhood(cells: string[]) {
+  return cells.map((cell) => {
+    const ids = extractMixedIds(cell);
+    if (!ids.length) return cleanCell(cell).replace(/[A-Z0-9]{6,}/gi, "[token]");
+    let masked = cleanCell(cell);
+    for (const id of ids) masked = masked.replace(new RegExp(id, "i"), `[id:${id.length}]`);
+    return masked;
+  }).join(" | ");
 }
 
 function cleanCell(value: string) {
