@@ -1,4 +1,4 @@
-name: Publish Partner 0.1.0 home hero reference OTA once
+name: Publish Partner 0.1.0 guarded refinements OTA
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
     paths:
       - '.github/workflows/publish-partner-0-1-home-hero-reference-once.yml'
       - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
+      - 'scripts/partner/patch-0-1-home-refinements.mjs'
+      - 'scripts/partner/patch-0-1-business-date-filter.mjs'
+      - 'scripts/partner/compat/partner-business-date-filter.tsx'
   workflow_dispatch:
 
 permissions:
@@ -64,7 +67,7 @@ jobs:
           }
           NODE
 
-      - name: Apply hero tuning with safe status strip
+      - name: Apply approved hero composition
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +79,28 @@ jobs:
           grep -q "transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "body: { marginTop: -10" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "searchShell: { minHeight: 49" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Apply Home refinements
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "backgroundColor: 'rgba(4,33,78,0.72)'" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q 'QuickAction icon="file-plus" label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "pendingBackdrop: { position: 'absolute', right: 3, top: 13, width: 88, height: 67" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          ! grep -q '<Text style={styles.sectionTitle}>Recent Activity</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Add native-safe Business Report date filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx \
+            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'rangeSelection?.summary.premium' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "getPartnerBusinessRange" 'compat/apps/partner-app/components/partner-business-date-filter-compat.tsx'
+          ! grep -q '@react-native-community/datetimepicker' 'compat/apps/partner-app/components/partner-business-date-filter-compat.tsx'
 
       - name: Require Expo token
         shell: bash
@@ -106,7 +131,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish Partner 0.1.0 status strip OTA
+      - name: Publish Partner 0.1.0 guarded refinements OTA
         working-directory: compat/apps/partner-app
         shell: bash
         run: |
@@ -114,21 +139,23 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 safe notification status strip above hero" \
+            --message "Partner 0.1.0 hero clarity, compact tasks and working business date filter" \
             --non-interactive \
-            --json > partner-0-1-home-hero-reference-update.json
-          cat partner-0-1-home-hero-reference-update.json
+            --json > partner-0-1-refinements-update.json
+          cat partner-0-1-refinements-update.json
 
       - name: Summary
         if: always()
         shell: bash
         run: |
           {
-            echo "## Partner 0.1.0 safe status strip OTA"
+            echo "## Partner 0.1.0 guarded refinements OTA"
             echo
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Scope: restore device-aware top safe area only; preserve hero crop, controls, greeting and search composition"
-            echo "- Business cards and dashboard data logic: unchanged"
+            echo "- Hero: approved crop preserved; greeting/activity/profile contrast strengthened"
+            echo "- Home: Pending Tasks compacted; Recent Activity removed; Policy Intake icon corrected"
+            echo "- Business Report: native-safe working date range filter drives headline premium/policies/customers/claims"
+            echo "- No new native dependency or APK required"
           } >> "$GITHUB_STEP_SUMMARY"
