@@ -68,16 +68,28 @@ function findSeparatedPair(vehicle: string): { chassis: string; engine: string; 
 }
 
 function extractMixedIds(block: string) {
-  const normalized = block
-    .replace(/[\u00a0\t\r\n]+/g, " ")
-    .replace(/\s*\/\s*/g, " ")
-    .trim();
-  const raw = normalized.match(/[A-Z0-9][A-Z0-9\s-]{5,34}/gi) ?? [];
-  const ids = raw
-    .map(compactId)
-    .filter(validId)
-    .filter((value) => !/^(?:CHASSIS|ENGINE|NUMBER|NO|TYPE|FUEL)$/.test(value));
-  return [...new Set(ids)];
+  const lines = block
+    .replace(/\u00a0/g, " ")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const ids: string[] = [];
+  for (const line of lines) {
+    const compactLine = compactId(line);
+    if (validId(compactLine)) {
+      ids.push(compactLine);
+      continue;
+    }
+
+    const tokens = line.match(/[A-Z0-9][A-Z0-9-]{5,29}/gi) ?? [];
+    for (const token of tokens) {
+      const candidate = compactId(token);
+      if (validId(candidate)) ids.push(candidate);
+    }
+  }
+
+  return [...new Set(ids)].filter((value) => !/^(?:CHASSIS|ENGINE|NUMBER|NO|TYPE|FUEL)$/.test(value));
 }
 
 function looksLikeChassis(value: string) {
