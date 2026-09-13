@@ -38,8 +38,7 @@ export function refineNewIndiaEnhancedCoversLiveResiduals(
   // one side is a 17-character VIN-like identifier.
   const pair = findStructuredPair(tables) ?? findRawPair(vehicleText) ?? findDirectPagePair(pages[0] ?? "");
   if (pair) {
-    if (!has(fields, "vehicle_chassis_number")) set(fields, "vehicle_chassis_number", "Chassis number", pair.chassis, pair.page, pair.evidence);
-    if (!has(fields, "vehicle_engine_number")) set(fields, "vehicle_engine_number", "Engine number", pair.engine, pair.page, pair.evidence);
+    applySemanticPair(fields, pair);
   }
 
   if (!has(fields, "vehicle_chassis_number")) {
@@ -55,6 +54,25 @@ export function refineNewIndiaEnhancedCoversLiveResiduals(
   }
 
   return { ...parsed, parserVersion: `${parsed.parserVersion}+new-india-enhanced-covers-live-residual-v3`, fields: [...fields.values()] };
+}
+
+function applySemanticPair(fields: Fields, pair: PairHit) {
+  const currentChassis = compactId(fields.get("vehicle_chassis_number")?.value ?? "");
+  const currentEngine = compactId(fields.get("vehicle_engine_number")?.value ?? "");
+  const pairValues = new Set([pair.chassis, pair.engine]);
+
+  // Never overwrite unrelated, already-proven identifiers. But if an earlier
+  // generic rule assigned one member of this exact combined pair to the wrong
+  // semantic field, repair the swap using the VIN-shape evidence.
+  const chassisCanChange = !currentChassis || pairValues.has(currentChassis);
+  const engineCanChange = !currentEngine || pairValues.has(currentEngine);
+
+  if (chassisCanChange && currentChassis !== pair.chassis) {
+    set(fields, "vehicle_chassis_number", "Chassis number", pair.chassis, pair.page, pair.evidence);
+  }
+  if (engineCanChange && currentEngine !== pair.engine) {
+    set(fields, "vehicle_engine_number", "Engine number", pair.engine, pair.page, pair.evidence);
+  }
 }
 
 function findStructuredValue(tables: StructuredPolicyTable[], label: RegExp, accept: (value: string) => boolean): Hit | null {
