@@ -76,7 +76,7 @@ jobs:
           grep -q "safeArea: { flex: 1, backgroundColor: '#F4F6F9' }" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "hero: { height: 158" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q "transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "opacity: 0.70, transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "body: { marginTop: -10" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "searchShell: { minHeight: 49" 'compat/apps/partner-app/app/(tabs)/index.tsx'
 
@@ -89,8 +89,13 @@ jobs:
             echo "Recent Activity still present on Home after refinement patch." >&2
             exit 1
           fi
+          if grep -q '<Text style={styles.sectionTitle}>Your Impact</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'; then
+            echo "Your Impact still present on Home after refinement patch." >&2
+            exit 1
+          fi
           grep -q "backgroundColor: 'rgba(3,30,68,0.42)'" 'compat/apps/partner-app/app/(tabs)/index.tsx'
-          grep -q '<QuickAction icon="file-plus" label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "policyAdd: require('../../assets/generated-dashboard/policy-add.png')" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q '<QuickAction asset={GeneratedDashboardAssets.policyAdd} label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "pendingRow: { minHeight: 40" 'compat/apps/partner-app/app/(tabs)/index.tsx'
 
       - name: Install 0.1-safe Business Report date-filter component
@@ -149,7 +154,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 home refinements and Business Report date range" \
+            --message "Partner 0.1.0 compact home, matched Policy Intake icon and 70% hero artwork" \
             --non-interactive \
             --json > partner-0-1-home-refinements-update.json
           cat partner-0-1-home-refinements-update.json
@@ -164,7 +169,7 @@ jobs:
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Home: stronger hero control/greeting contrast, compact Pending Tasks, Policy Intake glyph, Recent Activity removed"
+            echo "- Home: hero artwork opacity 70%, strong control/greeting contrast, compact Pending Tasks, Policy Intake image asset, Recent Activity removed, Your Impact removed"
             echo "- Business Report: JS-only date range drives report metrics without adding a native date-picker dependency"
             echo "- Hero crop/search overlap/status-strip: preserved"
           } >> "$GITHUB_STEP_SUMMARY"
