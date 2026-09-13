@@ -8,7 +8,6 @@ on:
     paths:
       - 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql'
       - 'supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql'
-      - 'supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql'
       - '.github/workflows/apply-external-renewal-voice-attempts.yml'
 
 permissions:
@@ -48,7 +47,6 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260913220500_external_renewal_voice_attempts.sql
           test -f supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql
-          test -f supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -65,8 +63,6 @@ jobs:
           supabase migration repair --linked --status applied 20260913220500
           supabase db query --linked --file supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql
           supabase migration repair --linked --status applied 20260913221500
-          supabase db query --linked --file supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql
-          supabase migration repair --linked --status applied 20260913222500
 
       - name: Verify voice integration schema contract
         shell: bash
