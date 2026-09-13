@@ -4,20 +4,19 @@ const NEW_INDIA = /THE\s+NEW\s+INDIA\s+ASSURANCE|NEW\s+INDIA\s+ASSURANCE\s+COMPA
 const ENHANCED = /COMMERCIAL\s+VEHICLE\s+PACKAGE\s+POLICY[\s\S]{0,40}?ENHANCED\s+COVERS/i;
 const COMBINED_LABEL = /Chassis\s*(?:no\.?|number)?\s*\/\s*Engine\s*(?:no\.?|number)?/i;
 
-export function refineNewIndiaSeparatedVehicleEvidence(
-  pages: string[],
-  parsed: ParsedPolicyResult,
-): ParsedPolicyResult {
+export function refineNewIndiaSeparatedVehicleEvidence(pages: string[], parsed: ParsedPolicyResult): ParsedPolicyResult {
   if (parsed.parserId !== "new_india_motor_v1") return parsed;
   const firstTwo = pages.slice(0, 2).join("\n");
   if (!NEW_INDIA.test(firstTwo) || !ENHANCED.test(firstTwo)) return parsed;
 
   const fields = new Map(parsed.fields.map((field) => [field.key, field]));
   const vehicle = boundedVehicleText(pages[0] ?? firstTwo);
+  const years = vehicleYears(vehicle);
 
-  if (!has(fields, "vehicle_manufacturing_year")) {
-    const year = uniqueVehicleYear(vehicle);
-    if (year) set(fields, "vehicle_manufacturing_year", "Manufacturing year", year, "Vehicle Details unique year evidence");
+  if (years.length > 1) {
+    fields.delete("vehicle_manufacturing_year");
+  } else if (years.length === 1 && !has(fields, "vehicle_manufacturing_year")) {
+    set(fields, "vehicle_manufacturing_year", "Manufacturing year", years[0], "Vehicle Details unique year evidence");
   }
 
   if (!has(fields, "vehicle_chassis_number") || !has(fields, "vehicle_engine_number")) {
@@ -28,11 +27,7 @@ export function refineNewIndiaSeparatedVehicleEvidence(
     }
   }
 
-  return {
-    ...parsed,
-    parserVersion: `${parsed.parserVersion}+new-india-separated-vehicle-evidence-v4`,
-    fields: [...fields.values()],
-  };
+  return { ...parsed, parserVersion: `${parsed.parserVersion}+new-india-separated-vehicle-evidence-v4`, fields: [...fields.values()] };
 }
 
 function boundedVehicleText(page: string) {
@@ -42,11 +37,9 @@ function boundedVehicleText(page: string) {
   return end > 0 ? source.slice(0, end) : source.slice(0, 7000);
 }
 
-function uniqueVehicleYear(vehicle: string) {
-  if (!/Year\s+of\s+manufacture/i.test(vehicle)) return null;
-  const years = [...vehicle.matchAll(/\b(?:19|20)\d{2}\b/g)].map((match) => match[0]);
-  const unique = [...new Set(years)];
-  return unique.length === 1 ? unique[0] : null;
+function vehicleYears(vehicle: string) {
+  if (!/Year\s+of\s+manufacture/i.test(vehicle)) return [];
+  return [...new Set([...vehicle.matchAll(/\b(?:19|20)\d{2}\b/g)].map((match) => match[0]))];
 }
 
 function findSeparatedPair(vehicle: string): { chassis: string; engine: string; evidence: string } | null {
@@ -57,8 +50,6 @@ function findSeparatedPair(vehicle: string): { chassis: string; engine: string; 
   const stop = after.search(/Type\s+of\s+fuel|Cubic\s+capacity|Type\s+of\s+body|Gross\s+Vehicle\s+Weight|Make\s*\/\s*Model|Registration\s*(?:no\.?|number)/i);
   const block = stop >= 0 ? after.slice(0, stop) : after;
   const candidates = extractMixedIds(block);
-  if (candidates.length < 2) return null;
-
   const chassisCandidates = candidates.filter(looksLikeChassis);
   if (chassisCandidates.length !== 1) return null;
   const chassis = chassisCandidates[0];
@@ -68,42 +59,22 @@ function findSeparatedPair(vehicle: string): { chassis: string; engine: string; 
 }
 
 function extractMixedIds(block: string) {
-  const lines = block
-    .replace(/\u00a0/g, " ")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
+  const lines = block.replace(/\u00a0/g, " ").split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   const ids: string[] = [];
   for (const line of lines) {
     const compactLine = compactId(line);
-    if (validId(compactLine)) {
-      ids.push(compactLine);
-      continue;
-    }
-
+    if (validId(compactLine)) { ids.push(compactLine); continue; }
     const tokens = line.match(/[A-Z0-9][A-Z0-9-]{5,29}/gi) ?? [];
     for (const token of tokens) {
       const candidate = compactId(token);
       if (validId(candidate)) ids.push(candidate);
     }
   }
-
   return [...new Set(ids)].filter((value) => !/^(?:CHASSIS|ENGINE|NUMBER|NO|TYPE|FUEL)$/.test(value));
 }
 
-function looksLikeChassis(value: string) {
-  return value.length === 17 && /^[A-Z0-9]{17}$/.test(value) && /[A-Z]/.test(value) && /\d/.test(value);
-}
-function validId(value: string) {
-  return value.length >= 10 && value.length <= 24 && /[A-Z]/.test(value) && /\d/.test(value);
-}
-function compactId(value: string) {
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
-function has(fields: Map<string, ParsedPolicyField>, key: string) {
-  return Boolean(fields.get(key)?.value?.trim());
-}
-function set(fields: Map<string, ParsedPolicyField>, key: string, label: string, value: string, evidence: string) {
-  fields.set(key, { key, label, value, confidence: .995, page: 1, evidence });
-}
+function looksLikeChassis(value: string) { return value.length === 17 && /^[A-Z0-9]{17}$/.test(value) && /[A-Z]/.test(value) && /\d/.test(value); }
+function validId(value: string) { return value.length >= 10 && value.length <= 24 && /[A-Z]/.test(value) && /\d/.test(value); }
+function compactId(value: string) { return value.toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+function has(fields: Map<string, ParsedPolicyField>, key: string) { return Boolean(fields.get(key)?.value?.trim()); }
+function set(fields: Map<string, ParsedPolicyField>, key: string, label: string, value: string, evidence: string) { fields.set(key, { key, label, value, confidence: .995, page: 1, evidence }); }
