@@ -117,6 +117,8 @@ jobs:
         run: npm run policy-ocr:digit-regression
       - name: New India regression
         run: npm run policy-ocr:new-india-regression
+      - name: New India Enhanced Covers regression
+        run: node --experimental-strip-types scripts/policy-ocr-new-india-enhanced-covers-regression.ts
       - name: Additional insurer OCR regression
         run: npm run policy-ocr:additional-regression
       - name: Tata AIG bundled two-wheeler OCR regression
@@ -176,7 +178,7 @@ jobs:
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Claim regressions: spot multi-upload/intimation, External Claim read-only legacy protection, and External Claim canonical Operations workflow"
             echo "- Performance regressions: expensive register create/edit workflow links do not auto-prefetch"
-            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, additional insurers, Tata AIG bundled two-wheeler, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard, 8 fresh20 precision, 9 fresh20 Digit recovery, 10 UIIC GCV Package and 12 UIIC GCV Make/Model, post-training replay safety, onboarding Section 02/03 import, premium training workflow, protected worker"
+            echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, New India Enhanced Covers, additional insurers, Tata AIG bundled two-wheeler, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard, 8 fresh20 precision, 9 fresh20 Digit recovery, 10 UIIC GCV Package and 12 UIIC GCV Make/Model, post-training replay safety, onboarding Section 02/03 import, premium training workflow, protected worker"
             echo "- Static checks: typecheck and lint"
             echo "- Build: Next.js production build"
             echo "- Build-only public env: non-secret CI placeholders; no production credentials used"
