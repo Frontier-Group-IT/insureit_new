@@ -7,6 +7,8 @@ import { refineNewIndiaCommercialPolicy } from "../lib/policy-ocr-new-india-refi
 import { refineNewIndiaStructuredPolicy } from "../lib/policy-ocr-new-india-structured-refiner.ts";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
 import { refineNewIndiaEnhancedCoversPolicy } from "../lib/policy-ocr-new-india-enhanced-covers-refiner.ts";
+// @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
+import { refineNewIndiaEnhancedCoversLiveResiduals } from "../lib/policy-ocr-new-india-enhanced-covers-live-residual-refiner.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 import type { StructuredPolicyTable } from "../lib/policy-ocr-iffco-structured-refiner.ts";
 
@@ -19,7 +21,8 @@ function run(pages: string[], tables: StructuredPolicyTable[] = []) {
   assert.equal(base.parserId, "new_india_motor_v1");
   const text = refineNewIndiaCommercialPolicy(pages, base);
   const structured = refineNewIndiaStructuredPolicy(tables, text);
-  return refineNewIndiaEnhancedCoversPolicy(pages, tables, structured);
+  const enhanced = refineNewIndiaEnhancedCoversPolicy(pages, tables, structured);
+  return refineNewIndiaEnhancedCoversLiveResiduals(pages, tables, enhanced);
 }
 
 const trainedPages = [
@@ -137,6 +140,60 @@ assert.equal(field(sibling, "od_premium"), "12000");
 assert.equal(field(sibling, "tp_premium"), "28000");
 assert.equal(field(sibling, "cpa_premium"), "275");
 
+// Live production residual shape after the first training round: page text did
+// not preserve Year/Chassis/Engine cleanly, while structured layout retained
+// the corresponding table label/value associations.
+const liveResidualPages = [
+  `THE NEW INDIA ASSURANCE CO. LTD.\nCommercial Vehicle Package Policy - Enhanced Covers\nVEHICLE DETAILS`,
+  `SCHEDULE OF PREMIUM`,
+];
+const liveResidualTables: StructuredPolicyTable[] = [{
+  page: 1,
+  rows: [
+    ["Geographical Area / Zone", "India/C", "Year of manufacture", "2026"],
+    ["Chassis no./Engine no.", "LIVECHASSIS12345 / LIVE ENG 987654"],
+    ["Type of fuel", "Diesel", "Gross Vehicle Weight (GVW)", "55000"],
+    ["Make/Model", "SYNTH TRUCKS/5532", "Registration no.", "RJ-45"],
+  ],
+}];
+const liveResidualInput: ParsedPolicyResult = {
+  parserId: "new_india_motor_v1",
+  parserVersion: "new_india_motor_v1+new-india-enhanced-covers-v1",
+  warnings: [],
+  fields: [
+    { key: "vehicle_make", label: "Vehicle make", value: "SYNTH TRUCKS", confidence: 1, page: 1, evidence: "already correct" },
+    { key: "vehicle_model", label: "Vehicle model", value: "5532", confidence: 1, page: 1, evidence: "already correct" },
+    { key: "vehicle_capacity", label: "Vehicle capacity", value: "55000", confidence: 1, page: 1, evidence: "already correct" },
+    { key: "vehicle_rto_state", label: "RTO state", value: "Rajasthan", confidence: 1, page: 1, evidence: "already correct" },
+    { key: "vehicle_class", label: "Vehicle class", value: "GCV", confidence: 1, page: 1, evidence: "already correct" },
+    { key: "tp_premium", label: "Third party premium", value: "44667", confidence: 1, page: 2, evidence: "already correct" },
+  ],
+};
+const liveResidual = refineNewIndiaEnhancedCoversLiveResiduals(liveResidualPages, liveResidualTables, liveResidualInput);
+assert.equal(field(liveResidual, "vehicle_manufacturing_year"), "2026");
+assert.equal(field(liveResidual, "vehicle_chassis_number"), "LIVECHASSIS12345");
+assert.equal(field(liveResidual, "vehicle_engine_number"), "LIVEENG987654");
+assert.equal(field(liveResidual, "vehicle_make"), "SYNTH TRUCKS");
+assert.equal(field(liveResidual, "tp_premium"), "44667");
+assert.match(liveResidual.parserVersion, /live-residual-v1/);
+
+const preserved = refineNewIndiaEnhancedCoversLiveResiduals(
+  liveResidualPages,
+  liveResidualTables,
+  {
+    ...liveResidualInput,
+    fields: [
+      ...liveResidualInput.fields,
+      { key: "vehicle_manufacturing_year", label: "Manufacturing year", value: "2025", confidence: 1, page: 1, evidence: "already proven" },
+      { key: "vehicle_chassis_number", label: "Chassis", value: "KEEPCHASSIS123", confidence: 1, page: 1, evidence: "already proven" },
+      { key: "vehicle_engine_number", label: "Engine", value: "KEEPENGINE456", confidence: 1, page: 1, evidence: "already proven" },
+    ],
+  },
+);
+assert.equal(field(preserved, "vehicle_manufacturing_year"), "2025");
+assert.equal(field(preserved, "vehicle_chassis_number"), "KEEPCHASSIS123");
+assert.equal(field(preserved, "vehicle_engine_number"), "KEEPENGINE456");
+
 const unsafePages = [
   trainedPages[0],
   trainedPages[1].replace("Total TP Premium (Rs) 44667", "Total TP Premium (Rs) 44000"),
@@ -159,4 +216,4 @@ const unrelatedText = refineNewIndiaCommercialPolicy(unrelatedPages, unrelatedBa
 const unrelatedAfter = refineNewIndiaEnhancedCoversPolicy(unrelatedPages, [], unrelatedText);
 assert.deepEqual(unrelatedAfter, unrelatedText, "non-Enhanced-Covers New India layouts must stay untouched");
 
-console.log("New India Enhanced Covers targeted regression passed.");
+console.log("New India Enhanced Covers targeted + live residual regression passed.");

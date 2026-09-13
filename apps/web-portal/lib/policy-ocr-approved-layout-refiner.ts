@@ -40,6 +40,8 @@ import { refineTataAigVisibleFields } from "./policy-ocr-tata-aig-visible-field-
 import { refineTataAigStructuredLayout } from "./policy-ocr-tata-aig-structured-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineNewIndiaEnhancedCoversPolicy } from "./policy-ocr-new-india-enhanced-covers-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineNewIndiaEnhancedCoversLiveResiduals } from "./policy-ocr-new-india-enhanced-covers-live-residual-refiner.ts";
 
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -92,7 +94,8 @@ export function refineApprovedMotorPolicyLayout(
   const round11 = refineProductionRound11UiicGcvLiveResiduals(pages, tables, round10);
   const round12 = refineProductionRound12UiicGcvMakeModel(pages, tables, round11);
   const identified = refineProductionPolicyIdentity(pages, round12);
-  return refineNewIndiaEnhancedCoversPolicy(pages, tables, identified);
+  const enhanced = refineNewIndiaEnhancedCoversPolicy(pages, tables, identified);
+  return refineNewIndiaEnhancedCoversLiveResiduals(pages, tables, enhanced);
 }
 
 function preserveValidatedUiicFinancials(
