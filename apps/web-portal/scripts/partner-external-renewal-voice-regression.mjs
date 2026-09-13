@@ -7,7 +7,8 @@ const repoRoot = path.resolve(root, "../..");
 
 const migration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913220500_external_renewal_voice_attempts.sql"), "utf8");
 const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql"), "utf8");
-const worklistProjection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913222500_external_renewal_voice_worklist_projection.sql"), "utf8");
+const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
+const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
@@ -29,8 +30,8 @@ assert(migration.includes("partner_app_commercial_scope()"), "Partner call start
 assert(migration.includes("'do_not_contact'"), "call start blocks do-not-contact opportunities");
 assert(migration.includes("external_renewal_voice_one_active_attempt_uidx"), "only one active AI call is allowed per opportunity");
 assert(migration.includes("revoke all on public.external_renewal_voice_attempts from public, anon, authenticated"), "authenticated users have no direct attempt-table access");
-assert(!/insert\s+into\s+public\.(customers|vehicles|policies)\b/i.test(migration + projection + worklistProjection), "voice migrations never insert verified customer/vehicle/policy records");
-assert(!/update\s+public\.(customers|vehicles|policies)\b/i.test(migration + projection + worklistProjection), "voice migrations never update verified customer/vehicle/policy records");
+assert(!/insert\s+into\s+public\.(customers|vehicles|policies)\b/i.test(migration + projection), "voice migrations never insert verified customer/vehicle/policy records");
+assert(!/update\s+public\.(customers|vehicles|policies)\b/i.test(migration + projection), "voice migrations never update verified customer/vehicle/policy records");
 
 assert(projection.includes("external_renewal_voice_attempt_events"), "provider retry attempts have a dedicated idempotency table");
 assert(projection.includes("unique (provider_attempt_id)"), "provider attempt id is an idempotency key");
@@ -40,10 +41,19 @@ assert(projection.includes("when 'wrong_person' then 'connected'"), "wrong-perso
 assert(!/v_outcome\s*:=.*'won'/s.test(projection), "voice result cannot set won");
 assert(projection.includes("p_connectivity_status='connected'"), "CRM outcomes require actual provider connectivity");
 assert(projection.includes("p_follow_up_at > now()"), "AI follow-up requires a future timestamp");
+assert(projection.includes("submission_status in ('completed','cancelled')"), "unexpected later provider attempts cannot reopen a completed parent call");
+assert(projection.includes("partner_app_external_renewal_voice_states"), "worklist uses a Partner-scoped batched voice-state projection");
+assert(projection.includes("partner_app_commercial_scope()"), "worklist voice states derive Partner scope server-side");
+assert(projection.includes("human_needed"), "worklist can surface human-review outcomes without auto-closing the opportunity");
 
-assert(worklistProjection.includes("partner_app_external_renewal_voice_states"), "worklist uses a Partner-scoped batched voice-state projection");
-assert(worklistProjection.includes("partner_app_commercial_scope()"), "worklist voice states derive Partner scope server-side");
-assert(worklistProjection.includes("human_needed"), "worklist can surface human-review outcomes without auto-closing the opportunity");
+for (const filename of [
+  "20260913220500_external_renewal_voice_attempts.sql",
+  "20260913221500_external_renewal_voice_result_projection.sql",
+]) {
+  assert(schemaWorkflow.includes(filename), `schema workflow applies ${filename}`);
+  assert(deployWorkflow.includes(filename), `production deploy gate recognizes ${filename}`);
+}
+assert(deployWorkflow.includes("apply-external-renewal-voice-attempts.yml"), "production deploy waits for the dedicated voice schema workflow");
 
 assert(sarvamClient.includes('process.env.SARVAM_API_KEY'), "Sarvam key comes from server environment");
 assert(sarvamClient.includes('api-subscription-key'), "Sarvam API uses subscription-key authentication");
