@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -20,28 +20,6 @@ export function PartnerBusinessDateFilterCompat({ onChange }: { onChange: (value
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const applyPreset = async (nextMode: Mode) => {
-    if (loading) return;
-    if (nextMode === 'this_month') {
-      setMode(nextMode);
-      setLabel('This Month');
-      setFromDate(startOfMonth(today));
-      setToDate(today);
-      setError(null);
-      onChange(null);
-      setOpen(false);
-      return;
-    }
-    if (nextMode === 'last_30') {
-      const from = addDays(today, -29);
-      await applyRange(from, today, 'Last 30 Days', nextMode);
-      return;
-    }
-    setMode('custom');
-    setSelecting('from');
-    setVisibleMonth(startOfMonth(fromDate));
-  };
-
   const applyRange = async (from: Date, to: Date, nextLabel: string, nextMode: Mode = 'custom') => {
     if (loading || to < from || daysInclusive(from, to) > 366) return;
     setLoading(true);
@@ -59,6 +37,48 @@ export function PartnerBusinessDateFilterCompat({ onChange }: { onChange: (value
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    let active = true;
+    const from = startOfMonth(today);
+    setLoading(true);
+    setError(null);
+    void getPartnerBusinessRange(toDateKey(from), toDateKey(today))
+      .then((summary) => {
+        if (!active) return;
+        setFromDate(from);
+        setToDate(today);
+        setMode('this_month');
+        setLabel('This Month');
+        onChange({ summary, label: 'This Month' });
+      })
+      .catch((reason) => {
+        if (!active) return;
+        setError(reason instanceof Error ? reason.message : 'Could not load this business range.');
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [onChange, today]);
+
+  const applyPreset = async (nextMode: Mode) => {
+    if (loading) return;
+    if (nextMode === 'this_month') {
+      await applyRange(startOfMonth(today), today, 'This Month', nextMode);
+      return;
+    }
+    if (nextMode === 'last_30') {
+      const from = addDays(today, -29);
+      await applyRange(from, today, 'Last 30 Days', nextMode);
+      return;
+    }
+    setMode('custom');
+    setSelecting('from');
+    setVisibleMonth(startOfMonth(fromDate));
   };
 
   const chooseDay = (date: Date) => {
