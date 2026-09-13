@@ -1,4 +1,4 @@
-name: Publish Partner 0.1.0 home hero reference OTA once
+name: Publish Partner 0.1.0 home refinements OTA once
 
 on:
   push:
@@ -7,6 +7,9 @@ on:
     paths:
       - '.github/workflows/publish-partner-0-1-home-hero-reference-once.yml'
       - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
+      - 'scripts/partner/patch-0-1-home-refinements.mjs'
+      - 'scripts/partner/patch-0-1-business-date-filter.mjs'
+      - 'scripts/partner/compat/partner-business-date-filter.tsx'
   workflow_dispatch:
 
 permissions:
@@ -31,7 +34,7 @@ jobs:
           path: tooling
           fetch-depth: 0
 
-      - name: Check out last known good Partner 0.1.0 source
+      - name: Check out approved Partner 0.1.0 compatibility source
         uses: actions/checkout@v4
         with:
           ref: ${{ env.COMPAT_SHA }}
@@ -64,7 +67,7 @@ jobs:
           }
           NODE
 
-      - name: Apply hero tuning with safe status strip
+      - name: Apply accepted hero/status-strip tuning
         shell: bash
         run: |
           set -euo pipefail
@@ -76,6 +79,38 @@ jobs:
           grep -q "transform: \[{ scale: 0.92 }\]" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "body: { marginTop: -10" 'compat/apps/partner-app/app/(tabs)/index.tsx'
           grep -q "searchShell: { minHeight: 49" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Apply Home refinement patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          if grep -q '<Text style={styles.sectionTitle}>Recent Activity</Text>' 'compat/apps/partner-app/app/(tabs)/index.tsx'; then
+            echo "Recent Activity still present on Home after refinement patch." >&2
+            exit 1
+          fi
+          grep -q "backgroundColor: 'rgba(3,30,68,0.42)'" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q '<QuickAction icon="file-plus" label="Policy Intake"' 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          grep -q "pendingRow: { minHeight: 40" 'compat/apps/partner-app/app/(tabs)/index.tsx'
+
+      - name: Install 0.1-safe Business Report date-filter component
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx \
+            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          grep -q 'export function PartnerBusinessDateFilterCompat' \
+            compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+
+      - name: Apply Business Report date-filter patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "partner_app_business_range" 'compat/apps/partner-app/lib/home.ts'
+          grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'rangeSelection' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'rangeSelection?.summary.premium' 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
       - name: Require Expo token
         shell: bash
@@ -106,7 +141,7 @@ jobs:
           npx eas-cli whoami
           npx eas-cli project:info --non-interactive
 
-      - name: Publish Partner 0.1.0 status strip OTA
+      - name: Publish Partner 0.1.0 home refinements OTA
         working-directory: compat/apps/partner-app
         shell: bash
         run: |
@@ -114,21 +149,22 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 safe notification status strip above hero" \
+            --message "Partner 0.1.0 home refinements and Business Report date range" \
             --non-interactive \
-            --json > partner-0-1-home-hero-reference-update.json
-          cat partner-0-1-home-hero-reference-update.json
+            --json > partner-0-1-home-refinements-update.json
+          cat partner-0-1-home-refinements-update.json
 
       - name: Summary
         if: always()
         shell: bash
         run: |
           {
-            echo "## Partner 0.1.0 safe status strip OTA"
+            echo "## Partner 0.1.0 home refinements OTA"
             echo
             echo "- Source baseline: $COMPAT_SHA"
             echo "- Channel: preview"
             echo "- Runtime: 0.1.0"
-            echo "- Scope: restore device-aware top safe area only; preserve hero crop, controls, greeting and search composition"
-            echo "- Business cards and dashboard data logic: unchanged"
+            echo "- Home: stronger hero control/greeting contrast, compact Pending Tasks, Policy Intake glyph, Recent Activity removed"
+            echo "- Business Report: JS-only date range drives report metrics without adding a native date-picker dependency"
+            echo "- Hero crop/search overlap/status-strip: preserved"
           } >> "$GITHUB_STEP_SUMMARY"
