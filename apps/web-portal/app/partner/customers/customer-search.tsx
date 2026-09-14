@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, useCallback, useEffect, useState, useTransition } from "react";
 import { Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -14,16 +14,17 @@ export function CustomerSearch({ initialQuery }: { initialQuery: string }) {
   const [isPending, startTransition] = useTransition();
 
   const currentQuery = searchParams.get("q")?.trim() ?? "";
+  const serializedSearchParams = searchParams.toString();
 
   useEffect(() => {
     setValue(currentQuery);
   }, [currentQuery]);
 
-  const replaceSearch = (nextValue: string) => {
+  const replaceSearch = useCallback((nextValue: string) => {
     const normalized = nextValue.trim();
     if (normalized === currentQuery) return;
 
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(serializedSearchParams);
     params.delete("page");
 
     if (normalized) params.set("q", normalized);
@@ -33,7 +34,7 @@ export function CustomerSearch({ initialQuery }: { initialQuery: string }) {
     startTransition(() => {
       router.replace(nextSearch ? `${pathname}?${nextSearch}` : pathname, { scroll: false });
     });
-  };
+  }, [currentQuery, pathname, router, serializedSearchParams]);
 
   useEffect(() => {
     const normalized = value.trim();
@@ -44,7 +45,7 @@ export function CustomerSearch({ initialQuery }: { initialQuery: string }) {
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-  }, [currentQuery, value]);
+  }, [currentQuery, replaceSearch, value]);
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
