@@ -304,7 +304,7 @@ export default async function PartnerExternalRenewalsPage({
                       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2F72DE]"><CalendarClock className="h-3.5 w-3.5" /></span>
                       <div className="min-w-0">
                         <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1A3154]">{row.account_name || row.customer_name || row.contact_name || "Customer"}</p>
-                        <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7184A0]">{[row.city, row.state].filter(Boolean).join(", ") || row.contact_name || "Contact not recorded"}</p>
+                        <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7184A0]">{row.contact_name || "Contact not recorded"}{row.mobile ? " · " + row.mobile : ""}</p>
                       </div>
                     </div>
 
