@@ -2,15 +2,12 @@ import Link from "next/link";
 import {
   ArrowLeft,
   ArrowRight,
-  BadgeIndianRupee,
-  Clock3,
   FileText,
   Search,
   ShieldCheck,
-  ShieldPlus,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebPolicySummary, listPartnerWebPolicies, type PartnerPolicyLifecycle } from "@/lib/partner-web";
+import { listPartnerWebPolicies, type PartnerPolicyLifecycle } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -70,10 +67,7 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [summary, rows] = await Promise.all([
-    getPartnerWebPolicySummary(),
-    listPartnerWebPolicies({ limit: PAGE_SIZE, offset, search: q, lifecycle }),
-  ]);
+  const rows = await listPartnerWebPolicies({ limit: PAGE_SIZE, offset, search: q, lifecycle });
 
   const total = rows[0]?.total_count ?? 0;
   const hasPrevious = page > 1;
@@ -90,37 +84,9 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
     return search ? "/partner/policies?" + search : "/partner/policies";
   };
 
-  const metrics = [
-    { label: "Premium Booked", value: currency(summary.total_premium), icon: BadgeIndianRupee, iconWrap: "bg-[#EAF3FF] text-[#2F72DE]", cell: "bg-white", showTrend: true },
-    { label: "Policies", value: summary.total_policies, icon: ShieldCheck, iconWrap: "bg-[#EEF4FF] text-[#3F7FE8]", cell: "bg-white" },
-    { label: "In Force", value: summary.in_force_policies, icon: ShieldPlus, iconWrap: "bg-[#E6F8EE] text-[#28B46A]", cell: "bg-[#F3FBF7]" },
-    { label: "Expiring 30d", value: summary.expiring_30_days, icon: Clock3, iconWrap: "bg-[#FFF3D8] text-[#F0A000]", cell: "bg-[#FFFAEF]" },
-    { label: "Expired", value: summary.expired_policies, icon: FileText, iconWrap: "bg-[#FFE8EF] text-[#E24F73]", cell: "bg-[#FFF5F8]" },
-  ];
-
   return (
     <PartnerPortalShell title="Policies">
       <div className="space-y-4">
-        <section className="grid overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_4px_14px_rgba(31,55,86,0.04)] sm:grid-cols-2 xl:grid-cols-5">
-          {metrics.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.label} className={`flex min-h-[78px] items-center gap-3 px-4 py-3 ${item.cell} ${index ? "border-t border-[#E4EAF2] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""} ${index === 4 ? "sm:border-t xl:border-t-0" : ""}`}>
-                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${item.iconWrap}`}>
-                  <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-[8px] font-extrabold uppercase tracking-[0.08em] text-[#71849E]">{item.label}</p>
-                    {item.showTrend ? <span className="text-[11px] font-black text-[#37B76B]">↗</span> : null}
-                  </div>
-                  <p className="mt-1 truncate text-[18px] font-extrabold leading-none tracking-[-0.02em] text-[#17365D]">{item.value}</p>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-
         <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_5px_16px_rgba(31,55,86,0.04)]">
           <div className="flex flex-col gap-3 border-b border-[#E5EBF2] px-4 py-3 xl:flex-row xl:items-center">
             <div className="flex shrink-0 items-center gap-3">
