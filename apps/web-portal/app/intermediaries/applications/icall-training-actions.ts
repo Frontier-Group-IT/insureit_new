@@ -52,6 +52,7 @@ type SyncAssignment = {
   exam_passed_at: string | null;
   exam_status: string | null;
   exam_score: number | null;
+  icall_environment?: string | null;
 };
 
 export async function launchIcallTrainingSso(applicationId: string, submittedLoginId: string) {
@@ -60,15 +61,25 @@ export async function launchIcallTrainingSso(applicationId: string, submittedLog
   if (!reviewer?.id) return { ok: false as const, message: "You are not authorized to open this training session." };
 
   const admin = createSupabaseAdminClient();
-  const { data: profile } = await admin
-    .from("posp_misp_onboarding_profiles")
-    .select("training_login_id,pan_number,dp_pan_number,partner_type")
-    .eq("application_id", applicationId)
-    .maybeSingle<{ training_login_id: string | null; pan_number: string | null; dp_pan_number: string | null; partner_type: "posp" | "misp" }>();
+  const [{ data: profile }, { data: assignment }] = await Promise.all([
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("training_login_id,partner_type")
+      .eq("application_id", applicationId)
+      .maybeSingle<{ training_login_id: string | null; partner_type: "posp" | "misp" }>(),
+    admin
+      .from("intermediary_training_exam_assignments")
+      .select("icall_environment,icall_login_id")
+      .eq("application_id", applicationId)
+      .maybeSingle<{ icall_environment: string | null; icall_login_id: string | null }>(),
+  ]);
 
   if (!profile) return { ok: false as const, message: "The POSP/MISP training account was not found." };
+  if (assignment?.icall_environment !== "production") {
+    return { ok: false as const, message: "Production iCall training has not been started for this application." };
+  }
 
-  const storedLoginId = profile.training_login_id || normalizePan(profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number);
+  const storedLoginId = assignment.icall_login_id || profile.training_login_id;
   const requestedLoginId = normalizePan(submittedLoginId);
   if (!storedLoginId || !requestedLoginId || storedLoginId !== requestedLoginId) {
     return { ok: false as const, message: "The iCall login ID does not match this application." };
@@ -78,7 +89,7 @@ export async function launchIcallTrainingSso(applicationId: string, submittedLog
     const response = await getIcallSso(storedLoginId);
     const redirectUrl = response.data?.redirectUrl?.trim();
     if (response.statusCode !== 200 || !redirectUrl) {
-      return { ok: false as const, message: "iCall did not return a valid training session." };
+      return { ok: false as const, message: response.message || "iCall did not return a valid training session." };
     }
 
     const parsed = new URL(redirectUrl);
@@ -88,52 +99,64 @@ export async function launchIcallTrainingSso(applicationId: string, submittedLog
 
     return { ok: true as const, redirectUrl };
   } catch (error) {
-    console.error("iCall SSO launch failed", { applicationId, loginId: storedLoginId, error });
-    return { ok: false as const, message: "Unable to open iCall training right now." };
+    console.error("iCall production SSO launch failed", { applicationId, error });
+    return { ok: false as const, message: "Unable to open iCall production training right now." };
   }
 }
 
-export async function registerWithIcallUat(formData: FormData) {
+export async function registerWithIcallProduction(formData: FormData) {
   const applicationId = field(formData, "application_id");
   if (!applicationId) redirect("/customers/posp-misp");
   const reviewer = await requireScopedPospMispManager(applicationId);
   if (!reviewer?.id) redirect("/customers/posp-misp");
 
   const admin = createSupabaseAdminClient();
-  const { data: application } = await admin
-    .from("intermediary_onboarding_applications")
-    .select("id,final_type,applicant_phone,applicant_email")
-    .eq("id", applicationId)
-    .maybeSingle<{ id: string; final_type: string | null; applicant_phone: string | null; applicant_email: string | null }>();
-  const { data: profile } = await admin
-    .from("posp_misp_onboarding_profiles")
-    .select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_last_name,pan_number,date_of_birth,applicant_email,applicant_phone,misp_name,dp_name,dp_first_name,dp_last_name,dp_pan_number,dp_date_of_birth,dp_email,dp_phone,training_login_id")
-    .eq("application_id", applicationId)
-    .maybeSingle<{
-      partner_type: "posp" | "misp";
-      external_onboarding_id: string | null;
-      pos_name: string | null;
-      pos_first_name: string | null;
-      pos_last_name: string | null;
-      pan_number: string | null;
-      date_of_birth: string | null;
-      applicant_email: string | null;
-      applicant_phone: string | null;
-      misp_name: string | null;
-      dp_name: string | null;
-      dp_first_name: string | null;
-      dp_last_name: string | null;
-      dp_pan_number: string | null;
-      dp_date_of_birth: string | null;
-      dp_email: string | null;
-      dp_phone: string | null;
-      training_login_id: string | null;
-    }>();
+  const [{ data: application }, { data: profile }, { data: assignment }] = await Promise.all([
+    admin
+      .from("intermediary_onboarding_applications")
+      .select("id,final_type,applicant_phone,applicant_email")
+      .eq("id", applicationId)
+      .maybeSingle<{ id: string; final_type: string | null; applicant_phone: string | null; applicant_email: string | null }>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("partner_type,external_onboarding_id,pos_name,pos_first_name,pos_last_name,pan_number,date_of_birth,applicant_email,applicant_phone,misp_name,dp_name,dp_first_name,dp_last_name,dp_pan_number,dp_date_of_birth,dp_email,dp_phone,training_login_id")
+      .eq("application_id", applicationId)
+      .maybeSingle<{
+        partner_type: "posp" | "misp";
+        external_onboarding_id: string | null;
+        pos_name: string | null;
+        pos_first_name: string | null;
+        pos_last_name: string | null;
+        pan_number: string | null;
+        date_of_birth: string | null;
+        applicant_email: string | null;
+        applicant_phone: string | null;
+        misp_name: string | null;
+        dp_name: string | null;
+        dp_first_name: string | null;
+        dp_last_name: string | null;
+        dp_pan_number: string | null;
+        dp_date_of_birth: string | null;
+        dp_email: string | null;
+        dp_phone: string | null;
+        training_login_id: string | null;
+      }>(),
+    admin
+      .from("intermediary_training_exam_assignments")
+      .select("icall_environment,icall_login_id")
+      .eq("application_id", applicationId)
+      .maybeSingle<{ icall_environment: string | null; icall_login_id: string | null }>(),
+  ]);
 
   if (!application || !profile || application.final_type === "partner") {
-    redirect(`${route(applicationId)}?stage=review&error=icall_account_required`);
+    redirect(`${route(applicationId)}?stage=training&error=icall_account_required`);
   }
-  if (profile.training_login_id) redirect(`${route(applicationId)}?stage=review&error=icall_already_registered`);
+  if (assignment?.icall_environment === "production" && (assignment.icall_login_id || profile.training_login_id)) {
+    redirect(`${route(applicationId)}?stage=training&error=icall_already_registered`);
+  }
+  if (profile.training_login_id && assignment?.icall_environment !== "production") {
+    redirect(`${route(applicationId)}?stage=training&error=icall_uat_reset_required`);
+  }
 
   const isMisp = profile.partner_type === "misp";
   const pan = normalizePan(isMisp ? profile.dp_pan_number : profile.pan_number);
@@ -142,7 +165,7 @@ export async function registerWithIcallUat(formData: FormData) {
   const nameParts = isMisp ? resolveName(profile.dp_first_name, profile.dp_last_name, profile.dp_name) : resolveName(profile.pos_first_name, profile.pos_last_name, profile.pos_name);
   const dob = formatDob(isMisp ? profile.dp_date_of_birth : profile.date_of_birth);
   if (!pan || !nameParts.firstName || !email || !mobile) {
-    redirect(`${route(applicationId)}?stage=review&error=icall_details_incomplete`);
+    redirect(`${route(applicationId)}?stage=training&error=icall_details_incomplete`);
   }
 
   try {
@@ -159,44 +182,127 @@ export async function registerWithIcallUat(formData: FormData) {
     const created = response.new_users?.[0];
     const existing = response.skipped_user;
     const loginId = created?.loginid || existing?.loginid || (existing?.message?.toLowerCase().includes("training ongoing") ? pan : null);
-    if (!loginId) throw new Error("iCall registration did not return a login ID.");
+    if (!loginId) throw new Error(response.message || "iCall registration did not return a login ID.");
 
-    await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId, profile.partner_type);
-    revalidatePath(route(applicationId));
-    redirect(`${route(applicationId)}?stage=review&success=icall_registered`);
+    await persistProductionRegistration({
+      admin,
+      reviewerId: reviewer.id,
+      applicationId,
+      loginId,
+      partnerType: profile.partner_type,
+      candidateName: created?.candidateName || existing?.candidateName || nameParts.firstName,
+      internalPosCode: profile.external_onboarding_id?.trim() || applicationId,
+    });
+
+    try {
+      await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId, profile.partner_type);
+      revalidatePath(route(applicationId));
+      redirect(`${route(applicationId)}?stage=training&success=icall_registered`);
+    } catch (syncError) {
+      console.error("iCall production registration succeeded but initial status sync failed", { applicationId, error: syncError });
+      revalidatePath(route(applicationId));
+      redirect(`${route(applicationId)}?stage=training&success=icall_registered_sync_pending`);
+    }
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    console.error("iCall UAT registration failed", { applicationId, partnerType: profile.partner_type, error });
-    redirect(`${route(applicationId)}?stage=review&error=icall_registration_failed`);
+    console.error("iCall production registration failed", { applicationId, partnerType: profile.partner_type, error });
+    redirect(`${route(applicationId)}?stage=training&error=icall_registration_failed`);
   }
 }
 
-export async function syncIcallUatStatus(formData: FormData) {
+export async function syncIcallProductionStatus(formData: FormData) {
   const applicationId = field(formData, "application_id");
   if (!applicationId) redirect("/customers/posp-misp");
   const reviewer = await requireScopedPospMispManager(applicationId);
   if (!reviewer?.id) redirect("/customers/posp-misp");
 
   const admin = createSupabaseAdminClient();
-  const { data: profile } = await admin
-    .from("posp_misp_onboarding_profiles")
-    .select("training_login_id,pan_number,dp_pan_number,partner_type")
-    .eq("application_id", applicationId)
-    .maybeSingle<{ training_login_id: string | null; pan_number: string | null; dp_pan_number: string | null; partner_type: "posp" | "misp" }>();
-  if (!profile) redirect(`${route(applicationId)}?stage=review&error=icall_account_required`);
+  const [{ data: profile }, { data: assignment }] = await Promise.all([
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("training_login_id,partner_type")
+      .eq("application_id", applicationId)
+      .maybeSingle<{ training_login_id: string | null; partner_type: "posp" | "misp" }>(),
+    admin
+      .from("intermediary_training_exam_assignments")
+      .select("icall_environment,icall_login_id")
+      .eq("application_id", applicationId)
+      .maybeSingle<{ icall_environment: string | null; icall_login_id: string | null }>(),
+  ]);
+  if (!profile) redirect(`${route(applicationId)}?stage=training&error=icall_account_required`);
+  if (assignment?.icall_environment !== "production") redirect(`${route(applicationId)}?stage=training&error=icall_not_registered`);
 
-  const loginId = profile.training_login_id || normalizePan(profile.partner_type === "misp" ? profile.dp_pan_number : profile.pan_number);
-  if (!loginId) redirect(`${route(applicationId)}?stage=review&error=icall_not_registered`);
+  const loginId = assignment.icall_login_id || profile.training_login_id;
+  if (!loginId) redirect(`${route(applicationId)}?stage=training&error=icall_not_registered`);
 
   try {
     await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId, profile.partner_type);
     revalidatePath(route(applicationId));
-    redirect(`${route(applicationId)}?stage=review&success=icall_status_synced`);
+    redirect(`${route(applicationId)}?stage=training&success=icall_status_synced`);
   } catch (error) {
     if (isRedirectError(error)) throw error;
-    console.error("iCall UAT status sync failed", { applicationId, loginId, error });
-    redirect(`${route(applicationId)}?stage=review&error=icall_status_failed`);
+    console.error("iCall production status sync failed", { applicationId, error });
+    redirect(`${route(applicationId)}?stage=training&error=icall_status_failed`);
   }
+}
+
+async function persistProductionRegistration({
+  admin,
+  reviewerId,
+  applicationId,
+  loginId,
+  partnerType,
+  candidateName,
+  internalPosCode,
+}: {
+  admin: ReturnType<typeof createSupabaseAdminClient>;
+  reviewerId: string;
+  applicationId: string;
+  loginId: string;
+  partnerType: "posp" | "misp";
+  candidateName: string;
+  internalPosCode: string;
+}) {
+  const now = new Date().toISOString();
+  const accountLabel = partnerType.toUpperCase();
+
+  const { error: assignmentError } = await admin.from("intermediary_training_exam_assignments").upsert({
+    application_id: applicationId,
+    training_title: `iCall ${accountLabel} 15 Hours Training`,
+    training_url: "https://www.icallinsurance.com/",
+    training_instructions: "Production iCall training. Start or continue training through the INSUREIT SSO launcher.",
+    training_assigned_at: now,
+    training_status: "assigned",
+    exam_status: "not_allotted",
+    icall_environment: "production",
+    icall_login_id: loginId,
+    icall_candidate_name: candidateName || null,
+    icall_internal_pos_code: internalPosCode || null,
+    icall_last_synced_at: null,
+    updated_by: reviewerId,
+    updated_at: now,
+  }, { onConflict: "application_id" });
+  if (assignmentError) throw new Error("The production iCall registration could not be saved.");
+
+  const { error: profileError } = await admin.from("posp_misp_onboarding_profiles").update({
+    training_login_id: loginId,
+    training_credentials_shared_flag: false,
+    training_start_date: null,
+    training_end_date: null,
+    training_status: "assigned",
+    exam_status: "not_allotted",
+    workflow_stage: "training",
+    updated_by: reviewerId,
+    updated_at: now,
+  }).eq("application_id", applicationId);
+  if (profileError) throw new Error("The production iCall account could not be linked to the onboarding profile.");
+
+  const { error: applicationError } = await admin.from("intermediary_onboarding_applications").update({
+    status: "under_review",
+    registration_status: "training_assigned",
+    updated_at: now,
+  }).eq("id", applicationId);
+  if (applicationError) throw new Error("The production training workflow could not be activated.");
 }
 
 async function syncStatusIntoPortal(
@@ -219,7 +325,7 @@ async function syncStatusIntoPortal(
       .maybeSingle<SyncProfile>(),
     admin
       .from("intermediary_training_exam_assignments")
-      .select("training_title,training_url,training_instructions,training_assigned_at,training_started_at,training_completed_at,training_deadline,training_status,exam_title,exam_url,exam_completed_at,exam_passed_at,exam_status,exam_score")
+      .select("training_title,training_url,training_instructions,training_assigned_at,training_started_at,training_completed_at,training_deadline,training_status,exam_title,exam_url,exam_completed_at,exam_passed_at,exam_status,exam_score,icall_environment")
       .eq("application_id", applicationId)
       .maybeSingle<SyncAssignment>(),
   ]);
@@ -227,9 +333,12 @@ async function syncStatusIntoPortal(
   if (applicationError || profileError || assignmentError || !application || !profile || application.final_type === "partner") {
     throw new Error("The POSP/MISP workflow could not be loaded safely.");
   }
+  if (assignment?.icall_environment && assignment.icall_environment !== "production") {
+    throw new Error("This training snapshot belongs to a non-production iCall environment.");
+  }
 
   const response = await getIcallPospTrainingStatus(loginId);
-  if (response.statusCode !== 200 || !response.data) throw new Error("iCall training status was unavailable.");
+  if (response.statusCode !== 200 || !response.data) throw new Error(response.message || "iCall production training status was unavailable.");
 
   const data = response.data;
   const now = new Date().toISOString();
@@ -261,9 +370,9 @@ async function syncStatusIntoPortal(
   const accountLabel = partnerType.toUpperCase();
   const { error: assignmentWriteError } = await admin.from("intermediary_training_exam_assignments").upsert({
     application_id: applicationId,
-    training_title: assignment?.training_title ?? `iCall ${accountLabel} 15 Hours Training (UAT)`,
+    training_title: assignment?.training_title ?? `iCall ${accountLabel} 15 Hours Training`,
     training_url: assignment?.training_url ?? "https://www.icallinsurance.com/",
-    training_instructions: `iCall UAT login ID: ${loginId}. Status is synced from the iCall API without replacing manually imported legacy history.`,
+    training_instructions: "Production iCall training. Status is synchronized from iCall; launch training through INSUREIT SSO.",
     training_assigned_at: issueDate ?? assignment?.training_assigned_at ?? now,
     training_started_at: startedAt ?? assignment?.training_started_at ?? null,
     training_completed_at: effectiveTrainingStatus === "completed"
@@ -273,7 +382,7 @@ async function syncStatusIntoPortal(
     training_status: effectiveTrainingStatus,
     exam_title: effectiveExamStatus === "not_allotted"
       ? assignment?.exam_title ?? null
-      : assignment?.exam_title ?? (icallExamStatus !== "not_allotted" ? `iCall ${accountLabel} Final Examination (UAT)` : null),
+      : assignment?.exam_title ?? (icallExamStatus !== "not_allotted" ? `iCall ${accountLabel} Final Examination` : null),
     exam_url: effectiveExamStatus === "not_allotted"
       ? assignment?.exam_url ?? null
       : assignment?.exam_url ?? (icallExamStatus !== "not_allotted" ? "https://www.icallinsurance.com/" : null),
@@ -283,6 +392,7 @@ async function syncStatusIntoPortal(
       : assignment?.exam_passed_at ?? null,
     exam_status: effectiveExamStatus,
     exam_score: Number.isFinite(score) ? score : assignment?.exam_score ?? null,
+    icall_environment: "production",
     icall_login_id: data.login_id || loginId,
     icall_candidate_name: data.candidate_name || null,
     icall_mobile_number: data.mobileNumber || null,
@@ -299,9 +409,9 @@ async function syncStatusIntoPortal(
   if (assignmentWriteError) throw new Error("The iCall assignment state could not be saved.");
 
   const { error: profileWriteError } = await admin.from("posp_misp_onboarding_profiles").update({
-    training_login_id: loginId,
+    training_login_id: data.login_id || loginId,
     training_credentials_shared_flag: true,
-    training_start_date: dateOnly(startedAt ?? issueDate) ?? profile.training_start_date ?? now.slice(0, 10),
+    training_start_date: dateOnly(startedAt) ?? profile.training_start_date,
     training_end_date: effectiveTrainingStatus === "completed"
       ? dateOnly(completedAt) ?? profile.training_end_date
       : profile.training_end_date,
