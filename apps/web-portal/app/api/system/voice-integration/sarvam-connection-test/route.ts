@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
   const result = await checkSarvamRenewalConnection();
   const target = new URL("/system/voice-integration", request.url);
   target.searchParams.set("sarvam_test", result.ok ? "ok" : "failed");
-  target.searchParams.set("sarvam_message", result.message);
   if (result.status !== null) target.searchParams.set("sarvam_status", String(result.status));
 
   return NextResponse.redirect(target, 303);
