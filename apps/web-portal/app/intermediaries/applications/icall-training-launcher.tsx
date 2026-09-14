@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { launchIcallTrainingSso } from "./icall-training-actions";
+import { launchIcallProductionTraining } from "./icall-production-launch-actions";
 
 type Props = {
   applicationId: string;
@@ -53,7 +53,7 @@ export function IcallTrainingLauncher({ applicationId }: Props) {
   function launch() {
     setError(null);
     startTransition(async () => {
-      const result = await launchIcallTrainingSso(applicationId);
+      const result = await launchIcallProductionTraining(applicationId);
       if (!result.ok || !result.redirectUrl) {
         setError(result.message || "Unable to open iCall training.");
         return;
@@ -67,7 +67,7 @@ export function IcallTrainingLauncher({ applicationId }: Props) {
     setError(null);
     const popup = window.open("about:blank", "_blank");
     startTransition(async () => {
-      const result = await launchIcallTrainingSso(applicationId);
+      const result = await launchIcallProductionTraining(applicationId);
       if (!result.ok || !result.redirectUrl) {
         popup?.close();
         setError(result.message || "Unable to open iCall training in a new tab.");
