@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CheckCircle2, Clock3, FileText, Search, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Search, ShieldAlert } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebClaimSummary, listPartnerWebClaims, type PartnerClaimState } from "@/lib/partner-web";
+import { listPartnerWebClaims, type PartnerClaimState } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -41,10 +41,7 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [summary, rows] = await Promise.all([
-    getPartnerWebClaimSummary(),
-    listPartnerWebClaims({ limit: PAGE_SIZE, offset, search: q, state }),
-  ]);
+  const rows = await listPartnerWebClaims({ limit: PAGE_SIZE, offset, search: q, state });
 
   const total = rows[0]?.total_count ?? 0;
   const hasPrevious = page > 1;
@@ -61,34 +58,9 @@ export default async function PartnerClaimsPage({ searchParams }: { searchParams
     return search ? "/partner/claims?" + search : "/partner/claims";
   };
 
-  const metricItems = [
-    { label: "Claims", value: summary.total_claims, icon: FileText, iconWrap: "bg-[#EAF3FF] text-[#3156B8]" },
-    { label: "Active", value: summary.active_claims, icon: CheckCircle2, iconWrap: "bg-[#E7F8F0] text-[#1AA572]" },
-    { label: "Completed", value: summary.completed_claims, icon: CheckCircle2, iconWrap: "bg-[#F0E9FF] text-[#7650D8]" },
-    { label: "Assistance", value: summary.assistance_requested, icon: Clock3, iconWrap: "bg-[#FFF2DD] text-[#E99515]" },
-  ];
-
   return (
     <PartnerPortalShell title="Claims">
       <div className="space-y-4 pb-4">
-        <section className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-            {metricItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className={`flex min-h-[72px] items-center gap-3 px-4 py-3 ${index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}>
-                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${item.iconWrap}`}><Icon className="h-[18px] w-[18px]" /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[16px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
-                    <p className="mt-1.5 text-[7.5px] font-black uppercase tracking-[0.07em] text-[#6A7A90]">{item.label}</p>
-                  </div>
-                  <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96]" />
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
         <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
           <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
             <div className="flex shrink-0 items-center gap-3">
