@@ -1,6 +1,8 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { registerWithIcallUat, syncIcallUatStatus } from "./icall-training-actions";
 
+export { IcallProductionPanel } from "./icall-production-panel";
+
 type Props = {
   applicationId: string;
   partnerType: "posp" | "misp";
