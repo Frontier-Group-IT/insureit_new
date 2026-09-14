@@ -1,10 +1,10 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Bell,
   Bot,
   CalendarClock,
   CalendarDays,
+  ChevronDown,
   FileText,
   MoreHorizontal,
   Search,
@@ -225,61 +225,81 @@ export default async function PartnerExternalRenewalsPage({
           <span className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EAF8F0] text-[#25875A]" : "bg-[#F1F4F8] text-[#6B7E98]")}>{voiceEnabled ? "AI calling available" : "AI calling not enabled"}</span>
         </section>
 
-        <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
-          <div className="flex flex-wrap items-center gap-2 border-b border-[#E7EDF4] px-4 py-3">
-            <span className="mr-2 text-[9px] font-extrabold text-[#324866]">Timeframe</span>
-            <Link href={hrefFor({ mode: "due", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "due" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Due</Link>
-            <Link href={hrefFor({ mode: "follow_up", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "follow_up" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Follow-ups</Link>
-            <Link href={hrefFor({ mode: "expired", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "expired" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Recently Expired</Link>
-            <Link href={hrefFor({ mode: "future", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "future" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Future</Link>
-
-            {mode === "due" ? (
-              <>
-                <span className="ml-3 border-l border-[#E2E8F0] pl-4 text-[9px] font-extrabold text-[#324866]">Date Range</span>
-                {(["all", "0_7", "8_15", "16_30"] as PartnerExternalRenewalWindow[]).map((value) => (
-                  <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (window === value ? "bg-[#E7F0FF] text-[#2669D2]" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>
-                    {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
-                  </Link>
-                ))}
-              </>
-            ) : null}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-            <span className="mr-2 text-[9px] font-extrabold text-[#324866]">Policy Status</span>
-            {(["all", "not_started", "in_progress"] as PartnerExternalRenewalIntakeFilter[]).map((value) => (
-              <Link key={value} href={hrefFor({ intake: value, page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (intake === value ? "bg-[#E7F0FF] text-[#2669D2]" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>
-                {value === "all" ? "All Policy Intake" : value === "not_started" ? "Not Started" : "In Policy Intake"}
-              </Link>
-            ))}
-
-            <span className="ml-3 border-l border-[#E2E8F0] pl-4 text-[9px] font-extrabold text-[#324866]">Other Filters</span>
-            {(["all", "new", "contacted", "interested", "quote", "follow_up", "closed"] as PartnerExternalRenewalStatusFilter[]).map((value) => (
-              <Link key={value} href={hrefFor({ status: value, page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (status === value ? "bg-[#0F2348] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>
-                {value === "all" ? "Active" : value === "follow_up" ? "Follow-up" : value.charAt(0).toUpperCase() + value.slice(1)}
-              </Link>
-            ))}
-          </div>
-        </section>
-
         <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_14px_rgba(31,55,86,0.04)]">
           <div className="flex flex-col gap-3 border-b border-[#E5EBF2] px-4 py-3 xl:flex-row xl:items-center">
-            <div className="min-w-0">
+            <div className="min-w-0 shrink-0">
               <h2 className="text-[16px] font-black tracking-[-0.02em] text-[#142B50]">{modeTitle}</h2>
-              <p className="mt-0.5 text-[9.5px] font-medium text-[#6F829F]">{rows.length} shown · {total} matched</p>
             </div>
 
-            <form action="/partner/renewals/external" className="w-full xl:ml-auto xl:max-w-[380px]">
-              {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
-              {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
-              {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
-              {followUp !== "all" && mode === "follow_up" ? <input type="hidden" name="follow_up" value={followUp} /> : null}
-              {intake !== "all" ? <input type="hidden" name="intake" value={intake} /> : null}
-              <div className="relative min-w-0">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                <input name="q" defaultValue={q} placeholder="Search customer, mobile, vehicle or channel..." className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+            <div className="flex w-full flex-col gap-2 xl:ml-auto xl:flex-row xl:items-center xl:justify-end">
+              <form action="/partner/renewals/external" className="w-full xl:max-w-[370px]">
+                {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
+                {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
+                {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
+                {followUp !== "all" && mode === "follow_up" ? <input type="hidden" name="follow_up" value={followUp} /> : null}
+                {intake !== "all" ? <input type="hidden" name="intake" value={intake} /> : null}
+                <div className="relative min-w-0">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                  <input name="q" defaultValue={q} placeholder="Search customer, mobile, vehicle or channel..." className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+                </div>
+              </form>
+
+              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
+                <details className="group relative">
+                  <summary className="flex h-9 min-w-[118px] cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-[#D5DFEA] bg-white px-3 text-[9.5px] font-bold text-[#304866] [&::-webkit-details-marker]:hidden">
+                    <span>Time line</span><ChevronDown className="h-3.5 w-3.5 text-[#58708F] transition group-open:rotate-180" />
+                  </summary>
+                  <div className="absolute right-0 z-30 mt-1.5 w-48 overflow-hidden rounded-lg border border-[#D8E1EB] bg-white p-1.5 shadow-[0_10px_30px_rgba(26,49,83,0.16)]">
+                    <Link href={hrefFor({ mode: "due", window: "all", followUp: "all", page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">Due</Link>
+                    <Link href={hrefFor({ mode: "follow_up", window: "all", followUp: "all", page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">Follow-ups</Link>
+                    <Link href={hrefFor({ mode: "expired", window: "all", followUp: "all", page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">Recently Expired</Link>
+                    <Link href={hrefFor({ mode: "future", window: "all", followUp: "all", page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">Future</Link>
+                    <div className="my-1 border-t border-[#E7ECF2]" />
+                    {(["all", "0_7", "8_15", "16_30"] as PartnerExternalRenewalWindow[]).map((value) => (
+                      <Link key={value} href={hrefFor({ mode: "due", window: value, followUp: "all", page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">
+                        {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
+                      </Link>
+                    ))}
+                    <div className="my-1 border-t border-[#E7ECF2]" />
+                    {(["all", "due", "scheduled"] as PartnerExternalRenewalFollowUpFilter[]).map((value) => (
+                      <Link key={value} href={hrefFor({ mode: "follow_up", followUp: value, window: "all", page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">
+                        {value === "all" ? "All Follow-ups" : value === "due" ? "Due Now" : "Scheduled"}
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+
+                <details className="group relative">
+                  <summary className="flex h-9 min-w-[126px] cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-[#D5DFEA] bg-white px-3 text-[9.5px] font-bold text-[#304866] [&::-webkit-details-marker]:hidden">
+                    <span>Policy Status</span><ChevronDown className="h-3.5 w-3.5 text-[#58708F] transition group-open:rotate-180" />
+                  </summary>
+                  <div className="absolute right-0 z-30 mt-1.5 w-44 overflow-hidden rounded-lg border border-[#D8E1EB] bg-white p-1.5 shadow-[0_10px_30px_rgba(26,49,83,0.16)]">
+                    {(["all", "not_started", "in_progress"] as PartnerExternalRenewalIntakeFilter[]).map((value) => (
+                      <Link key={value} href={hrefFor({ intake: value, page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">
+                        {value === "all" ? "All Policy Intake" : value === "not_started" ? "Not Started" : "In Policy Intake"}
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+
+                <details className="group relative">
+                  <summary className="flex h-9 min-w-[126px] cursor-pointer list-none items-center justify-between gap-3 rounded-lg border border-[#D5DFEA] bg-white px-3 text-[9.5px] font-bold text-[#304866] [&::-webkit-details-marker]:hidden">
+                    <span>Other Filters</span><ChevronDown className="h-3.5 w-3.5 text-[#58708F] transition group-open:rotate-180" />
+                  </summary>
+                  <div className="absolute right-0 z-30 mt-1.5 w-44 overflow-hidden rounded-lg border border-[#D8E1EB] bg-white p-1.5 shadow-[0_10px_30px_rgba(26,49,83,0.16)]">
+                    {(["all", "new", "contacted", "interested", "quote", "follow_up", "closed"] as PartnerExternalRenewalStatusFilter[]).map((value) => (
+                      <Link key={value} href={hrefFor({ status: value, page: 1 })} className="block rounded-md px-3 py-2 text-[9.5px] font-semibold text-[#405673] hover:bg-[#F2F6FB]">
+                        {value === "all" ? "Active" : value === "follow_up" ? "Follow-up" : value.charAt(0).toUpperCase() + value.slice(1)}
+                      </Link>
+                    ))}
+                  </div>
+                </details>
+
+                <div className="flex h-9 shrink-0 items-center gap-2 border-l border-[#E2E8F0] pl-3 text-[9px] font-medium text-[#6B7F9C]">
+                  <span>Total records</span><strong className="text-[15px] font-black text-[#173154]">{total}</strong>
+                </div>
               </div>
-            </form>
+            </div>
           </div>
 
           <div className="hidden grid-cols-[42px_minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] items-center gap-4 bg-[#F5F8FC] px-4 py-2.5 text-[8px] font-extrabold uppercase tracking-[0.04em] text-[#6484AB] xl:grid">
@@ -299,7 +319,6 @@ export default async function PartnerExternalRenewalsPage({
                 return (
                   <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[42px_minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] xl:items-center xl:gap-4">
                     <span className="hidden h-5 w-5 rounded border border-[#C8D4E2] bg-white xl:block" aria-hidden="true" />
-
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2F72DE]"><CalendarClock className="h-3.5 w-3.5" /></span>
                       <div className="min-w-0">
@@ -307,17 +326,14 @@ export default async function PartnerExternalRenewalsPage({
                         <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7184A0]">{row.contact_name || "Contact not recorded"}{row.mobile ? " · " + row.mobile : ""}</p>
                       </div>
                     </div>
-
                     <div className="min-w-0">
                       <p className="break-words text-[10px] font-semibold leading-4 text-[#1E3B66]">{row.registration_no || row.chassis_no || "Vehicle"}</p>
                       <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7489A5]">{[row.vehicle_make, row.vehicle_model, row.vehicle_lob].filter(Boolean).join(" · ") || "Vehicle details not recorded"}</p>
                     </div>
-
                     <div>
                       <p className="text-[10px] font-extrabold text-[#1D385B]">Ends {dateLabel(row.policy_end_date)}</p>
                       <p className="mt-0.5 text-[9px] text-[#7489A5]">{expiryLabel(row.days_to_expiry)}</p>
                     </div>
-
                     <div className="min-w-0">
                       <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + statusClass(row.opportunity_status)}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row.opportunity_status)}</span>
                       <p className="mt-1.5 truncate text-[8px] font-medium text-[#7B8CA4]">
@@ -328,9 +344,7 @@ export default async function PartnerExternalRenewalsPage({
                             : "No interaction yet"}
                       </p>
                     </div>
-
                     <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + (voiceEnabled ? voiceStateClass(voiceState) : "bg-[#EEF3F8] text-[#687D99]")}><Bot className="h-3 w-3" />{voiceEnabled ? voiceStateLabel(voiceState) : "AI Not Enabled"}</span>
-
                     <span className="hidden h-8 w-8 place-items-center justify-self-end rounded-full text-[#176AF0] transition group-hover:bg-[#EEF4FF] xl:grid"><MoreHorizontal className="h-4 w-4" /></span>
                   </Link>
                 );
