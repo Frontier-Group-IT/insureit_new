@@ -16,6 +16,13 @@ function statusLabel(value: string | null) {
   return (value || "active").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function policyLifecycle(endDate: string | null) {
+  if (!endDate) return "Active";
+  const parsed = new Date(endDate.length === 10 ? endDate + "T23:59:59" : endDate);
+  if (Number.isNaN(parsed.getTime())) return "Active";
+  return parsed.getTime() < Date.now() ? "Expired" : "Active";
+}
+
 function display(...values: Array<string | number | null | undefined>) {
   return values.map((value) => value == null ? "" : String(value).trim()).filter(Boolean).join(" · ");
 }
@@ -34,16 +41,14 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
 
         <section className="overflow-hidden rounded-xl bg-gradient-to-r from-[#06285D] via-[#0A458A] to-[#0C57B3] text-white shadow-[0_8px_24px_rgba(13,64,128,0.18)]">
           <div className="px-5 py-4 sm:px-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-4">
-                <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-[#176AF0] shadow-sm"><UserRound className="h-7 w-7" /></span>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="break-words text-[22px] font-black tracking-[-0.03em] sm:text-[24px]">{customer.customer_name}</h1>
-                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#24C684] text-white text-[10px] font-black">✓</span>
-                  </div>
-                  <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[#0B7D66] px-2.5 py-1 text-[9px] font-bold"><span className="h-1.5 w-1.5 rounded-full bg-[#37E5A3]" />{statusLabel(customer.status)}</span>
+            <div className="flex min-w-0 items-center gap-4">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-[#176AF0] shadow-sm"><UserRound className="h-7 w-7" /></span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="break-words text-[22px] font-black tracking-[-0.03em] sm:text-[24px]">{customer.customer_name}</h1>
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-[#24C684] text-[10px] font-black text-white">✓</span>
                 </div>
+                <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[#0B7D66] px-2.5 py-1 text-[9px] font-bold"><span className="h-1.5 w-1.5 rounded-full bg-[#37E5A3]" />{statusLabel(customer.status)}</span>
               </div>
             </div>
 
@@ -76,17 +81,20 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
                   <span>Policy Number</span><span>Insurer</span><span>Type</span><span>Start Date</span><span>Expiry Date</span><span>Status</span><span className="text-right">Actions</span>
                 </div>
                 <div className="divide-y divide-[#E8EDF4]">
-                  {data.policies.map((policy) => (
-                    <Link key={policy.policy_id} href={"/partner/policies/" + encodeURIComponent(policy.policy_id)} prefetch={false} className="group grid grid-cols-[1.2fr_1fr_.7fr_.7fr_.7fr_.65fr_.45fr] items-center gap-4 px-4 py-3.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-                      <span className="break-words text-[10px] font-extrabold text-[#183657]">{policy.policy_no || policy.policy_code || "Policy"}</span>
-                      <span className="break-words text-[9.5px] font-medium text-[#4E6683]">{policy.insurer_name || "Insurer not recorded"}</span>
-                      <span className="text-[9.5px] text-[#4E6683]">{policy.policy_type || policy.policy_product || "—"}</span>
-                      <span className="text-[9.5px] text-[#4E6683]">{dateLabel(policy.start_date)}</span>
-                      <span className="text-[9.5px] text-[#4E6683]">{dateLabel(policy.end_date)}</span>
-                      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#E7F8EF] px-2.5 py-1 text-[8.5px] font-bold text-[#15915B]"><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(policy.status)}</span>
-                      <span className="flex justify-end gap-2 text-[#176AF0]"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#EEF4FF]"><ArrowRight className="h-3.5 w-3.5" /></span><span className="grid h-7 w-7 place-items-center rounded-full bg-[#F3F6FA]"><MoreHorizontal className="h-3.5 w-3.5" /></span></span>
-                    </Link>
-                  ))}
+                  {data.policies.map((policy) => {
+                    const lifecycle = policyLifecycle(policy.end_date);
+                    return (
+                      <Link key={policy.policy_id} href={"/partner/policies/" + encodeURIComponent(policy.policy_id)} prefetch={false} className="group grid grid-cols-[1.2fr_1fr_.7fr_.7fr_.7fr_.65fr_.45fr] items-center gap-4 px-4 py-3.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
+                        <span className="break-words text-[10px] font-extrabold text-[#183657]">{policy.policy_no || policy.policy_code || "Policy"}</span>
+                        <span className="break-words text-[9.5px] font-medium text-[#4E6683]">{policy.insurer_name || "Insurer not recorded"}</span>
+                        <span className="text-[9.5px] text-[#4E6683]">{policy.policy_type || policy.policy_product || "—"}</span>
+                        <span className="text-[9.5px] text-[#4E6683]">—</span>
+                        <span className="text-[9.5px] text-[#4E6683]">{dateLabel(policy.end_date)}</span>
+                        <span className={"inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[8.5px] font-bold " + (lifecycle === "Expired" ? "bg-[#FFE9E9] text-[#C94A4A]" : "bg-[#E7F8EF] text-[#15915B]")}><span className="h-1.5 w-1.5 rounded-full bg-current" />{lifecycle}</span>
+                        <span className="flex justify-end gap-2 text-[#176AF0]"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#EEF4FF]"><ArrowRight className="h-3.5 w-3.5" /></span><span className="grid h-7 w-7 place-items-center rounded-full bg-[#F3F6FA]"><MoreHorizontal className="h-3.5 w-3.5" /></span></span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             </div>
