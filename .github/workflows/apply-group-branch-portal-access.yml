@@ -1,0 +1,62 @@
+name: Apply Group Branch Portal Access
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/20260915123000_group_branch_portal_access.sql'
+      - 'supabase/migrations/20260915124500_group_branch_partner_runtime.sql'
+      - 'supabase/migrations/20260915125000_group_branch_partner_identity.sql'
+      - 'supabase/verification/20260915123000_group_branch_portal_access_verify.sql'
+      - '.github/workflows/apply-group-branch-portal-access.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apply-group-branch-portal-access-production
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: Apply Group/Branch portal access schema
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Validate production credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${SUPABASE_ACCESS_TOKEN:-}" || { echo "Missing SUPABASE_ACCESS_TOKEN"; exit 1; }
+          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo "Missing SUPABASE_DB_PASSWORD"; exit 1; }
+          test -n "${SUPABASE_PROJECT_REF:-}" || { echo "Missing SUPABASE_PROJECT_REF"; exit 1; }
+
+      - name: Link production project
+        shell: bash
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply repository migrations
+        shell: bash
+        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Verify schema parity
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" | tee /tmp/migration-list.txt
+          for version in 20260915123000 20260915124500 20260915125000; do
+            grep -q "$version" /tmp/migration-list.txt || { echo "Migration $version missing from production history"; exit 1; }
+          done
