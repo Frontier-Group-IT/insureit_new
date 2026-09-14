@@ -7,6 +7,12 @@ import {
   requireIntermediaryGroupViewer,
 } from "@/lib/intermediary-group-access";
 import {
+  BusinessGroupWorkspace,
+  type BusinessGroup,
+  type BusinessGroupMembership,
+  type BusinessGroupPartner,
+} from "./business-group-workspace";
+import {
   IntermediaryGroupWorkspace,
   type GroupWorkspaceEmployee,
   type GroupWorkspaceGroup,
@@ -28,24 +34,194 @@ type ParentIntermediary = {
   display_name: string;
   associate_employee_id: string | null;
 };
-type OnboardingOwner = { application_id: string; associate_employee_id: string | null };
+type OnboardingOwner = {
+  application_id: string;
+  associate_employee_id: string | null;
+};
 type PartnerRow = {
   id: string;
   partner_code: string;
   partner_kind: string;
   display_name: string;
   source_application_id: string | null;
+  parent_partner_id?: string | null;
 };
+type GroupRow = {
+  id: string;
+  group_code: string;
+  group_name: string;
+  group_mode: "legacy_employee" | "business";
+  owner_employee_id: string | null;
+  status: string;
+  description: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+type ViewerProfile = Awaited<ReturnType<typeof requireIntermediaryGroupViewer>>;
+type EmployeeScope = Awaited<ReturnType<typeof getIntermediaryGroupEmployeeScope>>;
 
 export default async function IntermediaryGroupsPage({ searchParams }: { searchParams: Promise<Query> }) {
   const query = await searchParams;
   const profile = await requireIntermediaryGroupViewer();
-  const [manager, transferManager, scope] = await Promise.all([
-    getIntermediaryGroupManager(),
-    getIntermediaryGroupTransferManager(),
-    getIntermediaryGroupEmployeeScope(profile),
+  const scope = await getIntermediaryGroupEmployeeScope(profile);
+  const admin = createSupabaseAdminClient();
+
+  // Deployment-order safety: the currently working production Group screen must
+  // remain fully functional if application code reaches a runtime before the
+  // additive hierarchy migrations. Only switch to the new workspace after both
+  // hierarchy columns are confirmed by the live schema.
+  const [{ error: groupSchemaError }, { error: partnerSchemaError }] = await Promise.all([
+    admin.from("intermediary_groups").select("group_mode").limit(1),
+    admin.from("partners").select("parent_partner_id").limit(1),
   ]);
 
+  if (groupSchemaError || partnerSchemaError) {
+    return renderLegacyWorkspace({ query, profile, scope });
+  }
+
+  return renderBusinessWorkspace({ query, profile, scope });
+}
+
+async function renderBusinessWorkspace({
+  query,
+  profile,
+  scope,
+}: {
+  query: Query;
+  profile: ViewerProfile;
+  scope: EmployeeScope;
+}) {
+  const manager = await getIntermediaryGroupManager();
+  const admin = createSupabaseAdminClient();
+
+  const [
+    { data: parentIntermediaries, error: parentError },
+    { data: onboardingOwners, error: onboardingError },
+    { data: partnerRows, error: partnerLoadError },
+    { data: groupRows, error: groupLoadError },
+  ] = await Promise.all([
+    admin
+      .from("intermediaries")
+      .select("id,application_id,intermediary_code,display_name,associate_employee_id")
+      .eq("intermediary_type", "partner")
+      .order("display_name")
+      .returns<ParentIntermediary[]>(),
+    admin
+      .from("posp_misp_onboarding_profiles")
+      .select("application_id,associate_employee_id")
+      .returns<OnboardingOwner[]>(),
+    admin
+      .from("partners")
+      .select("id,partner_code,partner_kind,display_name,source_application_id,parent_partner_id")
+      .eq("partner_status", "active_partner")
+      .order("display_name")
+      .returns<PartnerRow[]>(),
+    admin
+      .from("intermediary_groups")
+      .select("id,group_code,group_name,group_mode,owner_employee_id,status,description,created_at,created_by")
+      .eq("status", "active")
+      .order("group_name")
+      .returns<GroupRow[]>(),
+  ]);
+
+  const allGroupIds = (groupRows ?? []).map((group) => group.id);
+  const allPartnerIds = (partnerRows ?? []).map((partner) => partner.id);
+  const membershipResult = allGroupIds.length && allPartnerIds.length
+    ? await admin
+        .from("intermediary_group_memberships")
+        .select("id,group_id,partner_id,effective_from")
+        .in("group_id", allGroupIds)
+        .in("partner_id", allPartnerIds)
+        .is("effective_to", null)
+        .returns<BusinessGroupMembership[]>()
+    : { data: [] as BusinessGroupMembership[], error: null };
+
+  const parentOwnerByApplication = new Map(
+    (parentIntermediaries ?? [])
+      .filter((row): row is ParentIntermediary & { application_id: string } => Boolean(row.application_id))
+      .map((row) => [row.application_id, row.associate_employee_id]),
+  );
+  const onboardingOwnerByApplication = new Map(
+    (onboardingOwners ?? []).map((row) => [row.application_id, row.associate_employee_id]),
+  );
+  const allowedEmployeeIds = new Set(scope.employeeIds);
+
+  const partners: BusinessGroupPartner[] = (partnerRows ?? []).flatMap((partner) => {
+    const applicationId = partner.source_application_id;
+    const ownerEmployeeId = applicationId
+      ? parentOwnerByApplication.get(applicationId) ?? onboardingOwnerByApplication.get(applicationId) ?? null
+      : null;
+
+    if (scope.mode !== "organization" && (!ownerEmployeeId || !allowedEmployeeIds.has(ownerEmployeeId))) return [];
+
+    return [{
+      id: partner.id,
+      partner_code: partner.partner_code,
+      partner_kind: partner.partner_kind,
+      display_name: partner.display_name,
+      parent_partner_id: partner.parent_partner_id ?? null,
+      owner_employee_id: ownerEmployeeId,
+    }];
+  });
+
+  const visiblePartnerIds = new Set(partners.map((partner) => partner.id));
+  const allMemberships = membershipResult.data ?? [];
+  const visibleMemberships = allMemberships.filter((membership) => visiblePartnerIds.has(membership.partner_id));
+  const visibleMembershipGroupIds = new Set(visibleMemberships.map((membership) => membership.group_id));
+
+  const groups: BusinessGroup[] = (groupRows ?? []).flatMap((group) => {
+    const visible = scope.mode === "organization"
+      || (group.group_mode === "legacy_employee" && Boolean(group.owner_employee_id && allowedEmployeeIds.has(group.owner_employee_id)))
+      || (group.group_mode === "business" && (group.created_by === profile.id || visibleMembershipGroupIds.has(group.id)));
+
+    if (!visible) return [];
+    return [{
+      id: group.id,
+      group_code: group.group_code,
+      group_name: group.group_name,
+      group_mode: group.group_mode,
+      owner_employee_id: group.owner_employee_id,
+      status: group.status,
+      description: group.description,
+      created_at: group.created_at,
+      created_by: group.created_by,
+    }];
+  });
+
+  const visibleGroupIds = new Set(groups.map((group) => group.id));
+  const memberships = visibleMemberships.filter((membership) => visibleGroupIds.has(membership.group_id));
+  const loadError = Boolean(parentError || onboardingError || partnerLoadError || groupLoadError || membershipResult.error);
+
+  return (
+    <AppShell title="Intermediary Groups" backHref="/intermediaries">
+      <BusinessGroupWorkspace
+        groups={groups}
+        partners={partners}
+        memberships={memberships}
+        canManage={Boolean(manager)}
+        hierarchyReady={!loadError}
+        success={query.success}
+        error={query.error}
+        loadError={loadError}
+      />
+    </AppShell>
+  );
+}
+
+async function renderLegacyWorkspace({
+  query,
+  profile,
+  scope,
+}: {
+  query: Query;
+  profile: ViewerProfile;
+  scope: EmployeeScope;
+}) {
+  const [manager, transferManager] = await Promise.all([
+    getIntermediaryGroupManager(),
+    getIntermediaryGroupTransferManager(),
+  ]);
   const admin = createSupabaseAdminClient();
 
   let employeeRequest = admin
@@ -120,7 +296,11 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
     if (scope.mode !== "organization" && !scopedEmployeeIds.has(ownerEmployeeId)) return [];
 
     return [{
-      ...partner,
+      id: partner.id,
+      partner_code: partner.partner_code,
+      partner_kind: partner.partner_kind,
+      display_name: partner.display_name,
+      source_application_id: partner.source_application_id,
       owner_employee_id: ownerEmployeeId,
       registration_code: parentIntermediary?.intermediary_code ?? null,
     }];
