@@ -4,27 +4,30 @@ import { canAccessCustomer, canAccessIntermediaryApplication } from "@/lib/emplo
 import { hasAnyEffectiveCapability, hasEffectiveCapability } from "@/lib/effective-permissions";
 import type { Capability } from "@/lib/roles";
 
-export async function requireCapability(capability: Capability, minimumAccess?: "view" | "edit" | "approve") {
+async function requireAuthenticatedPortalProfile() {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile || !(await hasEffectiveCapability(profile, capability, minimumAccess))) redirect("/access-denied");
+  if (!profile) redirect("/login");
+  return profile;
+}
+
+export async function requireCapability(capability: Capability, minimumAccess?: "view" | "edit" | "approve") {
+  const profile = await requireAuthenticatedPortalProfile();
+  if (!(await hasEffectiveCapability(profile, capability, minimumAccess))) redirect("/access-denied");
   return profile;
 }
 
 export async function requireAnyCapability(
   requirements: Array<{ capability: Capability; minimumAccess?: "view" | "edit" | "approve" }>,
 ) {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile) redirect("/access-denied");
+  const profile = await requireAuthenticatedPortalProfile();
   const allowed = await Promise.all(requirements.map(({ capability, minimumAccess }) => hasEffectiveCapability(profile, capability, minimumAccess)));
   if (!allowed.some(Boolean)) redirect("/access-denied");
   return profile;
 }
 
 export async function requireMasterDataManager() {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
+  const profile = await requireAuthenticatedPortalProfile();
   if (!(await hasEffectiveCapability(profile, "manage_master_data"))) redirect("/access-denied");
   return profile;
 }
@@ -82,9 +85,7 @@ export async function requireScopedPospMispManager(applicationId: string) {
 }
 
 export async function requireApplicationReviewer(applicationId: string) {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!profile?.id) redirect("/access-denied");
+  const profile = await requireAuthenticatedPortalProfile();
 
   const canOpen = await hasAnyEffectiveCapability(profile, [
     "view_intermediaries",
