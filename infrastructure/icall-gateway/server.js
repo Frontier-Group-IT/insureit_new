@@ -8,14 +8,16 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 const PORT = Number(process.env.PORT || 3001);
 const RELAY_SECRET = process.env.RELAY_SECRET;
-const ICALL_BASE_URL = process.env.ICALL_UAT_BASE_URL;
-const ICALL_TOKEN = process.env.ICALL_UAT_AUTH_TOKEN;
+const ICALL_UAT_BASE_URL = String(process.env.ICALL_UAT_BASE_URL || "").replace(/\/$/, "");
+const ICALL_UAT_TOKEN = String(process.env.ICALL_UAT_AUTH_TOKEN || "").trim();
+const ICALL_PROD_BASE_URL = String(process.env.ICALL_PROD_BASE_URL || "https://www.icallinsurance.com/API/SANKALP/PROD").replace(/\/$/, "");
+const ICALL_PROD_TOKEN = String(process.env.ICALL_PROD_AUTH_TOKEN || "").trim();
 const AUTHBRIDGE_BASE_URL = String(process.env.AUTHBRIDGE_BASE_URL || "https://www.truthscreen.com").replace(/\/$/, "");
 const AUTHBRIDGE_USERNAME = String(process.env.AUTHBRIDGE_USERNAME || "").trim();
 const GATEWAY_ENVIRONMENT = String(process.env.GATEWAY_ENVIRONMENT || "mixed").trim();
 
-if (!RELAY_SECRET || !ICALL_BASE_URL || !ICALL_TOKEN) {
-  console.error("Required iCall environment variables are missing.");
+if (!RELAY_SECRET) {
+  console.error("RELAY_SECRET is missing.");
   process.exit(1);
 }
 
@@ -89,8 +91,21 @@ async function postJson(url, { headers = {}, body, timeoutMs = 30000 } = {}) {
   }
 }
 
-async function callIcall(endpoint, body) {
-  const result = await postJson(`${ICALL_BASE_URL}${endpoint}`, { body, timeoutMs: 30000 });
+function icallConfig(environment) {
+  if (environment === "prod") {
+    return { baseUrl: ICALL_PROD_BASE_URL, token: ICALL_PROD_TOKEN, label: "production" };
+  }
+  return { baseUrl: ICALL_UAT_BASE_URL, token: ICALL_UAT_TOKEN, label: "uat" };
+}
+
+async function callIcall(environment, endpoint, body) {
+  const config = icallConfig(environment);
+  if (!config.baseUrl || !config.token) {
+    const error = new Error(`iCall ${config.label} environment is not configured`);
+    error.code = "ICALL_NOT_CONFIGURED";
+    throw error;
+  }
+  const result = await postJson(`${config.baseUrl}${endpoint}`, { body, timeoutMs: 30000 });
   if (typeof result.data === "string") {
     throw new Error(`iCall returned invalid JSON with HTTP ${result.httpStatus}`);
   }
@@ -142,87 +157,107 @@ app.get("/health", (_req, res) => {
     service: "insureit-integration-gateway",
     environment: GATEWAY_ENVIRONMENT,
     integrations: {
-      icall: "configured",
+      icall_uat: ICALL_UAT_BASE_URL && ICALL_UAT_TOKEN ? "configured" : "not_configured",
+      icall_production: ICALL_PROD_BASE_URL && ICALL_PROD_TOKEN ? "configured" : "not_configured",
       authbridge: AUTHBRIDGE_USERNAME ? "configured" : "not_configured",
     },
   });
 });
 
-app.post("/uat/icall/register", requireRelayAuth, async (req, res) => {
-  const { pan, pospFirstName, pospLastName = "", dob = "", email_id, mobile, internalPOSCode = "" } = req.body || {};
-  const normalizedPan = String(pan || "").trim().toUpperCase();
-  const normalizedMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
-  if (!validPan(normalizedPan) || !String(pospFirstName || "").trim() || !/^[6-9][0-9]{9}$/.test(normalizedMobile) || !String(email_id || "").includes("@")) {
-    return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid registration data" });
-  }
+function registerIcallRoutes(environment) {
+  const prefix = `/${environment}/icall`;
 
-  const payloadData = {
-    authToken: ICALL_TOKEN,
-    pan: normalizedPan,
-    pospFirstName: String(pospFirstName).trim(),
-    pospLastName: String(pospLastName).trim(),
-    dob: String(dob).trim(),
-    email_id: String(email_id).trim().toLowerCase(),
-    mobile: normalizedMobile,
-    internalPOSCode: String(internalPOSCode).trim(),
-  };
-
-  try {
-    const payload = Buffer.from(JSON.stringify(payloadData), "utf8").toString("base64");
-    const result = await callIcall("/RegisterPOSPTraining", { payload });
-    return res.status(result.httpStatus).json(result.data);
-  } catch (error) {
-    console.error("Registration request failed:", error.message);
-    return res.status(502).json({ statusCode: 502, status: "failed", message: "iCall registration service unavailable" });
-  }
-});
-
-app.post("/uat/icall/status", requireRelayAuth, async (req, res) => {
-  const loginId = String(req.body?.loginId || "").trim().toUpperCase();
-  if (!validPan(loginId)) return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid login ID" });
-  try {
-    const result = await callIcall("/POSPTrainingStatus", { authToken: ICALL_TOKEN, loginId });
-    return res.status(result.httpStatus).json(result.data);
-  } catch (error) {
-    console.error("Status request failed:", error.message);
-    return res.status(502).json({ statusCode: 502, status: "failed", message: "iCall status service unavailable" });
-  }
-});
-
-app.post("/uat/icall/sso", requireRelayAuth, async (req, res) => {
-  const loginId = String(req.body?.loginId || "").trim().toUpperCase();
-  if (!validPan(loginId)) return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid login ID" });
-  try {
-    const result = await callIcall("/AuthenticateUser", { authToken: ICALL_TOKEN, loginId });
-    const redirectUrl = result.data?.data?.redirectUrl;
-    if (redirectUrl) {
-      const parsedUrl = new URL(redirectUrl);
-      if (parsedUrl.protocol !== "https:" || parsedUrl.hostname !== "www.icallinsurance.com") {
-        return res.status(502).json({ statusCode: 502, status: "failed", message: "Invalid SSO redirect received" });
-      }
+  app.post(`${prefix}/register`, requireRelayAuth, async (req, res) => {
+    const { pan, pospFirstName, pospLastName = "", dob = "", email_id, mobile, internalPOSCode = "" } = req.body || {};
+    const normalizedPan = String(pan || "").trim().toUpperCase();
+    const normalizedMobile = String(mobile || "").replace(/\D/g, "").slice(-10);
+    if (!validPan(normalizedPan) || !String(pospFirstName || "").trim() || !/^[6-9][0-9]{9}$/.test(normalizedMobile) || !String(email_id || "").includes("@")) {
+      return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid registration data" });
     }
-    return res.status(result.httpStatus).json(result.data);
-  } catch (error) {
-    console.error("SSO request failed:", error.message);
-    return res.status(502).json({ statusCode: 502, status: "failed", message: "iCall SSO service unavailable" });
-  }
-});
 
-app.post("/uat/icall/tcc", requireRelayAuth, async (req, res) => {
-  const fromDate = String(req.body?.tcc_from_date || "").trim();
-  const toDate = String(req.body?.tcc_to_date || "").trim();
-  const datePattern = /^\d{2}-\d{2}-\d{4}$/;
-  if (!datePattern.test(fromDate) || !datePattern.test(toDate)) {
-    return res.status(400).json({ statusCode: 400, status: "failed", message: "Dates must use DD-MM-YYYY" });
-  }
-  try {
-    const result = await callIcall("/POSPTCC", { authToken: ICALL_TOKEN, tcc_from_date: fromDate, tcc_to_date: toDate });
-    return res.status(result.httpStatus).json(result.data);
-  } catch (error) {
-    console.error("TCC request failed:", error.message);
-    return res.status(502).json({ statusCode: 502, status: "failed", message: "iCall certificate service unavailable" });
-  }
-});
+    const config = icallConfig(environment);
+    if (!config.baseUrl || !config.token) {
+      return res.status(503).json({ statusCode: 503, status: "failed", message: `iCall ${config.label} environment is not configured` });
+    }
+
+    const payloadData = {
+      authToken: config.token,
+      pan: normalizedPan,
+      pospFirstName: String(pospFirstName).trim(),
+      pospLastName: String(pospLastName).trim(),
+      dob: String(dob).trim(),
+      email_id: String(email_id).trim().toLowerCase(),
+      mobile: normalizedMobile,
+      internalPOSCode: String(internalPOSCode).trim(),
+    };
+
+    try {
+      const payload = Buffer.from(JSON.stringify(payloadData), "utf8").toString("base64");
+      const result = await callIcall(environment, "/RegisterPOSPTraining", { payload });
+      return res.status(result.httpStatus).json(result.data);
+    } catch (error) {
+      const notConfigured = error?.code === "ICALL_NOT_CONFIGURED";
+      console.error(`iCall ${config.label} registration request failed:`, error.message);
+      return res.status(notConfigured ? 503 : 502).json({ statusCode: notConfigured ? 503 : 502, status: "failed", message: notConfigured ? error.message : "iCall registration service unavailable" });
+    }
+  });
+
+  app.post(`${prefix}/status`, requireRelayAuth, async (req, res) => {
+    const loginId = String(req.body?.loginId || "").trim().toUpperCase();
+    if (!validPan(loginId)) return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid login ID" });
+    const config = icallConfig(environment);
+    try {
+      const result = await callIcall(environment, "/POSPTrainingStatus", { authToken: config.token, loginId });
+      return res.status(result.httpStatus).json(result.data);
+    } catch (error) {
+      const notConfigured = error?.code === "ICALL_NOT_CONFIGURED";
+      console.error(`iCall ${config.label} status request failed:`, error.message);
+      return res.status(notConfigured ? 503 : 502).json({ statusCode: notConfigured ? 503 : 502, status: "failed", message: notConfigured ? error.message : "iCall status service unavailable" });
+    }
+  });
+
+  app.post(`${prefix}/sso`, requireRelayAuth, async (req, res) => {
+    const loginId = String(req.body?.loginId || "").trim().toUpperCase();
+    if (!validPan(loginId)) return res.status(400).json({ statusCode: 400, status: "failed", message: "Invalid login ID" });
+    const config = icallConfig(environment);
+    try {
+      const result = await callIcall(environment, "/AuthenticateUser", { authToken: config.token, loginId });
+      const redirectUrl = result.data?.data?.redirectUrl;
+      if (redirectUrl) {
+        const parsedUrl = new URL(redirectUrl);
+        if (parsedUrl.protocol !== "https:" || parsedUrl.hostname !== "www.icallinsurance.com") {
+          return res.status(502).json({ statusCode: 502, status: "failed", message: "Invalid SSO redirect received" });
+        }
+      }
+      return res.status(result.httpStatus).json(result.data);
+    } catch (error) {
+      const notConfigured = error?.code === "ICALL_NOT_CONFIGURED";
+      console.error(`iCall ${config.label} SSO request failed:`, error.message);
+      return res.status(notConfigured ? 503 : 502).json({ statusCode: notConfigured ? 503 : 502, status: "failed", message: notConfigured ? error.message : "iCall SSO service unavailable" });
+    }
+  });
+
+  app.post(`${prefix}/tcc`, requireRelayAuth, async (req, res) => {
+    const fromDate = String(req.body?.tcc_from_date || "").trim();
+    const toDate = String(req.body?.tcc_to_date || "").trim();
+    const datePattern = /^\d{2}-\d{2}-\d{4}$/;
+    if (!datePattern.test(fromDate) || !datePattern.test(toDate)) {
+      return res.status(400).json({ statusCode: 400, status: "failed", message: "Dates must use DD-MM-YYYY" });
+    }
+    const config = icallConfig(environment);
+    try {
+      const result = await callIcall(environment, "/POSPTCC", { authToken: config.token, tcc_from_date: fromDate, tcc_to_date: toDate });
+      return res.status(result.httpStatus).json(result.data);
+    } catch (error) {
+      const notConfigured = error?.code === "ICALL_NOT_CONFIGURED";
+      console.error(`iCall ${config.label} TCC request failed:`, error.message);
+      return res.status(notConfigured ? 503 : 502).json({ statusCode: notConfigured ? 503 : 502, status: "failed", message: notConfigured ? error.message : "iCall certificate service unavailable" });
+    }
+  });
+}
+
+registerIcallRoutes("uat");
+registerIcallRoutes("prod");
 
 app.post(["/authbridge/rc-verification", "/uat/authbridge/rc-verification"], requireRelayAuth, async (req, res) => {
   if (!AUTHBRIDGE_USERNAME) {
