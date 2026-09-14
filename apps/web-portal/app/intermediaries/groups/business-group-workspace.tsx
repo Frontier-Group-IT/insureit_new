@@ -160,6 +160,12 @@ export function BusinessGroupWorkspace({
           {canManage ? (
             <div className="flex flex-wrap gap-2">
               <Link
+                href="/intermediaries/groups/branches"
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#D7E0EA] bg-white px-4 text-[9px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]"
+              >
+                <Store className="h-4 w-4" /> Branch Register
+              </Link>
+              <Link
                 href="/intermediaries/groups/branches/new"
                 aria-disabled={!hierarchyReady}
                 className={`inline-flex h-9 items-center gap-2 rounded-xl border border-[#D7E0EA] bg-white px-4 text-[9px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}
