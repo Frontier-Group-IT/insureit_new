@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   BarChart3,
-  CalendarRange,
   CircleDollarSign,
   FileText,
   Layers3,
@@ -205,29 +204,8 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   return (
     <PartnerPortalShell title="My Business">
       <div className="space-y-4 pb-3">
-        <section className="flex flex-col gap-3 px-1 py-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-[#142B50]">Business performance</h1>
-            <p className="mt-1 text-[9.5px] font-medium text-[#7A899E]">Deep insights into business mix, portfolio quality and growth opportunities.</p>
-          </div>
-
-          <form className="flex items-center gap-1.5 rounded-full border border-[#DCE5F1] bg-white p-1.5 pl-2.5 shadow-[0_2px_8px_rgba(24,52,90,0.04)]" action="/partner/business">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]">
-              <CalendarRange className="h-3.5 w-3.5" />
-            </span>
-            <label className="grid gap-0">
-              <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7586A0]">From</span>
-              <input name="from" type="date" defaultValue={query.from ?? ""} className="h-5 w-[102px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
-            </label>
-            <div className="h-6 w-px bg-[#D5DFEC]" />
-            <label className="grid gap-0">
-              <span className="text-[6.5px] font-black uppercase tracking-[0.08em] text-[#7586A0]">To</span>
-              <input name="to" type="date" defaultValue={query.to ?? ""} className="h-5 w-[102px] border-0 bg-transparent px-0 text-[8.5px] font-bold text-[#203653] outline-none" />
-            </label>
-            <button type="submit" className="inline-flex h-8 items-center rounded-full bg-[#0D3F99] px-3.5 text-[8.5px] font-extrabold text-white transition hover:bg-[#082F72] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
-              Apply
-            </button>
-          </form>
+        <section className="px-1 py-1">
+          <h1 className="text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-[#142B50]">Business performance</h1>
         </section>
 
         <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
