@@ -466,7 +466,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
             <div className="grid grid-cols-2 gap-2 px-4 pb-4">
               <SnapshotCard label="Intakes Attention" value={home.service.intakes_need_attention} href="/partner/policy-intakes" iconSrc={homeIcons.intakeAttention} />
               <SnapshotCard label="Overdue Policies" value={home.business.overdue_policies} href="/partner/renewals" iconSrc={homeIcons.overduePolicies} />
-              <SnapshotCard label="Renewals Due 30D" value={home.business.renewals_30_days} href="/partner/renewals" iconSrc={homeIcons.renewals} />
+              <SnapshotCard label="Follow-ups Due" value={externalRenewals.follow_up_due_count} href="/partner/renewals/external?mode=follow_up&follow_up=due" iconSrc={homeIcons.priority} />
               <SnapshotCard label="Payout Pending Records" value={payout.available ? payout.pending_count : "—"} href="/partner/payout" iconSrc={homeIcons.payout} />
             </div>
           </DashboardPanel>
