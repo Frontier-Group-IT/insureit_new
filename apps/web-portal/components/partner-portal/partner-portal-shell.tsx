@@ -10,10 +10,14 @@ import { PartnerBusinessTrendResponsiveFix } from "./partner-business-trend-resp
 
 export async function PartnerPortalShell({ title, children, headerVariant = "default" }: { title: string; children: ReactNode; headerVariant?: "default" | "breadcrumb" }) {
   const accessToken = await getServerAccessToken();
-  const [{ user, profile }] = await Promise.all([
+  const [{ user, profile }, partnerSession] = await Promise.all([
     getAuthenticatedProfile(accessToken),
     getPartnerWebSession(),
   ]);
+
+  const partnerDisplayName = partnerSession.identity.actor_kind === "intermediary"
+    ? partnerSession.identity.partner_name || partnerSession.identity.display_name
+    : null;
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] text-[#10213D]">
@@ -37,6 +41,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
                 profile={profile}
                 user={user ? { id: user.id, email: user.email } : null}
                 homeHref="/partner"
+                displayNameOverride={partnerDisplayName}
               />
             </div>
           </div>
