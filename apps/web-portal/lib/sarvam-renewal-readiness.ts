@@ -1,5 +1,8 @@
 import "server-only";
 
+const SARVAM_BASE_URL = "https://apps.sarvam.ai";
+const CONNECTION_TIMEOUT_MS = 10_000;
+
 export type SarvamRenewalReadiness = {
   callingEnabled: boolean;
   requiredConfigured: boolean;
@@ -14,8 +17,20 @@ export type SarvamRenewalReadiness = {
   }>;
 };
 
+export type SarvamRenewalConnectionCheck = {
+  ok: boolean;
+  status: number | null;
+  message: string;
+};
+
 function configured(name: string) {
   return Boolean(process.env[name]?.trim());
+}
+
+function requiredEnv(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) throw new Error(`${name} is not configured.`);
+  return value;
 }
 
 function safeIdentifierHint(name: string) {
@@ -43,4 +58,87 @@ export function getSarvamRenewalReadiness(): SarvamRenewalReadiness {
     webhookUrl: `${portalOrigin}/api/integrations/sarvam/voice-campaign-webhook`,
     items,
   };
+}
+
+export async function checkSarvamRenewalConnection(): Promise<SarvamRenewalConnectionCheck> {
+  let apiKey: string;
+  let orgId: string;
+  let workspaceId: string;
+  let campaignId: string;
+
+  try {
+    apiKey = requiredEnv("SARVAM_API_KEY");
+    orgId = requiredEnv("SARVAM_ORG_ID");
+    workspaceId = requiredEnv("SARVAM_WORKSPACE_ID");
+    campaignId = requiredEnv("SARVAM_RENEWAL_CAMPAIGN_ID");
+  } catch {
+    return {
+      ok: false,
+      status: null,
+      message: "Required Sarvam server configuration is incomplete.",
+    };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/webhooks?limit=1`,
+      {
+        method: "GET",
+        headers: {
+          "api-subscription-key": apiKey,
+        },
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+
+    if (response.ok) {
+      return {
+        ok: true,
+        status: response.status,
+        message: "Sarvam authenticated successfully and the configured renewal campaign is reachable.",
+      };
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        ok: false,
+        status: response.status,
+        message: "Sarvam rejected the configured API credentials or workspace access.",
+      };
+    }
+
+    if (response.status === 404) {
+      return {
+        ok: false,
+        status: response.status,
+        message: "Sarvam is reachable, but the configured organisation, workspace or campaign could not be found.",
+      };
+    }
+
+    return {
+      ok: false,
+      status: response.status,
+      message: `Sarvam connection check failed with provider status ${response.status}.`,
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return {
+        ok: false,
+        status: null,
+        message: "Sarvam did not respond to the read-only connection check within 10 seconds.",
+      };
+    }
+
+    return {
+      ok: false,
+      status: null,
+      message: "Sarvam could not be reached from the INSUREIT server.",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
