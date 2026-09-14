@@ -44,13 +44,6 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
   return (
     <PartnerPortalShell title="Customers">
       <div className="space-y-4 pb-4">
-        <div className="grid overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_3px_10px_rgba(31,65,115,0.05)] sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric label="Total Customers" value={summary.total_customers} icon={<UsersRound className="h-4 w-4 text-[#3156B8]" />} iconClassName="bg-[#EAF3FF]" />
-          <SummaryMetric label="Active" value={summary.active_customers} icon={<span className="text-[18px] font-bold leading-none text-[#16A36A]">✓</span>} iconClassName="bg-[#E6F8EF]" />
-          <SummaryMetric label="With Phone" value={summary.with_phone} icon={<Phone className="h-4 w-4 text-[#6D42D8]" />} iconClassName="bg-[#F1EAFE]" />
-          <SummaryMetric label="With Email" value={summary.with_email} icon={<Mail className="h-4 w-4 text-[#F59E0B]" />} iconClassName="bg-[#FFF3DF]" />
-        </div>
-
         <section className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_5px_16px_rgba(31,65,115,0.05)]">
           <div className="flex flex-col gap-3 border-b border-[#E4EAF2] px-4 py-3 sm:flex-row sm:items-center">
             <div className="flex shrink-0 items-center gap-3">
@@ -142,18 +135,5 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
         </section>
       </div>
     </PartnerPortalShell>
-  );
-}
-
-function SummaryMetric({ label, value, icon, iconClassName }: { label: string; value: number; icon: React.ReactNode; iconClassName: string }) {
-  return (
-    <div className="flex min-h-[76px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0 sm:px-5">
-      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${iconClassName}`}>{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[18px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{value}</p>
-        <p className="mt-1.5 text-[8px] font-black uppercase tracking-[0.07em] text-[#526987]">{label}</p>
-      </div>
-      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96]" />
-    </div>
   );
 }
