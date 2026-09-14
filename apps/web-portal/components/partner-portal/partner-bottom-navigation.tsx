@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PartnerCustomIcon } from "./partner-custom-icon";
 import { partnerMobileItems } from "./partner-navigation";
 
 export function PartnerBottomNavigation() {
@@ -12,7 +13,6 @@ export function PartnerBottomNavigation() {
       aria-label="Partner mobile quick navigation"
     >
       {partnerMobileItems.map((item) => {
-        const Icon = item.icon;
         const active = item.href === "/partner" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
@@ -24,7 +24,7 @@ export function PartnerBottomNavigation() {
               active ? "bg-white text-[#17213e]" : "text-[#D7DDF0]"
             }`}
           >
-            <Icon className={`h-[19px] w-[19px] ${active ? "text-[#6759ff]" : "text-[#F4F7FF]"}`} />
+            <PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" />
             <span className="truncate">{item.label}</span>
           </Link>
         );
