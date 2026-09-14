@@ -52,7 +52,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
       <div>
         <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-blue-700">Live iCall Production status</p>
         <h4 className="mt-1 text-[13px] font-semibold text-[#0F172A]">{details.icall_candidate_name || "Training account"}</h4>
-        <p className="mt-1 text-[9.5px] text-[#64748B]">Login ID {details.icall_login_id || "-"}{details.icall_internal_pos_code ? ` · Internal code ${details.icall_internal_pos_code}` : ""}</p>
+        <p className="mt-1 text-[9.5px] text-[#64748B]">iCall account {maskIdentifier(details.icall_login_id)}{details.icall_internal_pos_code ? ` · Internal code ${details.icall_internal_pos_code}` : ""}</p>
       </div>
       <div className="flex items-center gap-2">
         <span className={`rounded-full px-2.5 py-1.5 text-[8.5px] font-semibold ${production ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{production ? "Production" : "Environment review"}</span>
@@ -74,7 +74,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
         <Detail label="Expiry date" value={formatDate(details.icall_expiry_date || details.training_deadline)} />
         <Detail label="Training started" value={formatDateTime(details.training_started_at)} />
         <Detail label="Training completed" value={formatDateTime(details.training_completed_at)} />
-        <Detail label="Registered mobile" value={details.icall_mobile_number || "-"} />
+        <Detail label="Registered mobile" value={maskMobile(details.icall_mobile_number)} />
         <Detail label="Exam completion" value={formatDateTime(details.exam_completed_at)} />
         <Detail label="Exam score" value={details.exam_score != null ? String(details.exam_score) : "-"} />
         <Detail label="Last synced" value={formatDateTime(details.icall_last_synced_at)} />
@@ -82,7 +82,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
     </div>
 
     <div className="flex flex-wrap gap-2">
-      {production && details.icall_login_id ? <IcallTrainingLauncher applicationId={applicationId} loginId={details.icall_login_id} /> : <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9.5px] text-amber-800">Production training must be registered and synchronized before it can be opened.</div>}
+      {production && details.icall_login_id ? <IcallTrainingLauncher applicationId={applicationId} /> : <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9.5px] text-amber-800">Production training must be registered and synchronized before it can be opened.</div>}
       {production ? <form action={syncIcallProductionStatus}>
         <input type="hidden" name="application_id" value={applicationId} />
         <FormSubmitButton label="Sync latest status" pendingLabel="Syncing" className="h-10 rounded-xl border border-blue-200 bg-white px-4 text-[10px] font-semibold text-blue-800" />
@@ -110,6 +110,17 @@ function durationSeconds(value: string | null | undefined) {
 
 function friendly(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function maskIdentifier(value: string | null | undefined) {
+  if (!value) return "-";
+  return value.length > 5 ? `${value.slice(0, 2)}****${value.slice(-3)}` : "linked";
+}
+
+function maskMobile(value: string | null | undefined) {
+  if (!value) return "-";
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 4 ? `******${digits.slice(-4)}` : "linked";
 }
 
 function formatDate(value: string | null | undefined) {
