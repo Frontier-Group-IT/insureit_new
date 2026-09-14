@@ -1,0 +1,120 @@
+name: Apply Partner Branch onboarding migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260914194500_partner_branch_onboarding.sql'
+      - '.github/workflows/apply-partner-branch-onboarding.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply reversible Partner Branch onboarding schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260914194500_partner_branch_onboarding.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link production Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Capture pre-migration invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              (select count(*) from public.partners) as partner_count,
+              (select count(*) from public.intermediary_groups) as group_count,
+              (select count(*) from public.intermediary_group_memberships) as membership_count,
+              (select count(*) from public.partners where parent_partner_id is not null) as parent_link_count;
+          ")
+          echo "$result"
+          echo "PRE_PARTNER_COUNT=$(jq -r '.[0].partner_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_GROUP_COUNT=$(jq -r '.[0].group_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_MEMBERSHIP_COUNT=$(jq -r '.[0].membership_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_PARENT_LINK_COUNT=$(jq -r '.[0].parent_link_count' <<<"$result")" >> "$GITHUB_ENV"
+
+      - name: Apply Partner Branch onboarding migration
+        run: supabase db query --linked --file supabase/migrations/20260914194500_partner_branch_onboarding.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260914194500
+
+      - name: Verify schema, security and no backfill
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.partner_branch_profiles') is not null as branch_table_ready,
+              to_regprocedure('public.service_create_partner_branch_profile(text,text,text,text,text,uuid,uuid)') is not null as create_rpc_ready,
+              to_regprocedure('public.service_assign_registered_partner_branch(uuid,uuid,uuid)') is not null as assign_rpc_ready,
+              to_regprocedure('public.service_delete_empty_partner_branch_profile(uuid,uuid)') is not null as delete_rpc_ready,
+              not has_function_privilege('authenticated', 'public.service_create_partner_branch_profile(text,text,text,text,text,uuid,uuid)', 'EXECUTE') as create_authenticated_blocked,
+              not has_function_privilege('authenticated', 'public.service_assign_registered_partner_branch(uuid,uuid,uuid)', 'EXECUTE') as assign_authenticated_blocked,
+              not has_function_privilege('authenticated', 'public.service_delete_empty_partner_branch_profile(uuid,uuid)', 'EXECUTE') as delete_authenticated_blocked,
+              has_function_privilege('service_role', 'public.service_create_partner_branch_profile(text,text,text,text,text,uuid,uuid)', 'EXECUTE') as create_service_role_ready,
+              has_function_privilege('service_role', 'public.service_assign_registered_partner_branch(uuid,uuid,uuid)', 'EXECUTE') as assign_service_role_ready,
+              has_function_privilege('service_role', 'public.service_delete_empty_partner_branch_profile(uuid,uuid)', 'EXECUTE') as delete_service_role_ready,
+              (select count(*) from public.partners) as partner_count,
+              (select count(*) from public.intermediary_groups) as group_count,
+              (select count(*) from public.intermediary_group_memberships) as membership_count,
+              (select count(*) from public.partners where parent_partner_id is not null) as parent_link_count,
+              (select count(*) from public.partner_branch_profiles) as branch_profile_count;
+          ")
+          echo "$result"
+
+          test "$(jq -r '.[0].branch_table_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].create_rpc_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].assign_rpc_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].delete_rpc_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].create_authenticated_blocked' <<<"$result")" = "true"
+          test "$(jq -r '.[0].assign_authenticated_blocked' <<<"$result")" = "true"
+          test "$(jq -r '.[0].delete_authenticated_blocked' <<<"$result")" = "true"
+          test "$(jq -r '.[0].create_service_role_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].assign_service_role_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].delete_service_role_ready' <<<"$result")" = "true"
+
+          test "$(jq -r '.[0].partner_count' <<<"$result")" = "$PRE_PARTNER_COUNT"
+          test "$(jq -r '.[0].group_count' <<<"$result")" = "$PRE_GROUP_COUNT"
+          test "$(jq -r '.[0].membership_count' <<<"$result")" = "$PRE_MEMBERSHIP_COUNT"
+          test "$(jq -r '.[0].parent_link_count' <<<"$result")" = "$PRE_PARENT_LINK_COUNT"
+          test "$(jq -r '.[0].branch_profile_count' <<<"$result")" = "0"
