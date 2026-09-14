@@ -8,8 +8,8 @@ import {
   BriefcaseBusiness,
   ClipboardList,
   FileInput,
-  Gauge,
-  LifeBuoy,
+  Headphones,
+  LayoutDashboard,
   Network,
   RefreshCw,
   Search,
@@ -24,30 +24,28 @@ type PartnerNavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  iconShellClass?: string;
-  iconClass?: string;
 };
 
 const primaryItems: PartnerNavItem[] = [
-  { href: "/partner", label: "Home", icon: Gauge, iconShellClass: "bg-[#EAF2FF]", iconClass: "text-[#2F6BFF]" },
-  { href: "/partner/business", label: "My Business", icon: BriefcaseBusiness, iconShellClass: "bg-[#F0ECFF]", iconClass: "text-[#7656E8]" },
-  { href: "/partner/customers", label: "Customers", icon: UsersRound, iconShellClass: "bg-[#E7F8F4]", iconClass: "text-[#18A884]" },
-  { href: "/partner/policies", label: "Policies", icon: ShieldCheck, iconShellClass: "bg-[#EEF4FF]", iconClass: "text-[#386DDC]" },
-  { href: "/partner/renewals", label: "Renewals", icon: RefreshCw, iconShellClass: "bg-[#F2ECFF]", iconClass: "text-[#8A5BE8]" },
-  { href: "/partner/claims", label: "Claims", icon: ClipboardList, iconShellClass: "bg-[#FFF0F4]", iconClass: "text-[#E34D7A]" },
-  { href: "/partner/policy-intakes", label: "Policy Intake", icon: FileInput, iconShellClass: "bg-[#FFF4E7]", iconClass: "text-[#E9902D]" },
+  { href: "/partner", label: "Home", icon: LayoutDashboard },
+  { href: "/partner/business", label: "My Business", icon: BriefcaseBusiness },
+  { href: "/partner/customers", label: "Customers", icon: UsersRound },
+  { href: "/partner/policies", label: "Policies", icon: ShieldCheck },
+  { href: "/partner/renewals", label: "Renewals", icon: RefreshCw },
+  { href: "/partner/claims", label: "Claims", icon: ClipboardList },
+  { href: "/partner/policy-intakes", label: "Policy Intake", icon: FileInput },
 ];
 
 const secondaryItems: PartnerNavItem[] = [
-  { href: "/partner/payout", label: "Payout", icon: BadgeIndianRupee, iconShellClass: "bg-[#FFF5DF]", iconClass: "text-[#D89000]" },
-  { href: "/partner/network", label: "Network", icon: Network, iconShellClass: "bg-[#EAF2FF]", iconClass: "text-[#2F6BFF]" },
-  { href: "/partner/search", label: "Search", icon: Search, iconShellClass: "bg-[#E9F8FC]", iconClass: "text-[#2396B5]" },
-  { href: "/partner/activity", label: "Activity", icon: Activity, iconShellClass: "bg-[#EAF8EF]", iconClass: "text-[#2D9A62]" },
+  { href: "/partner/payout", label: "Payout", icon: BadgeIndianRupee },
+  { href: "/partner/network", label: "Network", icon: Network },
+  { href: "/partner/search", label: "Search", icon: Search },
+  { href: "/partner/activity", label: "Activity", icon: Activity },
 ];
 
 const accountItems: PartnerNavItem[] = [
-  { href: "/partner/account", label: "Account", icon: UserRound, iconShellClass: "bg-[#F1ECFF]", iconClass: "text-[#7656E8]" },
-  { href: "/partner/support", label: "Support", icon: LifeBuoy, iconShellClass: "bg-[#EAF6FF]", iconClass: "text-[#2A83C7]" },
+  { href: "/partner/account", label: "Account", icon: UserRound },
+  { href: "/partner/support", label: "Support", icon: Headphones },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -63,12 +61,18 @@ function NavLink({ item }: { item: PartnerNavItem }) {
     <Link
       href={item.href}
       prefetch={false}
-      className={`group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
-        active ? "bg-white text-[#141d3b]" : "text-white/88 hover:bg-white/10 hover:text-white"
+      className={`group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
+        active
+          ? "bg-white text-[#141d3b] shadow-[0_3px_12px_rgba(5,18,45,0.12)]"
+          : "text-white/88 hover:bg-white/8 hover:text-white"
       }`}
     >
-      <span className={`grid h-8 w-8 place-items-center rounded-xl shadow-[0_2px_8px_rgba(6,20,48,0.12)] ${item.iconShellClass ?? "bg-[#EAF2FF]"}`}>
-        <Icon className={`h-4 w-4 ${item.iconClass ?? "text-[#2F6BFF]"}`} />
+      <span
+        className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200 ${
+          active ? "bg-[#EAF1FF] text-[#2F6BFF]" : "text-white/72 group-hover:bg-white/8 group-hover:text-white"
+        }`}
+      >
+        <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
       </span>
       <span className="flex-1">{item.label}</span>
     </Link>
