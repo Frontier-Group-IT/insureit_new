@@ -9,7 +9,6 @@ import {
   Layers3,
   Repeat2,
   ShieldAlert,
-  Target,
   TrendingUp,
   UsersRound,
 } from "lucide-react";
@@ -118,19 +117,6 @@ function aggregateBy(rows: PartnerPolicyRow[], getLabel: (policy: PartnerPolicyR
   return [...grouped.values()].sort((a, b) => b.premium - a.premium || b.policies - a.policies);
 }
 
-function aggregateCustomers(rows: PartnerPolicyRow[]) {
-  const grouped = new Map<string, MixRow>();
-  for (const policy of rows) {
-    const label = policy.customer_name?.trim() || "Unassigned customer";
-    const key = policy.customer_id || `name:${label.toLowerCase()}`;
-    const current = grouped.get(key) ?? { label, policies: 0, premium: 0 };
-    current.policies += 1;
-    current.premium += numeric(policy.premium_amount);
-    grouped.set(key, current);
-  }
-  return [...grouped.values()].sort((a, b) => b.premium - a.premium || b.policies - a.policies);
-}
-
 export default async function PartnerBusinessPage({ searchParams }: { searchParams: Promise<BusinessSearchParams> }) {
   const query = await searchParams;
   const hasRange = validIsoDate(query.from) && validIsoDate(query.to) && String(query.from) <= String(query.to);
@@ -166,34 +152,17 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   const customerCounts = [...customerPolicyCounts.values()];
   const uniqueCustomers = customerCounts.length;
   const repeatCustomers = customerCounts.filter((count) => count > 1).length;
-  const crossSellCustomers = customerCounts.filter((count) => count === 1).length;
   const repeatCustomerRate = uniqueCustomers ? (repeatCustomers / uniqueCustomers) * 100 : 0;
-  const policiesPerCustomer = uniqueCustomers ? analysisPolicies.length / uniqueCustomers : 0;
-  const averageCustomerValue = uniqueCustomers ? analysisPremium / uniqueCustomers : 0;
-  const unclassifiedRows = analysisPolicies.filter(
+
+  const unclassifiedPolicies = analysisPolicies.filter(
     (policy) => !policy.business_type || (!policy.policy_product && !policy.policy_type && !policy.business_line),
-  );
-  const unclassifiedPolicies = unclassifiedRows.length;
-  const unclassifiedPremium = unclassifiedRows.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+  ).length;
 
   const productMix = aggregateBy(
     analysisPolicies,
     (policy) => policy.policy_product || policy.policy_type || policy.business_line || "Other",
   ).slice(0, 5);
   const insurerMix = aggregateBy(analysisPolicies, (policy) => policy.insurer_name || "Unassigned insurer").slice(0, 5);
-  const customerMix = aggregateCustomers(analysisPolicies);
-  const topCustomers = customerMix.slice(0, 5);
-  const topCustomerPremium = topCustomers.reduce((sum, item) => sum + item.premium, 0);
-  const portfolioConcentration = analysisPremium > 0 ? (topCustomerPremium / analysisPremium) * 100 : 0;
-
-  const repeatCustomerIds = new Set([...customerPolicyCounts.entries()].filter(([, count]) => count > 1).map(([id]) => id));
-  const crossSellCustomerIds = new Set([...customerPolicyCounts.entries()].filter(([, count]) => count === 1).map(([id]) => id));
-  const repeatCustomerPremium = analysisPolicies
-    .filter((policy) => Boolean(policy.customer_id && repeatCustomerIds.has(policy.customer_id)))
-    .reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const crossSellCustomerPremium = analysisPolicies
-    .filter((policy) => Boolean(policy.customer_id && crossSellCustomerIds.has(policy.customer_id)))
-    .reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
 
   const monthlySplit = performance.trend.map((item) => {
     const monthPolicies = portfolio.filter((policy) => policyDate(policy)?.slice(0, 7) === item.month);
@@ -269,18 +238,9 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
           {metrics.map((metric) => <InsightMetricCard key={metric.label} {...metric} />)}
         </section>
 
-        <section className="grid gap-3 xl:grid-cols-3">
-          <ContributionPanel icon={TrendingUp} title="Top Insurer Contribution" subtitle="Premium contribution by insurer" rows={insurerMix} totalPremium={analysisPremium} />
-          <ContributionPanel icon={UsersRound} title="Top Customer Contribution" subtitle="Premium contribution by customer" rows={topCustomers} totalPremium={analysisPremium} href="/partner/customers" />
-          <InsightPanel icon={UsersRound} title="Customer Value & Portfolio Quality" subtitle="Key indicators for sustainable growth">
-            <QualityRow label="Average Customer Value" value={currency(averageCustomerValue)} />
-            <QualityRow label="Policies per Customer" value={policiesPerCustomer.toFixed(1)} />
-            <QualityRow label="Repeat Customer Rate" value={percentage(repeatCustomerRate)} />
-            <QualityRow label="Portfolio Concentration" value={percentage(portfolioConcentration)} meta="Top 5 customers" />
-          </InsightPanel>
-        </section>
+        <ContributionPanel icon={TrendingUp} title="Top Insurer Contribution" subtitle="Premium contribution by insurer" rows={insurerMix} totalPremium={analysisPremium} />
 
-        <section className="grid gap-3 xl:grid-cols-[1.15fr_.88fr_.98fr_1fr]">
+        <section className="grid gap-3 xl:grid-cols-[1.15fr_.88fr_1fr]">
           <InsightPanel icon={BarChart3} title="New vs Renewal Premium Trend" subtitle="Monthly premium split across new and renewal business">
             <div className="flex items-center gap-3 text-[8px] font-bold text-[#61728A]">
               <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />New Business</span>
@@ -343,13 +303,6 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
               }) : <EmptyLine text="No product mix is available for this period." />}
             </div>
           </section>
-
-          <InsightPanel icon={Target} title="Opportunity Snapshot" subtitle="Actionable portfolio opportunities">
-            <OpportunityRow label="Cross-sell Opportunity" value={`${crossSellCustomers} customers`} amount={currency(crossSellCustomerPremium)} meta="Customers with one recorded policy" href="/partner/customers" />
-            <OpportunityRow label="Repeat Customers" value={`${repeatCustomers} customers`} amount={currency(repeatCustomerPremium)} meta="Customers with multiple recorded policies" href="/partner/customers" />
-            <OpportunityRow label="Unclassified Portfolio" value={`${unclassifiedPolicies} policies`} amount={currency(unclassifiedPremium)} meta="Missing business or product classification" href="/partner/policies" />
-            <OpportunityRow label="Premium at Risk" value={`${premiumAtRiskRows.length} policies`} amount={currency(premiumAtRisk)} meta="Policies ending in the next 30 days" href="/partner/renewals" tone="risk" />
-          </InsightPanel>
 
           <InsightPanel icon={ShieldAlert} title="Renewal Risk & Lost Business" subtitle="Track renewal exposure and expired premium">
             <div className="grid grid-cols-2 gap-2">
@@ -427,17 +380,14 @@ function InsightMetricCard({ label, value, meta, tone, icon: Icon }: { label: st
   );
 }
 
-function ContributionPanel({ icon: Icon, title, subtitle, rows, totalPremium, href }: { icon: InsightIcon; title: string; subtitle: string; rows: MixRow[]; totalPremium: number; href?: string }) {
+function ContributionPanel({ icon: Icon, title, subtitle, rows, totalPremium }: { icon: InsightIcon; title: string; subtitle: string; rows: MixRow[]; totalPremium: number }) {
   return (
     <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-      <div className="flex items-start justify-between gap-3 border-b border-[#EDF1F5] pb-3">
-        <div className="flex items-start gap-2.5">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
-          <div><h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2><p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p></div>
-        </div>
-        {href ? <Link href={href} prefetch={false} className="inline-flex items-center gap-1 text-[8px] font-extrabold text-[#2B73E8]">View all <ArrowRight className="h-3 w-3" /></Link> : null}
+      <div className="flex items-start gap-2.5 border-b border-[#EDF1F5] pb-3">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+        <div><h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2><p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p></div>
       </div>
-      <div className="mt-3 space-y-1.5">
+      <div className="mt-3 grid gap-1.5 xl:grid-cols-2">
         {rows.length ? rows.map((item, index) => {
           const percent = totalPremium > 0 ? Math.min(100, (item.premium / totalPremium) * 100) : 0;
           return (
@@ -465,27 +415,6 @@ function InsightPanel({ icon: Icon, title, subtitle, children }: { icon: Insight
       </div>
       <div className="mt-3 space-y-2">{children}</div>
     </section>
-  );
-}
-
-function QualityRow({ label, value, meta }: { label: string; value: string; meta?: string }) {
-  return (
-    <div className="flex min-h-[45px] items-center justify-between gap-3 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-3 py-2">
-      <p className="text-[8.5px] font-bold text-[#52637C]">{label}</p>
-      <div className="text-right"><p className="text-[12px] font-black text-[#183057]">{value}</p>{meta ? <p className="text-[7px] font-medium text-[#8190A5]">{meta}</p> : null}</div>
-    </div>
-  );
-}
-
-function OpportunityRow({ label, value, amount, meta, href, tone = "normal" }: { label: string; value: string; amount: string; meta: string; href: string; tone?: "normal" | "risk" }) {
-  const isRisk = tone === "risk";
-  return (
-    <Link href={href} prefetch={false} className="group flex min-h-[50px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2 transition hover:border-[#CAD6E5] hover:bg-white">
-      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${isRisk ? "bg-[#FFF0F2] text-[#EF4565]" : "bg-[#EEF4FF] text-[#3156B8]"}`}>{isRisk ? <AlertTriangle className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}</span>
-      <span className="min-w-0 flex-1"><span className="block text-[8.5px] font-extrabold text-[#263A58]">{label}</span><span className="mt-0.5 block truncate text-[7.5px] font-medium text-[#8190A5]">{meta}</span></span>
-      <span className="shrink-0 text-right"><span className="block text-[8.5px] font-black text-[#183057]">{value}</span><span className="block text-[7.5px] font-bold text-[#526782]">{amount}</span></span>
-      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#4F78C8] transition group-hover:translate-x-0.5" />
-    </Link>
   );
 }
 
