@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, ArrowRight, FileText, Plus, RefreshCw } from "lucide-react";
-import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowRight, FileText, Plus, RefreshCw, Search } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
-type IntakeFilter = "all" | "attention" | "in_progress" | "completed";
+type IntakeFilter = "all" | "active" | "attention" | "in_progress" | "completed";
 const PAGE_SIZE = 25;
 
 function humanize(value: string) {
@@ -18,19 +17,29 @@ function statusLabel(row: PartnerPolicyIntake) {
   const labels: Record<string, string> = {
     processing: "Processing",
     ready_for_review: "Ready",
-    in_review: "In review",
-    needs_attention: "Needs attention",
+    in_review: "In Progress",
+    needs_attention: "Need You",
     completed: "Completed",
     rejected: "Rejected",
   };
   return labels[row.status] || humanize(row.status);
 }
 
-function dateLabel(value: string) {
+function statusTone(row: PartnerPolicyIntake) {
+  if (row.status === "completed") return "bg-[#E5F8EE] text-[#14975F]";
+  if (row.status === "rejected") return "bg-[#FFE8E8] text-[#C83A3A]";
+  if (row.status === "needs_attention") return "bg-[#FFF1DA] text-[#C87808]";
+  if (row.status === "processing" || row.status === "ready_for_review" || row.status === "in_review") return "bg-[#E8F2FF] text-[#2470D9]";
+  return "bg-[#EEF3F8] text-[#425672]";
+}
+
+function dateParts(value: string) {
   const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
+  if (Number.isNaN(date.getTime())) return { date: value, time: "" };
+  return {
+    date: new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date),
+    time: new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit" }).format(date),
+  };
 }
 
 function field(row: PartnerPolicyIntake, key: string) {
@@ -40,22 +49,21 @@ function field(row: PartnerPolicyIntake, key: string) {
 export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [filter, setFilter] = useState<IntakeFilter>("all");
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({ active: 0, attention: 0, progress: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const load = useCallback(async (manual = false) => {
-    if (manual) setRefreshing(true);
-    else setLoading(true);
+  const load = useCallback(async () => {
+    setLoading(true);
     setError("");
     try {
       const result = await getPartnerPolicyIntakesWeb({
         limit: PAGE_SIZE,
         offset: (page - 1) * PAGE_SIZE,
-        filter,
+        filter: filter === "active" ? "all" : filter,
       });
       setRows(result.intakes);
       setTotal(result.total);
@@ -64,55 +72,79 @@ export function PartnerPolicyIntakeListClient() {
       setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [filter, page]);
 
   useEffect(() => {
-    void load(false);
+    void load();
   }, [load]);
+
+  const visibleRows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      if (filter === "active" && (row.status === "completed" || row.status === "rejected")) return false;
+      if (!query) return true;
+      const values = [
+        row.intake_number,
+        row.customer_mobile,
+        row.lead_source_name,
+        row.status,
+        statusLabel(row),
+        field(row, "policy_number"),
+        field(row, "vehicle_registration_number"),
+      ];
+      return values.some((value) => value?.toLowerCase().includes(query));
+    });
+  }, [rows, filter, search]);
 
   const hasPrevious = page > 1;
   const hasNext = page * PAGE_SIZE < total;
 
+  const metrics = [
+    { label: "Active", value: counts.active, meta: "Active submissions", wrap: "bg-[#EAF3FF] text-[#2875DD]" },
+    { label: "Need You", value: counts.attention, meta: "Awaiting your action", wrap: "bg-[#E8F8EF] text-[#18A56C]" },
+    { label: "In Progress", value: counts.progress, meta: "Under review", wrap: "bg-[#F2E9FF] text-[#7B4DE2]" },
+    { label: "Completed", value: counts.completed, meta: "Successfully completed", wrap: "bg-[#FFF0DE] text-[#F28A12]" },
+  ];
+
   return (
-    <div className="space-y-7">
-      <PartnerPageHeader
-        eyebrow="Policy Intake"
-        title="My submissions"
-        description="Send policy copies and track their progress."
-        action={
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void load(true)}
-              disabled={refreshing}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-4 text-[10.5px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:opacity-50"
-            >
-              <RefreshCw className={"h-4 w-4 " + (refreshing ? "animate-spin" : "")} /> Refresh
-            </button>
-            <Link href="/partner/policy-intakes/new" className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
-              <Plus className="h-4 w-4" /> New Intake
-            </Link>
+    <div className="space-y-3 pb-4">
+      <section className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
+        <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((item, index) => (
+            <div key={item.label} className={`flex min-h-[72px] items-center gap-3 px-4 py-3 ${index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}>
+              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${item.wrap}`}><FileText className="h-4 w-4" /></span>
+              <div className="min-w-0">
+                <p className="text-[8px] font-black uppercase tracking-[0.07em] text-[#6A7A90]">{item.label}</p>
+                <p className="mt-0.5 text-[18px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
+                <p className="mt-1 text-[8.5px] font-medium text-[#8996A8]">{item.meta}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
+        <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
+          <div className="flex min-w-0 items-center gap-3 xl:flex-1">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><FileText className="h-4 w-4" /></span>
+            <h2 className="shrink-0 text-[12px] font-extrabold text-[#1B2F4E]">Policy Intake Register</h2>
+            <div className="relative min-w-0 flex-1 xl:max-w-[360px]">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Policy number, customer, vehicle or status"
+                className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+              />
+            </div>
           </div>
-        }
-      />
 
-      <PartnerMetricStrip
-        items={[
-          { label: "Active", value: counts.active },
-          { label: "Need You", value: counts.attention },
-          { label: "In Progress", value: counts.progress },
-          { label: "Completed", value: counts.completed },
-        ]}
-      />
-
-      <section>
-        <div className="flex flex-col gap-3 border-y border-[#DCE4ED] py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2 xl:ml-auto xl:justify-end">
             {([
               ["all", "All"],
-              ["attention", "Attention"],
+              ["active", "Active"],
+              ["attention", "Need You"],
               ["in_progress", "In Progress"],
               ["completed", "Completed"],
             ] as Array<[IntakeFilter, string]>).map(([value, label]) => (
@@ -120,117 +152,75 @@ export function PartnerPolicyIntakeListClient() {
                 key={value}
                 type="button"
                 onClick={() => { setFilter(value); setPage(1); }}
-                className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (filter === value ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}
+                className={"rounded-lg px-3 py-2 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (filter === value ? "bg-[#2875E8] text-white shadow-[0_3px_8px_rgba(40,117,232,0.18)]" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}
               >
                 {label}
               </button>
             ))}
+            <span className="ml-1 text-[9.5px] font-semibold text-[#7A899F]">{total} total</span>
+            <Link href="/partner/policy-intakes/new" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
+              <Plus className="h-4 w-4" /> Intake
+            </Link>
           </div>
-          <p className="text-[9.5px] font-semibold text-[#7A899F]">{rows.length} shown · {total} matched</p>
         </div>
-        <div className="mt-5"><PartnerSectionHeading title="Policy Intake Register" description={total + " matched"} /></div>
-        <div className="mt-3 border-y border-[#DCE4ED]">
 
-        {error ? (
-          <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">{error}</div>
-        ) : null}
+        <div className="grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 border-b border-[#E7EDF4] bg-[#F8FAFD] px-4 py-2 text-[8px] font-black uppercase tracking-[0.05em] text-[#6F819A]">
+          <span>#</span><span>Policy / Reference</span><span>Customer / Vehicle</span><span>Submission Date</span><span>Status</span><span className="text-right">Action</span>
+        </div>
+
+        {error ? <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">{error}</div> : null}
 
         {loading && !rows.length ? (
           <div className="py-14 text-center">
             <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#7F90A8]" />
             <p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intakes…</p>
           </div>
-        ) : rows.length ? (
+        ) : visibleRows.length ? (
           <div className="divide-y divide-[#E8EDF4]">
-            {rows.map((row) => (
-              <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group block px-1 py-3.5 transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#EEF4FF] text-[#3156B8]">
-                      <FileText className="h-4.5 w-4.5" />
-                    </span>
+            {visibleRows.map((row, index) => {
+              const created = dateParts(row.created_at);
+              const policy = field(row, "policy_number") || "Policy pending";
+              const vehicle = field(row, "vehicle_registration_number") || "Vehicle pending";
+              return (
+                <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 px-4 py-2.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
+                  <span className="text-[9px] font-semibold text-[#74839A]">{(page - 1) * PAGE_SIZE + index + 1}</span>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EAF3FF] text-[#2875DD]"><FileText className="h-3.5 w-3.5" /></span>
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[11.5px] font-extrabold text-[#1B2F4E]">{row.intake_number}</p>
-                        <span className="rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row)}</span>
-                      </div>
-                      <p className="mt-1 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_mobile} · {row.lead_source_name}</p>
-                      <p className="mt-1 break-words text-[9.5px] leading-4 text-[#8190A5]">{field(row, "policy_number") || "Policy pending"} · {field(row, "vehicle_registration_number") || "Vehicle pending"}</p>
+                      <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.intake_number}</p>
+                      <p className="mt-0.5 break-words text-[9px] font-medium leading-4 text-[#7A899F]">{policy}</p>
                     </div>
                   </div>
-
-                  <IntakeProgress row={row} />
-
-                  <div className="min-w-[150px] xl:text-right">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-[#8190A5]">Updated</p>
-                    <p className="mt-1 text-[9.5px] font-semibold text-[#536680]">{dateLabel(row.updated_at || row.created_at)}</p>
+                  <div className="min-w-0">
+                    <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{row.lead_source_name}</p>
+                    <p className="mt-0.5 break-words text-[9px] leading-4 text-[#8190A5]">{vehicle} · {row.customer_mobile}</p>
                   </div>
-                  <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
-                </div>
-
-                {row.attention_reason ? (
-                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#F1D6A7] bg-[#FFF8EC] px-3 py-2.5">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#A86708]" />
-                    <p className="text-[9.5px] font-semibold leading-4 text-[#80511A]">{row.attention_reason}</p>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#304665]">{created.date}</p>
+                    <p className="mt-0.5 text-[9px] text-[#8190A5]">{created.time}</p>
                   </div>
-                ) : null}
-              </Link>
-            ))}
+                  <span className={`inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[8.5px] font-bold ${statusTone(row)}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row)}</span>
+                  <ArrowRight className="h-4 w-4 justify-self-end text-[#315A91] transition group-hover:translate-x-0.5" />
+                </Link>
+              );
+            })}
           </div>
         ) : (
           <div className="py-14 text-center">
             <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
-            <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions on this page" : "No Policy Intakes yet"}</p>
-            <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Go back a page or choose another filter." : "Create a new intake when you have a policy copy."}</p>
+            <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions match this view" : "No Policy Intakes yet"}</p>
+            <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Choose another filter or adjust your search." : "Create a new intake when you have a policy copy."}</p>
           </div>
         )}
+
         {(hasPrevious || hasNext) ? (
-          <div className="flex items-center justify-between border-t border-[#E6ECF3] py-4">
-            <button
-              type="button"
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-              disabled={!hasPrevious || loading}
-              className="inline-flex min-h-9 items-center rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Previous
-            </button>
+          <div className="flex items-center justify-between border-t border-[#E6ECF3] px-4 py-3.5">
+            <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={!hasPrevious || loading} className="inline-flex min-h-9 items-center rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
             <p className="text-[10px] font-semibold text-[#74839A]">Page {page}</p>
-            <button
-              type="button"
-              onClick={() => setPage((value) => value + 1)}
-              disabled={!hasNext || loading}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Next <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!hasNext || loading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40">Next <ArrowRight className="h-3.5 w-3.5" /></button>
           </div>
         ) : null}
-        </div>
       </section>
-    </div>
-  );
-}
-
-function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
-  const manual = row.status === "processing" && row.ocr_status === "failed";
-  const activeStep = row.status === "completed" ? 4 : row.status === "in_review" ? 3 : row.status === "ready_for_review" || row.status === "needs_attention" || manual ? 2 : 1;
-  const rejected = row.status === "rejected";
-
-  return (
-    <div className="flex min-w-[220px] flex-1 items-start">
-      {["Uploaded", "Read", "Review", "Done"].map((label, index) => {
-        const step = index + 1;
-        const complete = !rejected && step <= activeStep;
-        return (
-          <div key={label} className="relative flex flex-1 flex-col items-center">
-            <div className="relative flex w-full items-center justify-center">
-              <span className={"z-10 h-2.5 w-2.5 rounded-full " + (complete ? "bg-[#3156B8]" : rejected && step === activeStep ? "bg-[#C85353]" : "bg-[#D6DCE6]")} />
-              {index < 3 ? <span className={"absolute left-[56%] h-px w-[88%] " + (step < activeStep && !rejected ? "bg-[#8DA9F2]" : "bg-[#DCE1E9]")} /> : null}
-            </div>
-            <span className={"mt-1 text-[8px] font-semibold " + (complete ? "text-[#354C70]" : "text-[#9AA6B8]")}>{label}</span>
-          </div>
-        );
-      })}
     </div>
   );
 }
