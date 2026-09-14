@@ -1,6 +1,6 @@
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
-import { syncIcallUatStatus } from "./icall-training-actions";
+import { syncIcallProductionStatus } from "./icall-training-actions";
 import { IcallTrainingLauncher } from "./icall-training-launcher";
 
 export type IcallTrainingAssignment = {
@@ -14,6 +14,7 @@ export type IcallTrainingAssignment = {
   exam_completed_at: string | null;
   exam_status: string;
   exam_score: number | null;
+  icall_environment?: string | null;
   icall_login_id?: string | null;
   icall_candidate_name?: string | null;
   icall_mobile_number?: string | null;
@@ -27,7 +28,7 @@ export type IcallTrainingAssignment = {
 };
 
 type IcallDetails = Required<Pick<IcallTrainingAssignment,
-  "icall_login_id" | "icall_candidate_name" | "icall_mobile_number" | "icall_internal_pos_code" |
+  "icall_environment" | "icall_login_id" | "icall_candidate_name" | "icall_mobile_number" | "icall_internal_pos_code" |
   "icall_issue_date" | "icall_expiry_date" | "icall_hours_allotted" | "icall_hours_completed" |
   "icall_hours_remaining" | "icall_last_synced_at"
 >>;
@@ -36,7 +37,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
   const admin = createSupabaseAdminClient();
   const { data } = await admin
     .from("intermediary_training_exam_assignments")
-    .select("icall_login_id,icall_candidate_name,icall_mobile_number,icall_internal_pos_code,icall_issue_date,icall_expiry_date,icall_hours_allotted,icall_hours_completed,icall_hours_remaining,icall_last_synced_at")
+    .select("icall_environment,icall_login_id,icall_candidate_name,icall_mobile_number,icall_internal_pos_code,icall_issue_date,icall_expiry_date,icall_hours_allotted,icall_hours_completed,icall_hours_remaining,icall_last_synced_at")
     .eq("application_id", applicationId)
     .maybeSingle<IcallDetails>();
   const details = { ...assignment, ...(data || {}) };
@@ -44,15 +45,19 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
   const total = durationSeconds(details.icall_hours_allotted);
   const percentage = total > 0 ? Math.min(100, Math.max(0, Math.round((completed / total) * 100))) : details.training_status === "completed" ? 100 : 0;
   const examResult = details.exam_status === "passed" ? "Passed" : details.exam_status === "failed" ? "Failed" : "Not attempted";
+  const production = details.icall_environment === "production";
 
   return <div className="space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-blue-700">Live iCall API status</p>
+        <p className="text-[9px] font-semibold uppercase tracking-[.08em] text-blue-700">Live iCall Production status</p>
         <h4 className="mt-1 text-[13px] font-semibold text-[#0F172A]">{details.icall_candidate_name || "Training account"}</h4>
-        <p className="mt-1 text-[9.5px] text-[#64748B]">Login ID {details.icall_login_id || "-"}{details.icall_internal_pos_code ? ` · Internal code ${details.icall_internal_pos_code}` : ""}</p>
+        <p className="mt-1 text-[9.5px] text-[#64748B]">iCall account {maskIdentifier(details.icall_login_id)}{details.icall_internal_pos_code ? ` · Internal code ${details.icall_internal_pos_code}` : ""}</p>
       </div>
-      <span className={`rounded-full px-3 py-1.5 text-[9px] font-semibold ${details.training_status === "completed" ? "bg-emerald-100 text-emerald-700" : details.training_status === "expired" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>{friendly(details.training_status)}</span>
+      <div className="flex items-center gap-2">
+        <span className={`rounded-full px-2.5 py-1.5 text-[8.5px] font-semibold ${production ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-800"}`}>{production ? "Production" : "Environment review"}</span>
+        <span className={`rounded-full px-3 py-1.5 text-[9px] font-semibold ${details.training_status === "completed" ? "bg-emerald-100 text-emerald-700" : details.training_status === "expired" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>{friendly(details.training_status)}</span>
+      </div>
     </div>
 
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -69,7 +74,7 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
         <Detail label="Expiry date" value={formatDate(details.icall_expiry_date || details.training_deadline)} />
         <Detail label="Training started" value={formatDateTime(details.training_started_at)} />
         <Detail label="Training completed" value={formatDateTime(details.training_completed_at)} />
-        <Detail label="Registered mobile" value={details.icall_mobile_number || "-"} />
+        <Detail label="Registered mobile" value={maskMobile(details.icall_mobile_number)} />
         <Detail label="Exam completion" value={formatDateTime(details.exam_completed_at)} />
         <Detail label="Exam score" value={details.exam_score != null ? String(details.exam_score) : "-"} />
         <Detail label="Last synced" value={formatDateTime(details.icall_last_synced_at)} />
@@ -77,11 +82,11 @@ export async function IcallTrainingDashboard({ applicationId, assignment }: { ap
     </div>
 
     <div className="flex flex-wrap gap-2">
-      {details.icall_login_id ? <IcallTrainingLauncher applicationId={applicationId} loginId={details.icall_login_id} /> : <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9.5px] text-amber-800">Sync the iCall status before opening training.</div>}
-      <form action={syncIcallUatStatus}>
+      {production && details.icall_login_id ? <IcallTrainingLauncher applicationId={applicationId} /> : <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9.5px] text-amber-800">Production training must be registered and synchronized before it can be opened.</div>}
+      {production ? <form action={syncIcallProductionStatus}>
         <input type="hidden" name="application_id" value={applicationId} />
         <FormSubmitButton label="Sync latest status" pendingLabel="Syncing" className="h-10 rounded-xl border border-blue-200 bg-white px-4 text-[10px] font-semibold text-blue-800" />
-      </form>
+      </form> : null}
     </div>
   </div>;
 }
@@ -105,6 +110,17 @@ function durationSeconds(value: string | null | undefined) {
 
 function friendly(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function maskIdentifier(value: string | null | undefined) {
+  if (!value) return "-";
+  return value.length > 5 ? `${value.slice(0, 2)}****${value.slice(-3)}` : "linked";
+}
+
+function maskMobile(value: string | null | undefined) {
+  if (!value) return "-";
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 4 ? `******${digits.slice(-4)}` : "linked";
 }
 
 function formatDate(value: string | null | undefined) {

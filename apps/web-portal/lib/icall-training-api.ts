@@ -74,6 +74,8 @@ export type IcallTccResponse = {
   data?: unknown;
 };
 
+type IcallEnvironment = "uat" | "prod";
+
 function configuration() {
   const gatewayUrl = process.env.ICALL_GATEWAY_URL?.trim().replace(/\/$/, "");
   const gatewaySecret = process.env.ICALL_GATEWAY_SECRET?.trim();
@@ -148,21 +150,30 @@ function normalizeIcallResponse(value: unknown): unknown {
   return record;
 }
 
+function gatewayPath(environment: IcallEnvironment, action: "register" | "status" | "sso" | "tcc") {
+  return `/${environment}/icall/${action}`;
+}
+
 export async function registerIcallPosp(input: IcallRegistrationRequest) {
-  return postGateway<IcallRegistrationResponse>("/uat/icall/register", input);
+  return postGateway<IcallRegistrationResponse>(gatewayPath("prod", "register"), input);
 }
 
 export async function getIcallPospTrainingStatus(loginId: string) {
-  return postGateway<IcallTrainingStatusResponse>("/uat/icall/status", { loginId });
+  return postGateway<IcallTrainingStatusResponse>(gatewayPath("prod", "status"), { loginId });
 }
 
 export async function getIcallSso(loginId: string) {
-  return postGateway<IcallSsoResponse>("/uat/icall/sso", { loginId });
+  return postGateway<IcallSsoResponse>(gatewayPath("prod", "sso"), { loginId });
 }
 
 export async function getIcallTcc(tccFromDate: string, tccToDate: string) {
-  return postGateway<IcallTccResponse>("/uat/icall/tcc", {
+  return postGateway<IcallTccResponse>(gatewayPath("prod", "tcc"), {
     tcc_from_date: tccFromDate,
     tcc_to_date: tccToDate,
   });
+}
+
+// Retained only for controlled rollback / diagnostics. Product workflow uses PROD helpers above.
+export async function getIcallPospTrainingStatusUat(loginId: string) {
+  return postGateway<IcallTrainingStatusResponse>(gatewayPath("uat", "status"), { loginId });
 }
