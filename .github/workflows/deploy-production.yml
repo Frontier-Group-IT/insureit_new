@@ -141,7 +141,7 @@ jobs:
             echo "External renewal intake lifecycle migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906235500_external_renewal_intake_visibility.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-intake-visibility.yml"
-            echo "External renewal intake visibility migration detected. Waiting for its schema workflow..."
+            echo "External renewal intake visibility detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260907001500_external_renewal_intake_detail_state.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-intake-detail-state.yml"
             echo "External renewal intake detail-state migration detected. Waiting for its schema workflow..."
@@ -199,6 +199,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260912121000_partner_schemes.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-schemes.yml"
             echo "Partner schemes migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260914194500_partner_branch_onboarding.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-partner-branch-onboarding.yml"
+            echo "Partner Branch onboarding migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"

@@ -32,6 +32,12 @@ type OnboardingOwnerRow = {
   associate_employee_id: string | null;
 };
 
+type BranchAccessRow = {
+  id: string;
+  parent_partner_id: string | null;
+  partner_branch_profiles: { created_by: string | null }[] | null;
+};
+
 const returnPath = "/intermediaries/groups";
 
 export async function createBusinessGroup(formData: FormData) {
@@ -164,12 +170,15 @@ export async function assignPartnerBranch(formData: FormData) {
   const parentPartnerId = text(formData, "parent_partner_id");
   const branchPartnerId = text(formData, "branch_partner_id");
   if (!parentPartnerId || !branchPartnerId) return fail("Parent Partner and Branch are required.");
-  if (!(await canAccessPartners(profile, [parentPartnerId, branchPartnerId]))) {
-    return fail("One or more selected Partners are outside your permitted hierarchy.");
+  if (!(await canAccessPartners(profile, [parentPartnerId]))) {
+    return fail("The selected parent Partner is outside your permitted hierarchy.");
+  }
+  if (!(await canAccessRegisteredBranch(profile, branchPartnerId))) {
+    return fail("The selected Branch is not an available Branch profile.");
   }
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin.rpc("service_assign_partner_branch", {
+  const { error } = await admin.rpc("service_assign_registered_partner_branch", {
     p_parent_partner_id: parentPartnerId,
     p_branch_partner_id: branchPartnerId,
     p_actor_profile_id: profile.id,
@@ -182,7 +191,9 @@ export async function removePartnerBranch(formData: FormData) {
   const profile = await requireIntermediaryGroupManager();
   const branchPartnerId = text(formData, "branch_partner_id");
   if (!branchPartnerId) return fail("Branch is required.");
-  if (!(await canAccessPartners(profile, [branchPartnerId]))) return fail("The selected Branch is outside your permitted hierarchy.");
+  if (!(await canAccessRegisteredBranch(profile, branchPartnerId))) {
+    return fail("The selected Branch is outside your permitted hierarchy.");
+  }
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.rpc("service_remove_partner_branch", {
@@ -229,6 +240,25 @@ async function activeGroupPartnerIds(groupId: string) {
     .is("effective_to", null)
     .returns<Array<{ partner_id: string }>>();
   return (data ?? []).map((row) => row.partner_id);
+}
+
+async function canAccessRegisteredBranch(
+  profile: Awaited<ReturnType<typeof requireIntermediaryGroupManager>>,
+  branchPartnerId: string,
+) {
+  const scope = await getIntermediaryGroupEmployeeScope(profile);
+  const admin = createSupabaseAdminClient();
+  const { data: branch } = await admin
+    .from("partners")
+    .select("id,parent_partner_id,partner_branch_profiles!inner(created_by)")
+    .eq("id", branchPartnerId)
+    .eq("partner_status", "active_partner")
+    .maybeSingle<BranchAccessRow>();
+  if (!branch) return false;
+  if (scope.mode === "organization") return true;
+  if (branch.parent_partner_id) return canAccessPartners(profile, [branch.parent_partner_id]);
+  const createdBy = branch.partner_branch_profiles?.[0]?.created_by ?? null;
+  return createdBy === profile.id;
 }
 
 async function canAccessPartners(
@@ -287,9 +317,9 @@ function ids(formData: FormData, key: string) {
 
 function groupError(message: string) {
   if (/business_group_name_active|duplicate key/i.test(message)) return "An active business Group with this name already exists.";
-  if (/root Partner|root partner|branch cannot/i.test(message)) return message;
+  if (/root Partner|root partner|branch cannot|Branch profile|Branch parent|unassigned Branch/i.test(message)) return message;
   if (/active members before archiving/i.test(message)) return "Move or remove all active Partners before archiving this Group.";
-  if (/function .* does not exist|schema cache/i.test(message)) return "The business Group migration has not been applied yet.";
+  if (/function .* does not exist|schema cache/i.test(message)) return "The required Group/Branch migration has not been applied yet.";
   return message || "The Group hierarchy action could not be completed.";
 }
 
