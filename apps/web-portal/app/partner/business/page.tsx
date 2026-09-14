@@ -290,7 +290,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
             )}
           </InsightPanel>
 
-          <div className="rounded-xl border border-[#D8EADF] bg-gradient-to-br from-[#F8FCFA] to-[#EEF9F5] p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
+          <div className="rounded-xl border border-[#D8EADF] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2.5">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]">
