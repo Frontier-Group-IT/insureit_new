@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowRight, FileText, Plus, RefreshCw, Search } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Plus, RefreshCw, Search } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
 type IntakeFilter = "all" | "active" | "attention" | "in_progress" | "completed";
@@ -131,6 +131,9 @@ export function PartnerPolicyIntakeListClient() {
 
   const hasPrevious = page > 1;
   const hasNext = page * PAGE_SIZE < total;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   const metrics = [
     { label: "Active", value: counts.active, meta: "Active submissions", wrap: "bg-[#EAF3FF] text-[#2875DD]" },
@@ -249,11 +252,18 @@ export function PartnerPolicyIntakeListClient() {
           </div>
         </div>
 
-        {(hasPrevious || hasNext) ? (
-          <div className="flex items-center justify-between border-t border-[#E6ECF3] px-4 py-3.5">
-            <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={!hasPrevious || loading} className="inline-flex min-h-9 items-center rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40">Previous</button>
-            <p className="text-[10px] font-semibold text-[#74839A]">Page {page}</p>
-            <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!hasNext || loading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-40">Next <ArrowRight className="h-3.5 w-3.5" /></button>
+        {total > 0 ? (
+          <div className="flex flex-col gap-3 border-t border-[#E6ECF3] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[10px] font-medium text-[#6F8198]">Showing {rangeStart}-{rangeEnd} of {total}</p>
+            <div className="flex items-center gap-3 self-end sm:self-auto">
+              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={!hasPrevious || loading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:border-[#E5EAF0] disabled:bg-[#FAFBFC] disabled:text-[#AAB4C2]">
+                <ArrowLeft className="h-3.5 w-3.5" /> Previous
+              </button>
+              <span className="min-w-[44px] text-center text-[10px] font-bold text-[#536680]">{page} / {totalPages}</span>
+              <button type="button" onClick={() => setPage((value) => value + 1)} disabled={!hasNext || loading} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:border-[#E5EAF0] disabled:bg-[#FAFBFC] disabled:text-[#AAB4C2]">
+                Next <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         ) : null}
       </section>
