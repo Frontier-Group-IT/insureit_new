@@ -46,6 +46,10 @@ type PartnerRow = {
   source_application_id: string | null;
   parent_partner_id?: string | null;
 };
+type BranchProfileRow = {
+  partner_id: string;
+  created_by: string | null;
+};
 type GroupRow = {
   id: string;
   group_code: string;
@@ -67,10 +71,7 @@ export default async function IntermediaryGroupsPage({ searchParams }: { searchP
   const scope = await getIntermediaryGroupEmployeeScope(profile);
   const admin = createSupabaseAdminClient();
 
-  // Deployment-order safety: the currently working production Group screen must
-  // remain fully functional if application code reaches a runtime before the
-  // additive hierarchy migrations. Only switch to the new workspace after both
-  // hierarchy columns are confirmed by the live schema.
+  // Deployment-order safety for the original Business Group foundation.
   const [{ error: groupSchemaError }, { error: partnerSchemaError }] = await Promise.all([
     admin.from("intermediary_groups").select("group_mode").limit(1),
     admin.from("partners").select("parent_partner_id").limit(1),
@@ -100,6 +101,7 @@ async function renderBusinessWorkspace({
     { data: onboardingOwners, error: onboardingError },
     { data: partnerRows, error: partnerLoadError },
     { data: groupRows, error: groupLoadError },
+    { data: branchProfiles, error: branchProfileLoadError },
   ] = await Promise.all([
     admin
       .from("intermediaries")
@@ -123,6 +125,10 @@ async function renderBusinessWorkspace({
       .eq("status", "active")
       .order("group_name")
       .returns<GroupRow[]>(),
+    admin
+      .from("partner_branch_profiles")
+      .select("partner_id,created_by")
+      .returns<BranchProfileRow[]>(),
   ]);
 
   const allGroupIds = (groupRows ?? []).map((group) => group.id);
@@ -145,15 +151,31 @@ async function renderBusinessWorkspace({
   const onboardingOwnerByApplication = new Map(
     (onboardingOwners ?? []).map((row) => [row.application_id, row.associate_employee_id]),
   );
+  const branchProfileByPartner = new Map((branchProfiles ?? []).map((row) => [row.partner_id, row]));
+  const directOwnerByPartner = new Map<string, string | null>();
+  for (const partner of partnerRows ?? []) {
+    const applicationId = partner.source_application_id;
+    directOwnerByPartner.set(
+      partner.id,
+      applicationId
+        ? parentOwnerByApplication.get(applicationId) ?? onboardingOwnerByApplication.get(applicationId) ?? null
+        : null,
+    );
+  }
   const allowedEmployeeIds = new Set(scope.employeeIds);
 
   const partners: BusinessGroupPartner[] = (partnerRows ?? []).flatMap((partner) => {
-    const applicationId = partner.source_application_id;
-    const ownerEmployeeId = applicationId
-      ? parentOwnerByApplication.get(applicationId) ?? onboardingOwnerByApplication.get(applicationId) ?? null
-      : null;
+    const isBranchProfile = branchProfileByPartner.has(partner.id);
+    const ownerEmployeeId = isBranchProfile && partner.parent_partner_id
+      ? directOwnerByPartner.get(partner.parent_partner_id) ?? null
+      : directOwnerByPartner.get(partner.id) ?? null;
+    const branchCreatedByViewer = isBranchProfile && branchProfileByPartner.get(partner.id)?.created_by === profile.id;
 
-    if (scope.mode !== "organization" && (!ownerEmployeeId || !allowedEmployeeIds.has(ownerEmployeeId))) return [];
+    if (
+      scope.mode !== "organization"
+      && (!ownerEmployeeId || !allowedEmployeeIds.has(ownerEmployeeId))
+      && !branchCreatedByViewer
+    ) return [];
 
     return [{
       id: partner.id,
@@ -162,6 +184,7 @@ async function renderBusinessWorkspace({
       display_name: partner.display_name,
       parent_partner_id: partner.parent_partner_id ?? null,
       owner_employee_id: ownerEmployeeId,
+      is_branch_profile: isBranchProfile,
     }];
   });
 
@@ -191,7 +214,17 @@ async function renderBusinessWorkspace({
 
   const visibleGroupIds = new Set(groups.map((group) => group.id));
   const memberships = visibleMemberships.filter((membership) => visibleGroupIds.has(membership.group_id));
-  const loadError = Boolean(parentError || onboardingError || partnerLoadError || groupLoadError || membershipResult.error);
+  // If the additive Branch schema has not reached the runtime yet, keep the
+  // current Business Group page readable but disable mutations instead of
+  // falling all the way back to the retired Employee-first workspace.
+  const loadError = Boolean(
+    parentError
+    || onboardingError
+    || partnerLoadError
+    || groupLoadError
+    || branchProfileLoadError
+    || membershipResult.error,
+  );
 
   return (
     <AppShell title="Intermediary Groups" backHref="/intermediaries">
