@@ -48,7 +48,6 @@ export default async function PartnerCustomerDetailPage({ params }: { params: Pr
                   <h1 className="break-words text-[22px] font-black tracking-[-0.03em] sm:text-[24px]">{customer.customer_name}</h1>
                   <span className="grid h-5 w-5 place-items-center rounded-full bg-[#24C684] text-[10px] font-black text-white">✓</span>
                 </div>
-                <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-[#0B7D66] px-2.5 py-1 text-[9px] font-bold"><span className="h-1.5 w-1.5 rounded-full bg-[#37E5A3]" />{statusLabel(customer.status)}</span>
               </div>
             </div>
 
