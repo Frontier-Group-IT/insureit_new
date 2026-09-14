@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Mail, MapPin, Phone, Search, UsersRound } from "lucide-react";
+import { ArrowRight, Mail, MapPin, Phone, UsersRound } from "lucide-react";
 import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
+import { CustomerSearch } from "./customer-search";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -54,12 +55,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
               <h2 className="text-[13px] font-extrabold tracking-[-0.02em] text-[#132851]">Customer Register</h2>
             </div>
 
-            <form action="/partner/customers" className="w-full sm:max-w-[430px]">
-              <div className="relative min-w-0">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7D8DA4]" />
-                <input name="q" defaultValue={q} placeholder="Search name, code, phone or email" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-              </div>
-            </form>
+            <CustomerSearch initialQuery={q} />
 
             <p className="shrink-0 text-[10px] font-semibold text-[#617596] sm:ml-auto">{total} customers</p>
           </div>
