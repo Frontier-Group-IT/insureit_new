@@ -66,7 +66,7 @@ export function PartnerPolicyIntakeListClient() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState({ active: 0, attention: 0, progress: 0, completed: 0 });
+  const [, setCounts] = useState({ active: 0, attention: 0, progress: 0, completed: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -135,36 +135,14 @@ export function PartnerPolicyIntakeListClient() {
   const rangeStart = total ? (page - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
-  const metrics = [
-    { label: "Active", value: counts.active, meta: "Active submissions", wrap: "bg-[#EAF3FF] text-[#2875DD]" },
-    { label: "Need You", value: counts.attention, meta: "Awaiting your action", wrap: "bg-[#E8F8EF] text-[#18A56C]" },
-    { label: "In Progress", value: counts.progress, meta: "Under review", wrap: "bg-[#F2E9FF] text-[#7B4DE2]" },
-    { label: "Completed", value: counts.completed, meta: "Successfully completed", wrap: "bg-[#FFF0DE] text-[#F28A12]" },
-  ];
-
   return (
-    <div className="space-y-3 pb-4">
-      <section className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
-        <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-          {metrics.map((item, index) => (
-            <div key={item.label} className={`flex min-h-[72px] items-center gap-3 px-4 py-3 ${index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}>
-              <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${item.wrap}`}><FileText className="h-4 w-4" /></span>
-              <div className="min-w-0">
-                <p className="text-[8px] font-black uppercase tracking-[0.07em] text-[#6A7A90]">{item.label}</p>
-                <p className="mt-0.5 text-[18px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
-                <p className="mt-1 text-[8.5px] font-medium text-[#8996A8]">{item.meta}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
+    <div className="pb-4">
       <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
         <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
           <div className="flex min-w-0 items-center gap-3 xl:flex-1">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><FileText className="h-4 w-4" /></span>
             <h2 className="shrink-0 text-[12px] font-extrabold text-[#1B2F4E]">Policy Intake Register</h2>
-            <div className="relative min-w-0 flex-1 xl:max-w-[360px]">
+            <div className="relative min-w-0 flex-1 xl:max-w-[420px]">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
               <input
                 value={search}
@@ -176,23 +154,21 @@ export function PartnerPolicyIntakeListClient() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 xl:ml-auto xl:justify-end">
-            {([
-              ["all", "All"],
-              ["active", "Active"],
-              ["attention", "Need You"],
-              ["in_progress", "In Progress"],
-              ["completed", "Completed"],
-            ] as Array<[IntakeFilter, string]>).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => { setFilter(value); setPage(1); }}
-                className={"rounded-lg px-3 py-2 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (filter === value ? "bg-[#2875E8] text-white shadow-[0_3px_8px_rgba(40,117,232,0.18)]" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}
+            <label className="relative">
+              <span className="sr-only">Status filter</span>
+              <select
+                value={filter}
+                onChange={(event) => { setFilter(event.target.value as IntakeFilter); setPage(1); }}
+                className="h-9 min-w-[118px] cursor-pointer rounded-lg border border-[#C9D8EC] bg-[#F5F9FF] px-3 text-[10px] font-bold text-[#23436D] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/15"
               >
-                {label}
-              </button>
-            ))}
-            <span className="ml-1 text-[9.5px] font-semibold text-[#7A899F]">{total} total</span>
+                <option value="all">Status · All</option>
+                <option value="active">Status · Active</option>
+                <option value="attention">Status · Need You</option>
+                <option value="in_progress">Status · In Progress</option>
+                <option value="completed">Status · Completed</option>
+              </select>
+            </label>
+            <span className="px-1 text-[9.5px] font-semibold text-[#7A899F]">{total} total records</span>
             <Link href="/partner/policy-intakes/new" className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25">
               <Plus className="h-4 w-4" /> Intake
             </Link>
@@ -202,9 +178,9 @@ export function PartnerPolicyIntakeListClient() {
         {error ? <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">{error}</div> : null}
 
         <div className="overflow-x-auto">
-          <div className="min-w-[760px]">
-            <div className="grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 border-b border-[#E7EDF4] bg-[#F8FAFD] px-4 py-2 text-[8px] font-black uppercase tracking-[0.05em] text-[#6F819A]">
-              <span>#</span><span>Policy / Reference</span><span>Customer / Vehicle</span><span>Submission Date</span><span>Status</span><span className="text-right">Action</span>
+          <div className="min-w-[720px]">
+            <div className="grid grid-cols-[minmax(210px,1.1fr)_minmax(190px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 border-b border-[#E7EDF4] bg-[#F8FAFD] px-4 py-2 text-[8px] font-black uppercase tracking-[0.05em] text-[#6F819A]">
+              <span>Policy / Reference</span><span>Customer / Vehicle</span><span>Submission Date</span><span>Status</span><span className="text-right">Action</span>
             </div>
 
             {loading && !rows.length ? (
@@ -214,13 +190,12 @@ export function PartnerPolicyIntakeListClient() {
               </div>
             ) : rows.length ? (
               <div className="divide-y divide-[#E8EDF4]">
-                {rows.map((row, index) => {
+                {rows.map((row) => {
                   const created = dateParts(row.created_at);
                   const policy = field(row, "policy_number") || "Policy pending";
                   const vehicle = field(row, "vehicle_registration_number") || "Vehicle pending";
                   return (
-                    <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 px-4 py-2.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-                      <span className="text-[9px] font-semibold text-[#74839A]">{(page - 1) * PAGE_SIZE + index + 1}</span>
+                    <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group grid grid-cols-[minmax(210px,1.1fr)_minmax(190px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 px-4 py-2.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
                       <div className="flex min-w-0 items-center gap-3">
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EAF3FF] text-[#2875DD]"><FileText className="h-3.5 w-3.5" /></span>
                         <div className="min-w-0">
