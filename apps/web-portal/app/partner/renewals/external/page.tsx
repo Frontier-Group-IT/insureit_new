@@ -61,6 +61,14 @@ function dateLabel(value: string | null | undefined) {
     : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date);
 }
 
+function dateTimeLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: true }).format(date);
+}
+
 function expiryLabel(days: number) {
   if (days < 0) return Math.abs(days) + "d overdue";
   if (days === 0) return "Due today";
@@ -309,7 +317,16 @@ export default async function PartnerExternalRenewalsPage({
                       <p className="mt-0.5 text-[9px] text-[#7489A5]">{expiryLabel(row.days_to_expiry)}</p>
                     </div>
 
-                    <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + statusClass(row.opportunity_status)}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row.opportunity_status)}</span>
+                    <div className="min-w-0">
+                      <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + statusClass(row.opportunity_status)}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row.opportunity_status)}</span>
+                      <p className="mt-1.5 truncate text-[8px] font-medium text-[#7B8CA4]">
+                        {row.next_follow_up_at
+                          ? "Follow-up " + dateTimeLabel(row.next_follow_up_at)
+                          : row.last_interaction_at
+                            ? "Last contact " + dateTimeLabel(row.last_interaction_at)
+                            : "No interaction yet"}
+                      </p>
+                    </div>
 
                     <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + (voiceEnabled ? voiceStateClass(voiceState) : "bg-[#EEF3F8] text-[#687D99]")}><Bot className="h-3 w-3" />{voiceEnabled ? voiceStateLabel(voiceState) : "AI Not Enabled"}</span>
 
