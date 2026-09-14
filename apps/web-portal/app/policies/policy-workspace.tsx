@@ -250,7 +250,8 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
     const businessDate = policyBusinessDate(row);
     return businessDate >= mtdStart && businessDate <= mtdEnd;
   }), [controlFiltered, mtdEnd, mtdStart]);
-  const baseFiltered = timeScope === "mtd" ? mtdFiltered : controlFiltered;
+  const hasSearch = query.trim().length > 0;
+  const baseFiltered = hasSearch ? controlFiltered : timeScope === "mtd" ? mtdFiltered : controlFiltered;
 
   const stats = useMemo(() => {
     const active = baseFiltered.filter((row) => row.status === "Active").length;
