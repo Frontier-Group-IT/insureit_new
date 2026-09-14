@@ -2,50 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Activity,
-  BadgeIndianRupee,
-  BriefcaseBusiness,
-  ClipboardList,
-  FileInput,
-  Headphones,
-  LayoutDashboard,
-  Network,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
+import { PartnerCustomIcon, type PartnerCustomIconName } from "./partner-custom-icon";
 
 type PartnerNavItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: PartnerCustomIconName;
 };
 
 const primaryItems: PartnerNavItem[] = [
-  { href: "/partner", label: "Home", icon: LayoutDashboard },
-  { href: "/partner/business", label: "My Business", icon: BriefcaseBusiness },
-  { href: "/partner/customers", label: "Customers", icon: UsersRound },
-  { href: "/partner/policies", label: "Policies", icon: ShieldCheck },
-  { href: "/partner/renewals", label: "Renewals", icon: RefreshCw },
-  { href: "/partner/claims", label: "Claims", icon: ClipboardList },
-  { href: "/partner/policy-intakes", label: "Policy Intake", icon: FileInput },
+  { href: "/partner", label: "Home", icon: "home" },
+  { href: "/partner/business", label: "My Business", icon: "business" },
+  { href: "/partner/customers", label: "Customers", icon: "customers" },
+  { href: "/partner/policies", label: "Policies", icon: "policies" },
+  { href: "/partner/renewals", label: "Renewals", icon: "renewals" },
+  { href: "/partner/claims", label: "Claims", icon: "claims" },
+  { href: "/partner/policy-intakes", label: "Policy Intake", icon: "policy-intake" },
 ];
 
 const secondaryItems: PartnerNavItem[] = [
-  { href: "/partner/payout", label: "Payout", icon: BadgeIndianRupee },
-  { href: "/partner/network", label: "Network", icon: Network },
-  { href: "/partner/search", label: "Search", icon: Search },
-  { href: "/partner/activity", label: "Activity", icon: Activity },
+  { href: "/partner/payout", label: "Payout", icon: "payout" },
+  { href: "/partner/network", label: "Network", icon: "network" },
+  { href: "/partner/search", label: "Search", icon: "search" },
+  { href: "/partner/activity", label: "Activity", icon: "activity" },
 ];
 
 const accountItems: PartnerNavItem[] = [
-  { href: "/partner/account", label: "Account", icon: UserRound },
-  { href: "/partner/support", label: "Support", icon: Headphones },
+  { href: "/partner/account", label: "Account", icon: "account" },
+  { href: "/partner/support", label: "Support", icon: "support" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -56,7 +41,6 @@ function isActive(pathname: string, href: string) {
 function NavLink({ item }: { item: PartnerNavItem }) {
   const pathname = usePathname();
   const active = isActive(pathname, item.href);
-  const Icon = item.icon;
   return (
     <Link
       href={item.href}
@@ -69,10 +53,10 @@ function NavLink({ item }: { item: PartnerNavItem }) {
     >
       <span
         className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200 ${
-          active ? "bg-[#EAF1FF] text-[#2F6BFF]" : "text-white/72 group-hover:bg-white/8 group-hover:text-white"
+          active ? "bg-[#EAF1FF]" : "group-hover:bg-white/8"
         }`}
       >
-        <Icon className="h-[18px] w-[18px]" strokeWidth={1.9} />
+        <PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" />
       </span>
       <span className="flex-1">{item.label}</span>
     </Link>
@@ -115,5 +99,5 @@ export const partnerMobileItems = [
   primaryItems[3],
   primaryItems[4],
   primaryItems[5],
-  { href: "/partner/account", label: "More", icon: UserRound },
+  { href: "/partner/account", label: "More", icon: "account" },
 ] satisfies PartnerNavItem[];

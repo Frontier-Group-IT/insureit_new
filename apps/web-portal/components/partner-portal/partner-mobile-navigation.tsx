@@ -4,38 +4,24 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import {
-  Activity,
-  BadgeIndianRupee,
-  BriefcaseBusiness,
-  ClipboardList,
-  FileInput,
-  LifeBuoy,
-  Menu,
-  Network,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  UserRound,
-  UsersRound,
-  X,
-} from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
+import { PartnerCustomIcon, type PartnerCustomIconName } from "./partner-custom-icon";
 
-const items = [
-  { href: "/partner", label: "Home", icon: BriefcaseBusiness },
-  { href: "/partner/business", label: "My Business", icon: BriefcaseBusiness },
-  { href: "/partner/customers", label: "Customers", icon: UsersRound },
-  { href: "/partner/policies", label: "Policies", icon: ShieldCheck },
-  { href: "/partner/renewals", label: "Renewals", icon: RefreshCw },
-  { href: "/partner/claims", label: "Claims", icon: ClipboardList },
-  { href: "/partner/policy-intakes", label: "Policy Intake", icon: FileInput },
-  { href: "/partner/payout", label: "Payout", icon: BadgeIndianRupee },
-  { href: "/partner/network", label: "Network", icon: Network },
-  { href: "/partner/search", label: "Search", icon: Search },
-  { href: "/partner/activity", label: "Activity", icon: Activity },
-  { href: "/partner/account", label: "Account", icon: UserRound },
-  { href: "/partner/support", label: "Support", icon: LifeBuoy },
+const items: Array<{ href: string; label: string; icon: PartnerCustomIconName }> = [
+  { href: "/partner", label: "Home", icon: "home" },
+  { href: "/partner/business", label: "My Business", icon: "business" },
+  { href: "/partner/customers", label: "Customers", icon: "customers" },
+  { href: "/partner/policies", label: "Policies", icon: "policies" },
+  { href: "/partner/renewals", label: "Renewals", icon: "renewals" },
+  { href: "/partner/claims", label: "Claims", icon: "claims" },
+  { href: "/partner/policy-intakes", label: "Policy Intake", icon: "policy-intake" },
+  { href: "/partner/payout", label: "Payout", icon: "payout" },
+  { href: "/partner/network", label: "Network", icon: "network" },
+  { href: "/partner/search", label: "Search", icon: "search" },
+  { href: "/partner/activity", label: "Activity", icon: "activity" },
+  { href: "/partner/account", label: "Account", icon: "account" },
+  { href: "/partner/support", label: "Support", icon: "support" },
 ];
 
 function activeFor(pathname: string, href: string) {
@@ -80,7 +66,6 @@ export function PartnerMobileNavigation() {
               <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55">Partner Workspace</p>
               <div className="space-y-1.5">
                 {items.map((item) => {
-                  const Icon = item.icon;
                   const active = activeFor(pathname, item.href);
                   return (
                     <Link
@@ -92,7 +77,9 @@ export function PartnerMobileNavigation() {
                         active ? "bg-white text-[#141d3b]" : "text-white/88 hover:bg-white/10"
                       }`}
                     >
-                      <Icon className="h-4 w-4" />
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${active ? "bg-[#EAF1FF]" : "bg-white/5"}`}>
+                        <PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" />
+                      </span>
                       <span>{item.label}</span>
                     </Link>
                   );
