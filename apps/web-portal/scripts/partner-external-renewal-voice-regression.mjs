@@ -13,6 +13,7 @@ const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
+const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhook = fs.readFileSync(path.join(root, "app/api/integrations/sarvam/voice-campaign-webhook/route.ts"), "utf8");
 const detailPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/[id]/page.tsx"), "utf8");
 const worklistPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/page.tsx"), "utf8");
@@ -71,12 +72,21 @@ assert(!sarvamClient.includes('NEXT_PUBLIC_SARVAM'), "no Sarvam credential/confi
 assert(readinessModel.includes('import "server-only"'), "readiness model is server-only");
 assert(readinessModel.includes('SARVAM_RENEWAL_WEBHOOK_SECRET'), "readiness checks webhook-secret presence");
 assert(readinessModel.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "readiness reports the outbound kill switch");
+assert(readinessModel.includes('checkSarvamRenewalConnection'), "readiness supports an explicit read-only Sarvam connectivity check");
+assert(readinessModel.includes('/webhooks?limit=1'), "connection check uses the read-only campaign webhook-list endpoint");
+assert(readinessModel.includes('"api-subscription-key": apiKey'), "connection check authenticates server-side with the Sarvam subscription key");
 assert(!readinessModel.includes('NEXT_PUBLIC_SARVAM'), "readiness does not depend on browser Sarvam configuration");
 
 assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
 assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
 assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
 assert(callRoute.includes("providerDefinitelyRejected"), "only definitive provider rejection releases the local active-attempt guard");
+
+assert(connectionTestRoute.includes('viewer.role !== "it_super_user"'), "Sarvam connection test requires exact IT Super User role");
+assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam connection test requires critical system approval access");
+assert(connectionTestRoute.includes("checkSarvamRenewalConnection()"), "Sarvam connection test invokes only the readiness probe");
+assert(!connectionTestRoute.includes("streamExternalRenewalToSarvam"), "Sarvam connection test cannot queue a customer call");
+assert(!connectionTestRoute.includes("SARVAM_API_KEY"), "Sarvam connection-test route never reads or renders the API key directly");
 
 assert(webhook.includes("SARVAM_RENEWAL_WEBHOOK_SECRET"), "webhook requires INSUREIT-controlled secret");
 assert(webhook.includes("SARVAM_RENEWAL_CAMPAIGN_ID"), "webhook rejects unexpected campaigns");
@@ -91,6 +101,7 @@ assert(worklistPage.includes("getPartnerExternalRenewalVoiceStates"), "Partner w
 
 assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice integration readiness requires exact IT Super User role");
 assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice integration readiness also requires critical system access");
+assert(readinessPage.includes("Test Sarvam connection"), "voice admin page exposes the explicit read-only provider connectivity check");
 assert(readinessPage.includes("No customer identity, phone number, transcript or raw provider payload"), "voice admin page explicitly preserves the minimal-data boundary");
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");

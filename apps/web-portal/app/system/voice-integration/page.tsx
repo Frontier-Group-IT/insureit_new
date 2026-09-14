@@ -17,6 +17,10 @@ type AttemptRow = {
   updated_at: string;
 };
 
+type VoiceIntegrationPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
 function labelize(value: string | null) {
   if (!value) return "—";
   return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
@@ -28,13 +32,26 @@ function tone(ready: boolean) {
     : "border-amber-200 bg-amber-50 text-amber-800";
 }
 
-export default async function VoiceIntegrationPage() {
+function queryValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegrationPageProps) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
   if (!viewer?.id || viewer.role !== "it_super_user" || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) {
     redirect("/access-denied");
   }
 
+  const query = await searchParams;
+  const sarvamTest = queryValue(query.sarvam_test);
+  const sarvamStatus = queryValue(query.sarvam_status);
+  const sarvamTestOk = sarvamTest === "ok";
+  const sarvamTestFailed = sarvamTest === "failed";
+
   const readiness = getSarvamRenewalReadiness();
+  const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
+    (key) => readiness.items.find((item) => item.key === key)?.configured,
+  );
   const admin = createSupabaseAdminClient();
   const { data: attempts, error } = await admin
     .from("external_renewal_voice_attempts")
@@ -66,10 +83,43 @@ export default async function VoiceIntegrationPage() {
                 This page is visible only to IT Super User. It reports configuration presence and workflow health without exposing Sarvam credentials.
               </p>
             </div>
-            <span className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-semibold ${tone(operationalReady)}`}>
-              {operationalReady ? "Technically ready for controlled test" : "Controlled test not ready"}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <form action="/api/system/voice-integration/sarvam-connection-test" method="post">
+                <button
+                  type="submit"
+                  disabled={!connectionConfigReady}
+                  className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[#C8D7EA] bg-white px-3 text-[9.5px] font-semibold text-[#24345A] transition hover:bg-[#F7FAFE] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Test Sarvam connection
+                </button>
+              </form>
+              <span className={`inline-flex rounded-full border px-3 py-1.5 text-[10px] font-semibold ${tone(operationalReady)}`}>
+                {operationalReady ? "Technically ready for controlled test" : "Controlled test not ready"}
+              </span>
+            </div>
           </div>
+
+          {sarvamTestOk || sarvamTestFailed ? (
+            <div className={`mt-4 rounded-xl border px-3.5 py-3 ${sarvamTestOk ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className={`text-[10px] font-semibold ${sarvamTestOk ? "text-emerald-800" : "text-amber-900"}`}>
+                    {sarvamTestOk ? "Sarvam connection verified" : "Sarvam connection needs attention"}
+                  </p>
+                  <p className={`mt-1 text-[9.5px] leading-4 ${sarvamTestOk ? "text-emerald-700" : "text-amber-800"}`}>
+                    {sarvamTestOk
+                      ? "INSUREIT authenticated with Sarvam and reached the configured renewal campaign using a read-only provider request."
+                      : sarvamStatus === "401" || sarvamStatus === "403"
+                        ? "Sarvam rejected the configured API credentials or workspace access."
+                        : sarvamStatus === "404"
+                          ? "Sarvam is reachable, but the configured organisation, workspace or campaign was not found."
+                          : "The read-only Sarvam connection check did not complete successfully. Review the server configuration and provider availability."}
+                  </p>
+                </div>
+                {sarvamStatus ? <span className="rounded-full border border-current/15 px-2.5 py-1 text-[8.5px] font-semibold">HTTP {sarvamStatus}</span> : null}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-5 grid gap-2 lg:grid-cols-2">
             {readiness.items.map((item) => (
