@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { UserMenu } from "@/components/user-menu";
 import { getPartnerWebSession } from "@/lib/partner-web";
-import { PartnerNavigation } from "./partner-navigation";
 import { PartnerMobileNavigation } from "./partner-mobile-navigation";
 import { PartnerBottomNavigation } from "./partner-bottom-navigation";
 import { PartnerBreadcrumbs } from "./partner-breadcrumbs";
@@ -21,8 +20,6 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] text-[#10213D]">
-      <PartnerNavigation />
-
       <div className="lg:pl-[268px]">
         <header
           data-partner-header-variant={headerVariant}
