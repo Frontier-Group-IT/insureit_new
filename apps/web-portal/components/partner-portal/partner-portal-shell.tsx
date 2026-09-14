@@ -6,6 +6,7 @@ import { PartnerMobileNavigation } from "./partner-mobile-navigation";
 import { PartnerBottomNavigation } from "./partner-bottom-navigation";
 import { PartnerBreadcrumbs } from "./partner-breadcrumbs";
 import { PartnerBusinessTrendResponsiveFix } from "./partner-business-trend-responsive-fix";
+import { PartnerPageCustomIconStyles } from "./partner-page-custom-icon-styles";
 
 export async function PartnerPortalShell({ title, children, headerVariant = "default" }: { title: string; children: ReactNode; headerVariant?: "default" | "breadcrumb" }) {
   const accessToken = await getServerAccessToken();
@@ -20,6 +21,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] text-[#10213D]">
+      <PartnerPageCustomIconStyles />
       <div className="lg:pl-[268px]">
         <header
           data-partner-header-variant={headerVariant}
@@ -44,7 +46,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
           </div>
         </header>
 
-        <main className="min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-5 lg:px-7 lg:py-6">
+        <main className="partner-page-content min-h-[calc(100vh-66px)] px-3 pb-24 pt-4 sm:px-5 sm:pb-8 sm:pt-5 lg:px-7 lg:py-6">
           <div className="mx-auto w-full max-w-[1480px] animate-portal-enter">{children}</div>
         </main>
       </div>
