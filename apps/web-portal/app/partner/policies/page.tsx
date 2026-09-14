@@ -1,11 +1,11 @@
 import Link from "next/link";
 import {
-  ArrowLeft,
   ArrowRight,
   FileText,
   Search,
   ShieldCheck,
 } from "lucide-react";
+import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebPolicies, type PartnerPolicyLifecycle } from "@/lib/partner-web";
 
@@ -200,17 +200,13 @@ export default async function PartnerPoliciesPage({ searchParams }: { searchPara
             </div>
           )}
 
-          {(hasPrevious || hasNext) ? (
-            <div className="flex items-center justify-between border-t border-[#E6ECF3] px-4 py-3.5">
-              <Link href={hasPrevious ? hrefFor({ page: page - 1 }) : "#"} aria-disabled={!hasPrevious} className={"inline-flex min-h-8 items-center gap-2 rounded-lg border px-3 text-[9.5px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (hasPrevious ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
-                <ArrowLeft className="h-3.5 w-3.5" /> Previous
-              </Link>
-              <p className="text-[9.5px] font-semibold text-[#74839A]">Page {page}</p>
-              <Link href={hasNext ? hrefFor({ page: page + 1 }) : "#"} aria-disabled={!hasNext} className={"inline-flex min-h-8 items-center gap-2 rounded-lg border px-3 text-[9.5px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (hasNext ? "border-[#D2DCE9] text-[#203653]" : "pointer-events-none border-[#E5EAF0] text-[#AAB4C2]")}>
-                Next <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          ) : null}
+          <PartnerPagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            previousHref={hasPrevious ? hrefFor({ page: page - 1 }) : null}
+            nextHref={hasNext ? hrefFor({ page: page + 1 }) : null}
+          />
         </section>
       </div>
     </PartnerPortalShell>
