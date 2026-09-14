@@ -1,17 +1,19 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   BarChart3,
   CircleDollarSign,
   FileText,
+  Filter,
   Layers3,
   Repeat2,
+  ShieldAlert,
   Target,
   TrendingUp,
   UsersRound,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import {
   getPartnerWebBusinessPerformance,
   listPartnerWebPolicies,
@@ -30,6 +32,8 @@ type MixRow = {
   policies: number;
   premium: number;
 };
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function currency(value: number | string | null | undefined) {
   const amount = Number(value ?? 0);
@@ -79,6 +83,14 @@ function percentage(value: number) {
   return `${value.toFixed(1)}%`;
 }
 
+function policyEndOffsetDays(policy: PartnerPolicyRow, referenceEpoch: number) {
+  const endDate = policy.end_date?.slice(0, 10);
+  if (!endDate || !validIsoDate(endDate)) return null;
+  const endEpoch = Date.parse(`${endDate}T00:00:00Z`);
+  if (!Number.isFinite(endEpoch)) return null;
+  return Math.floor((endEpoch - referenceEpoch) / DAY_MS);
+}
+
 async function loadPortfolioPolicies() {
   const pageSize = 200;
   const rows: PartnerPolicyRow[] = [];
@@ -92,10 +104,7 @@ async function loadPortfolioPolicies() {
   return rows;
 }
 
-function aggregateBy(
-  rows: PartnerPolicyRow[],
-  getLabel: (policy: PartnerPolicyRow) => string,
-) {
+function aggregateBy(rows: PartnerPolicyRow[], getLabel: (policy: PartnerPolicyRow) => string) {
   const grouped = new Map<string, MixRow>();
 
   for (const policy of rows) {
@@ -106,6 +115,19 @@ function aggregateBy(
     grouped.set(label, current);
   }
 
+  return [...grouped.values()].sort((a, b) => b.premium - a.premium || b.policies - a.policies);
+}
+
+function aggregateCustomers(rows: PartnerPolicyRow[]) {
+  const grouped = new Map<string, MixRow>();
+  for (const policy of rows) {
+    const label = policy.customer_name?.trim() || "Unassigned customer";
+    const key = policy.customer_id || `name:${label.toLowerCase()}`;
+    const current = grouped.get(key) ?? { label, policies: 0, premium: 0 };
+    current.policies += 1;
+    current.premium += numeric(policy.premium_amount);
+    grouped.set(key, current);
+  }
   return [...grouped.values()].sort((a, b) => b.premium - a.premium || b.policies - a.policies);
 }
 
@@ -135,6 +157,7 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   const analysisPremium = analysisPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
   const averagePremium = analysisPolicies.length ? analysisPremium / analysisPolicies.length : 0;
 
+  // Preserve the existing KPI calculation logic exactly: repeat-customer metrics use only canonical customer IDs.
   const customerPolicyCounts = new Map<string, number>();
   for (const policy of analysisPolicies) {
     if (!policy.customer_id) continue;
@@ -147,16 +170,30 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   const repeatCustomerRate = uniqueCustomers ? (repeatCustomers / uniqueCustomers) * 100 : 0;
   const policiesPerCustomer = uniqueCustomers ? analysisPolicies.length / uniqueCustomers : 0;
   const averageCustomerValue = uniqueCustomers ? analysisPremium / uniqueCustomers : 0;
-  const unclassifiedPolicies = analysisPolicies.filter((policy) => !policy.business_type || (!policy.policy_product && !policy.policy_type && !policy.business_line)).length;
+  const unclassifiedRows = analysisPolicies.filter(
+    (policy) => !policy.business_type || (!policy.policy_product && !policy.policy_type && !policy.business_line),
+  );
+  const unclassifiedPolicies = unclassifiedRows.length;
+  const unclassifiedPremium = unclassifiedRows.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
 
   const productMix = aggregateBy(
     analysisPolicies,
     (policy) => policy.policy_product || policy.policy_type || policy.business_line || "Other",
-  ).slice(0, 6);
-  const insurerMix = aggregateBy(
-    analysisPolicies,
-    (policy) => policy.insurer_name || "Unassigned insurer",
   ).slice(0, 5);
+  const insurerMix = aggregateBy(analysisPolicies, (policy) => policy.insurer_name || "Unassigned insurer").slice(0, 5);
+  const customerMix = aggregateCustomers(analysisPolicies);
+  const topCustomers = customerMix.slice(0, 5);
+  const topCustomerPremium = topCustomers.reduce((sum, item) => sum + item.premium, 0);
+  const portfolioConcentration = analysisPremium > 0 ? (topCustomerPremium / analysisPremium) * 100 : 0;
+
+  const repeatCustomerIds = new Set([...customerPolicyCounts.entries()].filter(([, count]) => count > 1).map(([id]) => id));
+  const crossSellCustomerIds = new Set([...customerPolicyCounts.entries()].filter(([, count]) => count === 1).map(([id]) => id));
+  const repeatCustomerPremium = analysisPolicies
+    .filter((policy) => Boolean(policy.customer_id && repeatCustomerIds.has(policy.customer_id)))
+    .reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+  const crossSellCustomerPremium = analysisPolicies
+    .filter((policy) => Boolean(policy.customer_id && crossSellCustomerIds.has(policy.customer_id)))
+    .reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
 
   const monthlySplit = performance.trend.map((item) => {
     const monthPolicies = portfolio.filter((policy) => policyDate(policy)?.slice(0, 7) === item.month);
@@ -169,6 +206,25 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   const maxSplitPremium = Math.max(1, ...monthlySplit.map((item) => item.newPremium + item.renewalPremium));
   const hasBusinessTypeClassification = newPolicies.length + renewalPolicies.length > 0;
   const analysisPeriodLabel = hasRange ? `${query.from} to ${query.to}` : "Last 6 months";
+
+  const generatedDay = performance.generated_at?.slice(0, 10);
+  const referenceDay = validIsoDate(generatedDay) ? String(generatedDay) : new Date().toISOString().slice(0, 10);
+  const referenceEpoch = Date.parse(`${referenceDay}T00:00:00Z`);
+  const renewalWindows = portfolio.map((policy) => ({ policy, days: policyEndOffsetDays(policy, referenceEpoch) }));
+  const due7 = renewalWindows.filter(({ days }) => days !== null && days >= 0 && days <= 7).map(({ policy }) => policy);
+  const due15 = renewalWindows.filter(({ days }) => days !== null && days >= 8 && days <= 15).map(({ policy }) => policy);
+  const due30 = renewalWindows.filter(({ days }) => days !== null && days >= 16 && days <= 30).map(({ policy }) => policy);
+  const premiumAtRiskRows = [...due7, ...due15, ...due30];
+  const expiredRows = renewalWindows
+    .filter(({ policy, days }) => policy.lifecycle_status === "expired" || (days !== null && days < 0))
+    .map(({ policy }) => policy);
+  const premiumAtRisk = premiumAtRiskRows.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+  const expiredPremiumExposure = expiredRows.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+
+  const due7Premium = due7.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+  const due15Premium = due15.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+  const due30Premium = due30.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
+  const classifiedPolicies = Math.max(0, analysisPolicies.length - unclassifiedPolicies);
 
   const metrics = [
     {
@@ -208,70 +264,41 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
           <h1 className="text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-[#142B50]">Business performance</h1>
         </section>
 
+        {/* Header KPI strip intentionally unchanged. */}
         <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
           {metrics.map((metric) => <InsightMetricCard key={metric.label} {...metric} />)}
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.22fr_.78fr]">
-          <div className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
-            <div className="flex items-start gap-2.5 border-b border-[#EDF1F5] pb-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]">
-                <TrendingUp className="h-4 w-4" />
-              </span>
-              <div>
-                <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">Top Insurer Contribution</h2>
-                <p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">Premium contribution by insurer</p>
-              </div>
-            </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {insurerMix.length ? insurerMix.map((item, index) => {
-                const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
-                return (
-                  <div key={item.label} className="grid grid-cols-[22px_minmax(0,1fr)_78px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
-                    <span className="text-center text-[8.5px] font-black text-[#526782]">{index + 1}</span>
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-[9px] font-extrabold text-[#263A58]">{item.label}</p>
-                        <p className="text-[8px] font-bold text-[#657792]">{percentage(percent)}</p>
-                      </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
-                        <div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} />
-                      </div>
-                    </div>
-                    <p className="text-right text-[8.5px] font-extrabold text-[#27405F]">{currency(item.premium)}</p>
-                  </div>
-                );
-              }) : <EmptyLine text="No insurer contribution is available for this period." />}
-            </div>
-          </div>
-
-          <InsightPanel icon={UsersRound} title="Customer Value & Portfolio Quality" subtitle="Indicators for sustainable growth">
+        <section className="grid gap-3 xl:grid-cols-3">
+          <ContributionPanel icon={TrendingUp} title="Top Insurer Contribution" subtitle="Premium contribution by insurer" rows={insurerMix} totalPremium={analysisPremium} />
+          <ContributionPanel icon={UsersRound} title="Top Customer Contribution" subtitle="Premium contribution by customer" rows={topCustomers} totalPremium={analysisPremium} href="/partner/customers" />
+          <InsightPanel icon={UsersRound} title="Customer Value & Portfolio Quality" subtitle="Key indicators for sustainable growth">
             <QualityRow label="Average Customer Value" value={currency(averageCustomerValue)} />
             <QualityRow label="Policies per Customer" value={policiesPerCustomer.toFixed(1)} />
             <QualityRow label="Repeat Customer Rate" value={percentage(repeatCustomerRate)} />
+            <QualityRow label="Portfolio Concentration" value={percentage(portfolioConcentration)} meta="Top 5 customers" />
           </InsightPanel>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-3">
-          <InsightPanel icon={BarChart3} title="New vs Renewal Premium Trend" subtitle="Business-type premium split across the last six months">
+        <section className="grid gap-3 xl:grid-cols-[1.15fr_.88fr_.98fr_1fr]">
+          <InsightPanel icon={BarChart3} title="New vs Renewal Premium Trend" subtitle="Monthly premium split across new and renewal business">
             <div className="flex items-center gap-3 text-[8px] font-bold text-[#61728A]">
               <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />New Business</span>
               <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#7145E9]" />Renewal Business</span>
             </div>
             {hasBusinessTypeClassification ? (
-              <div className="flex min-h-[155px] items-end gap-1.5 overflow-x-auto border-t border-[#EEF2F6] pt-3">
+              <div className="flex min-h-[175px] items-end gap-1 overflow-x-auto border-t border-[#EEF2F6] pt-3">
                 {monthlySplit.map((item) => {
                   const total = item.newPremium + item.renewalPremium;
-                  const totalHeight = Math.max(total > 0 ? 6 : 0, Math.round((total / maxSplitPremium) * 96));
+                  const totalHeight = Math.max(total > 0 ? 6 : 0, Math.round((total / maxSplitPremium) * 108));
                   const newHeight = total > 0 ? Math.round((item.newPremium / total) * totalHeight) : 0;
                   const renewalHeight = Math.max(0, totalHeight - newHeight);
                   return (
-                    <div key={item.month} className="flex min-w-[50px] flex-1 flex-col items-center">
-                      <p className="mb-1 text-center text-[7px] font-extrabold text-[#526B91]">{currency(total)}</p>
-                      <div className="flex h-[100px] w-full items-end justify-center px-1">
+                    <div key={item.month} className="flex min-w-[42px] flex-1 flex-col items-center">
+                      <div className="flex h-[118px] w-full items-end justify-center px-1">
                         <div className="flex w-full max-w-[28px] flex-col-reverse overflow-hidden rounded-t-md" style={{ height: totalHeight }}>
                           {newHeight > 0 ? <div className="w-full bg-[#1689EA]" style={{ height: newHeight }} /> : null}
-                          {renewalHeight > 0 ? <div className="w-full bg-[#7145E9]" style={{ height: renewalHeight }} /> : null}
+                          {renewalHeight > 0 ? <div className="w-full bg-[#8A63EE]" style={{ height: renewalHeight }} /> : null}
                         </div>
                       </div>
                       <p className="mt-1 text-[8px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
@@ -280,62 +307,99 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
                 })}
               </div>
             ) : (
-              <div className="grid min-h-[155px] place-items-center rounded-lg border border-dashed border-[#D9E2EE] bg-[#FAFBFD] px-4 text-center">
+              <div className="grid min-h-[175px] place-items-center rounded-lg border border-dashed border-[#D9E2EE] bg-[#FAFBFD] px-4 text-center">
                 <div>
                   <Layers3 className="mx-auto h-5 w-5 text-[#8A99AE]" />
                   <p className="mt-2 text-[10px] font-extrabold text-[#31445F]">Business-type split is not available yet</p>
-                  <p className="mt-1 text-[8px] font-medium text-[#7D8CA1]">The chart will populate when policies are classified as new/fresh or renewal business.</p>
+                  <p className="mt-1 text-[8px] font-medium text-[#7D8CA1]">This chart populates when policies are classified as new/fresh or renewal business.</p>
                 </div>
               </div>
             )}
           </InsightPanel>
 
-          <div className="rounded-xl border border-[#D8EADF] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
-            <div className="flex items-start justify-between gap-3">
+          <section className="rounded-xl border border-[#D8EADF] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
+            <div className="flex items-start justify-between gap-2 border-b border-[#EDF1F5] pb-3">
               <div className="flex items-start gap-2.5">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]">
-                  <Layers3 className="h-4 w-4" />
-                </span>
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]"><Layers3 className="h-4 w-4" /></span>
                 <div>
                   <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#5C8D79]">Business Mix</p>
-                  <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">By product</h2>
+                  <h2 className="mt-0.5 text-[13px] font-extrabold text-[#142B50]">By product</h2>
                 </div>
               </div>
-              <span className="rounded-full border border-[#DCE6E1] bg-white px-2.5 py-1 text-[7.5px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
+              <span className="rounded-full border border-[#DCE6E1] px-2 py-1 text-[7px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
             </div>
-
             <div className="mt-3 space-y-2">
               {productMix.length ? productMix.map((item) => {
                 const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
                 return (
-                  <div key={item.label} className="rounded-lg border border-[#E2E9F1] bg-white px-3 py-2.5 shadow-[0_2px_8px_rgba(25,50,90,0.03)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-[10px] font-extrabold text-[#203653]">{humanize(item.label)}</p>
-                      <p className="shrink-0 text-[8.5px] font-bold text-[#627692]">{percentage(percent)} · {currency(item.premium)} · {item.policies}</p>
+                  <div key={item.label} className="rounded-lg border border-[#E2E9F1] bg-[#FAFBFD] px-2.5 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="min-w-0 truncate text-[9px] font-extrabold text-[#203653]">{humanize(item.label)}</p>
+                      <p className="shrink-0 text-[8px] font-bold text-[#627692]">{percentage(percent)} · {currency(item.premium)}</p>
                     </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
-                      <div className="h-full rounded-full bg-gradient-to-r from-[#4D45E5] to-[#1592E7]" style={{ width: `${percent}%` }} />
-                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]"><div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} /></div>
                   </div>
                 );
               }) : <EmptyLine text="No product mix is available for this period." />}
             </div>
-          </div>
+          </section>
 
           <InsightPanel icon={Target} title="Opportunity Snapshot" subtitle="Actionable portfolio opportunities">
-            <OpportunityRow label="Cross-sell Opportunity" value={`${crossSellCustomers} customers`} meta="Have only one recorded policy" href="/partner/customers" />
-            <OpportunityRow label="Repeat Customers" value={`${repeatCustomers} customers`} meta="Already hold multiple recorded policies" href="/partner/customers" />
-            <OpportunityRow label="Unclassified Portfolio" value={`${unclassifiedPolicies} policies`} meta="Missing business or product classification" href="/partner/policies" />
+            <OpportunityRow label="Cross-sell Opportunity" value={`${crossSellCustomers} customers`} amount={currency(crossSellCustomerPremium)} meta="Customers with one recorded policy" href="/partner/customers" />
+            <OpportunityRow label="Repeat Customers" value={`${repeatCustomers} customers`} amount={currency(repeatCustomerPremium)} meta="Customers with multiple recorded policies" href="/partner/customers" />
+            <OpportunityRow label="Unclassified Portfolio" value={`${unclassifiedPolicies} policies`} amount={currency(unclassifiedPremium)} meta="Missing business or product classification" href="/partner/policies" />
+            <OpportunityRow label="Premium at Risk" value={`${premiumAtRiskRows.length} policies`} amount={currency(premiumAtRisk)} meta="Policies ending in the next 30 days" href="/partner/renewals" tone="risk" />
+          </InsightPanel>
+
+          <InsightPanel icon={ShieldAlert} title="Renewal Risk & Lost Business" subtitle="Track renewal exposure and expired premium">
+            <div className="grid grid-cols-2 gap-2">
+              <RiskSummary label="Upcoming Premium at Risk" value={currency(premiumAtRisk)} count={`${premiumAtRiskRows.length} policies`} tone="amber" />
+              <RiskSummary label="Expired Premium Exposure" value={currency(expiredPremiumExposure)} count={`${expiredRows.length} policies`} tone="red" />
+            </div>
+            <p className="pt-1 text-[8px] font-extrabold text-[#52637C]">Due in next</p>
+            <div className="grid grid-cols-3 gap-2">
+              <WindowCard label="7 days" value={currency(due7Premium)} count={`${due7.length} policies`} tone="red" />
+              <WindowCard label="15 days" value={currency(due15Premium)} count={`${due15.length} policies`} tone="amber" />
+              <WindowCard label="30 days" value={currency(due30Premium)} count={`${due30.length} policies`} tone="green" />
+            </div>
           </InsightPanel>
         </section>
 
-        <section className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
-          <PartnerSectionHeading eyebrow="Workspaces" title="Continue working" />
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
-            <Action href="/partner/customers" title="Customer Book" subtitle="Open scoped customers" />
-            <Action href="/partner/policies" title="Policy Register" subtitle="Review policy portfolio" />
-            <Action href="/partner/renewals" title="Renewal Pipeline" subtitle="Open due and overdue business" />
-          </div>
+        <section className="grid gap-3 xl:grid-cols-[1fr_1.1fr]">
+          <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Filter className="h-4 w-4" /></span>
+                <div>
+                  <h2 className="text-[12px] font-extrabold text-[#183057]">Business Activity Funnel</h2>
+                  <p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">Real portfolio counts from the selected period</p>
+                </div>
+              </div>
+              <span className="rounded-full border border-[#DCE5F1] px-2.5 py-1 text-[7px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-lg border border-[#E4EAF2] sm:grid-cols-5">
+              <FunnelStage label="Recorded" value={analysisPolicies.length} meta="policies" />
+              <FunnelStage label="Classified" value={classifiedPolicies} meta="policies" />
+              <FunnelStage label="New Business" value={newPolicies.length} meta="policies" accent="blue" />
+              <FunnelStage label="Renewal" value={renewalPolicies.length} meta="policies" accent="green" />
+              <FunnelStage label="Repeat" value={repeatCustomers} meta="customers" accent="purple" />
+            </div>
+          </section>
+
+          <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
+            <div className="flex items-start gap-2.5">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Layers3 className="h-4 w-4" /></span>
+              <div>
+                <p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#71819A]">Workspaces</p>
+                <h2 className="mt-0.5 text-[13px] font-extrabold text-[#183057]">Continue working</h2>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              <Action href="/partner/customers" title="Customer Book" subtitle="Open scoped customers" icon={UsersRound} />
+              <Action href="/partner/policies" title="Policy Register" subtitle="Review policy portfolio" icon={FileText} />
+              <Action href="/partner/renewals" title="Renewal Pipeline" subtitle="Open due and overdue business" icon={Repeat2} />
+            </div>
+          </section>
         </section>
       </div>
     </PartnerPortalShell>
@@ -352,9 +416,7 @@ const insightToneClasses: Record<InsightTone, string> = {
 function InsightMetricCard({ label, value, meta, tone, icon: Icon }: { label: string; value: number | string; meta: string; tone: InsightTone; icon: InsightIcon }) {
   return (
     <div className="flex min-h-[98px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
-      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${insightToneClasses[tone]}`}>
-        <Icon className="h-4.5 w-4.5" />
-      </span>
+      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${insightToneClasses[tone]}`}><Icon className="h-4.5 w-4.5" /></span>
       <div className="min-w-0 flex-1">
         <p className="text-[8px] font-black uppercase tracking-[0.06em] text-[#50637F]">{label}</p>
         <p className="mt-1 truncate text-[17px] font-black leading-none tracking-[-0.025em] text-[#142A50]">{value}</p>
@@ -365,58 +427,97 @@ function InsightMetricCard({ label, value, meta, tone, icon: Icon }: { label: st
   );
 }
 
+function ContributionPanel({ icon: Icon, title, subtitle, rows, totalPremium, href }: { icon: InsightIcon; title: string; subtitle: string; rows: MixRow[]; totalPremium: number; href?: string }) {
+  return (
+    <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
+      <div className="flex items-start justify-between gap-3 border-b border-[#EDF1F5] pb-3">
+        <div className="flex items-start gap-2.5">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+          <div><h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2><p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p></div>
+        </div>
+        {href ? <Link href={href} prefetch={false} className="inline-flex items-center gap-1 text-[8px] font-extrabold text-[#2B73E8]">View all <ArrowRight className="h-3 w-3" /></Link> : null}
+      </div>
+      <div className="mt-3 space-y-1.5">
+        {rows.length ? rows.map((item, index) => {
+          const percent = totalPremium > 0 ? Math.min(100, (item.premium / totalPremium) * 100) : 0;
+          return (
+            <div key={`${item.label}-${index}`} className="grid grid-cols-[22px_minmax(0,1fr)_82px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
+              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#EEF2F7] text-[8px] font-black text-[#526782]">{index + 1}</span>
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2"><p className="truncate text-[8.5px] font-extrabold text-[#263A58]">{item.label}</p><p className="text-[7.5px] font-bold text-[#657792]">{percentage(percent)}</p></div>
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]"><div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} /></div>
+              </div>
+              <p className="text-right text-[8px] font-extrabold text-[#27405F]">{currency(item.premium)}</p>
+            </div>
+          );
+        }) : <EmptyLine text={`No ${title.toLowerCase()} is available for this period.`} />}
+      </div>
+    </section>
+  );
+}
+
 function InsightPanel({ icon: Icon, title, subtitle, children }: { icon: InsightIcon; title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
+    <section className="rounded-xl border border-[#DCE5F1] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
       <div className="flex items-start gap-2.5 border-b border-[#EDF1F5] pb-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]">
-          <Icon className="h-4 w-4" />
-        </span>
-        <div>
-          <h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2>
-          <p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p>
-        </div>
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+        <div><h2 className="text-[12px] font-extrabold text-[#183057]">{title}</h2><p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">{subtitle}</p></div>
       </div>
       <div className="mt-3 space-y-2">{children}</div>
     </section>
   );
 }
 
-function QualityRow({ label, value }: { label: string; value: string }) {
+function QualityRow({ label, value, meta }: { label: string; value: string; meta?: string }) {
   return (
-    <div className="flex min-h-[50px] items-center justify-between gap-3 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-3 py-2.5">
-      <p className="text-[9px] font-bold text-[#52637C]">{label}</p>
-      <p className="text-[13px] font-black tracking-[-0.02em] text-[#183057]">{value}</p>
+    <div className="flex min-h-[45px] items-center justify-between gap-3 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-3 py-2">
+      <p className="text-[8.5px] font-bold text-[#52637C]">{label}</p>
+      <div className="text-right"><p className="text-[12px] font-black text-[#183057]">{value}</p>{meta ? <p className="text-[7px] font-medium text-[#8190A5]">{meta}</p> : null}</div>
     </div>
   );
 }
 
-function OpportunityRow({ label, value, meta, href }: { label: string; value: string; meta: string; href: string }) {
+function OpportunityRow({ label, value, amount, meta, href, tone = "normal" }: { label: string; value: string; amount: string; meta: string; href: string; tone?: "normal" | "risk" }) {
+  const isRisk = tone === "risk";
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[54px] items-center gap-3 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-3 py-2.5 transition hover:border-[#CAD6E5] hover:bg-white">
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Target className="h-3.5 w-3.5" /></span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[9px] font-extrabold text-[#263A58]">{label}</span>
-        <span className="mt-0.5 block truncate text-[8px] font-medium text-[#8190A5]">{meta}</span>
-      </span>
-      <span className="shrink-0 text-[10px] font-black text-[#183057]">{value}</span>
+    <Link href={href} prefetch={false} className="group flex min-h-[50px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2 transition hover:border-[#CAD6E5] hover:bg-white">
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${isRisk ? "bg-[#FFF0F2] text-[#EF4565]" : "bg-[#EEF4FF] text-[#3156B8]"}`}>{isRisk ? <AlertTriangle className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}</span>
+      <span className="min-w-0 flex-1"><span className="block text-[8.5px] font-extrabold text-[#263A58]">{label}</span><span className="mt-0.5 block truncate text-[7.5px] font-medium text-[#8190A5]">{meta}</span></span>
+      <span className="shrink-0 text-right"><span className="block text-[8.5px] font-black text-[#183057]">{value}</span><span className="block text-[7.5px] font-bold text-[#526782]">{amount}</span></span>
       <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#4F78C8] transition group-hover:translate-x-0.5" />
     </Link>
   );
+}
+
+function RiskSummary({ label, value, count, tone }: { label: string; value: string; count: string; tone: "amber" | "red" }) {
+  const classes = tone === "amber" ? "bg-[#FFF9EE] text-[#E59B25]" : "bg-[#FFF2F4] text-[#EB4E68]";
+  return (
+    <div className="rounded-lg border border-[#E7EBF1] bg-[#FAFBFD] px-2.5 py-2.5">
+      <div className="flex items-start gap-2"><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${classes}`}><AlertTriangle className="h-3.5 w-3.5" /></span><div><p className="text-[7px] font-bold text-[#687A91]">{label}</p><p className="mt-1 text-[12px] font-black text-[#183057]">{value}</p><p className="mt-0.5 text-[7px] font-medium text-[#8190A5]">{count}</p></div></div>
+    </div>
+  );
+}
+
+function WindowCard({ label, value, count, tone }: { label: string; value: string; count: string; tone: "red" | "amber" | "green" }) {
+  const classes = tone === "red" ? "border-[#F7D9DF] bg-[#FFF2F4]" : tone === "amber" ? "border-[#F5E3C3] bg-[#FFF8EC]" : "border-[#D7EEE4] bg-[#EFFAF5]";
+  return <div className={`rounded-lg border px-2 py-2 ${classes}`}><p className="text-[7.5px] font-extrabold text-[#52637C]">{label}</p><p className="mt-1 text-[10px] font-black text-[#183057]">{value}</p><p className="mt-0.5 text-[7px] font-medium text-[#7D8CA1]">{count}</p></div>;
+}
+
+function FunnelStage({ label, value, meta, accent = "neutral" }: { label: string; value: number; meta: string; accent?: "neutral" | "blue" | "green" | "purple" }) {
+  const accentClasses = accent === "blue" ? "bg-[#EDF4FF]" : accent === "green" ? "bg-[#ECF9F3]" : accent === "purple" ? "bg-[#F3EFFF]" : "bg-[#FAFBFD]";
+  return <div className={`min-h-[70px] border-r border-[#E4EAF2] px-3 py-2.5 last:border-r-0 ${accentClasses}`}><p className="text-[7.5px] font-bold text-[#71819A]">{label}</p><p className="mt-1 text-[15px] font-black text-[#183057]">{value}</p><p className="text-[7px] font-medium text-[#8190A5]">{meta}</p></div>;
 }
 
 function EmptyLine({ text }: { text: string }) {
   return <p className="rounded-lg border border-dashed border-[#DCE4EE] bg-[#FAFBFD] px-3 py-6 text-center text-[9px] font-medium text-[#7D8CA1]">{text}</p>;
 }
 
-function Action({ href, title, subtitle }: { href: string; title: string; subtitle: string }) {
+function Action({ href, title, subtitle, icon: Icon }: { href: string; title: string; subtitle: string; icon: InsightIcon }) {
   return (
-    <Link href={href} prefetch={false} className="group flex min-h-[58px] items-center justify-between gap-3 rounded-lg border border-[#E2E8F0] bg-[#FAFBFD] px-3 py-2.5 transition hover:border-[#CAD6E5] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-      <span>
-        <span className="block break-words text-[10.5px] font-extrabold leading-4 text-[#172846]">{title}</span>
-        <span className="mt-0.5 block break-words text-[9px] font-medium leading-4 text-[#74839A]">{subtitle}</span>
-      </span>
-      <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
+    <Link href={href} prefetch={false} className="group flex min-h-[58px] items-center gap-2.5 rounded-lg border border-[#E2E8F0] bg-[#FAFBFD] px-3 py-2.5 transition hover:border-[#CAD6E5] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-3.5 w-3.5" /></span>
+      <span className="min-w-0 flex-1"><span className="block truncate text-[9px] font-extrabold text-[#172846]">{title}</span><span className="mt-0.5 block truncate text-[7.5px] font-medium text-[#74839A]">{subtitle}</span></span>
+      <ArrowRight className="h-3.5 w-3.5 text-[#8090A8] transition group-hover:translate-x-0.5" />
     </Link>
   );
 }
