@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowRight, FileText, Plus, RefreshCw, Search } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
@@ -46,6 +46,20 @@ function field(row: PartnerPolicyIntake, key: string) {
   return row.ocr_fields?.find((item) => item.key === key)?.value?.trim() || "";
 }
 
+function matchesSearch(row: PartnerPolicyIntake, query: string) {
+  if (!query) return true;
+  const values = [
+    row.intake_number,
+    row.customer_mobile,
+    row.lead_source_name,
+    row.status,
+    statusLabel(row),
+    field(row, "policy_number"),
+    field(row, "vehicle_registration_number"),
+  ];
+  return values.some((value) => value?.toLowerCase().includes(query));
+}
+
 export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [filter, setFilter] = useState<IntakeFilter>("all");
@@ -60,42 +74,60 @@ export function PartnerPolicyIntakeListClient() {
     setLoading(true);
     setError("");
     try {
-      const result = await getPartnerPolicyIntakesWeb({
-        limit: PAGE_SIZE,
-        offset: (page - 1) * PAGE_SIZE,
-        filter: filter === "active" ? "all" : filter,
+      const query = search.trim().toLowerCase();
+      const needsCompleteDataset = filter === "active" || Boolean(query);
+
+      if (!needsCompleteDataset) {
+        const result = await getPartnerPolicyIntakesWeb({
+          limit: PAGE_SIZE,
+          offset: (page - 1) * PAGE_SIZE,
+          filter,
+        });
+        setRows(result.intakes);
+        setTotal(result.total);
+        setCounts(result.counts);
+        return;
+      }
+
+      const serverFilter = filter === "active" ? "all" : filter;
+      const completeRows: PartnerPolicyIntake[] = [];
+      let offset = 0;
+      let firstCounts = { active: 0, attention: 0, progress: 0, completed: 0 };
+      let expectedTotal = 0;
+
+      do {
+        const result = await getPartnerPolicyIntakesWeb({
+          limit: PAGE_SIZE,
+          offset,
+          filter: serverFilter,
+        });
+        if (offset === 0) {
+          firstCounts = result.counts;
+          expectedTotal = result.total;
+        }
+        completeRows.push(...result.intakes);
+        offset += PAGE_SIZE;
+        if (!result.intakes.length) break;
+      } while (completeRows.length < expectedTotal);
+
+      const completeMatches = completeRows.filter((row) => {
+        if (filter === "active" && (row.status === "completed" || row.status === "rejected")) return false;
+        return matchesSearch(row, query);
       });
-      setRows(result.intakes);
-      setTotal(result.total);
-      setCounts(result.counts);
+      const start = (page - 1) * PAGE_SIZE;
+      setRows(completeMatches.slice(start, start + PAGE_SIZE));
+      setTotal(completeMatches.length);
+      setCounts(firstCounts);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
     } finally {
       setLoading(false);
     }
-  }, [filter, page]);
+  }, [filter, page, search]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  const visibleRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return rows.filter((row) => {
-      if (filter === "active" && (row.status === "completed" || row.status === "rejected")) return false;
-      if (!query) return true;
-      const values = [
-        row.intake_number,
-        row.customer_mobile,
-        row.lead_source_name,
-        row.status,
-        statusLabel(row),
-        field(row, "policy_number"),
-        field(row, "vehicle_registration_number"),
-      ];
-      return values.some((value) => value?.toLowerCase().includes(query));
-    });
-  }, [rows, filter, search]);
 
   const hasPrevious = page > 1;
   const hasNext = page * PAGE_SIZE < total;
@@ -133,7 +165,7 @@ export function PartnerPolicyIntakeListClient() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="Policy number, customer, vehicle or status"
                 className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
               />
@@ -164,54 +196,58 @@ export function PartnerPolicyIntakeListClient() {
           </div>
         </div>
 
-        <div className="grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 border-b border-[#E7EDF4] bg-[#F8FAFD] px-4 py-2 text-[8px] font-black uppercase tracking-[0.05em] text-[#6F819A]">
-          <span>#</span><span>Policy / Reference</span><span>Customer / Vehicle</span><span>Submission Date</span><span>Status</span><span className="text-right">Action</span>
-        </div>
-
         {error ? <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">{error}</div> : null}
 
-        {loading && !rows.length ? (
-          <div className="py-14 text-center">
-            <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#7F90A8]" />
-            <p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intakes…</p>
+        <div className="overflow-x-auto">
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 border-b border-[#E7EDF4] bg-[#F8FAFD] px-4 py-2 text-[8px] font-black uppercase tracking-[0.05em] text-[#6F819A]">
+              <span>#</span><span>Policy / Reference</span><span>Customer / Vehicle</span><span>Submission Date</span><span>Status</span><span className="text-right">Action</span>
+            </div>
+
+            {loading && !rows.length ? (
+              <div className="py-14 text-center">
+                <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#7F90A8]" />
+                <p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intakes…</p>
+              </div>
+            ) : rows.length ? (
+              <div className="divide-y divide-[#E8EDF4]">
+                {rows.map((row, index) => {
+                  const created = dateParts(row.created_at);
+                  const policy = field(row, "policy_number") || "Policy pending";
+                  const vehicle = field(row, "vehicle_registration_number") || "Vehicle pending";
+                  return (
+                    <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 px-4 py-2.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
+                      <span className="text-[9px] font-semibold text-[#74839A]">{(page - 1) * PAGE_SIZE + index + 1}</span>
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EAF3FF] text-[#2875DD]"><FileText className="h-3.5 w-3.5" /></span>
+                        <div className="min-w-0">
+                          <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.intake_number}</p>
+                          <p className="mt-0.5 break-words text-[9px] font-medium leading-4 text-[#7A899F]">{policy}</p>
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{row.lead_source_name}</p>
+                        <p className="mt-0.5 break-words text-[9px] leading-4 text-[#8190A5]">{vehicle} · {row.customer_mobile}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-semibold text-[#304665]">{created.date}</p>
+                        <p className="mt-0.5 text-[9px] text-[#8190A5]">{created.time}</p>
+                      </div>
+                      <span className={`inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[8.5px] font-bold ${statusTone(row)}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row)}</span>
+                      <ArrowRight className="h-4 w-4 justify-self-end text-[#315A91] transition group-hover:translate-x-0.5" />
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="py-14 text-center">
+                <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
+                <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions match this view" : "No Policy Intakes yet"}</p>
+                <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Choose another filter or adjust your search." : "Create a new intake when you have a policy copy."}</p>
+              </div>
+            )}
           </div>
-        ) : visibleRows.length ? (
-          <div className="divide-y divide-[#E8EDF4]">
-            {visibleRows.map((row, index) => {
-              const created = dateParts(row.created_at);
-              const policy = field(row, "policy_number") || "Policy pending";
-              const vehicle = field(row, "vehicle_registration_number") || "Vehicle pending";
-              return (
-                <Link key={row.id} href={"/partner/policy-intakes/" + encodeURIComponent(row.id)} className="group grid grid-cols-[36px_minmax(180px,1.05fr)_minmax(180px,1fr)_minmax(130px,.7fr)_minmax(110px,.55fr)_34px] items-center gap-3 px-4 py-2.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-                  <span className="text-[9px] font-semibold text-[#74839A]">{(page - 1) * PAGE_SIZE + index + 1}</span>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EAF3FF] text-[#2875DD]"><FileText className="h-3.5 w-3.5" /></span>
-                    <div className="min-w-0">
-                      <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.intake_number}</p>
-                      <p className="mt-0.5 break-words text-[9px] font-medium leading-4 text-[#7A899F]">{policy}</p>
-                    </div>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{row.lead_source_name}</p>
-                    <p className="mt-0.5 break-words text-[9px] leading-4 text-[#8190A5]">{vehicle} · {row.customer_mobile}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold text-[#304665]">{created.date}</p>
-                    <p className="mt-0.5 text-[9px] text-[#8190A5]">{created.time}</p>
-                  </div>
-                  <span className={`inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[8.5px] font-bold ${statusTone(row)}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row)}</span>
-                  <ArrowRight className="h-4 w-4 justify-self-end text-[#315A91] transition group-hover:translate-x-0.5" />
-                </Link>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-14 text-center">
-            <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
-            <p className="mt-3 text-[12px] font-bold text-[#23395D]">{total ? "No submissions match this view" : "No Policy Intakes yet"}</p>
-            <p className="mt-1 text-[10.5px] text-[#7A899F]">{total ? "Choose another filter or adjust your search." : "Create a new intake when you have a policy copy."}</p>
-          </div>
-        )}
+        </div>
 
         {(hasPrevious || hasNext) ? (
           <div className="flex items-center justify-between border-t border-[#E6ECF3] px-4 py-3.5">
