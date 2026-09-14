@@ -245,37 +245,11 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#D8EADF] bg-gradient-to-br from-[#F8FCFA] to-[#EEF9F5] p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]">
-                  <Layers3 className="h-4 w-4" />
-                </span>
-                <div>
-                  <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#5C8D79]">Business Mix</p>
-                  <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">By product</h2>
-                </div>
-              </div>
-              <span className="rounded-full border border-[#DCE6E1] bg-white px-2.5 py-1 text-[7.5px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {productMix.length ? productMix.map((item) => {
-                const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
-                return (
-                  <div key={item.label} className="rounded-lg border border-[#E2E9F1] bg-white px-3 py-2.5 shadow-[0_2px_8px_rgba(25,50,90,0.03)]">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="min-w-0 truncate text-[10px] font-extrabold text-[#203653]">{humanize(item.label)}</p>
-                      <p className="shrink-0 text-[8.5px] font-bold text-[#627692]">{percentage(percent)} · {currency(item.premium)} · {item.policies}</p>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
-                      <div className="h-full rounded-full bg-gradient-to-r from-[#4D45E5] to-[#1592E7]" style={{ width: `${percent}%` }} />
-                    </div>
-                  </div>
-                );
-              }) : <EmptyLine text="No product mix is available for this period." />}
-            </div>
-          </div>
+          <InsightPanel icon={UsersRound} title="Customer Value & Portfolio Quality" subtitle="Indicators for sustainable growth">
+            <QualityRow label="Average Customer Value" value={currency(averageCustomerValue)} />
+            <QualityRow label="Policies per Customer" value={policiesPerCustomer.toFixed(1)} />
+            <QualityRow label="Repeat Customer Rate" value={percentage(repeatCustomerRate)} />
+          </InsightPanel>
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
@@ -316,11 +290,37 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
             )}
           </InsightPanel>
 
-          <InsightPanel icon={UsersRound} title="Customer Value & Portfolio Quality" subtitle="Indicators for sustainable growth">
-            <QualityRow label="Average Customer Value" value={currency(averageCustomerValue)} />
-            <QualityRow label="Policies per Customer" value={policiesPerCustomer.toFixed(1)} />
-            <QualityRow label="Repeat Customer Rate" value={percentage(repeatCustomerRate)} />
-          </InsightPanel>
+          <div className="rounded-xl border border-[#D8EADF] bg-gradient-to-br from-[#F8FCFA] to-[#EEF9F5] p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#DDF6EC] text-[#21A874]">
+                  <Layers3 className="h-4 w-4" />
+                </span>
+                <div>
+                  <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#5C8D79]">Business Mix</p>
+                  <h2 className="mt-0.5 text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">By product</h2>
+                </div>
+              </div>
+              <span className="rounded-full border border-[#DCE6E1] bg-white px-2.5 py-1 text-[7.5px] font-bold text-[#61728A]">{analysisPeriodLabel}</span>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {productMix.length ? productMix.map((item) => {
+                const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
+                return (
+                  <div key={item.label} className="rounded-lg border border-[#E2E9F1] bg-white px-3 py-2.5 shadow-[0_2px_8px_rgba(25,50,90,0.03)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="min-w-0 truncate text-[10px] font-extrabold text-[#203653]">{humanize(item.label)}</p>
+                      <p className="shrink-0 text-[8.5px] font-bold text-[#627692]">{percentage(percent)} · {currency(item.premium)} · {item.policies}</p>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
+                      <div className="h-full rounded-full bg-gradient-to-r from-[#4D45E5] to-[#1592E7]" style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                );
+              }) : <EmptyLine text="No product mix is available for this period." />}
+            </div>
+          </div>
 
           <InsightPanel icon={Target} title="Opportunity Snapshot" subtitle="Actionable portfolio opportunities">
             <OpportunityRow label="Cross-sell Opportunity" value={`${crossSellCustomers} customers`} meta="Have only one recorded policy" href="/partner/customers" />
