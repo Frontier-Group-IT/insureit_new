@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Archive,
@@ -46,6 +47,7 @@ export type BusinessGroupPartner = {
   display_name: string;
   parent_partner_id: string | null;
   owner_employee_id: string | null;
+  is_branch_profile: boolean;
 };
 
 export type BusinessGroupMembership = {
@@ -62,6 +64,7 @@ const successMessages: Record<string, string> = {
   business_members_removed: "Partner removed from the Group.",
   business_group_updated: "Group updated.",
   business_group_archived: "Group archived.",
+  branch_created: "Branch created and tagged to the selected Partner.",
   branch_assigned: "Branch linked to its parent Partner.",
   branch_removed: "Branch detached from its parent Partner.",
 };
@@ -96,7 +99,10 @@ export function BusinessGroupWorkspace({
     () => new Map(memberships.map((membership) => [membership.partner_id, membership])),
     [memberships],
   );
-  const rootPartners = useMemo(() => partners.filter((partner) => !partner.parent_partner_id), [partners]);
+  const rootPartners = useMemo(
+    () => partners.filter((partner) => !partner.parent_partner_id && !partner.is_branch_profile),
+    [partners],
+  );
   const branchesByParent = useMemo(() => {
     const map = new Map<string, BusinessGroupPartner[]>();
     partners.forEach((partner) => {
@@ -109,7 +115,9 @@ export function BusinessGroupWorkspace({
   }, [partners]);
 
   const ungroupedRoots = rootPartners.filter((partner) => !membershipByPartner.has(partner.id));
-  const branchCandidates = ungroupedRoots.filter((partner) => !(branchesByParent.get(partner.id)?.length));
+  const branchCandidates = partners.filter(
+    (partner) => partner.is_branch_profile && !partner.parent_partner_id && !membershipByPartner.has(partner.id),
+  );
 
   const visibleGroups = groups.filter((group) => {
     if (!normalizedQuery) return true;
@@ -151,6 +159,13 @@ export function BusinessGroupWorkspace({
           </div>
           {canManage ? (
             <div className="flex flex-wrap gap-2">
+              <Link
+                href="/intermediaries/groups/branches/new"
+                aria-disabled={!hierarchyReady}
+                className={`inline-flex h-9 items-center gap-2 rounded-xl border border-[#D7E0EA] bg-white px-4 text-[9px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}
+              >
+                <Plus className="h-4 w-4" /> Add Branch
+              </Link>
               <button
                 type="button"
                 onClick={() => setBranchOpen(true)}
@@ -174,7 +189,7 @@ export function BusinessGroupWorkspace({
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <Metric label="Groups" value={groups.length} icon={<Layers3 className="h-4 w-4" />} />
           <Metric label="Root Partners" value={rootPartners.length} icon={<Building2 className="h-4 w-4" />} />
-          <Metric label="Branches" value={partners.length - rootPartners.length} icon={<Store className="h-4 w-4" />} />
+          <Metric label="Branches" value={partners.filter((partner) => partner.is_branch_profile).length} icon={<Store className="h-4 w-4" />} />
           <Metric label="Ungrouped Partners" value={ungroupedRoots.length} icon={<UsersRound className="h-4 w-4" />} />
         </div>
       </section>
@@ -297,7 +312,7 @@ export function BusinessGroupWorkspace({
       {ungroupedRoots.length ? (
         <section className="rounded-[22px] border border-[#F0DFC0] bg-[#FFFCF6] p-4">
           <h2 className="text-[11px] font-bold text-[#76541E]">Ungrouped root Partners</h2>
-          <p className="mt-1 text-[8px] text-[#9A7B4B]">These are available for Group assignment or, where appropriate, can be linked as a Branch under another Partner.</p>
+          <p className="mt-1 text-[8px] text-[#9A7B4B]">These are available for Group assignment.</p>
           <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
             {ungroupedRoots.map((partner) => (
               <div key={partner.id} className="rounded-xl border border-[#F0E3CC] bg-white px-3 py-2.5">
@@ -330,7 +345,7 @@ export function BusinessGroupWorkspace({
       ) : null}
 
       {branchOpen ? (
-        <Modal title="Assign Partner as Branch" onClose={() => setBranchOpen(false)}>
+        <Modal title="Assign Branch" onClose={() => setBranchOpen(false)}>
           <form action={assignPartnerBranch} className="space-y-3">
             <Field label="Parent Partner">
               <select name="parent_partner_id" required defaultValue="" className={inputClass}>
@@ -338,16 +353,16 @@ export function BusinessGroupWorkspace({
                 {rootPartners.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
               </select>
             </Field>
-            <Field label="Branch profile">
+            <Field label="Branch">
               <select name="branch_partner_id" required defaultValue="" className={inputClass}>
-                <option value="">Select ungrouped Partner profile</option>
+                <option value="">{branchCandidates.length ? "Select unassigned Branch" : "No unassigned Branches available"}</option>
                 {branchCandidates.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
               </select>
             </Field>
-            <p className="rounded-xl bg-[#FFF9EB] px-3 py-2 text-[7.8px] leading-4 text-[#84652D]">This does not delete or recreate the Branch profile. It only adds a reversible parent relationship. A directly grouped Partner must be removed from its Group before it can become a Branch.</p>
+            <p className="rounded-xl bg-[#FFF9EB] px-3 py-2 text-[7.8px] leading-4 text-[#84652D]">Only Branch profiles created through Branch Onboarding are shown here. POSP, MISP and ordinary Partner profiles are excluded.</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setBranchOpen(false)} className="h-9 rounded-lg border border-[#D7E0EA] bg-white px-4 text-[8.5px] font-bold text-[#5D6F82]">Cancel</button>
-              <FormSubmitButton label="Assign Branch" pendingLabel="Assigning…" className="inline-flex h-9 items-center rounded-lg bg-[#315FEA] px-4 text-[8.5px] font-bold text-white" />
+              <FormSubmitButton disabled={!branchCandidates.length} label="Assign Branch" pendingLabel="Assigning…" className="inline-flex h-9 items-center rounded-lg bg-[#315FEA] px-4 text-[8.5px] font-bold text-white disabled:cursor-not-allowed disabled:opacity-45" />
             </div>
           </form>
         </Modal>
