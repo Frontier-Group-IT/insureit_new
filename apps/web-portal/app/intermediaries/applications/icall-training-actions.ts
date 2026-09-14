@@ -194,15 +194,16 @@ export async function registerWithIcallProduction(formData: FormData) {
       internalPosCode: profile.external_onboarding_id?.trim() || applicationId,
     });
 
+    let initialSyncSucceeded = false;
     try {
       await syncStatusIntoPortal(admin, reviewer.id, applicationId, loginId, profile.partner_type);
-      revalidatePath(route(applicationId));
-      redirect(`${route(applicationId)}?stage=training&success=icall_registered`);
+      initialSyncSucceeded = true;
     } catch (syncError) {
       console.error("iCall production registration succeeded but initial status sync failed", { applicationId, error: syncError });
-      revalidatePath(route(applicationId));
-      redirect(`${route(applicationId)}?stage=training&success=icall_registered_sync_pending`);
     }
+
+    revalidatePath(route(applicationId));
+    redirect(`${route(applicationId)}?stage=training&success=${initialSyncSucceeded ? "icall_registered" : "icall_registered_sync_pending"}`);
   } catch (error) {
     if (isRedirectError(error)) throw error;
     console.error("iCall production registration failed", { applicationId, partnerType: profile.partner_type, error });
