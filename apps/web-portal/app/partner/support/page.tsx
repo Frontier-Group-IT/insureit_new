@@ -82,7 +82,11 @@ function ContactSummary({ href, icon: Icon, label, value }: { href?: string; ico
 
 function WorkloadMetric({ href, value, label }: { href: string; value: number; label: string }) {
   return (
-    <Link href={href} className="min-w-0 px-2.5 first:pl-0 last:pr-0 hover:opacity-70">
+    <Link
+      href={href}
+      aria-label={`${label}: ${value}`}
+      className="flex min-h-[42px] min-w-0 cursor-pointer flex-col justify-center rounded-md px-2.5 py-1 transition hover:bg-[#F4F7FB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 active:bg-[#EDF2F8] first:ml-0 last:mr-0"
+    >
       <span className="block text-[16px] font-extrabold leading-5 text-[#172846]">{value}</span>
       <span className="mt-0.5 block text-[8px] font-semibold leading-3 text-[#74839A]">{label}</span>
     </Link>
