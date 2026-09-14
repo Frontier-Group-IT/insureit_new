@@ -1,8 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BarChart3, CalendarClock, CalendarDays, Clock3, ExternalLink, RefreshCw, Search } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarClock, ExternalLink, RefreshCw, Search } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebRenewalSummary, listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
+import { listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -47,10 +47,7 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [summary, rows] = await Promise.all([
-    getPartnerWebRenewalSummary(),
-    listPartnerWebRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window }),
-  ]);
+  const rows = await listPartnerWebRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window });
 
   const total = rows[0]?.total_count ?? 0;
   const hasPrevious = page > 1;
@@ -68,36 +65,9 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
     return search ? "/partner/renewals?" + search : "/partner/renewals";
   };
 
-  const metricItems = [
-    { label: "Overdue", value: summary.overdue_count, meta: currency(summary.overdue_premium), icon: Clock3, iconWrap: "bg-[#EAF3FF] text-[#3156B8]" },
-    { label: "Due 0–7 Days", value: summary.due_0_7_count, meta: currency(summary.due_0_7_premium), icon: CalendarDays, iconWrap: "bg-[#E7F8F0] text-[#1AA572]" },
-    { label: "Due 8–15 Days", value: summary.due_8_15_count, meta: currency(summary.due_8_15_premium), icon: CalendarDays, iconWrap: "bg-[#F0E9FF] text-[#7650D8]" },
-    { label: "Due 16–30 Days", value: summary.due_16_30_count, meta: currency(summary.due_16_30_premium), icon: CalendarDays, iconWrap: "bg-[#FFF2DD] text-[#E99515]" },
-  ];
-
   return (
     <PartnerPortalShell title="Renewals">
       <div data-partner-renewals-reference-page="true" className="space-y-3 pb-4">
-        <section data-partner-renewals-reference-metrics="true" className="overflow-hidden rounded-xl border border-[#DCE5F0] bg-white shadow-[0_3px_12px_rgba(37,61,103,0.04)]">
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-            {metricItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <div key={item.label} className={`flex min-h-[62px] items-center gap-3 px-4 py-2.5 ${index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : ""} ${index === 2 ? "sm:border-t xl:border-t-0" : ""}`}>
-                  <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${item.iconWrap}`}><Icon className="h-4 w-4" /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[7.5px] font-black uppercase tracking-[0.07em] text-[#6A7A90]">{item.label}</p>
-                    <div className="mt-0.5 flex items-baseline gap-2">
-                      <p className="text-[17px] font-black leading-none tracking-[-0.03em] text-[#142A50]">{item.value}</p>
-                      <p className="truncate text-[8.5px] font-medium text-[#8996A8]">{item.meta}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
         <section data-partner-renewals-reference-actions="true" className="grid gap-2 xl:grid-cols-2">
           <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#DCE5F0] bg-white px-3.5 py-2 shadow-[0_3px_12px_rgba(37,61,103,0.035)] transition hover:border-[#C4DDF5] hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#DDEEFF] text-[#2F70E5]"><ExternalLink className="h-4 w-4" /></span>
