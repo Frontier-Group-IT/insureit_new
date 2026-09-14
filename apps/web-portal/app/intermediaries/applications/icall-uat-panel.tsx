@@ -1,6 +1,3 @@
-import { FormSubmitButton } from "@/components/form-submit-button";
-import { registerWithIcallUat, syncIcallUatStatus } from "./icall-training-actions";
-
 export { IcallProductionPanel } from "./icall-production-panel";
 
 type Props = {
@@ -11,34 +8,25 @@ type Props = {
   examStatus: string | null;
 };
 
-export function IcallUatPanel({ applicationId, partnerType, loginId, trainingStatus, examStatus }: Props) {
+export function IcallUatPanel({ partnerType, loginId, trainingStatus, examStatus }: Props) {
   const accountLabel = partnerType.toUpperCase();
-  return <section className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 shadow-sm">
+  return <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <p className="text-[8.5px] font-bold uppercase tracking-[.1em] text-blue-700">Training integration</p>
-        <h3 className="mt-1 text-[12px] font-semibold text-[#0F172A]">iCall {accountLabel} Training &amp; Examination</h3>
-        <p className="mt-1 max-w-2xl text-[9.5px] leading-5 text-[#526178]">Register this {accountLabel} for iCall training and keep training and examination progress synchronized with InsureIt.</p>
+        <p className="text-[8.5px] font-bold uppercase tracking-[.1em] text-amber-700">Legacy UAT diagnostics</p>
+        <h3 className="mt-1 text-[12px] font-semibold text-[#0F172A]">iCall {accountLabel} UAT snapshot</h3>
+        <p className="mt-1 max-w-2xl text-[9.5px] leading-5 text-[#526178]">UAT mutations are disabled during the Production cutover. This panel is read-only so an operator cannot accidentally create or modify a UAT training account while the live workflow uses Production.</p>
       </div>
-      <span className="rounded-full border border-blue-200 bg-white px-2.5 py-1 text-[8.5px] font-semibold text-blue-700">iCall connected</span>
+      <span className="rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[8.5px] font-semibold text-amber-700">Read only</span>
     </div>
 
     {loginId ? <div className="mt-4 grid gap-2 sm:grid-cols-3">
       <Fact label="Login ID" value={loginId} />
       <Fact label="Training status" value={trainingStatus || "Not synced"} />
       <Fact label="Exam status" value={examStatus || "Not allotted"} />
-    </div> : <div className="mt-4 rounded-xl border border-dashed border-blue-200 bg-white/80 px-3 py-3 text-[9.5px] text-[#526178]">This applicant has not yet been registered for iCall training.</div>}
+    </div> : <div className="mt-4 rounded-xl border border-dashed border-amber-200 bg-white/80 px-3 py-3 text-[9.5px] text-[#526178]">No UAT training snapshot is linked to this applicant.</div>}
 
-    <div className="mt-4 flex flex-wrap gap-2">
-      {!loginId ? <form action={registerWithIcallUat}>
-        <input type="hidden" name="application_id" value={applicationId} />
-        <FormSubmitButton label="Register in iCall" pendingLabel="Registering" className="h-10 rounded-xl bg-[#0F2A55] px-4 text-[10px] font-semibold text-white" />
-      </form> : null}
-      {loginId ? <form action={syncIcallUatStatus}>
-        <input type="hidden" name="application_id" value={applicationId} />
-        <FormSubmitButton label="Sync iCall status" pendingLabel="Syncing" className="h-10 rounded-xl border border-blue-200 bg-white px-4 text-[10px] font-semibold text-blue-800" />
-      </form> : null}
-    </div>
+    <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[9.5px] leading-4 text-amber-900">Use the normal POSP/MISP workflow to start Production training. UAT gateway routes remain available only for controlled rollback and diagnostics.</div>
   </section>;
 }
 
