@@ -1,15 +1,16 @@
 name: Apply Group Branch Portal Access
 
 on:
+  workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'supabase/migrations/20260915123000_group_branch_portal_access.sql'
       - 'supabase/migrations/20260915124500_group_branch_partner_runtime.sql'
       - 'supabase/migrations/20260915125000_group_branch_partner_identity.sql'
       - 'supabase/verification/20260915123000_group_branch_portal_access_verify.sql'
       - '.github/workflows/apply-group-branch-portal-access.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,44 +20,128 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  apply:
-    name: Apply Group/Branch portal access schema
+  migrate:
+    name: Apply reversible Group/Branch portal access schema
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: production
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
 
-      - name: Setup Supabase CLI
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260915123000_group_branch_portal_access.sql
+          test -f supabase/migrations/20260915124500_group_branch_partner_runtime.sql
+          test -f supabase/migrations/20260915125000_group_branch_partner_identity.sql
+          test -f supabase/verification/20260915123000_group_branch_portal_access_verify.sql
+
+      - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
           version: latest
 
-      - name: Validate production credentials
+      - name: Link production Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Capture pre-migration business invariants
         shell: bash
         run: |
           set -euo pipefail
-          test -n "${SUPABASE_ACCESS_TOKEN:-}" || { echo "Missing SUPABASE_ACCESS_TOKEN"; exit 1; }
-          test -n "${SUPABASE_DB_PASSWORD:-}" || { echo "Missing SUPABASE_DB_PASSWORD"; exit 1; }
-          test -n "${SUPABASE_PROJECT_REF:-}" || { echo "Missing SUPABASE_PROJECT_REF"; exit 1; }
+          result=$(supabase db query --linked --output-format json "
+            select
+              (select count(*) from public.partners) as partner_count,
+              (select count(*) from public.intermediary_groups) as group_count,
+              (select count(*) from public.intermediary_group_memberships) as membership_count,
+              (select count(*) from public.intermediary_portal_accounts) as partner_portal_account_count;
+          ")
+          echo "$result"
+          echo "PRE_PARTNER_COUNT=$(jq -r '.[0].partner_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_GROUP_COUNT=$(jq -r '.[0].group_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_MEMBERSHIP_COUNT=$(jq -r '.[0].membership_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_PARTNER_PORTAL_COUNT=$(jq -r '.[0].partner_portal_account_count' <<<"$result")" >> "$GITHUB_ENV"
 
-      - name: Link production project
+      - name: Apply Group/Branch portal access migrations
         shell: bash
-        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        run: |
+          set -euo pipefail
+          for version in 20260915123000 20260915124500 20260915125000; do
+            file="supabase/migrations/${version}_$(case "$version" in
+              20260915123000) echo group_branch_portal_access ;;
+              20260915124500) echo group_branch_partner_runtime ;;
+              20260915125000) echo group_branch_partner_identity ;;
+            esac).sql"
+            echo "Applying $file"
+            supabase db query --linked --file "$file"
+            supabase migration repair --linked --status applied "$version"
+          done
 
-      - name: Apply repository migrations
+      - name: Verify schema, ACLs, no backfill, and business invariants
         shell: bash
-        run: supabase db push --linked --password "$SUPABASE_DB_PASSWORD"
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.portal_access_identities') is not null as access_table_ready,
+              to_regprocedure('public.partner_portal_access_context()') is not null as access_context_ready,
+              to_regprocedure('public.partner_app_current_identity()') is not null as identity_ready,
+              to_regprocedure('public.partner_app_legacy_current_identity()') is not null as legacy_identity_ready,
+              to_regprocedure('public.partner_app_commercial_scope()') is not null as scope_ready,
+              not has_function_privilege('anon', 'public.partner_app_current_identity()', 'EXECUTE') as identity_anon_blocked,
+              has_function_privilege('authenticated', 'public.partner_app_current_identity()', 'EXECUTE') as identity_authenticated_ready,
+              not has_function_privilege('authenticated', 'public.partner_app_legacy_current_identity()', 'EXECUTE') as legacy_authenticated_blocked,
+              (select count(*) from public.portal_access_identities) as access_count,
+              (select count(*) from public.partners) as partner_count,
+              (select count(*) from public.intermediary_groups) as group_count,
+              (select count(*) from public.intermediary_group_memberships) as membership_count,
+              (select count(*) from public.intermediary_portal_accounts) as partner_portal_account_count;
+          ")
+          echo "$result"
 
-      - name: Verify schema parity
+          test "$(jq -r '.[0].access_table_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].access_context_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].identity_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].legacy_identity_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].scope_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].identity_anon_blocked' <<<"$result")" = "true"
+          test "$(jq -r '.[0].identity_authenticated_ready' <<<"$result")" = "true"
+          test "$(jq -r '.[0].legacy_authenticated_blocked' <<<"$result")" = "true"
+          test "$(jq -r '.[0].access_count' <<<"$result")" = "0"
+          test "$(jq -r '.[0].partner_count' <<<"$result")" = "$PRE_PARTNER_COUNT"
+          test "$(jq -r '.[0].group_count' <<<"$result")" = "$PRE_GROUP_COUNT"
+          test "$(jq -r '.[0].membership_count' <<<"$result")" = "$PRE_MEMBERSHIP_COUNT"
+          test "$(jq -r '.[0].partner_portal_account_count' <<<"$result")" = "$PRE_PARTNER_PORTAL_COUNT"
+
+      - name: Verify migration history
         shell: bash
         run: |
           set -euo pipefail
           supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" | tee /tmp/migration-list.txt
           for version in 20260915123000 20260915124500 20260915125000; do
-            grep -q "$version" /tmp/migration-list.txt || { echo "Migration $version missing from production history"; exit 1; }
+            grep -q "$version" /tmp/migration-list.txt || {
+              echo "::error::Migration $version missing from production history."
+              exit 1
+            }
           done
