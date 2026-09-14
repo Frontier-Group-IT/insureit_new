@@ -41,9 +41,11 @@ const matcherRoots = new Set(
     .map((value) => value.slice(0, -"/:path*".length)),
 );
 
+// Authentication entry/callback pages and intentionally public legal/demo pages must stay reachable without a portal session.
 const intentionallyPublicPageRoots = new Set([
   "access-denied",
   "account-deletion",
+  "auth",
   "forgot-password",
   "invite",
   "login",
