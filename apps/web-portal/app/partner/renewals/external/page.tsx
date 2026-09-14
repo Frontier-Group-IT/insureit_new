@@ -1,8 +1,17 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Bot, CalendarClock, Search } from "lucide-react";
+import {
+  ArrowRight,
+  Bell,
+  Bot,
+  CalendarClock,
+  CalendarDays,
+  FileText,
+  MoreHorizontal,
+  Search,
+  UsersRound,
+} from "lucide-react";
 import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { PartnerMetricStrip, PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
 import {
   getPartnerExternalRenewalSummary,
   listPartnerExternalRenewals,
@@ -64,7 +73,7 @@ function dateTimeLabel(value: string | null | undefined) {
 function expiryLabel(days: number) {
   if (days < 0) return Math.abs(days) + "d overdue";
   if (days === 0) return "Due today";
-  return days + "d left";
+  return "In " + days + " days";
 }
 
 function statusLabel(value: string) {
@@ -104,16 +113,17 @@ function voiceStateLabel(value: string) {
 }
 
 function voiceStateClass(value: string) {
-  if (value === "interested" || value === "connected") return "bg-[#EEF8F1] text-[#2F6B43]";
-  if (value === "human_needed" || value === "failed") return "bg-[#FFF2F1] text-[#9A4540]";
-  if (value === "queued" || value === "calling" || value === "follow_up") return "bg-[#E9F0FF] text-[#3156B8]";
-  if (value === "no_answer" || value === "busy" || value === "needs_details") return "bg-[#FFF7E8] text-[#8A6423]";
-  return "bg-[#F1F4F8] text-[#5A6D86]";
+  if (value === "interested" || value === "connected") return "bg-[#EAF9F1] text-[#1C8C59]";
+  if (value === "human_needed" || value === "failed") return "bg-[#FFF0F0] text-[#C04444]";
+  if (value === "queued" || value === "calling" || value === "follow_up") return "bg-[#EAF1FF] text-[#2769CE]";
+  if (value === "no_answer" || value === "busy" || value === "needs_details") return "bg-[#FFF5E5] text-[#A36A13]";
+  return "bg-[#EEF3F8] text-[#5C708D]";
 }
 
-function intakeStatusLabel(value: string | null) {
-  if (!value) return "In Policy Intake";
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+function statusClass(value: string) {
+  if (value === "closed" || value === "won") return "bg-[#E9F8EF] text-[#178557]";
+  if (value === "follow_up" || value === "quote_requested" || value === "quote_shared") return "bg-[#FFF3DF] text-[#B36D0B]";
+  return "bg-[#E9F8EF] text-[#178557]";
 }
 
 export default async function PartnerExternalRenewalsPage({
@@ -135,6 +145,7 @@ export default async function PartnerExternalRenewalsPage({
     getPartnerExternalRenewalSummary(),
     listPartnerExternalRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window, status, followUp, intake }),
   ]);
+
   const voiceStates = await getPartnerExternalRenewalVoiceStates(rows.map((row) => row.opportunity_id));
   const voiceStateByOpportunity = new Map(voiceStates.map((state) => [state.opportunity_id, state]));
   const voiceEnabled = isSarvamRenewalCallingEnabled();
@@ -177,162 +188,169 @@ export default async function PartnerExternalRenewalsPage({
         ? "Follow-up worklist"
         : "30-day opportunity worklist";
 
+  const metrics = [
+    { label: "Due in 30 Days", value: summary.due_30_count, meta: "External opportunities", icon: CalendarDays, wrap: "bg-[#EAF3FF] text-[#2170E8]" },
+    { label: "Not Contacted", value: summary.uncontacted_count, meta: "Start outreach", icon: UsersRound, wrap: "bg-[#F1E9FF] text-[#744FE0]" },
+    { label: "Follow-ups Due", value: summary.follow_up_due_count, meta: "Needs attention", icon: Bell, wrap: "bg-[#FFF0E8] text-[#F06B23]" },
+    { label: "In Policy Intake", value: summary.in_policy_intake_count, meta: "Conversion in progress", icon: FileText, wrap: "bg-[#E6F8EF] text-[#1BB36C]" },
+  ];
+
   return (
-    <PartnerPortalShell title="External Renewal Opportunities">
-      <div className="space-y-7">
-        <PartnerPageHeader
-          eyebrow="External Renewal Opportunities"
-          title="Renewal outreach"
-          description="Retarget external-policy customers through controlled outreach while keeping opportunities separate from verified INSUREIT business."
-          action={
-            <Link href="/partner/renewals" prefetch={false} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] px-3.5 text-[10px] font-bold text-[#203653] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to Renewals
-            </Link>
-          }
-        />
+    <PartnerPortalShell title="External Opportunities">
+      <div className="space-y-3 pb-4">
+        <section className="grid overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_14px_rgba(31,55,86,0.04)] sm:grid-cols-2 xl:grid-cols-4">
+          {metrics.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className={"flex min-h-[78px] items-center gap-3 px-4 py-3 " + (index ? "border-t border-[#E6ECF3] sm:border-t-0 sm:border-l" : "") + (index === 2 ? " sm:border-t xl:border-t-0" : "")}>
+                <span className={"grid h-10 w-10 shrink-0 place-items-center rounded-xl " + item.wrap}><Icon className="h-5 w-5" /></span>
+                <div className="min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-[0.06em] text-[#657A98]">{item.label}</p>
+                  <p className="mt-0.5 text-[19px] font-black leading-none text-[#142B50]">{item.value}</p>
+                  <p className="mt-1.5 text-[9px] font-medium text-[#6E82A1]">{item.meta}</p>
+                </div>
+              </div>
+            );
+          })}
+        </section>
 
-        <PartnerMetricStrip
-          items={[
-            { label: "Due in 30 Days", value: summary.due_30_count, meta: "External opportunities" },
-            { label: "Not Contacted", value: summary.uncontacted_count, meta: "Start outreach" },
-            { label: "Follow-ups Due", value: summary.follow_up_due_count, meta: "Needs attention" },
-            { label: "In Policy Intake", value: summary.in_policy_intake_count, meta: "Conversion in progress" },
-          ]}
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-[#DCE4ED] py-3 sm:px-4">
-          <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-[#3156B8]" />
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DDE6F0] bg-white px-4 py-3 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EAF3FF] text-[#2A6FD8]"><Bot className="h-4 w-4" /></span>
             <div>
-              <p className="text-[10px] font-extrabold text-[#203653]">AI renewal outreach</p>
-              <p className="mt-0.5 text-[9px] text-[#7A899F]">Single-customer AI calls are controlled from each opportunity. Provider administration is not exposed here.</p>
+              <p className="text-[11px] font-extrabold text-[#1B3152]">AI renewal outreach</p>
+              <p className="mt-0.5 text-[9px] text-[#7184A0]">Single-customer AI calls are controlled from each opportunity. Provider administration is not exposed here.</p>
             </div>
           </div>
-          <span className={"rounded-full px-2.5 py-1 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EEF8F1] text-[#2F6B43]" : "bg-[#F1F4F8] text-[#687A91]")}>{voiceEnabled ? "AI calling available" : "AI calling not enabled"}</span>
-        </div>
+          <span className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EAF8F0] text-[#25875A]" : "bg-[#F1F4F8] text-[#6B7E98]")}>{voiceEnabled ? "AI calling available" : "AI calling not enabled"}</span>
+        </section>
 
-        <section>
-          <div className="border-y border-[#DCE4ED] py-3">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="flex flex-wrap gap-2">
-                <Link href={hrefFor({ mode: "due", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "due" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Due</Link>
-                <Link href={hrefFor({ mode: "follow_up", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "follow_up" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Follow-ups</Link>
-                <Link href={hrefFor({ mode: "expired", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "expired" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Recently Expired</Link>
-                <Link href={hrefFor({ mode: "future", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (mode === "future" ? "bg-[#3156B8] text-white" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>Future</Link>
-              </div>
-
-              <form action="/partner/renewals/external" className="flex w-full gap-2 xl:max-w-[520px]">
-                {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
-                {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
-                {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
-                {followUp !== "all" && mode === "follow_up" ? <input type="hidden" name="follow_up" value={followUp} /> : null}
-                {intake !== "all" ? <input type="hidden" name="intake" value={intake} /> : null}
-                <div className="relative min-w-0 flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                  <input name="q" defaultValue={q} placeholder="Search customer, mobile, vehicle or chassis" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-                </div>
-                <button className="h-9 rounded-lg bg-[#111A35] px-3.5 text-[10px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25" type="submit">Search</button>
-              </form>
-            </div>
+        <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[#E7EDF4] px-4 py-3">
+            <span className="mr-2 text-[9px] font-extrabold text-[#324866]">Timeframe</span>
+            <Link href={hrefFor({ mode: "due", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "due" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Due</Link>
+            <Link href={hrefFor({ mode: "follow_up", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "follow_up" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Follow-ups</Link>
+            <Link href={hrefFor({ mode: "expired", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "expired" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Recently Expired</Link>
+            <Link href={hrefFor({ mode: "future", window: "all", followUp: "all", page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (mode === "future" ? "bg-[#1670F4] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>Future</Link>
 
             {mode === "due" ? (
-              <div className="mt-3 flex flex-wrap gap-2">
+              <>
+                <span className="ml-3 border-l border-[#E2E8F0] pl-4 text-[9px] font-extrabold text-[#324866]">Date Range</span>
                 {(["all", "0_7", "8_15", "16_30"] as PartnerExternalRenewalWindow[]).map((value) => (
-                  <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-lg px-2.5 py-1.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (window === value ? "bg-[#E9F0FF] text-[#3156B8]" : "bg-[#F4F6F9] text-[#657792]")}>
+                  <Link key={value} href={hrefFor({ window: value, page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (window === value ? "bg-[#E7F0FF] text-[#2669D2]" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>
                     {value === "all" ? "All 30 Days" : value.replace("_", "–") + " Days"}
                   </Link>
                 ))}
-              </div>
+              </>
             ) : null}
+          </div>
 
-            {mode === "follow_up" ? (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {(["all", "due", "scheduled"] as PartnerExternalRenewalFollowUpFilter[]).map((value) => (
-                  <Link key={value} href={hrefFor({ followUp: value, page: 1 })} className={"rounded-lg px-2.5 py-1.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (followUp === value ? "bg-[#E9F0FF] text-[#3156B8]" : "bg-[#F4F6F9] text-[#657792]")}>
-                    {value === "all" ? "All Follow-ups" : value === "due" ? "Due Now" : "Scheduled"}
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+            <span className="mr-2 text-[9px] font-extrabold text-[#324866]">Policy Status</span>
+            {(["all", "not_started", "in_progress"] as PartnerExternalRenewalIntakeFilter[]).map((value) => (
+              <Link key={value} href={hrefFor({ intake: value, page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (intake === value ? "bg-[#E7F0FF] text-[#2669D2]" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>
+                {value === "all" ? "All Policy Intake" : value === "not_started" ? "Not Started" : "In Policy Intake"}
+              </Link>
+            ))}
+
+            <span className="ml-3 border-l border-[#E2E8F0] pl-4 text-[9px] font-extrabold text-[#324866]">Other Filters</span>
+            {(["all", "new", "contacted", "interested", "quote", "follow_up", "closed"] as PartnerExternalRenewalStatusFilter[]).map((value) => (
+              <Link key={value} href={hrefFor({ status: value, page: 1 })} className={"rounded-lg px-3 py-2 text-[9px] font-bold " + (status === value ? "bg-[#0F2348] text-white" : "border border-[#DCE4EE] bg-white text-[#566D8B]")}>
+                {value === "all" ? "Active" : value === "follow_up" ? "Follow-up" : value.charAt(0).toUpperCase() + value.slice(1)}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_14px_rgba(31,55,86,0.04)]">
+          <div className="flex flex-col gap-3 border-b border-[#E5EBF2] px-4 py-3 xl:flex-row xl:items-center">
+            <div className="min-w-0">
+              <h2 className="text-[16px] font-black tracking-[-0.02em] text-[#142B50]">{modeTitle}</h2>
+              <p className="mt-0.5 text-[9.5px] font-medium text-[#6F829F]">{rows.length} shown · {total} matched</p>
+            </div>
+
+            <form action="/partner/renewals/external" className="w-full xl:ml-auto xl:max-w-[380px]">
+              {mode !== "due" ? <input type="hidden" name="mode" value={mode} /> : null}
+              {window !== "all" && mode === "due" ? <input type="hidden" name="window" value={window} /> : null}
+              {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
+              {followUp !== "all" && mode === "follow_up" ? <input type="hidden" name="follow_up" value={followUp} /> : null}
+              {intake !== "all" ? <input type="hidden" name="intake" value={intake} /> : null}
+              <div className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
+                <input name="q" defaultValue={q} placeholder="Search customer, mobile, vehicle or channel..." className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
+              </div>
+            </form>
+          </div>
+
+          <div className="hidden grid-cols-[42px_minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] items-center gap-4 bg-[#F5F8FC] px-4 py-2.5 text-[8px] font-extrabold uppercase tracking-[0.04em] text-[#6484AB] xl:grid">
+            <span />
+            <span>Customer / Business</span>
+            <span>Policy / Reference</span>
+            <span>Expiry Date</span>
+            <span>Status</span>
+            <span>AI Outreach</span>
+            <span className="text-center">Actions</span>
+          </div>
+
+          {rows.length ? (
+            <div className="divide-y divide-[#E8EDF4]">
+              {rows.map((row) => {
+                const voiceState = voiceStateByOpportunity.get(row.opportunity_id)?.voice_state ?? (row.mobile ? "available" : "needs_details");
+                return (
+                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[42px_minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] xl:items-center xl:gap-4">
+                    <span className="hidden h-5 w-5 rounded border border-[#C8D4E2] bg-white xl:block" aria-hidden="true" />
+
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2F72DE]"><CalendarClock className="h-3.5 w-3.5" /></span>
+                      <div className="min-w-0">
+                        <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1A3154]">{row.account_name || row.customer_name || row.contact_name || "Customer"}</p>
+                        <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7184A0]">{[row.city, row.state].filter(Boolean).join(", ") || row.contact_name || "Contact not recorded"}</p>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="break-words text-[10px] font-semibold leading-4 text-[#1E3B66]">{row.registration_no || row.chassis_no || "Vehicle"}</p>
+                      <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7489A5]">{[row.vehicle_make, row.vehicle_model, row.vehicle_lob].filter(Boolean).join(" · ") || "Vehicle details not recorded"}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] font-extrabold text-[#1D385B]">Ends {dateLabel(row.policy_end_date)}</p>
+                      <p className="mt-0.5 text-[9px] text-[#7489A5]">{expiryLabel(row.days_to_expiry)}</p>
+                    </div>
+
+                    <div className="min-w-0">
+                      <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + statusClass(row.opportunity_status)}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabel(row.opportunity_status)}</span>
+                      <p className="mt-1.5 truncate text-[8px] font-medium text-[#7B8CA4]">
+                        {row.next_follow_up_at
+                          ? "Follow-up " + dateTimeLabel(row.next_follow_up_at)
+                          : row.last_interaction_at
+                            ? "Last contact " + dateTimeLabel(row.last_interaction_at)
+                            : "No interaction yet"}
+                      </p>
+                    </div>
+
+                    <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + (voiceEnabled ? voiceStateClass(voiceState) : "bg-[#EEF3F8] text-[#687D99]")}><Bot className="h-3 w-3" />{voiceEnabled ? voiceStateLabel(voiceState) : "AI Not Enabled"}</span>
+
+                    <span className="hidden h-8 w-8 place-items-center justify-self-end rounded-full text-[#176AF0] transition group-hover:bg-[#EEF4FF] xl:grid"><MoreHorizontal className="h-4 w-4" /></span>
                   </Link>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="mt-3 flex flex-wrap gap-2 border-t border-[#E7ECF2] pt-3">
-              {(["all", "new", "contacted", "interested", "quote", "follow_up", "closed"] as PartnerExternalRenewalStatusFilter[]).map((value) => (
-                <Link key={value} href={hrefFor({ status: value, page: 1 })} className={"rounded-lg px-2.5 py-1.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (status === value ? "bg-[#111A35] text-white" : "bg-[#F4F6F9] text-[#657792]")}>
-                  {value === "all" ? "Active" : value === "follow_up" ? "Follow-up" : value.charAt(0).toUpperCase() + value.slice(1)}
-                </Link>
-              ))}
+                );
+              })}
             </div>
-
-            <div className="mt-3 flex flex-wrap gap-2 border-t border-[#E7ECF2] pt-3">
-              {(["all", "not_started", "in_progress"] as PartnerExternalRenewalIntakeFilter[]).map((value) => (
-                <Link key={value} href={hrefFor({ intake: value, page: 1 })} className={"rounded-lg px-2.5 py-1.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (intake === value ? "bg-[#E9F0FF] text-[#3156B8]" : "bg-[#F4F6F9] text-[#657792]")}>
-                  {value === "all" ? "All Policy Intake" : value === "not_started" ? "Not Started" : "In Policy Intake"}
-                </Link>
-              ))}
+          ) : (
+            <div className="py-14 text-center">
+              <CalendarClock className="mx-auto h-7 w-7 text-[#9AABC0]" />
+              <p className="mt-3 text-[12px] font-bold text-[#23395D]">No external renewal opportunities found</p>
+              <p className="mt-1 text-[10.5px] text-[#7A899F]">Published opportunity data matching this filter will appear here.</p>
             </div>
-          </div>
+          )}
 
-          <div className="mt-5">
-            <PartnerSectionHeading title={modeTitle} description={rows.length + " shown · " + total + " matched"} />
-          </div>
-
-          <div className="mt-3 border-y border-[#DCE4ED]">
-            {rows.length ? (
-              <div className="divide-y divide-[#E8EDF4]">
-                {rows.map((row) => {
-                  const voiceState = voiceStateByOpportunity.get(row.opportunity_id)?.voice_state ?? (row.mobile ? "available" : "needs_details");
-                  return (
-                    <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-1 py-3.5 transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-4 sm:py-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(170px,.8fr)_minmax(190px,.9fr)_auto] xl:items-center">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><CalendarClock className="h-4 w-4" /></span>
-                        <div className="min-w-0">
-                          <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.account_name || row.customer_name || row.contact_name || "Customer"}</p>
-                          <p className="mt-0.5 break-words text-[9.5px] font-medium leading-4 text-[#74839A]">{row.contact_name || "Contact not recorded"}{row.mobile ? " · " + row.mobile : ""}</p>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="break-words text-[10px] font-semibold leading-4 text-[#536680]">{row.registration_no || row.chassis_no || "Vehicle"}</p>
-                        <p className="mt-0.5 break-words text-[9.5px] leading-4 text-[#7F8EA4]">{[row.vehicle_make, row.vehicle_model, row.vehicle_lob].filter(Boolean).join(" · ") || "Vehicle details not recorded"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10.5px] font-extrabold text-[#203653]">Ends {dateLabel(row.policy_end_date)}</p>
-                        <p className="mt-0.5 text-[9px] text-[#8190A5]">{expiryLabel(row.days_to_expiry)}</p>
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap gap-1.5">
-                          <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.opportunity_status)}</span>
-                          <span className={"inline-flex w-fit items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-bold " + (voiceEnabled ? voiceStateClass(voiceState) : "bg-[#F1F4F8] text-[#74839A]")}><Bot className="h-3 w-3" /> {voiceEnabled ? voiceStateLabel(voiceState) : "AI Not Enabled"}</span>
-                        </div>
-                        {row.intake_state === "in_progress" ? (
-                          <div className="mt-1.5">
-                            <span className="inline-flex w-fit rounded-lg bg-[#E9F0FF] px-2 py-1 text-[9px] font-bold text-[#3156B8]">In Policy Intake</span>
-                            <p className="mt-1 break-words text-[9px] leading-4 text-[#6E7F98]">{row.intake_number ? row.intake_number + " · " + intakeStatusLabel(row.intake_status) : "Policy Intake already started"}</p>
-                          </div>
-                        ) : (
-                          <p className="mt-1 text-[9px] leading-4 text-[#7D8CA2]">{row.next_follow_up_at ? "Follow-up " + dateTimeLabel(row.next_follow_up_at) : row.last_interaction_at ? "Last contact " + dateTimeLabel(row.last_interaction_at) : "No interaction yet"}</p>
-                        )}
-                      </div>
-                      <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="py-14 text-center">
-                <CalendarClock className="mx-auto h-7 w-7 text-[#9AABC0]" />
-                <p className="mt-3 text-[12px] font-bold text-[#23395D]">No external renewal opportunities found</p>
-                <p className="mt-1 text-[10.5px] text-[#7A899F]">Published opportunity data matching this filter will appear here.</p>
-              </div>
-            )}
-
-            <PartnerPagination
-              page={page}
-              pageSize={PAGE_SIZE}
-              total={total}
-              previousHref={hasPrevious ? hrefFor({ page: page - 1 }) : null}
-              nextHref={hasNext ? hrefFor({ page: page + 1 }) : null}
-            />
-          </div>
+          <PartnerPagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={total}
+            previousHref={hasPrevious ? hrefFor({ page: page - 1 }) : null}
+            nextHref={hasNext ? hrefFor({ page: page + 1 }) : null}
+          />
         </section>
       </div>
     </PartnerPortalShell>
