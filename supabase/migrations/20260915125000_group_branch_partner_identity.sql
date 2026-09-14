@@ -1,129 +1,29 @@
 begin;
 
--- Snapshot the existing Partner/Employee identity behavior under a private helper.
--- The body below is the pre-existing partner_app_current_identity implementation.
-create or replace function public.partner_app_legacy_current_identity()
-returns jsonb
-language plpgsql
-stable
-security definer
-set search_path = public, auth
-as $$
-declare
-  v_auth_user_id uuid := auth.uid();
-  v_portal_account_id uuid;
-  v_intermediary_id uuid;
-  v_intermediary_type text;
-  v_intermediary_code text;
-  v_intermediary_name text;
-  v_partner_id uuid;
-  v_partner_code text;
-  v_partner_name text;
-  v_profile_id uuid;
-  v_profile_role text;
-  v_employee_id uuid;
-  v_employee_code text;
-  v_employee_name text;
-  v_employee_designation text;
+-- Preserve the exact Partner/Employee identity implementation that is live when
+-- this migration is applied. Renaming the function keeps its OID/body intact,
+-- so this feature cannot overwrite a newer legacy Partner identity contract.
+do $$
 begin
-  if v_auth_user_id is null then
-    return null;
+  if to_regprocedure('public.partner_app_legacy_current_identity()') is not null then
+    raise exception 'partner_app_legacy_current_identity already exists';
   end if;
 
-  select
-    ipa.id,
-    ipa.intermediary_id,
-    i.intermediary_type,
-    i.intermediary_code,
-    i.display_name
-  into
-    v_portal_account_id,
-    v_intermediary_id,
-    v_intermediary_type,
-    v_intermediary_code,
-    v_intermediary_name
-  from public.intermediary_portal_accounts ipa
-  join public.intermediaries i on i.id = ipa.intermediary_id
-  where ipa.auth_user_id = v_auth_user_id
-    and ipa.status = 'active'
-  limit 1;
-
-  select
-    p.id,
-    p.role::text,
-    p.employee_id,
-    e.employee_code,
-    e.full_name,
-    e.designation
-  into
-    v_profile_id,
-    v_profile_role,
-    v_employee_id,
-    v_employee_code,
-    v_employee_name,
-    v_employee_designation
-  from public.profiles p
-  join public.employees e on e.id = p.employee_id
-  where p.id = v_auth_user_id
-    and p.is_active = true
-    and e.employment_status = 'active'
-  limit 1;
-
-  if v_portal_account_id is not null and v_profile_id is not null then
-    raise exception 'Ambiguous INSUREIT Partner identity for authenticated user'
-      using errcode = '28000';
+  if to_regprocedure('public.partner_app_current_identity()') is null then
+    raise exception 'partner_app_current_identity is required';
   end if;
 
-  if v_portal_account_id is not null then
-    v_partner_id := public.partner_app_resolve_partner_family(v_intermediary_id);
-
-    if v_partner_id is null then
-      raise exception 'Intermediary account does not resolve to one active permanent Partner family'
-        using errcode = '28000';
-    end if;
-
-    select p.partner_code, p.display_name
-    into v_partner_code, v_partner_name
-    from public.partners p
-    where p.id = v_partner_id;
-
-    return jsonb_build_object(
-      'actor_kind', 'intermediary',
-      'auth_user_id', v_auth_user_id,
-      'portal_account_id', v_portal_account_id,
-      'intermediary_id', v_intermediary_id,
-      'intermediary_type', v_intermediary_type,
-      'intermediary_code', v_intermediary_code,
-      'display_name', v_intermediary_name,
-      'partner_id', v_partner_id,
-      'partner_code', v_partner_code,
-      'partner_name', v_partner_name
-    );
-  end if;
-
-  if v_profile_id is not null then
-    return jsonb_build_object(
-      'actor_kind', 'employee',
-      'auth_user_id', v_auth_user_id,
-      'profile_id', v_profile_id,
-      'role', v_profile_role,
-      'employee_id', v_employee_id,
-      'employee_code', v_employee_code,
-      'display_name', v_employee_name,
-      'designation', v_employee_designation
-    );
-  end if;
-
-  return null;
+  alter function public.partner_app_current_identity()
+    rename to partner_app_legacy_current_identity;
 end;
 $$;
 
 revoke all on function public.partner_app_legacy_current_identity() from public, anon, authenticated;
 grant execute on function public.partner_app_legacy_current_identity() to service_role;
 
--- Public/current identity now checks the explicit Group/Branch mapping first and
--- otherwise delegates to the exact legacy behavior above.
-create or replace function public.partner_app_current_identity()
+-- Canonical identity resolver: explicit Group/Branch access first; otherwise
+-- delegate to the untouched legacy Partner/Employee implementation above.
+create function public.partner_app_current_identity()
 returns jsonb
 language plpgsql
 stable
@@ -211,7 +111,8 @@ begin
 end;
 $$;
 
--- Keep the convenience wrapper aligned with the canonical identity function.
+-- Convenience alias for callers that want to make the broader portal identity
+-- contract explicit. Existing Partner callers can keep using the canonical RPC.
 create or replace function public.partner_portal_current_identity()
 returns jsonb
 language sql
