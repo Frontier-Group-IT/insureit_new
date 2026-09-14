@@ -10,6 +10,7 @@ type UserMenuProps = {
   profile: Profile | null;
   user: Pick<User, "email" | "id"> | null;
   homeHref?: string;
+  displayNameOverride?: string | null;
 };
 
 function initialsFor(name?: string | null, email?: string | null) {
@@ -18,15 +19,15 @@ function initialsFor(name?: string | null, email?: string | null) {
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "IU";
 }
 
-export function UserMenu({ profile, user, homeHref = internalLaunchHome }: UserMenuProps) {
+export function UserMenu({ profile, user, homeHref = internalLaunchHome, displayNameOverride }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetMessage, setResetMessage] = useState<string | null>(null);
-  const displayName = profile?.full_name || user?.email || "Signed-in user";
-  const initials = useMemo(() => initialsFor(profile?.full_name, user?.email), [profile?.full_name, user?.email]);
+  const displayName = displayNameOverride?.trim() || profile?.full_name || user?.email || "Signed-in user";
+  const initials = useMemo(() => initialsFor(displayName, user?.email), [displayName, user?.email]);
 
   useEffect(() => {
     if (!isOpen) return;
