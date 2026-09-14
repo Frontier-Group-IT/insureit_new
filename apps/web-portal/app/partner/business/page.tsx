@@ -236,53 +236,35 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
         <section className="grid gap-4 xl:grid-cols-[1.22fr_.78fr]">
           <div className="rounded-xl border border-[#DCE5F1] bg-white p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[#2875E8]">
-                  <BarChart3 className="h-4 w-4" />
-                </span>
-                <div>
-                  <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">New vs Renewal Premium Trend</h2>
-                  <p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">Business-type premium split across the last six months</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 text-[8px] font-bold text-[#61728A]">
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />New Business</span>
-                <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#7145E9]" />Renewal Business</span>
+            <div className="flex items-start gap-2.5 border-b border-[#EDF1F5] pb-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#3156B8]">
+                <TrendingUp className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[#142B50]">Top Insurer Contribution</h2>
+                <p className="mt-0.5 text-[8.5px] font-medium text-[#8190A5]">Premium contribution by insurer</p>
               </div>
             </div>
-
-            {hasBusinessTypeClassification ? (
-              <div className="mt-3 flex min-h-[215px] items-end gap-2 overflow-x-auto border-t border-[#EEF2F6] pt-3">
-                {monthlySplit.map((item) => {
-                  const total = item.newPremium + item.renewalPremium;
-                  const totalHeight = Math.max(total > 0 ? 8 : 0, Math.round((total / maxSplitPremium) * 136));
-                  const newHeight = total > 0 ? Math.round((item.newPremium / total) * totalHeight) : 0;
-                  const renewalHeight = Math.max(0, totalHeight - newHeight);
-                  return (
-                    <div key={item.month} className="flex min-w-[72px] flex-1 flex-col items-center">
-                      <p className="mb-1.5 text-center text-[8px] font-extrabold text-[#526B91]">{currency(total)}</p>
-                      <div className="flex h-[140px] w-full items-end justify-center px-2">
-                        <div className="flex w-full max-w-[44px] flex-col-reverse overflow-hidden rounded-t-md shadow-[0_5px_10px_rgba(58,86,185,0.14)]" style={{ height: totalHeight }}>
-                          {newHeight > 0 ? <div className="w-full bg-[#1689EA]" style={{ height: newHeight }} /> : null}
-                          {renewalHeight > 0 ? <div className="w-full bg-[#7145E9]" style={{ height: renewalHeight }} /> : null}
-                        </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {insurerMix.length ? insurerMix.map((item, index) => {
+                const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
+                return (
+                  <div key={item.label} className="grid grid-cols-[22px_minmax(0,1fr)_78px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
+                    <span className="text-center text-[8.5px] font-black text-[#526782]">{index + 1}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-[9px] font-extrabold text-[#263A58]">{item.label}</p>
+                        <p className="text-[8px] font-bold text-[#657792]">{percentage(percent)}</p>
                       </div>
-                      <p className="mt-1.5 text-[9px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
-                      <p className="text-[7.5px] text-[#8190A5]">N {currency(item.newPremium)} · R {currency(item.renewalPremium)}</p>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
+                        <div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} />
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="mt-3 grid min-h-[215px] place-items-center rounded-lg border border-dashed border-[#D9E2EE] bg-[#FAFBFD] px-6 text-center">
-                <div>
-                  <Layers3 className="mx-auto h-5 w-5 text-[#8A99AE]" />
-                  <p className="mt-2 text-[10.5px] font-extrabold text-[#31445F]">Business-type split is not available yet</p>
-                  <p className="mt-1 text-[9px] font-medium text-[#7D8CA1]">The chart will populate automatically when policies are classified as new/fresh or renewal business.</p>
-                </div>
-              </div>
-            )}
+                    <p className="text-right text-[8.5px] font-extrabold text-[#27405F]">{currency(item.premium)}</p>
+                  </div>
+                );
+              }) : <EmptyLine text="No insurer contribution is available for this period." />}
+            </div>
           </div>
 
           <div className="rounded-xl border border-[#D8EADF] bg-gradient-to-br from-[#F8FCFA] to-[#EEF9F5] p-4 shadow-[0_4px_14px_rgba(25,50,90,0.05)]">
@@ -319,27 +301,41 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
         </section>
 
         <section className="grid gap-4 xl:grid-cols-3">
-          <InsightPanel icon={TrendingUp} title="Top Insurer Contribution" subtitle="Premium contribution by insurer">
-            <div className="space-y-2">
-              {insurerMix.length ? insurerMix.map((item, index) => {
-                const percent = analysisPremium > 0 ? Math.min(100, (item.premium / analysisPremium) * 100) : 0;
-                return (
-                  <div key={item.label} className="grid grid-cols-[22px_minmax(0,1fr)_78px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
-                    <span className="text-center text-[8.5px] font-black text-[#526782]">{index + 1}</span>
-                    <div className="min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-[9px] font-extrabold text-[#263A58]">{item.label}</p>
-                        <p className="text-[8px] font-bold text-[#657792]">{percentage(percent)}</p>
-                      </div>
-                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]">
-                        <div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} />
-                      </div>
-                    </div>
-                    <p className="text-right text-[8.5px] font-extrabold text-[#27405F]">{currency(item.premium)}</p>
-                  </div>
-                );
-              }) : <EmptyLine text="No insurer contribution is available for this period." />}
+          <InsightPanel icon={BarChart3} title="New vs Renewal Premium Trend" subtitle="Business-type premium split across the last six months">
+            <div className="flex items-center gap-3 text-[8px] font-bold text-[#61728A]">
+              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />New Business</span>
+              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#7145E9]" />Renewal Business</span>
             </div>
+            {hasBusinessTypeClassification ? (
+              <div className="flex min-h-[155px] items-end gap-1.5 overflow-x-auto border-t border-[#EEF2F6] pt-3">
+                {monthlySplit.map((item) => {
+                  const total = item.newPremium + item.renewalPremium;
+                  const totalHeight = Math.max(total > 0 ? 6 : 0, Math.round((total / maxSplitPremium) * 96));
+                  const newHeight = total > 0 ? Math.round((item.newPremium / total) * totalHeight) : 0;
+                  const renewalHeight = Math.max(0, totalHeight - newHeight);
+                  return (
+                    <div key={item.month} className="flex min-w-[50px] flex-1 flex-col items-center">
+                      <p className="mb-1 text-center text-[7px] font-extrabold text-[#526B91]">{currency(total)}</p>
+                      <div className="flex h-[100px] w-full items-end justify-center px-1">
+                        <div className="flex w-full max-w-[28px] flex-col-reverse overflow-hidden rounded-t-md" style={{ height: totalHeight }}>
+                          {newHeight > 0 ? <div className="w-full bg-[#1689EA]" style={{ height: newHeight }} /> : null}
+                          {renewalHeight > 0 ? <div className="w-full bg-[#7145E9]" style={{ height: renewalHeight }} /> : null}
+                        </div>
+                      </div>
+                      <p className="mt-1 text-[8px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid min-h-[155px] place-items-center rounded-lg border border-dashed border-[#D9E2EE] bg-[#FAFBFD] px-4 text-center">
+                <div>
+                  <Layers3 className="mx-auto h-5 w-5 text-[#8A99AE]" />
+                  <p className="mt-2 text-[10px] font-extrabold text-[#31445F]">Business-type split is not available yet</p>
+                  <p className="mt-1 text-[8px] font-medium text-[#7D8CA1]">The chart will populate when policies are classified as new/fresh or renewal business.</p>
+                </div>
+              </div>
+            )}
           </InsightPanel>
 
           <InsightPanel icon={UsersRound} title="Customer Value & Portfolio Quality" subtitle="Indicators for sustainable growth">
