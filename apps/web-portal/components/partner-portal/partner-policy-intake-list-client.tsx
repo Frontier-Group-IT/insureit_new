@@ -377,7 +377,7 @@ export function PartnerPolicyIntakeListClient() {
                     setFilter(tab.key);
                     setPage(1);
                   }}
-                  className={`shrink-0 rounded-lg px-3 py-2 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
+                  className={`min-w-[96px] flex-1 whitespace-nowrap rounded-lg px-3 py-2 text-center text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
                     active ? "bg-[#123F73] text-white shadow-sm" : "text-[#60728C] hover:bg-[#F4F7FB] hover:text-[#203653]"
                   }`}
                 >
