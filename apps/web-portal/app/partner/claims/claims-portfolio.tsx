@@ -111,9 +111,6 @@ export function PartnerClaimsPortfolio({ rows }: { rows: PartnerClaimPortfolioRo
                 <option value="all">All claim stages</option>
                 {workflowStages.map((stage) => <option key={stage.key} value={stage.key}>{stage.label}</option>)}
               </select>
-              <Link prefetch={false} href="/claims/new" className="inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#003A83] px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-[#073E83] max-md:w-full">
-                <span aria-hidden="true" className="text-[16px] leading-none">+</span><span>Add Claim</span>
-              </Link>
             </div>
           </div>
         </div>
