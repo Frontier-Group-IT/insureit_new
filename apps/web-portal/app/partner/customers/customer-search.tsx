@@ -58,17 +58,17 @@ export function CustomerSearch({ initialQuery }: { initialQuery: string }) {
   };
 
   return (
-    <form onSubmit={submit} className="w-full sm:max-w-[430px]" role="search">
+    <form onSubmit={submit} className="w-full sm:max-w-[390px]" role="search">
       <div className="relative min-w-0">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#7D8DA4]" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8594A8]" />
         <input
           name="q"
           value={value}
           onChange={(event) => setValue(event.target.value)}
-          placeholder="Search name, code, phone or email"
+          placeholder="Search customer, code, trade name, mobile or city"
           autoComplete="off"
-          aria-label="Search customers by name, code, phone or email"
-          className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-9 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+          aria-label="Search customers by name, code, trade name, mobile or city"
+          className="h-10 w-full rounded-xl border border-[#D5DEEA] bg-white pl-10 pr-9 text-[10.5px] font-medium text-[#213653] outline-none transition placeholder:text-[#8796AA] focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
         />
         {value ? (
           <button
