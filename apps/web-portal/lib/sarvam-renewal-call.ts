@@ -69,6 +69,36 @@ function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
   return variables;
 }
 
+async function postSarvamWithAuthFallback(url: string, apiKey: string, body: string, signal: AbortSignal) {
+  const primary = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "api-subscription-key": apiKey,
+    },
+    body,
+    signal,
+    cache: "no-store",
+  });
+
+  if (primary.status !== 401) return primary;
+
+  // A 401 is a definitive auth rejection and therefore proves the first request
+  // was not accepted for execution. Sarvam also documents Bearer auth for the
+  // same API key, so retry once using that supported form without risking a
+  // duplicate cohort submission.
+  return fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
+    body,
+    signal,
+    cache: "no-store",
+  });
+}
+
 export async function streamExternalRenewalToSarvam(context: ExternalRenewalVoiceStartContext) {
   if (!isSarvamRenewalCallingEnabled()) {
     throw new Error("AI renewal calling is currently disabled by INSUREIT administration.");
@@ -85,35 +115,26 @@ export async function streamExternalRenewalToSarvam(context: ExternalRenewalVoic
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const response = await fetch(
-      `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/cohorts/stream`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "api-subscription-key": apiKey,
+    const url = `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/cohorts/stream`;
+    const body = JSON.stringify({
+      name: cohortName,
+      users: [
+        {
+          user_phone_number: phone,
+          user_identifier: context.attempt_id,
+          app_variables: buildAgentVariables(context),
         },
-        body: JSON.stringify({
-          name: cohortName,
-          users: [
-            {
-              user_phone_number: phone,
-              user_identifier: context.attempt_id,
-              app_variables: buildAgentVariables(context),
-            },
-          ],
-        }),
-        signal: controller.signal,
-        cache: "no-store",
-      },
-    );
+      ],
+    });
+
+    const response = await postSarvamWithAuthFallback(url, apiKey, body, controller.signal);
 
     const text = await response.text();
-    let body: unknown = null;
+    let responseBody: unknown = null;
     try {
-      body = text ? JSON.parse(text) : null;
+      responseBody = text ? JSON.parse(text) : null;
     } catch {
-      body = null;
+      responseBody = null;
     }
 
     if (!response.ok) {
@@ -125,7 +146,7 @@ export async function streamExternalRenewalToSarvam(context: ExternalRenewalVoic
       );
     }
 
-    if (!body || typeof body !== "object") {
+    if (!responseBody || typeof responseBody !== "object") {
       // A 2xx followed by an unreadable body is ambiguous: the cohort may already
       // exist. Keep the local active-attempt guard so a retry cannot duplicate it.
       throw new SarvamRenewalSubmissionError(
@@ -134,7 +155,7 @@ export async function streamExternalRenewalToSarvam(context: ExternalRenewalVoic
       );
     }
 
-    const cohort = body as SarvamRenewalCohortResponse;
+    const cohort = responseBody as SarvamRenewalCohortResponse;
     const cohortId = String(cohort.cohort_id ?? "").trim();
     if (!cohortId) {
       throw new SarvamRenewalSubmissionError(
