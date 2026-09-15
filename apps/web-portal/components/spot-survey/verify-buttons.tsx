@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { verifySpotSurveyDetail, verifySpotSurveyDocument } from "@/app/claims/[id]/spot-survey-actions";
+import { verifyClaimDocumentWithAdditionalUploadCompat } from "@/app/claims/[id]/claim-document-verification-compat-actions";
+import { verifySpotSurveyDetail } from "@/app/claims/[id]/spot-survey-actions";
 
 type ActionState = {
   ok: boolean;
@@ -25,7 +26,7 @@ export function VerifyDocumentButton({ claimId, documentId, disabled = false }: 
             const formData = new FormData();
             formData.set("claimId", claimId);
             formData.set("documentId", documentId);
-            const result = await verifySpotSurveyDocument(formData);
+            const result = await verifyClaimDocumentWithAdditionalUploadCompat(formData);
             setState(result);
             if (result.ok) router.refresh();
           });

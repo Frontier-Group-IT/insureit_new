@@ -52,7 +52,9 @@ type ClaimContext = {
 
 export function BulkDocumentVerificationGroup({ item, claim, verifications }: { item: BulkDocumentGroupItem; claim: ClaimContext; verifications: VerificationRow[] }) {
   const selectableIds = useMemo(
-    () => item.documents.filter((document) => !isDocumentVerified(document, verifications) && document.verification_status !== "rejected").map((document) => document.id),
+    () => item.documents
+      .filter((document) => !isDocumentVerified(document, verifications) && (document.verification_status !== "rejected" || isLegacyAdditionalUpload(document)))
+      .map((document) => document.id),
     [item.documents, verifications],
   );
   const selectableKey = selectableIds.join("|");
@@ -134,7 +136,7 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
             {item.documents.map((document) => {
               const verification = latestVerificationForDocument(document, verifications);
               const verified = isDocumentVerified(document, verifications);
-              const rejected = document.verification_status === "rejected";
+              const rejected = document.verification_status === "rejected" && !isLegacyAdditionalUpload(document);
               const selected = selectedIds.has(document.id);
               return (
                 <DocumentFileRow
@@ -177,7 +179,8 @@ export function BulkDocumentVerificationGroup({ item, claim, verifications }: { 
 
 function DocumentFileRow({ item, claim, document, verification, verified, rejected, selected, onSelectedChange }: { item: BulkDocumentGroupItem; claim: ClaimContext; document: DocumentRow; verification?: VerificationRow; verified: boolean; rejected: boolean; selected: boolean; onSelectedChange: (checked: boolean) => void }) {
   const normalizedDocumentType = document.document_type?.toLowerCase() ?? "";
-  const documentStatus = normalizedDocumentType.includes("intimation attachment") ? "pending" : document.verification_status ?? "pending";
+  const legacyAdditionalUpload = isLegacyAdditionalUpload(document);
+  const documentStatus = legacyAdditionalUpload || normalizedDocumentType.includes("intimation attachment") ? "pending" : document.verification_status ?? "pending";
   const selectable = !verified && !rejected;
 
   return (
@@ -242,6 +245,11 @@ function latestVerificationForDocument(document: DocumentRow, verifications: Ver
 function isDocumentVerified(document: DocumentRow, verifications: VerificationRow[]) {
   const verification = latestVerificationForDocument(document, verifications);
   return document.verification_status === "verified" || Boolean(verification?.is_valid);
+}
+
+function isLegacyAdditionalUpload(document: DocumentRow) {
+  return document.verification_status === "rejected"
+    && document.rejection_reason?.trim().toLowerCase() === "replaced by newer upload";
 }
 
 function fallbackVerification(claim: ClaimContext, item: BulkDocumentGroupItem, document: DocumentRow): VerificationRow {
