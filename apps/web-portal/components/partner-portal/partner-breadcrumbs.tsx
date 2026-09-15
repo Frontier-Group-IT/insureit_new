@@ -46,9 +46,12 @@ function getBreadcrumbs(pathname: string, currentTitle: string): BreadcrumbItem[
   const [section, detail, ...rest] = partnerSegments;
   const sectionLabel = topLevelLabels[section] ?? fallbackLabel(section);
   const sectionHref = `/partner/${section}`;
-  items.push({ label: sectionLabel, href: partnerSegments.length > 1 ? sectionHref : undefined });
+  items.push({ label: sectionLabel, href: partnerSegments.length > 1 || section === "renewals" ? sectionHref : undefined });
 
-  if (!detail) return items;
+  if (!detail) {
+    if (section === "renewals") items.push({ label: "Internal Renewal" });
+    return items;
+  }
 
   if (section === "renewals" && detail === "external") {
     items.push({ label: "External Opportunities" });

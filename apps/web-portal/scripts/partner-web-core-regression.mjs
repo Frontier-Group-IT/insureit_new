@@ -99,7 +99,15 @@ const renewalsPage = read("app/partner/renewals/page.tsx");
 assert(renewalsPage.includes("listPartnerWebRenewals"), "renewals page must use backend-filtered renewal pagination");
 assert(!renewalsPage.includes("listPartnerWebPolicies"), "renewals page must not paginate generic policies then filter renewal windows locally");
 assert(!renewalsPage.includes("visibleRows"), "renewal window filtering must not happen after pagination");
-assert(renewalsPage.includes('href="/partner/renewals/external"'), "renewals page must expose the isolated external opportunity workspace");
+
+const partnerNavigation = read("components/partner-portal/partner-navigation.tsx");
+const partnerMobileNavigation = read("components/partner-portal/partner-mobile-navigation.tsx");
+assert(partnerNavigation.includes('href="/partner/renewals/external"'), "Partner navigation must expose the isolated external opportunity workspace");
+assert(partnerNavigation.includes("Internal Renewal"), "Partner navigation must expose Internal Renewal");
+assert(partnerNavigation.includes("External Renewal"), "Partner navigation must expose External Renewal");
+assert(partnerMobileNavigation.includes('href="/partner/renewals/external"'), "Partner mobile navigation must expose the isolated external opportunity workspace");
+assert(partnerMobileNavigation.includes("Internal Renewal"), "Partner mobile navigation must expose Internal Renewal");
+assert(partnerMobileNavigation.includes("External Renewal"), "Partner mobile navigation must expose External Renewal");
 
 const partnerWeb = read("lib/partner-web.ts");
 assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
