@@ -12,7 +12,13 @@ function humanize(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-async function keepRootPartnerFamilies(rows: PartnerNetworkRow[]) {
+async function keepRootPartnerFamilies(rows: PartnerNetworkRow[], scopeMode: string) {
+  // A self-scoped login (including Branch login) is already constrained by the
+  // authorized partner_app_network RPC. Avoid the broader hierarchy lookup here:
+  // Branch users can legitimately lack RLS visibility to the parent Partner row,
+  // which previously turned the Network page into a server-side exception.
+  if (scopeMode === "self") return rows;
+
   const partnerIds = [...new Set(rows.map((row) => row.partner_id).filter(Boolean))];
   if (!partnerIds.length) return rows;
 
@@ -41,7 +47,7 @@ async function keepRootPartnerFamilies(rows: PartnerNetworkRow[]) {
 
 export default async function PartnerNetworkPage() {
   const data = await getPartnerWebNetwork();
-  const partnerRows = await keepRootPartnerFamilies(data.partners);
+  const partnerRows = await keepRootPartnerFamilies(data.partners, data.scope_mode);
   const visibleGroupIds = new Set(
     partnerRows.map((row) => row.group?.group_id).filter((groupId): groupId is string => Boolean(groupId)),
   );
