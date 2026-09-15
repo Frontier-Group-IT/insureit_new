@@ -130,34 +130,67 @@ export function PartnerPolicyIntakeListClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const loadCounts = useCallback(async () => {
+    const allRows: PartnerPolicyIntake[] = [];
+    let offset = 0;
+    let expectedTotal = 0;
+
+    do {
+      const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: "all" });
+      if (offset === 0) expectedTotal = result.total;
+      allRows.push(...result.intakes);
+      offset += PAGE_SIZE;
+      if (!result.intakes.length) break;
+    } while (allRows.length < expectedTotal);
+
+    setCounts({
+      attention: allRows.filter((row) => row.status === "needs_attention").length,
+      inReview: allRows.filter((row) => row.status === "in_review" || row.status === "ready_for_review").length,
+      processing: allRows.filter((row) => row.status === "processing").length,
+      completed: allRows.filter((row) => row.status === "completed").length,
+      duplicate: allRows.filter((row) => row.status === "duplicate").length,
+      rejected: allRows.filter((row) => row.status === "rejected").length,
+      all: allRows.length,
+    });
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const allRows: PartnerPolicyIntake[] = [];
+      const query = search.trim().toLowerCase();
+      const canUseDirectServerPage = !query && (filter === "all" || filter === "attention" || filter === "completed");
+
+      if (canUseDirectServerPage) {
+        const serverFilter = filter === "attention" ? "attention" : filter === "completed" ? "completed" : "all";
+        const result = await getPartnerPolicyIntakesWeb({
+          limit: PAGE_SIZE,
+          offset: (page - 1) * PAGE_SIZE,
+          filter: serverFilter,
+        });
+        setRows(result.intakes);
+        setTotal(result.total);
+        return;
+      }
+
+      const serverFilter = filter === "in_review" || filter === "processing" ? "in_progress" : "all";
+      const completeRows: PartnerPolicyIntake[] = [];
       let offset = 0;
       let expectedTotal = 0;
 
       do {
-        const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: "all" });
+        const result = await getPartnerPolicyIntakesWeb({
+          limit: PAGE_SIZE,
+          offset,
+          filter: serverFilter,
+        });
         if (offset === 0) expectedTotal = result.total;
-        allRows.push(...result.intakes);
+        completeRows.push(...result.intakes);
         offset += PAGE_SIZE;
         if (!result.intakes.length) break;
-      } while (allRows.length < expectedTotal);
+      } while (completeRows.length < expectedTotal);
 
-      setCounts({
-        attention: allRows.filter((row) => row.status === "needs_attention").length,
-        inReview: allRows.filter((row) => row.status === "in_review" || row.status === "ready_for_review").length,
-        processing: allRows.filter((row) => row.status === "processing").length,
-        completed: allRows.filter((row) => row.status === "completed").length,
-        duplicate: allRows.filter((row) => row.status === "duplicate").length,
-        rejected: allRows.filter((row) => row.status === "rejected").length,
-        all: allRows.length,
-      });
-
-      const query = search.trim().toLowerCase();
-      const matches = allRows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query));
+      const matches = completeRows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query));
       const start = (page - 1) * PAGE_SIZE;
       setRows(matches.slice(start, start + PAGE_SIZE));
       setTotal(matches.length);
@@ -169,8 +202,16 @@ export function PartnerPolicyIntakeListClient() {
   }, [filter, page, search]);
 
   useEffect(() => {
+    void loadCounts().catch(() => undefined);
+  }, [loadCounts]);
+
+  useEffect(() => {
     void load();
   }, [load]);
+
+  const refresh = useCallback(async () => {
+    await Promise.all([load(), loadCounts()]);
+  }, [load, loadCounts]);
 
   const hasPrevious = page > 1;
   const hasNext = page * PAGE_SIZE < total;
@@ -212,7 +253,7 @@ export function PartnerPolicyIntakeListClient() {
           </div>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={() => void refresh()}
             disabled={loading}
             aria-label="Refresh policy intakes"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#D3DDE9] bg-white text-[#365170] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-60"
