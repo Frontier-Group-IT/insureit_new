@@ -115,6 +115,7 @@ export function PartnerAutocompleteInput({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const intakeRowsRef = useRef<IntakeRow[] | null>(null);
+  const selectedValueRef = useRef("");
 
   const normalized = useMemo(() => currentValue.trim(), [currentValue]);
 
@@ -124,7 +125,10 @@ export function PartnerAutocompleteInput({
   };
 
   useEffect(() => {
-    if (normalized.length < 2) {
+    if (selectedValueRef.current && normalized !== selectedValueRef.current) {
+      selectedValueRef.current = "";
+    }
+    if (normalized.length < 2 || normalized === selectedValueRef.current) {
       setSuggestions([]);
       setOpen(false);
       setActiveIndex(-1);
@@ -195,7 +199,9 @@ export function PartnerAutocompleteInput({
   }, []);
 
   const choose = (suggestion: Suggestion) => {
+    selectedValueRef.current = suggestion.value.trim();
     setValue(suggestion.value);
+    setSuggestions([]);
     setOpen(false);
     setActiveIndex(-1);
     if (autoSubmitOnSelect) {
@@ -227,10 +233,13 @@ export function PartnerAutocompleteInput({
         ref={inputRef}
         name={name}
         value={currentValue}
-        onChange={(event) => setValue(event.target.value)}
+        onChange={(event) => {
+          selectedValueRef.current = "";
+          setValue(event.target.value);
+        }}
         onFocus={() => {
           setFocused(true);
-          if (normalized.length >= 2 && suggestions.length) setOpen(true);
+          if (normalized.length >= 2 && normalized !== selectedValueRef.current && suggestions.length) setOpen(true);
         }}
         onBlur={() => setFocused(false)}
         onKeyDown={onKeyDown}
@@ -249,6 +258,7 @@ export function PartnerAutocompleteInput({
           type="button"
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
+            selectedValueRef.current = "";
             setValue("");
             setSuggestions([]);
             setOpen(false);
