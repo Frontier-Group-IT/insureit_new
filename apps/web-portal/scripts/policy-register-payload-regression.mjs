@@ -8,7 +8,8 @@ const policyDetail = await readFile(new URL("../app/policies/[id]/page.tsx", imp
 const dashboardBusiness = await readFile(new URL("../app/dashboard-v2/dashboard-business.ts", import.meta.url), "utf8");
 const dashboardView = await readFile(new URL("../app/dashboard-v2/dashboard-view.tsx", import.meta.url), "utf8");
 const reportBusiness = await readFile(new URL("../lib/reports/policy-business.ts", import.meta.url), "utf8");
-const reportMigration = await readFile(new URL("../../../supabase/migrations/20260905225000_policy_business_report_rm_scope_v4.sql", import.meta.url), "utf8");
+const reportPage = await readFile(new URL("../app/reports/business/page.tsx", import.meta.url), "utf8");
+const reportMigration = await readFile(new URL("../../../supabase/migrations/20260915163500_policy_business_report_net_premium_v5.sql", import.meta.url), "utf8");
 
 const mainQuery = page.match(/let query = admin\.from\("policies"\)\.select\("([^"]+)"\)/)?.[1] ?? "";
 assert.ok(mainQuery, "Policies page should keep an explicit main register select.");
@@ -31,15 +32,20 @@ assert.ok(policyDetail.includes("canAccessPolicy"), "Direct policy detail route 
 
 assert.ok(dashboardBusiness.includes("getAccessiblePolicyRmEmployeeIds"), "Dashboard business data must use policy RM scope rather than customer scope.");
 assert.ok(dashboardBusiness.includes('.in("rm_employee_id", rmEmployeeIds)'), "Dashboard policy population must be constrained by RM employee scope.");
-assert.ok(dashboardBusiness.includes("averageGrossPremium"), "Dashboard should use gross premium as the canonical business metric.");
-assert.ok(dashboardView.includes("Gross premium"), "Dashboard business headline must label the canonical metric as Gross premium.");
+assert.ok(dashboardBusiness.includes("netPremium"), "Dashboard business data must expose net premium for headline reporting.");
+assert.ok(dashboardView.includes("Net premium"), "Dashboard business headline must label the requested metric as Net premium.");
+assert.ok(dashboardView.includes("Avg. net / policy"), "Dashboard business headline must show average net premium per policy.");
 assert.ok(dashboardView.includes("Ranked by gross premium"), "Dashboard rankings must clearly use gross premium.");
 
 assert.ok(reportBusiness.includes("getAccessiblePolicyRmEmployeeIds"), "Business reports must use policy RM scope rather than customer scope.");
-assert.ok(reportBusiness.includes('get_policy_business_report_v4'), "Business reports must use the RM-scoped report function.");
+assert.ok(reportBusiness.includes('get_policy_business_report_v5'), "Business reports must use the net-premium RM-scoped report function.");
 assert.ok(reportBusiness.includes('query.period)?query.period:"mtd"'), "Business reports should default to MTD to reconcile with Dashboard and Policy Register.");
+assert.ok(reportPage.includes("Net premium"), "Business report must label premium output as Net premium.");
+assert.ok(reportPage.includes("Avg. net / policy"), "Business report must show average net premium per policy.");
+assert.ok(!reportPage.includes("Gross premium"), "Business report page must not expose Gross premium labels.");
 assert.ok(reportMigration.includes("p.rm_employee_id=any(p_scope_rm_employee_ids)"), "Report SQL must enforce the authorized RM employee scope.");
 assert.ok(reportMigration.includes("b.rm_employee_id=p_rm_employee_id"), "Selected RM report filter must match stable employee id, not RM name text.");
+assert.ok(reportMigration.includes("sum(net_premium)"), "Report SQL must aggregate net premium for report values.");
 assert.ok(!reportMigration.includes("select full_name from public.employees where id=p_rm_employee_id"), "Report SQL must not translate selected RM id back to a name for authorization/filtering.");
 
 console.log("Policy register and business scope regression passed.");

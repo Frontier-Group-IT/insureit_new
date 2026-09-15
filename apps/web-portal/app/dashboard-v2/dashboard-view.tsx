@@ -299,11 +299,14 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
   const motorPolicies = business.businessLineMix.find((row) => row.label === "Motor")?.policies ?? 0;
   const nonMotorPolicies = business.businessLineMix.find((row) => row.label === "Non Motor")?.policies ?? 0;
   const policyMixLabel = `${motorPolicies.toLocaleString("en-IN")} Motor · ${nonMotorPolicies.toLocaleString("en-IN")} Non-Motor`;
+  const averageNetPremium = business.netPremium !== null && business.policyCount > 0
+    ? business.netPremium / business.policyCount
+    : 0;
   const headline = [
     { label: `Policies · ${business.periodShortLabel} · ${policyMixLabel}`, value: business.policyCount.toLocaleString("en-IN") },
     ...(commercial ? [
-      { label: `Gross premium · ${business.periodShortLabel}`, value: formatMoney(business.grossPremium ?? 0) },
-      { label: "Avg. gross / policy", value: formatMoney(business.averageGrossPremium ?? 0) },
+      { label: `Net premium · ${business.periodShortLabel}`, value: formatMoney(business.netPremium ?? 0) },
+      { label: "Avg. net / policy", value: formatMoney(averageNetPremium) },
     ] : []),
     { label: "Active producers", value: business.activeProducerCount.toLocaleString("en-IN") },
   ];
@@ -348,7 +351,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
         {headline.map((item, index) => (
           <div key={item.label} className={`${index ? "border-t sm:border-l sm:border-t-0" : ""} border-[#E5EAF1] px-4 py-4 sm:px-5`}>
             <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-            <p className="mt-2 whitespace-normal break-words text-[7.5px] font-bold uppercase leading-relaxed tracking-[.095em] text-[#77869A]">{item.label}</p>
+            <p className="mt-2 whitespace-normal break-words text-[9px] font-black uppercase leading-relaxed tracking-[.08em] text-[#52657F]">{item.label}</p>
           </div>
         ))}
       </div>
