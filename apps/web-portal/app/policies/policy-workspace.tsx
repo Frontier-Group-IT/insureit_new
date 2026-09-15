@@ -232,6 +232,31 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
   const enriched = useMemo(() => rows.map((row) => ({ ...row, status: policyStatus(row.end_date), daysLeft: daysUntil(row.end_date) })), [rows]);
   const rms = useMemo(() => Array.from(new Set(rows.map((row) => row.rm_name?.trim()).filter((item): item is string => Boolean(item)))).sort((a, b) => a.localeCompare(b)), [rows]);
   const categories = useMemo(() => Array.from(new Set(rows.filter((row) => policyBusinessLine(row) === "Non Motor").map((row) => policyCategory(row)).filter(Boolean))).sort(), [rows]);
+  const visibleSourceOptions = useMemo(() => {
+    if (rm === "all") return sourceOptions;
+    const rmSourceKeys = new Set(
+      rows
+        .filter((row) => row.rm_name?.trim() === rm)
+        .map((row) => policySourceKey(row))
+        .filter(Boolean)
+    );
+    return sourceOptions.filter((option) => rmSourceKeys.has(option.value));
+  }, [rm, rows, sourceOptions]);
+  const selectedSourceVisible = source === "all" || visibleSourceOptions.some((option) => option.value === source);
+  const sourceSelectValue = selectedSourceVisible ? source : "all";
+
+  useEffect(() => {
+    if (rm === "all") return;
+    if (source !== "all" && !visibleSourceOptions.some((option) => option.value === source)) {
+      setSource(visibleSourceOptions.length === 1 ? visibleSourceOptions[0].value : "all");
+      setPage(1);
+      return;
+    }
+    if (source === "all" && visibleSourceOptions.length === 1) {
+      setSource(visibleSourceOptions[0].value);
+      setPage(1);
+    }
+  }, [rm, source, visibleSourceOptions]);
 
   const controlFiltered = useMemo(() => enriched.filter((row) => {
     const haystack = [row.policy_no, row.business_line, row.policy_type, row.policy_product, row.insurance_companies?.name, row.rm_name, row.vehicles?.vehicle_no, row.vehicles?.chassis_no, row.vehicles?.engine_no, row.customers?.company_name, row.customers?.contact_name, row.intermediary_type, row.intermediary_code, row.source_name, policyCategory(row), riskAssetPrimary(row), riskAssetSecondary(row)].filter(Boolean).join(" ").toLowerCase();
@@ -390,13 +415,13 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
             onCategoryChange={(value) => { setCategory(value); setPage(1); }}
           />
           <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[170px] [&_select]:w-full">
-            <RegisterSelect value={source} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
+            <RegisterSelect value={sourceSelectValue} onChange={(value) => { setSource(value); setPage(1); }} label="Lead source">
               <option value="all">All Sources</option>
-              {sourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {visibleSourceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </RegisterSelect>
           </div>
           <div className="[&>label]:block [&>label]:w-full [&_select]:min-w-[180px] [&_select]:w-full">
-            <RegisterSelect value={rm} onChange={(value) => { setRm(value); setPage(1); }} label="Relationship manager">
+            <RegisterSelect value={rm} onChange={(value) => { setRm(value); if (value === "all") setSource("all"); setPage(1); }} label="Relationship manager">
               <option value="all">All RMs</option>
               {rms.map((item) => <option key={item} value={item}>{item}</option>)}
             </RegisterSelect>
