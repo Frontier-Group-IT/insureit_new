@@ -7,6 +7,11 @@ const MAX_WEBHOOK_BYTES = 256_000;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CONNECTIVITY = new Set(["connected", "busy", "no_answer", "failed"]);
 const COMPLETION = new Set(["completed", "partial", "failed"]);
+
+// These are the durable INSUREIT persistence values used by the existing
+// production schema/RPC. The committed Sarvam agent may expose newer,
+// customer-facing enum labels; normalize those labels here rather than widening
+// the database contract during a controlled production pilot.
 const DISPOSITIONS = new Set([
   "no_decision",
   "interested",
@@ -45,6 +50,11 @@ function normalizeDisposition(value: unknown) {
   const token = normalizeToken(value);
   if (!token) return null;
   const aliases: Record<string, string> = {
+    // Current committed Sarvam agent contract.
+    connected: "no_decision",
+    renewed_elsewhere: "already_renewed",
+
+    // Existing/legacy provider labels remain accepted for backward compatibility.
     no_decision: "no_decision",
     interested: "interested",
     follow_up: "follow_up",
@@ -67,7 +77,21 @@ function normalizeDisposition(value: unknown) {
 
 function normalizeInterest(value: unknown) {
   const token = normalizeToken(value);
-  return token && INTEREST.has(token) ? token : null;
+  if (!token) return null;
+  const aliases: Record<string, string> = {
+    // Current committed Sarvam agent contract.
+    interested: "high",
+    maybe: "medium",
+    not_interested: "low",
+
+    // Existing/legacy provider labels remain accepted for backward compatibility.
+    unknown: "unknown",
+    high: "high",
+    medium: "medium",
+    low: "low",
+  };
+  const normalized = aliases[token] ?? token;
+  return INTEREST.has(normalized) ? normalized : null;
 }
 
 function normalizeBoolean(value: unknown) {
@@ -163,7 +187,7 @@ export async function POST(request: NextRequest) {
       nextActionStatus: optionalText(payload.next_action_status, 120),
       failureReason: optionalText(payload.failure_reason, 1000),
       retryAttempt: normalizeInteger(payload.retry_attempt),
-      durationSeconds: normalizeNumber(payload.duration),
+      durationSeconds: normalizeNumber(payload.duration ?? payload.duration_in_seconds),
       startedAt: normalizeTimestamp(payload.start_datetime),
       endedAt: normalizeTimestamp(payload.end_datetime),
       callDisposition: normalizeDisposition(variable("call_disposition")),
