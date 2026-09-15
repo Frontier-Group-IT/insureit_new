@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Mail, MapPin, Phone, UsersRound } from "lucide-react";
+import { Building2, MoreVertical, ShieldCheck } from "lucide-react";
 import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type SearchParams = { q?: string; page?: string };
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 function pageNumber(value?: string) {
   const parsed = Number(value ?? "1");
@@ -18,6 +18,11 @@ function pageNumber(value?: string) {
 
 function statusLabel(value: string | null) {
   return (value || "active").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function customerTypeLabel(value: string | null) {
+  if (!value) return "Customer";
+  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 export default async function PartnerCustomersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -32,6 +37,8 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
   ]);
 
   const total = rows[0]?.total_count ?? (q ? rows.length : summary.total_customers);
+  const active = summary.active_customers;
+  const inactive = Math.max(summary.total_customers - summary.active_customers, 0);
   const hasPrevious = page > 1;
   const hasNext = offset + rows.length < total;
 
@@ -45,74 +52,109 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
 
   return (
     <PartnerPortalShell title="Customers">
-      <div className="space-y-4 pb-4">
-        <section className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_5px_16px_rgba(31,65,115,0.05)]">
-          <div className="flex flex-col gap-3 border-b border-[#E4EAF2] px-4 py-3 sm:flex-row sm:items-center">
-            <div className="flex shrink-0 items-center gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EAF3FF] text-[#206DDF]">
-                <UsersRound className="h-4 w-4" />
+      <div className="pb-4">
+        <section className="overflow-hidden rounded-2xl border border-[#D9E1EC] bg-white shadow-[0_8px_24px_rgba(31,65,115,0.05)]">
+          <div className="flex min-h-[72px] flex-col gap-3 border-b border-[#E2E8F0] px-5 py-3.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#173E6C] text-white shadow-[0_4px_10px_rgba(23,62,108,0.16)]">
+                <Building2 className="h-[19px] w-[19px]" />
               </span>
-              <h2 className="text-[13px] font-extrabold tracking-[-0.02em] text-[#132851]">Customer Register</h2>
+              <h1 className="text-[16px] font-extrabold tracking-[-0.025em] text-[#15233B]">Customer Portfolio</h1>
             </div>
-
-            <CustomerSearch initialQuery={q} />
-
-            <p className="shrink-0 text-[10px] font-semibold text-[#617596] sm:ml-auto">{total} customers</p>
           </div>
 
-          <div className="hidden grid-cols-[42px_minmax(0,1.35fr)_minmax(170px,.7fr)_minmax(160px,.65fr)_minmax(90px,.4fr)_36px] items-center border-b border-[#E4EAF2] bg-[#F8FAFD] px-4 py-2 text-[8px] font-black uppercase tracking-[0.06em] text-[#667A98] lg:grid">
-            <span>#</span>
-            <span>Customer Name / Code</span>
-            <span>Phone</span>
-            <span>Location</span>
+          <div className="flex flex-col gap-3 border-b border-[#E2E8F0] px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+              <CustomerSearch initialQuery={q} />
+
+              <div className="relative w-full sm:w-[225px]">
+                <select
+                  aria-label="Customer type"
+                  defaultValue="all"
+                  className="h-10 w-full appearance-none rounded-xl border border-[#D5DEEA] bg-white px-4 pr-9 text-[11px] font-semibold text-[#41516A] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+                >
+                  <option value="all">All customer types</option>
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#425672]">⌄</span>
+              </div>
+            </div>
+
+            <div className="inline-flex h-10 shrink-0 items-center rounded-xl border border-[#D5DEEA] bg-[#F7F9FC] p-1 text-[10px] font-bold text-[#667892]">
+              <span className="inline-flex h-8 items-center rounded-lg bg-[#173E6C] px-3 text-white shadow-sm">All&nbsp; {summary.total_customers}</span>
+              <span className="inline-flex h-8 items-center px-3">Active&nbsp; {active}</span>
+              <span className="inline-flex h-8 items-center px-3">Inactive&nbsp; {inactive}</span>
+            </div>
+          </div>
+
+          <div className="hidden grid-cols-[42px_minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] items-center border-b border-[#E2E8F0] bg-[#F7F9FC] px-3 py-2.5 text-[8.5px] font-black uppercase tracking-[0.045em] text-[#61728D] lg:grid">
+            <span className="flex justify-center"><span className="h-4 w-4 rounded border border-[#AAB7C8] bg-white" aria-hidden="true" /></span>
+            <span>Customer</span>
+            <span>Customer Type</span>
+            <span>Mobile</span>
             <span>Status</span>
-            <span className="text-right">Action</span>
+            <span>Next Action</span>
+            <span className="text-center">More</span>
           </div>
 
           {rows.length ? (
             <div className="divide-y divide-[#E7ECF3]">
-              {rows.map((row, index) => (
-                <Link
-                  key={row.customer_id}
-                  href={"/partner/customers/" + encodeURIComponent(row.customer_id)}
-                  prefetch={false}
-                  className="group grid gap-3 px-4 py-3 transition hover:bg-[#F8FBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 lg:grid-cols-[42px_minmax(0,1.35fr)_minmax(170px,.7fr)_minmax(160px,.65fr)_minmax(90px,.4fr)_36px] lg:items-center"
-                >
-                  <span className="hidden text-[9.5px] font-semibold text-[#71829B] lg:block">{offset + index + 1}</span>
-
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#EAF3FF] text-[#2973E6]"><UsersRound className="h-4 w-4" /></span>
-                    <div className="min-w-0">
-                      <p className="break-words text-[11px] font-extrabold leading-4 text-[#172D53]">{row.customer_name || row.company_name || "Customer"}</p>
-                      <p className="mt-0.5 break-words text-[9.5px] font-medium leading-4 text-[#61779A]">{row.customer_code || row.company_name || row.customer_type || "Customer record"}</p>
+              {rows.map((row) => {
+                const activeRow = statusLabel(row.customer_status) === "Active";
+                return (
+                  <div
+                    key={row.customer_id}
+                    className="grid gap-3 px-3 py-3 transition hover:bg-[#FAFCFF] lg:grid-cols-[42px_minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] lg:items-center"
+                  >
+                    <div className="hidden justify-center lg:flex">
+                      <span className="h-4 w-4 rounded border border-[#AAB7C8] bg-white" aria-hidden="true" />
                     </div>
+
+                    <Link
+                      href={"/partner/customers/" + encodeURIComponent(row.customer_id)}
+                      prefetch={false}
+                      className="min-w-0 text-[11px] font-extrabold text-[#17233A] transition hover:text-[#173E6C] focus-visible:outline-none focus-visible:underline"
+                    >
+                      <span className="block truncate">{row.customer_name || row.company_name || "Customer"}</span>
+                    </Link>
+
+                    <p className="min-w-0 truncate text-[10.5px] font-medium text-[#44546E]">{customerTypeLabel(row.customer_type)}</p>
+                    <p className="min-w-0 truncate text-[10.5px] font-medium text-[#4A5B73]">{row.phone || "—"}</p>
+
+                    <div className="min-w-0">
+                      {activeRow ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#9FE6C7] bg-[#ECFBF4] px-2.5 py-1 text-[9px] font-bold text-[#13865D]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#27B27A]" aria-hidden="true" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full border border-[#D7DEE8] bg-[#F4F6F9] px-2.5 py-1 text-[9px] font-bold text-[#63738A]">{statusLabel(row.customer_status)}</span>
+                      )}
+                    </div>
+
+                    <Link
+                      href={"/partner/customers/" + encodeURIComponent(row.customer_id)}
+                      prefetch={false}
+                      className="inline-flex min-w-0 items-center gap-1.5 text-[10.5px] font-semibold text-[#13865D] transition hover:text-[#0F6F4C] focus-visible:outline-none focus-visible:underline"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate">{activeRow ? "Portfolio active" : "Review portfolio"}</span>
+                    </Link>
+
+                    <Link
+                      href={"/partner/customers/" + encodeURIComponent(row.customer_id)}
+                      prefetch={false}
+                      aria-label={`Open ${row.customer_name || row.company_name || "customer"}`}
+                      className="hidden h-7 w-7 place-items-center justify-self-center rounded-lg text-[#293A54] transition hover:bg-[#EEF3F8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 lg:grid"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Link>
                   </div>
-
-                  <div className="min-w-0 space-y-1">
-                    {row.phone ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[9.5px] font-semibold leading-4 text-[#536680]"><Phone className="h-3 w-3" />{row.phone}</p> : null}
-                    {row.email ? <p className="flex min-w-0 items-center gap-1.5 break-all text-[9.5px] font-semibold leading-4 text-[#536680]"><Mail className="h-3 w-3" />{row.email}</p> : null}
-                  </div>
-
-                  <p className="flex min-w-0 items-center gap-1.5 text-[9.5px] font-semibold text-[#536680]"><MapPin className="h-3 w-3 shrink-0" /><span className="truncate">{[row.city, row.state].filter(Boolean).join(", ") || "Location not recorded"}</span></p>
-
-                  <div className="min-w-0">
-                    {statusLabel(row.customer_status) === "Active" ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#E8F8EF] px-2.5 py-1 text-[9px] font-bold text-[#148A5A]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#13A36B]" aria-hidden="true" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{statusLabel(row.customer_status)}</span>
-                    )}
-                  </div>
-
-                  <ArrowRight className="hidden h-4 w-4 justify-self-end text-[#315A91] transition group-hover:translate-x-0.5 lg:block" />
-                </Link>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="px-5 py-14 text-center">
-              <UsersRound className="mx-auto h-7 w-7 text-[#9AABC0]" />
+              <Building2 className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No customers found</p>
               <p className="mt-1 text-[10.5px] text-[#7A899F]">{q ? "Try a different search." : "No customers available yet."}</p>
             </div>
