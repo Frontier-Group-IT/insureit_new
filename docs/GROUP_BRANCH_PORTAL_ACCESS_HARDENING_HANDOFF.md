@@ -2,9 +2,9 @@
 
 ## State
 
-**IMPLEMENTED IN FEATURE BRANCH / NOT MERGED / NOT APPLIED / NOT DEPLOYED**
+**IMPLEMENTED IN FEATURE BRANCH / PR #1834 OPEN / NOT MERGED / NOT APPLIED / NOT DEPLOYED**
 
-Branch: `fix/group-branch-portal-access-hardening`
+Branch: `fix/group-branch-portal-access-hardening-main`
 
 This follow-up hardens the Group/Branch login architecture introduced by PR #1827 without replacing it and without changing existing Partner credentials.
 
