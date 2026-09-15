@@ -30,41 +30,35 @@ export async function createGroupBranchPortalLogin(formData: FormData) {
   const entityType = entityTypeValue(formData);
   const entityId = text(formData, "entity_id");
   const loginEmail = text(formData, "login_email").toLowerCase();
-  const password = text(formData, "temporary_password");
+  const phone = text(formData, "phone");
 
   if (!entityType || !uuid(entityId) || !email(loginEmail)) fail("Enter a valid Group/Branch and login email.");
-  if (!strongPassword(password)) fail("Temporary password must be at least 12 characters and include upper-case, lower-case, number and symbol.");
+  if (!phoneNumber(phone)) fail("Enter a valid phone number.");
   if (!(await canManageEntity(manager, entityType, entityId))) fail("The selected Group or Branch is outside your permitted hierarchy.");
 
   const admin = createSupabaseAdminClient();
-  const [{ data: existingEntity }, { data: existingEmail }] = await Promise.all([
+  const [{ data: existingEntity }, { data: existingEmail }, { data: existingProfileEmail }] = await Promise.all([
     admin.from("portal_access_identities").select("profile_id").eq("entity_type", entityType).eq("entity_id", entityId).maybeSingle(),
     admin.from("portal_access_identities").select("profile_id").ilike("login_email", loginEmail).maybeSingle(),
+    admin.from("profiles").select("id").ilike("email", loginEmail).maybeSingle(),
   ]);
   if (existingEntity) fail("Portal login already exists for this Group or Branch.");
-  if (existingEmail) fail("That login email is already assigned to another Group or Branch.");
+  if (existingEmail || existingProfileEmail) fail("That login email is already assigned to another portal user.");
 
   const displayName = await entityDisplayName(entityType, entityId);
   if (!displayName) fail("The selected Group or Branch is not available.");
 
-  const { data: created, error: authError } = await admin.auth.admin.createUser({
-    email: loginEmail,
-    password,
-    email_confirm: true,
-    user_metadata: {
-      full_name: displayName,
-      role: "intermediary",
-      portal_account_type: entityType,
-    },
-  });
-  if (authError || !created.user?.id) fail(authError?.message || "Unable to create the portal login.");
+  const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(loginEmail, inviteOptions(displayName, entityType));
+  if (inviteError || !invite.user?.id) fail(inviteError?.message || "Unable to send the portal invitation.");
 
-  const profileId = created.user.id;
+  const profileId = invite.user.id;
   const now = new Date().toISOString();
   const { error: profileError } = await admin.from("profiles").upsert({
     id: profileId,
     full_name: displayName,
     role: "intermediary",
+    email: loginEmail,
+    phone,
     is_active: true,
     updated_at: now,
   }, { onConflict: "id" });
@@ -89,19 +83,29 @@ export async function createGroupBranchPortalLogin(formData: FormData) {
     fail(mappingError.message);
   }
 
-  done("portal_login_created");
+  done("portal_invite_sent");
 }
 
-export async function resetGroupBranchPortalPassword(formData: FormData) {
+export async function resendGroupBranchPortalInvite(formData: FormData) {
   const manager = await requireIntermediaryGroupManager();
   const mapping = await loadAuthorizedMapping(manager, formData);
-  const password = text(formData, "temporary_password");
-  if (!strongPassword(password)) fail("Temporary password must be at least 12 characters and include upper-case, lower-case, number and symbol.");
+  if (mapping.status !== "active") fail("Enable this login before resending its invitation.");
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin.auth.admin.updateUserById(mapping.profile_id, { password });
+  const { error } = await admin.auth.resetPasswordForEmail(mapping.login_email, resetOptions());
   if (error) fail(error.message);
-  done("portal_password_reset");
+  done("portal_invite_resent");
+}
+
+export async function sendGroupBranchPortalPasswordReset(formData: FormData) {
+  const manager = await requireIntermediaryGroupManager();
+  const mapping = await loadAuthorizedMapping(manager, formData);
+  if (mapping.status !== "active") fail("Enable this login before sending a password reset.");
+
+  const admin = createSupabaseAdminClient();
+  const { error } = await admin.auth.resetPasswordForEmail(mapping.login_email, resetOptions());
+  if (error) fail(error.message);
+  done("portal_password_email_sent");
 }
 
 export async function setGroupBranchPortalLoginStatus(formData: FormData) {
@@ -231,6 +235,23 @@ async function entityDisplayName(entityType: AccessEntityType, entityId: string)
   return data?.display_name ?? null;
 }
 
+function inviteOptions(displayName: string, entityType: AccessEntityType) {
+  const redirectTo = authRedirectTo();
+  const data = { full_name: displayName, role: "intermediary", portal_account_type: entityType };
+  return redirectTo ? { redirectTo, data } : { data };
+}
+
+function resetOptions() {
+  const redirectTo = authRedirectTo();
+  return redirectTo ? { redirectTo } : undefined;
+}
+
+function authRedirectTo() {
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
+  return siteUrl ? `${siteUrl}/auth/callback?next=/intermediary-portal` : undefined;
+}
+
 function entityTypeValue(formData: FormData): AccessEntityType | null {
   const value = text(formData, "entity_type");
   return value === "group" || value === "branch" ? value : null;
@@ -249,8 +270,9 @@ function email(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function strongPassword(value: string) {
-  return value.length >= 12 && /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value);
+function phoneNumber(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15;
 }
 
 function done(event: string): never {

@@ -59,6 +59,7 @@ export type BusinessGroupMembership = {
 
 const successMessages: Record<string, string> = {
   business_group_created: "Business Group created.",
+  business_group_created_invited: "Business Group created. Password setup invitation sent to the Group email.",
   group_converted: "Group converted to the employee-independent business hierarchy.",
   business_members_moved: "Partner moved to the selected Group.",
   business_members_removed: "Partner removed from the Group.",
@@ -339,7 +340,11 @@ export function BusinessGroupWorkspace({
       {createOpen ? (
         <Modal title="Create Business Group" onClose={() => setCreateOpen(false)}>
           <form action={createBusinessGroup} className="space-y-3">
-            <Field label="Group name"><input name="group_name" required maxLength={80} className={inputClass} /></Field>
+            <Field label="Group name"><input name="group_name" required maxLength={80} autoComplete="organization" className={inputClass} /></Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Group email"><input name="login_email" type="email" required autoComplete="email" className={inputClass} /></Field>
+              <Field label="Phone number"><input name="phone" type="tel" required inputMode="tel" autoComplete="tel" className={inputClass} /></Field>
+            </div>
             <Field label="Description"><input name="description" className={inputClass} /></Field>
             <Field label="Initial Partner (optional)">
               <select name="partner_id" defaultValue="" className={inputClass}>
@@ -347,10 +352,10 @@ export function BusinessGroupWorkspace({
                 {ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
               </select>
             </Field>
-            <p className="rounded-xl bg-[#F5F8FF] px-3 py-2 text-[7.8px] leading-4 text-[#61738A]">No Employee owner will be created. Existing Employee assignments on the selected Partner remain unchanged.</p>
+            <p className="rounded-xl bg-[#F5F8FF] px-3 py-2 text-[7.8px] leading-4 text-[#61738A]">A secure password-setup invitation will be emailed to the Group contact. The admin never creates or sees the Group password. No Employee owner will be created; existing Employee assignments on the selected Partner remain unchanged.</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setCreateOpen(false)} className="h-9 rounded-lg border border-[#D7E0EA] bg-white px-4 text-[8.5px] font-bold text-[#5D6F82]">Cancel</button>
-              <FormSubmitButton label="Create Group" pendingLabel="Creating…" className="inline-flex h-9 items-center rounded-lg bg-[#315FEA] px-4 text-[8.5px] font-bold text-white" />
+              <FormSubmitButton label="Create Group" pendingLabel="Creating & sending invite…" className="inline-flex h-9 items-center rounded-lg bg-[#315FEA] px-4 text-[8.5px] font-bold text-white" />
             </div>
           </form>
         </Modal>

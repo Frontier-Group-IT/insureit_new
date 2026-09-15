@@ -9,7 +9,8 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 import {
   createGroupBranchPortalLogin,
-  resetGroupBranchPortalPassword,
+  resendGroupBranchPortalInvite,
+  sendGroupBranchPortalPasswordReset,
   setGroupBranchPortalLoginStatus,
 } from "../group-branch-login-actions";
 
@@ -97,6 +98,12 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
       .returns<AccessRow[]>(),
   ]);
 
+  const authStateEntries = await Promise.all((accessRows ?? []).map(async (row) => {
+    const { data, error } = await admin.auth.admin.getUserById(row.profile_id);
+    return [row.profile_id, { exists: !error && Boolean(data.user), hasSignedIn: Boolean(data.user?.last_sign_in_at) }] as const;
+  }));
+  const authStateByProfile = new Map(authStateEntries);
+
   const accessByEntity = new Map((accessRows ?? []).map((row) => [`${row.entity_type}:${row.entity_id}`, row]));
   const branchProfileById = new Map((branchProfiles ?? []).map((row) => [row.partner_id, row]));
   const partnerById = new Map((partners ?? []).map((row) => [row.id, row]));
@@ -170,7 +177,7 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <div>
             <h1 className="text-base font-semibold text-slate-900">Portal Login Access</h1>
-            <p className="mt-0.5 text-xs text-slate-500">Create explicit Group or Branch credentials. Existing Partner logins are unchanged.</p>
+            <p className="mt-0.5 text-xs text-slate-500">Manage Group and Branch invitations. New Groups are invited during creation; existing records can be invited here. Existing Partner logins are unchanged.</p>
           </div>
           <div className="flex items-center gap-2 text-xs">
             <Link href="/intermediaries/groups" className="rounded-lg border border-slate-200 px-3 py-2 font-medium text-slate-700 hover:bg-slate-50">Groups</Link>
@@ -185,13 +192,27 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
         ) : null}
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="grid grid-cols-[minmax(240px,1.5fr)_minmax(160px,.75fr)_minmax(220px,1fr)_minmax(300px,1.35fr)] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <div className="grid grid-cols-[minmax(240px,1.5fr)_minmax(160px,.75fr)_minmax(220px,1fr)_minmax(320px,1.35fr)] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
             <span>Group / Branch</span><span>Status</span><span>Login ID</span><span>Actions</span>
           </div>
           {entities.length ? entities.map((entity) => {
             const mapping = accessByEntity.get(`${entity.entityType}:${entity.id}`) ?? null;
+            const authState = mapping ? authStateByProfile.get(mapping.profile_id) : null;
+            const invitationPending = Boolean(mapping && mapping.status === "active" && authState?.exists && !authState.hasSignedIn);
+            const active = Boolean(mapping && mapping.status === "active" && authState?.hasSignedIn);
+            const statusLabel = !mapping ? "No Access" : mapping.status === "disabled" ? "Disabled" : invitationPending ? "Invitation Sent" : active ? "Active" : "Access Issue";
+            const statusClass = !mapping
+              ? "bg-slate-100 text-slate-600"
+              : mapping.status === "disabled"
+                ? "bg-amber-50 text-amber-700"
+                : invitationPending
+                  ? "bg-blue-50 text-blue-700"
+                  : active
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-rose-50 text-rose-700";
+
             return (
-              <div key={`${entity.entityType}:${entity.id}`} className="grid grid-cols-[minmax(240px,1.5fr)_minmax(160px,.75fr)_minmax(220px,1fr)_minmax(300px,1.35fr)] gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0">
+              <div key={`${entity.entityType}:${entity.id}`} className="grid grid-cols-[minmax(240px,1.5fr)_minmax(160px,.75fr)_minmax(220px,1fr)_minmax(320px,1.35fr)] gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">{entity.entityType}</span>
@@ -200,31 +221,34 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                   <p className="mt-1 truncate text-xs text-slate-500">{entity.code} · {entity.context}</p>
                 </div>
                 <div className="self-center">
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${mapping?.status === "active" ? "bg-emerald-50 text-emerald-700" : mapping?.status === "disabled" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
-                    {mapping?.status === "active" ? "Active" : mapping?.status === "disabled" ? "Disabled" : "No Login"}
-                  </span>
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${statusClass}`}>{statusLabel}</span>
                 </div>
                 <div className="self-center truncate text-sm text-slate-700">{mapping?.login_email ?? "—"}</div>
                 <div className="self-center">
                   {!mapping ? (
-                    <form action={createGroupBranchPortalLogin} className="grid grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto] gap-2">
+                    <form action={createGroupBranchPortalLogin} className="grid grid-cols-[minmax(140px,1fr)_minmax(115px,.8fr)_auto] gap-2">
                       <input type="hidden" name="entity_type" value={entity.entityType} />
                       <input type="hidden" name="entity_id" value={entity.id} />
-                      <input name="login_email" type="email" required disabled={migrationMissing} placeholder="Login email" className="min-w-0 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400 disabled:bg-slate-50" />
-                      <input name="temporary_password" type="password" required minLength={12} disabled={migrationMissing} placeholder="Temporary password" autoComplete="new-password" className="min-w-0 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400 disabled:bg-slate-50" />
-                      <button disabled={migrationMissing} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">Create Login</button>
+                      <input name="login_email" type="email" required disabled={migrationMissing} placeholder="Login email" autoComplete="email" className="min-w-0 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400 disabled:bg-slate-50" />
+                      <input name="phone" type="tel" required disabled={migrationMissing} placeholder="Phone" autoComplete="tel" className="min-w-0 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400 disabled:bg-slate-50" />
+                      <button disabled={migrationMissing} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">Send Invitation</button>
                     </form>
                   ) : (
                     <div className="flex flex-wrap items-center gap-2">
-                      <details className="relative">
-                        <summary className="cursor-pointer list-none rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Reset Password</summary>
-                        <form action={resetGroupBranchPortalPassword} className="absolute right-0 z-20 mt-2 flex w-[330px] gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
+                      {mapping.status === "active" && invitationPending ? (
+                        <form action={resendGroupBranchPortalInvite}>
                           <input type="hidden" name="entity_type" value={entity.entityType} />
                           <input type="hidden" name="entity_id" value={entity.id} />
-                          <input name="temporary_password" type="password" required minLength={12} placeholder="New temporary password" autoComplete="new-password" className="min-w-0 flex-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400" />
-                          <button className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">Reset</button>
+                          <button className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Resend Invitation</button>
                         </form>
-                      </details>
+                      ) : null}
+                      {mapping.status === "active" && active ? (
+                        <form action={sendGroupBranchPortalPasswordReset}>
+                          <input type="hidden" name="entity_type" value={entity.entityType} />
+                          <input type="hidden" name="entity_id" value={entity.id} />
+                          <button className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Reset Password</button>
+                        </form>
+                      ) : null}
                       <form action={setGroupBranchPortalLoginStatus}>
                         <input type="hidden" name="entity_type" value={entity.entityType} />
                         <input type="hidden" name="entity_id" value={entity.id} />
@@ -243,7 +267,7 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
           )}
         </div>
 
-        <p className="px-1 text-xs text-slate-500">Disabling a login only disables its access mapping/profile. It does not delete or modify the Group, Partner, Branch, memberships, policies, customers, claims, or other business records.</p>
+        <p className="px-1 text-xs text-slate-500">Invitations and password resets are sent by email so the Group or Branch user chooses their own password; administrators never create or see it. Disabling a login does not modify hierarchy or business records.</p>
       </div>
     </AppShell>
   );
@@ -255,8 +279,9 @@ function Notice({ tone, children }: { tone: "success" | "error" | "warning"; chi
 }
 
 function successMessage(event: string) {
-  if (event === "portal_login_created") return "Portal login created successfully.";
-  if (event === "portal_password_reset") return "Temporary password updated successfully.";
+  if (event === "portal_invite_sent") return "Portal invitation sent successfully.";
+  if (event === "portal_invite_resent") return "Portal invitation sent again.";
+  if (event === "portal_password_email_sent") return "Password reset email sent successfully.";
   if (event === "portal_login_enabled") return "Portal login enabled.";
   if (event === "portal_login_disabled") return "Portal login disabled. The business hierarchy was not changed.";
   return "Portal login access updated.";
