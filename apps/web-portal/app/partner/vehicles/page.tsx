@@ -129,27 +129,36 @@ export default async function PartnerVehiclesPage({
                 const vehicleType = vehicle.vehicle_type || "—";
                 const vehicleLabel = pending ? "Registration pending" : vehicle.vehicle_no || "—";
                 const makeModel = [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "—";
+                const detailHref = `/partner/vehicles/${encodeURIComponent(vehicle.vehicle_id)}?customer=${encodeURIComponent(vehicle.customer_id)}`;
 
                 return (
                   <tr key={vehicle.vehicle_id} className="text-[11px] text-[#273B56] transition hover:bg-[#FBFCFE]">
                     <td className="px-4 py-3.5 sm:px-6">
-                      <div className="font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A]">{vehicleLabel}</div>
-                      <div className="mt-1 text-[9px] font-medium uppercase text-[#8190A5]">{vehicleType}</div>
+                      <Link href={detailHref} prefetch={false} className="group block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+                        <div className="font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A] transition group-hover:text-[#1458A6] group-hover:underline">{vehicleLabel}</div>
+                        <div className="mt-1 text-[9px] font-medium uppercase text-[#8190A5]">{vehicleType}</div>
+                      </Link>
                     </td>
-                    <td className="px-4 py-3.5 font-semibold text-[#31435B]">{vehicle.customer_name || "—"}</td>
-                    <td className="px-4 py-3.5 font-semibold text-[#2C3C55]">{makeModel}</td>
+                    <td className="px-4 py-3.5 font-semibold text-[#31435B]">
+                      <Link href={detailHref} prefetch={false} className="block rounded-md py-1 transition hover:text-[#1458A6]">{vehicle.customer_name || "—"}</Link>
+                    </td>
+                    <td className="px-4 py-3.5 font-semibold text-[#2C3C55]">
+                      <Link href={detailHref} prefetch={false} className="block rounded-md py-1 transition hover:text-[#1458A6]">{makeModel}</Link>
+                    </td>
                     <td className="px-4 py-3.5">
-                      {pending ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F2C85C] bg-[#FFF9E9] px-2.5 py-1 text-[9.5px] font-extrabold text-[#A85A13]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#B77B45]" />
-                          RC pending
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#98E7C3] bg-[#EDFFF5] px-2.5 py-1 text-[9.5px] font-extrabold text-[#16775D]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#49AE8C]" />
-                          Registered
-                        </span>
-                      )}
+                      <Link href={detailHref} prefetch={false} className="inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
+                        {pending ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F2C85C] bg-[#FFF9E9] px-2.5 py-1 text-[9.5px] font-extrabold text-[#A85A13]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#B77B45]" />
+                            RC pending
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#98E7C3] bg-[#EDFFF5] px-2.5 py-1 text-[9.5px] font-extrabold text-[#16775D]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#49AE8C]" />
+                            Registered
+                          </span>
+                        )}
+                      </Link>
                     </td>
                     <td className="px-4 py-3.5 sm:pr-6">
                       <Link
