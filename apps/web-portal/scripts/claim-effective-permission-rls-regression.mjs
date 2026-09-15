@@ -9,6 +9,7 @@ const repoRoot = path.resolve(scriptDir, "../../..");
 const migrationPath = path.join(repoRoot, "supabase/migrations/20260908123000_align_claim_workflow_rls_with_effective_manage_claims.sql");
 const migration = await readFile(migrationPath, "utf8");
 const stageActions = await readFile(path.join(repoRoot, "apps/web-portal/app/claims/stage-actions.ts"), "utf8");
+const workflowAccess = await readFile(path.join(repoRoot, "apps/web-portal/lib/claim-workflow-access.ts"), "utf8");
 const verificationActions = await readFile(path.join(repoRoot, "apps/web-portal/app/claims/[id]/verification-actions.ts"), "utf8");
 const roles = await readFile(path.join(repoRoot, "apps/web-portal/lib/roles.ts"), "utf8");
 
@@ -59,7 +60,15 @@ assert.match(migration, /changed_by is null or changed_by = auth\.uid\(\)/);
 assert.match(migration, /uploaded_by is null or uploaded_by = auth\.uid\(\)/);
 assert.match(migration, /verified_by is null or verified_by = auth\.uid\(\)/);
 
-assert.match(stageActions, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/);
+// Canonical stage mutations now delegate authorization to one shared helper.
+// Employees must retain the effective manage_claims + customer-scope guard,
+// while Partner users are admitted only after the Partner-scoped claim RPC
+// proves this exact claim is inside the authenticated intermediary scope.
+assert.match(stageActions, /requireClaimWorkflowAccess\(claimId/);
+assert.match(workflowAccess, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/);
+assert.match(workflowAccess, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/);
+assert.match(workflowAccess, /profile\.role === "intermediary"/);
+assert.match(workflowAccess, /rpc\("partner_app_claim_detail", \{ p_claim_id: claimId \}\)/);
 assert.match(stageActions, /from\("claim_stage_details"\)\.insert/);
 assert.match(stageActions, /from\("claim_status_history"\)\.insert/);
 assert.match(verificationActions, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/);
@@ -68,5 +77,7 @@ assert.match(verificationActions, /from\("claim_stage_details"\)\.insert/);
 
 const salesHeadBlock = roles.match(/sales_head:\[(.*?)\],\n  zonal_head:/s)?.[1] ?? "";
 assert.doesNotMatch(salesHeadBlock, /"manage_claims"/, "sales_head must not gain manage_claims by role default");
+const intermediaryBlock = roles.match(/intermediary:\[(.*?)\]/s)?.[1] ?? "";
+assert.doesNotMatch(intermediaryBlock, /"manage_claims"/, "intermediary must not gain global manage_claims by role default");
 
 console.log("Claim effective manage_claims RLS regression passed.");
