@@ -31,8 +31,9 @@ assert.ok(policyDetail.includes("canAccessPolicy"), "Direct policy detail route 
 
 assert.ok(dashboardBusiness.includes("getAccessiblePolicyRmEmployeeIds"), "Dashboard business data must use policy RM scope rather than customer scope.");
 assert.ok(dashboardBusiness.includes('.in("rm_employee_id", rmEmployeeIds)'), "Dashboard policy population must be constrained by RM employee scope.");
-assert.ok(dashboardBusiness.includes("averageGrossPremium"), "Dashboard should use gross premium as the canonical business metric.");
-assert.ok(dashboardView.includes("Gross premium"), "Dashboard business headline must label the canonical metric as Gross premium.");
+assert.ok(dashboardBusiness.includes("netPremium"), "Dashboard business data must expose net premium for headline reporting.");
+assert.ok(dashboardView.includes("Net premium"), "Dashboard business headline must label the requested metric as Net premium.");
+assert.ok(dashboardView.includes("Avg. net / policy"), "Dashboard business headline must show average net premium per policy.");
 assert.ok(dashboardView.includes("Ranked by gross premium"), "Dashboard rankings must clearly use gross premium.");
 
 assert.ok(reportBusiness.includes("getAccessiblePolicyRmEmployeeIds"), "Business reports must use policy RM scope rather than customer scope.");
