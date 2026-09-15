@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, FileText, Plus, RefreshCw, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  ChevronDown,
+  FileText,
+  RefreshCw,
+  Search,
+} from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
 type IntakeFilter = "all" | "active" | "attention" | "in_progress" | "completed";
@@ -167,8 +175,8 @@ export function PartnerPolicyIntakeListClient() {
   const rangeStart = total ? (page - 1) * PAGE_SIZE + 1 : 0;
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
-  const filterTabs: Array<{ key: IntakeFilter; label: string; count?: number }> = [
-    { key: "all", label: "All" },
+  const filterTabs: Array<{ key: IntakeFilter; label: string; count: number }> = [
+    { key: "all", label: "All", count: total },
     { key: "active", label: "Active", count: counts.active },
     { key: "attention", label: "Action Required", count: counts.attention },
     { key: "in_progress", label: "In Progress", count: counts.progress },
@@ -178,46 +186,37 @@ export function PartnerPolicyIntakeListClient() {
   return (
     <div className="pb-4">
       <section className="overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_10px_30px_rgba(31,61,107,0.06)]">
-        <div className="flex flex-col gap-3 border-b border-[#E3EAF3] px-4 py-3 xl:flex-row xl:items-center">
-          <div className="flex min-w-0 items-center gap-3 xl:flex-1">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0B376D] text-white shadow-sm">
-              <FileText className="h-5 w-5" />
-            </span>
-            <h2 className="shrink-0 text-[15px] font-extrabold tracking-[-0.02em] text-[#142642]">
-              Policy Intake Register
-            </h2>
-            <div className="relative min-w-0 flex-1 xl:max-w-[520px]">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8CA4]" />
-              <input
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search PIR, customer, vehicle, policy, insurer or status"
-                className="h-11 w-full rounded-xl border border-[#D3DDE9] bg-white pl-10 pr-3 text-[10.5px] font-semibold text-[#213653] outline-none transition placeholder:text-[#9AA9BB] focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={() => void load()}
-              disabled={loading}
-              aria-label="Refresh policy intakes"
-              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#D3DDE9] bg-white text-[#365170] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            </button>
+        <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0B376D] text-white shadow-sm">
+            <FileText className="h-5 w-5" />
+          </span>
+          <h2 className="shrink-0 text-[15px] font-extrabold tracking-[-0.02em] text-[#142642]">
+            Policy Intake Register
+          </h2>
+          <div className="relative min-w-0 flex-1 xl:max-w-[520px]">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8CA4]" />
+            <input
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="Search PIR, customer, vehicle, policy, insurer or status"
+              className="h-11 w-full rounded-xl border border-[#D3DDE9] bg-white pl-10 pr-3 text-[10.5px] font-semibold text-[#213653] outline-none transition placeholder:text-[#9AA9BB] focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+            />
           </div>
-
-          <Link
-            href="/partner/policy-intakes/new"
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#0B376D] px-4 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-[#12477F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25"
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            aria-label="Refresh policy intakes"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#D3DDE9] bg-white text-[#365170] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Plus className="h-4 w-4" /> New Intake
-          </Link>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
-        <div className="flex flex-col gap-2 border-b border-[#E3EAF3] bg-[#FBFCFE] px-4 py-2.5 xl:flex-row xl:items-center">
+        <div className="flex min-w-0 items-center gap-2 border-b border-[#E3EAF3] bg-white px-4 py-2.5">
           <label className="relative shrink-0">
             <span className="sr-only">Status filter</span>
             <select
@@ -236,7 +235,16 @@ export function PartnerPolicyIntakeListClient() {
             </select>
           </label>
 
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-xl border border-[#DDE5EF] bg-white p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[#D3DDE9] bg-white px-3.5 text-[10px] font-bold text-[#2D4666] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/15"
+          >
+            <CalendarDays className="h-3.5 w-3.5 text-[#5A7494]" />
+            Date Range
+            <ChevronDown className="h-3.5 w-3.5 text-[#5A7494]" />
+          </button>
+
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filterTabs.map((tab) => {
               const active = filter === tab.key;
               return (
@@ -247,17 +255,25 @@ export function PartnerPolicyIntakeListClient() {
                     setFilter(tab.key);
                     setPage(1);
                   }}
-                  className={`shrink-0 rounded-lg px-3 py-2 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
+                  className={`shrink-0 rounded-xl px-3.5 py-2.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
                     active
                       ? "bg-[#123F73] text-white shadow-sm"
-                      : "text-[#60728C] hover:bg-[#F4F7FB] hover:text-[#203653]"
+                      : "bg-[#F7F9FC] text-[#60728C] hover:bg-[#EEF3F8] hover:text-[#203653]"
                   }`}
                 >
-                  {tab.label}{tab.count !== undefined ? ` ${tab.count}` : ""}
+                  {tab.label} {tab.count}
                 </button>
               );
             })}
           </div>
+
+          <button
+            type="button"
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[#D3DDE9] bg-white px-3.5 text-[9px] font-bold text-[#2D4666] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/15"
+          >
+            My Active Work 0
+            <ChevronDown className="h-3.5 w-3.5 text-[#5A7494]" />
+          </button>
         </div>
 
         {error ? (
