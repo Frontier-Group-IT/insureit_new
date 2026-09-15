@@ -9,7 +9,9 @@ on:
       - 'supabase/migrations/20260915123000_group_branch_portal_access.sql'
       - 'supabase/migrations/20260915124500_group_branch_partner_runtime.sql'
       - 'supabase/migrations/20260915125000_group_branch_partner_identity.sql'
+      - 'supabase/migrations/20260915143000_group_branch_access_hardening.sql'
       - 'supabase/verification/20260915123000_group_branch_portal_access_verify.sql'
+      - 'supabase/verification/20260915143000_group_branch_access_hardening_verify.sql'
       - '.github/workflows/apply-group-branch-portal-access.yml'
 
 permissions:
@@ -53,10 +55,14 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
-          test -f supabase/migrations/20260915123000_group_branch_portal_access.sql
-          test -f supabase/migrations/20260915124500_group_branch_partner_runtime.sql
-          test -f supabase/migrations/20260915125000_group_branch_partner_identity.sql
-          test -f supabase/verification/20260915123000_group_branch_portal_access_verify.sql
+          for file in \
+            supabase/migrations/20260915123000_group_branch_portal_access.sql \
+            supabase/migrations/20260915124500_group_branch_partner_runtime.sql \
+            supabase/migrations/20260915125000_group_branch_partner_identity.sql \
+            supabase/migrations/20260915143000_group_branch_access_hardening.sql \
+            supabase/verification/20260915143000_group_branch_access_hardening_verify.sql; do
+            test -f "$file"
+          done
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -75,43 +81,50 @@ jobs:
               (select count(*) from public.partners) as partner_count,
               (select count(*) from public.intermediary_groups) as group_count,
               (select count(*) from public.intermediary_group_memberships) as membership_count,
-              (select count(*) from public.intermediary_portal_accounts) as partner_portal_account_count;
+              (select count(*) from public.intermediary_portal_accounts) as partner_portal_account_count,
+              (select count(*) from public.portal_access_identities) as access_count;
           ")
           echo "$result"
           echo "PRE_PARTNER_COUNT=$(jq -r '.[0].partner_count' <<<"$result")" >> "$GITHUB_ENV"
           echo "PRE_GROUP_COUNT=$(jq -r '.[0].group_count' <<<"$result")" >> "$GITHUB_ENV"
           echo "PRE_MEMBERSHIP_COUNT=$(jq -r '.[0].membership_count' <<<"$result")" >> "$GITHUB_ENV"
           echo "PRE_PARTNER_PORTAL_COUNT=$(jq -r '.[0].partner_portal_account_count' <<<"$result")" >> "$GITHUB_ENV"
+          echo "PRE_ACCESS_COUNT=$(jq -r '.[0].access_count' <<<"$result")" >> "$GITHUB_ENV"
 
-      - name: Apply Group/Branch portal access migrations
+      - name: Apply missing Group/Branch portal access migrations
         shell: bash
         run: |
           set -euo pipefail
-          for version in 20260915123000 20260915124500 20260915125000; do
-            file="supabase/migrations/${version}_$(case "$version" in
-              20260915123000) echo group_branch_portal_access ;;
-              20260915124500) echo group_branch_partner_runtime ;;
-              20260915125000) echo group_branch_partner_identity ;;
-            esac).sql"
+
+          applied_json=$(supabase db query --linked --output-format json "select version from supabase_migrations.schema_migrations;")
+          applied_versions=$(jq -r '.[].version // empty' <<<"$applied_json")
+
+          for version in 20260915123000 20260915124500 20260915125000 20260915143000; do
+            if grep -qx "$version" <<<"$applied_versions"; then
+              echo "Migration $version already recorded; skipping."
+              continue
+            fi
+
+            case "$version" in
+              20260915123000) file="supabase/migrations/20260915123000_group_branch_portal_access.sql" ;;
+              20260915124500) file="supabase/migrations/20260915124500_group_branch_partner_runtime.sql" ;;
+              20260915125000) file="supabase/migrations/20260915125000_group_branch_partner_identity.sql" ;;
+              20260915143000) file="supabase/migrations/20260915143000_group_branch_access_hardening.sql" ;;
+            esac
+
             echo "Applying $file"
             supabase db query --linked --file "$file"
             supabase migration repair --linked --status applied "$version"
           done
 
-      - name: Verify schema, ACLs, no backfill, and business invariants
+      - name: Verify hardened schema and business invariants
         shell: bash
         run: |
           set -euo pipefail
+          supabase db query --linked --file supabase/verification/20260915143000_group_branch_access_hardening_verify.sql
+
           result=$(supabase db query --linked --output-format json "
             select
-              to_regclass('public.portal_access_identities') is not null as access_table_ready,
-              to_regprocedure('public.partner_portal_access_context()') is not null as access_context_ready,
-              to_regprocedure('public.partner_app_current_identity()') is not null as identity_ready,
-              to_regprocedure('public.partner_app_legacy_current_identity()') is not null as legacy_identity_ready,
-              to_regprocedure('public.partner_app_commercial_scope()') is not null as scope_ready,
-              not has_function_privilege('anon', 'public.partner_app_current_identity()', 'EXECUTE') as identity_anon_blocked,
-              has_function_privilege('authenticated', 'public.partner_app_current_identity()', 'EXECUTE') as identity_authenticated_ready,
-              not has_function_privilege('authenticated', 'public.partner_app_legacy_current_identity()', 'EXECUTE') as legacy_authenticated_blocked,
               (select count(*) from public.portal_access_identities) as access_count,
               (select count(*) from public.partners) as partner_count,
               (select count(*) from public.intermediary_groups) as group_count,
@@ -120,15 +133,7 @@ jobs:
           ")
           echo "$result"
 
-          test "$(jq -r '.[0].access_table_ready' <<<"$result")" = "true"
-          test "$(jq -r '.[0].access_context_ready' <<<"$result")" = "true"
-          test "$(jq -r '.[0].identity_ready' <<<"$result")" = "true"
-          test "$(jq -r '.[0].legacy_identity_ready' <<<"$result")" = "true"
-          test "$(jq -r '.[0].scope_ready' <<<"$result")" = "true"
-          test "$(jq -r '.[0].identity_anon_blocked' <<<"$result")" = "true"
-          test "$(jq -r '.[0].identity_authenticated_ready' <<<"$result")" = "true"
-          test "$(jq -r '.[0].legacy_authenticated_blocked' <<<"$result")" = "true"
-          test "$(jq -r '.[0].access_count' <<<"$result")" = "0"
+          test "$(jq -r '.[0].access_count' <<<"$result")" = "$PRE_ACCESS_COUNT"
           test "$(jq -r '.[0].partner_count' <<<"$result")" = "$PRE_PARTNER_COUNT"
           test "$(jq -r '.[0].group_count' <<<"$result")" = "$PRE_GROUP_COUNT"
           test "$(jq -r '.[0].membership_count' <<<"$result")" = "$PRE_MEMBERSHIP_COUNT"
@@ -139,7 +144,7 @@ jobs:
         run: |
           set -euo pipefail
           supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" | tee /tmp/migration-list.txt
-          for version in 20260915123000 20260915124500 20260915125000; do
+          for version in 20260915123000 20260915124500 20260915125000 20260915143000; do
             grep -q "$version" /tmp/migration-list.txt || {
               echo "::error::Migration $version missing from production history."
               exit 1
