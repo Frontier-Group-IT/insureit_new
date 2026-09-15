@@ -54,7 +54,7 @@ export default async function PartnerVehiclesPage({
       <section className="overflow-hidden rounded-[18px] border border-[#DCE5EF] bg-white shadow-[0_8px_26px_rgba(25,58,100,0.05)]">
         <div className="flex min-h-[82px] items-center justify-between border-b border-[#E5EBF2] px-5 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
-            <span className="grid h-13 w-13 place-items-center rounded-[14px] bg-[#123E6E] text-white shadow-[0_5px_14px_rgba(18,62,110,0.18)]">
+            <span className="grid h-[52px] w-[52px] place-items-center rounded-[14px] bg-[#123E6E] text-white shadow-[0_5px_14px_rgba(18,62,110,0.18)]">
               <CarFront className="h-5 w-5" />
             </span>
             <h1 className="text-[18px] font-extrabold tracking-[-0.02em] text-[#18243A]">Vehicle Portfolio</h1>
@@ -63,7 +63,7 @@ export default async function PartnerVehiclesPage({
           <Link
             href="/partner/customers"
             prefetch={false}
-            className="inline-flex h-11 items-center gap-2 rounded-[14px] bg-[#153E6D] px-4.5 text-[12px] font-extrabold text-white shadow-[0_4px_12px_rgba(21,62,109,0.18)] transition hover:bg-[#0E345E]"
+            className="inline-flex h-11 items-center gap-2 rounded-[14px] bg-[#153E6D] px-[18px] text-[12px] font-extrabold text-white shadow-[0_4px_12px_rgba(21,62,109,0.18)] transition hover:bg-[#0E345E]"
             title="Choose a customer to add a vehicle"
           >
             <Plus className="h-4 w-4" />
