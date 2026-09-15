@@ -1,7 +1,6 @@
 import { FileText, Layers3, Target, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
-import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
 import { PartnerNetworkStructure } from "./network-structure";
 
@@ -12,42 +11,23 @@ function humanize(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-async function keepRootPartnerFamilies(rows: PartnerNetworkRow[], scopeMode: string) {
-  // A self-scoped login (including Branch login) is already constrained by the
-  // authorized partner_app_network RPC. Avoid the broader hierarchy lookup here:
-  // Branch users can legitimately lack RLS visibility to the parent Partner row,
-  // which previously turned the Network page into a server-side exception.
+type PartnerNetworkHierarchyRow = PartnerNetworkRow & {
+  parent_partner_id?: string | null;
+};
+
+function keepRootPartnerFamilies(rows: PartnerNetworkRow[], scopeMode: string) {
+  // partner_app_network is the authorization boundary for Group/Partner/Branch
+  // visibility. Self scope intentionally renders the single authorized Branch row.
   if (scopeMode === "self") return rows;
 
-  const partnerIds = [...new Set(rows.map((row) => row.partner_id).filter(Boolean))];
-  if (!partnerIds.length) return rows;
-
-  const supabase = await createServerSupabaseClient();
-  const { data: hierarchyRows, error } = await supabase
-    .from("partners")
-    .select("id, parent_partner_id")
-    .in("id", partnerIds);
-
-  if (error) {
-    throw new Error(`Partner hierarchy is unavailable: ${error.message}`);
-  }
-
-  if ((hierarchyRows ?? []).length !== partnerIds.length) {
-    throw new Error("Partner hierarchy is incomplete for the current network scope.");
-  }
-
-  const branchIds = new Set(
-    (hierarchyRows ?? [])
-      .filter((row) => Boolean(row.parent_partner_id))
-      .map((row) => row.id),
-  );
-
-  return rows.filter((row) => !branchIds.has(row.partner_id));
+  // Broader scopes receive parent_partner_id from the SECURITY DEFINER RPC so the
+  // page can classify Branch rows without performing a second RLS-limited query.
+  return rows.filter((row) => !(row as PartnerNetworkHierarchyRow).parent_partner_id);
 }
 
 export default async function PartnerNetworkPage() {
   const data = await getPartnerWebNetwork();
-  const partnerRows = await keepRootPartnerFamilies(data.partners, data.scope_mode);
+  const partnerRows = keepRootPartnerFamilies(data.partners, data.scope_mode);
   const visibleGroupIds = new Set(
     partnerRows.map((row) => row.group?.group_id).filter((groupId): groupId is string => Boolean(groupId)),
   );
