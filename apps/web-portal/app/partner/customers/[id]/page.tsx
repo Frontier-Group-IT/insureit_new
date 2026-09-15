@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebCustomerDetail } from "@/lib/partner-web";
-import { PartnerCustomerFleetSummary } from "./partner-customer-fleet-summary";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -67,6 +66,13 @@ export default async function PartnerCustomerDetailPage({
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Customer Register
+          </Link>
+          <Link
+            href={`/partner/customers/${encodeURIComponent(id)}/fleet`}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#123F73] px-3.5 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-[#0D3260] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25"
+          >
+            <CarFront className="h-3.5 w-3.5" />
+            View Fleet
           </Link>
         </div>
 
@@ -162,8 +168,6 @@ export default async function PartnerCustomerDetailPage({
           </div>
         </details>
 
-        <PartnerCustomerFleetSummary data={data} />
-
         <section className="overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
           <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D6E1EE] bg-[#F4F7FB] px-2.5 text-[11px] font-semibold text-[#2563EB]">
@@ -176,6 +180,12 @@ export default async function PartnerCustomerDetailPage({
                 className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]"
               >
                 Back
+              </Link>
+              <Link
+                href={`/partner/customers/${encodeURIComponent(id)}/fleet`}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]"
+              >
+                View Fleet
               </Link>
               {data.summary.policies > 0 ? (
                 <Link
