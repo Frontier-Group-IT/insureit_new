@@ -1,135 +1,76 @@
-import Link from "next/link";
-import { ArrowRight, FileText, Search, ShieldAlert } from "lucide-react";
-import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { listPartnerWebClaims, type PartnerClaimState } from "@/lib/partner-web";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { listPartnerWebClaims, type PartnerClaimRow } from "@/lib/partner-web";
+import { PartnerClaimsPortfolio, type PartnerClaimPortfolioRow } from "./claims-portfolio";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const PAGE_SIZE = 25;
-const states: Array<{ value: PartnerClaimState; label: string }> = [
-  { value: "all", label: "All" },
-  { value: "active", label: "Active" },
-  { value: "completed", label: "Completed" },
-];
+const BATCH_SIZE = 200;
+const MAX_ROWS = 5000;
 
-function currency(value: number | string | null | undefined) {
-  if (value == null) return "Amount not recorded";
-  const amount = Number(value);
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(Number.isFinite(amount) ? amount : 0);
-}
-function dateLabel(value: string | null) {
-  if (!value) return "—";
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(d);
-}
-function humanize(value: string | null | undefined) {
-  return (value || "not recorded").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-function validState(value?: string): PartnerClaimState {
-  return states.some((item) => item.value === value) ? value as PartnerClaimState : "all";
-}
-function pageNumber(value?: string) {
-  const parsed = Number(value ?? "1");
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
+type ClaimEnrichmentRow = {
+  id: string;
+  policy_service_source: string | null;
+  customers: { company_name: string | null; contact_name: string | null; phone: string | null } | null;
+  vehicles: { vehicle_no: string | null; make: string | null; model: string | null } | null;
+};
+
+async function loadScopedPartnerClaims() {
+  const rows: PartnerClaimRow[] = [];
+  let offset = 0;
+  let total = 1;
+
+  while (offset < total && rows.length < MAX_ROWS) {
+    const batch = await listPartnerWebClaims({ limit: BATCH_SIZE, offset, state: "all" });
+    if (offset === 0) total = Math.min(batch[0]?.total_count ?? batch.length, MAX_ROWS);
+    if (!batch.length) break;
+    rows.push(...batch);
+    offset += batch.length;
+  }
+
+  return rows;
 }
 
-export default async function PartnerClaimsPage({ searchParams }: { searchParams: Promise<{ q?: string; state?: string; page?: string }> }) {
-  const query = await searchParams;
-  const q = query.q?.trim() ?? "";
-  const state = validState(query.state);
-  const page = pageNumber(query.page);
-  const offset = (page - 1) * PAGE_SIZE;
+export default async function PartnerClaimsPage() {
+  const scopedRows = await loadScopedPartnerClaims();
+  const claimIds = scopedRows.map((row) => row.claim_id);
+  const enrichmentById = new Map<string, ClaimEnrichmentRow>();
 
-  const rows = await listPartnerWebClaims({ limit: PAGE_SIZE, offset, search: q, state });
+  if (claimIds.length) {
+    const admin = createSupabaseAdminClient();
+    const { data } = await admin
+      .from("claims")
+      .select("id, policy_service_source, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model)")
+      .in("id", claimIds)
+      .returns<ClaimEnrichmentRow[]>();
 
-  const total = rows[0]?.total_count ?? 0;
-  const hasPrevious = page > 1;
-  const hasNext = offset + rows.length < total;
+    for (const row of data ?? []) enrichmentById.set(row.id, row);
+  }
 
-  const hrefFor = (next: { state?: PartnerClaimState; page?: number }) => {
-    const params = new URLSearchParams();
-    const nextState = next.state ?? state;
-    const nextPage = next.page ?? 1;
-    if (q) params.set("q", q);
-    if (nextState !== "all") params.set("state", nextState);
-    if (nextPage > 1) params.set("page", String(nextPage));
-    const search = params.toString();
-    return search ? "/partner/claims?" + search : "/partner/claims";
-  };
+  const rows: PartnerClaimPortfolioRow[] = scopedRows.map((row) => {
+    const detail = enrichmentById.get(row.claim_id);
+    return {
+      id: row.claim_id,
+      controlNo: row.claim_no,
+      insurerClaimNo: row.insurer_claim_no,
+      currentStatus: row.current_status,
+      source: detail?.policy_service_source === "external" ? "external" : "internal",
+      customerName: row.customer_name,
+      customerPhone: detail?.customers?.phone ?? null,
+      vehicleNo: row.vehicle_no ?? detail?.vehicles?.vehicle_no ?? null,
+      vehicleMake: detail?.vehicles?.make ?? null,
+      vehicleModel: detail?.vehicles?.model ?? null,
+      accidentAt: row.accident_at,
+      createdAt: row.created_at,
+      insurerName: row.insurer_name,
+      policyNo: row.policy_no,
+    };
+  });
 
   return (
     <PartnerPortalShell title="Claims">
-      <div className="space-y-4 pb-4">
-        <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
-          <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
-            <div className="flex shrink-0 items-center gap-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#3156B8]"><FileText className="h-4 w-4" /></span>
-              <h2 className="text-[12px] font-extrabold text-[#1B2F4E]">Your claims</h2>
-            </div>
-
-            <form action="/partner/claims" className="w-full xl:ml-3 xl:max-w-[470px]">
-              {state !== "all" ? <input type="hidden" name="state" value={state} /> : null}
-              <div className="relative min-w-0">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7D8DA4]" />
-                <input name="q" defaultValue={q} placeholder="Search claim, customer, vehicle or policy" className="h-9 w-full rounded-lg border border-[#CCD7E4] bg-white pl-9 pr-3 text-[10px] font-semibold text-[#213653] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10" />
-              </div>
-            </form>
-
-            <div className="flex flex-wrap items-center gap-2 xl:ml-auto">
-              {states.map((item) => (
-                <Link key={item.value} href={hrefFor({ state: item.value, page: 1 })} className={"rounded-lg px-3 py-2 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 " + (item.value === state ? "bg-[#166EF0] text-white shadow-[0_4px_10px_rgba(22,110,240,0.18)]" : "border border-[#D8E0EA] bg-white text-[#4D617D]")}>{item.label}</Link>
-              ))}
-              <span className="ml-1 hidden h-6 w-px bg-[#E1E7EF] sm:block" aria-hidden="true" />
-              <p className="shrink-0 text-[9.5px] font-medium text-[#74839A]">Total recorded <span className="ml-1 text-[13px] font-black text-[#172846]">{total}</span></p>
-            </div>
-          </div>
-
-          {rows.length ? (
-            <div className="divide-y divide-[#E8EDF4]">
-              {rows.map((row) => {
-                const amount = row.settlement_amount ?? row.approved_amount ?? row.estimated_loss;
-                return (
-                  <Link key={row.claim_id} href={"/partner/claims/" + encodeURIComponent(row.claim_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(140px,.65fr)_minmax(120px,.55fr)_auto] xl:items-center">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#FFF6E7] text-[#B56A00]"><ShieldAlert className="h-4 w-4" /></span>
-                      <div className="min-w-0">
-                        <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.claim_no || "Claim"}</p>
-                        <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.customer_name}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="break-words text-[10px] font-semibold leading-4 text-[#536680]">{row.insurer_name || "Insurer not recorded"}</p>
-                      <p className="mt-0.5 break-words text-[9.5px] leading-4 text-[#7F8EA4]">{[row.vehicle_no || "Vehicle not linked", row.policy_no || "External policy"].join(" · ")}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10.5px] font-extrabold text-[#203653]">{currency(amount)}</p>
-                      <p className="mt-0.5 text-[9px] text-[#8190A5]">{dateLabel(row.accident_at || row.created_at)}</p>
-                    </div>
-                    <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{humanize(row.current_status || row.claim_state)}</span>
-                    <ArrowRight className="hidden h-4 w-4 text-[#315A91] transition group-hover:translate-x-0.5 xl:block" />
-                  </Link>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="py-14 text-center">
-              <ShieldAlert className="mx-auto h-7 w-7 text-[#9AABC0]" />
-              <p className="mt-3 text-[12px] font-bold text-[#23395D]">No claims found</p>
-              <p className="mt-1 text-[10.5px] text-[#7A899F]">No claims match this search or filter.</p>
-            </div>
-          )}
-
-          <PartnerPagination
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={total}
-            previousHref={hasPrevious ? hrefFor({ page: page - 1 }) : null}
-            nextHref={hasNext ? hrefFor({ page: page + 1 }) : null}
-          />
-        </section>
-      </div>
+      <PartnerClaimsPortfolio rows={rows} />
     </PartnerPortalShell>
   );
 }
