@@ -208,6 +208,9 @@ jobs:
             fi
             schema_workflow="apply-group-branch-portal-access.yml"
             echo "Group/Branch portal access migrations detected. Waiting for their schema workflow..."
+          elif grep -qx 'supabase/migrations/20260915170000_group_branch_portal_access_hardening.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-group-branch-portal-access-hardening.yml"
+            echo "Group/Branch portal access hardening detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260914194500_partner_branch_onboarding.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-branch-onboarding.yml"
             echo "Partner Branch onboarding migration detected. Waiting for its schema workflow..."
