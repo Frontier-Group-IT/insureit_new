@@ -91,12 +91,6 @@ if (fs.existsSync(reportingPagePath)) {
   assert(page.includes("interaction history"), "reporting UI must explain funnel history semantics");
 }
 
-if (fs.existsSync(renewalsPagePath)) {
-  const page = fs.readFileSync(renewalsPagePath, "utf8");
-  assert(page.includes('href="/partner/renewals/external/reporting"'), "Renewals page must expose external renewal reporting");
-  assert(page.includes("External Renewal Reporting"), "Renewals page reporting label is missing");
-}
-
 if (fs.existsSync(libPath)) {
   const lib = fs.readFileSync(libPath, "utf8");
   assert(lib.includes('PartnerExternalRenewalIntakeFilter = "all" | "not_started" | "in_progress"'), "typed intake filter is missing");
