@@ -54,20 +54,18 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
     <PartnerPortalShell title="Customers">
       <div className="pb-4">
         <section className="overflow-hidden rounded-2xl border border-[#D9E1EC] bg-white shadow-[0_8px_24px_rgba(31,65,115,0.05)]">
-          <div className="flex min-h-[72px] flex-col gap-3 border-b border-[#E2E8F0] px-5 py-3.5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="flex flex-col gap-3 border-b border-[#E2E8F0] px-4 py-3.5 xl:flex-row xl:items-center">
+            <div className="flex min-w-0 shrink-0 items-center gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#173E6C] text-white shadow-[0_4px_10px_rgba(23,62,108,0.16)]">
                 <Building2 className="h-[19px] w-[19px]" />
               </span>
-              <h1 className="text-[16px] font-extrabold tracking-[-0.025em] text-[#15233B]">Customer Portfolio</h1>
+              <h1 className="whitespace-nowrap text-[16px] font-extrabold tracking-[-0.025em] text-[#15233B]">Customer Portfolio</h1>
             </div>
-          </div>
 
-          <div className="flex flex-col gap-3 border-b border-[#E2E8F0] px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center xl:ml-5">
               <CustomerSearch initialQuery={q} />
 
-              <div className="relative w-full sm:w-[225px]">
+              <div className="relative w-full sm:w-[225px] sm:shrink-0">
                 <select
                   aria-label="Customer type"
                   defaultValue="all"
@@ -79,7 +77,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
               </div>
             </div>
 
-            <div className="inline-flex h-10 shrink-0 items-center rounded-xl border border-[#D5DEEA] bg-[#F7F9FC] p-1 text-[10px] font-bold text-[#667892]">
+            <div className="inline-flex h-10 shrink-0 items-center self-start rounded-xl border border-[#D5DEEA] bg-[#F7F9FC] p-1 text-[10px] font-bold text-[#667892] sm:self-auto xl:ml-3">
               <span className="inline-flex h-8 items-center rounded-lg bg-[#173E6C] px-3 text-white shadow-sm">All&nbsp; {summary.total_customers}</span>
               <span className="inline-flex h-8 items-center px-3">Active&nbsp; {active}</span>
               <span className="inline-flex h-8 items-center px-3">Inactive&nbsp; {inactive}</span>
