@@ -91,6 +91,12 @@ assert(!connectionTestRoute.includes("SARVAM_API_KEY"), "Sarvam connection-test 
 assert(webhook.includes("SARVAM_RENEWAL_WEBHOOK_SECRET"), "webhook requires INSUREIT-controlled secret");
 assert(webhook.includes("SARVAM_RENEWAL_CAMPAIGN_ID"), "webhook rejects unexpected campaigns");
 assert(webhook.includes("user_identifier"), "webhook correlates by INSUREIT local attempt id");
+assert(webhook.includes('connected: "no_decision"'), "current Sarvam connected disposition normalizes to the durable connected/no-decision persistence value");
+assert(webhook.includes('renewed_elsewhere: "already_renewed"'), "current Sarvam renewed-elsewhere disposition remains compatible with the durable CRM projection");
+assert(webhook.includes('interested: "high"'), "current Sarvam interested label normalizes to the durable interest scale");
+assert(webhook.includes('maybe: "medium"'), "current Sarvam maybe label normalizes to the durable interest scale");
+assert(webhook.includes('not_interested: "low"'), "current Sarvam not-interested label normalizes to the durable interest scale");
+assert(webhook.includes("payload.duration ?? payload.duration_in_seconds"), "webhook accepts both documented/legacy duration field shapes without weakening validation");
 assert(!/interaction_transcript[^\n]*applyExternalRenewalVoiceResult/i.test(webhook), "raw transcript is not passed into persistence");
 assert(!/console\.(log|error|warn)\s*\(/.test(webhook), "webhook does not log provider/customer payloads");
 
