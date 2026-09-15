@@ -9,6 +9,7 @@ import {
   ChevronDown,
   FileText,
   RefreshCw,
+  RotateCcw,
   Search,
 } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
@@ -276,7 +277,7 @@ export function PartnerPolicyIntakeListClient() {
             aria-label="Refresh policy intakes"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#D3DDE9] bg-white text-[#365170] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <RotateCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
 
