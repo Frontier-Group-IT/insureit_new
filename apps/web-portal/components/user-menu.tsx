@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, MouseEvent } from "react";
 import { Camera } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/auth-config";
@@ -109,7 +110,7 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome, display
     };
   }, [isOpen]);
 
-  function openAvatarPicker(event: React.MouseEvent<HTMLButtonElement>) {
+  function openAvatarPicker(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
     cancelCloseTimer();
@@ -118,7 +119,7 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome, display
     fileInputRef.current?.click();
   }
 
-  function handleAvatarSelected(event: React.ChangeEvent<HTMLInputElement>) {
+  function handleAvatarSelected(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
