@@ -44,7 +44,7 @@ assert.match(stage3Workspace, /\[claimId, rows\]/, "Stage 3 verification data mu
 
 assert.match(stage3Loader, /requireClaimWorkflowAccess\(claimId, "You do not have permission to verify claim documents\."\)/, "Stage 3 parity loader must pass through the shared claim workflow authorization guard.");
 assert.match(claimWorkflowAccess, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/, "Shared claim workflow authorization must preserve employee manage_claims edit capability checks.");
-assert.match(claimWorkflowAccess, /canAccessCustomer\(profile\.id, profile\.role, customerId, "manage_claims"\)/, "Shared claim workflow authorization must preserve employee customer-scope enforcement.");
+assert.match(claimWorkflowAccess, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/, "Shared claim workflow authorization must preserve employee customer-scope enforcement.");
 assert.match(stage3Loader, /claim\.claim_service_mode !== "broker_managed"/, "Stage 3 parity must remain within the broker-managed Operations boundary.");
 assert.match(stage3Loader, /from\("external_policies"\)/, "External Claim Stage 3 must resolve external-policy validity dates.");
 assert.match(stage3Loader, /from\("policies"\)/, "Internal Claim Stage 3 must resolve internal-policy validity dates.");
