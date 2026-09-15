@@ -30,7 +30,15 @@ export async function createBranchProfile(formData: FormData) {
   }
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin.rpc("service_create_partner_branch_profile", {
+  const [{ data: existingAccess }, { data: existingProfile }] = await Promise.all([
+    admin.from("portal_access_identities").select("profile_id").ilike("login_email", email).maybeSingle(),
+    admin.from("profiles").select("id").ilike("email", email).maybeSingle(),
+  ]);
+  if (existingAccess || existingProfile) {
+    return fail("That Branch email is already assigned to another portal user.");
+  }
+
+  const { data: branchPartnerId, error } = await admin.rpc("service_create_partner_branch_profile", {
     p_branch_name: branchName,
     p_phone: phone,
     p_email: email,
@@ -39,10 +47,60 @@ export async function createBranchProfile(formData: FormData) {
     p_parent_partner_id: parentPartnerId,
     p_actor_profile_id: profile.id,
   });
-  if (error) return fail(error.message || "Branch could not be created.");
+  if (error || typeof branchPartnerId !== "string") {
+    return fail(error?.message || "Branch could not be created.");
+  }
+
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
+  const inviteOptions = siteUrl
+    ? {
+        redirectTo: `${siteUrl}/auth/callback?next=/intermediary-portal`,
+        data: { full_name: branchName, role: "intermediary", portal_account_type: "branch" },
+      }
+    : { data: { full_name: branchName, role: "intermediary", portal_account_type: "branch" } };
+
+  const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, inviteOptions);
+  if (inviteError || !invite.user?.id) {
+    return branchCreatedButInviteFailed(inviteError?.message || "Unable to send the Branch login invitation.");
+  }
+
+  const profileId = invite.user.id;
+  const now = new Date().toISOString();
+  const { error: profileError } = await admin.from("profiles").upsert({
+    id: profileId,
+    full_name: branchName,
+    role: "intermediary",
+    email,
+    phone,
+    is_active: true,
+    updated_at: now,
+  }, { onConflict: "id" });
+  if (profileError) {
+    await admin.auth.admin.deleteUser(profileId);
+    return branchCreatedButInviteFailed(`Portal profile could not be prepared: ${profileError.message}`);
+  }
+
+  const { error: mappingError } = await admin.from("portal_access_identities").insert({
+    profile_id: profileId,
+    entity_type: "branch",
+    entity_id: branchPartnerId,
+    status: "active",
+    login_email: email,
+    created_by: profile.id,
+    updated_by: profile.id,
+    updated_at: now,
+  });
+  if (mappingError) {
+    await admin.from("profiles").delete().eq("id", profileId);
+    await admin.auth.admin.deleteUser(profileId);
+    return branchCreatedButInviteFailed(`Login access could not be linked: ${mappingError.message}`);
+  }
 
   revalidatePath("/intermediaries/groups");
+  revalidatePath("/intermediaries/groups/branches");
   revalidatePath("/intermediaries/groups/branches/new");
+  revalidatePath("/intermediaries/groups/login-access");
   redirect("/intermediaries/groups?success=branch_created");
 }
 
@@ -89,4 +147,11 @@ function text(formData: FormData, key: string) {
 
 function fail(message: string): never {
   redirect(`/intermediaries/groups/branches/new?error=${encodeURIComponent(message)}`);
+}
+
+function branchCreatedButInviteFailed(message: string): never {
+  revalidatePath("/intermediaries/groups");
+  revalidatePath("/intermediaries/groups/branches");
+  revalidatePath("/intermediaries/groups/login-access");
+  redirect(`/intermediaries/groups/login-access?error=${encodeURIComponent(`Branch was created, but the login invitation could not be completed. ${message} Use Login Access to retry.`)}`);
 }
