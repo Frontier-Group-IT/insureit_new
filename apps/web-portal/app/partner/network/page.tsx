@@ -1,7 +1,8 @@
 import { FileText, Layers3, Target, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerPageHeader } from "@/components/partner-portal/partner-page-primitives";
-import { getPartnerWebNetwork } from "@/lib/partner-web";
+import { createServerSupabaseClient } from "@/lib/auth-server";
+import { getPartnerWebNetwork, type PartnerNetworkRow } from "@/lib/partner-web";
 import { PartnerNetworkStructure } from "./network-structure";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,41 @@ function humanize(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+async function keepRootPartnerFamilies(rows: PartnerNetworkRow[]) {
+  const partnerIds = [...new Set(rows.map((row) => row.partner_id).filter(Boolean))];
+  if (!partnerIds.length) return rows;
+
+  const supabase = await createServerSupabaseClient();
+  const { data: hierarchyRows, error } = await supabase
+    .from("partners")
+    .select("id, parent_partner_id")
+    .in("id", partnerIds);
+
+  if (error) {
+    throw new Error(`Partner hierarchy is unavailable: ${error.message}`);
+  }
+
+  if ((hierarchyRows ?? []).length !== partnerIds.length) {
+    throw new Error("Partner hierarchy is incomplete for the current network scope.");
+  }
+
+  const branchIds = new Set(
+    (hierarchyRows ?? [])
+      .filter((row) => Boolean(row.parent_partner_id))
+      .map((row) => row.id),
+  );
+
+  return rows.filter((row) => !branchIds.has(row.partner_id));
+}
+
 export default async function PartnerNetworkPage() {
   const data = await getPartnerWebNetwork();
-  const childCount = data.partners.reduce((sum, row) => sum + row.child_count, 0);
+  const partnerRows = await keepRootPartnerFamilies(data.partners);
+  const visibleGroupIds = new Set(
+    partnerRows.map((row) => row.group?.group_id).filter((groupId): groupId is string => Boolean(groupId)),
+  );
+  const totalGroups = visibleGroupIds.size;
+  const childCount = partnerRows.reduce((sum, row) => sum + row.child_count, 0);
 
   return (
     <PartnerPortalShell title="Network">
@@ -21,14 +54,14 @@ export default async function PartnerNetworkPage() {
         <PartnerPageHeader title="Commercial relationships" />
 
         <section className="grid overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-[0_8px_24px_rgba(49,86,184,0.05)] sm:grid-cols-2 xl:grid-cols-4">
-          <SummaryMetric label="Partner Families" value={data.total_partners} icon={<UsersRound className="h-4 w-4" />} iconClass="bg-[#EEF4FF] text-[#2563EB]" />
-          <SummaryMetric label="Groups" value={data.total_groups} icon={<Layers3 className="h-4 w-4" />} iconClass="bg-[#E7F8EF] text-[#13A36B]" />
+          <SummaryMetric label="Partner Families" value={partnerRows.length} icon={<UsersRound className="h-4 w-4" />} iconClass="bg-[#EEF4FF] text-[#2563EB]" />
+          <SummaryMetric label="Groups" value={totalGroups} icon={<Layers3 className="h-4 w-4" />} iconClass="bg-[#E7F8EF] text-[#13A36B]" />
           <SummaryMetric label="POSP / MISP" value={childCount} icon={<FileText className="h-4 w-4" />} iconClass="bg-[#F4EAFE] text-[#8B3FE8]" />
           <SummaryMetric label="Scope" value={humanize(data.scope_mode)} icon={<Target className="h-4 w-4" />} iconClass="bg-[#FFF0DF] text-[#F28A18]" />
         </section>
 
-        {data.partners.length ? (
-          <PartnerNetworkStructure rows={data.partners} totalGroups={data.total_groups} />
+        {partnerRows.length ? (
+          <PartnerNetworkStructure rows={partnerRows} totalGroups={totalGroups} />
         ) : (
           <section className="rounded-xl border border-[#DFE7F2] bg-white px-4 py-10 text-center shadow-[0_8px_24px_rgba(49,86,184,0.05)]">
             <p className="text-[12px] font-bold text-[#23395D]">No commercial network available</p>
