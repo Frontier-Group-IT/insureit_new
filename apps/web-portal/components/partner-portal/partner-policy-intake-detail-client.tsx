@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, CheckCircle2, FileUp, Loader2, RefreshCw } from "lucide-react";
-import { PartnerPageHeader, PartnerSectionHeading } from "@/components/partner-portal/partner-page-primitives";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AlertCircle, CheckCircle2, ExternalLink, FileText, FileUp, Loader2, Phone, ShieldCheck, UserRound } from "lucide-react";
+
+import { openPartnerPolicyIntakeDocumentWeb } from "@/lib/partner-policy-intake-document-client";
 import {
   getPartnerPolicyIntakeWeb,
   POLICY_INTAKE_ACCEPT,
@@ -12,56 +12,96 @@ import {
   validatePolicyIntakeFile,
   type IntakeProgress,
   type PartnerPolicyIntake,
+  type PartnerPolicyIntakeField,
 } from "@/lib/partner-policy-intakes-client";
 
-function humanize(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
+const vehicleKeys = [
+  "vehicle_registration_status",
+  "vehicle_registration_number",
+  "vehicle_class",
+  "vehicle_make",
+  "vehicle_model",
+  "vehicle_fuel_type",
+  "vehicle_manufacturing_year",
+  "vehicle_capacity",
+  "vehicle_chassis_number",
+  "vehicle_engine_number",
+  "vehicle_rto_name",
+  "vehicle_rto_state",
+];
 
-function dateLabel(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
-}
+const policyKeys = [
+  "policy_product",
+  "policy_number",
+  "insurer_name",
+  "idv",
+  "od_premium",
+  "tp_premium",
+  "cpa_premium",
+  "cpa_opted",
+  "policy_start_date",
+  "policy_end_date",
+  "total_premium",
+  "tax_amount",
+  "gross_premium",
+];
 
 function statusLabel(row: PartnerPolicyIntake) {
   if (row.status === "processing" && row.ocr_status === "failed") return "Manual review required";
-  const labels: Record<string, string> = {
-    processing: "Fetching policy details",
-    ready_for_review: "Ready for Operations review",
-    in_review: "In Operations review",
-    needs_attention: "Your response is needed",
-    completed: "Policy onboarding completed",
-    rejected: "Intake rejected",
-  };
-  return labels[row.status] || humanize(row.status);
+  return ({
+    processing: "Fetching policy & vehicle details",
+    ready_for_review: "Ready for review",
+    in_review: "In review",
+    needs_attention: "Needs attention",
+    completed: "Completed",
+    rejected: "Rejected",
+  } as Record<string, string>)[row.status] ?? row.status;
 }
 
-function statusHelp(row: PartnerPolicyIntake) {
-  if (row.status === "processing" && row.ocr_status === "failed") return "Automatic reading was unavailable. The policy copy is still available for review.";
-  if (row.status === "processing") return "The uploaded policy copy is being read automatically.";
-  if (row.status === "ready_for_review") return "The extracted details are ready for review.";
-  if (row.status === "in_review") return "This intake is being reviewed.";
-  if (row.status === "needs_attention") return "Read the note below and upload a replacement policy copy.";
-  if (row.status === "completed") return "The final policy was linked and this intake is closed.";
-  if (row.status === "rejected") return "This intake was closed without policy onboarding.";
-  return "Track this submission here.";
+function statusClass(row: PartnerPolicyIntake) {
+  if (row.status === "processing" && row.ocr_status === "failed") return "bg-amber-50 text-amber-800";
+  return ({
+    processing: "bg-blue-50 text-blue-700",
+    ready_for_review: "bg-indigo-50 text-indigo-700",
+    in_review: "bg-violet-50 text-violet-700",
+    needs_attention: "bg-amber-50 text-amber-800",
+    completed: "bg-emerald-50 text-emerald-700",
+    rejected: "bg-rose-50 text-rose-700",
+  } as Record<string, string>)[row.status] ?? "bg-slate-50 text-slate-700";
 }
 
-function pendingLabel(row: PartnerPolicyIntake) {
-  return row.ocr_status === "failed" ? "Manual review" : row.ocr_status === "completed" ? "Not found" : "Fetching…";
+function ocrLabel(status: string) {
+  return status === "completed" ? "Details fetched" : status === "failed" ? "Manual review" : status === "processing" ? "Fetching details" : "Queued";
+}
+
+function submittedByLabel(row: PartnerPolicyIntake) {
+  return row.lead_source_name || "INSUREIT Partner user";
+}
+
+function reviewerLabel(row: PartnerPolicyIntake) {
+  if (row.status === "completed") return "Completed by Operations";
+  if (row.status === "in_review" || row.status === "needs_attention") return "Operations team";
+  return "Not assigned";
+}
+
+function orderedFields(fields: PartnerPolicyIntakeField[], order: string[]) {
+  const byKey = new Map(fields.map((field) => [field.key, field]));
+  return order.map((key) => byKey.get(key)).filter((field): field is PartnerPolicyIntakeField => Boolean(field));
+}
+
+function formattedDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("en-IN");
 }
 
 export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const submitted = searchParams.get("submitted") === "1";
   const [row, setRow] = useState<PartnerPolicyIntake | null>(null);
   const [loading, setLoading] = useState(true);
   const [replacing, setReplacing] = useState(false);
   const [progress, setProgress] = useState<IntakeProgress | null>(null);
   const [error, setError] = useState("");
+  const [documentError, setDocumentError] = useState("");
+  const [openingDocument, startDocumentTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async (manual = false) => {
@@ -81,7 +121,8 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
     void load(false);
   }, [load]);
 
-  const fields = useMemo(() => new Map((row?.ocr_fields ?? []).map((field) => [field.key, field])), [row?.ocr_fields]);
+  const vehicleFields = useMemo(() => orderedFields(row?.ocr_fields ?? [], vehicleKeys), [row?.ocr_fields]);
+  const policyFields = useMemo(() => orderedFields(row?.ocr_fields ?? [], policyKeys), [row?.ocr_fields]);
 
   async function replaceDocument(file?: File) {
     if (!row || !file || replacing) return;
@@ -108,152 +149,141 @@ export function PartnerPolicyIntakeDetailClient({ intakeId }: { intakeId: string
     }
   }
 
+  function openDocument() {
+    if (!row || openingDocument) return;
+    setDocumentError("");
+    startDocumentTransition(async () => {
+      try {
+        const url = await openPartnerPolicyIntakeDocumentWeb(row.id);
+        window.open(url, "_blank", "noopener,noreferrer");
+      } catch (cause) {
+        setDocumentError(cause instanceof Error ? cause.message : "Could not open the policy copy.");
+      }
+    });
+  }
+
   if (loading) {
-    return <div className="border-y border-[#DCE4ED] py-14 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#7E90A8]" /><p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intake…</p></div>;
+    return <div className="py-14 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#7E90A8]" /><p className="mt-3 text-[11px] font-semibold text-[#526680]">Loading Policy Intake…</p></div>;
   }
 
   if (!row) {
-    return (
-      <div className="space-y-7">
-        <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
-        <div className="border-y border-[#DCE4ED] py-14 text-center">
-          <AlertCircle className="mx-auto h-7 w-7 text-[#A66A18]" />
-          <p className="mt-3 text-[12px] font-bold text-[#23395D]">Policy Intake unavailable</p>
-          <p className="mt-1 text-[10.5px] text-[#7A899F]">{error || "This intake is not available."}</p>
-        </div>
-      </div>
-    );
+    return <div className="rounded-2xl border border-[#DCE5EF] bg-white p-8 text-center shadow-sm"><AlertCircle className="mx-auto h-7 w-7 text-[#A66A18]" /><p className="mt-3 text-[12px] font-bold text-[#23395D]">Policy Intake unavailable</p><p className="mt-1 text-[10.5px] text-[#7A899F]">{error || "This intake is not available."}</p></div>;
   }
 
+  const submittedBy = submittedByLabel(row);
+  const manualReview = row.status === "processing" && row.ocr_status === "failed";
+
   return (
-    <div className="space-y-7">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" onClick={() => router.back()} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"><ArrowLeft className="h-3.5 w-3.5" /> Back</button>
-        <button type="button" onClick={() => void load(true)} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#D2DCE9] bg-white px-3 text-[10px] font-bold text-[#203653] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"><RefreshCw className="h-3.5 w-3.5" /> Refresh</button>
-      </div>
-
-      {submitted ? (
-        <section className="flex items-start gap-3 rounded-[16px] border border-[#CDE7D7] bg-[#F3FBF6] px-4 py-3">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#2F7F52]" />
-          <div><p className="text-[10.5px] font-extrabold text-[#285E41]">Policy Intake {row.intake_number} submitted</p><p className="mt-0.5 text-[9.5px] font-medium text-[#4F735F]">Received by Operations. Track progress here.</p></div>
-        </section>
-      ) : null}
-
-      {error ? <section className="rounded-[14px] border border-[#F0D0D0] bg-[#FFF7F7] px-4 py-3 text-[10.5px] font-semibold text-[#9E3939]">{error}</section> : null}
-
-      <section className="py-1">
-        <PartnerPageHeader
-          eyebrow="Policy Intake"
-          title={row.intake_number}
-          description={statusHelp(row)}
-          action={<span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2.5 py-1.5 text-[9.5px] font-bold text-[#425672]">{statusLabel(row)}</span>}
-        />
-
-        <IntakeProgress row={row} />
-        <p className="mt-3 text-right text-[9px] font-medium text-[#8190A5]">Updated {dateLabel(row.updated_at)}</p>
-      </section>
-
-      {row.final_policy_id ? (
-        <Link href={"/partner/policies/" + encodeURIComponent(row.final_policy_id)} className="flex min-h-12 items-center justify-between border-y border-[#DCE4ED] px-1 text-[10.5px] font-extrabold text-[#203653] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20">
-          Open final policy <span aria-hidden="true">→</span>
-        </Link>
-      ) : null}
-
-      {row.attention_reason ? (
-        <section className="rounded-[16px] border border-[#F0D7AE] bg-[#FFF8EC] p-5">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#A86809]" />
+    <div className="mx-auto grid max-w-[1360px] gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
+      <main className="min-w-0 overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_14px_40px_rgba(15,23,42,.06)]">
+        <header className="border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 py-3.5 sm:px-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-[11px] font-extrabold text-[#80511A]">Operations needs your response</p>
-              <p className="mt-1 text-[10px] font-medium leading-4 text-[#80511A]">{row.attention_reason}</p>
+              <p className="text-[8px] font-bold uppercase tracking-[.12em] text-[#64748B]">Policy Intake Review</p>
+              <h1 className="mt-1 text-[17px] font-semibold text-[#0F172A]">{row.intake_number}</h1>
+              <p className="mt-1 text-[9px] text-[#64748B]">Submitted by <span className="font-semibold text-[#334155]">{submittedBy}</span> · {formattedDate(row.created_at)}</p>
             </div>
+            <span className={`inline-flex self-start rounded-full px-2.5 py-1 text-[8.5px] font-bold ${statusClass(row)}`}>{statusLabel(row)}</span>
           </div>
 
-          <input ref={fileRef} type="file" accept={POLICY_INTAKE_ACCEPT} className="sr-only" onChange={(event) => void replaceDocument(event.target.files?.[0])} />
-          {progress ? <UploadProgress progress={progress} /> : null}
-          <button
-            type="button"
-            disabled={replacing}
-            onClick={() => fileRef.current?.click()}
-            className="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-[#111A35] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#1B2A50] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25 disabled:opacity-50"
-          >
-            {replacing ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-            {replacing ? "Uploading replacement…" : "Upload replacement policy copy"}
+          <div className="mt-3 grid gap-2 border-t border-[#E5ECF5] pt-3 sm:grid-cols-3">
+            <HeaderMeta icon={<Phone className="h-3.5 w-3.5" />} label="Customer" value={row.customer_mobile} hint="Partner supplied" />
+            <HeaderMeta icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Lead source" value={row.lead_source_name} hint={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ""}`} />
+            <HeaderMeta icon={<FileText className="h-3.5 w-3.5" />} label="Policy copy" value={row.file_name} hint="Original source document" />
+          </div>
+
+          {row.attention_reason ? <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[9px] font-medium text-amber-900">Operations note: {row.attention_reason}</div> : null}
+          {error ? <div className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[9px] font-medium text-rose-800">{error}</div> : null}
+        </header>
+
+        <ReviewSection number="01" title="Source & customer" subtitle="Details supplied by Partner before automatic policy reading.">
+          <ReviewField label="Submitted by" value={submittedBy} source="Partner" />
+          <ReviewField label="Customer mobile" value={row.customer_mobile} source="Partner" />
+          <ReviewField label="Lead source" value={row.lead_source_name} source="Partner" />
+          <ReviewField label="Intermediary" value={`${row.lead_source_type.toUpperCase()}${row.lead_source_code ? ` · ${row.lead_source_code}` : ""}`} source="Partner" />
+        </ReviewSection>
+
+        <ReviewSection number="02" title="Vehicle details" subtitle={row.ocr_status === "completed" ? "Fetched from the uploaded policy copy for Operations review." : "Vehicle information will appear here when available."}>
+          {vehicleFields.length ? vehicleFields.map((item) => <ReviewField key={item.key} label={item.label} value={item.value} source="OCR" confidence={item.confidence} />) : <SectionEmpty text={manualReview ? "Automatic vehicle extraction was unavailable. Operations will use the saved policy copy for manual review." : "Fetching vehicle details from the saved policy copy…"} />}
+        </ReviewSection>
+
+        <ReviewSection number="03" title="Policy & premium" subtitle={row.ocr_status === "completed" ? "Proposal only. Operations confirms these values in Policy Onboarding." : "Policy and premium information will appear here when available."}>
+          {policyFields.length ? policyFields.map((item) => <ReviewField key={item.key} label={item.label} value={item.value} source="OCR" confidence={item.confidence} />) : <SectionEmpty text={manualReview ? "Automatic policy extraction was unavailable. Operations will continue with manual review from the policy copy." : "Fetching policy and premium details…"} />}
+        </ReviewSection>
+      </main>
+
+      <aside className="space-y-3 xl:sticky xl:top-[88px] xl:self-start">
+        <section className="rounded-2xl border border-[#DCE5EF] bg-white p-3 shadow-sm">
+          <div className="flex items-start gap-2">
+            <FileText className="mt-0.5 h-4 w-4 text-[#315B9A]" />
+            <div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#64748B]">Policy copy</p><p className="mt-1 truncate text-[9px] font-semibold text-[#334155]">{row.file_name}</p></div>
+          </div>
+          <button type="button" onClick={openDocument} disabled={openingDocument} className="mt-2.5 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-[#D7E1EC] bg-white text-[9px] font-bold text-[#17365D] transition hover:bg-[#F8FAFC] disabled:opacity-60">
+            {openingDocument ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+            {openingDocument ? "Opening…" : "View policy copy"}
+            {!openingDocument ? <ExternalLink className="h-3 w-3" /> : null}
           </button>
+          {documentError ? <p className="mt-1.5 text-[8px] font-semibold text-red-600">{documentError}</p> : null}
         </section>
-      ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="py-1">
-          <PartnerSectionHeading title="Submission" />
-          <div className="mt-4 divide-y divide-[#E8EDF4]">
-            <Detail label="Customer mobile" value={row.customer_mobile} />
-            <Detail label="Lead source" value={row.lead_source_name} />
-            <Detail label="Intermediary" value={row.lead_source_type.toUpperCase() + (row.lead_source_code ? " · " + row.lead_source_code : "")} />
-            <Detail label="Policy copy" value={row.file_name} />
-            <Detail label="Submitted" value={dateLabel(row.created_at)} />
+        <section className="rounded-2xl border border-[#DCE5EF] bg-white p-3 shadow-sm">
+          <p className="text-[8px] font-bold uppercase tracking-[.08em] text-[#64748B]">Review status</p>
+          <div className="mt-2 space-y-2 text-[9px]">
+            <SideMeta label="Workflow" value={statusLabel(row)} />
+            <SideMeta label="Detail fetch" value={ocrLabel(row.ocr_status)} />
+            <SideMeta label="Reviewer" value={reviewerLabel(row)} />
           </div>
         </section>
 
-        <section className="py-1">
-          <PartnerSectionHeading title="Extracted Policy" description={row.ocr_status === "completed" ? "Details ready" : humanize(row.ocr_status)} />
-          <div className="mt-4 divide-y divide-[#E8EDF4]">
-            <Detail label="Policy number" value={fields.get("policy_number")?.value || pendingLabel(row)} />
-            <Detail label="Insurer" value={fields.get("insurer_name")?.value || pendingLabel(row)} />
-            <Detail label="Product" value={fields.get("policy_product")?.value || pendingLabel(row)} />
-            <Detail label="Valid from" value={fields.get("policy_start_date")?.value || pendingLabel(row)} />
-            <Detail label="Valid upto" value={fields.get("policy_end_date")?.value || pendingLabel(row)} />
-          </div>
-        </section>
-      </div>
+        {row.final_policy_id ? (
+          <Link href={`/partner/policies/${encodeURIComponent(row.final_policy_id)}`} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-[#DCE5EF] bg-white px-3 text-[9px] font-bold text-[#17365D] shadow-sm transition hover:bg-[#F8FAFC]">
+            Open final policy <ExternalLink className="h-3 w-3" />
+          </Link>
+        ) : null}
 
-      <section className="py-1">
-        <PartnerSectionHeading title="Extracted Vehicle" description={fields.get("vehicle_registration_number")?.value || "Pending / not found"} />
-        <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Info label="Registration" value={fields.get("vehicle_registration_number")?.value || pendingLabel(row)} />
-          <Info label="Make" value={fields.get("vehicle_make")?.value || pendingLabel(row)} />
-          <Info label="Model" value={fields.get("vehicle_model")?.value || pendingLabel(row)} />
-          <Info label="Chassis" value={fields.get("vehicle_chassis_number")?.value || pendingLabel(row)} />
-        </div>
-      </section>
+        <div className="rounded-xl bg-[#F3F7FB] px-3 py-2.5 text-[8.5px] leading-4 text-[#64748B]"><UserRound className="mb-1.5 h-3.5 w-3.5 text-[#315B9A]" />This is a pre-onboarding review sheet. The saved policy copy remains the source document; final corrections are made by Operations in Policy Onboarding.</div>
+
+        {row.status === "needs_attention" ? (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-3 shadow-sm">
+            <div className="flex items-start gap-2"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" /><div><p className="text-[9px] font-bold text-amber-900">Operations needs your response</p><p className="mt-1 text-[8.5px] leading-4 text-amber-800">{row.attention_reason || "Upload the requested replacement policy copy."}</p></div></div>
+            <input ref={fileRef} type="file" accept={POLICY_INTAKE_ACCEPT} className="sr-only" onChange={(event) => void replaceDocument(event.target.files?.[0])} />
+            {progress ? <UploadProgress progress={progress} /> : null}
+            <button type="button" disabled={replacing} onClick={() => fileRef.current?.click()} className="mt-3 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#17365D] px-3 text-[9px] font-bold text-white transition hover:bg-[#244D80] disabled:opacity-50">
+              {replacing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
+              {replacing ? "Uploading replacement…" : "Upload replacement policy copy"}
+            </button>
+          </section>
+        ) : null}
+
+        <div className="sr-only" aria-live="polite">{row.status === "completed" ? <CheckCircle2 /> : null}</div>
+      </aside>
     </div>
   );
 }
 
-function IntakeProgress({ row }: { row: PartnerPolicyIntake }) {
-  const manual = row.status === "processing" && row.ocr_status === "failed";
-  const activeStep = row.status === "completed" ? 4 : row.status === "in_review" ? 3 : row.status === "ready_for_review" || row.status === "needs_attention" || manual ? 2 : 1;
-  const rejected = row.status === "rejected";
-
-  return (
-    <div className="mt-6 grid grid-cols-4 gap-0">
-      {["Uploaded", "Read", "Review", "Done"].map((label, index) => {
-        const step = index + 1;
-        const complete = !rejected && step <= activeStep;
-        return (
-          <div key={label} className="relative flex flex-col items-center">
-            <div className="relative flex w-full items-center justify-center">
-              <span className={"z-10 h-3 w-3 rounded-full border-2 border-white shadow " + (complete ? "bg-[#3156B8]" : rejected && step === activeStep ? "bg-[#C85353]" : "bg-[#D6DCE6]")} />
-              {index < 3 ? <span className={"absolute left-[55%] h-px w-[90%] " + (step < activeStep && !rejected ? "bg-[#8DA9F2]" : "bg-[#DCE1E9]")} /> : null}
-            </div>
-            <span className={"mt-2 text-[8.5px] font-bold " + (complete ? "text-[#354C70]" : "text-[#9AA6B8]")}>{label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
+function HeaderMeta({ icon, label, value, hint }: { icon: React.ReactNode; label: string; value: string; hint: string }) {
+  return <div className="flex min-w-0 items-start gap-2"><span className="mt-0.5 text-[#315B9A]">{icon}</span><div className="min-w-0"><p className="text-[7.5px] font-bold uppercase tracking-[.06em] text-[#8A96A8]">{label}</p><p className="mt-0.5 truncate text-[9.5px] font-semibold text-[#334155]">{value || "—"}</p><p className="mt-0.5 truncate text-[7.5px] text-[#8A96A8]">{hint}</p></div></div>;
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
-  return <div className="flex min-h-11 items-center justify-between gap-4 py-3"><p className="text-[9px] font-black uppercase tracking-[0.08em] text-[#8491A3]">{label}</p><p className="max-w-[68%] break-words text-right text-[10px] font-semibold leading-4 text-[#203653]">{value}</p></div>;
+function ReviewSection({ number, title, subtitle, children }: { number: string; title: string; subtitle: string; children: React.ReactNode }) {
+  return <section className="border-b border-[#E5ECF5] px-4 py-4 last:border-b-0 sm:px-5"><div className="mb-3 flex items-start gap-3"><span className="mt-0.5 text-[9px] font-bold tabular-nums text-[#315B9A]">{number}</span><div><h2 className="text-[12px] font-semibold text-[#17365D]">{title}</h2><p className="mt-0.5 text-[8.5px] text-[#7A8798]">{subtitle}</p></div></div><div className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{children}</div></section>;
 }
 
-function Info({ label, value }: { label: string; value: string }) {
-  return <div><p className="text-[8.5px] font-black uppercase tracking-[0.08em] text-[#8491A3]">{label}</p><p className="mt-1 break-words text-[10px] font-semibold leading-4 text-[#203653]">{value}</p></div>;
+function ReviewField({ label, value, source, confidence }: { label: string; value: string; source: "Partner" | "OCR"; confidence?: number | null }) {
+  const review = source === "OCR" && typeof confidence === "number" && confidence < .9;
+  return <div className="min-w-0 py-1"><div className="flex items-center gap-1.5"><p className="text-[7.5px] font-bold uppercase tracking-[.055em] text-[#7A8798]">{label}</p><span className="rounded bg-[#EEF3F8] px-1.5 py-0.5 text-[6.5px] font-bold uppercase tracking-[.04em] text-[#60758D]">{source}</span>{review ? <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[6.5px] font-bold uppercase text-amber-800">Review</span> : null}</div><p className="mt-1 break-words text-[10.5px] font-semibold leading-4 text-[#253B59]">{value || "—"}</p>{review && typeof confidence === "number" ? <p className="mt-0.5 text-[7px] text-amber-700">{Math.round(confidence * 100)}% extraction confidence</p> : null}</div>;
+}
+
+function SectionEmpty({ text }: { text: string }) {
+  return <p className="col-span-full py-2 text-[9px] text-[#7A8798]">{text}</p>;
+}
+
+function SideMeta({ label, value }: { label: string; value: string }) {
+  return <div className="flex items-start justify-between gap-3"><span className="text-[#7A8798]">{label}</span><span className="text-right font-semibold text-[#334155]">{value}</span></div>;
 }
 
 function UploadProgress({ progress }: { progress: IntakeProgress }) {
   const percent = progress.stage === "preparing" ? 8 : progress.stage === "submitting" ? 96 : Math.max(12, Math.min(92, progress.percent ?? 12));
   const label = progress.stage === "preparing" ? "Preparing secure upload" : progress.stage === "submitting" ? "Sending to Operations" : "Uploading replacement";
-  return <div className="mt-4"><div className="flex justify-between text-[9px] font-semibold text-[#80511A]"><span>{label}</span><span>{Math.round(percent)}%</span></div><div className="mt-2 h-2 overflow-hidden rounded-full bg-[#F0D7AE]"><div className="h-full rounded-full bg-[#A36A22]" style={{ width: String(percent) + "%" }} /></div></div>;
+  return <div className="mt-3"><div className="flex justify-between text-[8px] font-semibold text-amber-800"><span>{label}</span><span>{Math.round(percent)}%</span></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-amber-100"><div className="h-full rounded-full bg-amber-600" style={{ width: String(percent) + "%" }} /></div></div>;
 }
