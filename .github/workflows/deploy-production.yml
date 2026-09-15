@@ -245,7 +245,7 @@ jobs:
         if: env.VERIFIED_COMMIT != ''
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.117.0
 
       - name: Verify production schema parity and Partner RPC contract
         if: env.VERIFIED_COMMIT != ''
