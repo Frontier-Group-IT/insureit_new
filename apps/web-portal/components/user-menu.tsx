@@ -21,6 +21,7 @@ function initialsFor(name?: string | null, email?: string | null) {
 
 export function UserMenu({ profile, user, homeHref = internalLaunchHome, displayNameOverride }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -29,16 +30,51 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome, display
   const displayName = displayNameOverride?.trim() || profile?.full_name || user?.email || "Signed-in user";
   const initials = useMemo(() => initialsFor(displayName, user?.email), [displayName, user?.email]);
 
+  function cancelCloseTimer() {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+
+  function openOnHover() {
+    cancelCloseTimer();
+    setIsOpen(true);
+  }
+
+  function closeAfterHover() {
+    cancelCloseTimer();
+    closeTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+      closeTimerRef.current = null;
+    }, 160);
+  }
+
+  useEffect(() => {
+    return () => cancelCloseTimer();
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
 
     function handleOutsidePointer(event: PointerEvent) {
       if (menuRef.current?.contains(event.target as Node)) return;
+      cancelCloseTimer();
+      setIsOpen(false);
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      cancelCloseTimer();
       setIsOpen(false);
     }
 
     document.addEventListener("pointerdown", handleOutsidePointer);
-    return () => document.removeEventListener("pointerdown", handleOutsidePointer);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("pointerdown", handleOutsidePointer);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, [isOpen]);
 
   async function handleResetPassword() {
@@ -61,7 +97,7 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome, display
   }
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={menuRef} className="relative" onMouseEnter={openOnHover} onMouseLeave={closeAfterHover}>
       <button
         type="button"
         aria-haspopup="menu"
