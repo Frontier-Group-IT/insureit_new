@@ -11,15 +11,19 @@ const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/de
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
+const diagnosticsModel = fs.readFileSync(path.join(root, "lib/sarvam-deep-diagnostics.ts"), "utf8");
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
+const diagnosticsRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-deep-diagnostics/route.ts"), "utf8");
 const webhook = fs.readFileSync(path.join(root, "app/api/integrations/sarvam/voice-campaign-webhook/route.ts"), "utf8");
 const detailPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/[id]/page.tsx"), "utf8");
 const worklistPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/page.tsx"), "utf8");
 const readinessPage = fs.readFileSync(path.join(root, "app/system/voice-integration/page.tsx"), "utf8");
+const diagnosticsPage = fs.readFileSync(path.join(root, "app/system/voice-integration/diagnostics/page.tsx"), "utf8");
 const localAgents = fs.readFileSync(path.join(root, "app/partner/renewals/external/AGENTS.md"), "utf8");
 const adminAgents = fs.readFileSync(path.join(root, "app/system/voice-integration/AGENTS.md"), "utf8");
+const currentVoiceState = fs.readFileSync(path.join(repoRoot, "docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -77,6 +81,15 @@ assert(readinessModel.includes('/webhooks?limit=1'), "connection check uses the 
 assert(readinessModel.includes('"api-subscription-key": apiKey'), "connection check authenticates server-side with the Sarvam subscription key");
 assert(!readinessModel.includes('NEXT_PUBLIC_SARVAM'), "readiness does not depend on browser Sarvam configuration");
 
+assert(diagnosticsModel.includes('import "server-only"'), "deep diagnostics model is server-only");
+assert(diagnosticsModel.includes('pronunciation-dictionary/insureit-diagnostic-do-not-create'), "core auth probe is a non-mutating nonexistent-resource lookup");
+assert(diagnosticsModel.includes('/webhooks?limit=1'), "deep diagnostics uses the read-only campaign webhook-list endpoint");
+assert(diagnosticsModel.includes('"api-subscription-key": apiKey'), "deep diagnostics tests subscription-key scheduling auth");
+assert(diagnosticsModel.includes('authorization: `Bearer ${apiKey}`'), "deep diagnostics separately tests Bearer scheduling auth");
+assert(!diagnosticsModel.includes("cohorts/stream"), "deep diagnostics cannot stream a cohort");
+assert(!diagnosticsModel.includes('method: "POST"'), "deep diagnostics performs no provider mutation request");
+assert(!/console\.(log|error|warn)\s*\(/.test(diagnosticsModel), "deep diagnostics does not log provider responses or secrets");
+
 assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
 assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
 assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
@@ -87,6 +100,12 @@ assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_syst
 assert(connectionTestRoute.includes("checkSarvamRenewalConnection()"), "Sarvam connection test invokes only the readiness probe");
 assert(!connectionTestRoute.includes("streamExternalRenewalToSarvam"), "Sarvam connection test cannot queue a customer call");
 assert(!connectionTestRoute.includes("SARVAM_API_KEY"), "Sarvam connection-test route never reads or renders the API key directly");
+
+assert(diagnosticsRoute.includes('viewer.role !== "it_super_user"'), "Sarvam deep diagnostics requires exact IT Super User role");
+assert(diagnosticsRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam deep diagnostics requires critical system approval access");
+assert(diagnosticsRoute.includes("runSarvamDeepDiagnostics()"), "diagnostics route invokes only the read-only diagnostic model");
+assert(!diagnosticsRoute.includes("streamExternalRenewalToSarvam"), "diagnostics route cannot queue a customer call");
+assert(!diagnosticsRoute.includes("SARVAM_API_KEY"), "diagnostics route never reads or renders the API key directly");
 
 assert(webhook.includes("SARVAM_RENEWAL_WEBHOOK_SECRET"), "webhook requires INSUREIT-controlled secret");
 assert(webhook.includes("SARVAM_RENEWAL_CAMPAIGN_ID"), "webhook rejects unexpected campaigns");
@@ -112,9 +131,19 @@ assert(readinessPage.includes("No customer identity, phone number, transcript or
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
 
+assert(diagnosticsPage.includes('viewer.role !== "it_super_user"'), "deep diagnostics page requires exact IT Super User role");
+assert(diagnosticsPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "deep diagnostics page requires critical system access");
+assert(diagnosticsPage.includes("Run Deep Diagnostics"), "deep diagnostics page exposes the explicit read-only diagnostic action");
+assert(diagnosticsPage.includes("does not place calls"), "deep diagnostics page states its no-call safety boundary");
+assert(!diagnosticsPage.includes("process.env.SARVAM_API_KEY"), "deep diagnostics page cannot render the API key");
+
 assert(localAgents.includes("VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md"), "relevant future agents are instructed to read the durable voice handoff");
 assert(localAgents.includes("won"), "local agent instructions preserve Policy Intake as the only win boundary");
 assert(adminAgents.includes("VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md"), "IT voice admin future agents are instructed to read the durable voice handoff");
+assert(adminAgents.includes("SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md"), "IT voice admin agents are instructed to read the current Sarvam workflow state");
 assert(adminAgents.includes("it_super_user"), "IT voice admin instructions preserve exact role restriction");
+assert(currentVoiceState.includes("INSUREIT-Re-e2468e47-50a8"), "current voice state records the approved controlled campaign binding");
+assert(currentVoiceState.includes("PAUSED"), "current voice state records the campaign safety state");
+assert(!/9329861634|7225842509/.test(currentVoiceState), "current voice state does not persist internal test phone numbers");
 
 if (!process.exitCode) console.log("External renewal voice integration regression passed.");
