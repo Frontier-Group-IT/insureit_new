@@ -1,10 +1,9 @@
 "use server";
 
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
-import { hasEffectiveCapability } from "@/lib/effective-permissions";
-
 import { revalidatePath } from "next/cache";
-import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const bucketName = "claim-documents";
 type ActionResult = { ok: boolean; message?: string };
@@ -18,16 +17,9 @@ type ClaimIntimationDetails = {
   estimate_amount: string;
 };
 
-async function currentProfile() {
-  const accessToken = await getServerAccessToken();
-  const { profile } = await getAuthenticatedProfile(accessToken);
-  if (!(await hasEffectiveCapability(profile, "manage_claims", "edit"))) throw new Error("You do not have permission to update final documents.");
-  return profile;
-}
-
 async function loadClaim(claimId: string) {
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.from("claims").select("id, customer_id, current_status, policy_service_source").eq("id", claimId).maybeSingle<ClaimRow>();
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin.from("claims").select("id, customer_id, current_status, policy_service_source").eq("id", claimId).maybeSingle<ClaimRow>();
   if (error || !data) throw new Error(error?.message ?? "Claim not found.");
   return data;
 }
@@ -56,9 +48,8 @@ function detailText(details: Record<string, unknown>, ...keys: string[]) {
 export async function loadFinalClaimIntimationDetails(claimId: string): Promise<{ ok: boolean; details?: ClaimIntimationDetails; message?: string }> {
   try {
     if (!claimId) throw new Error("Missing claim id.");
-    await currentProfile();
+    const { supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to view final documents.");
     const claim = await loadClaim(claimId);
-    const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
       .from("claim_stage_details")
       .select("details")
@@ -102,7 +93,7 @@ export async function saveFinalDealershipDetails(formData: FormData): Promise<Ac
   try {
     const claimId = clean(formData.get("claimId"));
     if (!claimId) throw new Error("Missing claim id.");
-    const profile = await currentProfile();
+    const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update final documents.");
     const claim = await loadClaim(claimId);
     const claimIntimationDate = clean(formData.get("claim_intimation_date"));
     const dealershipName = clean(formData.get("dealership_name"));
@@ -112,11 +103,7 @@ export async function saveFinalDealershipDetails(formData: FormData): Promise<Ac
     const estimateAmount = Number(estimateAmountText);
 
     const missing = [
-      ["Claim Intimation Date", claimIntimationDate],
-      ["Dealership Name", dealershipName],
-      ["Dealership Location", dealershipLocation],
-      ["Gate-in Date", gateInDate],
-      ["Estimate Amount", estimateAmountText]
+      ["Claim Intimation Date", claimIntimationDate], ["Dealership Name", dealershipName], ["Dealership Location", dealershipLocation], ["Gate-in Date", gateInDate], ["Estimate Amount", estimateAmountText]
     ].filter(([, value]) => !value).map(([label]) => label);
     if (missing.length) throw new Error(`Please fill: ${missing.join(", ")}.`);
     if (!isDateValue(claimIntimationDate)) throw new Error("Please select a valid Claim Intimation Date.");
@@ -130,19 +117,16 @@ export async function saveFinalDealershipDetails(formData: FormData): Promise<Ac
       dealership_location: dealershipLocation,
       gate_in_date: gateInDate,
       estimate_amount: estimateAmount,
-      // Backward-compatible aliases for existing operations reads.
       dealership_address: dealershipLocation,
       contact_person_name: claimIntimationDate,
       contact_number: gateInDate,
       saved_at: new Date().toISOString(),
-      saved_by: profile?.id ?? null
+      saved_by: profile.id
     };
 
-    const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details, created_by: profile?.id ?? null });
+    const { error } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details, created_by: profile.id });
     if (error) throw new Error(error.message);
-    revalidatePath(`/claims/${claimId}`);
-    revalidatePath(`/claims/${claimId}/final-documents`);
+    revalidateClaimPaths(claimId);
     return { ok: true, message: "Stage details saved." };
   } catch (error) {
     console.error("saveFinalDealershipDetails failed", error);
@@ -158,9 +142,8 @@ export async function uploadFinalDocument(formData: FormData): Promise<ActionRes
     if (!claimId || !documentType) throw new Error("Missing claim or document type.");
     if (!(file instanceof File) || !file.size) throw new Error("Please select a file to upload.");
 
-    const profile = await currentProfile();
+    const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update final documents.");
     const claim = await loadClaim(claimId);
-    const supabase = await createServerSupabaseClient();
     const safeName = safeFileName(file.name);
     const storagePath = `${claimId}/final-documents/${Date.now()}-${safeName}`;
     const { error: uploadError } = await supabase.storage.from(bucketName).upload(storagePath, file, { cacheControl: "3600", upsert: false });
@@ -188,14 +171,9 @@ export async function uploadFinalDocument(formData: FormData): Promise<ActionRes
       await supabase.storage.from(bucketName).remove([storagePath]);
       throw new Error(existingError.message);
     }
-    const replacedIds = (existingDocuments ?? [])
-      .filter((document) => matchesClaimIntimationDocument(document.document_type, documentType))
-      .map((document) => document.id);
+    const replacedIds = (existingDocuments ?? []).filter((document) => matchesClaimIntimationDocument(document.document_type, documentType)).map((document) => document.id);
     if (replacedIds.length) {
-      const { error: replacementError } = await supabase
-        .from("claim_documents")
-        .update({ verification_status: "rejected", rejection_reason: "Replaced by newer upload", verified_by: profile?.id ?? null, verified_at: new Date().toISOString() })
-        .in("id", replacedIds);
+      const { error: replacementError } = await supabase.from("claim_documents").update({ verification_status: "rejected", rejection_reason: "Replaced by newer upload", verified_by: profile.id, verified_at: new Date().toISOString() }).in("id", replacedIds);
       if (replacementError) {
         await supabase.from("claim_documents").delete().eq("id", insertedDocument.id);
         await supabase.storage.from(bucketName).remove([storagePath]);
@@ -203,9 +181,8 @@ export async function uploadFinalDocument(formData: FormData): Promise<ActionRes
       }
     }
 
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_document_uploaded", document_type: documentType, file_name: safeName, uploaded_at: new Date().toISOString(), uploaded_by: profile?.id ?? null }, created_by: profile?.id ?? null });
-    revalidatePath(`/claims/${claimId}/final-documents`);
-    revalidatePath("/dashboard");
+    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_document_uploaded", document_type: documentType, file_name: safeName, uploaded_at: new Date().toISOString(), uploaded_by: profile.id }, created_by: profile.id });
+    revalidateClaimPaths(claimId);
     return { ok: true, message: `${documentType} uploaded.` };
   } catch (error) {
     console.error("uploadFinalDocument failed", error);
@@ -219,15 +196,13 @@ export async function verifyFinalDocument(formData: FormData): Promise<ActionRes
     const documentId = clean(formData.get("documentId"));
     const documentType = clean(formData.get("documentType"));
     if (!claimId || !documentId || !documentType) throw new Error("Upload the document before verification.");
-    const profile = await currentProfile();
+    const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to verify claim documents.");
     const claim = await loadClaim(claimId);
-    const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.from("claim_documents").update({ verification_status: "verified", verified_by: profile?.id ?? null, verified_at: new Date().toISOString(), rejection_reason: null }).eq("id", documentId).eq("claim_id", claimId);
+    const { error } = await supabase.from("claim_documents").update({ verification_status: "verified", verified_by: profile.id, verified_at: new Date().toISOString(), rejection_reason: null }).eq("id", documentId).eq("claim_id", claimId);
     if (error) throw new Error(error.message);
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_document_verified", document_type: documentType, document_id: documentId, verified_at: new Date().toISOString(), verified_by: profile?.id ?? null }, created_by: profile?.id ?? null });
-    await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${documentType} verified in final documents stage.`, changed_by: profile?.id ?? null });
-    revalidatePath(`/claims/${claimId}/final-documents`);
-    revalidatePath("/dashboard");
+    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_document_verified", document_type: documentType, document_id: documentId, verified_at: new Date().toISOString(), verified_by: profile.id }, created_by: profile.id });
+    await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${documentType} verified in final documents stage.`, changed_by: profile.id });
+    revalidateClaimPaths(claimId);
     return { ok: true, message: `${documentType} verified.` };
   } catch (error) {
     console.error("verifyFinalDocument failed", error);
@@ -239,14 +214,22 @@ export async function submitFinalDocumentsDraft(formData: FormData): Promise<Act
   try {
     const claimId = clean(formData.get("claimId"));
     if (!claimId) throw new Error("Missing claim id.");
-    const profile = await currentProfile();
+    const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update final documents.");
     const claim = await loadClaim(claimId);
-    const supabase = await createServerSupabaseClient();
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_documents_draft_saved", saved_at: new Date().toISOString(), saved_by: profile?.id ?? null }, created_by: profile?.id ?? null });
-    revalidatePath(`/claims/${claimId}/final-documents`);
+    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status ?? "Final Documents", details: { verification_type: "final_documents_draft_saved", saved_at: new Date().toISOString(), saved_by: profile.id }, created_by: profile.id });
+    revalidateClaimPaths(claimId);
     return { ok: true, message: "Draft saved." };
   } catch (error) {
     console.error("submitFinalDocumentsDraft failed", error);
     return { ok: false, message: error instanceof Error ? error.message : "Unable to save draft." };
   }
+}
+
+function revalidateClaimPaths(claimId: string) {
+  revalidatePath(`/claims/${claimId}`);
+  revalidatePath(`/partner/claims/${claimId}`);
+  revalidatePath(`/claims/${claimId}/final-documents`);
+  revalidatePath("/claims");
+  revalidatePath("/partner/claims");
+  revalidatePath("/dashboard");
 }

@@ -6,6 +6,7 @@ const stage3Group = await readFile(new URL("../components/final-documents/stage3
 const collapsedStatus = await readFile(new URL("../components/claim-manager/claim-document-collapsed-status.tsx", import.meta.url), "utf8");
 const stage3Workspace = await readFile(new URL("../components/final-documents/final-documents-workspace-v2.tsx", import.meta.url), "utf8");
 const stage3Loader = await readFile(new URL("../components/final-documents/final-document-verification-data-actions.ts", import.meta.url), "utf8");
+const claimWorkflowAccess = await readFile(new URL("../lib/claim-workflow-access.ts", import.meta.url), "utf8");
 const claimPage = await readFile(new URL("../app/claims/[id]/page.tsx", import.meta.url), "utf8");
 const claimWorkflow = await readFile(new URL("../lib/claim-workflow.ts", import.meta.url), "utf8");
 
@@ -41,8 +42,9 @@ assert.match(stage3Workspace, /documentsForType\(verificationData\.documents, ro
 assert.match(stage3Workspace, /matchesClaimIntimationDocument/, "Stage 3 grouping must use the canonical claim-intimation document matcher.");
 assert.match(stage3Workspace, /\[claimId, rows\]/, "Stage 3 verification data must refresh after document mutations reflected by the server render.");
 
-assert.match(stage3Loader, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/, "Stage 3 parity loader must require claim-management edit capability.");
-assert.match(stage3Loader, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/, "Stage 3 parity loader must enforce customer-scope authorization.");
+assert.match(stage3Loader, /requireClaimWorkflowAccess\(claimId, "You do not have permission to verify claim documents\."\)/, "Stage 3 parity loader must pass through the shared claim workflow authorization guard.");
+assert.match(claimWorkflowAccess, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/, "Shared claim workflow authorization must preserve employee manage_claims edit capability checks.");
+assert.match(claimWorkflowAccess, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/, "Shared claim workflow authorization must preserve employee customer-scope enforcement.");
 assert.match(stage3Loader, /claim\.claim_service_mode !== "broker_managed"/, "Stage 3 parity must remain within the broker-managed Operations boundary.");
 assert.match(stage3Loader, /from\("external_policies"\)/, "External Claim Stage 3 must resolve external-policy validity dates.");
 assert.match(stage3Loader, /from\("policies"\)/, "Internal Claim Stage 3 must resolve internal-policy validity dates.");
@@ -59,4 +61,4 @@ assert.doesNotMatch(verifiedStatusFunction, /Final Documents Verification Pendin
 assert.doesNotMatch(verifiedStatusFunction, /Final Documents Submitted/, "Stage 3 verification must remain on the explicit Claim Intimation Save Details workflow.");
 assert.match(claimWorkflow, /advance_initial_documents_verified RPC/, "The Stage 3 RPC boundary must be documented beside the status guard.");
 
-console.log("Claim document Stage 1/Stage 3 Internal/External parity, compact pill status summary and workflow-boundary regression passed.");
+console.log("Claim document Stage 1/Stage 3 Internal/External parity, shared claim authorization, compact pill status summary and workflow-boundary regression passed.");
