@@ -5,13 +5,15 @@ import {
   FileText,
   LockKeyhole,
   ReceiptIndianRupee,
-  Search,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebPayoutSummary } from "@/lib/partner-web";
+import { PayoutSearch } from "./payout-search";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+type SearchParams = { q?: string };
 
 function currency(value: number | string | null | undefined) {
   const amount = Number(value ?? 0);
@@ -60,8 +62,27 @@ function PayoutMetric({ label, value, meta, icon: Icon, iconClassName }: MetricI
   );
 }
 
-export default async function PartnerPayoutPage() {
+export default async function PartnerPayoutPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const query = await searchParams;
+  const q = query.q?.trim() ?? "";
+  const normalizedQuery = q.toLowerCase();
   const payout = await getPartnerWebPayoutSummary();
+
+  const recent = payout.available && normalizedQuery
+    ? payout.recent.filter((row) => {
+        const searchableValues = [
+          row.policy_no,
+          row.customer_name,
+          row.status,
+          row.commercial_status,
+          row.voucher_number,
+          row.amount,
+        ];
+        return searchableValues.some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery));
+      })
+    : payout.available
+      ? payout.recent
+      : [];
 
   return (
     <PartnerPortalShell title="Payout">
@@ -114,10 +135,7 @@ export default async function PartnerPayoutPage() {
                   </span>
                   <h2 className="whitespace-nowrap text-[14px] font-black tracking-[-0.02em] text-[#132851]">Recent payout records</h2>
                 </div>
-                <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#DCE5EF] bg-white px-3 text-[#8593A8] sm:max-w-[320px]">
-                  <Search className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate text-[9px] font-medium">Customer, policy, claim, vehicle or insurer</span>
-                </div>
+                <PayoutSearch initialQuery={q} />
               </div>
               <div className="flex items-center gap-2 border-l border-[#E5EBF2] pl-4">
                 <span className="whitespace-nowrap text-[9px] font-medium text-[#617596]">Total recorded</span>
@@ -125,7 +143,7 @@ export default async function PartnerPayoutPage() {
               </div>
             </div>
 
-            {payout.recent.length ? (
+            {recent.length ? (
               <div className="overflow-x-auto">
                 <div className="min-w-[760px]">
                   <div className="grid grid-cols-[44px_minmax(300px,1.4fr)_minmax(140px,.55fr)_minmax(120px,.45fr)_64px] border-b border-[#E4EAF2] bg-[#F8FAFD] px-4 py-2 text-[8px] font-bold text-[#60728E] sm:px-5">
@@ -135,7 +153,7 @@ export default async function PartnerPayoutPage() {
                     <span>Status</span>
                     <span className="text-center">Action</span>
                   </div>
-                  {payout.recent.map((row) => {
+                  {recent.map((row) => {
                     const status = row.status || row.commercial_status;
                     return (
                       <Link
@@ -162,6 +180,12 @@ export default async function PartnerPayoutPage() {
                     );
                   })}
                 </div>
+              </div>
+            ) : q ? (
+              <div className="px-5 py-14 text-center">
+                <ReceiptIndianRupee className="mx-auto h-7 w-7 text-[#9AABC0]" />
+                <p className="mt-3 text-[12px] font-bold text-[#23395D]">No payout records match your search</p>
+                <p className="mt-1 text-[10.5px] text-[#7A899F]">Try another policy number, customer, status, voucher or amount.</p>
               </div>
             ) : (
               <div className="px-5 py-14 text-center">
