@@ -10,9 +10,23 @@ const BUCKET = "policy-documents";
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp"]);
 
-type PartnerIdentity =
-  | { actor_kind: "employee"; profile_id: string }
-  | { actor_kind: "intermediary"; portal_account_id: string; intermediary_id: string };
+type EmployeeIdentity = { actor_kind: "employee"; profile_id: string };
+type LegacyPartnerIdentity = {
+  actor_kind: "intermediary";
+  portal_account_id: string;
+  intermediary_id: string;
+  portal_access_type?: undefined;
+};
+type ExplicitPortalIdentity = {
+  actor_kind: "intermediary";
+  profile_id: string;
+  auth_user_id: string;
+  portal_account_id: null;
+  intermediary_id: null;
+  portal_access_type: "group" | "branch";
+  portal_access_entity_id: string;
+};
+type PartnerIdentity = EmployeeIdentity | LegacyPartnerIdentity | ExplicitPortalIdentity;
 
 type PartnerScope = {
   intermediary_ids?: string[];
@@ -46,9 +60,7 @@ export async function GET(request: Request) {
   const view = url.searchParams.get("view")?.trim().toLowerCase();
 
   if (view === "sources") {
-    const sourceIds = identity.actor_kind === "intermediary"
-      ? [identity.intermediary_id]
-      : (scope.intermediary_ids ?? []);
+    const sourceIds = authorizedSourceIds(identity, scope);
     const { data: sources, error: sourcesError } = sourceIds.length
       ? await admin
           .from("intermediaries")
@@ -68,9 +80,10 @@ export async function GET(request: Request) {
       .select(intakeSelect)
       .eq("id", requestedId);
 
-    detailQuery = identity.actor_kind === "employee"
-      ? detailQuery.eq("submitted_by_profile_id", identity.profile_id)
-      : detailQuery.eq("submitted_by_portal_account_id", identity.portal_account_id);
+    const profileSubmitterId = submittedByProfileId(identity);
+    detailQuery = profileSubmitterId
+      ? detailQuery.eq("submitted_by_profile_id", profileSubmitterId)
+      : detailQuery.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
 
     const { data: intake, error: intakeError } = await detailQuery.maybeSingle();
     if (intakeError) {
@@ -99,9 +112,10 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  query = identity.actor_kind === "employee"
-    ? query.eq("submitted_by_profile_id", identity.profile_id)
-    : query.eq("submitted_by_portal_account_id", identity.portal_account_id);
+  const profileSubmitterId = submittedByProfileId(identity);
+  query = profileSubmitterId
+    ? query.eq("submitted_by_profile_id", profileSubmitterId)
+    : query.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
@@ -112,9 +126,9 @@ export async function GET(request: Request) {
       .from("policy_intake_requests")
       .select("id", { count: "exact", head: true });
 
-    countQuery = identity.actor_kind === "employee"
-      ? countQuery.eq("submitted_by_profile_id", identity.profile_id)
-      : countQuery.eq("submitted_by_portal_account_id", identity.portal_account_id);
+    countQuery = profileSubmitterId
+      ? countQuery.eq("submitted_by_profile_id", profileSubmitterId)
+      : countQuery.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
 
     if (statuses.length) {
       countQuery = excluded
@@ -266,9 +280,7 @@ async function completeUpload(
     .returns<Array<{ id: string }>>();
 
   const source = sourceResult.source;
-  const submitter = identity.actor_kind === "employee"
-    ? { submitted_by_profile_id: identity.profile_id, submitted_by_portal_account_id: null }
-    : { submitted_by_profile_id: null, submitted_by_portal_account_id: identity.portal_account_id };
+  const submitter = submitterColumns(identity);
 
   const { error: intakeError } = await admin.from("policy_intake_requests").insert({
     id: input.id,
@@ -294,9 +306,7 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  const uploader = identity.actor_kind === "employee"
-    ? { uploaded_by_profile_id: identity.profile_id, uploaded_by_portal_account_id: null }
-    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: identity.portal_account_id };
+  const uploader = uploaderColumns(identity);
 
   const { error: documentError } = await admin.from("policy_intake_documents").insert({
     intake_id: input.id,
@@ -368,9 +378,7 @@ async function completeResponse(
     return json({ ok: false, error: "Policy copy must be 15 MB or smaller." }, 400);
   }
 
-  const uploader = identity.actor_kind === "employee"
-    ? { uploaded_by_profile_id: identity.profile_id, uploaded_by_portal_account_id: null }
-    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: identity.portal_account_id };
+  const uploader = uploaderColumns(identity);
 
   const { data: newDocument, error: documentError } = await admin
     .from("policy_intake_documents")
@@ -416,9 +424,10 @@ async function completeResponse(
     .eq("id", input.id)
     .eq("status", "needs_attention");
 
-  update = identity.actor_kind === "employee"
-    ? update.eq("submitted_by_profile_id", identity.profile_id)
-    : update.eq("submitted_by_portal_account_id", identity.portal_account_id);
+  const profileSubmitterId = submittedByProfileId(identity);
+  update = profileSubmitterId
+    ? update.eq("submitted_by_profile_id", profileSubmitterId)
+    : update.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
 
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
@@ -437,9 +446,10 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
     .select("id,intake_number,status,storage_bucket,storage_path")
     .eq("id", id);
 
-  query = identity.actor_kind === "employee"
-    ? query.eq("submitted_by_profile_id", identity.profile_id)
-    : query.eq("submitted_by_portal_account_id", identity.portal_account_id);
+  const profileSubmitterId = submittedByProfileId(identity);
+  query = profileSubmitterId
+    ? query.eq("submitted_by_profile_id", profileSubmitterId)
+    : query.eq("submitted_by_portal_account_id", legacyPortalAccountId(identity));
 
   const { data } = await query.maybeSingle<{
     id: string;
@@ -452,12 +462,14 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
 }
 
 async function resolveSource(identity: PartnerIdentity, scope: PartnerScope, requestedId?: string) {
-  const sourceId = identity.actor_kind === "intermediary"
+  const authorized = authorizedSourceIds(identity, scope);
+  const requested = requestedId?.trim();
+  const sourceId = isLegacyPartnerIdentity(identity)
     ? identity.intermediary_id
-    : requestedId?.trim();
+    : requested || (authorized.length === 1 ? authorized[0] : undefined);
 
   if (!sourceId) return { ok: false as const, error: "Select an authorized Partner, POSP or MISP." };
-  if (identity.actor_kind === "employee" && !(scope.intermediary_ids ?? []).includes(sourceId)) {
+  if (!authorized.includes(sourceId)) {
     return { ok: false as const, error: "This lead source is outside your permitted sales scope." };
   }
 
@@ -479,6 +491,43 @@ async function resolveSource(identity: PartnerIdentity, scope: PartnerScope, req
   }
 
   return { ok: true as const, source: data };
+}
+
+function isExplicitPortalIdentity(identity: PartnerIdentity): identity is ExplicitPortalIdentity {
+  return identity.actor_kind === "intermediary" && (identity.portal_access_type === "group" || identity.portal_access_type === "branch");
+}
+
+function isLegacyPartnerIdentity(identity: PartnerIdentity): identity is LegacyPartnerIdentity {
+  return identity.actor_kind === "intermediary" && !isExplicitPortalIdentity(identity);
+}
+
+function submittedByProfileId(identity: PartnerIdentity) {
+  if (identity.actor_kind === "employee") return identity.profile_id;
+  if (isExplicitPortalIdentity(identity)) return identity.profile_id || identity.auth_user_id;
+  return null;
+}
+
+function legacyPortalAccountId(identity: PartnerIdentity) {
+  return isLegacyPartnerIdentity(identity) ? identity.portal_account_id : "00000000-0000-0000-0000-000000000000";
+}
+
+function submitterColumns(identity: PartnerIdentity) {
+  const profileId = submittedByProfileId(identity);
+  return profileId
+    ? { submitted_by_profile_id: profileId, submitted_by_portal_account_id: null }
+    : { submitted_by_profile_id: null, submitted_by_portal_account_id: legacyPortalAccountId(identity) };
+}
+
+function uploaderColumns(identity: PartnerIdentity) {
+  const profileId = submittedByProfileId(identity);
+  return profileId
+    ? { uploaded_by_profile_id: profileId, uploaded_by_portal_account_id: null }
+    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: legacyPortalAccountId(identity) };
+}
+
+function authorizedSourceIds(identity: PartnerIdentity, scope: PartnerScope) {
+  if (isLegacyPartnerIdentity(identity)) return [identity.intermediary_id];
+  return [...new Set(scope.intermediary_ids ?? [])];
 }
 
 async function processStoredOcr(id: string) {
