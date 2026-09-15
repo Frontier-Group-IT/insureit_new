@@ -1,9 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
- type Suggestion = {
+type Suggestion = {
   value: string;
   label: string;
   meta: string;
@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 };
 
 type SearchConfig = {
-  scope: "customers" | "policies" | "renewals" | "claims" | "payout" | "global" | "policy-intakes";
+  scope: "policies" | "renewals" | "global" | "policy-intakes";
   selector: string;
 };
 
@@ -28,15 +28,6 @@ type IntakeRow = {
 const SEARCH_DEBOUNCE_MS = 180;
 
 function searchConfig(pathname: string): SearchConfig | null {
-  if (pathname === "/partner/customers") {
-    return { scope: "customers", selector: 'input[aria-label^="Search customers"]' };
-  }
-  if (pathname === "/partner/payout") {
-    return { scope: "payout", selector: 'input[aria-label="Search payout records"]' };
-  }
-  if (pathname.startsWith("/partner/claims")) {
-    return { scope: "claims", selector: 'input[aria-label="Search claims"]' };
-  }
   if (pathname === "/partner/policy-intakes") {
     return { scope: "policy-intakes", selector: 'input[placeholder^="Search PIR"]' };
   }
@@ -120,7 +111,7 @@ function intakeSuggestions(rows: IntakeRow[], query: string): Suggestion[] {
 
 export function PartnerSearchAutocompleteEnhancer() {
   const pathname = usePathname();
-  const config = searchConfig(pathname);
+  const config = useMemo(() => searchConfig(pathname), [pathname]);
   const [input, setInput] = useState<HTMLInputElement | null>(null);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [open, setOpen] = useState(false);
@@ -128,6 +119,13 @@ export function PartnerSearchAutocompleteEnhancer() {
   const [position, setPosition] = useState({ left: 0, top: 0, width: 0 });
   const intakeRowsRef = useRef<IntakeRow[] | null>(null);
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    intakeRowsRef.current = null;
+    setSuggestions([]);
+    setOpen(false);
+    setActiveIndex(-1);
+  }, [pathname]);
 
   useEffect(() => {
     if (!config) {
@@ -139,14 +137,14 @@ export function PartnerSearchAutocompleteEnhancer() {
     const findInput = () => document.querySelector<HTMLInputElement>(config.selector);
     const syncInput = () => {
       const next = findInput();
-      if (next !== input) setInput(next);
+      setInput((current) => (current === next ? current : next));
     };
 
     syncInput();
     const observer = new MutationObserver(syncInput);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
-  }, [config?.scope, config?.selector, input]);
+  }, [config]);
 
   useEffect(() => {
     if (!input || !config) return;
@@ -236,7 +234,11 @@ export function PartnerSearchAutocompleteEnhancer() {
             ok?: boolean;
             suggestions?: Suggestion[];
           } | null;
-          if (!response.ok || !payload?.ok) return;
+          if (!response.ok || !payload?.ok) {
+            setSuggestions([]);
+            setOpen(false);
+            return;
+          }
           next = payload.suggestions ?? [];
         }
 
@@ -247,6 +249,8 @@ export function PartnerSearchAutocompleteEnhancer() {
         setOpen(next.length > 0 && document.activeElement === input);
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return;
+        setSuggestions([]);
+        setOpen(false);
       }
     };
 
@@ -281,7 +285,7 @@ export function PartnerSearchAutocompleteEnhancer() {
   useEffect(() => {
     if (!input || !open) return;
 
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (!suggestions.length) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
