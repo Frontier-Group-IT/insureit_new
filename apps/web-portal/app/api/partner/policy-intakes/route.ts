@@ -12,7 +12,14 @@ const ALLOWED_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "im
 
 type PartnerIdentity =
   | { actor_kind: "employee"; profile_id: string }
-  | { actor_kind: "intermediary"; portal_account_id: string; intermediary_id: string };
+  | {
+      actor_kind: "intermediary";
+      portal_account_id: string | null;
+      intermediary_id: string | null;
+      auth_user_id?: string;
+      portal_access_type?: "group" | "branch";
+      portal_access_entity_id?: string;
+    };
 
 type PartnerScope = {
   intermediary_ids?: string[];
@@ -46,7 +53,7 @@ export async function GET(request: Request) {
   const view = url.searchParams.get("view")?.trim().toLowerCase();
 
   if (view === "sources") {
-    const sourceIds = identity.actor_kind === "intermediary"
+    const sourceIds = isLegacyPartnerIdentity(identity)
       ? [identity.intermediary_id]
       : (scope.intermediary_ids ?? []);
     const { data: sources, error: sourcesError } = sourceIds.length
@@ -68,9 +75,10 @@ export async function GET(request: Request) {
       .select(intakeSelect)
       .eq("id", requestedId);
 
-    detailQuery = identity.actor_kind === "employee"
-      ? detailQuery.eq("submitted_by_profile_id", identity.profile_id)
-      : detailQuery.eq("submitted_by_portal_account_id", identity.portal_account_id);
+    const owner = submissionOwner(identity);
+    detailQuery = owner.kind === "profile"
+      ? detailQuery.eq("submitted_by_profile_id", owner.id)
+      : detailQuery.eq("submitted_by_portal_account_id", owner.id);
 
     const { data: intake, error: intakeError } = await detailQuery.maybeSingle();
     if (intakeError) {
@@ -99,9 +107,10 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  query = identity.actor_kind === "employee"
-    ? query.eq("submitted_by_profile_id", identity.profile_id)
-    : query.eq("submitted_by_portal_account_id", identity.portal_account_id);
+  const owner = submissionOwner(identity);
+  query = owner.kind === "profile"
+    ? query.eq("submitted_by_profile_id", owner.id)
+    : query.eq("submitted_by_portal_account_id", owner.id);
 
   if (filter === "attention") query = query.eq("status", "needs_attention");
   if (filter === "completed") query = query.eq("status", "completed");
@@ -112,9 +121,9 @@ export async function GET(request: Request) {
       .from("policy_intake_requests")
       .select("id", { count: "exact", head: true });
 
-    countQuery = identity.actor_kind === "employee"
-      ? countQuery.eq("submitted_by_profile_id", identity.profile_id)
-      : countQuery.eq("submitted_by_portal_account_id", identity.portal_account_id);
+    countQuery = owner.kind === "profile"
+      ? countQuery.eq("submitted_by_profile_id", owner.id)
+      : countQuery.eq("submitted_by_portal_account_id", owner.id);
 
     if (statuses.length) {
       countQuery = excluded
@@ -200,9 +209,14 @@ async function authenticate(request: Request) {
     return { ok: false as const, response: json({ ok: false, error: "INSUREIT Partner access is unavailable." }, 403) };
   }
 
+  const identity = identityData as PartnerIdentity;
+  if (isPortalAccessIdentity(identity) && !identity.auth_user_id) {
+    return { ok: false as const, response: json({ ok: false, error: "INSUREIT Partner access is unavailable." }, 403) };
+  }
+
   return {
     ok: true as const,
-    identity: identityData as PartnerIdentity,
+    identity,
     scope: scopeData as PartnerScope,
   };
 }
@@ -266,9 +280,10 @@ async function completeUpload(
     .returns<Array<{ id: string }>>();
 
   const source = sourceResult.source;
-  const submitter = identity.actor_kind === "employee"
-    ? { submitted_by_profile_id: identity.profile_id, submitted_by_portal_account_id: null }
-    : { submitted_by_profile_id: null, submitted_by_portal_account_id: identity.portal_account_id };
+  const submitterOwner = submissionOwner(identity);
+  const submitter = submitterOwner.kind === "profile"
+    ? { submitted_by_profile_id: submitterOwner.id, submitted_by_portal_account_id: null }
+    : { submitted_by_profile_id: null, submitted_by_portal_account_id: submitterOwner.id };
 
   const { error: intakeError } = await admin.from("policy_intake_requests").insert({
     id: input.id,
@@ -294,9 +309,9 @@ async function completeUpload(
     return json({ ok: false, error: "Policy intake could not be created." }, 500);
   }
 
-  const uploader = identity.actor_kind === "employee"
-    ? { uploaded_by_profile_id: identity.profile_id, uploaded_by_portal_account_id: null }
-    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: identity.portal_account_id };
+  const uploader = submitterOwner.kind === "profile"
+    ? { uploaded_by_profile_id: submitterOwner.id, uploaded_by_portal_account_id: null }
+    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: submitterOwner.id };
 
   const { error: documentError } = await admin.from("policy_intake_documents").insert({
     intake_id: input.id,
@@ -368,9 +383,10 @@ async function completeResponse(
     return json({ ok: false, error: "Policy copy must be 15 MB or smaller." }, 400);
   }
 
-  const uploader = identity.actor_kind === "employee"
-    ? { uploaded_by_profile_id: identity.profile_id, uploaded_by_portal_account_id: null }
-    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: identity.portal_account_id };
+  const uploaderOwner = submissionOwner(identity);
+  const uploader = uploaderOwner.kind === "profile"
+    ? { uploaded_by_profile_id: uploaderOwner.id, uploaded_by_portal_account_id: null }
+    : { uploaded_by_profile_id: null, uploaded_by_portal_account_id: uploaderOwner.id };
 
   const { data: newDocument, error: documentError } = await admin
     .from("policy_intake_documents")
@@ -416,9 +432,10 @@ async function completeResponse(
     .eq("id", input.id)
     .eq("status", "needs_attention");
 
-  update = identity.actor_kind === "employee"
-    ? update.eq("submitted_by_profile_id", identity.profile_id)
-    : update.eq("submitted_by_portal_account_id", identity.portal_account_id);
+  const owner = submissionOwner(identity);
+  update = owner.kind === "profile"
+    ? update.eq("submitted_by_profile_id", owner.id)
+    : update.eq("submitted_by_portal_account_id", owner.id);
 
   const { error: updateError } = await update;
   if (updateError) return json({ ok: false, error: "Could not attach the replacement policy copy." }, 500);
@@ -437,9 +454,10 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
     .select("id,intake_number,status,storage_bucket,storage_path")
     .eq("id", id);
 
-  query = identity.actor_kind === "employee"
-    ? query.eq("submitted_by_profile_id", identity.profile_id)
-    : query.eq("submitted_by_portal_account_id", identity.portal_account_id);
+  const owner = submissionOwner(identity);
+  query = owner.kind === "profile"
+    ? query.eq("submitted_by_profile_id", owner.id)
+    : query.eq("submitted_by_portal_account_id", owner.id);
 
   const { data } = await query.maybeSingle<{
     id: string;
@@ -452,12 +470,13 @@ async function ownIntake(identity: PartnerIdentity, id: string) {
 }
 
 async function resolveSource(identity: PartnerIdentity, scope: PartnerScope, requestedId?: string) {
-  const sourceId = identity.actor_kind === "intermediary"
+  const allowedIds = scope.intermediary_ids ?? [];
+  const sourceId = isLegacyPartnerIdentity(identity)
     ? identity.intermediary_id
     : requestedId?.trim();
 
   if (!sourceId) return { ok: false as const, error: "Select an authorized Partner, POSP or MISP." };
-  if (identity.actor_kind === "employee" && !(scope.intermediary_ids ?? []).includes(sourceId)) {
+  if (!isLegacyPartnerIdentity(identity) && !allowedIds.includes(sourceId)) {
     return { ok: false as const, error: "This lead source is outside your permitted sales scope." };
   }
 
@@ -517,7 +536,6 @@ async function processStoredOcr(id: string) {
   const formData = new FormData();
   formData.set("policy_document", file);
   const ocr = await extractPolicyIntakeDocumentTrusted(formData);
-
   if (!ocr.ok) {
     await markOcrFailure(id, intake.storage_path, ocr.error);
     return;
@@ -545,6 +563,25 @@ async function markOcrFailure(id: string, storagePath: string, message: string) 
     .eq("id", id)
     .eq("storage_path", storagePath)
     .eq("status", "processing");
+}
+
+function isPortalAccessIdentity(identity: PartnerIdentity): identity is Extract<PartnerIdentity, { actor_kind: "intermediary" }> & { portal_access_type: "group" | "branch"; auth_user_id: string } {
+  return identity.actor_kind === "intermediary"
+    && (identity.portal_access_type === "group" || identity.portal_access_type === "branch");
+}
+
+function isLegacyPartnerIdentity(identity: PartnerIdentity): identity is Extract<PartnerIdentity, { actor_kind: "intermediary" }> & { portal_account_id: string; intermediary_id: string } {
+  return identity.actor_kind === "intermediary"
+    && !identity.portal_access_type
+    && Boolean(identity.portal_account_id)
+    && Boolean(identity.intermediary_id);
+}
+
+function submissionOwner(identity: PartnerIdentity): { kind: "profile" | "portal"; id: string } {
+  if (identity.actor_kind === "employee") return { kind: "profile", id: identity.profile_id };
+  if (isPortalAccessIdentity(identity) && identity.auth_user_id) return { kind: "profile", id: identity.auth_user_id };
+  if (identity.portal_account_id) return { kind: "portal", id: identity.portal_account_id };
+  throw new Error("Policy Intake identity has no valid submitter.");
 }
 
 function validateMeta(file: UploadMeta) {

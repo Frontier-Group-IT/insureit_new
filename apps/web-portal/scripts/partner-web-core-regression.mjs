@@ -133,8 +133,12 @@ assert(intakeApi.includes('searchParams.get("filter")'), "Policy Intake API must
 assert(intakeApi.includes('.range(offset, offset + limit - 1)'), "Policy Intake API must paginate before returning list rows");
 assert(intakeApi.includes('view === "sources"'), "Policy Intake API must expose a sources-only view");
 
-assert(intakeApi.includes('.eq("submitted_by_portal_account_id", identity.portal_account_id)'), "Policy Intake detail must retain Partner ownership filtering");
-assert(intakeApi.includes('.eq("submitted_by_profile_id", identity.profile_id)'), "Policy Intake detail must retain employee submitter filtering");
+assert(intakeApi.includes('function submissionOwner(identity: PartnerIdentity)'), "Policy Intake must centralize submitter ownership for employee, Partner, Group and Branch actors");
+assert(intakeApi.includes('return { kind: "profile", id: identity.profile_id }'), "Policy Intake must retain employee profile ownership filtering");
+assert(intakeApi.includes('return { kind: "portal", id: identity.portal_account_id }'), "Policy Intake must retain legacy Partner portal-account ownership filtering");
+assert(intakeApi.includes('return { kind: "profile", id: identity.auth_user_id }'), "Policy Intake must attribute Group/Branch submissions to their authenticated profile");
+assert(intakeApi.includes('scope.intermediary_ids ?? []'), "Group/Branch Policy Intake sources must come from authenticated commercial scope");
+assert(intakeApi.includes('!isLegacyPartnerIdentity(identity) && !allowedIds.includes(sourceId)'), "Group/Branch Policy Intake must reject lead sources outside commercial scope");
 
 const registrationPage = read("app/partner/account/registration/page.tsx");
 assert(registrationPage.includes("getPartnerWebRegistrationOverview"), "registration page must use scoped Partner registration adapter");
