@@ -132,9 +132,12 @@ assert(intakeApi.includes('searchParams.get("id")'), "Policy Intake API must acc
 assert(intakeApi.includes('searchParams.get("filter")'), "Policy Intake API must accept server-side pipeline filters");
 assert(intakeApi.includes('.range(offset, offset + limit - 1)'), "Policy Intake API must paginate before returning list rows");
 assert(intakeApi.includes('view === "sources"'), "Policy Intake API must expose a sources-only view");
-
-assert(intakeApi.includes('.eq("submitted_by_portal_account_id", identity.portal_account_id)'), "Policy Intake detail must retain Partner ownership filtering");
-assert(intakeApi.includes('.eq("submitted_by_profile_id", identity.profile_id)'), "Policy Intake detail must retain employee submitter filtering");
+assert(intakeApi.includes('function isLegacyPartnerIdentity(identity: PartnerIdentity)'), "Policy Intake must distinguish legacy Partner identities");
+assert(intakeApi.includes('return isLegacyPartnerIdentity(identity) ? identity.portal_account_id'), "Policy Intake must retain legacy Partner portal-account ownership filtering");
+assert(intakeApi.includes('if (identity.actor_kind === "employee") return identity.profile_id;'), "Policy Intake must retain employee profile ownership filtering");
+assert(intakeApi.includes('if (isExplicitPortalIdentity(identity)) return identity.profile_id || identity.auth_user_id;'), "Policy Intake must attribute Group/Branch submissions to their authenticated profile");
+assert(intakeApi.includes('submitted_by_profile_id: profileId'), "Policy Intake explicit identities must persist profile ownership");
+assert(intakeApi.includes('submitted_by_portal_account_id: legacyPortalAccountId(identity)'), "Policy Intake legacy Partners must persist portal-account ownership");
 
 const registrationPage = read("app/partner/account/registration/page.tsx");
 assert(registrationPage.includes("getPartnerWebRegistrationOverview"), "registration page must use scoped Partner registration adapter");
