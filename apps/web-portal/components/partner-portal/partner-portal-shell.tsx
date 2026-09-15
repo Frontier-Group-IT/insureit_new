@@ -7,6 +7,7 @@ import { PartnerBottomNavigation } from "./partner-bottom-navigation";
 import { PartnerBreadcrumbs } from "./partner-breadcrumbs";
 import { PartnerBusinessTrendResponsiveFix } from "./partner-business-trend-responsive-fix";
 import { PartnerPageCustomIconStyles } from "./partner-page-custom-icon-styles";
+import { PartnerSearchAutocompleteEnhancer } from "./partner-search-autocomplete-enhancer";
 
 export async function PartnerPortalShell({ title, children, headerVariant = "default" }: { title: string; children: ReactNode; headerVariant?: "default" | "breadcrumb" }) {
   const accessToken = await getServerAccessToken();
@@ -51,6 +52,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
         </main>
       </div>
 
+      <PartnerSearchAutocompleteEnhancer />
       <PartnerBottomNavigation />
       <PartnerBusinessTrendResponsiveFix />
     </div>
