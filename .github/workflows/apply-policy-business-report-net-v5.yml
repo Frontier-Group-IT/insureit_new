@@ -66,6 +66,17 @@ jobs:
           supabase db query --linked --file supabase/migrations/20260915163500_policy_business_report_net_premium_v5.sql
           supabase migration repair --linked --status applied 20260915163500
 
+      - name: Enforce RPC access contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db query --linked "
+            revoke execute on function public.get_policy_business_report_v5(uuid[],date,date,uuid,uuid,text,text,text,integer,integer) from public;
+            revoke execute on function public.get_policy_business_report_v5(uuid[],date,date,uuid,uuid,text,text,text,integer,integer) from anon;
+            revoke execute on function public.get_policy_business_report_v5(uuid[],date,date,uuid,uuid,text,text,text,integer,integer) from authenticated;
+            grant execute on function public.get_policy_business_report_v5(uuid[],date,date,uuid,uuid,text,text,text,integer,integer) to service_role;
+          "
+
       - name: Verify RPC contract
         shell: bash
         run: |
