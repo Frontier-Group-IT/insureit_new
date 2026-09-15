@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ExternalLink, Menu, RefreshCw, X } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { PartnerCustomIcon, type PartnerCustomIconName } from "./partner-custom-icon";
 
@@ -71,31 +71,37 @@ export function PartnerMobileNavigation() {
                   if (item.href === "/partner/renewals") {
                     const internalActive = pathname === "/partner/renewals";
                     const externalActive = pathname.startsWith("/partner/renewals/external");
+                    const childClass = (childActive: boolean) => `group flex min-h-9 items-center gap-2.5 rounded-lg px-2.5 py-2 text-[11px] font-semibold transition ${childActive ? "bg-white text-[#141d3b] shadow-[0_2px_10px_rgba(5,18,45,0.16)]" : "text-white/72 hover:bg-white/8 hover:text-white"}`;
+                    const childIconClass = (childActive: boolean) => `grid h-6 w-6 shrink-0 place-items-center rounded-md ${childActive ? "bg-[#EAF1FF] text-[#2F70E5]" : "text-white/60 group-hover:bg-white/8 group-hover:text-white"}`;
                     return (
                       <div key={item.href}>
-                        <div className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold ${active ? "bg-white text-[#141d3b]" : "text-white/88"}`}>
-                          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${active ? "bg-[#EAF1FF]" : "bg-white/5"}`}>
+                        <div className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold ${active ? "bg-white/8 text-white" : "text-white/88"}`}>
+                          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${active ? "bg-white/10" : "bg-white/5"}`}>
                             <PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" />
                           </span>
                           <span>{item.label}</span>
                         </div>
-                        <div className="ml-[29px] mt-1.5 border-l border-white/30 pl-4">
+                        <div className="ml-[29px] mt-1.5 border-l border-white/30 pl-3.5">
                           <div className="space-y-1">
                             <Link
                               href="/partner/renewals"
                               prefetch={false}
+                              aria-current={internalActive ? "page" : undefined}
                               onClick={() => setOpen(false)}
-                              className={`block rounded-lg px-3 py-2 text-[11px] font-semibold transition ${internalActive ? "bg-white/14 text-white" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
+                              className={childClass(internalActive)}
                             >
-                              Internal Renewal
+                              <span className={childIconClass(internalActive)}><RefreshCw className="h-3.5 w-3.5" /></span>
+                              <span>Internal Renewal</span>
                             </Link>
                             <Link
                               href="/partner/renewals/external"
                               prefetch={false}
+                              aria-current={externalActive ? "page" : undefined}
                               onClick={() => setOpen(false)}
-                              className={`block rounded-lg px-3 py-2 text-[11px] font-semibold transition ${externalActive ? "bg-white/14 text-white" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
+                              className={childClass(externalActive)}
                             >
-                              External Renewal
+                              <span className={childIconClass(externalActive)}><ExternalLink className="h-3.5 w-3.5" /></span>
+                              <span>External Renewal</span>
                             </Link>
                           </div>
                         </div>
