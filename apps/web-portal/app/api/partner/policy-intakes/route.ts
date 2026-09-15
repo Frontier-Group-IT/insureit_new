@@ -193,7 +193,7 @@ async function authenticate(request: Request) {
   }
 
   const [{ data: identityData, error: identityError }, { data: scopeData, error: scopeError }] = await Promise.all([
-    scoped.rpc("partner_app_current_identity"),
+    scoped.rpc("partner_policy_intake_current_identity"),
     scoped.rpc("partner_app_commercial_scope"),
   ]);
   if (identityError || scopeError || !identityData || !scopeData) {
