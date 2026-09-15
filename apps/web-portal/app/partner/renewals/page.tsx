@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, BarChart3, CalendarClock, ExternalLink, RefreshCw, Search } from "lucide-react";
+import { ArrowRight, CalendarClock, RefreshCw, Search } from "lucide-react";
 import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
@@ -67,23 +67,8 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
   };
 
   return (
-    <PartnerPortalShell title="Renewals">
-      <div data-partner-renewals-reference-page="true" className="space-y-3 pb-4">
-        <section data-partner-renewals-reference-actions="true" className="grid gap-2 xl:grid-cols-2">
-          <Link href="/partner/renewals/external" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#DCE5F0] bg-white px-3.5 py-2 shadow-[0_3px_12px_rgba(37,61,103,0.035)] transition hover:border-[#C4DDF5] hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#DDEEFF] text-[#2F70E5]"><ExternalLink className="h-4 w-4" /></span>
-            <span className="min-w-0 flex-1 text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Opportunities</span>
-            <span className="rounded-full bg-[#E6F1FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#2563D8]">Open</span>
-            <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
-          </Link>
-          <Link href="/partner/renewals/external/reporting" prefetch={false} className="group flex min-h-[48px] items-center gap-3 rounded-xl border border-[#DCE5F0] bg-white px-3.5 py-2 shadow-[0_3px_12px_rgba(37,61,103,0.035)] transition hover:border-[#D9CEF4] hover:bg-[#FCFBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7650D8]/20">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEE6FF] text-[#7650D8]"><BarChart3 className="h-4 w-4" /></span>
-            <span className="min-w-0 flex-1 text-[10.5px] font-extrabold text-[#1B2F4E]">External Renewal Reporting</span>
-            <span className="rounded-full bg-[#EEE8FF] px-2.5 py-1 text-[8.5px] font-black uppercase tracking-[0.07em] text-[#6E49CF]">View</span>
-            <ArrowRight className="h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5" />
-          </Link>
-        </section>
-
+    <PartnerPortalShell title="Internal Renewal">
+      <div data-partner-renewals-reference-page="true" className="pb-4">
         <section data-partner-renewals-reference-worklist="true" className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_16px_rgba(37,61,103,0.045)]">
           <div className="flex flex-col gap-3 border-b border-[#E7EDF4] px-4 py-3 xl:flex-row xl:items-center">
             <div className="flex shrink-0 items-center gap-3">
