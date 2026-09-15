@@ -4,6 +4,7 @@ export type PartnerCustomIconName =
   | "home"
   | "business"
   | "customers"
+  | "vehicle"
   | "policies"
   | "renewals"
   | "claims"
@@ -19,6 +20,7 @@ const iconAssets: Record<PartnerCustomIconName, string> = {
   home: "/assets/Custom-Icons/optimized-128/tasks-work-queue.png",
   business: "/assets/Custom-Icons/optimized-128/reports-analytics.png",
   customers: "/assets/Custom-Icons/optimized-128/customers.png",
+  vehicle: "/assets/Custom-Icons/optimized-128/fleet-vehicle.png",
   policies: "/assets/Custom-Icons/optimized-128/policy.png",
   renewals: "/assets/Custom-Icons/optimized-128/renewal.png",
   claims: "/assets/Custom-Icons/optimized-128/claims.png",
