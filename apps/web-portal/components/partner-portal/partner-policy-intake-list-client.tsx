@@ -112,6 +112,13 @@ function matchesFilter(row: PartnerPolicyIntake, filter: IntakeFilter) {
   return true;
 }
 
+function serverFilterFor(filter: IntakeFilter): "all" | "attention" | "in_progress" | "completed" {
+  if (filter === "attention") return "attention";
+  if (filter === "completed") return "completed";
+  if (filter === "in_review" || filter === "processing") return "in_progress";
+  return "all";
+}
+
 export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [filter, setFilter] = useState<IntakeFilter>("attention");
@@ -130,70 +137,54 @@ export function PartnerPolicyIntakeListClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadCounts = useCallback(async () => {
-    const allRows: PartnerPolicyIntake[] = [];
-    let offset = 0;
-    let expectedTotal = 0;
-
-    do {
-      const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: "all" });
-      if (offset === 0) expectedTotal = result.total;
-      allRows.push(...result.intakes);
-      offset += PAGE_SIZE;
-      if (!result.intakes.length) break;
-    } while (allRows.length < expectedTotal);
-
-    setCounts({
-      attention: allRows.filter((row) => row.status === "needs_attention").length,
-      inReview: allRows.filter((row) => row.status === "in_review" || row.status === "ready_for_review").length,
-      processing: allRows.filter((row) => row.status === "processing").length,
-      completed: allRows.filter((row) => row.status === "completed").length,
-      duplicate: allRows.filter((row) => row.status === "duplicate").length,
-      rejected: allRows.filter((row) => row.status === "rejected").length,
-      all: allRows.length,
-    });
-  }, []);
-
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const query = search.trim().toLowerCase();
-      const canUseDirectServerPage = !query && (filter === "all" || filter === "attention" || filter === "completed");
+      const needsExactClientFiltering = Boolean(query) || ["in_review", "processing", "duplicate", "rejected"].includes(filter);
 
-      if (canUseDirectServerPage) {
-        const serverFilter = filter === "attention" ? "attention" : filter === "completed" ? "completed" : "all";
+      if (!needsExactClientFiltering) {
         const result = await getPartnerPolicyIntakesWeb({
           limit: PAGE_SIZE,
           offset: (page - 1) * PAGE_SIZE,
-          filter: serverFilter,
+          filter: serverFilterFor(filter),
         });
         setRows(result.intakes);
         setTotal(result.total);
+        setCounts((current) => ({
+          ...current,
+          attention: result.counts.attention,
+          completed: result.counts.completed,
+          all: filter === "all" ? result.total : current.all,
+        }));
         return;
       }
 
-      const serverFilter = filter === "in_review" || filter === "processing" ? "in_progress" : "all";
-      const completeRows: PartnerPolicyIntake[] = [];
+      const sourceFilter = serverFilterFor(filter);
+      const allRows: PartnerPolicyIntake[] = [];
       let offset = 0;
       let expectedTotal = 0;
 
       do {
-        const result = await getPartnerPolicyIntakesWeb({
-          limit: PAGE_SIZE,
-          offset,
-          filter: serverFilter,
-        });
+        const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: sourceFilter });
         if (offset === 0) expectedTotal = result.total;
-        completeRows.push(...result.intakes);
+        allRows.push(...result.intakes);
         offset += PAGE_SIZE;
         if (!result.intakes.length) break;
-      } while (completeRows.length < expectedTotal);
+      } while (allRows.length < expectedTotal);
 
-      const matches = completeRows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query));
+      const matches = allRows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query));
       const start = (page - 1) * PAGE_SIZE;
       setRows(matches.slice(start, start + PAGE_SIZE));
       setTotal(matches.length);
+      setCounts((current) => ({
+        ...current,
+        inReview: filter === "in_review" ? matches.length : current.inReview,
+        processing: filter === "processing" ? matches.length : current.processing,
+        duplicate: filter === "duplicate" ? matches.length : current.duplicate,
+        rejected: filter === "rejected" ? matches.length : current.rejected,
+      }));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
     } finally {
@@ -202,16 +193,8 @@ export function PartnerPolicyIntakeListClient() {
   }, [filter, page, search]);
 
   useEffect(() => {
-    void loadCounts().catch(() => undefined);
-  }, [loadCounts]);
-
-  useEffect(() => {
     void load();
   }, [load]);
-
-  const refresh = useCallback(async () => {
-    await Promise.all([load(), loadCounts()]);
-  }, [load, loadCounts]);
 
   const hasPrevious = page > 1;
   const hasNext = page * PAGE_SIZE < total;
@@ -236,9 +219,7 @@ export function PartnerPolicyIntakeListClient() {
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0B376D] text-white shadow-sm">
             <FileText className="h-5 w-5" />
           </span>
-          <h2 className="shrink-0 text-[15px] font-extrabold tracking-[-0.02em] text-[#142642]">
-            Policy Intake Register
-          </h2>
+          <h2 className="shrink-0 text-[15px] font-extrabold tracking-[-0.02em] text-[#142642]">Policy Intake Register</h2>
           <div className="relative min-w-0 flex-1 xl:max-w-[520px]">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B8CA4]" />
             <input
@@ -253,7 +234,7 @@ export function PartnerPolicyIntakeListClient() {
           </div>
           <button
             type="button"
-            onClick={() => void refresh()}
+            onClick={() => void load()}
             disabled={loading}
             aria-label="Refresh policy intakes"
             className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#D3DDE9] bg-white text-[#365170] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 disabled:cursor-not-allowed disabled:opacity-60"
@@ -304,9 +285,7 @@ export function PartnerPolicyIntakeListClient() {
                     setPage(1);
                   }}
                   className={`shrink-0 rounded-lg px-3 py-2 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
-                    active
-                      ? "bg-[#123F73] text-white shadow-sm"
-                      : "text-[#60728C] hover:bg-[#F4F7FB] hover:text-[#203653]"
+                    active ? "bg-[#123F73] text-white shadow-sm" : "text-[#60728C] hover:bg-[#F4F7FB] hover:text-[#203653]"
                   }`}
                 >
                   {tab.label} {tab.count}
@@ -325,9 +304,7 @@ export function PartnerPolicyIntakeListClient() {
         </div>
 
         {error ? (
-          <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">
-            {error}
-          </div>
+          <div className="border-b border-[#F1D5D5] bg-[#FFF7F7] px-5 py-3 text-[10.5px] font-semibold text-[#A33B3B] sm:px-6">{error}</div>
         ) : null}
 
         <div className="overflow-x-auto">
@@ -369,18 +346,14 @@ export function PartnerPolicyIntakeListClient() {
                         <p className="mt-0.5 text-[8.5px] font-medium text-[#8B99AC]">Policy intake</p>
                       </div>
                       <div className="min-w-0">
-                        <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">
-                          {customerName || row.customer_mobile || "Customer pending"}
-                        </p>
+                        <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{customerName || row.customer_mobile || "Customer pending"}</p>
                         {customerName && row.customer_mobile ? (
                           <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{row.customer_mobile}</p>
                         ) : null}
                       </div>
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{vehicle}</p>
-                        {vehicleMeta ? (
-                          <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{vehicleMeta}</p>
-                        ) : null}
+                        {vehicleMeta ? <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{vehicleMeta}</p> : null}
                       </div>
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{policy}</p>
