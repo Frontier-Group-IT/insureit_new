@@ -43,21 +43,79 @@ const returnPath = "/intermediaries/groups";
 export async function createBusinessGroup(formData: FormData) {
   const profile = await requireIntermediaryGroupManager();
   const groupName = text(formData, "group_name");
+  const loginEmail = text(formData, "login_email").toLowerCase();
+  const phone = text(formData, "phone");
   const partnerIds = ids(formData, "partner_id");
+
   if (!groupName) return fail("Group name is required.");
+  if (!email(loginEmail)) return fail("Enter a valid Group email address.");
+  if (!phoneNumber(phone)) return fail("Enter a valid Group phone number.");
   if (partnerIds.length && !(await canAccessPartners(profile, partnerIds))) {
     return fail("One or more selected Partners are outside your permitted hierarchy.");
   }
 
   const admin = createSupabaseAdminClient();
-  const { error } = await admin.rpc("service_create_business_intermediary_group", {
+  const [{ data: existingEmail }, { data: existingProfileEmail }] = await Promise.all([
+    admin.from("portal_access_identities").select("profile_id").ilike("login_email", loginEmail).maybeSingle(),
+    admin.from("profiles").select("id").ilike("email", loginEmail).maybeSingle(),
+  ]);
+  if (existingEmail || existingProfileEmail) return fail("That email is already assigned to a portal user.");
+
+  const { data: groupId, error } = await admin.rpc("service_create_business_intermediary_group", {
     p_group_name: groupName,
     p_description: text(formData, "description") || null,
     p_partner_ids: partnerIds,
     p_actor_profile_id: profile.id,
   });
-  if (error) return fail(groupError(error.message));
-  done("business_group_created");
+  if (error || !groupId) return fail(groupError(error?.message ?? "Business Group could not be created."));
+
+  const productionHost = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (productionHost ? `https://${productionHost}` : null);
+  const inviteOptions = siteUrl
+    ? {
+        redirectTo: `${siteUrl}/auth/callback?next=/intermediary-portal`,
+        data: { full_name: groupName, role: "intermediary", portal_account_type: "group" },
+      }
+    : { data: { full_name: groupName, role: "intermediary", portal_account_type: "group" } };
+
+  const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(loginEmail, inviteOptions);
+  if (inviteError || !invite.user?.id) {
+    return fail(`Business Group created, but the login invitation could not be sent: ${inviteError?.message ?? "unknown error"}`);
+  }
+
+  const profileId = invite.user.id;
+  const now = new Date().toISOString();
+  const { error: profileError } = await admin.from("profiles").upsert({
+    id: profileId,
+    full_name: groupName,
+    role: "intermediary",
+    email: loginEmail,
+    phone,
+    is_active: true,
+    updated_at: now,
+  }, { onConflict: "id" });
+  if (profileError) {
+    await admin.auth.admin.deleteUser(profileId);
+    return fail(`Business Group created, but the portal profile could not be prepared: ${profileError.message}`);
+  }
+
+  const { error: mappingError } = await admin.from("portal_access_identities").insert({
+    profile_id: profileId,
+    entity_type: "group",
+    entity_id: groupId,
+    status: "active",
+    login_email: loginEmail,
+    created_by: profile.id,
+    updated_by: profile.id,
+    updated_at: now,
+  });
+  if (mappingError) {
+    await admin.from("profiles").delete().eq("id", profileId);
+    await admin.auth.admin.deleteUser(profileId);
+    return fail(`Business Group created, but login access could not be linked: ${mappingError.message}`);
+  }
+
+  done("business_group_created_invited");
 }
 
 export async function convertLegacyGroupToBusiness(formData: FormData) {
@@ -315,6 +373,15 @@ function ids(formData: FormData, key: string) {
   return Array.from(new Set(formData.getAll(key).filter((value): value is string => typeof value === "string" && /^[0-9a-f-]{36}$/i.test(value))));
 }
 
+function email(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function phoneNumber(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15;
+}
+
 function groupError(message: string) {
   if (/business_group_name_active|duplicate key/i.test(message)) return "An active business Group with this name already exists.";
   if (/root Partner|root partner|branch cannot|Branch profile|Branch parent|unassigned Branch/i.test(message)) return message;
@@ -326,6 +393,7 @@ function groupError(message: string) {
 function done(event: string): never {
   revalidatePath(returnPath);
   revalidatePath("/intermediaries");
+  revalidatePath("/intermediaries/groups/login-access");
   redirect(`${returnPath}?success=${encodeURIComponent(event)}`);
 }
 
