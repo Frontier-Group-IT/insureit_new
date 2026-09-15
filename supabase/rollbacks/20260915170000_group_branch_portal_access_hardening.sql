@@ -6,6 +6,36 @@ begin;
 
 drop function if exists public.partner_policy_intake_current_identity();
 
+create or replace function public.portal_access_identity_validate_target()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.entity_type = 'group' then
+    if not exists (
+      select 1 from public.intermediary_groups g
+      where g.id = new.entity_id and g.status = 'active'
+    ) then
+      raise exception 'portal_access_group_not_available';
+    end if;
+  elsif new.entity_type = 'branch' then
+    if not exists (
+      select 1
+      from public.partners p
+      join public.partner_branch_profiles b on b.partner_id = p.id
+      where p.id = new.entity_id
+    ) then
+      raise exception 'portal_access_branch_not_available';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function public.portal_access_identity_validate_target() from public;
+
 create or replace function public.partner_portal_access_context()
 returns table(account_type text, entity_id uuid, login_email text, scoped_partner_ids uuid[])
 language plpgsql
