@@ -180,6 +180,12 @@ export function BusinessGroupWorkspace({
               >
                 <GitBranch className="h-4 w-4" /> Assign Branch
               </button>
+              <Link
+                href="/intermediaries/groups/login-access"
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#D7E0EA] bg-white px-4 text-[9px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]"
+              >
+                <UsersRound className="h-4 w-4" /> Login Access
+              </Link>
               <button
                 type="button"
                 onClick={() => setCreateOpen(true)}
