@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -112,6 +112,24 @@ function matchesFilter(row: PartnerPolicyIntake, filter: IntakeFilter) {
   return true;
 }
 
+function matchesDateRange(row: PartnerPolicyIntake, fromDate: string, toDate: string) {
+  if (!fromDate && !toDate) return true;
+  const submittedAt = new Date(row.created_at);
+  if (Number.isNaN(submittedAt.getTime())) return false;
+
+  if (fromDate) {
+    const from = new Date(`${fromDate}T00:00:00`);
+    if (submittedAt < from) return false;
+  }
+
+  if (toDate) {
+    const to = new Date(`${toDate}T23:59:59.999`);
+    if (submittedAt > to) return false;
+  }
+
+  return true;
+}
+
 function serverFilterFor(filter: IntakeFilter): "all" | "attention" | "in_progress" | "completed" {
   if (filter === "attention") return "attention";
   if (filter === "completed") return "completed";
@@ -123,6 +141,9 @@ export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
   const [filter, setFilter] = useState<IntakeFilter>("attention");
   const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [dateOpen, setDateOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({
@@ -136,13 +157,17 @@ export function PartnerPolicyIntakeListClient() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const dateFilterRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const query = search.trim().toLowerCase();
-      const needsExactClientFiltering = Boolean(query) || ["in_review", "processing", "duplicate", "rejected"].includes(filter);
+      const hasDateFilter = Boolean(fromDate || toDate);
+      const needsExactClientFiltering = Boolean(query)
+        || hasDateFilter
+        || ["in_review", "processing", "duplicate", "rejected"].includes(filter);
 
       if (!needsExactClientFiltering) {
         const result = await getPartnerPolicyIntakesWeb({
@@ -174,7 +199,11 @@ export function PartnerPolicyIntakeListClient() {
         if (!result.intakes.length) break;
       } while (allRows.length < expectedTotal);
 
-      const matches = allRows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query));
+      const matches = allRows.filter((row) => (
+        matchesFilter(row, filter)
+        && matchesSearch(row, query)
+        && matchesDateRange(row, fromDate, toDate)
+      ));
       const start = (page - 1) * PAGE_SIZE;
       setRows(matches.slice(start, start + PAGE_SIZE));
       setTotal(matches.length);
@@ -190,11 +219,19 @@ export function PartnerPolicyIntakeListClient() {
     } finally {
       setLoading(false);
     }
-  }, [filter, page, search]);
+  }, [filter, fromDate, page, search, toDate]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!dateFilterRef.current?.contains(event.target as Node)) setDateOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
 
   const hasPrevious = page > 1;
   const hasNext = page * PAGE_SIZE < total;
@@ -214,7 +251,7 @@ export function PartnerPolicyIntakeListClient() {
 
   return (
     <div className="pb-4">
-      <section className="overflow-hidden rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_10px_30px_rgba(31,61,107,0.06)]">
+      <section className="overflow-visible rounded-2xl border border-[#DCE6F1] bg-white shadow-[0_10px_30px_rgba(31,61,107,0.06)]">
         <div className="flex min-w-0 items-center gap-3 border-b border-[#E3EAF3] px-4 py-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#0B376D] text-white shadow-sm">
             <FileText className="h-5 w-5" />
@@ -243,7 +280,7 @@ export function PartnerPolicyIntakeListClient() {
           </button>
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 border-b border-[#E3EAF3] bg-white px-4 py-2.5">
+        <div className="relative z-30 flex min-w-0 items-center gap-2 border-b border-[#E3EAF3] bg-white px-4 py-2.5">
           <label className="relative shrink-0">
             <span className="sr-only">Detail status filter</span>
             <select
@@ -264,14 +301,70 @@ export function PartnerPolicyIntakeListClient() {
             </select>
           </label>
 
-          <button
-            type="button"
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[#D3DDE9] bg-white px-3.5 text-[10px] font-bold text-[#2D4666] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/15"
-          >
-            <CalendarDays className="h-3.5 w-3.5 text-[#5A7494]" />
-            Date Range
-            <ChevronDown className="h-3.5 w-3.5 text-[#5A7494]" />
-          </button>
+          <div ref={dateFilterRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setDateOpen((open) => !open)}
+              aria-expanded={dateOpen}
+              aria-haspopup="dialog"
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-[#D3DDE9] bg-white px-3.5 text-[10px] font-bold text-[#2D4666] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/15"
+            >
+              <CalendarDays className="h-3.5 w-3.5 text-[#5A7494]" />
+              Date Range
+              <ChevronDown className={`h-3.5 w-3.5 text-[#5A7494] transition-transform ${dateOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {dateOpen ? (
+              <div
+                role="dialog"
+                aria-label="Date range filter"
+                className="absolute left-0 top-[46px] z-50 w-[365px] rounded-2xl border border-[#DCE5EF] bg-white p-4 shadow-[0_18px_50px_rgba(30,55,90,0.16)]"
+              >
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="min-w-0">
+                    <span className="mb-2 block text-[9px] font-bold text-[#71829A]">From date</span>
+                    <input
+                      type="date"
+                      value={fromDate}
+                      max={toDate || undefined}
+                      onChange={(event) => {
+                        setFromDate(event.target.value);
+                        setPage(1);
+                      }}
+                      className="h-11 w-full rounded-xl border border-[#CFD9E6] bg-white px-3 text-[11px] font-semibold text-[#40536D] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+                    />
+                  </label>
+                  <label className="min-w-0">
+                    <span className="mb-2 block text-[9px] font-bold text-[#71829A]">To date</span>
+                    <input
+                      type="date"
+                      value={toDate}
+                      min={fromDate || undefined}
+                      onChange={(event) => {
+                        setToDate(event.target.value);
+                        setPage(1);
+                      }}
+                      className="h-11 w-full rounded-xl border border-[#CFD9E6] bg-white px-3 text-[11px] font-semibold text-[#40536D] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+                    />
+                  </label>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromDate("");
+                      setToDate("");
+                      setPage(1);
+                    }}
+                    disabled={!fromDate && !toDate}
+                    className="rounded-lg px-2 py-1 text-[10px] font-bold text-[#6F7F94] transition hover:bg-[#F4F7FB] hover:text-[#2D4666] disabled:cursor-default disabled:opacity-45"
+                  >
+                    Clear dates
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
 
           <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-xl border border-[#DDE5EF] bg-white p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filterTabs.map((tab) => {
