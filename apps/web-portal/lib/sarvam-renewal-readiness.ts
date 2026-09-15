@@ -40,6 +40,31 @@ function safeIdentifierHint(name: string) {
   return `…${value.slice(-6)}`;
 }
 
+async function fetchSarvamWithAuthFallback(url: string, apiKey: string, signal: AbortSignal) {
+  const primary = await fetch(url, {
+    method: "GET",
+    headers: {
+      "api-subscription-key": apiKey,
+    },
+    cache: "no-store",
+    signal,
+  });
+
+  if (primary.status !== 401) return primary;
+
+  // Sarvam documents the same API key as valid Bearer authentication. Some
+  // apps.sarvam.ai scheduling endpoints reject subscription-key auth with 401,
+  // so retry only that definitive auth rejection using the documented Bearer form.
+  return fetch(url, {
+    method: "GET",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+    },
+    cache: "no-store",
+    signal,
+  });
+}
+
 export function getSarvamRenewalReadiness(): SarvamRenewalReadiness {
   const portalOrigin = (process.env.NEXT_PUBLIC_PORTAL_URL?.trim() || "https://portal.insureit.in").replace(/\/$/, "");
   const items = [
@@ -83,17 +108,8 @@ export async function checkSarvamRenewalConnection(): Promise<SarvamRenewalConne
   const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT_MS);
 
   try {
-    const response = await fetch(
-      `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/webhooks?limit=1`,
-      {
-        method: "GET",
-        headers: {
-          "api-subscription-key": apiKey,
-        },
-        cache: "no-store",
-        signal: controller.signal,
-      },
-    );
+    const url = `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/webhooks?limit=1`;
+    const response = await fetchSarvamWithAuthFallback(url, apiKey, controller.signal);
 
     if (response.ok) {
       return {
@@ -107,7 +123,7 @@ export async function checkSarvamRenewalConnection(): Promise<SarvamRenewalConne
       return {
         ok: false,
         status: response.status,
-        message: "Sarvam rejected the configured API credentials or workspace access.",
+        message: "Sarvam rejected both supported API-key authentication forms or workspace access.",
       };
     }
 
