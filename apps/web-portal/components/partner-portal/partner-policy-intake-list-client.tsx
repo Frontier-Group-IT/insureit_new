@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
-type IntakeFilter = "all" | "active" | "attention" | "in_progress" | "completed";
+type IntakeFilter = "all" | "attention" | "in_review" | "processing" | "completed" | "duplicate" | "rejected";
 const PAGE_SIZE = 25;
 
 function humanize(value: string) {
@@ -25,9 +25,10 @@ function statusLabel(row: PartnerPolicyIntake) {
   const labels: Record<string, string> = {
     processing: "Processing",
     ready_for_review: "Ready",
-    in_review: "In Progress",
-    needs_attention: "Need You",
+    in_review: "In Review",
+    needs_attention: "Action Required",
     completed: "Completed",
+    duplicate: "Duplicate",
     rejected: "Rejected",
   };
   return labels[row.status] || humanize(row.status);
@@ -100,13 +101,32 @@ function matchesSearch(row: PartnerPolicyIntake, query: string) {
   return values.some((value) => value?.toLowerCase().includes(query));
 }
 
+function matchesFilter(row: PartnerPolicyIntake, filter: IntakeFilter) {
+  if (filter === "all") return true;
+  if (filter === "attention") return row.status === "needs_attention";
+  if (filter === "in_review") return row.status === "in_review" || row.status === "ready_for_review";
+  if (filter === "processing") return row.status === "processing";
+  if (filter === "completed") return row.status === "completed";
+  if (filter === "duplicate") return row.status === "duplicate";
+  if (filter === "rejected") return row.status === "rejected";
+  return true;
+}
+
 export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
-  const [filter, setFilter] = useState<IntakeFilter>("all");
+  const [filter, setFilter] = useState<IntakeFilter>("attention");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState({ active: 0, attention: 0, progress: 0, completed: 0 });
+  const [counts, setCounts] = useState({
+    attention: 0,
+    inReview: 0,
+    processing: 0,
+    completed: 0,
+    duplicate: 0,
+    rejected: 0,
+    all: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -114,50 +134,33 @@ export function PartnerPolicyIntakeListClient() {
     setLoading(true);
     setError("");
     try {
-      const query = search.trim().toLowerCase();
-      const needsCompleteDataset = filter === "active" || Boolean(query);
-
-      if (!needsCompleteDataset) {
-        const result = await getPartnerPolicyIntakesWeb({
-          limit: PAGE_SIZE,
-          offset: (page - 1) * PAGE_SIZE,
-          filter,
-        });
-        setRows(result.intakes);
-        setTotal(result.total);
-        setCounts(result.counts);
-        return;
-      }
-
-      const serverFilter = filter === "active" ? "all" : filter;
-      const completeRows: PartnerPolicyIntake[] = [];
+      const allRows: PartnerPolicyIntake[] = [];
       let offset = 0;
-      let firstCounts = { active: 0, attention: 0, progress: 0, completed: 0 };
       let expectedTotal = 0;
 
       do {
-        const result = await getPartnerPolicyIntakesWeb({
-          limit: PAGE_SIZE,
-          offset,
-          filter: serverFilter,
-        });
-        if (offset === 0) {
-          firstCounts = result.counts;
-          expectedTotal = result.total;
-        }
-        completeRows.push(...result.intakes);
+        const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: "all" });
+        if (offset === 0) expectedTotal = result.total;
+        allRows.push(...result.intakes);
         offset += PAGE_SIZE;
         if (!result.intakes.length) break;
-      } while (completeRows.length < expectedTotal);
+      } while (allRows.length < expectedTotal);
 
-      const completeMatches = completeRows.filter((row) => {
-        if (filter === "active" && (row.status === "completed" || row.status === "rejected")) return false;
-        return matchesSearch(row, query);
+      setCounts({
+        attention: allRows.filter((row) => row.status === "needs_attention").length,
+        inReview: allRows.filter((row) => row.status === "in_review" || row.status === "ready_for_review").length,
+        processing: allRows.filter((row) => row.status === "processing").length,
+        completed: allRows.filter((row) => row.status === "completed").length,
+        duplicate: allRows.filter((row) => row.status === "duplicate").length,
+        rejected: allRows.filter((row) => row.status === "rejected").length,
+        all: allRows.length,
       });
+
+      const query = search.trim().toLowerCase();
+      const matches = allRows.filter((row) => matchesFilter(row, filter) && matchesSearch(row, query));
       const start = (page - 1) * PAGE_SIZE;
-      setRows(completeMatches.slice(start, start + PAGE_SIZE));
-      setTotal(completeMatches.length);
-      setCounts(firstCounts);
+      setRows(matches.slice(start, start + PAGE_SIZE));
+      setTotal(matches.length);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Policy Intakes could not be loaded.");
     } finally {
@@ -176,11 +179,13 @@ export function PartnerPolicyIntakeListClient() {
   const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   const filterTabs: Array<{ key: IntakeFilter; label: string; count: number }> = [
-    { key: "all", label: "All", count: total },
-    { key: "active", label: "Active", count: counts.active },
     { key: "attention", label: "Action Required", count: counts.attention },
-    { key: "in_progress", label: "In Progress", count: counts.progress },
+    { key: "in_review", label: "In Review", count: counts.inReview },
+    { key: "processing", label: "Processing", count: counts.processing },
     { key: "completed", label: "Completed", count: counts.completed },
+    { key: "duplicate", label: "Duplicate", count: counts.duplicate },
+    { key: "rejected", label: "Rejected", count: counts.rejected },
+    { key: "all", label: "All", count: counts.all },
   ];
 
   return (
@@ -218,20 +223,22 @@ export function PartnerPolicyIntakeListClient() {
 
         <div className="flex min-w-0 items-center gap-2 border-b border-[#E3EAF3] bg-white px-4 py-2.5">
           <label className="relative shrink-0">
-            <span className="sr-only">Status filter</span>
+            <span className="sr-only">Detail status filter</span>
             <select
               value={filter}
               onChange={(event) => {
                 setFilter(event.target.value as IntakeFilter);
                 setPage(1);
               }}
-              className="h-10 min-w-[140px] cursor-pointer rounded-xl border border-[#D3DDE9] bg-white px-3 text-[10px] font-bold text-[#2D4666] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/15"
+              className="h-10 min-w-[165px] cursor-pointer rounded-xl border border-[#D3DDE9] bg-white px-3 text-[10px] font-bold text-[#2D4666] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/15"
             >
-              <option value="all">Status · All</option>
-              <option value="active">Status · Active</option>
-              <option value="attention">Status · Action Required</option>
-              <option value="in_progress">Status · In Progress</option>
-              <option value="completed">Status · Completed</option>
+              <option value="all">All Detail Status</option>
+              <option value="attention">Action Required</option>
+              <option value="in_review">In Review</option>
+              <option value="processing">Processing</option>
+              <option value="completed">Completed</option>
+              <option value="duplicate">Duplicate</option>
+              <option value="rejected">Rejected</option>
             </select>
           </label>
 
@@ -244,7 +251,7 @@ export function PartnerPolicyIntakeListClient() {
             <ChevronDown className="h-3.5 w-3.5 text-[#5A7494]" />
           </button>
 
-          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto rounded-xl border border-[#DDE5EF] bg-white p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filterTabs.map((tab) => {
               const active = filter === tab.key;
               return (
@@ -255,10 +262,10 @@ export function PartnerPolicyIntakeListClient() {
                     setFilter(tab.key);
                     setPage(1);
                   }}
-                  className={`shrink-0 rounded-xl px-3.5 py-2.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
+                  className={`shrink-0 rounded-lg px-3 py-2 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
                     active
                       ? "bg-[#123F73] text-white shadow-sm"
-                      : "bg-[#F7F9FC] text-[#60728C] hover:bg-[#EEF3F8] hover:text-[#203653]"
+                      : "text-[#60728C] hover:bg-[#F4F7FB] hover:text-[#203653]"
                   }`}
                 >
                   {tab.label} {tab.count}
@@ -317,12 +324,9 @@ export function PartnerPolicyIntakeListClient() {
                       className="group grid grid-cols-[minmax(150px,.78fr)_minmax(170px,.9fr)_minmax(150px,.8fr)_minmax(230px,1.2fr)_minmax(150px,.8fr)_minmax(110px,.58fr)_minmax(110px,.58fr)_34px] items-center gap-4 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20"
                     >
                       <div className="min-w-0">
-                        <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">
-                          {row.intake_number}
-                        </p>
+                        <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.intake_number}</p>
                         <p className="mt-0.5 text-[8.5px] font-medium text-[#8B99AC]">Policy intake</p>
                       </div>
-
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">
                           {customerName || row.customer_mobile || "Customer pending"}
@@ -331,34 +335,28 @@ export function PartnerPolicyIntakeListClient() {
                           <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{row.customer_mobile}</p>
                         ) : null}
                       </div>
-
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{vehicle}</p>
                         {vehicleMeta ? (
                           <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{vehicleMeta}</p>
                         ) : null}
                       </div>
-
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{policy}</p>
                         <p className="mt-0.5 break-words text-[8.5px] leading-4 text-[#8392A7]">{insurer}</p>
                       </div>
-
                       <div>
                         <p className="text-[10px] font-semibold text-[#304665]">{created.date}</p>
                         <p className="mt-0.5 text-[8.5px] text-[#8392A7]">{created.time}</p>
                       </div>
-
                       <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[8.5px] font-bold ${ocrTone(row)}`}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {ocrLabel(row)}
                       </span>
-
                       <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[8.5px] font-bold ${statusTone(row)}`}>
                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {statusLabel(row)}
                       </span>
-
                       <ArrowRight className="h-4 w-4 justify-self-end text-[#1768C5] transition group-hover:translate-x-0.5" />
                     </Link>
                   );
@@ -367,12 +365,8 @@ export function PartnerPolicyIntakeListClient() {
             ) : (
               <div className="py-16 text-center">
                 <FileText className="mx-auto h-7 w-7 text-[#9AABC0]" />
-                <p className="mt-3 text-[12px] font-bold text-[#23395D]">
-                  {total ? "No submissions match this view" : "No Policy Intakes yet"}
-                </p>
-                <p className="mt-1 text-[10.5px] text-[#7A899F]">
-                  {total ? "Choose another status or adjust your search." : "Create a new intake when you have a policy copy."}
-                </p>
+                <p className="mt-3 text-[12px] font-bold text-[#23395D]">No submissions match this view</p>
+                <p className="mt-1 text-[10.5px] text-[#7A899F]">Choose another status or adjust your search.</p>
               </div>
             )}
           </div>
@@ -380,9 +374,7 @@ export function PartnerPolicyIntakeListClient() {
 
         {total > 0 ? (
           <div className="flex flex-col gap-3 border-t border-[#E3EAF3] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[10px] font-medium text-[#6F8198]">
-              Showing {rangeStart}-{rangeEnd} of {total}
-            </p>
+            <p className="text-[10px] font-medium text-[#6F8198]">Showing {rangeStart}-{rangeEnd} of {total}</p>
             <div className="flex items-center gap-3 self-end sm:self-auto">
               <button
                 type="button"
@@ -392,9 +384,7 @@ export function PartnerPolicyIntakeListClient() {
               >
                 <ArrowLeft className="h-3.5 w-3.5" /> Previous
               </button>
-              <span className="min-w-[44px] text-center text-[10px] font-bold text-[#536680]">
-                {page} / {totalPages}
-              </span>
+              <span className="min-w-[44px] text-center text-[10px] font-bold text-[#536680]">{page} / {totalPages}</span>
               <button
                 type="button"
                 onClick={() => setPage((value) => value + 1)}
