@@ -67,6 +67,42 @@ export function PartnerMobileNavigation() {
               <div className="space-y-1.5">
                 {items.map((item) => {
                   const active = activeFor(pathname, item.href);
+
+                  if (item.href === "/partner/renewals") {
+                    const internalActive = pathname === "/partner/renewals";
+                    const externalActive = pathname.startsWith("/partner/renewals/external");
+                    return (
+                      <div key={item.href}>
+                        <div className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold ${active ? "bg-white text-[#141d3b]" : "text-white/88"}`}>
+                          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${active ? "bg-[#EAF1FF]" : "bg-white/5"}`}>
+                            <PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" />
+                          </span>
+                          <span>{item.label}</span>
+                        </div>
+                        <div className="ml-[29px] mt-1.5 border-l border-white/30 pl-4">
+                          <div className="space-y-1">
+                            <Link
+                              href="/partner/renewals"
+                              prefetch={false}
+                              onClick={() => setOpen(false)}
+                              className={`block rounded-lg px-3 py-2 text-[11px] font-semibold transition ${internalActive ? "bg-white/14 text-white" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
+                            >
+                              Internal Renewal
+                            </Link>
+                            <Link
+                              href="/partner/renewals/external"
+                              prefetch={false}
+                              onClick={() => setOpen(false)}
+                              className={`block rounded-lg px-3 py-2 text-[11px] font-semibold transition ${externalActive ? "bg-white/14 text-white" : "text-white/72 hover:bg-white/8 hover:text-white"}`}
+                            >
+                              External Renewal
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.href}
