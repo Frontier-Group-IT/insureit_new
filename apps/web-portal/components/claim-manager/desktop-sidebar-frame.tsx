@@ -69,7 +69,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
         className={`group fixed top-3 z-[60] hidden h-10 w-10 place-items-center rounded-xl text-white transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:grid ${
           collapsed
             ? "left-3 border border-transparent bg-transparent shadow-none hover:border-white/10 hover:bg-[#1a2548] hover:shadow-[0_8px_24px_rgba(6,12,30,.24)]"
-            : "left-[148px] border border-white/15 bg-[#111a35]/95 shadow-[0_8px_24px_rgba(6,12,30,.24)] backdrop-blur hover:bg-[#1a2548]"
+            : "left-[196px] border border-white/15 bg-[#111a35]/95 shadow-[0_8px_24px_rgba(6,12,30,.24)] backdrop-blur hover:bg-[#1a2548]"
         }`}
       >
         {collapsed ? (
@@ -84,7 +84,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
         </span>
       </button>
 
-      <div className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-16" : "lg:pl-[200px]"}`}>
+      <div className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-16" : "lg:pl-[248px]"}`}>
         {children}
       </div>
 
@@ -96,7 +96,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
 
           .desktop-sidebar-expanded aside {
-            width: 200px !important;
+            width: 248px !important;
           }
 
           .desktop-sidebar-expanded aside > a {
@@ -155,14 +155,14 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
 
           .desktop-sidebar-expanded aside nav button > .flex-1 {
-            flex: 0 1 auto !important;
+            flex: 1 1 auto !important;
             min-width: 0;
             white-space: nowrap;
           }
 
           .desktop-sidebar-expanded aside nav button > svg:last-child {
             flex-shrink: 0;
-            margin-left: 2px;
+            margin-left: 8px;
           }
 
           .desktop-sidebar-expanded aside nav > div > div > div {
