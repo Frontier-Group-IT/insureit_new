@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowLeft,
   BadgeCheck,
   CalendarDays,
   CarFront,
@@ -59,23 +58,6 @@ export default async function PartnerCustomerDetailPage({
   return (
     <PartnerPortalShell title="Customer Detail">
       <div className="space-y-2 pb-5">
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/partner/customers"
-            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#CBD5E1] bg-white px-3 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Customer Register
-          </Link>
-          <Link
-            href={`/partner/customers/${encodeURIComponent(id)}/fleet`}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#123F73] px-3.5 text-[10.5px] font-bold text-white shadow-sm transition hover:bg-[#0D3260] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25"
-          >
-            <CarFront className="h-3.5 w-3.5" />
-            View Fleet
-          </Link>
-        </div>
-
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
           <div className="px-4 py-3.5">
             <div className="flex min-w-0 items-center gap-3">
