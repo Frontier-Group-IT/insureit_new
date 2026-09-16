@@ -4,6 +4,8 @@ import { loadManagementPack, type ManagementPack } from "@/lib/reports/managemen
 
 type ViewerProfile = { id: string; role: string | null };
 
+const CURRENT_SNAPSHOT_VERSION = 2;
+
 export type ManagementPackSnapshotSummary = {
   id: string;
   month: string;
@@ -88,7 +90,7 @@ export async function captureManagementPackSnapshot(profile: ViewerProfile, mont
       owner_profile_id: profile.id,
       month: `${pack.filters.month}-01`,
       scope_mode: pack.scopeMode,
-      snapshot_version: 1,
+      snapshot_version: CURRENT_SNAPSHOT_VERSION,
       snapshot: pack,
     })
     .select("id, month, scope_mode, snapshot_version, captured_at")
@@ -104,7 +106,7 @@ export async function captureManagementPackSnapshot(profile: ViewerProfile, mont
     id: String(data.id),
     month: String(data.month).slice(0, 7),
     scopeMode: scopeMode(data.scope_mode),
-    snapshotVersion: numberValue(data.snapshot_version) || 1,
+    snapshotVersion: numberValue(data.snapshot_version) || CURRENT_SNAPSHOT_VERSION,
     capturedAt: String(data.captured_at),
   };
 }
