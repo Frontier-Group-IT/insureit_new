@@ -16,6 +16,7 @@ import "./mobile.css";
 import "./document-grid.css";
 import "./accounts-navigation-labels.css";
 import "./policy-summary-stability.css";
+import "./policy-section-nav.css";
 
 const manrope = Manrope({
   subsets: ["latin"],
