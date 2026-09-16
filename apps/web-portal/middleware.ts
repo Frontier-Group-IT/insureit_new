@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { accessTokenCookie, isAuthorizedProfile, refreshTokenCookie, sessionRoleCookie, type Profile } from "@/lib/auth-config";
 import { internalLaunchHome, isIntermediaryLaunchPath, isIntermediaryOnlyLaunch } from "@/lib/launch-scope";
-import { isProtectedPortalPath, safePortalReturnPath } from "@/lib/portal-routes";
+import { isAccountsRolePortalPath, isProtectedPortalPath, safePortalReturnPath } from "@/lib/portal-routes";
 import { hasCapability } from "@/lib/roles";
 
 type SessionStatus = "authorized" | "forbidden" | "invalid";
 type SessionCheck = { status: SessionStatus; role: string | null };
 type RefreshedSession = { access_token: string; refresh_token: string; expires_in: number };
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
+const accountsHome = "/accounts";
 
 function getSupabaseEnvironment() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -119,10 +120,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname === "/") return continueRequest(request, refreshedSession, check.role);
+  if (pathname === "/") {
+    if (check.status === "authorized" && check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
+    return continueRequest(request, refreshedSession, check.role);
+  }
 
   if (pathname === "/login") {
-    if (check.status === "authorized") return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
+    if (check.status === "authorized") {
+      if (check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
+      return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
+    }
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
     return clearSessionCookies(continueRequest(request));
   }
@@ -134,6 +141,9 @@ export async function middleware(request: NextRequest) {
       return clearSessionCookies(NextResponse.redirect(loginUrl));
     }
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
+    if (check.role === "accounts" && !isAccountsRolePortalPath(pathname)) {
+      return redirect(request, accountsHome, refreshedSession, check.role);
+    }
     if (check.role === "intermediary" && !pathname.startsWith("/partner") && !pathname.startsWith("/intermediary-portal")) {
       return redirect(request, "/partner", refreshedSession, check.role);
     }
