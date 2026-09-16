@@ -421,7 +421,7 @@ export default function AddVehicleScreen() {
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
           <InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><PremiumDateField label="Start date *" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
+            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
             <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
           </View>
           <View style={styles.twoColumnRow}>
