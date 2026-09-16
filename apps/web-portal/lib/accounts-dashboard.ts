@@ -47,7 +47,6 @@ type PayinRow = { policy_id: string; payin_after_tds: number | string | null };
 type PayoutRow = {
   policy_id: string;
   gross_payout: number | string | null;
-  partner_payout_amount: number | string | null;
   retention_amount: number | string | null;
 };
 type InsurerRow = { id: string; name: string };
@@ -101,7 +100,7 @@ export async function loadAccountsDashboard(
   const [premiumResults, payinResults, payoutResults] = await Promise.all([
     Promise.all(batches.map((batch) => admin.from("policy_premium_details").select("policy_id,net_premium").in("policy_id", batch).returns<PremiumRow[]>())),
     Promise.all(batches.map((batch) => admin.from("policy_payin_details").select("policy_id,payin_after_tds").in("policy_id", batch).returns<PayinRow[]>())),
-    Promise.all(batches.map((batch) => admin.from("policy_intermediary_payouts").select("policy_id,gross_payout,partner_payout_amount,retention_amount").in("policy_id", batch).returns<PayoutRow[]>())),
+    Promise.all(batches.map((batch) => admin.from("policy_intermediary_payouts").select("policy_id,gross_payout,retention_amount").in("policy_id", batch).returns<PayoutRow[]>())),
   ]);
 
   const premiumFailed = premiumResults.some((result) => result.error);
@@ -178,10 +177,10 @@ function emptyDashboard(filters: AccountsDashboardFilters): AccountsDashboardDat
   };
 }
 
+// Finance totals use the computed policy payout. partner_payout_amount is an input/planning
+// field and can exist without insurer pay-in, so it must not be used as dashboard cashflow.
 function payoutValue(row: PayoutRow) {
-  return row.partner_payout_amount === null || row.partner_payout_amount === undefined
-    ? numberValue(row.gross_payout)
-    : numberValue(row.partner_payout_amount);
+  return numberValue(row.gross_payout);
 }
 
 function chunkValues<T>(values: T[], size: number) {
