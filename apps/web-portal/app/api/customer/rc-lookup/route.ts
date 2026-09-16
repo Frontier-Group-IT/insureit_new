@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-09-12-v3";
+const RC_MAPPER_VERSION = "2026-09-16-v4";
 
 type SafeVehicleDetails = {
   registrationNumber: string;
@@ -29,6 +29,7 @@ type SafeVehicleDetails = {
   localPermitExpiryDate: string | null;
   insuranceCompany: string | null;
   policyNumber: string | null;
+  policyStartDate: string | null;
   policyExpiryDate: string | null;
 };
 
@@ -222,6 +223,14 @@ function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): Safe
     findObjectValue(vehicleDetails, ["Model / Makers Class", "Model/Makers Class", "Model Makers Class", "Model", "Makers Class"])
       ?? findValue(values, ["modelmakersclass", "model", "modelname", "makermodel", "makermodelname", "vehiclename", "vehiclemodel", "vehiclemodelname", "modeldescription", "modeldesc", "variant", "variantname", "modelvariant", "modelvariantname"]),
   );
+  const policyExpiryDate = toIsoDate(
+    findObjectValue(insuranceDetails, ["Insurance To Date/Insurance Upto", "Insurance To Date", "Insurance Upto", "Policy Expiry Date"])
+      ?? findValue(values, ["insurancetodateinsuranceupto", "insurancetodate", "insuranceupto", "policyexpirydate", "insuranceexpirydate"]),
+  );
+  const policyStartDate = toIsoDate(
+    findObjectValue(insuranceDetails, ["Insurance From Date", "Insurance From", "Policy Start Date", "Policy From Date"])
+      ?? findValue(values, ["insurancefromdate", "insurancefrom", "policystartdate", "policyfromdate", "insurancepolicyfromdate"]),
+  ) ?? derivePolicyStartDate(policyExpiryDate);
 
   return {
     registrationNumber,
@@ -249,10 +258,8 @@ function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): Safe
       findObjectValue(insuranceDetails, ["Policy Number", "Policy No", "PolicyNo"])
         ?? findValue(values, ["policynumber", "policyno", "insurancepolicynumber"]),
     ),
-    policyExpiryDate: toIsoDate(
-      findObjectValue(insuranceDetails, ["Insurance To Date/Insurance Upto", "Insurance To Date", "Insurance Upto", "Policy Expiry Date"])
-        ?? findValue(values, ["insurancetodateinsuranceupto", "insurancetodate", "insuranceupto", "policyexpirydate", "insuranceexpirydate"]),
-    ),
+    policyStartDate,
+    policyExpiryDate,
   };
 }
 
@@ -308,8 +315,21 @@ function sanitizeCachedDetails(raw: unknown, registrationNumber: string): SafeVe
     localPermitExpiryDate: toIsoDate(toPrimitive(value.localPermitExpiryDate)),
     insuranceCompany: cleanText(toPrimitive(value.insuranceCompany)),
     policyNumber: cleanPolicyNumber(toPrimitive(value.policyNumber)),
+    policyStartDate: toIsoDate(toPrimitive(value.policyStartDate)) ?? derivePolicyStartDate(toIsoDate(toPrimitive(value.policyExpiryDate))),
     policyExpiryDate: toIsoDate(toPrimitive(value.policyExpiryDate)),
   };
+}
+
+function derivePolicyStartDate(expiryIso: string | null) {
+  if (!expiryIso) return null;
+  const [year, month, day] = expiryIso.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const start = new Date(year - 1, month - 1, day);
+  start.setDate(start.getDate() + 1);
+  const yyyy = start.getFullYear();
+  const mm = String(start.getMonth() + 1).padStart(2, '0');
+  const dd = String(start.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 function mappedFieldCount(details: SafeVehicleDetails) {

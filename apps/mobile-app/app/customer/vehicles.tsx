@@ -275,7 +275,7 @@ export default function VehiclesScreen() {
                       iconBg="#EAF8F1"
                       iconColor="#12805C"
                       label="Policy Number"
-                      value={policy.policy_no}
+                      value={maskPolicyNumber(policy.policy_no)}
                       statusActive={active}
                     />
                     <InfoBlock
@@ -997,6 +997,13 @@ function vehicleSketchFor(vehicle: Vehicle) {
 
 function isPrivateVehicle(vehicle: Vehicle) {
   return vehicleClassCode(vehicle) === 'PCP';
+}
+
+function maskPolicyNumber(value?: string | null) {
+  const normalized = String(value ?? '').replace(/\s+/g, '').trim();
+  if (!normalized) return '-';
+  if (normalized.length <= 8) return `${normalized.slice(0, 2)}${'•'.repeat(Math.max(2, normalized.length - 4))}${normalized.slice(-2)}`;
+  return `${normalized.slice(0, 4)}${'•'.repeat(Math.max(4, normalized.length - 8))}${normalized.slice(-4)}`;
 }
 
 function daysUntil(date: string) {
