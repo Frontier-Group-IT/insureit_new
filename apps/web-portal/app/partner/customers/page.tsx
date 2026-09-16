@@ -4,12 +4,8 @@ import { PartnerPagination } from "@/components/partner-portal/partner-paginatio
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebCustomerSummary } from "@/lib/partner-web";
 import { listFilteredPartnerCustomers } from "./customer-data";
-import {
-  CustomerStatusTabs,
-  CustomerTypeSelect,
-  type CustomerStatusFilter,
-  type CustomerTypeFilter,
-} from "./customer-filters";
+import type { CustomerStatusFilter, CustomerTypeFilter } from "./customer-filter-types";
+import { CustomerStatusTabs, CustomerTypeSelect } from "./customer-filters";
 import { CustomerSearch } from "./customer-search";
 
 export const dynamic = "force-dynamic";
