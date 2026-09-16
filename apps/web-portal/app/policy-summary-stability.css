@@ -1,0 +1,7 @@
+@media (min-width: 1280px) {
+  #policy-summary-fixed-card {
+    width: 336px !important;
+    min-width: 336px !important;
+    max-width: 336px !important;
+  }
+}
