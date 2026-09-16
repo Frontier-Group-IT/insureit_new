@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  AlertCircle,
   ArrowRight,
   BadgePercent,
   Ellipsis,
@@ -418,31 +417,26 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
             title="Priority work"
           >
             <div className="space-y-2 px-4 pb-4">
-              {home.today.length ? (
-                home.today.slice(0, 6).map((item, index) => (
-                  <Link
-                    key={`${item.kind}-${index}`}
-                    href={todayHref(item.kind)}
-                    prefetch={false}
-                    className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
-                  >
-                    <span className="grid h-9 w-9 shrink-0 place-items-center">
-                      <ProfessionalIcon src={todayIcon(item.kind)} size={24} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[11px] font-extrabold leading-4 text-[#183057]">{item.title}</span>
-                      <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74849C]">{item.subtitle}</span>
-                    </span>
-                    <span className="grid min-w-6 place-items-center rounded-full bg-[#FFF0F5] px-2 py-1 text-[9px] font-black text-[#E34578]">{item.count}</span>
-                    <ArrowRight className="h-4 w-4 text-[#3471E9] transition group-hover:translate-x-0.5" />
-                  </Link>
-                ))
-              ) : (
-                <div className="flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-4 text-[#62738D]">
-                  <AlertCircle className="h-4 w-4" />
-                  <p className="text-[10.5px] font-semibold">No priority actions right now.</p>
-                </div>
-              )}
+              {home.today.length
+                ? home.today.slice(0, 6).map((item, index) => (
+                    <Link
+                      key={`${item.kind}-${index}`}
+                      href={todayHref(item.kind)}
+                      prefetch={false}
+                      className="group flex min-h-[62px] items-center gap-3 rounded-lg border border-[#E3EAF4] bg-white px-3.5 py-2.5 shadow-[0_3px_10px_rgba(25,50,90,0.04)] transition hover:border-[#D2DDED] hover:shadow-[0_5px_14px_rgba(25,50,90,0.07)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center">
+                        <ProfessionalIcon src={todayIcon(item.kind)} size={24} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[11px] font-extrabold leading-4 text-[#183057]">{item.title}</span>
+                        <span className="mt-0.5 block text-[9.5px] font-medium leading-4 text-[#74849C]">{item.subtitle}</span>
+                      </span>
+                      <span className="grid min-w-6 place-items-center rounded-full bg-[#FFF0F5] px-2 py-1 text-[9px] font-black text-[#E34578]">{item.count}</span>
+                      <ArrowRight className="h-4 w-4 text-[#3471E9] transition group-hover:translate-x-0.5" />
+                    </Link>
+                  ))
+                : null}
 
               <Link
                 href="/partner/renewals/external"
