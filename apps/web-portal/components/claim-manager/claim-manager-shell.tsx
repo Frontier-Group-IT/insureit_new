@@ -31,7 +31,7 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
   const accountsAccess = canAccessPolicyCommercials(profile);
 
   const navigation = (
-    <Suspense fallback={<aside className="fixed inset-y-0 left-0 hidden w-[268px] bg-[#111A35] lg:block" />}>
+    <Suspense fallback={<aside className="fixed inset-y-0 left-0 hidden w-[200px] bg-[#111A35] lg:block" />}>
       <AppNavigation activeNav={activeNav} role={role} permissionAccess={permissionAccess} accountsAccess={accountsAccess} />
     </Suspense>
   );
