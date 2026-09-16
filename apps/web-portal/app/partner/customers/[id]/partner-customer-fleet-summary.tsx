@@ -123,57 +123,54 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                     <Detail label="Local Permit" value={dateLabel(vehicle.local_permit_expiry_date)} />
                   </div>
 
-                  {currentPolicy ? (
-                    <div className="flex justify-end border-t border-[#EEF2F6] px-4 py-2.5">
-                      <Link
-                        href={"/partner/policies/" + encodeURIComponent(currentPolicy.policy_id)}
-                        prefetch={false}
-                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-[#123D82] px-3 text-[8.5px] font-bold text-white transition hover:bg-[#0D326D]"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        View Policy
-                      </Link>
-                    </div>
-                  ) : null}
-
                   {policies.length ? (
-                    <div className="border-t border-[#E8EDF4] px-4 py-3">
-                      <div className="space-y-2">
-                        {policies.map((policy, index) => {
-                          const policyState = policyLifecycle(policy.end_date);
-                          return (
-                            <Link
-                              key={policy.policy_id}
-                              href={"/partner/policies/" + encodeURIComponent(policy.policy_id)}
-                              prefetch={false}
-                              className="group/policy grid gap-2 rounded-xl border border-[#E3EAF2] bg-[#FBFCFE] px-3 py-2.5 transition hover:border-[#C9D9ED] hover:bg-white sm:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(100px,.65fr))_auto] sm:items-center"
-                            >
-                              <div className="flex min-w-0 items-center gap-2.5">
-                                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EAF8F1] text-[#1B9A63]">
-                                  <ShieldCheck className="h-4 w-4" />
-                                </span>
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <p className="truncate text-[9.5px] font-extrabold text-[#173A69]">{policy.policy_no || policy.policy_code || "Policy"}</p>
-                                    {index === 0 ? (
-                                      <span className="rounded-full border border-[#BDEBD3] bg-[#ECFAF3] px-1.5 py-0.5 text-[7px] font-bold text-[#15915B]">Latest</span>
-                                    ) : null}
+                    <details className="group/policies border-t border-[#EEF2F6]">
+                      <summary className="flex cursor-pointer list-none justify-end px-4 py-2.5 [&::-webkit-details-marker]:hidden">
+                        <span className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-[#123D82] px-3 text-[8.5px] font-bold text-white transition hover:bg-[#0D326D]">
+                          <FileText className="h-3.5 w-3.5" />
+                          View Policy
+                          <ChevronDown className="h-3 w-3 transition-transform duration-200 group-open/policies:rotate-180" />
+                        </span>
+                      </summary>
+
+                      <div className="border-t border-[#E8EDF4] px-4 py-3">
+                        <div className="space-y-2">
+                          {policies.map((policy, index) => {
+                            const policyState = policyLifecycle(policy.end_date);
+                            return (
+                              <Link
+                                key={policy.policy_id}
+                                href={"/partner/policies/" + encodeURIComponent(policy.policy_id)}
+                                prefetch={false}
+                                className="group/policy grid gap-2 rounded-xl border border-[#E3EAF2] bg-[#FBFCFE] px-3 py-2.5 transition hover:border-[#C9D9ED] hover:bg-white sm:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(100px,.65fr))_auto] sm:items-center"
+                              >
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EAF8F1] text-[#1B9A63]">
+                                    <ShieldCheck className="h-4 w-4" />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="truncate text-[9.5px] font-extrabold text-[#173A69]">{policy.policy_no || policy.policy_code || "Policy"}</p>
+                                      {index === 0 ? (
+                                        <span className="rounded-full border border-[#BDEBD3] bg-[#ECFAF3] px-1.5 py-0.5 text-[7px] font-bold text-[#15915B]">Latest</span>
+                                      ) : null}
+                                    </div>
+                                    <p className="mt-0.5 truncate text-[8px] font-medium text-[#7A8CA4]">{policy.insurer_name || "Insurer not recorded"}</p>
                                   </div>
-                                  <p className="mt-0.5 truncate text-[8px] font-medium text-[#7A8CA4]">{policy.insurer_name || "Insurer not recorded"}</p>
                                 </div>
-                              </div>
-                              <Detail label="Policy Type" value={policy.policy_type || policy.policy_product || "—"} compact />
-                              <Detail label="Validity" value={policy.end_date ? `Until ${dateLabel(policy.end_date)}` : "—"} compact />
-                              <Detail label="Premium" value={policy.premium_amount != null ? `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Number(policy.premium_amount) || 0)}` : "—"} compact />
-                              <SummaryField label="Status" value={policyState} tone={policyState === "Active" ? "green" : "red"} />
-                              <span className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[#CCD9EA] bg-white px-3 text-[8px] font-bold text-[#174A91]">
-                                Policy Details <ArrowRight className="h-3 w-3 transition group-hover/policy:translate-x-0.5" />
-                              </span>
-                            </Link>
-                          );
-                        })}
+                                <Detail label="Policy Type" value={policy.policy_type || policy.policy_product || "—"} compact />
+                                <Detail label="Validity" value={policy.end_date ? `Until ${dateLabel(policy.end_date)}` : "—"} compact />
+                                <Detail label="Premium" value={policy.premium_amount != null ? `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(Number(policy.premium_amount) || 0)}` : "—"} compact />
+                                <SummaryField label="Status" value={policyState} tone={policyState === "Active" ? "green" : "red"} />
+                                <span className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-[#CCD9EA] bg-white px-3 text-[8px] font-bold text-[#174A91]">
+                                  Policy Details <ArrowRight className="h-3 w-3 transition group-hover/policy:translate-x-0.5" />
+                                </span>
+                              </Link>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    </details>
                   ) : null}
 
                   {claims.length ? (
