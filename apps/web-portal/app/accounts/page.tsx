@@ -5,6 +5,7 @@ import { AppShell } from "@/components/shell";
 import { loadAccountsDashboard, type AccountsDashboardQuery } from "@/lib/accounts-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
+import { ReconciliationTools } from "./reconciliation-tools";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -148,6 +149,13 @@ export default async function AccountsPage({ searchParams }: Props) {
             />
           </div>
         </section>
+
+        <ReconciliationTools
+          period={filters.period}
+          fromDate={filters.fromDate}
+          toDate={filters.toDate}
+          insurerId={filters.insurerId}
+        />
       </div>
     </AppShell>
   );
