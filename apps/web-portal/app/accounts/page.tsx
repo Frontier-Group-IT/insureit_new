@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, CalendarRange, HandCoins, Landmark, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
+import { ArrowRight, Building2, CalendarRange, HandCoins, Landmark, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { loadAccountsDashboard, type AccountsDashboardQuery } from "@/lib/accounts-dashboard";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -102,6 +102,52 @@ export default async function AccountsPage({ searchParams }: Props) {
           <KpiCard icon={HandCoins} label="Projected net payout" value={currency(data.projectedNetPayout)} note={`${integer(data.payoutIntermediaryCount)} intermediaries included`} />
           <KpiCard icon={TrendingUp} label="Projected retention" value={currency(data.projectedRetention)} note="Projected retained commercial value" />
         </section>
+
+        <section className="rounded-2xl border border-[#dbe3ee] bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[8px] font-black uppercase tracking-[.1em] text-[#0f766e]">Accounts workflow</p>
+              <h2 className="mt-1 text-[14px] font-semibold text-[#17365D]">Expected → Reconciled → Billed → Received</h2>
+              <p className="mt-1 text-[9px] text-[#7c899b]">This is the first operating layer for the new Accounts workflow. Existing accounting controls remain unchanged.</p>
+            </div>
+            <span className="rounded-full border border-[#dce4ee] bg-[#f8fafc] px-2.5 py-1 text-[8px] font-bold text-[#667085]">Step 1 · workflow foundation</span>
+          </div>
+
+          <div className="mt-3 grid gap-2 lg:grid-cols-4">
+            <WorkflowStep
+              number="01"
+              title="Expected pay-in"
+              value={currency(data.projectedNetPayin)}
+              note={`${integer(data.policyCount)} policies in current filter`}
+              href="/accounts"
+              action="Current view"
+            />
+            <WorkflowStep
+              number="02"
+              title="Insurer reconciliation"
+              value="Match insurer statements"
+              note="Review matched, short and excess pay-in lines"
+              href="/reconciliation"
+              action="Open reconciliation"
+            />
+            <WorkflowStep
+              number="03"
+              title="Brokerage billing"
+              value="Raise reconciled bills"
+              note="Create and raise insurer brokerage invoices"
+              href="/accounts/billing"
+              action="Open billing"
+            />
+            <WorkflowStep
+              number="04"
+              title="Receipts & UTR"
+              value="Track money received"
+              note="Review insurer receivables and receipt postings"
+              href="/accounts/receivables"
+              action="Open receivables"
+            />
+          </div>
+        </section>
       </div>
     </AppShell>
   );
@@ -121,6 +167,21 @@ function KpiCard({ icon: Icon, label, value, note }: { icon: typeof Building2; l
       <p className="mt-2.5 truncate text-[20px] font-semibold tabular-nums text-[#14213c]" title={value}>{value}</p>
       <p className="mt-1 min-h-[14px] text-[8.5px] font-medium text-[#8490a1]">{note}</p>
     </article>
+  );
+}
+
+function WorkflowStep({ number, title, value, note, href, action }: { number: string; title: string; value: string; note: string; href: string; action: string }) {
+  return (
+    <Link prefetch={false} href={href} className="group rounded-xl border border-[#e2e8f0] bg-[#fbfcfe] p-3 transition hover:border-[#b7c8dc] hover:bg-white hover:shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <span className="rounded-md bg-[#e8f5f3] px-2 py-1 text-[8px] font-black text-[#0f766e]">{number}</span>
+        <ArrowRight className="h-3.5 w-3.5 text-[#a1adbb] transition group-hover:translate-x-0.5 group-hover:text-[#17365D]" />
+      </div>
+      <p className="mt-2 text-[10px] font-bold text-[#17365D]">{title}</p>
+      <p className="mt-1 text-[12px] font-semibold text-[#14213c]">{value}</p>
+      <p className="mt-1 min-h-[28px] text-[8.5px] leading-4 text-[#7c899b]">{note}</p>
+      <p className="mt-2 text-[8.5px] font-bold text-[#0f766e]">{action}</p>
+    </Link>
   );
 }
 
