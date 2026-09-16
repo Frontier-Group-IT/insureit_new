@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, FileText, GraduationCap, LayoutGrid, LifeBuoy, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerWebSession } from "@/lib/partner-web";
@@ -12,6 +13,8 @@ function humanize(value: string) {
 
 export default async function PartnerAccountPage() {
   const { identity, scope } = await getPartnerWebSession();
+  if (scope.scope_mode === "hierarchy") redirect("/partner");
+
   const intermediary = identity.actor_kind === "intermediary" ? identity : null;
   const partnerCode = intermediary?.partner_code || "—";
   const accountCode = intermediary?.intermediary_code || partnerCode;

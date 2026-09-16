@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
 import { PartnerNavigation } from "@/components/partner-portal/partner-navigation";
+import { getPartnerWebSession } from "@/lib/partner-web";
 
-export default function PartnerLayout({ children }: { children: ReactNode }) {
+export default async function PartnerLayout({ children }: { children: ReactNode }) {
+  const { scope } = await getPartnerWebSession();
+  const hideAccount = scope.scope_mode === "hierarchy";
+
   return (
     <>
-      <PartnerNavigation />
+      <PartnerNavigation hideAccount={hideAccount} />
       {children}
     </>
   );

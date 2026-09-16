@@ -29,11 +29,12 @@ function activeFor(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function PartnerMobileNavigation() {
+export function PartnerMobileNavigation({ hideAccount = false }: { hideAccount?: boolean }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const visibleItems = hideAccount ? items.filter((item) => item.href !== "/partner/account") : items;
 
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -65,7 +66,7 @@ export function PartnerMobileNavigation() {
             <nav className="min-h-0 flex-1 overflow-y-auto px-3.5 py-4">
               <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/55">Partner Workspace</p>
               <div className="space-y-1.5">
-                {items.map((item) => {
+                {visibleItems.map((item) => {
                   const active = activeFor(pathname, item.href);
 
                   if (item.href === "/partner/renewals") {
