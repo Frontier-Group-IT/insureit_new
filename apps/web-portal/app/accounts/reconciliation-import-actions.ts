@@ -86,8 +86,8 @@ export async function confirmAccountsReconciliationUpload(formData: FormData): P
     const incomingTds = row.actualTds;
     if (tdsByBillPolicy.has(tdsKey)) {
       const previous = tdsByBillPolicy.get(tdsKey);
-      if (previous !== null && incomingTds !== null && Math.abs(previous - incomingTds) > 0.01) throw new Error(`Policy ${row.policyNumber} repeats under bill ${row.billNumber} with different Actual TDS values.`);
-      if (previous === null && incomingTds !== null) {
+      if (previous != null && incomingTds !== null && Math.abs(previous - incomingTds) > 0.01) throw new Error(`Policy ${row.policyNumber} repeats under bill ${row.billNumber} with different Actual TDS values.`);
+      if (previous == null && incomingTds !== null) {
         tdsByBillPolicy.set(tdsKey, incomingTds);
         group.actualTds = money(group.actualTds + incomingTds);
       }
