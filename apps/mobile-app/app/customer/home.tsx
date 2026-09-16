@@ -206,6 +206,7 @@ export default function CustomerMockupHomeScreen() {
         onQuote={() => router.push({ pathname: '/customer/insurance-quote', params: { source: 'customer_dashboard' } } as Href)}
         onChallan={() => router.push({ pathname: '/customer/e-challan', params: { source: 'customer_dashboard' } } as Href)}
         onClaim={() => router.push('/customer/start-claim')}
+        onExchange={() => undefined}
       />
       <ClaimsSummaryCard
         totalCount={claims.length}
@@ -362,19 +363,26 @@ function AttentionPulseIcon() {
   );
 }
 
-function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChallan, onClaim }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onQuote: () => void; onChallan: () => void; onClaim: () => void }) {
+function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChallan, onClaim, onExchange }: { renewalDue: number; claimTasks: number; onRenewals: () => void; onQuote: () => void; onChallan: () => void; onClaim: () => void; onExchange: () => void }) {
   return (
     <View style={styles.quickDock}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionEyebrow}>Quick actions</Text>
         <Text style={styles.sectionHint}>One tap services</Text>
       </View>
-      <View style={styles.quickGrid}>
+      <ScrollView
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.quickGrid}
+        style={styles.quickScroller}
+      >
         <QuickAction icon="calendar-month-outline" image={require('../../assets/brand/dashboard/dashboard-renewal.png')} label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
         <QuickAction icon="shield-plus-outline" image={require('../../assets/brand/dashboard/dashboard-start-claim.png')} label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
+        <QuickAction icon="swap-horizontal" image={require('../../assets/brand/dashboard/dashboard-exchange.png')} label="Exchange" tone="#EAF3FF" color="#174EA6" onPress={onExchange} />
         <QuickAction icon="file-document-edit-outline" image={require('../../assets/brand/dashboard/dashboard-get-quote.png')} label="Get Quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
         <QuickAction icon="ticket-confirmation-outline" image={require('../../assets/brand/dashboard/dashboard-echallan.png')} label="Pay Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -639,8 +647,9 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
   sectionHint: { color: '#607089', fontSize: 11, fontWeight: '800' },
-  quickGrid: { flexDirection: 'row', gap: 8 },
-  quickAction: { flex: 1, minHeight: 74, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
+  quickScroller: { marginHorizontal: -2 },
+  quickGrid: { flexDirection: 'row', gap: 8, paddingHorizontal: 2 },
+  quickAction: { width: 78, flexShrink: 0, minHeight: 74, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
   quickIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   quickIconArtwork: { width: 32, height: 32 },
   quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 5 },
