@@ -2,13 +2,20 @@ import Link from "next/link";
 import { Building2, MoreVertical, ShieldCheck } from "lucide-react";
 import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebCustomerSummary, listPartnerWebCustomers } from "@/lib/partner-web";
+import { getPartnerWebCustomerSummary } from "@/lib/partner-web";
+import { listFilteredPartnerCustomers } from "./customer-data";
+import {
+  CustomerStatusTabs,
+  CustomerTypeSelect,
+  type CustomerStatusFilter,
+  type CustomerTypeFilter,
+} from "./customer-filters";
 import { CustomerSearch } from "./customer-search";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type SearchParams = { q?: string; page?: string };
+type SearchParams = { q?: string; page?: string; status?: string; customerType?: string };
 const PAGE_SIZE = 10;
 
 function pageNumber(value?: string) {
@@ -16,11 +23,33 @@ function pageNumber(value?: string) {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 1;
 }
 
+function customerStatusFilter(value?: string): CustomerStatusFilter {
+  return value === "active" || value === "inactive" ? value : "all";
+}
+
+function customerTypeFilter(value?: string): CustomerTypeFilter {
+  switch (value) {
+    case "individual_proprietor":
+    case "dealership":
+    case "corporate":
+    case "group":
+    case "posp":
+    case "misp":
+      return value;
+    default:
+      return "all";
+  }
+}
+
 function statusLabel(value: string | null) {
   return (value || "active").replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function customerTypeLabel(value: string | null) {
+  const normalized = (value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  if (["individual", "proprietor", "individual_proprietor"].includes(normalized)) return "Individual / Proprietor";
+  if (normalized === "posp") return "POSP";
+  if (normalized === "misp") return "MISP";
   if (!value) return "Customer";
   return value.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -28,15 +57,24 @@ function customerTypeLabel(value: string | null) {
 export default async function PartnerCustomersPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const query = await searchParams;
   const q = query.q?.trim() ?? "";
+  const status = customerStatusFilter(query.status);
+  const customerType = customerTypeFilter(query.customerType);
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
   const [summary, rows] = await Promise.all([
     getPartnerWebCustomerSummary(),
-    listPartnerWebCustomers({ limit: PAGE_SIZE, offset, search: q }),
+    listFilteredPartnerCustomers({
+      limit: PAGE_SIZE,
+      offset,
+      search: q,
+      status,
+      customerType,
+    }),
   ]);
 
-  const total = rows[0]?.total_count ?? (q ? rows.length : summary.total_customers);
+  const filtersApplied = Boolean(q) || status !== "all" || customerType !== "all";
+  const total = rows[0]?.total_count ?? (filtersApplied ? 0 : summary.total_customers);
   const active = summary.active_customers;
   const inactive = Math.max(summary.total_customers - summary.active_customers, 0);
   const hasPrevious = page > 1;
@@ -45,6 +83,8 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
   const pageHref = (nextPage: number) => {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
+    if (status !== "all") params.set("status", status);
+    if (customerType !== "all") params.set("customerType", customerType);
     if (nextPage > 1) params.set("page", String(nextPage));
     const search = params.toString();
     return search ? "/partner/customers?" + search : "/partner/customers";
@@ -64,24 +104,15 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
 
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center xl:ml-5">
               <CustomerSearch initialQuery={q} />
-
-              <div className="relative w-full sm:w-[225px] sm:shrink-0">
-                <select
-                  aria-label="Customer type"
-                  defaultValue="all"
-                  className="h-10 w-full appearance-none rounded-xl border border-[#D5DEEA] bg-white px-4 pr-9 text-[11px] font-semibold text-[#41516A] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
-                >
-                  <option value="all">All customer types</option>
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[#425672]">⌄</span>
-              </div>
+              <CustomerTypeSelect value={customerType} />
             </div>
 
-            <div className="inline-flex h-10 shrink-0 items-center self-start rounded-xl border border-[#D5DEEA] bg-[#F7F9FC] p-1 text-[10px] font-bold text-[#667892] sm:self-auto xl:ml-3">
-              <span className="inline-flex h-8 items-center rounded-lg bg-[#173E6C] px-3 text-white shadow-sm">All&nbsp; {summary.total_customers}</span>
-              <span className="inline-flex h-8 items-center px-3">Active&nbsp; {active}</span>
-              <span className="inline-flex h-8 items-center px-3">Inactive&nbsp; {inactive}</span>
-            </div>
+            <CustomerStatusTabs
+              value={status}
+              total={summary.total_customers}
+              active={active}
+              inactive={inactive}
+            />
           </div>
 
           <div className="hidden grid-cols-[42px_minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] items-center border-b border-[#E2E8F0] bg-[#F7F9FC] px-3 py-2.5 text-[8.5px] font-black uppercase tracking-[0.045em] text-[#61728D] lg:grid">
@@ -154,7 +185,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
             <div className="px-5 py-14 text-center">
               <Building2 className="mx-auto h-7 w-7 text-[#9AABC0]" />
               <p className="mt-3 text-[12px] font-bold text-[#23395D]">No customers found</p>
-              <p className="mt-1 text-[10.5px] text-[#7A899F]">{q ? "Try a different search." : "No customers available yet."}</p>
+              <p className="mt-1 text-[10.5px] text-[#7A899F]">{filtersApplied ? "Try a different search or filter." : "No customers available yet."}</p>
             </div>
           )}
 
