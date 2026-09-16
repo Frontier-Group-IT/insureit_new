@@ -9,7 +9,6 @@ import {
   ChevronDown,
   ClipboardCheck,
   ExternalLink,
-  FileCheck2,
   FileText,
   Gauge,
   Headphones,
@@ -66,12 +65,10 @@ const referenceIconMap: Record<PartnerCustomIconName, { Icon: LucideIcon; tileCl
   activity: { Icon: Activity, tileClass: "bg-[#17A99E]" },
   account: { Icon: UserRoundCog, tileClass: "bg-[#6B5AE8]" },
   support: { Icon: Headphones, tileClass: "bg-[#2E7DD7]" },
-  documents: { Icon: FileCheck2, tileClass: "bg-[#2E7DD7]" },
-  insights: { Icon: BarChart3, tileClass: "bg-[#2ABED7]" },
 };
 
 function SidebarIcon({ name }: { name: PartnerCustomIconName }) {
-  const { Icon, tileClass } = referenceIconMap[name] ?? { Icon: FileText, tileClass: "bg-[#3977E8]" };
+  const { Icon, tileClass } = referenceIconMap[name];
   return (
     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${tileClass} text-white shadow-[0_2px_6px_rgba(5,18,45,0.18)]`}>
       <Icon className="h-[17px] w-[17px]" strokeWidth={1.85} aria-hidden="true" />
