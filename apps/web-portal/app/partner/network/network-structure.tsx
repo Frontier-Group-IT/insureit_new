@@ -104,13 +104,13 @@ export function PartnerNetworkStructure({
             </div>
           </div>
 
-          <label className="flex h-11 w-full max-w-[470px] items-center gap-2.5 rounded-2xl border border-[#D7E0EC] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
+          <label className="flex h-11 w-full max-w-[470px] items-center gap-2.5 overflow-hidden rounded-2xl border border-[#D7E0EC] bg-white px-4 shadow-[0_1px_2px_rgba(15,23,42,0.02)]">
             <Search className="h-4 w-4 shrink-0 text-[#6F8097]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search partner, branch, group or POSP/MISP..."
-              className="min-w-0 flex-1 bg-transparent text-[10.5px] font-medium text-[#213A60] outline-none placeholder:text-[#8090A5]"
+              className="w-full min-w-0 flex-1 appearance-none !border-0 !bg-transparent !p-0 text-[10.5px] font-medium text-[#213A60] !shadow-none !outline-none placeholder:text-[#8090A5] focus:!border-0 focus:!outline-none focus:!ring-0"
             />
           </label>
         </div>
