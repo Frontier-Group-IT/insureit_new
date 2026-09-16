@@ -13,7 +13,7 @@ type DiagnosticsPageProps = {
 };
 
 type ProbeView = {
-  key: "core" | "scheduling_subscription" | "scheduling_bearer";
+  key: "core" | "scheduling_x_api_key" | "scheduling_subscription" | "scheduling_bearer";
   label: string;
   status: string | null;
   classification: string | null;
@@ -40,26 +40,31 @@ function statusTone(classification: string | null) {
 
 function conclusion(probes: ProbeView[]) {
   const core = probes.find((probe) => probe.key === "core");
+  const xApiKey = probes.find((probe) => probe.key === "scheduling_x_api_key");
   const subscription = probes.find((probe) => probe.key === "scheduling_subscription");
   const bearer = probes.find((probe) => probe.key === "scheduling_bearer");
-  const coreAccepted = core?.classification?.startsWith("api_key_accepted") ?? false;
 
+  if (xApiKey?.classification === "campaign_reachable") {
+    return "Voice Agents scheduling accepts the configured credential with X-API-Key. This confirms the earlier HTTP 401 blocker was the scheduling header contract, not the campaign binding. The core API 403 does not block the Voice Agents scheduling integration.";
+  }
+
+  const coreAccepted = core?.classification?.startsWith("api_key_accepted") ?? false;
   if (!coreAccepted) {
-    return "The core Sarvam API did not accept the configured API key. Resolve the credential before changing campaign configuration.";
+    return "The core Sarvam API did not accept the configured credential and the X-API-Key scheduling probe did not reach the campaign. Keep the campaign paused and use the four probe results below to isolate the credential contract.";
   }
   if (subscription?.classification === "campaign_reachable" || bearer?.classification === "campaign_reachable") {
     return "The API key is accepted and the configured Voice Agents campaign is reachable. The provider-authentication blocker is cleared.";
   }
   if (subscription?.status === "401" && bearer?.status === "401") {
-    return "The API key is accepted by api.sarvam.ai, but both Voice Agents scheduling authentication forms return HTTP 401. This isolates the blocker to the Voice Agents scheduling authentication/permission contract rather than the API key itself.";
+    return "The core API accepts the key, while the legacy scheduling auth forms return HTTP 401. Inspect X-API-Key because Voice Agents scheduling uses a separate API-key header contract.";
   }
-  if (subscription?.status === "403" || bearer?.status === "403") {
-    return "The API key is accepted by the core API, while Voice Agents scheduling reports forbidden access. Check Voice Agents product/workspace/campaign permissions with Sarvam.";
+  if (xApiKey?.status === "403" || subscription?.status === "403" || bearer?.status === "403") {
+    return "Voice Agents scheduling reports forbidden access. Check the Voice Agents workspace key, product access and campaign permissions.";
   }
-  if (subscription?.status === "404" || bearer?.status === "404") {
-    return "The core API accepts the key, while the configured Voice Agents campaign binding was not found. Recheck the organisation, workspace and campaign identifiers.";
+  if (xApiKey?.status === "404" || subscription?.status === "404" || bearer?.status === "404") {
+    return "A scheduling request reached Voice Agents but the configured campaign binding was not found. Recheck the organisation, workspace and campaign identifiers.";
   }
-  return "The core API accepts the key, but the scheduling probes did not reach the configured campaign. Use the sanitized statuses and request identifiers below for provider escalation.";
+  return "The scheduling probes did not reach the configured campaign. Use the sanitized statuses and request identifiers below for provider escalation.";
 }
 
 export default async function SarvamDiagnosticsPage({ searchParams }: DiagnosticsPageProps) {
@@ -78,6 +83,14 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
       classification: queryValue(query.diag_core_class) ?? null,
       errorCode: queryValue(query.diag_core_code) ?? null,
       requestId: queryValue(query.diag_core_request) ?? null,
+    },
+    {
+      key: "scheduling_x_api_key",
+      label: "Voice Agents scheduling · X-API-Key",
+      status: queryValue(query.diag_scheduling_x_api_key_status) ?? null,
+      classification: queryValue(query.diag_scheduling_x_api_key_class) ?? null,
+      errorCode: queryValue(query.diag_scheduling_x_api_key_code) ?? null,
+      requestId: queryValue(query.diag_scheduling_x_api_key_request) ?? null,
     },
     {
       key: "scheduling_subscription",
@@ -107,7 +120,7 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
             <div>
               <h2 className="text-[15px] font-semibold text-[#17203A]">Read-only provider diagnostics</h2>
               <p className="mt-1 max-w-2xl text-[10.5px] leading-5 text-[#64748B]">
-                Runs three non-mutating server-side probes. It does not place calls, stream cohorts, modify campaigns, expose credentials, or render raw provider response bodies.
+                Runs four non-mutating server-side probes. It does not place calls, stream cohorts, modify campaigns, expose credentials, or render raw provider response bodies.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -135,7 +148,7 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
                 <p className="mt-2 text-[10.5px] leading-5 text-[#334155]">{conclusion(probes)}</p>
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-3">
+              <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 {probes.map((probe) => (
                   <div key={probe.key} className="rounded-xl border border-[#E2E8F0] bg-white p-3.5">
                     <div className="flex items-start justify-between gap-2">
@@ -157,11 +170,12 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
         </Card>
 
         <Card>
-          <h2 className="text-[15px] font-semibold text-[#17203A]">How to interpret the three probes</h2>
+          <h2 className="text-[15px] font-semibold text-[#17203A]">How to interpret the four probes</h2>
           <ul className="mt-3 space-y-2 text-[10px] leading-5 text-[#64748B]">
-            <li><strong className="text-[#334155]">Core API key:</strong> a valid key should pass authentication and reach resource resolution; the diagnostic deliberately asks for a nonexistent pronunciation dictionary so a 404/422 can prove the key got past authentication without creating anything.</li>
-            <li><strong className="text-[#334155]">Scheduling · subscription key:</strong> tests the configured campaign with the standard `api-subscription-key` header.</li>
-            <li><strong className="text-[#334155]">Scheduling · Bearer:</strong> repeats the same read-only campaign request with `Authorization: Bearer` to distinguish header-contract issues from campaign/product permissions.</li>
+            <li><strong className="text-[#334155]">Core API key:</strong> tests the general `api.sarvam.ai` API with `api-subscription-key`.</li>
+            <li><strong className="text-[#334155]">Scheduling · X-API-Key:</strong> tests the Voice Agents scheduling header shown in Sarvam Agent API examples for the same `apps.sarvam.ai/api/scheduling/v1/...` API family.</li>
+            <li><strong className="text-[#334155]">Scheduling · subscription key:</strong> retains the previous `api-subscription-key` probe for comparison.</li>
+            <li><strong className="text-[#334155]">Scheduling · Bearer:</strong> retains the previous Bearer probe for comparison.</li>
           </ul>
         </Card>
       </div>
