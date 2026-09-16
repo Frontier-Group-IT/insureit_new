@@ -13,7 +13,12 @@ type DiagnosticsPageProps = {
 };
 
 type ProbeView = {
-  key: "core" | "scheduling_x_api_key" | "scheduling_subscription" | "scheduling_bearer";
+  key:
+    | "core"
+    | "scheduling_x_api_key"
+    | "scheduling_x_api_key_missing_campaign"
+    | "scheduling_subscription"
+    | "scheduling_bearer";
   label: string;
   status: string | null;
   classification: string | null;
@@ -41,6 +46,7 @@ function statusTone(classification: string | null) {
 function conclusion(probes: ProbeView[]) {
   const core = probes.find((probe) => probe.key === "core");
   const xApiKey = probes.find((probe) => probe.key === "scheduling_x_api_key");
+  const missingCampaign = probes.find((probe) => probe.key === "scheduling_x_api_key_missing_campaign");
   const subscription = probes.find((probe) => probe.key === "scheduling_subscription");
   const bearer = probes.find((probe) => probe.key === "scheduling_bearer");
 
@@ -48,21 +54,33 @@ function conclusion(probes: ProbeView[]) {
     return "Voice Agents scheduling accepts the configured credential with X-API-Key. This confirms the earlier HTTP 401 blocker was the scheduling header contract, not the campaign binding. The core API 403 does not block the Voice Agents scheduling integration.";
   }
 
+  if (xApiKey?.status === "500" && missingCampaign?.status === "404") {
+    return "The intentionally missing campaign returns HTTP 404 with X-API-Key, while the real campaign returns HTTP 500. This proves X-API-Key gets through generic campaign lookup and isolates the provider failure to the configured campaign resource or a backend path reached after that campaign is found.";
+  }
+
+  if (xApiKey?.status === "500" && missingCampaign?.status === "500") {
+    return "Both the real and intentionally missing campaign return HTTP 500 with X-API-Key. Sarvam is failing before normal campaign existence resolution, which isolates the problem to the Voice Agents scheduling authentication/gateway/workspace layer rather than this specific campaign.";
+  }
+
+  if ((xApiKey?.status === "401" || xApiKey?.status === "403") && missingCampaign?.status === xApiKey.status) {
+    return "Both X-API-Key probes are rejected before campaign lookup. The blocker remains at the Voice Agents credential or workspace authorization layer.";
+  }
+
   const coreAccepted = core?.classification?.startsWith("api_key_accepted") ?? false;
   if (!coreAccepted) {
-    return "The core Sarvam API did not accept the configured credential and the X-API-Key scheduling probe did not reach the campaign. Keep the campaign paused and use the four probe results below to isolate the credential contract.";
+    return "The core Sarvam API did not accept the configured credential and the X-API-Key probes did not isolate a successful campaign lookup. Keep the campaign paused and use the five probe results below before changing any credential.";
   }
   if (subscription?.classification === "campaign_reachable" || bearer?.classification === "campaign_reachable") {
     return "The API key is accepted and the configured Voice Agents campaign is reachable. The provider-authentication blocker is cleared.";
   }
   if (subscription?.status === "401" && bearer?.status === "401") {
-    return "The core API accepts the key, while the legacy scheduling auth forms return HTTP 401. Inspect X-API-Key because Voice Agents scheduling uses a separate API-key header contract.";
+    return "The core API accepts the key, while the legacy scheduling auth forms return HTTP 401. Inspect the two X-API-Key probes because Voice Agents scheduling uses a separate API-key header contract.";
   }
   if (xApiKey?.status === "403" || subscription?.status === "403" || bearer?.status === "403") {
     return "Voice Agents scheduling reports forbidden access. Check the Voice Agents workspace key, product access and campaign permissions.";
   }
   if (xApiKey?.status === "404" || subscription?.status === "404" || bearer?.status === "404") {
-    return "A scheduling request reached Voice Agents but the configured campaign binding was not found. Recheck the organisation, workspace and campaign identifiers.";
+    return "A scheduling request reached Voice Agents but the configured campaign binding was not found. Recheck organisation, workspace and campaign identifiers.";
   }
   return "The scheduling probes did not reach the configured campaign. Use the sanitized statuses and request identifiers below for provider escalation.";
 }
@@ -86,11 +104,19 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
     },
     {
       key: "scheduling_x_api_key",
-      label: "Voice Agents scheduling · X-API-Key",
+      label: "Voice Agents scheduling · X-API-Key · configured campaign",
       status: queryValue(query.diag_scheduling_x_api_key_status) ?? null,
       classification: queryValue(query.diag_scheduling_x_api_key_class) ?? null,
       errorCode: queryValue(query.diag_scheduling_x_api_key_code) ?? null,
       requestId: queryValue(query.diag_scheduling_x_api_key_request) ?? null,
+    },
+    {
+      key: "scheduling_x_api_key_missing_campaign",
+      label: "Voice Agents scheduling · X-API-Key · intentionally missing campaign",
+      status: queryValue(query.diag_scheduling_x_api_key_missing_campaign_status) ?? null,
+      classification: queryValue(query.diag_scheduling_x_api_key_missing_campaign_class) ?? null,
+      errorCode: queryValue(query.diag_scheduling_x_api_key_missing_campaign_code) ?? null,
+      requestId: queryValue(query.diag_scheduling_x_api_key_missing_campaign_request) ?? null,
     },
     {
       key: "scheduling_subscription",
@@ -120,7 +146,7 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
             <div>
               <h2 className="text-[15px] font-semibold text-[#17203A]">Read-only provider diagnostics</h2>
               <p className="mt-1 max-w-2xl text-[10.5px] leading-5 text-[#64748B]">
-                Runs four non-mutating server-side probes. It does not place calls, stream cohorts, modify campaigns, expose credentials, or render raw provider response bodies.
+                Runs five non-mutating server-side probes. It does not place calls, stream cohorts, modify campaigns, expose credentials, or render raw provider response bodies.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -170,10 +196,11 @@ export default async function SarvamDiagnosticsPage({ searchParams }: Diagnostic
         </Card>
 
         <Card>
-          <h2 className="text-[15px] font-semibold text-[#17203A]">How to interpret the four probes</h2>
+          <h2 className="text-[15px] font-semibold text-[#17203A]">How to interpret the five probes</h2>
           <ul className="mt-3 space-y-2 text-[10px] leading-5 text-[#64748B]">
             <li><strong className="text-[#334155]">Core API key:</strong> tests the general `api.sarvam.ai` API with `api-subscription-key`.</li>
-            <li><strong className="text-[#334155]">Scheduling · X-API-Key:</strong> tests the Voice Agents scheduling header shown in Sarvam Agent API examples for the same `apps.sarvam.ai/api/scheduling/v1/...` API family.</li>
+            <li><strong className="text-[#334155]">X-API-Key · configured campaign:</strong> tests the real approved Voice Agents campaign using the header shown in Sarvam Agent API examples.</li>
+            <li><strong className="text-[#334155]">X-API-Key · intentionally missing campaign:</strong> uses the same org, workspace, endpoint and credential with a synthetic nonexistent campaign ID. A 404 here proves the request got through authentication and normal campaign lookup.</li>
             <li><strong className="text-[#334155]">Scheduling · subscription key:</strong> retains the previous `api-subscription-key` probe for comparison.</li>
             <li><strong className="text-[#334155]">Scheduling · Bearer:</strong> retains the previous Bearer probe for comparison.</li>
           </ul>

@@ -4,10 +4,11 @@ Before changing this route or any related Sarvam renewal integration code, read:
 
 - `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md`
 - `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md`
+- `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md`
 - `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`
 - `apps/web-portal/app/partner/renewals/external/AGENTS.md`
 
-Treat `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md` as the current continuation record for agent version, controlled campaign binding, portal activation state, live-test evidence and the active Sarvam authentication blocker. Keep it current after any material provider-authentication, campaign, agent-version, webhook or portal-dispatch change.
+Treat `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md` as the current continuation record for agent version, controlled campaign binding, portal activation state, live-test evidence and the active Sarvam authentication blocker. Read `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md` for the latest repeated production provider-response evidence, including the reproducible X-API-Key HTTP 500 pattern. Keep these records current after any material provider-authentication, campaign, agent-version, webhook or portal-dispatch change.
 
 This area is IT Super User only. Preserve the exact `it_super_user` role check plus `manage_system` at `approve` access. Do not expose provider secrets, API keys, webhook secrets, raw provider payloads, customer phone numbers, or transcripts here.
 
