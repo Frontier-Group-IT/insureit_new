@@ -37,7 +37,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
         onClick={toggleSidebar}
         aria-label={collapsed ? "Open sidebar" : "Close sidebar"}
         aria-expanded={!collapsed}
-        className={`group fixed top-3 z-[60] hidden h-10 w-10 place-items-center rounded-xl border border-white/15 bg-[#111a35]/95 text-white shadow-[0_8px_24px_rgba(6,12,30,.24)] backdrop-blur transition-all duration-200 hover:bg-[#1a2548] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:grid ${collapsed ? "left-3" : "left-[216px]"}`}
+        className={`group fixed top-3 z-[60] hidden h-10 w-10 place-items-center rounded-xl border border-white/15 bg-[#111a35]/95 text-white shadow-[0_8px_24px_rgba(6,12,30,.24)] backdrop-blur transition-all duration-200 hover:bg-[#1a2548] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:grid ${collapsed ? "left-3" : "left-[148px]"}`}
       >
         {collapsed ? <PanelLeftOpen className="h-[18px] w-[18px]" /> : <PanelLeftClose className="h-[18px] w-[18px]" />}
         <span
@@ -47,7 +47,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
         </span>
       </button>
 
-      <div className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-16" : "lg:pl-[268px]"}`}>
+      <div className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-16" : "lg:pl-[200px]"}`}>
         {children}
       </div>
 
@@ -56,6 +56,97 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           .desktop-sidebar-expanded aside,
           .desktop-sidebar-collapsed aside {
             transition: width 200ms ease-out, box-shadow 200ms ease-out;
+          }
+
+          .desktop-sidebar-expanded aside {
+            width: 200px !important;
+          }
+
+          .desktop-sidebar-expanded aside > a {
+            height: 64px !important;
+            padding-left: 12px !important;
+            padding-right: 48px !important;
+          }
+
+          .desktop-sidebar-expanded aside > a > * {
+            transform: scale(0.82);
+            transform-origin: left center;
+          }
+
+          .desktop-sidebar-expanded aside nav {
+            padding: 10px 8px !important;
+          }
+
+          .desktop-sidebar-expanded aside nav > a {
+            height: 40px !important;
+            margin-bottom: 6px !important;
+            gap: 8px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            border-radius: 14px !important;
+          }
+
+          .desktop-sidebar-expanded aside nav > a > span:first-child,
+          .desktop-sidebar-expanded aside nav > div > div > button > span:first-child {
+            width: 28px !important;
+            height: 28px !important;
+            border-radius: 10px !important;
+          }
+
+          .desktop-sidebar-expanded aside nav > p {
+            margin-top: 14px !important;
+            margin-bottom: 6px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+
+          .desktop-sidebar-expanded aside nav > div > div {
+            margin-top: 2px !important;
+            border-radius: 14px !important;
+          }
+
+          .desktop-sidebar-expanded aside nav > div > div:first-child {
+            margin-top: 0 !important;
+          }
+
+          .desktop-sidebar-expanded aside nav > div > div > button {
+            height: 40px !important;
+            gap: 8px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            border-radius: 14px !important;
+          }
+
+          .desktop-sidebar-expanded aside nav button > .flex-1 {
+            flex: 0 1 auto !important;
+            min-width: 0;
+          }
+
+          .desktop-sidebar-expanded aside nav button > svg:last-child {
+            flex-shrink: 0;
+            margin-left: 2px;
+          }
+
+          .desktop-sidebar-expanded aside nav > div > div > div {
+            padding-bottom: 6px !important;
+          }
+
+          .desktop-sidebar-expanded aside > div:last-child {
+            padding: 8px !important;
+          }
+
+          .desktop-sidebar-expanded aside > div:last-child > a {
+            height: 40px !important;
+            gap: 8px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            border-radius: 14px !important;
+          }
+
+          .desktop-sidebar-expanded aside > div:last-child > a > span:first-child {
+            width: 28px !important;
+            height: 28px !important;
+            border-radius: 10px !important;
           }
 
           .desktop-sidebar-collapsed aside {
