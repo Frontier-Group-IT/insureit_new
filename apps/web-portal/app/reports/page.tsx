@@ -5,7 +5,7 @@ import { AppShell } from "@/components/shell";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
-import { loadPolicyBusinessReport, reportScopeLabel } from "@/lib/reports/policy-business";
+import { loadPolicyBusinessNetReport, reportScopeLabel } from "@/lib/reports/policy-business";
 
 type Query = Record<string, string | string[] | undefined>;
 type Props = { searchParams: Promise<Query> };
@@ -29,12 +29,12 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
   let loadError = false;
   let pack: Awaited<ReturnType<typeof loadManagementPack>> | null = null;
-  let ytdBusiness: Awaited<ReturnType<typeof loadPolicyBusinessReport>>["report"] | null = null;
+  let ytdBusiness: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
 
   try {
     const [managementPack, businessPayload] = await Promise.all([
       loadManagementPack(profile, {}),
-      loadPolicyBusinessReport(profile, { period: "ytd", page: "1" }),
+      loadPolicyBusinessNetReport(profile, { period: "ytd", page: "1" }),
     ]);
     pack = managementPack;
     ytdBusiness = businessPayload.report;
@@ -46,7 +46,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
   const monthLabel = pack ? formatMonth(pack.filters.month) : "Current month";
   const scopeLabel = pack ? reportScopeLabel(pack.scopeMode) : "Accessible portfolio";
   const trend = (ytdBusiness?.trend ?? []).slice(-6);
-  const maxTrendPremium = Math.max(...trend.map((row) => row.gross_premium), 1);
+  const maxTrendPremium = Math.max(...trend.map((row) => row.net_premium), 1);
   const topInsurers = (ytdBusiness?.insurers ?? []).slice(0, 5);
   const renewals = (pack?.renewals.register.rows ?? []).filter((row) => row.days_to_expiry >= 0).slice(0, 5);
 
@@ -76,7 +76,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
         ) : (
           <>
             <section className="r2-panel r2-kpis" aria-label="Broker performance summary">
-              <Kpi label="Gross Premium" value={money(pack.business.summary.gross_premium)} note={`Motor ${compactMoney(pack.business.summary.motor_gross_premium)} · Non-Motor ${compactMoney(pack.business.summary.non_motor_gross_premium)}`} />
+              <Kpi label="Net Premium" value={money(pack.business.summary.net_premium)} note={`Motor ${compactMoney(pack.business.summary.motor_net_premium)} · Non-Motor ${compactMoney(pack.business.summary.non_motor_net_premium)}`} />
               <Kpi label="Policies" value={number(pack.business.summary.policy_count)} note="Month to date" />
               <Kpi label={commercialAccess ? "Projected PayIn" : "Commercials"} value={commercialAccess ? money(pack.finance.summary.projected_payin) : "Restricted"} note={commercialAccess ? "Expectation only" : "Authorized users only"} />
               <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note="Current open book" />
@@ -85,13 +85,13 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
             <section className="r2-main-grid">
               <article className="r2-panel overflow-hidden">
-                <div className="r2-section-head"><h2>Premium & Policy Trend</h2><Link prefetch={false} href="/reports/business" className="r2-section-link">Business <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
+                <div className="r2-section-head"><h2>Net Premium & Policy Trend</h2><Link prefetch={false} href="/reports/business" className="r2-section-link">Business <ArrowRight className="ml-1 inline h-3 w-3" /></Link></div>
                 <div className="r2-trend">
                   {trend.length ? trend.map((row) => (
                     <div key={row.month} className="r2-trend-row">
                       <span className="r2-trend-month">{shortMonth(row.month)}</span>
-                      <span className="r2-trend-track"><span className="r2-trend-bar block" style={{ width: `${Math.max(2, (row.gross_premium / maxTrendPremium) * 100)}%` }} /></span>
-                      <span className="r2-trend-value">{compactMoney(row.gross_premium)}</span>
+                      <span className="r2-trend-track"><span className="r2-trend-bar block" style={{ width: `${Math.max(2, (row.net_premium / maxTrendPremium) * 100)}%` }} /></span>
+                      <span className="r2-trend-value">{compactMoney(row.net_premium)}</span>
                       <span className="r2-trend-count">{number(row.policy_count)}</span>
                     </div>
                   )) : <div className="r2-empty">No year-to-date business trend available</div>}
@@ -114,8 +114,8 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               <article className="r2-panel overflow-hidden">
                 <div className="r2-section-head"><h2>Insurer Business · YTD</h2><Link prefetch={false} href="/reports/business" className="r2-section-link">View business</Link></div>
                 {topInsurers.length ? (
-                  <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Insurer</th><th className="r2-num">Policies</th><th className="r2-num">Premium</th><th className="r2-num">Share</th></tr></thead><tbody>
-                    {topInsurers.map((row) => <tr key={`${row.id}-${row.name}`}><td><strong>{row.name || "Unassigned"}</strong></td><td className="r2-num">{number(row.policy_count)}</td><td className="r2-num">{compactMoney(row.gross_premium)}</td><td className="r2-num">{row.share_percent.toFixed(1)}%</td></tr>)}
+                  <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Insurer</th><th className="r2-num">Policies</th><th className="r2-num">Net premium</th><th className="r2-num">Share</th></tr></thead><tbody>
+                    {topInsurers.map((row) => <tr key={`${row.id}-${row.name}`}><td><strong>{row.name || "Unassigned"}</strong></td><td className="r2-num">{number(row.policy_count)}</td><td className="r2-num">{compactMoney(row.net_premium)}</td><td className="r2-num">{row.share_percent.toFixed(1)}%</td></tr>)}
                   </tbody></table></div>
                 ) : <div className="r2-empty">No insurer business available</div>}
               </article>
@@ -123,8 +123,8 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               <article className="r2-panel overflow-hidden">
                 <div className="r2-section-head"><h2>Upcoming Renewals</h2><Link prefetch={false} href="/reports/renewals" className="r2-section-link">View portfolio</Link></div>
                 {renewals.length ? (
-                  <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Customer</th><th>Risk / Asset</th><th>Insurer</th><th className="r2-num">Days</th><th className="r2-num">Premium</th></tr></thead><tbody>
-                    {renewals.map((row) => <tr key={row.id}><td><strong>{row.customer_name}</strong></td><td>{row.risk_reference || row.vehicle_no || "—"}</td><td>{row.insurer_name || "—"}</td><td className="r2-num">{number(row.days_to_expiry)}</td><td className="r2-num">{compactMoney(row.gross_premium)}</td></tr>)}
+                  <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Customer</th><th>Risk / Asset</th><th>Insurer</th><th className="r2-num">Days</th><th className="r2-num">Net premium</th></tr></thead><tbody>
+                    {renewals.map((row) => <tr key={row.id}><td><strong>{row.customer_name}</strong></td><td>{row.risk_reference || row.vehicle_no || "—"}</td><td>{row.insurer_name || "—"}</td><td className="r2-num">{number(row.days_to_expiry)}</td><td className="r2-num">{compactMoney(row.net_premium)}</td></tr>)}
                   </tbody></table></div>
                 ) : <div className="r2-empty">No upcoming renewals in the current horizon</div>}
               </article>
@@ -137,7 +137,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
                 {commercialAccess ? <Position label="Projected PayIn" value={money(pack.finance.summary.projected_payin)} href="/reports/finance" /> : <Position label="Commercials" value="Restricted" href="/reports" />}
                 {commercialAccess ? <Position label="Partner Payout" value={money(pack.finance.summary.gross_payout)} href="/reports/finance" /> : <Position label="Commercial access" value="Restricted" href="/reports" />}
                 <Position label="Claims Estimated Loss" value={money(pack.claims.summary.estimated_loss)} href="/reports/claims" />
-                <Position label="Premium at Renewal Risk" value={money(pack.renewals.summary.premium_at_risk)} href="/reports/renewals" />
+                <Position label="Net Premium at Renewal Risk" value={money(pack.renewals.summary.premium_at_risk)} href="/reports/renewals" />
               </div>
               <div className="r2-month-end">
                 <div className="r2-month-end__copy"><strong>Month-end reporting</strong><span>Review the live pack, freeze the eligible month, or open a previous frozen snapshot.</span></div>
