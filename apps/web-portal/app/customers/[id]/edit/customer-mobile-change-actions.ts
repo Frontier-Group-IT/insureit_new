@@ -153,7 +153,7 @@ export async function requestCustomerMobileChangeOtp(customerId: string, propose
   if (!MOBILE_PATTERN.test(newMobile)) return { ok: false, error: "Enter a valid 10-digit Indian login mobile number." };
 
   const context = await loadEditorAndCustomer(customerId);
-  if ("error" in context) return { ok: false, error: context.error };
+  if ("error" in context) return { ok: false, error: context.error ?? "Unable to authorize this mobile change." };
 
   const currentMobile = normalizeMobile(context.customer.phone);
   if (currentMobile === newMobile) return { ok: false, error: "The login mobile number has not changed." };
@@ -217,7 +217,7 @@ export async function requestCustomerMobileChangeOtp(customerId: string, propose
 
 export async function verifyCustomerMobileChangeOtp(customerId: string, challengeToken: string, otp: string): Promise<VerifyResult> {
   const context = await loadEditorAndCustomer(customerId);
-  if ("error" in context) return { ok: false, error: context.error };
+  if ("error" in context) return { ok: false, error: context.error ?? "Unable to authorize this mobile change." };
 
   const challenge = readSignedPayload<ChallengePayload>(challengeToken);
   if (!challenge || challenge.kind !== "customer-mobile-otp" || challenge.customerId !== customerId || challenge.editorId !== context.editorId) {
