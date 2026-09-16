@@ -8,6 +8,7 @@ export default function PartnerPolicyIntakesPage() {
   return (
     <PartnerPortalShell title="Policy Intake">
       <div data-policy-intake-page>
+        <style>{`[data-policy-intake-page] label:has(> select) { display: none; }`}</style>
         <PartnerPolicyIntakeListClient />
       </div>
     </PartnerPortalShell>
