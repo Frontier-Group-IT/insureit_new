@@ -2,16 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
-
-export type CustomerStatusFilter = "all" | "active" | "inactive";
-export type CustomerTypeFilter =
-  | "all"
-  | "individual_proprietor"
-  | "dealership"
-  | "corporate"
-  | "group"
-  | "posp"
-  | "misp";
+import type { CustomerStatusFilter, CustomerTypeFilter } from "./customer-filter-types";
 
 const CUSTOMER_TYPE_OPTIONS: { value: CustomerTypeFilter; label: string }[] = [
   { value: "all", label: "All customer types" },
