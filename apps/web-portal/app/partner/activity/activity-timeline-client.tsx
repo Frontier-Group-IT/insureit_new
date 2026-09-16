@@ -64,7 +64,7 @@ export function ActivityTimelineClient({ data }: { data: PartnerActivityData }) 
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search policy, customer, insurer, vehicle, etc."
               aria-label="Search activity"
-              className="min-w-0 flex-1 bg-transparent text-[10px] font-medium text-[#243B5A] outline-none placeholder:text-[#8593A8]"
+              className="min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-[10px] font-medium text-[#243B5A] shadow-none outline-none placeholder:text-[#8593A8] hover:border-0 focus:border-0 focus:ring-0 focus:shadow-none"
             />
           </label>
         </div>
