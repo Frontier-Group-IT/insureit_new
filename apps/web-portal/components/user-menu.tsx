@@ -198,7 +198,7 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome, display
               <button
                 type="button"
                 onClick={openAvatarPicker}
-                className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-navy-800 text-white shadow-sm transition hover:bg-navy-900 focus:outline-none focus:ring-2 focus:ring-green-100"
+                className="absolute -bottom-1 -right-1 z-10 grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-[#111A35] text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-green-100"
                 aria-label="Change profile photo"
                 title="Change profile photo"
               >
