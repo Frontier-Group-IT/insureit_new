@@ -205,7 +205,7 @@ Example: one ₹1,000 bill contains Policy A ₹600 and Policy B ₹400; a ₹70
 
 This is the verified place for a **small extension to the existing allocation model** before confirmed policy-level receipt imports. Do not respond by creating a parallel generic Pay-In transaction table.
 
-TDS already works at invoice level. If final Accounts input requires TDS by policy line inside a consolidated bill, use the same minimal line-attribution approach rather than a parallel TDS ledger.
+TDS already works at invoice level. The final workbook design must explicitly settle whether the Accounts-entered TDS value is a bill-level fact repeated/displayed across the bill or a policy-line attribution. Do not infer a policy split. If policy-line TDS is required inside a consolidated bill, use the same minimal line-attribution approach rather than a parallel TDS ledger.
 
 ### System-calculated fields
 
