@@ -1,3 +1,5 @@
+import { createClient } from "@/lib/supabase";
+
 export type PartnerPolicyIntakeSource = {
   id: string;
   intermediary_type: "partner" | "posp" | "misp";
@@ -188,15 +190,31 @@ export function validatePolicyIntakeFile(file: File) {
 }
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
+  const supabase = createClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  let accessToken = sessionData.session?.access_token;
+
+  const send = (token?: string) => fetch(path, {
     ...init,
     credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
     cache: "no-store",
   });
+
+  let response = await send(accessToken);
+
+  if (response.status === 401) {
+    const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+    const refreshedToken = refreshed.session?.access_token;
+    if (!refreshError && refreshedToken && refreshedToken !== accessToken) {
+      accessToken = refreshedToken;
+      response = await send(accessToken);
+    }
+  }
 
   const payload = await response.json().catch(() => null) as ({ ok?: boolean; error?: string } & Partial<T>) | null;
   if (!response.ok || !payload?.ok) throw new Error(payload?.error || "Policy Intake request failed.");
