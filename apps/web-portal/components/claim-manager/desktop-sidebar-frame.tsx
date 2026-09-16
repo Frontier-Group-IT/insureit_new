@@ -43,8 +43,8 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
     const target = event.target;
     if (!(target instanceof Element)) return;
 
-    const aside = target.closest("aside");
-    if (!aside) return;
+    const sidebar = event.currentTarget.querySelector(":scope > aside");
+    if (!sidebar || !sidebar.contains(target)) return;
 
     // In collapsed mode every interaction with the rail opens the full sidebar.
     // Prevent links and parent-menu buttons from navigating/toggling until the
@@ -90,31 +90,31 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
 
       <style jsx global>{`
         @media (min-width: 1024px) {
-          .desktop-sidebar-expanded aside,
-          .desktop-sidebar-collapsed aside {
+          .desktop-sidebar-expanded > aside,
+          .desktop-sidebar-collapsed > aside {
             transition: width 200ms ease-out, box-shadow 200ms ease-out;
           }
 
-          .desktop-sidebar-expanded aside {
+          .desktop-sidebar-expanded > aside {
             width: 248px !important;
           }
 
-          .desktop-sidebar-expanded aside > a {
+          .desktop-sidebar-expanded > aside > a {
             height: 64px !important;
             padding-left: 12px !important;
             padding-right: 48px !important;
           }
 
-          .desktop-sidebar-expanded aside > a > * {
+          .desktop-sidebar-expanded > aside > a > * {
             transform: scale(0.82);
             transform-origin: left center;
           }
 
-          .desktop-sidebar-expanded aside nav {
+          .desktop-sidebar-expanded > aside nav {
             padding: 10px 8px !important;
           }
 
-          .desktop-sidebar-expanded aside nav > a {
+          .desktop-sidebar-expanded > aside nav > a {
             height: 40px !important;
             margin-bottom: 6px !important;
             gap: 8px !important;
@@ -123,30 +123,30 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             border-radius: 14px !important;
           }
 
-          .desktop-sidebar-expanded aside nav > a > span:first-child,
-          .desktop-sidebar-expanded aside nav > div > div > button > span:first-child {
+          .desktop-sidebar-expanded > aside nav > a > span:first-child,
+          .desktop-sidebar-expanded > aside nav > div > div > button > span:first-child {
             width: 28px !important;
             height: 28px !important;
             border-radius: 10px !important;
           }
 
-          .desktop-sidebar-expanded aside nav > p {
+          .desktop-sidebar-expanded > aside nav > p {
             margin-top: 14px !important;
             margin-bottom: 6px !important;
             padding-left: 10px !important;
             padding-right: 10px !important;
           }
 
-          .desktop-sidebar-expanded aside nav > div > div {
+          .desktop-sidebar-expanded > aside nav > div > div {
             margin-top: 2px !important;
             border-radius: 14px !important;
           }
 
-          .desktop-sidebar-expanded aside nav > div > div:first-child {
+          .desktop-sidebar-expanded > aside nav > div > div:first-child {
             margin-top: 0 !important;
           }
 
-          .desktop-sidebar-expanded aside nav > div > div > button {
+          .desktop-sidebar-expanded > aside nav > div > div > button {
             height: 40px !important;
             gap: 8px !important;
             padding-left: 10px !important;
@@ -154,26 +154,26 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             border-radius: 14px !important;
           }
 
-          .desktop-sidebar-expanded aside nav button > .flex-1 {
+          .desktop-sidebar-expanded > aside nav button > .flex-1 {
             flex: 1 1 auto !important;
             min-width: 0;
             white-space: nowrap;
           }
 
-          .desktop-sidebar-expanded aside nav button > svg:last-child {
+          .desktop-sidebar-expanded > aside nav button > svg:last-child {
             flex-shrink: 0;
             margin-left: 8px;
           }
 
-          .desktop-sidebar-expanded aside nav > div > div > div {
+          .desktop-sidebar-expanded > aside nav > div > div > div {
             padding-bottom: 6px !important;
           }
 
-          .desktop-sidebar-expanded aside > div:last-child {
+          .desktop-sidebar-expanded > aside > div:last-child {
             padding: 8px !important;
           }
 
-          .desktop-sidebar-expanded aside > div:last-child > a {
+          .desktop-sidebar-expanded > aside > div:last-child > a {
             height: 40px !important;
             gap: 8px !important;
             padding-left: 10px !important;
@@ -181,19 +181,19 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             border-radius: 14px !important;
           }
 
-          .desktop-sidebar-expanded aside > div:last-child > a > span:first-child {
+          .desktop-sidebar-expanded > aside > div:last-child > a > span:first-child {
             width: 28px !important;
             height: 28px !important;
             border-radius: 10px !important;
           }
 
-          .desktop-sidebar-collapsed aside {
+          .desktop-sidebar-collapsed > aside {
             width: 64px !important;
             overflow: visible !important;
             box-shadow: 10px 0 30px rgba(17, 26, 53, 0.16) !important;
           }
 
-          .desktop-sidebar-collapsed aside > a {
+          .desktop-sidebar-collapsed > aside > a {
             height: 64px !important;
             width: 64px !important;
             justify-content: center !important;
@@ -201,35 +201,35 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             padding: 0 !important;
           }
 
-          .desktop-sidebar-collapsed aside > a > div {
+          .desktop-sidebar-collapsed > aside > a > div {
             gap: 0 !important;
           }
 
-          .desktop-sidebar-collapsed aside > a > div > img {
+          .desktop-sidebar-collapsed > aside > a > div > img {
             width: 38px !important;
             height: 38px !important;
           }
 
-          .desktop-sidebar-collapsed aside > a > div > div {
+          .desktop-sidebar-collapsed > aside > a > div > div {
             display: none !important;
           }
 
-          .desktop-sidebar-collapsed aside nav {
+          .desktop-sidebar-collapsed > aside nav {
             overflow: visible !important;
             padding: 10px 8px !important;
             scrollbar-width: none;
           }
 
-          .desktop-sidebar-collapsed aside nav::-webkit-scrollbar {
+          .desktop-sidebar-collapsed > aside nav::-webkit-scrollbar {
             display: none;
           }
 
-          .desktop-sidebar-collapsed aside nav > p {
+          .desktop-sidebar-collapsed > aside nav > p {
             display: none !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > a,
-          .desktop-sidebar-collapsed aside nav > div > div > button {
+          .desktop-sidebar-collapsed > aside nav > a,
+          .desktop-sidebar-collapsed > aside nav > div > div > button {
             position: relative !important;
             width: 48px !important;
             height: 44px !important;
@@ -242,13 +242,13 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             overflow: visible !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > a:hover,
-          .desktop-sidebar-collapsed aside nav > div > div > button:hover {
+          .desktop-sidebar-collapsed > aside nav > a:hover,
+          .desktop-sidebar-collapsed > aside nav > div > div > button:hover {
             background-color: rgba(255, 255, 255, 0.10) !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > a > span:first-child,
-          .desktop-sidebar-collapsed aside nav > div > div > button > span:first-child {
+          .desktop-sidebar-collapsed > aside nav > a > span:first-child,
+          .desktop-sidebar-collapsed > aside nav > div > div > button > span:first-child {
             width: 32px !important;
             height: 32px !important;
             min-width: 32px !important;
@@ -256,9 +256,9 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             margin: 0 !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > a > .flex-1,
-          .desktop-sidebar-collapsed aside nav > div > div > button > .flex-1,
-          .desktop-sidebar-collapsed aside > div:last-child > a > .flex-1 {
+          .desktop-sidebar-collapsed > aside nav > a > .flex-1,
+          .desktop-sidebar-collapsed > aside nav > div > div > button > .flex-1,
+          .desktop-sidebar-collapsed > aside > div:last-child > a > .flex-1 {
             position: absolute !important;
             left: 56px !important;
             top: 50% !important;
@@ -280,32 +280,32 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             transition: opacity 120ms ease-out, transform 120ms ease-out !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > a:hover > .flex-1,
-          .desktop-sidebar-collapsed aside nav > a:focus-visible > .flex-1,
-          .desktop-sidebar-collapsed aside nav > div > div > button:hover > .flex-1,
-          .desktop-sidebar-collapsed aside nav > div > div > button:focus-visible > .flex-1,
-          .desktop-sidebar-collapsed aside > div:last-child > a:hover > .flex-1,
-          .desktop-sidebar-collapsed aside > div:last-child > a:focus-visible > .flex-1 {
+          .desktop-sidebar-collapsed > aside nav > a:hover > .flex-1,
+          .desktop-sidebar-collapsed > aside nav > a:focus-visible > .flex-1,
+          .desktop-sidebar-collapsed > aside nav > div > div > button:hover > .flex-1,
+          .desktop-sidebar-collapsed > aside nav > div > div > button:focus-visible > .flex-1,
+          .desktop-sidebar-collapsed > aside > div:last-child > a:hover > .flex-1,
+          .desktop-sidebar-collapsed > aside > div:last-child > a:focus-visible > .flex-1 {
             opacity: 1 !important;
             transform: translateY(-50%) translateX(0) !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > a > svg:last-child,
-          .desktop-sidebar-collapsed aside nav > div > div > button > svg:last-child {
+          .desktop-sidebar-collapsed > aside nav > a > svg:last-child,
+          .desktop-sidebar-collapsed > aside nav > div > div > button > svg:last-child {
             display: none !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > div > div {
+          .desktop-sidebar-collapsed > aside nav > div > div {
             margin: 0 !important;
             border-radius: 12px !important;
             overflow: visible !important;
           }
 
-          .desktop-sidebar-collapsed aside nav > div > div > div {
+          .desktop-sidebar-collapsed > aside nav > div > div > div {
             display: none !important;
           }
 
-          .desktop-sidebar-collapsed aside > div:last-child {
+          .desktop-sidebar-collapsed > aside > div:last-child {
             position: relative !important;
             margin-top: auto !important;
             flex-shrink: 0 !important;
@@ -315,7 +315,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             padding: 8px !important;
           }
 
-          .desktop-sidebar-collapsed aside > div:last-child > a {
+          .desktop-sidebar-collapsed > aside > div:last-child > a {
             position: relative !important;
             width: 48px !important;
             height: 44px !important;
@@ -326,11 +326,11 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
             overflow: visible !important;
           }
 
-          .desktop-sidebar-collapsed aside > div:last-child > a:hover {
+          .desktop-sidebar-collapsed > aside > div:last-child > a:hover {
             background-color: rgba(255, 255, 255, 0.10) !important;
           }
 
-          .desktop-sidebar-collapsed aside > div:last-child > a > span:first-child {
+          .desktop-sidebar-collapsed > aside > div:last-child > a > span:first-child {
             width: 32px !important;
             height: 32px !important;
             min-width: 32px !important;
