@@ -79,7 +79,7 @@ begin
   select pg_get_functiondef('public.next_partner_code()'::regprocedure)
   into v_function_def;
 
-  if position("'PT'" in v_function_def) = 0
+  if position('''PT''' in v_function_def) = 0
      or position('partner_code_sequence' in v_function_def) = 0 then
     raise exception 'PT partner code verification failed: next_partner_code() is not using the PT sequence format.';
   end if;
