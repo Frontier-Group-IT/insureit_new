@@ -4,7 +4,8 @@ import { getPartnerWebSession } from "@/lib/partner-web";
 
 export default async function PartnerLayout({ children }: { children: ReactNode }) {
   const { scope } = await getPartnerWebSession();
-  const hideAccount = scope.scope_mode === "hierarchy";
+  const branchPortal = "portal_access_type" in scope && scope.portal_access_type === "branch";
+  const hideAccount = scope.scope_mode === "hierarchy" || branchPortal;
 
   return (
     <>
