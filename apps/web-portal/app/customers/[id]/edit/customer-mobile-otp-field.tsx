@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { Check, Pencil, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { requestCustomerMobileChangeOtp, verifyCustomerMobileChangeOtp } from "./customer-mobile-change-actions";
 
@@ -17,8 +17,9 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const verificationInputRef = useRef<HTMLInputElement>(null);
+  const normalizedInitialMobile = normalizeMobile(initialMobile).slice(0, 10);
   const [editable, setEditable] = useState(false);
-  const [mobile, setMobile] = useState(initialMobile);
+  const [mobile, setMobile] = useState(normalizedInitialMobile);
   const [challengeToken, setChallengeToken] = useState("");
   const [maskedEmail, setMaskedEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -27,13 +28,14 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
   const [verifying, setVerifying] = useState(false);
   const [message, setMessage] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const normalizedMobile = normalizeMobile(mobile).slice(0, 10);
+  const isMobileValid = MOBILE_PATTERN.test(normalizedMobile);
 
   function clearVerification() {
     if (verificationInputRef.current) verificationInputRef.current.value = "";
   }
 
   async function requestOtp() {
-    const normalizedMobile = normalizeMobile(mobile);
     if (!MOBILE_PATTERN.test(normalizedMobile)) {
       setMessage("Enter a valid 10-digit Indian login mobile number.");
       setModalOpen(true);
@@ -58,6 +60,16 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
     }
   }
 
+  function confirmMobileEdit() {
+    if (!isMobileValid || requesting) return;
+    if (normalizedMobile === normalizedInitialMobile) {
+      setEditable(false);
+      setMessage("");
+      return;
+    }
+    void requestOtp();
+  }
+
   useEffect(() => {
     if (cooldown <= 0) return;
     const timer = window.setInterval(() => setCooldown((current) => Math.max(0, current - 1)), 1000);
@@ -70,7 +82,6 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
 
     const onSubmit = (event: SubmitEvent) => {
       const normalizedInitial = normalizeMobile(initialMobile);
-      const normalizedMobile = normalizeMobile(mobile);
       if (normalizedInitial === normalizedMobile) return;
       if (verificationInputRef.current?.value) return;
 
@@ -91,7 +102,7 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
 
     form.addEventListener("submit", onSubmit);
     return () => form.removeEventListener("submit", onSubmit);
-  }, [customerId, initialMobile, mobile]);
+  }, [customerId, initialMobile, normalizedMobile]);
 
   async function verifyOtp() {
     if (!challengeToken) {
@@ -135,11 +146,12 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
             name="phone"
             type="tel"
             required
-            maxLength={13}
+            inputMode="numeric"
+            maxLength={10}
             value={mobile}
             readOnly={!editable}
             onChange={(event) => {
-              setMobile(event.target.value);
+              setMobile(event.target.value.replace(/\D/g, "").slice(0, 10));
               clearVerification();
               setChallengeToken("");
               setMessage("");
@@ -148,18 +160,20 @@ export function CustomerMobileOtpField({ customerId, initialMobile }: { customer
           />
           <button
             type="button"
-            aria-label={editable ? "Stop editing login mobile" : "Edit login mobile"}
-            title={editable ? "Stop editing" : "Edit login mobile"}
+            aria-label={editable ? "Confirm login mobile" : "Edit login mobile"}
+            title={editable ? (isMobileValid ? "Confirm mobile" : "Enter a valid 10-digit mobile") : "Edit login mobile"}
+            disabled={editable && (!isMobileValid || requesting)}
             onClick={() => {
-              setEditable((current) => {
-                const next = !current;
-                if (next) window.setTimeout(() => inputRef.current?.focus(), 0);
-                return next;
-              });
+              if (editable) {
+                confirmMobileEdit();
+                return;
+              }
+              setEditable(true);
+              window.setTimeout(() => inputRef.current?.focus(), 0);
             }}
-            className="grid h-full w-9 shrink-0 place-items-center border-l border-[#D7DFEA] text-[#315FEA] transition hover:bg-[#EEF3FF] hover:text-[#244ED5]"
+            className="grid h-full w-9 shrink-0 place-items-center border-l border-[#D7DFEA] text-[#315FEA] transition hover:bg-[#EEF3FF] hover:text-[#244ED5] disabled:cursor-not-allowed disabled:bg-[#F5F7FA] disabled:text-[#A8B2C3]"
           >
-            <Pencil className="h-3.5 w-3.5" strokeWidth={2} />
+            {editable ? <Check className="h-4 w-4" strokeWidth={2.4} /> : <Pencil className="h-3.5 w-3.5" strokeWidth={2} />}
           </button>
         </div>
         <input ref={verificationInputRef} type="hidden" name="mobile_change_verification" defaultValue="" />
