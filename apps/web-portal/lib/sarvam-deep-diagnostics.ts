@@ -5,7 +5,7 @@ const VOICE_BASE_URL = "https://apps.sarvam.ai";
 const TIMEOUT_MS = 10_000;
 
 export type SarvamDiagnosticProbe = {
-  key: "core" | "scheduling_subscription" | "scheduling_bearer";
+  key: "core" | "scheduling_x_api_key" | "scheduling_subscription" | "scheduling_bearer";
   label: string;
   status: number | null;
   classification: string;
@@ -114,28 +114,33 @@ async function runProbe(
 
 function summarize(probes: SarvamDiagnosticProbe[]) {
   const core = probes.find((probe) => probe.key === "core");
+  const xApiKey = probes.find((probe) => probe.key === "scheduling_x_api_key");
   const subscription = probes.find((probe) => probe.key === "scheduling_subscription");
   const bearer = probes.find((probe) => probe.key === "scheduling_bearer");
+
+  if (xApiKey?.classification === "campaign_reachable") {
+    return "Voice Agents scheduling accepts the configured credential with X-API-Key. This confirms the prior 401 blocker was the scheduling header contract, not the campaign binding. The core API 403 is not a blocker for this product-specific Voice Agents credential.";
+  }
 
   const coreAccepted = core?.classification.startsWith("api_key_accepted") ?? false;
   const schedulingOk = [subscription, bearer].some((probe) => probe?.classification === "campaign_reachable");
 
   if (!coreAccepted) {
-    return "Core Sarvam API authentication did not reach the authenticated resource layer. Check the API key before changing campaign configuration.";
+    return "The core Sarvam API did not accept the configured credential and Voice Agents X-API-Key did not reach the campaign. Keep the campaign paused and inspect the X-API-Key result before changing any credential.";
   }
   if (schedulingOk) {
     return "The API key is accepted and at least one Voice Agents scheduling authentication form can reach the configured campaign.";
   }
   if (subscription?.status === 401 && bearer?.status === 401) {
-    return "The API key is accepted by api.sarvam.ai, but both Voice Agents scheduling authentication forms return 401. This isolates the blocker to the Voice Agents scheduling auth/permission contract rather than the API key itself.";
+    return "The API key is accepted by api.sarvam.ai, but the legacy scheduling authentication forms return 401. Inspect the X-API-Key result because Voice Agents scheduling uses its own API-key header contract.";
   }
-  if (subscription?.status === 403 || bearer?.status === 403) {
-    return "Core API authentication is accepted, while the Voice Agents scheduling API reports forbidden access. Check Voice Agents product/workspace/campaign permissions with Sarvam.";
+  if (xApiKey?.status === 403 || subscription?.status === 403 || bearer?.status === 403) {
+    return "Voice Agents scheduling reports forbidden access. Check the Voice Agents workspace key, product access and campaign permissions.";
   }
-  if (subscription?.status === 404 || bearer?.status === 404) {
-    return "Core API authentication is accepted, while the Voice Agents campaign binding is not found. Recheck organisation, workspace and campaign identifiers.";
+  if (xApiKey?.status === 404 || subscription?.status === 404 || bearer?.status === 404) {
+    return "A scheduling request reached Voice Agents but the configured campaign binding was not found. Recheck organisation, workspace and campaign identifiers.";
   }
-  return "The API key reaches Sarvam core successfully, but the Voice Agents scheduling probes did not reach the configured campaign. Use the individual sanitized statuses below for provider escalation.";
+  return "The Voice Agents scheduling probes did not reach the configured campaign. Use the sanitized statuses and request identifiers below for provider escalation.";
 }
 
 export async function runSarvamDeepDiagnostics(): Promise<SarvamDeepDiagnostics> {
@@ -154,6 +159,13 @@ export async function runSarvamDeepDiagnostics(): Promise<SarvamDeepDiagnostics>
       coreUrl,
       { "api-subscription-key": apiKey },
       classifyCore,
+    ),
+    runProbe(
+      "scheduling_x_api_key",
+      "Voice Agents scheduling · X-API-Key",
+      schedulingUrl,
+      { "X-API-Key": apiKey },
+      classifyScheduling,
     ),
     runProbe(
       "scheduling_subscription",
