@@ -8,6 +8,7 @@ const LIVE_SEARCH_PATHS = new Set([
   "/partner/renewals",
   "/partner/renewals/external",
   "/partner/search",
+  "/partner/vehicles",
 ]);
 
 const SEARCH_DEBOUNCE_MS = 350;
