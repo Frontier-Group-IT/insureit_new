@@ -119,13 +119,6 @@ export default async function PartnerPayoutPage({ searchParams }: { searchParams
             />
           </section>
 
-          {payout.needs_review_count > 0 ? (
-            <section className="rounded-xl border border-[#F0D7AE] bg-[#FFF8EC] px-4 py-3 sm:px-5">
-              <p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#99600E]">Commercial Review</p>
-              <p className="mt-1 text-[10.5px] font-semibold leading-4 text-[#80511A]">{payout.needs_review_count} payout record{payout.needs_review_count === 1 ? "" : "s"} require commercial review before they should be treated as final.</p>
-            </section>
-          ) : null}
-
           <section className="overflow-hidden rounded-xl border border-[#DCE5F1] bg-white shadow-[0_5px_16px_rgba(31,65,115,0.05)]">
             <div className="flex flex-col gap-3 border-b border-[#E4EAF2] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
               <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center">
