@@ -28,6 +28,8 @@ assert.match(accountsWorkbook, /book_append_sheet\(workbook, payoutSheet, "Pay-O
 assert.match(accountsWorkbook, /"Projected Gross Payout"/, "Pay-Out sheet must expose system projected gross payout.");
 assert.match(accountsUpload, /workbook\.SheetNames\.includes\("Pay-In"\)/, "Upload validation must require the Pay-In sheet.");
 assert.match(accountsUpload, /workbook\.SheetNames\.includes\("Pay-Out"\)/, "Upload validation must require the Pay-Out sheet.");
+assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must support grouping one insurer UTR across multiple policy rows.");
+assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must support grouping one intermediary UTR across multiple payable rows.");
 assert.doesNotMatch(accountsUpload, /\.insert\(|\.update\(|\.delete\(|\.rpc\(/, "Accounts workbook preview must remain read-only until the explicit Confirm Import posting stage is implemented.");
 
 for (const aggregate of ["customer_stats", "vehicle_stats", "policy_stats", "claim_stats", "onboarding_stats", "task_stats", "document_stats", "activity_stats"]) {
