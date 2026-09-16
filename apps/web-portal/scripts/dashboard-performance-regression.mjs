@@ -4,6 +4,9 @@ import { readFile } from "node:fs/promises";
 const dashboardPage = await readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8");
 const dashboardData = await readFile(new URL("../lib/operations-dashboard.ts", import.meta.url), "utf8");
 const accountsDashboardData = await readFile(new URL("../lib/accounts-dashboard.ts", import.meta.url), "utf8");
+const accountsPage = await readFile(new URL("../app/accounts/page.tsx", import.meta.url), "utf8");
+const accountsWorkbook = await readFile(new URL("../app/accounts/reconciliation-template/route.ts", import.meta.url), "utf8");
+const accountsUpload = await readFile(new URL("../app/accounts/reconciliation-upload-actions.ts", import.meta.url), "utf8");
 const dashboardMigration = await readFile(
   new URL("../../../supabase/migrations/20260831174500_optimize_operations_dashboard_single_pass.sql", import.meta.url),
   "utf8",
@@ -55,6 +58,16 @@ assert.match(
   /function payoutValue\(row: PayoutRow\) \{\s*return numberValue\(row\.gross_payout\);\s*\}/s,
   "Accounts dashboard projected payout must resolve directly from gross_payout.",
 );
+
+assert.doesNotMatch(accountsPage, /href="\/reconciliation"/, "New Accounts workflow must not redirect to legacy reconciliation.");
+assert.doesNotMatch(accountsPage, /href="\/accounts\/billing"/, "New Accounts workflow must not redirect to legacy billing.");
+assert.doesNotMatch(accountsPage, /href="\/accounts\/receivables"/, "New Accounts workflow must not redirect to legacy receivables.");
+assert.match(accountsWorkbook, /book_append_sheet\(workbook, payinSheet, "Pay-In"\)/, "Accounts workbook must contain a Pay-In sheet.");
+assert.match(accountsWorkbook, /book_append_sheet\(workbook, payoutSheet, "Pay-Out"\)/, "Accounts workbook must contain a Pay-Out sheet.");
+assert.match(accountsWorkbook, /"Projected Gross Payout"/, "Pay-Out sheet must expose system projected gross payout.");
+assert.match(accountsUpload, /workbook\.SheetNames\.includes\("Pay-In"\)/, "Upload validation must require the Pay-In sheet.");
+assert.match(accountsUpload, /workbook\.SheetNames\.includes\("Pay-Out"\)/, "Upload validation must require the Pay-Out sheet.");
+assert.doesNotMatch(accountsUpload, /\.insert\(|\.update\(|\.delete\(|\.rpc\(/, "Preview validation must remain read-only until Confirm Import is implemented.");
 
 for (const aggregate of [
   "customer_stats",
