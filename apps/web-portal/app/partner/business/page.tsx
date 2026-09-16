@@ -138,8 +138,6 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
   const newPolicies = analysisPolicies.filter(isNewBusiness);
   const renewalPolicies = analysisPolicies.filter(isRenewal);
-  const newPremium = newPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
-  const renewalPremium = renewalPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
   const analysisPremium = analysisPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0);
   const averagePremium = analysisPolicies.length ? analysisPremium / analysisPolicies.length : 0;
 
@@ -164,16 +162,16 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
   ).slice(0, 5);
   const insurerMix = aggregateBy(analysisPolicies, (policy) => policy.insurer_name || "Unassigned insurer").slice(0, 5);
 
-  const monthlySplit = performance.trend.map((item) => {
+  // Renewal premium is intentionally treated as NIL until a canonical renewal-premium concept is introduced.
+  const monthlyPremiumTrend = performance.trend.map((item) => {
     const monthPolicies = portfolio.filter((policy) => policyDate(policy)?.slice(0, 7) === item.month);
     return {
       month: item.month,
-      newPremium: monthPolicies.filter(isNewBusiness).reduce((sum, policy) => sum + numeric(policy.premium_amount), 0),
-      renewalPremium: monthPolicies.filter(isRenewal).reduce((sum, policy) => sum + numeric(policy.premium_amount), 0),
+      businessPremium: monthPolicies.reduce((sum, policy) => sum + numeric(policy.premium_amount), 0),
+      renewalPremium: 0,
     };
   });
-  const maxSplitPremium = Math.max(1, ...monthlySplit.map((item) => item.newPremium + item.renewalPremium));
-  const hasBusinessTypeClassification = newPolicies.length + renewalPolicies.length > 0;
+  const maxTrendPremium = Math.max(1, ...monthlyPremiumTrend.map((item) => item.businessPremium));
   const analysisPeriodLabel = hasRange ? `${query.from} to ${query.to}` : "Last 6 months";
 
   const generatedDay = performance.generated_at?.slice(0, 10);
@@ -197,18 +195,11 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
 
   const metrics = [
     {
-      label: "New Business Premium",
-      value: currency(newPremium),
-      meta: `${newPolicies.length} classified policies · ${analysisPeriodLabel}`,
+      label: "Business Premium",
+      value: currency(analysisPremium),
+      meta: `${analysisPolicies.length} recorded policies · ${analysisPeriodLabel}`,
       tone: "blue" as const,
       icon: BarChart3,
-    },
-    {
-      label: "Renewal Business Premium",
-      value: currency(renewalPremium),
-      meta: `${renewalPolicies.length} classified policies · ${analysisPeriodLabel}`,
-      tone: "green" as const,
-      icon: Repeat2,
     },
     {
       label: "Average Premium per Policy",
@@ -233,48 +224,31 @@ export default async function PartnerBusinessPage({ searchParams }: { searchPara
           <h1 className="text-[20px] font-extrabold leading-tight tracking-[-0.03em] text-[#142B50]">Business performance</h1>
         </section>
 
-        {/* Header KPI strip intentionally unchanged. */}
-        <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] sm:grid-cols-2 xl:grid-cols-4">
+        <section className="grid overflow-hidden rounded-xl border border-[#E2E8F0] bg-white shadow-[0_4px_14px_rgba(25,50,90,0.05)] md:grid-cols-3">
           {metrics.map((metric) => <InsightMetricCard key={metric.label} {...metric} />)}
         </section>
 
         <ContributionPanel icon={TrendingUp} title="Top Insurer Contribution" subtitle="Premium contribution by insurer" rows={insurerMix} totalPremium={analysisPremium} />
 
         <section className="grid gap-3 xl:grid-cols-[1.15fr_.88fr_1fr]">
-          <InsightPanel icon={BarChart3} title="New vs Renewal Premium Trend" subtitle="Monthly premium split across new and renewal business">
+          <InsightPanel icon={BarChart3} title="Business Premium Trend" subtitle="Monthly business premium; renewal premium is currently treated as nil">
             <div className="flex items-center gap-3 text-[8px] font-bold text-[#61728A]">
-              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />New Business</span>
-              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#7145E9]" />Renewal Business</span>
+              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#1689EA]" />Business Premium</span>
+              <span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#7145E9]" />Renewal Premium · ₹0</span>
             </div>
-            {hasBusinessTypeClassification ? (
-              <div className="flex min-h-[175px] items-end gap-1 overflow-x-auto border-t border-[#EEF2F6] pt-3">
-                {monthlySplit.map((item) => {
-                  const total = item.newPremium + item.renewalPremium;
-                  const totalHeight = Math.max(total > 0 ? 6 : 0, Math.round((total / maxSplitPremium) * 108));
-                  const newHeight = total > 0 ? Math.round((item.newPremium / total) * totalHeight) : 0;
-                  const renewalHeight = Math.max(0, totalHeight - newHeight);
-                  return (
-                    <div key={item.month} className="flex min-w-[42px] flex-1 flex-col items-center">
-                      <div className="flex h-[118px] w-full items-end justify-center px-1">
-                        <div className="flex w-full max-w-[28px] flex-col-reverse overflow-hidden rounded-t-md" style={{ height: totalHeight }}>
-                          {newHeight > 0 ? <div className="w-full bg-[#1689EA]" style={{ height: newHeight }} /> : null}
-                          {renewalHeight > 0 ? <div className="w-full bg-[#8A63EE]" style={{ height: renewalHeight }} /> : null}
-                        </div>
-                      </div>
-                      <p className="mt-1 text-[8px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
+            <div className="flex min-h-[175px] items-end gap-1 overflow-x-auto border-t border-[#EEF2F6] pt-3">
+              {monthlyPremiumTrend.map((item) => {
+                const totalHeight = Math.max(item.businessPremium > 0 ? 6 : 0, Math.round((item.businessPremium / maxTrendPremium) * 108));
+                return (
+                  <div key={item.month} className="flex min-w-[42px] flex-1 flex-col items-center">
+                    <div className="flex h-[118px] w-full items-end justify-center px-1">
+                      <div className="w-full max-w-[28px] overflow-hidden rounded-t-md bg-[#1689EA]" style={{ height: totalHeight }} />
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="grid min-h-[175px] place-items-center rounded-lg border border-dashed border-[#D9E2EE] bg-[#FAFBFD] px-4 text-center">
-                <div>
-                  <Layers3 className="mx-auto h-5 w-5 text-[#8A99AE]" />
-                  <p className="mt-2 text-[10px] font-extrabold text-[#31445F]">Business-type split is not available yet</p>
-                  <p className="mt-1 text-[8px] font-medium text-[#7D8CA1]">This chart populates when policies are classified as new/fresh or renewal business.</p>
-                </div>
-              </div>
-            )}
+                    <p className="mt-1 text-[8px] font-extrabold text-[#223755]">{shortMonth(item.month)}</p>
+                  </div>
+                );
+              })}
+            </div>
           </InsightPanel>
 
           <section className="rounded-xl border border-[#D8EADF] bg-white p-3.5 shadow-[0_4px_14px_rgba(25,50,90,0.04)]">
@@ -368,7 +342,7 @@ const insightToneClasses: Record<InsightTone, string> = {
 
 function InsightMetricCard({ label, value, meta, tone, icon: Icon }: { label: string; value: number | string; meta: string; tone: InsightTone; icon: InsightIcon }) {
   return (
-    <div className="flex min-h-[98px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(n+3)]:border-b-0 xl:border-b-0 xl:border-r xl:last:border-r-0">
+    <div className="flex min-h-[98px] items-center gap-3 border-b border-[#E8EDF3] px-4 py-3 md:border-b-0 md:border-r md:last:border-r-0">
       <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${insightToneClasses[tone]}`}><Icon className="h-4.5 w-4.5" /></span>
       <div className="min-w-0 flex-1">
         <p className="text-[8px] font-black uppercase tracking-[0.06em] text-[#50637F]">{label}</p>
