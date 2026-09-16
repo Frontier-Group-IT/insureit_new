@@ -5,7 +5,6 @@ import { FileText } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { claimStatuses, operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
-import { PartnerAutocompleteInput } from "@/components/partner-portal/partner-autocomplete-input";
 
 export type PartnerClaimPortfolioRow = {
   id: string;
@@ -107,14 +106,13 @@ export function PartnerClaimsPortfolio({ rows }: { rows: PartnerClaimPortfolioRo
             </div>
 
             <div className="flex min-w-0 flex-1 items-center gap-2 max-md:flex-col max-md:items-stretch lg:justify-end">
-              <PartnerAutocompleteInput
-                scope="claims"
+              <input
                 value={query}
-                onValueChange={setQuery}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search by customer, vehicle no., claim no., policy no., control no."
-                ariaLabel="Search claims"
-                wrapperClassName="relative min-w-0 flex-1 lg:max-w-[520px]"
-                inputClassName="h-10 w-full rounded-lg border border-[#CCD6E4] bg-white pl-9 pr-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100"
+                aria-label="Search claims"
+                autoComplete="off"
+                className="h-10 min-w-0 flex-1 rounded-lg border border-[#CCD6E4] bg-white px-3.5 text-[12px] font-normal text-[#071D49] shadow-sm outline-none placeholder:text-[#7A8797] focus:border-[#174EA6] focus:ring-4 focus:ring-blue-100 lg:max-w-[520px]"
               />
               <select value={selectedStage || "all"} onChange={(event) => setSelectedStage(event.target.value === "all" ? "" : event.target.value)} aria-label="Filter by claim stage" className="h-10 w-[220px] rounded-lg border border-[#D4DDE9] bg-white px-3 text-[12px] font-medium text-[#071D49] shadow-sm outline-none focus:border-[#174EA6] max-md:w-full">
                 <option value="all">All claim stages</option>

@@ -1,8 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState, useTransition } from "react";
+import { Search, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { PartnerAutocompleteInput } from "@/components/partner-portal/partner-autocomplete-input";
 
 const SEARCH_DEBOUNCE_MS = 350;
 
@@ -50,20 +50,36 @@ export function PayoutSearch({ initialQuery }: { initialQuery: string }) {
     replaceSearch(value);
   };
 
+  const clear = () => {
+    setValue("");
+    replaceSearch("");
+  };
+
   return (
     <form onSubmit={submit} className="w-full sm:max-w-[320px]" role="search">
-      <PartnerAutocompleteInput
-        scope="payout"
-        name="q"
-        value={value}
-        onValueChange={setValue}
-        placeholder="Customer, policy, claim, vehicle or insurer"
-        ariaLabel="Search payout records"
-        inputClassName="h-9 w-full rounded-lg border border-[#DCE5EF] bg-white pl-9 pr-9 text-[9px] font-medium text-[#213653] outline-none transition placeholder:text-[#8593A8] focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
-        searchIconClassName="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8593A8]"
-        showClear
-      />
-      {isPending ? <span className="sr-only" aria-live="polite">Updating payout search results</span> : null}
+      <div className="relative min-w-0">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#8593A8]" />
+        <input
+          name="q"
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder="Customer, policy, claim, vehicle or insurer"
+          autoComplete="off"
+          aria-label="Search payout records"
+          className="h-9 w-full rounded-lg border border-[#DCE5EF] bg-white pl-9 pr-9 text-[9px] font-medium text-[#213653] outline-none transition placeholder:text-[#8593A8] focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+        />
+        {value ? (
+          <button
+            type="button"
+            onClick={clear}
+            aria-label="Clear payout search"
+            className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[#7D8DA4] transition hover:bg-[#EEF3F8] hover:text-[#3156B8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+        {isPending ? <span className="sr-only" aria-live="polite">Updating payout search results</span> : null}
+      </div>
     </form>
   );
 }
