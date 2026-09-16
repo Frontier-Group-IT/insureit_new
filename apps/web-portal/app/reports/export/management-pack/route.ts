@@ -21,14 +21,14 @@ export async function GET(request: NextRequest) {
   const archived = snapshotId ? await loadManagementPackSnapshot(profile.id, snapshotId) : null;
   if (snapshotId && !archived) return new Response("Snapshot not found", { status: 404 });
   const pack = archived?.pack ?? await loadManagementPack(profile, { month });
-  const dataRows = managementPackCsvRows(pack);
+  const dataRows = managementPackCsvRows(pack, archived?.snapshotVersion);
   const rows: Array<Array<string | number>> = [
     ["Month", pack.filters.month],
     ["From", pack.filters.fromDate],
     ["To", pack.filters.toDate],
     ["Scope", pack.scopeMode],
     ["Snapshot", archived ? "Frozen" : "Live"],
-    ...(archived ? [["Captured", archived.capturedAt] as Array<string | number>] : []),
+    ...(archived ? [["Snapshot Version", archived.snapshotVersion] as Array<string | number>, ["Captured", archived.capturedAt] as Array<string | number>] : []),
     [],
     ["Section", "Metric", "Value"],
     ...dataRows,
