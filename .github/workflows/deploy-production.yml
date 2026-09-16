@@ -211,6 +211,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260914194500_partner_branch_onboarding.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-branch-onboarding.yml"
             echo "Partner Branch onboarding migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260916113000_reports_net_premium_consistency.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-reports-net-premium-consistency.yml"
+            echo "Reports net premium consistency migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
