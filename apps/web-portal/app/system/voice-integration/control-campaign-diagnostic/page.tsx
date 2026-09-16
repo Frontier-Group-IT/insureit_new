@@ -113,7 +113,7 @@ export default async function SarvamControlCampaignDiagnosticPage({ searchParams
 
           {state === "done" ? (
             <div className="mt-4 rounded-xl border border-[#D9E5F3] bg-[#F7FAFE] p-3.5 text-[10px] leading-5 text-[#475569]">
-              <strong>Interpretation:</strong> if webhook listing remains HTTP 500 but stream validation returns HTTP 400/422, then X-API-Key, workspace routing, campaign lookup, and the CRM stream endpoint are all working; the defect is isolated to Sarvam's webhook-delivery listing path. If both return HTTP 500, the provider failure is broader inside scheduling. HTTP 401/403 on stream validation would put authorization back in scope.
+              <strong>Interpretation:</strong> if webhook listing remains HTTP 500 but stream validation returns HTTP 400/422, then X-API-Key, workspace routing, campaign lookup, and the CRM stream endpoint are all working; the defect is isolated to Sarvam&apos;s webhook-delivery listing path. If both return HTTP 500, the provider failure is broader inside scheduling. HTTP 401/403 on stream validation would put authorization back in scope.
             </div>
           ) : null}
         </Card>
