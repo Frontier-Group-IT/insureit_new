@@ -106,13 +106,14 @@ function escapeHtml(value: string) {
 
 async function loadEditorAndCustomer(customerId: string) {
   const profile = await getCustomerManager(customerId);
-  if (!profile?.id) return { error: "You are not authorized to update this customer." } as const;
+  const editorId = profile?.id;
+  if (!editorId) return { error: "You are not authorized to update this customer." } as const;
 
   const admin = createSupabaseAdminClient();
   const [{ data: customer }, { data: editorRecord }, editorAuth] = await Promise.all([
     admin.from("customers").select("id, customer_code, contact_name, company_name, phone, profile_id").eq("id", customerId).maybeSingle<{ id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; profile_id: string | null }>(),
-    admin.from("profiles").select("id, full_name, email").eq("id", profile.id).maybeSingle<{ id: string; full_name: string; email: string | null }>(),
-    admin.auth.admin.getUserById(profile.id),
+    admin.from("profiles").select("id, full_name, email").eq("id", editorId).maybeSingle<{ id: string; full_name: string; email: string | null }>(),
+    admin.auth.admin.getUserById(editorId),
   ]);
   if (!customer) return { error: "Customer could not be loaded." } as const;
 
@@ -121,10 +122,11 @@ async function loadEditorAndCustomer(customerId: string) {
 
   return {
     profile,
+    editorId,
     admin,
     customer,
     editorEmail,
-    editorName: editorRecord?.full_name?.trim() || profile.full_name || "INSUREIT user",
+    editorName: editorRecord?.full_name?.trim() || profile?.full_name || "INSUREIT user",
   } as const;
 }
 
@@ -164,7 +166,7 @@ export async function requestCustomerMobileChangeOtp(customerId: string, propose
   const now = Date.now();
   const challenge: ChallengePayload = {
     kind: "customer-mobile-otp",
-    editorId: context.profile.id,
+    editorId: context.editorId,
     customerId,
     newMobile,
     otpHash: hashOtp(nonce, otp),
@@ -201,7 +203,7 @@ export async function requestCustomerMobileChangeOtp(customerId: string, propose
       idempotencyKey: `customer-mobile-change-otp-${customerId}-${nonce}`,
     });
   } catch (error) {
-    console.error("customer_mobile_change_otp_email_failed", { customerId, editorProfileId: context.profile.id, error: error instanceof Error ? error.message : "unknown" });
+    console.error("customer_mobile_change_otp_email_failed", { customerId, editorProfileId: context.editorId, error: error instanceof Error ? error.message : "unknown" });
     return { ok: false, error: "OTP could not be sent to your registered email. Please try again." };
   }
 
@@ -218,7 +220,7 @@ export async function verifyCustomerMobileChangeOtp(customerId: string, challeng
   if ("error" in context) return { ok: false, error: context.error };
 
   const challenge = readSignedPayload<ChallengePayload>(challengeToken);
-  if (!challenge || challenge.kind !== "customer-mobile-otp" || challenge.customerId !== customerId || challenge.editorId !== context.profile.id) {
+  if (!challenge || challenge.kind !== "customer-mobile-otp" || challenge.customerId !== customerId || challenge.editorId !== context.editorId) {
     return { ok: false, error: "This OTP request is invalid. Please request a new OTP." };
   }
   if (Date.now() > challenge.expiresAt) return { ok: false, error: "This OTP has expired. Please request a new OTP." };
@@ -240,7 +242,7 @@ export async function verifyCustomerMobileChangeOtp(customerId: string, challeng
   const now = Date.now();
   const authorization: AuthorizationPayload = {
     kind: "customer-mobile-authorized",
-    editorId: context.profile.id,
+    editorId: context.editorId,
     customerId,
     newMobile: challenge.newMobile,
     nonce: challenge.nonce,
