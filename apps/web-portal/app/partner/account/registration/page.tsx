@@ -1,8 +1,6 @@
 import {
-  BadgeCheck,
   CalendarDays,
   Check,
-  ClipboardCheck,
   Eye,
   FileText,
   IdCard,
