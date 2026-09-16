@@ -1,25 +1,20 @@
 import Link from "next/link";
-import {
-  CarFront,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  ShieldAlert,
-  SlidersHorizontal,
-  Wrench,
-} from "lucide-react";
+import { CarFront, ChevronLeft, ChevronRight, Search, ShieldAlert, Wrench } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebVehicles } from "@/lib/partner-vehicles";
+import { VehicleFilters } from "./vehicle-filters";
+import { parseVehicleStatusFilter, parseVehicleTypeFilter, type VehicleStatusFilter, type VehicleTypeFilter } from "./vehicle-filter-types";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const PAGE_SIZE = 25;
 
-function buildHref(query: string, page: number) {
+function buildHref(query: string, page: number, status: VehicleStatusFilter, vehicleType: VehicleTypeFilter) {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
+  if (status !== "all") params.set("status", status);
+  if (vehicleType !== "all") params.set("vehicleType", vehicleType);
   if (page > 1) params.set("page", String(page));
   const value = params.toString();
   return value ? `/partner/vehicles?${value}` : "/partner/vehicles";
@@ -33,20 +28,24 @@ function isRegistrationPending(status: string | null) {
 export default async function PartnerVehiclesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; page?: string; status?: string; vehicleType?: string }>;
 }) {
   const params = await searchParams;
   const query = (params.q ?? "").trim();
+  const status = parseVehicleStatusFilter(params.status);
+  const vehicleType = parseVehicleTypeFilter(params.vehicleType);
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-  const { rows, total } = await listPartnerWebVehicles({ query, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const { rows, total, counts } = await listPartnerWebVehicles({
+    query,
+    status,
+    vehicleType,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  });
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const start = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const end = Math.min(safePage * PAGE_SIZE, total);
-
-  const visibleRegistered = rows.filter((vehicle) => !isRegistrationPending(vehicle.registration_status)).length;
-  const visiblePending = rows.filter((vehicle) => isRegistrationPending(vehicle.registration_status)).length;
-  const visibleUninsured = rows.filter((vehicle) => Number(vehicle.policy_count || 0) === 0).length;
 
   return (
     <PartnerPortalShell title="Vehicle">
@@ -59,118 +58,36 @@ export default async function PartnerVehiclesPage({
               </span>
               <h1 className="whitespace-nowrap text-[18px] font-extrabold tracking-[-0.02em] text-[#18243A]">Vehicle Portfolio</h1>
             </div>
-
             <form className="relative w-full lg:max-w-[390px]" action="/partner/vehicles">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#73849B]" />
-              <input
-                name="q"
-                defaultValue={query}
-                placeholder="Search registration, chassis, engine, customer, permit, make or model"
-                className="h-11 w-full rounded-[13px] border border-[#CFDAE7] bg-white pl-10 pr-4 text-[11px] font-semibold text-[#243A58] outline-none transition placeholder:text-[#95A2B5] focus:border-[#7FAADD] focus:ring-2 focus:ring-[#2E7ED0]/10"
-              />
+              <input name="q" defaultValue={query} placeholder="Search registration, chassis, engine, customer, permit, make or model" className="h-11 w-full rounded-[13px] border border-[#CFDAE7] bg-white pl-10 pr-4 text-[11px] font-semibold text-[#243A58] outline-none transition placeholder:text-[#95A2B5] focus:border-[#7FAADD] focus:ring-2 focus:ring-[#2E7ED0]/10" />
+              {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
+              {vehicleType !== "all" ? <input type="hidden" name="vehicleType" value={vehicleType} /> : null}
             </form>
           </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap xl:justify-end">
-            <button
-              type="button"
-              className="inline-flex h-11 min-w-[190px] items-center justify-between rounded-[13px] border border-[#CFDAE7] bg-white px-3.5 text-[11px] font-bold text-[#344761]"
-              aria-label="All vehicle types"
-            >
-              <span className="flex items-center gap-2.5">
-                <SlidersHorizontal className="h-4 w-4 text-[#6F8199]" />
-                All vehicle types
-              </span>
-              <ChevronDown className="h-4 w-4 text-[#344761]" />
-            </button>
-
-            <div className="flex flex-wrap items-center gap-1 rounded-[14px] border border-[#CFDAE7] bg-[#F8FAFD] p-1">
-              <span className="inline-flex h-9 items-center rounded-[10px] bg-[#153E6D] px-3.5 text-[10px] font-extrabold text-white">
-                All <span className="ml-1.5 opacity-90">{total}</span>
-              </span>
-              <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
-                Registered <span className="ml-1.5 text-[#91A0B3]">{visibleRegistered}</span>
-              </span>
-              <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
-                RC pending <span className="ml-1.5 text-[#91A0B3]">{visiblePending}</span>
-              </span>
-              <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
-                Uninsured <span className="ml-1.5 text-[#91A0B3]">{visibleUninsured}</span>
-              </span>
-            </div>
-          </div>
+          <VehicleFilters status={status} vehicleType={vehicleType} counts={counts} />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] border-collapse text-left">
-            <thead>
-              <tr className="bg-[#F7F9FC] text-[9px] font-black uppercase tracking-[0.04em] text-[#6E819B]">
-                <th className="px-4 py-3 sm:px-6">Vehicle</th>
-                <th className="px-4 py-3">Customer</th>
-                <th className="px-4 py-3">Make / Model</th>
-                <th className="px-4 py-3">Registration</th>
-                <th className="px-4 py-3 sm:pr-6">Next Action</th>
-              </tr>
-            </thead>
+            <thead><tr className="bg-[#F7F9FC] text-[9px] font-black uppercase tracking-[0.04em] text-[#6E819B]"><th className="px-4 py-3 sm:px-6">Vehicle</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Make / Model</th><th className="px-4 py-3">Registration</th><th className="px-4 py-3 sm:pr-6">Next Action</th></tr></thead>
             <tbody className="divide-y divide-[#E7ECF2]">
               {rows.map((vehicle) => {
                 const pending = isRegistrationPending(vehicle.registration_status);
-                const vehicleType = vehicle.vehicle_type || "—";
                 const vehicleLabel = pending ? "Registration pending" : vehicle.vehicle_no || "—";
                 const makeModel = [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "—";
                 const detailHref = `/partner/vehicles/${encodeURIComponent(vehicle.vehicle_id)}?customer=${encodeURIComponent(vehicle.customer_id)}`;
-
                 return (
                   <tr key={vehicle.vehicle_id} className="text-[11px] text-[#273B56] transition hover:bg-[#FBFCFE]">
-                    <td className="px-4 py-3.5 sm:px-6">
-                      <Link href={detailHref} prefetch={false} className="group block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
-                        <div className="font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A] transition group-hover:text-[#1458A6] group-hover:underline">{vehicleLabel}</div>
-                        <div className="mt-1 text-[9px] font-medium uppercase text-[#8190A5]">{vehicleType}</div>
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 font-semibold text-[#31435B]">
-                      <Link href={detailHref} prefetch={false} className="block rounded-md py-1 transition hover:text-[#1458A6]">{vehicle.customer_name || "—"}</Link>
-                    </td>
-                    <td className="px-4 py-3.5 font-semibold text-[#2C3C55]">
-                      <Link href={detailHref} prefetch={false} className="block rounded-md py-1 transition hover:text-[#1458A6]">{makeModel}</Link>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <Link href={detailHref} prefetch={false} className="inline-block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20">
-                        {pending ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F2C85C] bg-[#FFF9E9] px-2.5 py-1 text-[9.5px] font-extrabold text-[#A85A13]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#B77B45]" />
-                            RC pending
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#98E7C3] bg-[#EDFFF5] px-2.5 py-1 text-[9.5px] font-extrabold text-[#16775D]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#49AE8C]" />
-                            Registered
-                          </span>
-                        )}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3.5 sm:pr-6">
-                      <Link
-                        href={`/partner/customers/${vehicle.customer_id}/fleet`}
-                        prefetch={false}
-                        className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold transition hover:underline ${pending ? "text-[#C95A0A]" : "text-[#078161]"}`}
-                      >
-                        {pending ? <ShieldAlert className="h-3.5 w-3.5" /> : <Wrench className="h-3.5 w-3.5" />}
-                        {pending ? "Update RC" : "Maintained"}
-                      </Link>
-                    </td>
+                    <td className="px-4 py-3.5 sm:px-6"><Link href={detailHref} prefetch={false} className="group block rounded-md"><div className="font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A] group-hover:text-[#1458A6] group-hover:underline">{vehicleLabel}</div><div className="mt-1 text-[9px] font-medium uppercase text-[#8190A5]">{vehicle.vehicle_type || "—"}</div></Link></td>
+                    <td className="px-4 py-3.5 font-semibold text-[#31435B]"><Link href={detailHref} prefetch={false} className="block rounded-md py-1 transition hover:text-[#1458A6]">{vehicle.customer_name || "—"}</Link></td>
+                    <td className="px-4 py-3.5 font-semibold text-[#2C3C55]"><Link href={detailHref} prefetch={false} className="block rounded-md py-1 transition hover:text-[#1458A6]">{makeModel}</Link></td>
+                    <td className="px-4 py-3.5"><Link href={detailHref} prefetch={false} className="inline-block rounded-full">{pending ? <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F2C85C] bg-[#FFF9E9] px-2.5 py-1 text-[9.5px] font-extrabold text-[#A85A13]"><span className="h-1.5 w-1.5 rounded-full bg-[#B77B45]" />RC pending</span> : <span className="inline-flex items-center gap-1.5 rounded-full border border-[#98E7C3] bg-[#EDFFF5] px-2.5 py-1 text-[9.5px] font-extrabold text-[#16775D]"><span className="h-1.5 w-1.5 rounded-full bg-[#49AE8C]" />Registered</span>}</Link></td>
+                    <td className="px-4 py-3.5 sm:pr-6"><Link href={`/partner/customers/${vehicle.customer_id}/fleet`} prefetch={false} className={`inline-flex items-center gap-1.5 text-[10px] font-extrabold transition hover:underline ${pending ? "text-[#C95A0A]" : "text-[#078161]"}`}>{pending ? <ShieldAlert className="h-3.5 w-3.5" /> : <Wrench className="h-3.5 w-3.5" />}{pending ? "Update RC" : "Maintained"}</Link></td>
                   </tr>
                 );
               })}
-              {rows.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-20 text-center">
-                    <CarFront className="mx-auto h-8 w-8 text-[#A5B5C8]" />
-                    <p className="mt-3 text-[12px] font-extrabold text-[#253E61]">No vehicles found</p>
-                    <p className="mt-1 text-[10px] text-[#8090A7]">Try adjusting your search.</p>
-                  </td>
-                </tr>
-              ) : null}
+              {rows.length === 0 ? <tr><td colSpan={5} className="px-4 py-20 text-center"><CarFront className="mx-auto h-8 w-8 text-[#A5B5C8]" /><p className="mt-3 text-[12px] font-extrabold text-[#253E61]">No vehicles found</p><p className="mt-1 text-[10px] text-[#8090A7]">Try adjusting your filters or search.</p></td></tr> : null}
             </tbody>
           </table>
         </div>
@@ -178,21 +95,9 @@ export default async function PartnerVehiclesPage({
         <div className="flex flex-col gap-3 border-t border-[#E6EDF5] px-5 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p className="text-[10px] font-medium text-[#667B98]">Showing {start}-{end} of {total}</p>
           <div className="flex items-center gap-2">
-            <Link
-              aria-disabled={safePage <= 1}
-              href={safePage <= 1 ? buildHref(query, 1) : buildHref(query, safePage - 1)}
-              className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[10px] font-bold ${safePage <= 1 ? "pointer-events-none border-[#E4EAF1] text-[#B0BBC9]" : "border-[#D7E1EC] text-[#536A88] hover:bg-[#F7FAFD]"}`}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />Previous
-            </Link>
+            <Link aria-disabled={safePage <= 1} href={buildHref(query, Math.max(1, safePage - 1), status, vehicleType)} className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[10px] font-bold ${safePage <= 1 ? "pointer-events-none border-[#E4EAF1] text-[#B0BBC9]" : "border-[#D7E1EC] text-[#536A88] hover:bg-[#F7FAFD]"}`}><ChevronLeft className="h-3.5 w-3.5" />Previous</Link>
             <span className="min-w-[42px] text-center text-[10px] font-extrabold text-[#344D6D]">{safePage} / {totalPages}</span>
-            <Link
-              aria-disabled={safePage >= totalPages}
-              href={safePage >= totalPages ? buildHref(query, safePage) : buildHref(query, safePage + 1)}
-              className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[10px] font-bold ${safePage >= totalPages ? "pointer-events-none border-[#E4EAF1] text-[#B0BBC9]" : "border-[#D7E1EC] text-[#536A88] hover:bg-[#F7FAFD]"}`}
-            >
-              Next<ChevronRight className="h-3.5 w-3.5" />
-            </Link>
+            <Link aria-disabled={safePage >= totalPages} href={buildHref(query, Math.min(totalPages, safePage + 1), status, vehicleType)} className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-[10px] font-bold ${safePage >= totalPages ? "pointer-events-none border-[#E4EAF1] text-[#B0BBC9]" : "border-[#D7E1EC] text-[#536A88] hover:bg-[#F7FAFD]"}`}>Next<ChevronRight className="h-3.5 w-3.5" /></Link>
           </div>
         </div>
       </section>
