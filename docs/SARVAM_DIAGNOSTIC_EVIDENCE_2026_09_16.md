@@ -33,13 +33,13 @@ The stable comparison is important:
 
 - Campaign remains PAUSED.
 - No controlled opportunities should be queued yet.
-- Do not rotate credentials again without new evidence.
+- Do not rotate API credentials again without new evidence.
 - Do not change campaign, workspace, org, agent ID or agent version based solely on the 500.
-- Do not switch production cohort submission to X-API-Key until a read-only Voice Agents request returns a resource-level response (2xx, 404, or a provider-documented authorization response) instead of 500.
+- Do not switch production cohort submission to X-API-Key until a read-only Voice Agents request returns a resource-level response (2xx, 404, or a provider-documented authorization response) instead of 500 for the real campaign.
 
 ## Campaign lookup isolation probe
 
-The next deterministic check has now been implemented in the diagnostics branch. It adds a fifth read-only probe using the exact same:
+The next deterministic check added a fifth read-only probe using the exact same:
 
 - `X-API-Key` credential;
 - organization ID;
@@ -47,16 +47,9 @@ The next deterministic check has now been implemented in the diagnostics branch.
 - HTTP method (`GET`);
 - campaign webhook-list endpoint family;
 
-but substitutes a fixed, synthetic, intentionally nonexistent campaign ID.
+but substituted a fixed, synthetic, intentionally nonexistent campaign ID.
 
-No customer data, call submission, cohort streaming, campaign update, resume, retry, or other provider mutation is performed.
-
-Interpretation after production deployment:
-
-- configured campaign=500 and intentionally missing campaign=404: authentication and ordinary campaign lookup are working; the real configured campaign or a backend path reached after finding it is specifically failing;
-- configured campaign=500 and intentionally missing campaign=500: Sarvam fails before normal campaign existence resolution, strongly isolating the blocker to the Voice Agents scheduling authentication/gateway/workspace layer rather than this specific campaign;
-- both X-API-Key probes=401/403: the credential is rejected before campaign lookup;
-- configured campaign=2xx: the read-only scheduling blocker is cleared for that resource.
+No customer data, call submission, cohort streaming, campaign update, resume, retry, or other provider mutation was performed.
 
 ## Production campaign-isolation result
 
@@ -75,26 +68,50 @@ The other controls remained unchanged:
 
 ### What this proves
 
-This is stronger evidence than the earlier repeated 500s:
-
 1. `X-API-Key` is accepted far enough for the Voice Agents scheduling service to route the request using the configured org/workspace and perform campaign existence lookup.
 2. A nonexistent campaign produces the expected resource-level HTTP 404 response.
 3. Therefore the HTTP 500 is **specific to the configured real campaign or to backend processing reached only after that campaign is found**. It is not a generic browser cache issue, not a generic X-API-Key rejection, and not a generic failure to resolve the org/workspace route.
 4. `api-subscription-key` and Bearer remain incorrect for this Voice Agents scheduling API path because both still stop at HTTP 401.
 5. The general `api.sarvam.ai` 403 should be treated separately from the Voice Agents scheduling credential path; it does not invalidate the successful X-API-Key campaign lookup evidence.
 
-### Strongest current hypothesis
+## Campaign Advanced/Webhook inspection result
 
-Sarvam added outbound campaign webhooks on 2026-08-20. Current Sarvam documentation says campaign completion webhooks are configured in the campaign's `app_config.webhook_config`, and the `/campaigns/:campaign_id/webhooks` endpoint lists delivery records for that configured campaign.
+The user opened the paused campaign's Edit flow and inspected Schedule -> Advanced.
 
-The controlled campaign's INSUREIT webhook was not yet independently verified/configured in Sarvam. Therefore a plausible campaign-specific cause of the 500 is that the real campaign has missing, incomplete, legacy, or otherwise invalid outbound `webhook_config` state and Sarvam's webhook-list backend is failing instead of returning an empty list. This remains a hypothesis until the campaign's Advanced/Webhook configuration is inspected or corrected.
+Observed:
 
-### Next safe diagnostic action
+- a Webhook URL is already configured for the campaign;
+- therefore the earlier hypothesis that the 500 was caused simply by a blank/missing campaign webhook is ruled out;
+- the configured URL points at the INSUREIT production campaign webhook route and uses a query-string token mechanism;
+- the screenshot visibly exposed the current webhook token value. Treat that token as compromised and rotate it before any live webhook processing. Do not preserve or repeat the exposed token value in repository documentation, chat replies, issue bodies, or support tickets.
 
-Keep the campaign PAUSED. In the Sarvam campaign editor, inspect the campaign's Advanced/Webhook configuration without resuming or adding contacts. Confirm whether a webhook URL is configured. If absent, configure the already-approved INSUREIT campaign webhook endpoint using the existing server-side secret mechanism, save while paused, and rerun the read-only deep diagnostics before any cohort submission. Do not expose the webhook secret in screenshots or repository documentation.
+### Revised strongest hypotheses
 
-If the campaign already has the correct webhook URL and the real-campaign X-API-Key probe still returns 500 while the synthetic campaign returns 404, escalate to Sarvam with the provider request IDs from the 500 responses because the remaining evidence points to campaign-specific provider backend state.
+The remaining campaign-specific causes include:
+
+1. Sarvam has invalid/legacy/internal state attached to this campaign's `app_config.webhook_config` even though the UI renders a URL;
+2. the campaign record has stale state from the August 2026 outbound-webhook rollout and the webhook-list backend crashes while materializing delivery/configuration state;
+3. the query-string token URL format itself is accepted by the UI but triggers a provider-side parsing/deserialization defect for this campaign; or
+4. another campaign-specific backend attribute is inconsistent and the webhook-list endpoint is only the first read path exposing that defect.
+
+The evidence does **not** currently justify changing the API key, org ID, workspace ID, campaign ID, agent ID or agent version.
+
+## Next safe diagnostic action
+
+Keep the campaign PAUSED and do not add contacts.
+
+Because the webhook token was exposed in a screenshot, first rotate `SARVAM_RENEWAL_WEBHOOK_SECRET` and update the campaign Webhook URL to the new token without sharing the new value.
+
+Then use the pause -> edit -> save lifecycle to temporarily remove the Webhook URL from this same campaign and rerun the read-only deep diagnostics:
+
+- real campaign becomes 2xx with X-API-Key after webhook removal: the 500 is directly tied to the campaign's webhook configuration/state;
+- real campaign remains 500 with X-API-Key after webhook removal: the defect is broader campaign backend state, not merely the current webhook URL value;
+- synthetic campaign should continue returning 404 and serves as the control.
+
+If removing and re-saving the webhook does not clear the 500, create a fresh paused clone campaign using the same agent version and telephony configuration but no cohort/calls, then run the same read-only webhook-list probe against that new campaign before configuring any webhook. A clean campaign returning 2xx while the original remains 500 would strongly prove corruption/legacy backend state in the original campaign.
+
+Do not resume either campaign until the provider read path is healthy and the webhook secret has been rotated.
 
 ## Provider escalation evidence
 
-If Sarvam support is contacted, include the exact endpoint family, approximate timestamp, and the provider request IDs shown by the diagnostics UI. Do not include the API key itself. The repeated 500 request IDs should be supplied because Sarvam can trace them server-side.
+If Sarvam support is contacted, include the exact endpoint family, approximate timestamp, and the provider request IDs shown by the diagnostics UI. Do not include the API key or webhook secret. The repeated 500 request IDs should be supplied because Sarvam can trace them server-side.
