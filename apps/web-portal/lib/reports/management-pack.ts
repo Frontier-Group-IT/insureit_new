@@ -67,22 +67,33 @@ export function resolveManagementPackFilters(query: ManagementPackQuery): Manage
   return { month: requested, fromDate, toDate, currentMonth };
 }
 
-export function managementPackCsvRows(pack: ManagementPack) {
+export function managementPackCsvRows(pack: ManagementPack, snapshotVersion?: number) {
   const rows: Array<[string, string, string | number]> = [];
   const add = (section: string, metric: string, value: string | number) => rows.push([section, metric, value]);
+  const legacyFrozen = snapshotVersion !== undefined && snapshotVersion < 2;
+  const businessSummary = pack.business.summary as unknown as Record<string, unknown>;
+  const distributionSummary = pack.distribution.summary as unknown as Record<string, unknown>;
 
   add("Business", "Policies", pack.business.summary.policy_count);
   add("Business", "Active policies", pack.business.summary.active_policy_count);
   add("Business", "Gross premium", pack.business.summary.gross_premium);
   add("Business", "Net premium", pack.business.summary.net_premium);
-  add("Business", "Average net premium", pack.business.summary.average_net_premium);
+  add(
+    "Business",
+    legacyFrozen ? "Average premium (legacy frozen)" : "Average net premium",
+    legacyFrozen ? numberField(businessSummary, "average_premium") : pack.business.summary.average_net_premium,
+  );
   add("Business", "Intermediaries", pack.business.summary.intermediary_count);
 
   add("Distribution", "Active intermediaries", pack.distribution.summary.active_intermediary_count);
   add("Distribution", "Producing intermediaries", pack.distribution.summary.producing_intermediary_count);
   add("Distribution", "Customers", pack.distribution.summary.customer_count);
   add("Distribution", "Policies", pack.distribution.summary.policy_count);
-  add("Distribution", "Net premium", pack.distribution.summary.net_premium);
+  add(
+    "Distribution",
+    legacyFrozen ? "Gross premium (legacy frozen)" : "Net premium",
+    legacyFrozen ? numberField(distributionSummary, "gross_premium") : pack.distribution.summary.net_premium,
+  );
   add("Distribution", "Open onboarding", pack.distribution.summary.onboarding_open_count);
 
   add("Finance", "Projected PayIn", pack.finance.summary.projected_payin);
@@ -101,7 +112,7 @@ export function managementPackCsvRows(pack: ManagementPack) {
 
   add("Renewal snapshot", "Due within 30 days", pack.renewals.summary.due_30_count);
   add("Renewal snapshot", "Due within 90 days", pack.renewals.summary.due_90_count);
-  add("Renewal snapshot", "Net premium at risk", pack.renewals.summary.premium_at_risk);
+  add("Renewal snapshot", legacyFrozen ? "Premium at risk (legacy frozen)" : "Net premium at risk", pack.renewals.summary.premium_at_risk);
   add("Renewal snapshot", "Nearest expiry", pack.renewals.summary.nearest_expiry ?? "");
 
   add("Operations snapshot", "Vehicles", pack.operations.summary.vehicle_count);
@@ -120,6 +131,11 @@ export function managementPackCsvRows(pack: ManagementPack) {
   return rows;
 }
 
+function numberField(value: Record<string, unknown>, key: string) {
+  const raw = value[key];
+  const numeric = typeof raw === "number" ? raw : Number(raw ?? 0);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
 function validMonth(value: string | undefined) { return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)); }
 function lastDayOfMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
