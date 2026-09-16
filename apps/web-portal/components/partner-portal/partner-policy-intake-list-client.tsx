@@ -140,7 +140,7 @@ function serverFilterFor(filter: IntakeFilter): "all" | "attention" | "in_progre
 
 export function PartnerPolicyIntakeListClient() {
   const [rows, setRows] = useState<PartnerPolicyIntake[]>([]);
-  const [filter, setFilter] = useState<IntakeFilter>("attention");
+  const [filter, setFilter] = useState<IntakeFilter>("all");
   const [search, setSearch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
