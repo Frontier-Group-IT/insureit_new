@@ -3,9 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ChevronDown, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  ChevronDown,
+  ClipboardCheck,
+  ExternalLink,
+  FileCheck2,
+  FileText,
+  Gauge,
+  Headphones,
+  Network,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Truck,
+  UserRoundCog,
+  UsersRound,
+  WalletCards,
+  type LucideIcon,
+} from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
-import { PartnerCustomIcon, type PartnerCustomIconName } from "./partner-custom-icon";
+import type { PartnerCustomIconName } from "./partner-custom-icon";
 
 type PartnerNavItem = { href: string; label: string; icon: PartnerCustomIconName };
 
@@ -32,6 +51,34 @@ const accountItems: PartnerNavItem[] = [
   { href: "/partner/support", label: "Support", icon: "support" },
 ];
 
+const referenceIconMap: Record<PartnerCustomIconName, { Icon: LucideIcon; tileClass: string }> = {
+  home: { Icon: Gauge, tileClass: "bg-[#2F63E9]" },
+  business: { Icon: BarChart3, tileClass: "bg-[#2ABED7]" },
+  customers: { Icon: UsersRound, tileClass: "bg-[#7257ED]" },
+  vehicle: { Icon: Truck, tileClass: "bg-[#5668E8]" },
+  policies: { Icon: FileText, tileClass: "bg-[#3977E8]" },
+  renewals: { Icon: RefreshCw, tileClass: "bg-[#13AAA8]" },
+  claims: { Icon: ShieldCheck, tileClass: "bg-[#FF735D]" },
+  "policy-intake": { Icon: ClipboardCheck, tileClass: "bg-[#2D9BD5]" },
+  payout: { Icon: WalletCards, tileClass: "bg-[#169D9D]" },
+  network: { Icon: Network, tileClass: "bg-[#6759E9]" },
+  search: { Icon: Search, tileClass: "bg-[#2B86C5]" },
+  activity: { Icon: Activity, tileClass: "bg-[#17A99E]" },
+  account: { Icon: UserRoundCog, tileClass: "bg-[#6B5AE8]" },
+  support: { Icon: Headphones, tileClass: "bg-[#2E7DD7]" },
+  documents: { Icon: FileCheck2, tileClass: "bg-[#2E7DD7]" },
+  insights: { Icon: BarChart3, tileClass: "bg-[#2ABED7]" },
+};
+
+function SidebarIcon({ name }: { name: PartnerCustomIconName }) {
+  const { Icon, tileClass } = referenceIconMap[name] ?? { Icon: FileText, tileClass: "bg-[#3977E8]" };
+  return (
+    <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] ${tileClass} text-white shadow-[0_2px_6px_rgba(5,18,45,0.18)]`}>
+      <Icon className="h-[17px] w-[17px]" strokeWidth={1.85} aria-hidden="true" />
+    </span>
+  );
+}
+
 function isActive(pathname: string, href: string) {
   if (href === "/partner") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -42,9 +89,7 @@ function NavLink({ item }: { item: PartnerNavItem }) {
   const active = isActive(pathname, item.href);
   return (
     <Link href={item.href} prefetch={false} className={`group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active ? "bg-white text-[#141d3b] shadow-[0_3px_12px_rgba(5,18,45,0.12)]" : "text-white/88 hover:bg-white/8 hover:text-white"}`}>
-      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200 ${active ? "bg-[#EAF1FF]" : "group-hover:bg-white/8"}`}>
-        <PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" />
-      </span>
+      <SidebarIcon name={item.icon} />
       <span className="flex-1">{item.label}</span>
     </Link>
   );
@@ -64,7 +109,7 @@ function RenewalsNav({ item }: { item: PartnerNavItem }) {
   return (
     <div>
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[12px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${renewalsActive ? "bg-white/8 text-white" : "text-white/88 hover:bg-white/8 hover:text-white"}`}>
-        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg transition-colors duration-200 ${renewalsActive ? "bg-white/10" : "group-hover:bg-white/8"}`}><PartnerCustomIcon name={item.icon} size={22} className="h-[22px] w-[22px]" /></span>
+        <SidebarIcon name={item.icon} />
         <span className="flex-1">Renewals</span>
         <ChevronDown className={`h-4 w-4 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
