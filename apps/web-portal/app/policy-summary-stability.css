@@ -3,5 +3,8 @@
     width: 336px !important;
     min-width: 336px !important;
     max-width: 336px !important;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: #fff;
   }
 }
