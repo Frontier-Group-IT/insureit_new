@@ -108,7 +108,7 @@ The Sarvam campaign creation UI requires an uploaded cohort CSV before the wizar
 
 Safe control-campaign procedure:
 
-- use exactly one user-authorized internal test recipient only;
+- use only user-authorized internal test recipients;
 - do not use production/customer numbers;
 - keep retries OFF;
 - leave webhook blank for the initial control comparison;
@@ -116,11 +116,17 @@ Safe control-campaign procedure:
 - do not resume it until the read-only diagnostics are complete;
 - after creation, use only the new campaign ID as a diagnostic comparison target.
 
-Do not store the test phone number in repository documentation.
+Do not store the test phone number(s) in repository documentation.
+
+## Fresh control campaign — pre-launch review
+
+The user prepared a new control campaign named `INSUREIT Renewal Controlled 3` using the same `INSUREIT Motor Renewal Assistant` agent v4 and the same managed telephony connection. The uploaded cohort validates successfully with two user-authorized internal test rows, retries are OFF, CPS remains 0.5 calls/sec, and phone-number rotation is OFF. No webhook is configured for this initial control.
+
+The first scheduled calling window shown in the review screen is close to the current time. For safety, do not launch with that near-term start time. Move the start to a comfortably future window (for example the next day), then launch only to create the campaign resource and immediately PAUSE it. The campaign must remain paused before its calling window and before any diagnostic comparison.
 
 ## Next safe diagnostic action
 
-Create a fresh control campaign in the same Sarvam workspace with the same agent version and telephony configuration, using only one user-authorized internal test recipient because the UI requires a CSV. Keep retries OFF, webhook blank, schedule safely in the future, complete creation, and PAUSE immediately. Then compare the fresh campaign's read-only webhook-list response with the original campaign before any live test.
+Complete creation of `INSUREIT Renewal Controlled 3` only after moving its start time safely into the future. Immediately PAUSE it after creation and provide only the new campaign ID. Do not change the production `SARVAM_RENEWAL_CAMPAIGN_ID` yet. Then compare the fresh campaign's read-only webhook-list response with the original campaign before any live test.
 
 A fresh campaign returning 2xx while the original remains 500 would strongly prove corruption/legacy backend state in the original campaign.
 
