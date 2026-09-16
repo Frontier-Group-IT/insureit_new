@@ -206,7 +206,7 @@ export default function CustomerMockupHomeScreen() {
         onQuote={() => router.push({ pathname: '/customer/insurance-quote', params: { source: 'customer_dashboard' } } as Href)}
         onChallan={() => router.push({ pathname: '/customer/e-challan', params: { source: 'customer_dashboard' } } as Href)}
         onClaim={() => router.push('/customer/start-claim')}
-        onExchange={() => undefined}
+        onExchange={() => router.push('/customer/exchange')}
       />
       <ClaimsSummaryCard
         totalCount={claims.length}
@@ -379,7 +379,7 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
       >
         <QuickAction icon="calendar-month-outline" image={require('../../assets/brand/dashboard/dashboard-renewal.png')} label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
         <QuickAction icon="shield-plus-outline" image={require('../../assets/brand/dashboard/dashboard-start-claim.png')} label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
-        <QuickAction icon="swap-horizontal" image={require('../../assets/brand/dashboard/dashboard-exchange.png')} label="Exchange" tone="#EAF3FF" color="#174EA6" onPress={onExchange} />
+        <QuickAction icon="swap-horizontal-bold" label="Exchange" tone="#EAF3FF" color="#174EA6" onPress={onExchange} />
         <QuickAction icon="file-document-edit-outline" image={require('../../assets/brand/dashboard/dashboard-get-quote.png')} label="Get Quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
         <QuickAction icon="ticket-confirmation-outline" image={require('../../assets/brand/dashboard/dashboard-echallan.png')} label="Pay Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
       </ScrollView>
