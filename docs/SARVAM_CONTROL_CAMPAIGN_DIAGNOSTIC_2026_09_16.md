@@ -25,38 +25,66 @@ A new campaign was created only to compare Sarvam provider behavior against the 
 - webhook: intentionally blank for the initial provider comparison
 - the campaign must remain PAUSED while this diagnostic is run
 
-Do not replace production `SARVAM_RENEWAL_CAMPAIGN_ID` with this ID yet. The fresh campaign is a diagnostic control only until its read-only provider behavior is known.
+Do not replace production `SARVAM_RENEWAL_CAMPAIGN_ID` with this ID yet. The fresh campaign is a diagnostic control only until its provider behavior is known.
 
-## New read-only probe
+## First fresh-campaign production result
 
-The portal has a dedicated IT-Super-User-only diagnostic route for this fresh campaign:
+After PR #1953 was merged and deployed, the IT Super User ran the fresh campaign control probe against `INSUREIT-Re-31885c09-3493`.
 
-`/system/voice-integration/control-campaign-diagnostic`
+Observed result:
 
-It performs exactly one provider request:
+- `GET .../campaigns/INSUREIT-Re-31885c09-3493/webhooks?limit=1`
+- authentication: `X-API-Key`
+- HTTP **500**
+- classification: `provider_http_500`
+- provider request ID was returned and is available from the diagnostic UI for support escalation.
 
-`GET https://apps.sarvam.ai/api/scheduling/v1/orgs/:org_id/workspaces/:workspace_id/campaigns/INSUREIT-Re-31885c09-3493/webhooks?limit=1`
+This is decisive against the earlier "original campaign corruption only" theory. The newly-created paused campaign, with webhook intentionally blank and no legacy configuration history, fails on the same webhook-delivery listing endpoint as the original campaign.
 
-Authentication header:
+Combined with the established synthetic missing-campaign result of HTTP 404, the evidence now means:
+
+1. `X-API-Key` is accepted far enough to route through the configured org/workspace and perform campaign existence lookup.
+2. A nonexistent campaign returns normal resource-level HTTP 404.
+3. Two different valid campaigns both return HTTP 500 only after Sarvam finds the campaign.
+4. Therefore the failure is broader than either campaign and is most likely inside Sarvam's webhook-delivery listing backend path for valid campaign resources in this workspace/product.
+5. This does **not** yet prove that the CRM cohort-stream endpoint is broken. The webhook-list endpoint and stream-cohort endpoint are separate backend operations.
+
+Current Sarvam documentation still describes the campaign webhook-list endpoint as a normal GET that should return HTTP 200 with an `items` list and pagination metadata, including when `limit` is supplied. `limit=1` is explicitly documented as valid because the accepted range is 1-250. Therefore the repeated HTTP 500 is not explained by the query parameter itself.
+
+## Next deterministic diagnostic
+
+The next probe targets the exact API path INSUREIT ultimately needs for CRM-driven calling without creating a contact or queueing a call.
+
+Endpoint:
+
+`POST https://apps.sarvam.ai/api/scheduling/v1/orgs/:org_id/workspaces/:workspace_id/campaigns/INSUREIT-Re-31885c09-3493/cohorts/stream`
+
+Authentication:
 
 `X-API-Key: <server-side SARVAM_API_KEY>`
 
-Safety boundaries:
+Payload is intentionally invalid and contains **no phone number**:
 
-- no cohort streaming;
+- empty cohort name;
+- empty `users` array.
+
+Sarvam's published schema requires a 1-50 character name and 1-1000 users, and documents HTTP 422 for validation errors. Therefore:
+
+- HTTP 400/422 proves authentication, workspace routing, campaign lookup and the stream-cohort endpoint are reachable, while creating no callable contact;
+- HTTP 500 means the scheduling failure is broader than webhook-listing and affects the campaign stream path too;
+- HTTP 401/403 reopens authorization as the blocker;
+- HTTP 404 means campaign visibility differs between the read and stream paths;
+- an unexpected 2xx would indicate Sarvam accepted an invalid empty cohort and must not be treated as a successful safety result.
+
+## Safety boundaries for the validation-only stream probe
+
+- campaign remains PAUSED;
+- payload contains no phone number or customer identity;
+- no valid user record is submitted;
+- no call can be placed from this probe;
 - no campaign resume/start/update;
-- no call placement;
-- no contact mutation;
-- no provider POST/PUT/PATCH/DELETE;
-- no API key, webhook secret, raw response body, phone number or transcript rendered/logged;
+- no API key, webhook secret, raw provider response body, phone number or transcript rendered/logged;
 - only sanitized HTTP status, classification, provider error code and provider request/correlation ID may be shown.
-
-## Interpretation
-
-- fresh campaign HTTP 2xx while original remains 500: strong evidence the original campaign has corrupt, stale or legacy provider-side state. The controlled workflow can then be migrated to the clean campaign after webhook-secret rotation and a deliberate binding change.
-- fresh campaign HTTP 500: the failure is broader than the original campaign and likely tied to Sarvam's campaign backend path for valid campaigns in this workspace/product.
-- fresh campaign HTTP 404: the new campaign is not yet visible in the configured org/workspace binding or the campaign ID is wrong/stale.
-- fresh campaign HTTP 401/403: the request is rejected before normal campaign-resource processing and the X-API-Key authorization assumption must be revisited.
 
 ## Current safety state
 
