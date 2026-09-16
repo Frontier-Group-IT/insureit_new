@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getPartnerWebSession, type PartnerCustomerRow } from "@/lib/partner-web";
-import type { CustomerStatusFilter, CustomerTypeFilter } from "./customer-filters";
+import type { CustomerStatusFilter, CustomerTypeFilter } from "./customer-filter-types";
 
 export async function listFilteredPartnerCustomers({
   limit = 25,
