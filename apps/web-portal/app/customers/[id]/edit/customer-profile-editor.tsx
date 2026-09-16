@@ -41,9 +41,16 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget);
+    const mobile = String(formData.get("phone") ?? "").replace(/\D/g, "");
+    const normalizedMobile = mobile.length === 12 && mobile.startsWith("91") ? mobile.slice(2) : mobile;
+    if (!/^[6-9][0-9]{9}$/.test(normalizedMobile)) {
+      event.preventDefault();
+      setValidationPopup({ message: "Enter a valid 10-digit Indian login mobile number.", field: "phone" });
+      return;
+    }
     if (!gstRegistered) return;
 
-    const formData = new FormData(event.currentTarget);
     const legalTradeName = String(formData.get("legal_trade_name") ?? "").trim();
     const gstNumber = String(formData.get("gst_number") ?? "").replace(/\s/g, "").toUpperCase();
 
@@ -119,7 +126,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
             <h3 className="text-[12px] font-semibold text-[var(--text)]">Personal Information</h3>
             <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Customer name" name="contact_name" defaultValue={customer.contact_name} required />
-              <ReadOnlyField label="Login mobile" value={customer.phone} hint="Linked with OTP account" />
+              <Field label="Login mobile" name="phone" type="tel" defaultValue={customer.phone} required maxLength={13} />
               <Field label="Email" name="email" type="email" defaultValue={customer.email ?? ""} />
             </div>
           </div>
@@ -216,7 +223,7 @@ function StatusIcon({ status }: { status: string }) {
   const label = active ? "Active" : "KYC incomplete";
   return <span title={label} aria-label={label} className={`inline-grid h-[18px] w-[18px] place-items-center rounded-full ${active ? "bg-emerald-500 text-white shadow-[0_0_0_2px_rgba(255,255,255,.18)]" : "border border-amber-300/60 bg-amber-300/15 text-amber-200"}`}><Icon className={active ? "h-3 w-3" : "h-3.5 w-3.5"} strokeWidth={active ? 2.5 : 2} /></span>;
 }
-function ValidationPopup({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0F172A]/35 px-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="validation-title"><div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]"><div className="flex items-start gap-3 border-b border-[#F1D7D7] bg-[#FFF7F7] px-5 py-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-red-100 text-[18px] text-red-700">!</span><div><h3 id="validation-title" className="text-[14px] font-semibold text-[#7F1D1D]">Complete GST details</h3><p className="mt-1 text-[11.5px] leading-5 text-[#9F3232]">{message}</p></div></div><div className="flex justify-end px-5 py-3"><button type="button" autoFocus onClick={onClose} className="inline-flex h-9 items-center justify-center rounded-md bg-[#4F46E5] px-4 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4338CA]">Go to field</button></div></div></div>; }
+function ValidationPopup({ message, onClose }: { message: string; onClose: () => void }) { return <div className="fixed inset-0 z-[160] grid place-items-center bg-[#0F172A]/35 px-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="validation-title"><div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_28px_80px_rgba(15,23,42,0.28)]"><div className="flex items-start gap-3 border-b border-[#F1D7D7] bg-[#FFF7F7] px-5 py-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-red-100 text-[18px] text-red-700">!</span><div><h3 id="validation-title" className="text-[14px] font-semibold text-[#7F1D1D]">Check entered details</h3><p className="mt-1 text-[11.5px] leading-5 text-[#9F3232]">{message}</p></div></div><div className="flex justify-end px-5 py-3"><button type="button" autoFocus onClick={onClose} className="inline-flex h-9 items-center justify-center rounded-md bg-[#4F46E5] px-4 text-[11px] font-semibold text-white shadow-sm hover:bg-[#4338CA]">Go to field</button></div></div></div>; }
 function Field({ label, name, defaultValue = "", type = "text", required = false, maxLength, uppercase = false }: { label: string; name: string; defaultValue?: string; type?: string; required?: boolean; maxLength?: number; uppercase?: boolean }) { return <div><label className={labelClass} htmlFor={name}>{label}{required ? " *" : ""}</label><input id={name} name={name} type={type} required={required} maxLength={maxLength} defaultValue={defaultValue} className={`${inputClass} ${uppercase ? "uppercase" : ""}`} onInput={uppercase ? (event) => { event.currentTarget.value = event.currentTarget.value.toUpperCase(); } : undefined} /></div>; }
 function ReadOnlyField({ label, value, hint }: { label: string; value: string; hint?: string }) { return <div><span className={labelClass}>{label}</span><div className="flex h-8 items-center justify-between rounded-md border border-[#E1E7EF] bg-[#F5F7FA] px-2.5 text-[11.5px] text-[#526176]"><span>{value}</span>{hint ? <span className="text-[8.5px] text-[#8A96A7]">{hint}</span> : null}</div></div>; }
 function DocumentStatus({ status }: { status: string }) { const label = status === "verified" ? "Verified" : status === "rejected" ? "Rejected" : "Uploaded · Pending verification"; return <span className={`inline-flex max-w-[132px] items-center justify-center rounded-full border px-1.5 py-0.5 text-center text-[8px] font-semibold leading-tight ${status === "verified" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : status === "rejected" ? "border-red-200 bg-red-50 text-red-700" : "border-blue-200 bg-blue-50 text-blue-700"}`}>{label}</span>; }
