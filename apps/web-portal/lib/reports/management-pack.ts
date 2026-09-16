@@ -5,7 +5,7 @@ import { loadDistributionReport } from "@/lib/reports/distribution";
 import { loadFinanceReport } from "@/lib/reports/finance";
 import { loadGovernanceReport } from "@/lib/reports/governance";
 import { loadOperationsReport } from "@/lib/reports/operations";
-import { loadPolicyBusinessReport } from "@/lib/reports/policy-business";
+import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 import { loadRenewalReport } from "@/lib/reports/renewals";
 
 type ViewerProfile = { id: string; role: string | null };
@@ -16,7 +16,7 @@ export type ManagementPack = {
   filters: ManagementPackFilters;
   scopeMode: "organization" | "hierarchy" | "self" | "none";
   canViewGovernance: boolean;
-  business: Awaited<ReturnType<typeof loadPolicyBusinessReport>>["report"];
+  business: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"];
   distribution: Awaited<ReturnType<typeof loadDistributionReport>>["report"];
   finance: Awaited<ReturnType<typeof loadFinanceReport>>["report"];
   claims: Awaited<ReturnType<typeof loadClaimsReport>>["report"];
@@ -34,7 +34,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
-    loadPolicyBusinessReport(profile, monthQuery),
+    loadPolicyBusinessNetReport(profile, monthQuery),
     loadDistributionReport(profile, { ...monthQuery, onboardingPage: "1" }),
     loadFinanceReport(profile, monthQuery),
     loadClaimsReport(profile, monthQuery),
@@ -75,14 +75,14 @@ export function managementPackCsvRows(pack: ManagementPack) {
   add("Business", "Active policies", pack.business.summary.active_policy_count);
   add("Business", "Gross premium", pack.business.summary.gross_premium);
   add("Business", "Net premium", pack.business.summary.net_premium);
-  add("Business", "Average premium", pack.business.summary.average_premium);
+  add("Business", "Average net premium", pack.business.summary.average_net_premium);
   add("Business", "Intermediaries", pack.business.summary.intermediary_count);
 
   add("Distribution", "Active intermediaries", pack.distribution.summary.active_intermediary_count);
   add("Distribution", "Producing intermediaries", pack.distribution.summary.producing_intermediary_count);
   add("Distribution", "Customers", pack.distribution.summary.customer_count);
   add("Distribution", "Policies", pack.distribution.summary.policy_count);
-  add("Distribution", "Gross premium", pack.distribution.summary.gross_premium);
+  add("Distribution", "Net premium", pack.distribution.summary.net_premium);
   add("Distribution", "Open onboarding", pack.distribution.summary.onboarding_open_count);
 
   add("Finance", "Projected PayIn", pack.finance.summary.projected_payin);
@@ -101,7 +101,7 @@ export function managementPackCsvRows(pack: ManagementPack) {
 
   add("Renewal snapshot", "Due within 30 days", pack.renewals.summary.due_30_count);
   add("Renewal snapshot", "Due within 90 days", pack.renewals.summary.due_90_count);
-  add("Renewal snapshot", "Premium at risk", pack.renewals.summary.premium_at_risk);
+  add("Renewal snapshot", "Net premium at risk", pack.renewals.summary.premium_at_risk);
   add("Renewal snapshot", "Nearest expiry", pack.renewals.summary.nearest_expiry ?? "");
 
   add("Operations snapshot", "Vehicles", pack.operations.summary.vehicle_count);
