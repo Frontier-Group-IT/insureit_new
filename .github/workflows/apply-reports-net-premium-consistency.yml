@@ -66,7 +66,7 @@ jobs:
           set -euo pipefail
           result=$(supabase db query --linked --output-format json "
             select
-              to_regprocedure('public.get_distribution_report_v2(uuid[],date,date,uuid,text,text,integer,integer,integer,integer)') is not null as distribution_rpc_ready,
+              to_regprocedure('public.get_distribution_report_v2(uuid[],uuid[],date,date,uuid,text,text,integer,integer,integer,integer)') is not null as distribution_rpc_ready,
               to_regprocedure('public.get_renewal_report_v4(uuid[],integer,uuid,uuid,text,text,text,text,integer,integer)') is not null as renewal_rpc_ready,
               to_regprocedure('public.get_finance_report_v4(uuid[],date,date,uuid,uuid,text,text,text,text,integer,integer)') is not null as finance_rpc_ready;
           ")
