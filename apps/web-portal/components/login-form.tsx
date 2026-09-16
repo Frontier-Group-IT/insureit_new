@@ -111,10 +111,10 @@ export function LoginForm() {
     <div className="grid gap-2"><label htmlFor="email">Email</label><input className={isSubmitting ? "opacity-40 transition-opacity" : "transition-opacity"} id="email" type="email" placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required disabled={isSubmitting} /></div>
     <div className="grid gap-2"><label htmlFor="password">Password</label><div className="relative"><input className={`w-full pr-12 ${isSubmitting ? "opacity-40 transition-opacity" : "transition-opacity"}`} id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password} onChange={(event) => setPassword(event.target.value)} required disabled={isSubmitting} /><button type="button" onClick={() => setShowPassword((current) => !current)} disabled={isSubmitting} className="absolute inset-y-0 right-0 grid w-11 place-items-center text-[#53627A] transition hover:text-[#071D49] disabled:opacity-40" aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword}>{showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}</button></div></div>
 
-    <div className="grid gap-2">
+    <div className="grid gap-1.5">
       <label htmlFor="captcha">Enter Captcha</label>
       <div className="overflow-hidden rounded-xl border border-dashed border-[#9AA8BA] bg-[#FBFCFE]">
-        <div className="flex h-[70px] items-center justify-center">
+        <div className="flex h-[52px] items-center justify-center">
           {captchaImage ? <img src={captchaImage} alt="Captcha challenge" className="h-full w-full object-cover" draggable={false} /> : <span className="text-xs font-medium text-[#7A8798]">{captchaLoading ? "Loading captcha..." : "Captcha unavailable"}</span>}
         </div>
         <div className="flex border-t border-[#D8E0EA] bg-white">
@@ -131,16 +131,16 @@ export function LoginForm() {
             onChange={(event) => setCaptchaAnswer(event.target.value)}
             required
             disabled={isSubmitting || captchaLoading || !captchaToken}
-            className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-3 py-3 uppercase outline-none focus:ring-0 disabled:opacity-50"
+            className="min-w-0 flex-1 rounded-none border-0 bg-transparent px-3 py-2 uppercase outline-none focus:ring-0 disabled:opacity-50"
           />
           <button
             type="button"
             onClick={() => void loadCaptcha()}
             disabled={isSubmitting || captchaLoading}
             aria-label="Refresh captcha"
-            className="grid w-12 shrink-0 place-items-center border-l border-[#D8E0EA] bg-[#7D828A] text-white transition hover:bg-[#626870] disabled:cursor-not-allowed disabled:opacity-50"
+            className="grid w-10 shrink-0 place-items-center border-l border-[#D8E0EA] bg-[#7D828A] text-white transition hover:bg-[#626870] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw className={`h-5 w-5 ${captchaLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-[18px] w-[18px] ${captchaLoading ? "animate-spin" : ""}`} />
           </button>
         </div>
       </div>
