@@ -126,7 +126,7 @@ function workbookResponse(payinRows: Array<Record<string, unknown>>, payoutRows:
     ["Consolidated insurer bill", "Use the same Bill Number and Bill Date on every policy row included in that insurer bill. Bill Amount is the amount attributable to that policy line."],
     ["Difference", "INSUREIT calculates differences and outstanding balances during validation; do not maintain a Difference column manually."],
     ["Duplicate protection", "Repeating a policy is allowed. Repeating the same transaction reference/UTR is validated separately and may be blocked as a duplicate."],
-    ["Safety", "The current stage is validation preview only. Uploading this workbook does not write financial records."],
+    ["Safety", "This version performs validation preview only. It does not create invoices, receipts, TDS entries, payables, payments, allocations or ledger entries."],
   ]);
   instructions["!cols"] = [{ wch: 32 }, { wch: 118 }];
   XLSX.utils.book_append_sheet(workbook, instructions, "Instructions");
