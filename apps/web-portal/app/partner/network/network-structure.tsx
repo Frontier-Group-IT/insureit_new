@@ -92,13 +92,10 @@ export function PartnerNetworkStructure({
 
   return (
     <section className="overflow-hidden rounded-xl border border-[#DFE7F2] bg-white shadow-[0_8px_24px_rgba(49,86,184,0.05)]">
-      <div className="flex flex-col gap-3 border-b border-[#E6ECF4] px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-[#E6ECF4] px-4 py-3.5 sm:flex-row sm:items-center">
         <div className="flex min-w-0 items-center gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#2563EB]"><Network className="h-4 w-4" /></span>
-          <div className="min-w-0">
-            <h2 className="text-[13px] font-extrabold text-[#172846]">Partner Family Structure</h2>
-            <p className="mt-0.5 text-[9.5px] font-medium text-[#7A899F]">View and manage the complete hierarchy of your partner network.</p>
-          </div>
+          <h2 className="shrink-0 text-[13px] font-extrabold text-[#172846]">Partner Structure</h2>
         </div>
         <label className="flex h-9 w-full items-center gap-2 rounded-lg border border-[#DCE5F1] bg-white px-3 sm:w-[280px]">
           <Search className="h-3.5 w-3.5 shrink-0 text-[#71839B]" />
@@ -115,7 +112,6 @@ export function PartnerNetworkStructure({
                 <p className="truncate text-[11.5px] font-extrabold text-[#172846]">{rootLabel}</p>
                 <span className="rounded-full bg-white px-2 py-0.5 text-[7.5px] font-black text-[#2563EB] ring-1 ring-[#D6E3F8]">Main Group</span>
               </div>
-              <p className="mt-0.5 text-[8.5px] font-medium text-[#73839A]">Top level of the current partner network.</p>
             </div>
           </div>
 
