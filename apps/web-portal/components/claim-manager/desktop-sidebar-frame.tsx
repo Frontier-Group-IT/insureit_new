@@ -1,57 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import {
-  isValidElement,
-  type MouseEvent as ReactMouseEvent,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { ChevronRight, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
-import {
-  type NavigationSection,
-  visibleNavigationSections,
-} from "@/components/claim-manager/app-navigation";
-import type { PermissionAccess } from "@/lib/permission-management";
-import type { Capability } from "@/lib/roles";
+import { type MouseEvent as ReactMouseEvent, type ReactNode, useEffect, useState } from "react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 const STORAGE_KEY = "insureit:desktop-sidebar-collapsed";
 
-type PermissionAccessMap = Partial<Record<Capability, PermissionAccess>>;
-type NavigationElementProps = {
-  role?: string | null;
-  permissionAccess?: PermissionAccessMap;
-  accountsAccess?: boolean;
-};
-
-type FlyoutTarget = { type: "section"; key: string } | { type: "settings" } | null;
-
 export function DesktopSidebarFrame({ navigation, children }: { navigation: ReactNode; children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
-  const [flyoutTarget, setFlyoutTarget] = useState<FlyoutTarget>(null);
-  const [flyoutTop, setFlyoutTop] = useState(84);
-  const flyoutRef = useRef<HTMLDivElement | null>(null);
-
-  const navigationProps = isValidElement<NavigationElementProps>(navigation) ? navigation.props : null;
-  const visibleSections = useMemo(
-    () =>
-      navigationProps
-        ? visibleNavigationSections(
-            navigationProps.role,
-            navigationProps.permissionAccess ?? {},
-            navigationProps.accountsAccess ?? true,
-          )
-        : [],
-    [navigationProps],
-  );
-
-  const flyoutSection =
-    flyoutTarget?.type === "section"
-      ? visibleSections.find((section) => section.key === flyoutTarget.key) ?? null
-      : null;
 
   useEffect(() => {
     try {
@@ -60,30 +15,6 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
       // Ignore storage failures and keep the expanded default.
     }
   }, []);
-
-  useEffect(() => {
-    if (!collapsed || !flyoutTarget) return;
-
-    const closeOnOutsidePointer = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (flyoutRef.current?.contains(target)) return;
-      const aside = document.querySelector("aside");
-      if (aside?.contains(target)) return;
-      setFlyoutTarget(null);
-    };
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setFlyoutTarget(null);
-    };
-
-    document.addEventListener("pointerdown", closeOnOutsidePointer);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutsidePointer);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [collapsed, flyoutTarget]);
 
   function persistCollapsed(next: boolean) {
     try {
@@ -95,79 +26,32 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
 
   function openSidebar() {
     setCollapsed(false);
-    setFlyoutTarget(null);
     persistCollapsed(false);
   }
 
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current;
-      if (!next) setFlyoutTarget(null);
       persistCollapsed(next);
       return next;
     });
   }
 
-  function openFlyout(target: FlyoutTarget, trigger: HTMLElement) {
-    if (!target) return;
-    const rect = trigger.getBoundingClientRect();
-    const estimatedHeight = 520;
-    const maxTop = Math.max(76, window.innerHeight - estimatedHeight - 16);
-    setFlyoutTop(Math.min(Math.max(rect.top - 6, 76), maxTop));
-    setFlyoutTarget((current) => {
-      if (!current) return target;
-      if (current.type !== target.type) return target;
-      if (current.type === "settings" && target.type === "settings") return null;
-      if (current.type === "section" && target.type === "section" && current.key === target.key) return null;
-      return target;
-    });
-  }
-
   function handleCollapsedSidebarClick(event: ReactMouseEvent<HTMLDivElement>) {
     if (!collapsed) return;
+
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-    if (target.closest("[data-collapsed-flyout]")) return;
 
     const aside = target.closest("aside");
     if (!aside) return;
 
-    const topLogoLink = target.closest('a[aria-label="InsureIt home"]');
-    if (topLogoLink) {
-      event.preventDefault();
-      event.stopPropagation();
-      openSidebar();
-      return;
-    }
-
-    const settingsLink = target.closest('a[href="/settings"]');
-    if (settingsLink) {
-      event.preventDefault();
-      event.stopPropagation();
-      openFlyout({ type: "settings" }, settingsLink as HTMLElement);
-      return;
-    }
-
-    const sectionButton = target.closest("aside nav button");
-    if (sectionButton) {
-      const buttonText = sectionButton.textContent?.trim() ?? "";
-      const section = visibleSections.find((candidate) => buttonText.includes(candidate.label));
-      if (section) {
-        event.preventDefault();
-        event.stopPropagation();
-        openFlyout({ type: "section", key: section.key }, sectionButton as HTMLElement);
-        return;
-      }
-    }
-
-    if (!target.closest("a,button")) {
-      event.preventDefault();
-      openSidebar();
-    }
-  }
-
-  function closeFlyout() {
-    setFlyoutTarget(null);
+    // In collapsed mode every interaction with the rail opens the full sidebar.
+    // Prevent links and parent-menu buttons from navigating/toggling until the
+    // user can see the normal expanded hierarchy.
+    event.preventDefault();
+    event.stopPropagation();
+    openSidebar();
   }
 
   return (
@@ -199,36 +83,6 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           {collapsed ? "Open sidebar" : "Close sidebar"}
         </span>
       </button>
-
-      {collapsed && flyoutTarget ? (
-        <div
-          ref={flyoutRef}
-          data-collapsed-flyout
-          className="fixed left-[72px] z-[80] hidden w-[320px] max-h-[calc(100vh-96px)] overflow-y-auto rounded-[20px] border border-[#E5E7EB] bg-white p-3 text-[#111827] shadow-[0_22px_70px_rgba(15,23,42,.20)] lg:block"
-          style={{ top: flyoutTop }}
-        >
-          {flyoutSection ? (
-            <CollapsedSectionFlyout section={flyoutSection} onNavigate={closeFlyout} />
-          ) : flyoutTarget.type === "settings" ? (
-            <div>
-              <div className="mb-2 flex items-center gap-2 px-2 py-1.5">
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#F3F4F6] text-[#334155]">
-                  <Settings className="h-4 w-4" />
-                </span>
-                <div className="text-[14px] font-semibold text-[#111827]">Settings</div>
-              </div>
-              <Link
-                href="/settings"
-                onClick={closeFlyout}
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#334155] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]"
-              >
-                <Settings className="h-4 w-4 shrink-0" />
-                <span>Settings</span>
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
 
       <div className={`transition-[padding] duration-200 ease-out ${collapsed ? "lg:pl-16" : "lg:pl-[200px]"}`}>
         {children}
@@ -485,67 +339,6 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           }
         }
       `}</style>
-    </div>
-  );
-}
-
-function CollapsedSectionFlyout({ section, onNavigate }: { section: NavigationSection; onNavigate: () => void }) {
-  const SectionIcon = section.icon;
-
-  return (
-    <div>
-      <div className="mb-2 flex items-center gap-2 px-2 py-1.5">
-        <span className={`grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br ${section.tint} text-white`}>
-          <SectionIcon className="h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1 text-[14px] font-semibold text-[#111827]">{section.label}</div>
-      </div>
-
-      <div className="space-y-1">
-        {section.items.map((node) => {
-          if (node.kind === "group") {
-            const GroupIcon = node.icon;
-            return (
-              <div key={node.key} className="rounded-xl border border-[#EEF0F3] bg-[#FAFBFC] p-2">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-[12px] font-semibold text-[#475569]">
-                  <GroupIcon className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 flex-1">{node.label}</span>
-                  <ChevronRight className="h-3.5 w-3.5 rotate-90 text-[#94A3B8]" />
-                </div>
-                <div className="mt-1 space-y-0.5 border-l border-[#DDE3EA] pl-3">
-                  {node.items.map((item) => {
-                    const ItemIcon = item.icon;
-                    return (
-                      <Link
-                        key={`${item.href}:${item.label}`}
-                        href={item.href}
-                        onClick={onNavigate}
-                        className="flex items-center gap-2 rounded-lg px-2 py-2 text-[12px] font-medium text-[#334155] transition-colors hover:bg-white hover:text-[#0F172A]"
-                      >
-                        <ItemIcon className="h-3.5 w-3.5 shrink-0 text-[#64748B]" />
-                        <span className="min-w-0 flex-1">{item.label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          }
-
-          const ItemIcon = node.icon;
-          return (
-            <Link
-              key={`${node.href}:${node.label}`}
-              href={node.href}
-              onClick={onNavigate}
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-medium text-[#334155] transition-colors hover:bg-[#F3F4F6] hover:text-[#111827]"
-            >
-              <ItemIcon className="h-4 w-4 shrink-0 text-[#64748B]" />
-              <span className="min-w-0 flex-1">{node.label}</span>
-            </Link>
-          );
-        })}
-      </div>
     </div>
   );
 }
