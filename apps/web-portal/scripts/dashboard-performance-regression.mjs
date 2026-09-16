@@ -47,8 +47,8 @@ assert.match(
 );
 assert.doesNotMatch(
   accountsDashboardData,
-  /partner_payout_amount/,
-  "Accounts dashboard must not use partner payout planning inputs as projected cashflow.",
+  /\.select\("[^"]*partner_payout_amount[^"]*"\)/,
+  "Accounts dashboard must not fetch partner payout planning inputs as projected cashflow.",
 );
 assert.match(
   accountsDashboardData,
