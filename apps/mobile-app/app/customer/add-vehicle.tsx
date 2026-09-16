@@ -190,6 +190,8 @@ export default function AddVehicleScreen() {
         }
       }
       if (details.policyNumber) setPolicyNo(details.policyNumber.replace(/\s/g, '').toUpperCase());
+      if (details.policyStartDate) setPolicyStartDate(details.policyStartDate);
+      else if (details.policyExpiryDate) setPolicyStartDate(defaultPolicyStartDate(details.policyExpiryDate));
       if (details.policyExpiryDate) setPolicyEndDate(details.policyExpiryDate);
 
       if (details.model) setModel(cleanProviderModel(details.model, details.manufacturer));
@@ -419,7 +421,7 @@ export default function AddVehicleScreen() {
           <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
           <InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
           <View style={styles.twoColumnRow}>
-            <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
+            <View style={styles.column}><PremiumDateField label="Start date *" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
             <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
           </View>
           <View style={styles.twoColumnRow}>
@@ -578,6 +580,7 @@ async function uploadPolicyCopy(customerId: string, file: PickedPolicyCopy, user
     return null;
   } catch (error) { return error instanceof Error ? error.message : 'Upload failed.'; }
 }
+function defaultPolicyStartDate(endIso: string) { const end = parseDate(endIso); if (!end) return ''; const start = new Date(end.getFullYear() - 1, end.getMonth(), end.getDate()); start.setDate(start.getDate() + 1); return formatIsoDate(start); }
 function defaultPolicyEndDate(startIso: string) { const start = parseDate(startIso); if (!start) return ''; const end = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate()); end.setDate(end.getDate() - 1); return formatIsoDate(end); }
 function isMissingVehicleRpcSignature(error: { code?: string; message?: string } | null | undefined, functionName: string) { const message = error?.message?.toLowerCase() ?? ''; return error?.code === 'PGRST202' || (message.includes(functionName.toLowerCase()) && (message.includes('schema cache') || message.includes('could not find the function'))); }
 function parseDate(value: string) { if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null; const [year, month, day] = value.split('-').map(Number); const parsed = new Date(year, month - 1, day); if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) return null; return parsed; }

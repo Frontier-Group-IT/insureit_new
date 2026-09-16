@@ -20,6 +20,7 @@ export type CustomerRcLookupDetails = {
   localPermitExpiryDate: string | null;
   insuranceCompany: string | null;
   policyNumber: string | null;
+  policyStartDate: string | null;
   policyExpiryDate: string | null;
 };
 

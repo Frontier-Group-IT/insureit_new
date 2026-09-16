@@ -160,8 +160,8 @@ export default function VehicleDetailScreen() {
           <DetailCell icon="calendar-blank-outline" label="Manufacturing year" value={vehicle.year ? String(vehicle.year) : null} />
           <DetailCell icon="weight-kilogram" label="GVW" value={privateNotApplicable(vehicle, vehicle.gvw_kg ? `${vehicle.gvw_kg.toLocaleString('en-IN')} kg` : null)} />
           <DetailCell icon="calendar-check-outline" label="Registration date" value={formatDate(vehicle.registration_date)} />
-          <DetailCell icon="barcode" label="Chassis no." value={vehicle.chassis_no} />
-          <DetailCell icon="engine-outline" label="Engine no." value={vehicle.engine_no} />
+          <DetailCell icon="barcode" label="Chassis no." value={maskSensitiveIdentifier(vehicle.chassis_no)} />
+          <DetailCell icon="engine-outline" label="Engine no." value={maskSensitiveIdentifier(vehicle.engine_no)} />
         </View>
         <Text style={styles.detailGroupLabel}>Compliance and permits</Text>
         <View style={styles.detailGrid}>
@@ -189,6 +189,13 @@ function MiniStat({ label, value, badge }: { label: string; value: string; badge
 function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string | null; status?: 'expired' | 'due' | 'ok' }) {
   const showDateDot = status === 'expired' || status === 'due';
   return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : palette.navy} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
+}
+
+function maskSensitiveIdentifier(value?: string | null) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return null;
+  if (normalized.length <= 8) return `${normalized.slice(0, 2)}${'•'.repeat(Math.max(2, normalized.length - 4))}${normalized.slice(-2)}`;
+  return `${normalized.slice(0, 4)}${'•'.repeat(Math.max(4, normalized.length - 8))}${normalized.slice(-4)}`;
 }
 
 function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
