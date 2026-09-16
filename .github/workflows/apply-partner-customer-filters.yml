@@ -1,5 +1,6 @@
 name: Apply Partner customer filters migration
 
+# Operational trigger note: keep this workflow path-scoped so an approved main update can safely re-trigger the already-merged migration when schema parity blocks production.
 on:
   workflow_dispatch:
   push:
