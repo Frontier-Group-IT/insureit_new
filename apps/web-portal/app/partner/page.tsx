@@ -302,7 +302,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
                 <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#2E6CD5] transition group-hover:translate-x-0.5" aria-hidden="true" />
               </Link>
             ) : null}
-            <span className="whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
+            <span className="hidden whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
           </div>
         </section>
 
