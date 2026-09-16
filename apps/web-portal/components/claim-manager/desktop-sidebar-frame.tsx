@@ -120,6 +120,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           .desktop-sidebar-expanded aside nav button > .flex-1 {
             flex: 0 1 auto !important;
             min-width: 0;
+            white-space: nowrap;
           }
 
           .desktop-sidebar-expanded aside nav button > svg:last-child {
