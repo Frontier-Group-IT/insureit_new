@@ -47,6 +47,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-16 — Accounts reconciliation workflow + Excel preview:** PR #1933; workflow stages plus filtered reconciliation template download and preview-only upload validation are **IMPLEMENTED** on the feature branch. No financial writes or schema changes. See `docs/ACCOUNTS_RECONCILIATION_WORKFLOW_STEP1_2026_09_16.md`.
 - **2026-09-12 — AuthBridge production route + Customer policy prefill:** PR #1702 merged as `510ffd0b4f1e69bb1c5bce7245292c4082f6af9d`; canonical Lightsail/Nginx `/authbridge/rc-verification` route is **APPLIED + VERIFIED** with gateway health `mixed`, relay auth enforced and protected production service-372 lookup successful. PR #1704 merged as `fb5eaa5fbbd779784cc3b7b8a2084caa4705972e`; insurer, policy number and policy expiry prefill are **IMPLEMENTED IN MAIN**, while the exact Vercel production deployment, Customer production OTA and installed-app end-to-end verification remain **UNVERIFIED**. See `docs/AUTHBRIDGE_PRODUCTION_DEPLOYMENT_HANDOFF_2026_09_12.md`.
 - **2026-09-12 — Projected pay-in cashflow KPI:** PR #1747 merged as `b40d0714e5e93edb39ea03e194f79d25c471d5a6`; dashboard now presents projected net pay-in as the primary cashflow value with projected gross pay-in and projected TDS in the same KPI card, while Partner Payout and Retention remain separate. **MERGED / IMPLEMENTED IN MAIN; production deployment not yet verified.**
 
