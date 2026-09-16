@@ -13,7 +13,7 @@ const financeReportMigration = await readFile(
 for (const file of [
   "../app/policies/commercial-review/commercial-review-client.tsx",
   "../app/reports/page.tsx",
-  "../app/accounts/page.tsx",
+  "../app/accounts/other-recon/page.tsx",
   "../components/reports/report-navigation.tsx",
 ]) {
   const source = await readFile(new URL(file, import.meta.url), "utf8");
