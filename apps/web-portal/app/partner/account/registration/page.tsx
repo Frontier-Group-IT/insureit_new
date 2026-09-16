@@ -1,18 +1,18 @@
 import {
+  ArrowRight,
   CalendarDays,
   Check,
-  Eye,
   FileText,
   IdCard,
   Link2,
   LogIn,
-  Pencil,
   UserRound,
   UserRoundPlus,
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { PartnerIcallLauncher } from "@/components/partner-portal/partner-icall-launcher";
+import { createServerSupabaseClient } from "@/lib/auth-server";
 import { getPartnerWebRegistrationOverview } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +35,20 @@ function trainingButtonLabel(trainingStatus: string, examStatus: string) {
   return "Start training";
 }
 
+function documentTitle(documentType: string | null, fileName: string | null) {
+  const type = documentType?.trim();
+  if (type) return humanize(type);
+  if (fileName) return fileName.replace(/\.[^.]+$/, "");
+  return "Document";
+}
+
+function fileSizeLabel(value: number | null) {
+  if (!value || value <= 0) return "";
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default async function PartnerRegistrationPage() {
   const data = await getPartnerWebRegistrationOverview();
   const assignment = data.assignment;
@@ -48,7 +62,6 @@ export default async function PartnerRegistrationPage() {
   const linkedType = qualification?.final_type === "misp" ? "MISP" : qualification?.final_type === "posp" ? "POSP" : "Qualification";
   const linkedId = qualification ? `${linkedType} linked` : "Not linked";
   const active = data.intermediary.account_status === "active" || data.intermediary.portal_access_status === "active";
-  const reviewTitle = intermediaryType === "posp" ? "POSP Application Review" : intermediaryType === "misp" ? "MISP Application Review" : "Partner Application Review";
 
   const stats = [
     { icon: UserRound, label: "Account Type", value: intermediaryType === "posp" ? "POSP account" : intermediaryType === "misp" ? "MISP account" : "Partner" },
@@ -68,41 +81,44 @@ export default async function PartnerRegistrationPage() {
     { label: "IIB Upload", complete: intermediaryType === "partner" || isComplete(iibStatus) },
   ];
 
-  const documentLabels = intermediaryType === "partner"
-    ? ["Business Registration", "PAN Card", "Aadhaar Card", "Bank Account Proof", "GST Certificate", "Other Document"]
-    : ["Aadhaar Front", "Aadhaar Back", "PAN Copy", "Cancelled Cheque", "Photograph", "Other Document"];
+  const supabase = await createServerSupabaseClient();
+  const { data: rawDocuments } = await supabase
+    .from("intermediary_documents")
+    .select("id, document_type, file_name, storage_bucket, storage_path, mime_type, file_size, verification_status, created_at")
+    .eq("intermediary_id", data.intermediary.id)
+    .order("created_at", { ascending: true });
+
+  const visibleDocuments = (rawDocuments ?? []).filter((document) => {
+    const type = (document.document_type || "").trim().toLowerCase().replaceAll("_", " ");
+    return type !== "other" && type !== "other document" && type !== "others";
+  });
+
+  const documents = await Promise.all(
+    visibleDocuments.map(async (document) => {
+      if (!document.storage_bucket || !document.storage_path) return { ...document, openUrl: null as string | null };
+      const { data: signed } = await supabase.storage.from(document.storage_bucket).createSignedUrl(document.storage_path, 60 * 60);
+      return { ...document, openUrl: signed?.signedUrl ?? null };
+    }),
+  );
 
   return (
     <PartnerPortalShell title="Registration">
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
-          <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center px-5 py-5">
             <div className="flex min-w-0 items-center gap-3">
               <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md">
                 <UserRound className="h-6 w-6" />
               </span>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-semibold">{reviewTitle}</h1>
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <p className="truncate text-[13px] font-semibold text-white/90">{data.intermediary.display_name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-xl font-semibold">{data.intermediary.display_name}</h1>
                   <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold">
                     {data.intermediary.intermediary_code || "Code not recorded"}
                     {active ? <span className="grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-white"><Check className="h-2.5 w-2.5" /></span> : null}
                   </span>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="min-w-[190px] rounded-xl border border-white/25 bg-white/[0.06] px-3 py-2.5">
-                <p className="text-[7.5px] font-bold uppercase tracking-[.08em] text-white/55">Registration</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-amber-300" />
-                  <span className="text-[10px] font-semibold text-white">{humanize(registrationStatus)}</span>
-                </div>
-              </div>
-              <span className="grid h-10 w-10 place-items-center rounded-xl border border-white/20 bg-white/10 text-white/80">
-                <Pencil className="h-4 w-4" />
-              </span>
             </div>
           </div>
 
@@ -146,17 +162,50 @@ export default async function PartnerRegistrationPage() {
             </span>
             <div>
               <h2 className="text-[13px] font-semibold text-[#17203A]">Documents</h2>
-              <p className="mt-0.5 text-[9px] text-[#64748B]">{data.document_count} attached</p>
+              <p className="mt-0.5 text-[9px] text-[#64748B]">{documents.length} attached</p>
             </div>
           </div>
 
-          <div className="mt-4 overflow-x-auto pb-1">
-            <div className="grid min-w-[1050px] grid-cols-6 gap-3">
-              {documentLabels.map((label, index) => (
-                <DocumentCard key={label} label={label} uploaded={index < Math.min(data.document_count, 6)} />
-              ))}
+          {documents.length ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {documents.map((document) => {
+                const title = documentTitle(document.document_type, document.file_name);
+                const meta = [document.mime_type?.includes("pdf") ? "PDF" : document.mime_type?.split("/")[1]?.toUpperCase(), fileSizeLabel(document.file_size)].filter(Boolean).join(" · ");
+                const card = (
+                  <>
+                    <span className="inline-flex w-fit rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[7.5px] font-bold uppercase tracking-[.04em] text-emerald-700">Uploaded</span>
+                    <div className="mt-3 flex min-h-[86px] items-center gap-3 rounded-xl bg-white/65 px-4 py-3">
+                      <FileText className="h-10 w-10 shrink-0 text-[#3156B8]" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[11px] font-semibold text-[#17203A]">{title}</p>
+                        <p className="mt-1 truncate text-[9px] text-[#64748B]">{meta || document.file_name || "Uploaded document"}</p>
+                      </div>
+                      {document.openUrl ? <ArrowRight className="h-4 w-4 shrink-0 text-[#3156B8] transition group-hover:translate-x-0.5" /> : null}
+                    </div>
+                  </>
+                );
+
+                return document.openUrl ? (
+                  <a
+                    key={document.id}
+                    href={document.openUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${title}`}
+                    className="group block rounded-2xl border border-emerald-200 bg-gradient-to-br from-[#F7FAFF] via-[#EEF4FF] to-[#EAF0F8] p-3 transition hover:border-[#7CC9A9] hover:shadow-[0_8px_20px_rgba(49,86,184,.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25"
+                  >
+                    {card}
+                  </a>
+                ) : (
+                  <div key={document.id} className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-[#F7FAFF] via-[#EEF4FF] to-[#EAF0F8] p-3">
+                    {card}
+                  </div>
+                );
+              })}
             </div>
-          </div>
+          ) : (
+            <p className="mt-4 rounded-xl border border-dashed border-[#D9E2F0] px-4 py-6 text-center text-[10px] font-medium text-[#718096]">No documents available.</p>
+          )}
         </section>
       </div>
     </PartnerPortalShell>
@@ -210,21 +259,4 @@ function InfoCard({ title, children }: { title: string; children: React.ReactNod
 
 function Info({ label, value }: { label: string; value: string }) {
   return <div className="flex min-w-0 items-baseline gap-1.5 text-[10.5px] leading-5"><dt className="shrink-0 font-semibold text-[#64748B]">{label}:</dt><dd className="min-w-0 break-words font-semibold text-[#0F172A]">{value}</dd></div>;
-}
-
-function DocumentCard({ label, uploaded }: { label: string; uploaded: boolean }) {
-  return (
-    <div className={`relative min-h-[170px] overflow-hidden rounded-2xl border p-3 ${uploaded ? "border-emerald-200 bg-gradient-to-br from-[#F7FAFF] via-[#EEF4FF] to-[#EAF0F8]" : "border-[#D8E3F2] bg-[#F8FAFD]"}`}>
-      <span className={`inline-flex rounded-full border px-2 py-1 text-[7.5px] font-bold uppercase tracking-[.04em] ${uploaded ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[#D8E3F2] bg-white text-[#64748B]"}`}>
-        {uploaded ? "Uploaded" : "Pending"}
-      </span>
-      <div className="mt-3 flex h-[82px] items-center justify-center rounded-xl bg-white/55">
-        <FileText className={`h-12 w-12 ${uploaded ? "text-[#4F6EA8]/55" : "text-[#94A3B8]/40"}`} />
-      </div>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <p className="truncate text-[9.5px] font-semibold text-[#17203A]">{label}</p>
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white text-[#315FEA] shadow-sm"><Eye className="h-3.5 w-3.5" /></span>
-      </div>
-    </div>
-  );
 }
