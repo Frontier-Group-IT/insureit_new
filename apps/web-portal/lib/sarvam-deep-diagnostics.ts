@@ -3,9 +3,15 @@ import "server-only";
 const CORE_BASE_URL = "https://api.sarvam.ai";
 const VOICE_BASE_URL = "https://apps.sarvam.ai";
 const TIMEOUT_MS = 10_000;
+const DIAGNOSTIC_MISSING_CAMPAIGN_ID = "INSUREIT-Diagnostic-00000000-0000";
 
 export type SarvamDiagnosticProbe = {
-  key: "core" | "scheduling_x_api_key" | "scheduling_subscription" | "scheduling_bearer";
+  key:
+    | "core"
+    | "scheduling_x_api_key"
+    | "scheduling_x_api_key_missing_campaign"
+    | "scheduling_subscription"
+    | "scheduling_bearer";
   label: string;
   status: number | null;
   classification: string;
@@ -115,6 +121,7 @@ async function runProbe(
 function summarize(probes: SarvamDiagnosticProbe[]) {
   const core = probes.find((probe) => probe.key === "core");
   const xApiKey = probes.find((probe) => probe.key === "scheduling_x_api_key");
+  const missingCampaign = probes.find((probe) => probe.key === "scheduling_x_api_key_missing_campaign");
   const subscription = probes.find((probe) => probe.key === "scheduling_subscription");
   const bearer = probes.find((probe) => probe.key === "scheduling_bearer");
 
@@ -122,17 +129,29 @@ function summarize(probes: SarvamDiagnosticProbe[]) {
     return "Voice Agents scheduling accepts the configured credential with X-API-Key. This confirms the prior 401 blocker was the scheduling header contract, not the campaign binding. The core API 403 is not a blocker for this product-specific Voice Agents credential.";
   }
 
+  if (xApiKey?.status === 500 && missingCampaign?.status === 404) {
+    return "X-API-Key gets past the generic campaign lookup path: the intentionally missing campaign returns 404, while the real configured campaign returns 500. This isolates the provider failure to the real campaign resource or a backend path reached only after that campaign is found.";
+  }
+
+  if (xApiKey?.status === 500 && missingCampaign?.status === 500) {
+    return "Both the real and intentionally missing campaign return HTTP 500 with X-API-Key. That means Sarvam is failing before normal campaign existence resolution, strongly isolating the problem to the Voice Agents scheduling authentication/gateway/workspace layer rather than this specific campaign.";
+  }
+
+  if ((xApiKey?.status === 401 || xApiKey?.status === 403) && missingCampaign?.status === xApiKey.status) {
+    return "Both X-API-Key probes are rejected before campaign lookup. This keeps the blocker at the Voice Agents credential or workspace authorization layer.";
+  }
+
   const coreAccepted = core?.classification.startsWith("api_key_accepted") ?? false;
   const schedulingOk = [subscription, bearer].some((probe) => probe?.classification === "campaign_reachable");
 
   if (!coreAccepted) {
-    return "The core Sarvam API did not accept the configured credential and Voice Agents X-API-Key did not reach the campaign. Keep the campaign paused and inspect the X-API-Key result before changing any credential.";
+    return "The core Sarvam API did not accept the configured credential and Voice Agents X-API-Key did not reach the campaign. Keep the campaign paused and compare the real-vs-missing campaign X-API-Key probes before changing any credential.";
   }
   if (schedulingOk) {
     return "The API key is accepted and at least one Voice Agents scheduling authentication form can reach the configured campaign.";
   }
   if (subscription?.status === 401 && bearer?.status === 401) {
-    return "The API key is accepted by api.sarvam.ai, but the legacy scheduling authentication forms return 401. Inspect the X-API-Key result because Voice Agents scheduling uses its own API-key header contract.";
+    return "The API key is accepted by api.sarvam.ai, but the legacy scheduling authentication forms return 401. Inspect the two X-API-Key probes because Voice Agents scheduling uses its own API-key header contract.";
   }
   if (xApiKey?.status === 403 || subscription?.status === 403 || bearer?.status === 403) {
     return "Voice Agents scheduling reports forbidden access. Check the Voice Agents workspace key, product access and campaign permissions.";
@@ -149,7 +168,9 @@ export async function runSarvamDeepDiagnostics(): Promise<SarvamDeepDiagnostics>
   const workspaceId = requiredEnv("SARVAM_WORKSPACE_ID");
   const campaignId = requiredEnv("SARVAM_RENEWAL_CAMPAIGN_ID");
 
-  const schedulingUrl = `${VOICE_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/webhooks?limit=1`;
+  const schedulingBase = `${VOICE_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns`;
+  const schedulingUrl = `${schedulingBase}/${encodeURIComponent(campaignId)}/webhooks?limit=1`;
+  const missingCampaignUrl = `${schedulingBase}/${encodeURIComponent(DIAGNOSTIC_MISSING_CAMPAIGN_ID)}/webhooks?limit=1`;
   const coreUrl = `${CORE_BASE_URL}/text-to-speech/pronunciation-dictionary/insureit-diagnostic-do-not-create`;
 
   const probes = await Promise.all([
@@ -162,8 +183,15 @@ export async function runSarvamDeepDiagnostics(): Promise<SarvamDeepDiagnostics>
     ),
     runProbe(
       "scheduling_x_api_key",
-      "Voice Agents scheduling · X-API-Key",
+      "Voice Agents scheduling · X-API-Key · configured campaign",
       schedulingUrl,
+      { "X-API-Key": apiKey },
+      classifyScheduling,
+    ),
+    runProbe(
+      "scheduling_x_api_key_missing_campaign",
+      "Voice Agents scheduling · X-API-Key · intentionally missing campaign",
+      missingCampaignUrl,
       { "X-API-Key": apiKey },
       classifyScheduling,
     ),
