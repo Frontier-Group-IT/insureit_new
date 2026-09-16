@@ -1,10 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  ChevronDown,
-  ClipboardList,
   FileText,
-  RotateCcw,
   Search,
   ShieldCheck,
 } from "lucide-react";
@@ -122,8 +119,6 @@ export default async function PartnerPoliciesPage({
     return search ? `/partner/policies?${search}` : "/partner/policies";
   };
 
-  const resetHref = lifecycle === "all" && !q ? "/partner/policies" : "/partner/policies";
-
   return (
     <PartnerPortalShell title="Policies">
       <section className="overflow-hidden rounded-[18px] border border-[#D9E3EE] bg-white shadow-[0_10px_30px_rgba(29,54,86,0.06)]">
@@ -149,79 +144,6 @@ export default async function PartnerPoliciesPage({
               />
             </div>
           </form>
-
-          <div className="flex min-w-0 flex-wrap items-stretch gap-0 overflow-hidden rounded-[14px] border border-[#DCE5EF] bg-[#F8FAFD] xl:ml-auto">
-            <Link
-              href="/partner/policy-intakes"
-              className="flex min-h-11 items-center gap-2 border-r border-[#DCE5EF] px-3 text-[#183A64] transition hover:bg-white"
-            >
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#EAF1FF] text-[#2E6BD1]">
-                <ClipboardList className="h-3.5 w-3.5" />
-              </span>
-              <span>
-                <span className="block text-[9.5px] font-extrabold">Policy Intake</span>
-                <span className="block text-[7.5px] font-semibold uppercase tracking-[0.04em] text-[#8190A4]">Pending queue</span>
-              </span>
-            </Link>
-
-            <div className="flex min-h-11 items-center gap-2 border-r border-[#DCE5EF] px-3">
-              <span className="text-[8.5px] font-bold text-[#667A92]">In Force</span>
-              <span className="grid h-7 min-w-7 place-items-center rounded-lg border border-[#D6E1EC] bg-white px-1.5 text-[11px] font-extrabold text-[#304861]">
-                {summary.in_force_policies}
-              </span>
-            </div>
-
-            <div className="flex min-h-11 items-center gap-2 px-3">
-              <span className="text-[8.5px] font-bold text-[#B26F1D]">Expiring</span>
-              <span className="grid h-7 min-w-7 place-items-center rounded-lg border border-[#F0D79B] bg-[#FFF8E8] px-1.5 text-[11px] font-extrabold text-[#AA6711]">
-                {summary.expiring_30_days}
-              </span>
-            </div>
-          </div>
-
-          <Link
-            href="/partner/policy-intakes"
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[12px] bg-[#103D6B] px-4 text-[10px] font-extrabold text-white shadow-[0_5px_14px_rgba(16,61,107,0.18)] transition hover:bg-[#0A315A] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25"
-          >
-            <span className="text-[17px] font-medium leading-none">+</span>
-            Policy Intake
-          </Link>
-        </div>
-
-        <div className="flex flex-col gap-2 border-b border-[#E4EAF1] bg-[#FBFCFE] px-4 py-2.5 xl:flex-row xl:items-center">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <select
-                form="partner-policy-filter"
-                name="lifecycle"
-                defaultValue={lifecycle}
-                className="h-10 min-w-[210px] appearance-none rounded-[11px] border border-[#D7E0EA] bg-white pl-3 pr-9 text-[10px] font-bold text-[#344A63] outline-none focus:border-[#8099B8]"
-              >
-                {lifecycles.map((item) => (
-                  <option key={item.value} value={item.value}>{item.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#677C94]" />
-            </div>
-
-            <form id="partner-policy-filter" action="/partner/policies" className="contents">
-              {q ? <input type="hidden" name="q" value={q} /> : null}
-              <button
-                type="submit"
-                className="h-10 rounded-[11px] border border-[#D7E0EA] bg-white px-4 text-[9px] font-extrabold text-[#536A84] transition hover:bg-[#F5F8FC]"
-              >
-                Apply
-              </button>
-            </form>
-
-            <Link
-              href={resetHref}
-              aria-label="Reset policy filters"
-              className="grid h-10 w-10 place-items-center rounded-[11px] border border-[#D7E0EA] bg-white text-[#5D7590] transition hover:bg-[#F5F8FC]"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Link>
-          </div>
 
           <div className="flex flex-wrap items-center gap-0 overflow-hidden rounded-[12px] border border-[#D9E3EC] bg-[#F7F9FC] xl:ml-auto">
             {lifecycles.map((item) => {
