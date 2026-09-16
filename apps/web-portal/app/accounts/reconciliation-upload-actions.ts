@@ -11,6 +11,12 @@ export type PayinPreviewRow = { rowNumber: number; policyId: string; policyNumbe
 export type PayoutPreviewRow = { rowNumber: number; payoutId: string; policyId: string; policyNumber: string; intermediaryType: string; intermediaryCode: string; payoutOdPercent: number; payoutTpPercent: number; projectedGrossPayout: number; projectedRetention: number; paidAmount: number | null; paidDate: string; reference: string; status: PreviewStatus; message: string };
 export type ReconciliationUploadPreview = { totalRows: number; readyRows: number; warningRows: number; errorRows: number; skippedRows: number; payinRows: PayinPreviewRow[]; payoutRows: PayoutPreviewRow[]; message?: string };
 
+type PolicyRow = { id: string; policy_no: string | null; customer_id: string; insurance_company_id: string | null; intermediary_type: string | null; intermediary_code: string | null; insurance_companies: { name?: string | null } | Array<{ name?: string | null }> | null };
+type PayinDetailRow = { policy_id: string; total_projected_payin: number | string | null; tds_amount: number | string | null; payin_after_tds: number | string | null };
+type PayoutDetailRow = { id: string; policy_id: string; intermediary_type: string | null; intermediary_code: string | null; od_payout_percent: number | string | null; tp_payout_percent: number | string | null; gross_payout: number | string | null; retention_amount: number | string | null; commercial_status: string | null; status: string | null };
+type ReceiptRefRow = { insurer_id: string; bank_reference: string | null };
+type PartnerPaymentRefRow = { intermediary_code: string | null; payment_reference: string | null };
+
 const PAYIN_HEADERS = ["System Policy ID", "Policy Number", "Insurance Company", "Projected Pay-In", "Projected TDS", "Projected Net Pay-In", "Bill Number", "Bill Amount", "Bill Date", "Actual TDS", "Amount Received", "Receipt Date", "UTR / Reference"] as const;
 const PAYOUT_HEADERS = ["System Payout ID", "System Policy ID", "Policy Number", "Intermediary Type", "Intermediary Code", "Payout OD %", "Payout TP %", "Projected Gross Payout", "Projected Retention", "Paid Amount", "Paid Date", "UTR / Reference"] as const;
 
@@ -42,21 +48,21 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
   if (customerIds !== null && !customerIds.length) return emptyPreview("No uploaded rows are inside your Accounts access scope.");
 
-  let policies: Array<Record<string, any>> = [];
-  let payins: Array<Record<string, any>> = [];
-  let payouts: Array<Record<string, any>> = [];
+  let policies: PolicyRow[] = [];
+  let payins: PayinDetailRow[] = [];
+  let payouts: PayoutDetailRow[] = [];
   if (policyIds.length) {
     let policyQuery = db.from("policies").select("id,policy_no,customer_id,insurance_company_id,intermediary_type,intermediary_code,insurance_companies(name)").in("id", policyIds);
     if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
     const [{ data: policyData, error: policyError }, { data: payinData, error: payinError }] = await Promise.all([policyQuery, db.from("policy_payin_details").select("policy_id,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", policyIds)]);
     if (policyError || payinError) throw new Error(policyError?.message ?? payinError?.message ?? "Unable to validate reconciliation workbook.");
-    policies = policyData ?? [];
-    payins = payinData ?? [];
+    policies = (policyData ?? []) as PolicyRow[];
+    payins = (payinData ?? []) as PayinDetailRow[];
   }
   if (payoutIds.length) {
     const { data, error } = await db.from("policy_intermediary_payouts").select("id,policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,retention_amount,commercial_status,status").in("id", payoutIds);
     if (error) throw new Error(error.message);
-    payouts = data ?? [];
+    payouts = (data ?? []) as PayoutDetailRow[];
   }
 
   const policyMap = new Map(policies.map((policy) => [policy.id, policy]));
@@ -65,10 +71,10 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
 
   const payinRefs = [...new Set(activePayin.map(({ row }) => text(row["UTR / Reference"])).filter(Boolean))];
   const payoutRefs = [...new Set(activePayout.map(({ row }) => text(row["UTR / Reference"])).filter(Boolean))];
-  let existingReceipts: Array<Record<string, any>> = [];
-  let existingPartnerPayments: Array<Record<string, any>> = [];
-  if (payinRefs.length) { const { data } = await db.from("accounts_receipts").select("insurer_id,bank_reference").in("bank_reference", payinRefs); existingReceipts = data ?? []; }
-  if (payoutRefs.length) { const { data } = await db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", payoutRefs); existingPartnerPayments = data ?? []; }
+  let existingReceipts: ReceiptRefRow[] = [];
+  let existingPartnerPayments: PartnerPaymentRefRow[] = [];
+  if (payinRefs.length) { const { data } = await db.from("accounts_receipts").select("insurer_id,bank_reference").in("bank_reference", payinRefs); existingReceipts = (data ?? []) as ReceiptRefRow[]; }
+  if (payoutRefs.length) { const { data } = await db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", payoutRefs); existingPartnerPayments = (data ?? []) as PartnerPaymentRefRow[]; }
   const existingReceiptKeys = new Set(existingReceipts.map((row) => `${row.insurer_id}|${normalizeRef(row.bank_reference)}`));
   const existingPayoutKeys = new Set(existingPartnerPayments.map((row) => `${normalizeRef(row.intermediary_code)}|${normalizeRef(row.payment_reference)}`));
   const payinUploadGroups = new Map<string, string>();
@@ -76,7 +82,7 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
 
   const payinRows: PayinPreviewRow[] = activePayin.map(({ row, rowNumber }) => {
     const policyId = text(row["System Policy ID"]); const policy = policyMap.get(policyId); const livePayin = payinMap.get(policyId);
-    const relation = policy?.insurance_companies as { name?: string | null } | Array<{ name?: string | null }> | null | undefined;
+    const relation = policy?.insurance_companies;
     const insurer = Array.isArray(relation) ? relation[0]?.name ?? "" : relation?.name ?? text(row["Insurance Company"]);
     const projectedPayin = money(livePayin?.total_projected_payin); const projectedTds = money(livePayin?.tds_amount); const projectedNetPayin = money(livePayin?.payin_after_tds);
     const billNumber = text(row["Bill Number"]); const billAmount = optionalMoney(row["Bill Amount"]); const billDate = normalizedDate(row["Bill Date"]); const actualTds = optionalMoney(row["Actual TDS"]); const amountReceived = optionalMoney(row["Amount Received"]); const receiptDate = normalizedDate(row["Receipt Date"]); const reference = text(row["UTR / Reference"]); const difference = billAmount === null ? null : money(projectedPayin - billAmount);
