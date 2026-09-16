@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       rows.push(...next.report.register.rows);
     }
 
-    const headers = ["Business Date", "Policy No", "Business Line", "Category", "Customer", "Customer Code", "Risk / Asset", "Insurance Company", "RM", "Intermediary Code", "Gross Premium", "Projected Pay-In", "Gross Partner Payout", "Projected Margin"];
+    const headers = ["Business Date", "Policy No", "Business Line", "Category", "Customer", "Customer Code", "Risk / Asset", "Insurance Company", "RM", "Intermediary Code", "Net Premium", "Projected Pay-In", "Gross Partner Payout", "Projected Margin"];
     const lines = [headers.map(csvCell).join(",")];
     for (const row of rows) {
       lines.push([
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
         row.insurer_name,
         row.rm_name ?? "",
         row.intermediary_code ?? "",
-        row.gross_premium,
+        row.net_premium,
         row.projected_payin,
         row.gross_payout,
         row.projected_payin - row.gross_payout,

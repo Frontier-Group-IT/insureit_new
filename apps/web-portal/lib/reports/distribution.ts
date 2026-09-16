@@ -41,6 +41,7 @@ export type DistributionReport = {
     policy_count: number;
     customer_count: number;
     gross_premium: number;
+    net_premium: number;
     onboarding_open_count: number;
   };
   rms: Array<{
@@ -52,6 +53,7 @@ export type DistributionReport = {
     policy_count: number;
     customer_count: number;
     gross_premium: number;
+    net_premium: number;
   }>;
   intermediaries: {
     rows: Array<{
@@ -69,6 +71,7 @@ export type DistributionReport = {
       policy_count: number;
       customer_count: number;
       gross_premium: number;
+      net_premium: number;
       last_business_date: string | null;
     }>;
     total_count: number;
@@ -131,7 +134,7 @@ export async function loadDistributionReport(profile: ViewerProfile, query: Dist
   }
 
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.rpc("get_distribution_report", {
+  const { data, error } = await admin.rpc("get_distribution_report_v2", {
     p_intermediary_ids: intermediaryIds,
     p_application_ids: applicationIds,
     p_from_date: filters.fromDate,
@@ -197,6 +200,7 @@ function normalizeDistributionReport(value: unknown, page: number, onboardingPag
       policy_count: numberValue(summary.policy_count),
       customer_count: numberValue(summary.customer_count),
       gross_premium: numberValue(summary.gross_premium),
+      net_premium: numberValue(summary.net_premium),
       onboarding_open_count: numberValue(summary.onboarding_open_count),
     },
     rms: arrayValue(raw.rms).map((row) => {
@@ -210,6 +214,7 @@ function normalizeDistributionReport(value: unknown, page: number, onboardingPag
         policy_count: numberValue(item.policy_count),
         customer_count: numberValue(item.customer_count),
         gross_premium: numberValue(item.gross_premium),
+        net_premium: numberValue(item.net_premium),
       };
     }),
     intermediaries: {
@@ -230,6 +235,7 @@ function normalizeDistributionReport(value: unknown, page: number, onboardingPag
           policy_count: numberValue(item.policy_count),
           customer_count: numberValue(item.customer_count),
           gross_premium: numberValue(item.gross_premium),
+          net_premium: numberValue(item.net_premium),
           last_business_date: nullableString(item.last_business_date),
         };
       }),
@@ -296,6 +302,7 @@ function emptyDistributionReport(page: number, onboardingPage: number): Distribu
       policy_count: 0,
       customer_count: 0,
       gross_premium: 0,
+      net_premium: 0,
       onboarding_open_count: 0,
     },
     rms: [],
