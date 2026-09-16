@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { Truck } from "lucide-react";
 
 export type PartnerCustomIconName =
   | "home"
@@ -16,11 +17,10 @@ export type PartnerCustomIconName =
   | "account"
   | "support";
 
-const iconAssets: Record<PartnerCustomIconName, string> = {
+const iconAssets: Record<Exclude<PartnerCustomIconName, "vehicle">, string> = {
   home: "/assets/Custom-Icons/optimized-128/tasks-work-queue.png",
   business: "/assets/Custom-Icons/optimized-128/reports-analytics.png",
   customers: "/assets/Custom-Icons/optimized-128/customers.png",
-  vehicle: "/assets/Custom-Icons/optimized-128/fleet-vehicle.png",
   policies: "/assets/Custom-Icons/optimized-128/policy.png",
   renewals: "/assets/Custom-Icons/optimized-128/renewal.png",
   claims: "/assets/Custom-Icons/optimized-128/claims.png",
@@ -44,6 +44,18 @@ export function PartnerCustomIcon({
   className?: string;
   priority?: boolean;
 }) {
+  if (name === "vehicle") {
+    return (
+      <Truck
+        width={size}
+        height={size}
+        aria-hidden="true"
+        strokeWidth={2}
+        className={`shrink-0 text-[#2F70E5] ${className}`}
+      />
+    );
+  }
+
   return (
     <Image
       src={iconAssets[name]}
