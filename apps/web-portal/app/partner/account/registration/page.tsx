@@ -2,15 +2,20 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Building2,
+  CalendarDays,
   Check,
+  CircleUserRound,
   ClipboardCheck,
   FilePenLine,
   Files,
   GraduationCap,
   IdCard,
+  Link2,
+  LogIn,
   Mail,
   Phone,
   ShieldCheck,
+  UserRoundPlus,
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
@@ -25,7 +30,7 @@ type StepTone = "complete" | "active" | "pending";
 type StatusMetricProps = {
   label: string;
   value: string;
-  tone?: "success" | "warning" | "neutral";
+  icon: LucideIcon;
 };
 
 function humanize(value: string | null | undefined) {
@@ -104,64 +109,55 @@ export default async function PartnerRegistrationPage() {
   return (
     <PartnerPortalShell title="Registration & Training">
       <div className="space-y-4 pb-5">
-        <section className="overflow-hidden rounded-2xl bg-gradient-to-r from-[#0C2E64] via-[#0E447F] to-[#0A4F91] text-white shadow-[0_12px_30px_rgba(17,56,108,0.18)]">
-          <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between xl:px-6">
+        <section className="overflow-hidden rounded-[18px] bg-gradient-to-r from-[#0B2C64] via-[#0D3D7C] to-[#0B5298] text-white shadow-[0_12px_30px_rgba(17,56,108,0.18)]">
+          <div className="flex min-h-[124px] flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between xl:px-6">
             <div className="flex min-w-0 items-center gap-4">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white/95 text-[#1D62C7] shadow-sm">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-white text-[#2563EB] shadow-sm">
                 <Building2 className="h-6 w-6" />
               </span>
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <div>
-                    <p className="text-[8.5px] font-black uppercase tracking-[0.14em] text-white/65">Registration & Training</p>
-                    <h1 className="mt-1 truncate text-[22px] font-extrabold tracking-[-0.025em]">{data.intermediary.display_name}</h1>
-                  </div>
-                  <span className="inline-flex rounded-full bg-[#19875E] px-2.5 py-1 text-[8.5px] font-bold text-white">
+                <h1 className="truncate text-[22px] font-extrabold tracking-[-0.025em]">Registration & Training</h1>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  <span className="truncate text-[13px] font-extrabold text-white/95">{data.intermediary.display_name}</span>
+                  <span className="inline-flex rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-[9px] font-bold text-white">
+                    {data.intermediary.intermediary_code || "Code not recorded"}
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#1FB66B] px-2 py-1 text-[8.5px] font-bold text-white">
                     {humanize(registrationStatus)}
+                    <Check className="h-3 w-3" />
                   </span>
                 </div>
-                <p className="mt-1 text-[10px] font-semibold text-white/75">
-                  {humanize(data.intermediary.intermediary_type)} · {data.intermediary.intermediary_code || "Code not recorded"}
-                </p>
               </div>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[430px]">
+            <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[360px]">
               <HeroMeta label="Partner Type" value={humanize(data.intermediary.intermediary_type)} icon={IdCard} />
-              <HeroMeta label="Portal Access" value={humanize(data.intermediary.portal_access_status)} icon={ShieldCheck} />
+              <HeroMeta label="Portal Access" value={humanize(data.intermediary.portal_access_status)} icon={LogIn} />
             </div>
           </div>
 
-          <div className="grid border-t border-white/15 bg-[#0A3B74]/45 sm:grid-cols-2 xl:grid-cols-4">
-            <StatusMetric label="Account" value={humanize(data.intermediary.account_status)} tone="success" />
-            <StatusMetric label="Portal Access" value={humanize(data.intermediary.portal_access_status)} tone="success" />
-            <StatusMetric label="Qualification" value={qualification ? accountLabel : "Not linked"} tone={qualification ? "success" : "warning"} />
-            <StatusMetric label="Registration" value={humanize(registrationStatus)} tone="success" />
+          <div className="grid border-t border-white/15 bg-[#0B3B76]/42 sm:grid-cols-2 xl:grid-cols-6">
+            <StatusMetric label="Account Status" value={humanize(data.intermediary.account_status)} icon={CircleUserRound} />
+            <StatusMetric label="Partner Code" value={data.intermediary.intermediary_code || "Not recorded"} icon={Link2} />
+            <StatusMetric label="Qualification" value={qualification ? accountLabel : "Not linked"} icon={IdCard} />
+            <StatusMetric label="Registration Status" value={humanize(registrationStatus)} icon={UserRoundPlus} />
+            <StatusMetric label="Portal Access" value={humanize(data.intermediary.portal_access_status)} icon={LogIn} />
+            <StatusMetric label="Documents" value={`${data.document_count} attached`} icon={CalendarDays} />
           </div>
         </section>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <section className="rounded-2xl border border-[#DCE5F1] bg-white p-4 shadow-[0_6px_20px_rgba(31,65,115,0.06)] sm:p-5">
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#EEF2FF] text-[#5C5CE2]">
-                <Mail className="h-4 w-4" />
-              </span>
-              <h2 className="text-[13px] font-extrabold text-[#162B50]">Contact information</h2>
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <section className="min-h-[205px] rounded-[18px] border border-[#DDE5EF] bg-white px-5 py-5 shadow-[0_6px_20px_rgba(31,65,115,0.06)]">
+            <h2 className="text-[14px] font-extrabold text-[#162B50]">Contact information</h2>
+            <div className="mt-5 grid gap-x-12 gap-y-4 sm:grid-cols-2">
               <InfoItem label="Email" value={data.intermediary.email || "Email not recorded"} icon={Mail} />
               <InfoItem label="Mobile" value={data.intermediary.mobile || "Mobile not recorded"} icon={Phone} />
             </div>
           </section>
 
-          <section className="rounded-2xl border border-[#DCE5F1] bg-white p-4 shadow-[0_6px_20px_rgba(31,65,115,0.06)] sm:p-5">
-            <div className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#EEF2FF] text-[#5C5CE2]">
-                <IdCard className="h-4 w-4" />
-              </span>
-              <h2 className="text-[13px] font-extrabold text-[#162B50]">Partner details</h2>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-[10px]">
+          <section className="min-h-[205px] rounded-[18px] border border-[#DDE5EF] bg-white px-5 py-5 shadow-[0_6px_20px_rgba(31,65,115,0.06)]">
+            <h2 className="text-[14px] font-extrabold text-[#162B50]">Partner details</h2>
+            <div className="mt-5 grid grid-cols-2 gap-x-10 gap-y-4 text-[10px]">
               <DetailPair label="Partner type" value={humanize(data.intermediary.intermediary_type)} />
               <DetailPair label="Partner code" value={data.intermediary.intermediary_code || "Not recorded"} />
               <DetailPair label="Account status" value={humanize(data.intermediary.account_status)} />
@@ -260,32 +256,26 @@ export default async function PartnerRegistrationPage() {
 
 function HeroMeta({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-white/15 bg-white/[0.06] px-3 py-2.5">
+    <div className="flex min-w-0 items-center gap-3 rounded-xl border border-white/45 bg-white/[0.05] px-3 py-2.5">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/10 text-white/90">
         <Icon className="h-3.5 w-3.5" />
       </span>
       <div className="min-w-0">
-        <p className="text-[8px] font-semibold text-white/55">{label}</p>
+        <p className="text-[8px] font-semibold text-white/60">{label}</p>
         <p className="truncate text-[10.5px] font-extrabold text-white">{value}</p>
       </div>
     </div>
   );
 }
 
-function StatusMetric({ label, value, tone = "neutral" }: StatusMetricProps) {
-  const toneClasses = {
-    success: "bg-[#24A65D] text-white",
-    warning: "bg-[#F59E0B] text-white",
-    neutral: "bg-white/15 text-white",
-  }[tone];
-
+function StatusMetric({ label, value, icon: Icon }: StatusMetricProps) {
   return (
-    <div className="flex min-h-[74px] items-center gap-3 border-b border-white/10 px-4 py-3 sm:border-r xl:border-b-0 xl:last:border-r-0">
-      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${toneClasses}`}>
-        {tone === "warning" ? <GraduationCap className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+    <div className="flex min-h-[82px] items-center gap-3 border-b border-white/15 px-4 py-3 sm:border-r xl:border-b-0 xl:last:border-r-0">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/20 bg-white/10 text-white">
+        <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0">
-        <p className="text-[8px] font-semibold text-white/55">{label}</p>
+        <p className="text-[8px] font-semibold uppercase tracking-[0.02em] text-white/55">{label}</p>
         <p className="mt-0.5 truncate text-[10.5px] font-extrabold text-white">{value}</p>
       </div>
     </div>
@@ -297,8 +287,8 @@ function InfoItem({ label, value, icon: Icon }: { label: string; value: string; 
     <div className="flex min-w-0 items-start gap-3">
       <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[#315A91]" />
       <div className="min-w-0">
-        <p className="text-[8.5px] font-semibold text-[#7B8CA4]">{label}</p>
-        <p className="mt-0.5 break-words text-[10px] font-bold leading-4 text-[#213653]">{value}</p>
+        <p className="text-[9px] font-medium text-[#71839C]">{label}</p>
+        <p className="mt-1 break-words text-[10.5px] font-semibold leading-4 text-[#18283F]">{value}</p>
       </div>
     </div>
   );
@@ -308,7 +298,7 @@ function DetailPair({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
       <span className="shrink-0 text-[9px] font-medium text-[#71839C]">{label}</span>
-      <span className="min-w-0 break-words text-[10px] font-bold text-[#203653]">{value}</span>
+      <span className="min-w-0 break-words text-[10px] font-semibold text-[#18283F]">{value}</span>
     </div>
   );
 }
