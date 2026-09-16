@@ -37,20 +37,28 @@ The stable comparison is important:
 - Do not change campaign, workspace, org, agent ID or agent version based solely on the 500.
 - Do not switch production cohort submission to X-API-Key until a read-only Voice Agents request returns a resource-level response (2xx, 404, or a provider-documented authorization response) instead of 500.
 
-## Next deterministic check
+## Campaign lookup isolation probe
 
-If further client-side isolation is needed before provider escalation, compare the same read-only X-API-Key request against:
+The next deterministic check has now been implemented in the diagnostics branch. It adds a fifth read-only probe using the exact same:
 
-1. the configured real campaign ID; and
-2. an intentionally nonexistent campaign ID in the same confirmed org/workspace.
+- `X-API-Key` credential;
+- organization ID;
+- workspace ID;
+- HTTP method (`GET`);
+- campaign webhook-list endpoint family;
 
-Interpretation:
+but substitutes a fixed, synthetic, intentionally nonexistent campaign ID.
 
-- real=500 and nonexistent=404: authentication/resource lookup works and the real campaign/provider state is specifically failing;
-- real=500 and nonexistent=500: provider fails before campaign resource resolution, strongly supporting a scheduling auth/gateway/backend defect;
-- nonexistent=401/403: X-API-Key is not generally accepted and the real 500 is an inconsistent provider error path.
+No customer data, call submission, cohort streaming, campaign update, resume, retry, or other provider mutation is performed.
 
-This comparison must remain GET-only and must never create, update, retry, stream, resume, or otherwise mutate a Sarvam campaign.
+Interpretation after production deployment:
+
+- configured campaign=500 and intentionally missing campaign=404: authentication and ordinary campaign lookup are working; the real configured campaign or a backend path reached after finding it is specifically failing;
+- configured campaign=500 and intentionally missing campaign=500: Sarvam fails before normal campaign existence resolution, strongly isolating the blocker to the Voice Agents scheduling authentication/gateway/workspace layer rather than this specific campaign;
+- both X-API-Key probes=401/403: the credential is rejected before campaign lookup;
+- configured campaign=2xx: the read-only scheduling blocker is cleared for that resource.
+
+Until this comparison is run in production, the repeated 500 remains unresolved provider-side evidence rather than proof of successful authentication.
 
 ## Provider escalation evidence
 
