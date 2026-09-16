@@ -34,10 +34,7 @@ export default async function PartnerSearchPage({ searchParams }: { searchParams
   return (
     <PartnerPortalShell title="Search" headerVariant="breadcrumb">
       <div className="space-y-7">
-        <PartnerPageHeader
-          title="Search your business"
-          description="Search customers, policies and claims."
-        />
+        <PartnerPageHeader title="Search your business" />
 
         <section>
           <form action="/partner/search" className="flex w-full gap-2 rounded-2xl bg-[#F7FBFF] p-3 shadow-[0_8px_24px_rgba(49,86,184,0.08)]">
