@@ -82,7 +82,6 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
             return (
               <details
                 key={vehicle.vehicle_id}
-                open
                 className="group overflow-hidden rounded-2xl border border-[#DCE5F0] bg-white shadow-[0_5px_18px_rgba(31,55,86,0.055)]"
               >
                 <summary className="grid cursor-pointer list-none gap-3 px-4 py-3 transition hover:bg-[#FBFCFE] xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(110px,.75fr))_minmax(125px,.75fr)_24px] xl:items-center [&::-webkit-details-marker]:hidden">
