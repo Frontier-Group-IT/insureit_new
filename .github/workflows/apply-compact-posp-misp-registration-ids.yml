@@ -1,0 +1,101 @@
+name: Apply compact POSP MISP registration IDs migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260916173000_compact_posp_misp_registration_ids.sql'
+      - '.github/workflows/apply-compact-posp-misp-registration-ids.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply compact POSP MISP registration IDs migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260916173000_compact_posp_misp_registration_ids.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply compact POSP MISP registration IDs migration
+        run: supabase db query --linked --file supabase/migrations/20260916173000_compact_posp_misp_registration_ids.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260916173000
+
+      - name: Verify compact generators and migrated system registrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            with defs as (
+              select
+                pg_get_functiondef('public.next_registration_code(text)'::regprocedure) as registration_def,
+                pg_get_functiondef('public.next_posp_identity()'::regprocedure) as posp_identity_def
+            ), remaining_old_system_codes as (
+              select count(*)::int as count
+              from public.intermediary_registrations r
+              join public.posp_misp_onboarding_profiles p
+                on p.application_id = r.application_id
+              where p.record_source = 'new_onboarding'
+                and (
+                  (r.registration_type = 'posp' and r.registration_code ~ '^POSP-[0-9]{4}-[0-9]{5}$')
+                  or
+                  (r.registration_type = 'misp' and r.registration_code ~ '^MISP-[0-9]{4}-[0-9]{5}$')
+                )
+            ), legacy_rows as (
+              select count(*)::int as count
+              from public.posp_misp_onboarding_profiles
+              where record_source <> 'new_onboarding'
+                 or record_source is null
+            )
+            select
+              registration_def like '%return ''POSP'' || lpad(nextval(''public.posp_code_sequence''::regclass)::text, 5, ''0'')%' as posp_generator_compact,
+              registration_def like '%return ''MISP'' || lpad(nextval(''public.misp_code_sequence''::regclass)::text, 5, ''0'')%' as misp_generator_compact,
+              posp_identity_def like '%select ''POSP'' || lpad(nextval(''public.posp_identity_seq''::regclass)::text, 5, ''0'')%' as posp_identity_compact,
+              (select count from remaining_old_system_codes) = 0 as system_codes_migrated,
+              (select count from legacy_rows) as legacy_rows_preserved_scope
+            from defs;
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"posp_generator_compact"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"misp_generator_compact"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"posp_identity_compact"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"system_codes_migrated"[[:space:]]*:[[:space:]]*true'
