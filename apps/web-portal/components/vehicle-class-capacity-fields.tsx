@@ -32,6 +32,13 @@ type ManufacturerYearProps = {
   defaultYear?: string | null;
 };
 
+type RcAppliedDetails = {
+  vehicleClass?: string | null;
+  engineCapacityCc?: string | null;
+  seatingCapacity?: string | null;
+  gvwKg?: string | null;
+};
+
 export function ManufacturerYearFields({ manufacturers, defaultMake = "", defaultYear = "" }: ManufacturerYearProps) {
   const years = defaultYear && !yearOptions.includes(defaultYear) ? [defaultYear, ...yearOptions] : yearOptions;
 
@@ -73,8 +80,24 @@ export function VehicleSpecificationFields({ defaultClass = "", defaultChassis =
         setRegistrationMode(customEvent.detail.mode);
       }
     };
+
+    const handleRcApplied = (event: Event) => {
+      const customEvent = event as CustomEvent<RcAppliedDetails>;
+      const details = customEvent.detail ?? {};
+      const nextClass = details.vehicleClass && vehicleClassMap[details.vehicleClass] ? details.vehicleClass : null;
+      if (!nextClass) return;
+
+      setVehicleClass(nextClass);
+      const nextCapacity = capacityForClass(nextClass, details);
+      if (nextCapacity) setCapacity(nextCapacity);
+    };
+
     window.addEventListener("insureit:vehicle-registration-mode", handleMode);
-    return () => window.removeEventListener("insureit:vehicle-registration-mode", handleMode);
+    window.addEventListener("insureit:vehicle-rc-applied", handleRcApplied);
+    return () => {
+      window.removeEventListener("insureit:vehicle-registration-mode", handleMode);
+      window.removeEventListener("insureit:vehicle-rc-applied", handleRcApplied);
+    };
   }, []);
 
   function changeVehicleClass(value: string) {
@@ -112,4 +135,11 @@ export function VehicleSpecificationFields({ defaultClass = "", defaultChassis =
       <input id="gvw_kg" name="gvw_kg" type="number" min="0" step="0.01" className={inputClass} value={capacity} onChange={(event) => setCapacity(event.target.value)} placeholder={vehicleMeta ? `Enter ${vehicleMeta.capacityLabel.toLowerCase()}` : "Select class first"} disabled={!vehicleClass} />
     </div>
   </>;
+}
+
+function capacityForClass(vehicleClass: string, details: RcAppliedDetails) {
+  if (vehicleClass === "GCV") return details.gvwKg ?? "";
+  if (vehicleClass === "PCV") return details.seatingCapacity ?? "";
+  if (vehicleClass === "PCP" || vehicleClass === "TWP") return details.engineCapacityCc ?? "";
+  return details.gvwKg ?? details.engineCapacityCc ?? details.seatingCapacity ?? "";
 }
