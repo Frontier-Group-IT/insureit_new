@@ -118,52 +118,45 @@ end
 $$;
 
 -- Rewrite every live code-based reference as one transaction. UUID-based partner
--- relationships are intentionally untouched.
+-- relationships and unrelated metadata/timestamps are intentionally untouched.
 update public.posp_misp_onboarding_profiles p
-set partner_id = b.new_code,
-    updated_at = now()
+set partner_id = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and upper(btrim(coalesce(p.partner_id, ''))) = upper(b.old_code);
 
 update public.intermediaries i
-set intermediary_code = b.new_code,
-    updated_at = now()
+set intermediary_code = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and upper(btrim(i.intermediary_code)) = upper(b.old_code);
 
 update public.policies p
-set intermediary_code = b.new_code,
-    updated_at = now()
+set intermediary_code = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and upper(btrim(coalesce(p.intermediary_code, ''))) = upper(b.old_code);
 
 update public.policy_intermediary_payouts p
-set intermediary_code = b.new_code,
-    updated_at = now()
+set intermediary_code = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and upper(btrim(coalesce(p.intermediary_code, ''))) = upper(b.old_code);
 
 update public.partner_payables p
-set intermediary_code = b.new_code,
-    updated_at = now()
+set intermediary_code = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and upper(btrim(coalesce(p.intermediary_code, ''))) = upper(b.old_code);
 
 update public.partner_payments p
-set intermediary_code = b.new_code,
-    updated_at = now()
+set intermediary_code = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and upper(btrim(coalesce(p.intermediary_code, ''))) = upper(b.old_code);
 
 update public.partners p
-set partner_code = b.new_code,
-    updated_at = now()
+set partner_code = b.new_code
 from public.partner_code_format_migration_20260916_backup b
 where b.record_type = 'backfill'
   and p.id = b.partner_id
