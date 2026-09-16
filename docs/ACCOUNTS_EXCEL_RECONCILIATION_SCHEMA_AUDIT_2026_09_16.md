@@ -6,6 +6,8 @@ Status: **READ-ONLY PRODUCTION AUDIT / NO DATABASE CHANGES MADE**
 
 Canonical architecture: `docs/ACCOUNTS_RECONCILIATION_WORKFLOW_STEP1_2026_09_16.md`
 
+Canonical write mapping after active-code audit: `docs/ACCOUNTS_EXCEL_RECONCILIATION_CANONICAL_WRITE_MAPPING_2026_09_16.md`
+
 ## Purpose
 
 This audit verifies how much of the approved Excel-first Accounts reconciliation architecture already exists in the INSUREIT production database. The goal is to reuse the existing financial model and avoid creating duplicate pay-in, payout, receipt, TDS, billing, allocation or audit structures.
@@ -35,6 +37,8 @@ In particular, production already contains normalized structures for:
 
 The database also already supports the core business requirement that one policy/payable can receive multiple financial transactions over time.
 
+The active-code audit is now complete. Its final write-path decision and the one verified insurer-side granularity gap are recorded in `docs/ACCOUNTS_EXCEL_RECONCILIATION_CANONICAL_WRITE_MAPPING_2026_09_16.md`.
+
 ## Existing schema mapping
 
 | New workflow requirement | Existing production structure | Audit decision |
@@ -43,12 +47,12 @@ The database also already supports the core business requirement that one policy
 | Net premium | `policy_premium_details.net_premium` | **REUSE** |
 | Projected Pay-In | `policy_payin_details` | **REUSE** |
 | Projected Pay-Out / retention | `policy_intermediary_payouts` | **REUSE** |
-| Policy-level bill fields | `policy_payin_bills` | **REUSE where semantics fit; do not duplicate** |
-| Normalized insurer invoice | `accounts_invoices` | **REUSE** |
-| Policy rows within invoice | `accounts_invoice_lines` | **REUSE** |
+| Policy-level bill fields | `policy_payin_bills` | **LEGACY/REPORTING COMPATIBILITY; do not make a second canonical import ledger** |
+| Normalized insurer invoice | `accounts_invoices` | **REUSE AS CANONICAL BILL HEADER** |
+| Policy rows within invoice | `accounts_invoice_lines` | **REUSE AS CANONICAL POLICY BILL LINE** |
 | Insurer receipt / UTR transaction | `accounts_receipts` | **REUSE** |
-| Receipt-to-invoice allocation | `accounts_receipt_allocations` | **REUSE** |
-| TDS transaction | `accounts_tds_entries` | **REUSE** |
+| Receipt-to-invoice allocation | `accounts_receipt_allocations` | **REUSE; line-level policy attribution needs a small extension for consolidated invoices** |
+| TDS transaction | `accounts_tds_entries` | **REUSE; line-level attribution only if policy-level TDS is required** |
 | Insurer receivable ledger | `accounts_receivable_entries` | **REUSE** |
 | Invoice audit/state history | `accounts_invoice_events` | **REUSE** |
 | Partner payable | `partner_payables` | **REUSE** |
@@ -116,9 +120,17 @@ Production already has a policy-linked bill table with:
 
 `policy_id` is **not unique**, so the schema permits multiple rows against the same policy.
 
-This is very close to the Accounts team's requested spreadsheet format and should not be duplicated.
+This table is very close to the Accounts team's requested spreadsheet format, but the active production data and policy-onboarding code clarify its current role.
 
-However, this table combines bill and receipt information on the same row. The newer normalized Accounts model separately represents invoices, receipts and allocations. Therefore the implementation must decide which existing layer is canonical for the new import rather than writing the same fact into two unrelated sources without an explicit synchronization rule.
+Production currently contains 833 rows:
+
+- 575 `Unbilled` rows with no bill number, billed amount, received amount or receipt reference;
+- 258 `Billing details incomplete` rows with billed amount populated but no bill number, received amount or receipt reference;
+- zero current rows with actual received amount or receipt reference.
+
+The policy-onboarding function creates this row together with the policy/commercial records, and existing finance/readiness reports use it to classify policy billing status. It is therefore currently a policy-finance/reporting compatibility structure rather than the authoritative bank-receipt ledger.
+
+Decision after active-code audit: **do not make `policy_payin_bills` a second independently-written canonical source for confirmed Excel transactions.** The normalized Accounts invoice/receipt model is the canonical transaction layer. Keep `policy_payin_bills` for legacy/reporting compatibility unless a later explicit one-way projection is designed and tested.
 
 ## Existing normalized Pay-In / receivable model
 
@@ -140,7 +152,9 @@ The database enforces a case-insensitive unique nonblank invoice number.
 
 Already links invoice rows to policy IDs and policy numbers and stores recognized brokerage/adjustment/line amount.
 
-This is suitable for representing a bill containing one or more policy rows.
+The active billing code confirms that one invoice can contain many policy lines. Its current workbench builds those lines from legacy reconciliation rows, but `reconciliation_line_id` is nullable. Therefore the new Excel importer can create policy lines directly from validated System Policy IDs without manufacturing legacy reconciliation cycles or lines.
+
+Decision: **reuse `accounts_invoices` + `accounts_invoice_lines` as the canonical bill layer for the new workflow.**
 
 ### `accounts_receipts`
 
@@ -164,6 +178,8 @@ This structure naturally supports:
 - one invoice receiving multiple receipts at different times;
 - one receipt being allocated across multiple invoices.
 
+The active-code audit also confirms its one limitation for the new policy-row Excel workflow: it currently targets invoice headers, not invoice lines. Therefore an exact receipt split among policies inside one consolidated invoice cannot yet be persisted. The smallest safe extension should add line/policy attribution to the existing allocation model rather than creating a parallel Pay-In transaction table.
+
 ### `post_accounts_receipt(...)`
 
 Production already has a security-definer stored function that:
@@ -181,7 +197,7 @@ Production already has a security-definer stored function that:
 - moves invoice status to Partially Received or Received;
 - writes invoice events.
 
-Decision: **the new Excel importer should strongly prefer this existing posting function for confirmed Pay-In receipts instead of reproducing its accounting logic in application code.**
+Decision: **the new Excel importer should strongly prefer this existing posting function/behavior for confirmed Pay-In receipts instead of reproducing its accounting logic in application code.** Any line-attribution extension must preserve these controls atomically.
 
 ### `accounts_tds_entries` and `post_accounts_tds(...)`
 
@@ -193,6 +209,8 @@ Production already has separate TDS transaction storage and a posting function t
 - reduces outstanding;
 - updates invoice status;
 - records invoice event history.
+
+Current TDS storage targets the invoice, not an invoice line. If the definitive workbook uses policy-row TDS inside a consolidated invoice, the same minimal line-attribution issue must be addressed explicitly. If TDS is bill-level, the existing structure is sufficient.
 
 Decision: **reuse this existing TDS path rather than creating TDS columns on a new Excel transaction table.**
 
@@ -256,7 +274,7 @@ The database has a unique index on `(upper(intermediary_code), upper(payment_ref
 
 ### `partner_payment_allocations`
 
-Already allocates payments to payables. This supports multiple payment installments against the same payable.
+Already allocates payments to payables. This supports multiple payment installments against the same payable while retaining exact policy attribution because each payable is tied to one policy payout source.
 
 ### `post_partner_payment(...)`
 
@@ -274,7 +292,9 @@ Production already has a security-definer posting function that:
 - moves status to Payment Initiated or Paid;
 - writes payable events.
 
-Decision: **the Excel importer should reuse this function for confirmed Pay-Out transactions instead of implementing parallel payout accounting logic.**
+The active Accounts Partner Payables server action already uses this RPC and `gross_payout`-backed payable lifecycle.
+
+Decision: **the Excel importer should reuse this function for confirmed Pay-Out transactions instead of implementing parallel payout accounting logic. No new Pay-Out transaction or policy-attribution structure is required.**
 
 ## Partial payment requirement — already supported
 
@@ -292,6 +312,8 @@ For Pay-Out, separate `partner_payments` can allocate ₹400 and ₹560 against 
 
 Therefore **no new generic Pay-In transaction table and no new generic Pay-Out transaction table should be created for this requirement.**
 
+For Pay-In only, exact policy attribution within a multi-policy consolidated invoice is the verified small gap described above.
+
 ## Duplicate protection already present
 
 Existing database constraints provide useful idempotency:
@@ -305,6 +327,8 @@ Existing database constraints provide useful idempotency:
 
 The importer should validate likely duplicates before confirmation, but database constraints remain the final authority.
 
+Repeated Bill Number rows in one workbook are valid when they are policy lines belonging to the same insurer bill; they must be grouped under one invoice header rather than treated as duplicate invoice creation attempts.
+
 ## Legacy reconciliation tables
 
 Production also contains:
@@ -315,7 +339,9 @@ Production also contains:
 
 These structures support the older insurer statement reconciliation flow, including template import/excel-paste source methods and review/close/reopen lifecycle.
 
-Decision: **leave these available for Other Recon. The new Accounts workflow should not navigate into or require these legacy workspaces.**
+The active `/accounts/billing` workbench currently creates invoice drafts only from accepted/resolved legacy reconciliation lines. That dependency belongs to the old UI/workflow, not to the normalized database model: `accounts_invoice_lines.reconciliation_line_id` is nullable.
+
+Decision: **leave these available for Other Recon. The new Accounts workflow must not create fake reconciliation rows or navigate into/require these legacy workspaces merely to create an invoice.**
 
 Do not delete these tables and do not migrate their historical records solely to serve the new UI.
 
@@ -325,28 +351,30 @@ The schema already includes `accounting_periods`, `accounting_period_events` and
 
 Decision: preserve these controls. When the new importer begins writing financial transactions, it must respect existing accounting-period guards rather than bypassing them.
 
-## Main unresolved semantic question
+## Canonical write-path decision after active-code audit
 
-Most required structures already exist. The main remaining design choice is not whether to add transaction tables, but **how the Excel policy-level Bill fields map into the two existing billing layers**:
+The previously unresolved choice is now settled:
 
-1. legacy `policy_payin_bills`; and
-2. normalized `accounts_invoices` + `accounts_invoice_lines`.
+- group validated Excel Pay-In rows by live insurer + Bill Number when they are lines of the same insurer bill;
+- use one `accounts_invoices` header per real bill;
+- use `accounts_invoice_lines` for policy-specific Bill Amount;
+- leave `reconciliation_line_id` null for the new Excel workflow;
+- use `accounts_receipts` and existing posting behavior for actual bank receipts/UTRs;
+- use `accounts_tds_entries` and existing posting behavior for TDS;
+- derive invoice outstanding/status from the normalized model;
+- keep `policy_payin_bills` as legacy/reporting compatibility unless a deliberate one-way projection is later implemented;
+- do not create or require legacy reconciliation cycles/lines;
+- use `partner_payables` + `partner_payments` + allocations for Pay-Out.
 
-The normalized model is stronger for receipts, TDS, outstanding balance and audit. But the user's spreadsheet is policy-row oriented, while an insurer invoice may contain multiple policies.
+The detailed decision record is `docs/ACCOUNTS_EXCEL_RECONCILIATION_CANONICAL_WRITE_MAPPING_2026_09_16.md`.
 
-Before any schema change, implementation should inspect the active old billing page/RPC behavior and then choose one canonical write path.
+### Verified gap
 
-Preferred direction, subject to code audit:
+Receipt allocations currently target invoice headers, not invoice lines/policies. If one consolidated insurer invoice contains many policies and Accounts must preserve the exact receipt amount attributable to each policy, the existing schema cannot store that split.
 
-- group Excel rows by insurer + Bill Number when they represent the same insurer bill;
-- create/reuse one `accounts_invoices` header;
-- create policy-specific `accounts_invoice_lines`;
-- create actual bank receipts by UTR using `post_accounts_receipt`;
-- post TDS using `post_accounts_tds`;
-- derive outstanding/status from the normalized model;
-- use `policy_payin_bills` only if existing production code requires it as a compatibility projection, with an explicit synchronization rule rather than independent duplicate writes.
+This is a legitimate candidate for a **small extension to the existing allocation model**, not a reason to create a new Pay-In ledger.
 
-One potential gap remains: receipt allocations currently target invoice headers, not individual invoice lines/policies. If one consolidated insurer invoice contains many policies and Accounts needs to report exactly which installment amount belongs to which policy, that attribution is not directly represented by `accounts_receipt_allocations`. **Do not add a field/table yet.** First confirm whether Accounts actually allocates receipts policy-by-policy or only needs bill-level receipt reconciliation plus policy-line bill reporting.
+TDS has the same potential granularity issue only if TDS will be entered per policy row rather than at bill level.
 
 ## Import batch persistence
 
@@ -359,7 +387,7 @@ For the first confirmed-import design, prefer:
 - parse workbook server-side;
 - validate against live data;
 - allow preview corrections in temporary application state;
-- on Confirm Import, call existing posting functions atomically/idempotently;
+- on Confirm Import, call/reuse existing posting behavior atomically/idempotently;
 - rely on existing transaction IDs, UTR uniqueness and event/ledger records as financial proof.
 
 Only add import-batch persistence if a concrete requirement appears, such as resumable uploads, original-file retention, per-row upload provenance, or batch-level rollback/audit that cannot be represented safely through existing records.
@@ -372,9 +400,13 @@ No table, column, index, constraint, function, trigger, policy or production dat
 
 ## Next implementation direction
 
-1. Inspect active billing/receivable/partner-payable application code and any remaining RPCs to settle the canonical bill mapping.
-2. Remove legacy page redirects from the new Accounts dashboard workflow; keep legacy workspaces in Other Recon.
-3. Redesign the downloadable workbook into `Pay-In` and `Pay-Out` sheets using existing authoritative commercial values.
-4. Keep upload preview read-only to the database until Confirm Import.
-5. Reuse `post_accounts_receipt`, `post_accounts_tds`, `create_partner_payable`, approval lifecycle and `post_partner_payment` for confirmed writes wherever their existing business rules match.
-6. Do not introduce new financial transaction tables unless a verified gap remains after the code audit.
+1. Finalize the exact `Pay-In` and `Pay-Out` workbook columns and field granularity.
+2. Confirm whether TDS is a bill-level or policy-row-level operational input.
+3. Design the smallest safe invoice-line receipt-attribution extension for consolidated invoices.
+4. Put any required DDL in a separate implementation migration/PR; do not apply production DDL merely because the migration exists.
+5. Remove legacy page redirects from the new Accounts dashboard workflow; keep legacy workspaces in Other Recon.
+6. Redesign the downloadable workbook into `Pay-In` and `Pay-Out` sheets using existing authoritative commercial values.
+7. Keep upload preview non-writing until Confirm Import.
+8. Reuse existing receipt/TDS/payable/payment posting logic and preserve ledger/event/accounting-period controls.
+9. Add regression coverage for multi-policy bills, partial receipts, duplicate UTRs, partial Partner payouts, over-allocation, closed periods and retries/idempotency.
+10. Do not introduce new generic financial transaction tables.
