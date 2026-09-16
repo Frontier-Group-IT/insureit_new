@@ -19,7 +19,8 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
   const partnerDisplayName = partnerSession.identity.actor_kind === "intermediary"
     ? partnerSession.identity.partner_name || partnerSession.identity.display_name
     : null;
-  const hideAccount = partnerSession.scope.scope_mode === "hierarchy";
+  const branchPortal = "portal_access_type" in partnerSession.scope && partnerSession.scope.portal_access_type === "branch";
+  const hideAccount = partnerSession.scope.scope_mode === "hierarchy" || branchPortal;
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] text-[#10213D]">
