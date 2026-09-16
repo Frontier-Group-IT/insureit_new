@@ -126,15 +126,17 @@ export async function createEmployee(
       return { status: "error", message: friendlyError(employeeError?.message ?? "Could not create employee.") };
     }
 
+    let recoveredPortalInvite = false;
     if (createPortalAccess && portalRole && isAppRole(portalRole)) {
       try {
-        await governedInviteEmployeePortalUser({
+        const inviteResult = await governedInviteEmployeePortalUser({
           actorProfileId: actor.id,
           actorRole: actor.role,
           employeeId: employee.id,
           requestedRole: portalRole,
           redirectTo: await getInviteRedirectUrl(),
         });
+        recoveredPortalInvite = inviteResult.recovered;
       } catch (inviteError) {
         const admin = createSupabaseAdminClient();
         await admin.from("employees").delete().eq("id", employee.id);
@@ -151,7 +153,9 @@ export async function createEmployee(
     return {
       status: "success",
       message: createPortalAccess
-        ? `${employee.full_name} was onboarded and a portal invitation was sent.`
+        ? recoveredPortalInvite
+          ? `${employee.full_name} was onboarded and the existing portal invitation was recovered.`
+          : `${employee.full_name} was onboarded and a portal invitation was sent.`
         : `${employee.full_name} was added to the employee directory.`,
     };
   } catch (error) {
@@ -250,9 +254,11 @@ export async function sendEmployeePortalInvite(
     revalidatePath("/users");
     return {
       status: "success",
-      message: result.profile
-        ? `A fresh portal invitation was sent to ${result.employee.email}.`
-        : `Portal invitation sent to ${result.employee.email}.`,
+      message: result.recovered
+        ? `The existing portal invitation for ${result.employee.email} was recovered and linked to the employee.`
+        : result.profile
+          ? `A fresh portal invitation was sent to ${result.employee.email}.`
+          : `Portal invitation sent to ${result.employee.email}.`,
     };
   } catch (error) {
     return { status: "error", message: friendlyError(error instanceof Error ? error.message : "Could not send portal invitation.") };

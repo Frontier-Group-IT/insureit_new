@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { evaluateEmployeePortalGovernanceGuard } from "../lib/employee-portal-governance-rules.ts";
 
 function fail(message) {
@@ -98,9 +100,50 @@ expect(
   true,
 );
 
+expect(
+  "admin may invite Accounts role",
+  { ...base, operation: "invite", assigningRole: "accounts", targetHasExistingProfile: false },
+  true,
+);
+
+const governanceSource = readFileSync(
+  resolve(process.cwd(), "lib/employee-portal-governance.ts"),
+  "utf8",
+);
+const migrationSource = readFileSync(
+  resolve(process.cwd(), "../../supabase/migrations/20260916122000_add_accounts_app_role_and_quarantine_stranded_invites.sql"),
+  "utf8",
+);
+
+if (!governanceSource.includes('requestedRole !== "accounts"')) {
+  fail("Accounts orphan recovery must remain narrowly scoped to Accounts requests");
+}
+if (!governanceSource.includes('.is("employee_id", null)')) {
+  fail("Accounts orphan recovery must require an unlinked profile");
+}
+if (!governanceSource.includes('app_role: input.portalRole')) {
+  fail("portal role must be synchronized into server-controlled Auth app_metadata");
+}
+if (!governanceSource.includes("deleteUserOnFailure")) {
+  fail("new Auth invitations must retain compensating cleanup on synchronization failure");
+}
+const authMetadataSyncIndex = governanceSource.indexOf("admin.auth.admin.updateUserById");
+const profileUpsertIndex = governanceSource.indexOf('.from("profiles").upsert');
+if (authMetadataSyncIndex < 0 || profileUpsertIndex < 0 || authMetadataSyncIndex > profileUpsertIndex) {
+  fail("Auth app_metadata must be synchronized before the final profile upsert");
+}
+if (!migrationSource.includes("alter type public.app_role add value if not exists 'accounts'")) {
+  fail("Accounts database enum migration is missing");
+}
+if (!migrationSource.includes("p.employee_id is null") || !migrationSource.includes("raw_user_meta_data ->> 'app_role'")) {
+  fail("stranded Accounts invite quarantine must stay narrowly bounded");
+}
+
 console.log(JSON.stringify({
-  governanceCases: 12,
+  governanceCases: 13,
   protectedRoles: ["super_admin", "it_super_user"],
   normalPortalManagerRoles: ["super_admin", "admin", "it_super_user"],
+  accountsInviteRecovery: "guarded",
+  accountsDatabaseRoleMigration: "present",
   status: "ok",
 }, null, 2));
