@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
 
-type IntakeFilter = "all" | "attention" | "in_review" | "processing" | "completed" | "duplicate" | "rejected";
+type IntakeFilter = "all" | "active" | "attention" | "in_review" | "processing" | "completed" | "duplicate" | "rejected";
 const PAGE_SIZE = 25;
 
 function humanize(value: string) {
@@ -104,6 +104,7 @@ function matchesSearch(row: PartnerPolicyIntake, query: string) {
 
 function matchesFilter(row: PartnerPolicyIntake, filter: IntakeFilter) {
   if (filter === "all") return true;
+  if (filter === "active") return row.status !== "completed" && row.status !== "rejected";
   if (filter === "attention") return row.status === "needs_attention";
   if (filter === "in_review") return row.status === "in_review" || row.status === "ready_for_review";
   if (filter === "processing") return row.status === "processing";
@@ -148,6 +149,7 @@ export function PartnerPolicyIntakeListClient() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({
+    active: 0,
     attention: 0,
     inReview: 0,
     processing: 0,
@@ -168,7 +170,7 @@ export function PartnerPolicyIntakeListClient() {
       const hasDateFilter = Boolean(fromDate || toDate);
       const needsExactClientFiltering = Boolean(query)
         || hasDateFilter
-        || ["in_review", "processing", "duplicate", "rejected"].includes(filter);
+        || ["active", "in_review", "processing", "duplicate", "rejected"].includes(filter);
 
       if (!needsExactClientFiltering) {
         const result = await getPartnerPolicyIntakesWeb({
@@ -180,6 +182,7 @@ export function PartnerPolicyIntakeListClient() {
         setTotal(result.total);
         setCounts((current) => ({
           ...current,
+          active: result.counts.active,
           attention: result.counts.attention,
           completed: result.counts.completed,
           all: filter === "all" ? result.total : current.all,
@@ -191,10 +194,14 @@ export function PartnerPolicyIntakeListClient() {
       const allRows: PartnerPolicyIntake[] = [];
       let offset = 0;
       let expectedTotal = 0;
+      let activeCount = 0;
 
       do {
         const result = await getPartnerPolicyIntakesWeb({ limit: PAGE_SIZE, offset, filter: sourceFilter });
-        if (offset === 0) expectedTotal = result.total;
+        if (offset === 0) {
+          expectedTotal = result.total;
+          activeCount = result.counts.active;
+        }
         allRows.push(...result.intakes);
         offset += PAGE_SIZE;
         if (!result.intakes.length) break;
@@ -210,6 +217,7 @@ export function PartnerPolicyIntakeListClient() {
       setTotal(matches.length);
       setCounts((current) => ({
         ...current,
+        active: activeCount,
         inReview: filter === "in_review" ? matches.length : current.inReview,
         processing: filter === "processing" ? matches.length : current.processing,
         duplicate: filter === "duplicate" ? matches.length : current.duplicate,
@@ -292,6 +300,7 @@ export function PartnerPolicyIntakeListClient() {
               }}
               className="h-10 min-w-[165px] cursor-pointer rounded-xl border border-[#D3DDE9] bg-white px-3 text-[10px] font-bold text-[#2D4666] outline-none transition focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/15"
             >
+              <option value="active" hidden>My Active Work</option>
               <option value="all">All Detail Status</option>
               <option value="attention">Action Required</option>
               <option value="in_review">In Review</option>
@@ -390,10 +399,17 @@ export function PartnerPolicyIntakeListClient() {
 
           <button
             type="button"
-            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-[#D3DDE9] bg-white px-3.5 text-[9px] font-bold text-[#2D4666] transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/15"
+            onClick={() => {
+              setFilter("active");
+              setPage(1);
+            }}
+            className={`inline-flex h-10 shrink-0 items-center rounded-xl border px-3.5 text-[9px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/15 ${
+              filter === "active"
+                ? "border-[#123F73] bg-[#123F73] text-white shadow-sm"
+                : "border-[#D3DDE9] bg-white text-[#2D4666] hover:bg-[#F8FAFD]"
+            }`}
           >
-            My Active Work 0
-            <ChevronDown className="h-3.5 w-3.5 text-[#5A7494]" />
+            My Active Work {counts.active}
           </button>
         </div>
 
