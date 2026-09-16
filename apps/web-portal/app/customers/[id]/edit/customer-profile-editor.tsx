@@ -21,9 +21,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
   const formRef = useRef<HTMLFormElement>(null);
   const [gstRegistered, setGstRegistered] = useState(customer.is_gst_registered);
   const [selectedFileNames, setSelectedFileNames] = useState<Partial<Record<DocumentType, string>>>({});
-  const [validationPopup, setValidationPopup] = useState<{ message: string; field: string | null } | null>(
-    errorMessage ? { message: errorMessage, field: errorField ?? null } : null
-  );
+  const [validationPopup, setValidationPopup] = useState<{ message: string; field: string | null } | null>(null);
   const requiredTypes = gstRegistered ? allDocumentTypes : allDocumentTypes.filter((type) => type !== "gst_copy");
   const documentMap = new Map(documents.map((document) => [document.document_type, document]));
   const internalOwnerName = internalOwnerNameOverride ?? (customer.assigned_agent_id
@@ -88,7 +86,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
   return (
     <>
       {validationPopup ? <ValidationPopup message={validationPopup.message} onClose={closeValidationPopup} /> : null}
-      <form ref={formRef} action={action} encType="multipart/form-data" onSubmit={handleSubmit} className="space-y-2 pb-5">
+      <form ref={formRef} action={action} encType="multipart/form-data" onSubmit={handleSubmit} data-server-error={errorMessage ? "true" : undefined} data-error-field={errorField ?? undefined} className="space-y-2 pb-5">
         <input type="hidden" name="partner_type" value={customer.partner_type ?? ""} />
         <input type="hidden" name="fleet_size_band" value={customer.fleet_size_band ?? ""} />
         <input type="hidden" name="onboarding_status" value={customer.onboarding_status} />
