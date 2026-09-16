@@ -39,7 +39,7 @@ The stable comparison is important:
 
 ## Campaign lookup isolation probe
 
-The next deterministic check added a fifth read-only probe using the exact same:
+The deterministic comparison added a fifth read-only probe using the exact same:
 
 - `X-API-Key` credential;
 - organization ID;
@@ -80,35 +80,60 @@ The user opened the paused campaign's Edit flow and inspected Schedule -> Advanc
 
 Observed:
 
-- a Webhook URL is already configured for the campaign;
-- therefore the earlier hypothesis that the 500 was caused simply by a blank/missing campaign webhook is ruled out;
-- the configured URL points at the INSUREIT production campaign webhook route and uses a query-string token mechanism;
+- a Webhook URL was already configured for the campaign;
+- therefore the earlier hypothesis that the 500 was caused simply by a blank/missing campaign webhook was ruled out;
+- the configured URL pointed at the INSUREIT production campaign webhook route and used a query-string token mechanism;
 - the screenshot visibly exposed the current webhook token value. Treat that token as compromised and rotate it before any live webhook processing. Do not preserve or repeat the exposed token value in repository documentation, chat replies, issue bodies, or support tickets.
 
-### Revised strongest hypotheses
+### Revised hypotheses before the removal test
 
-The remaining campaign-specific causes include:
+The remaining campaign-specific causes included:
 
-1. Sarvam has invalid/legacy/internal state attached to this campaign's `app_config.webhook_config` even though the UI renders a URL;
-2. the campaign record has stale state from the August 2026 outbound-webhook rollout and the webhook-list backend crashes while materializing delivery/configuration state;
-3. the query-string token URL format itself is accepted by the UI but triggers a provider-side parsing/deserialization defect for this campaign; or
-4. another campaign-specific backend attribute is inconsistent and the webhook-list endpoint is only the first read path exposing that defect.
+1. Sarvam had invalid/legacy/internal state attached to this campaign's `app_config.webhook_config` even though the UI rendered a URL;
+2. the campaign record had stale state from the August 2026 outbound-webhook rollout and the webhook-list backend crashed while materializing delivery/configuration state;
+3. the query-string token URL format was accepted by the UI but triggered a provider-side parsing/deserialization defect for this campaign; or
+4. another campaign-specific backend attribute was inconsistent and the webhook-list endpoint was only the first read path exposing that defect.
 
-The evidence does **not** currently justify changing the API key, org ID, workspace ID, campaign ID, agent ID or agent version.
+## Webhook-removal retest result
 
-## Next safe diagnostic action
+The user then removed the campaign Webhook URL while the campaign remained PAUSED, saved the campaign, and reran the production deep diagnostics.
 
-Keep the campaign PAUSED and do not add contacts.
+The result did **not** change:
 
-Because the webhook token was exposed in a screenshot, first rotate `SARVAM_RENEWAL_WEBHOOK_SECRET` and update the campaign Webhook URL to the new token without sharing the new value.
+- configured real campaign with `X-API-Key`: HTTP **500**;
+- intentionally nonexistent campaign with the same `X-API-Key`, org and workspace: HTTP **404**;
+- scheduling with `api-subscription-key`: HTTP **401**;
+- scheduling with Bearer: HTTP **401**;
+- core `api.sarvam.ai`: HTTP **403** with `invalid_api_key_error`.
 
-Then use the pause -> edit -> save lifecycle to temporarily remove the Webhook URL from this same campaign and rerun the read-only deep diagnostics:
+### What the webhook-removal test rules out
 
-- real campaign becomes 2xx with X-API-Key after webhook removal: the 500 is directly tied to the campaign's webhook configuration/state;
-- real campaign remains 500 with X-API-Key after webhook removal: the defect is broader campaign backend state, not merely the current webhook URL value;
-- synthetic campaign should continue returning 404 and serves as the control.
+This rules out the current Webhook URL string itself as the direct cause of the 500. The provider failure survives removal and save, so the strongest remaining explanation is **campaign-specific backend state** attached to the real campaign record or another backend path reached after that campaign is found.
 
-If removing and re-saving the webhook does not clear the 500, create a fresh paused clone campaign using the same agent version and telephony configuration but no cohort/calls, then run the same read-only webhook-list probe against that new campaign before configuring any webhook. A clean campaign returning 2xx while the original remains 500 would strongly prove corruption/legacy backend state in the original campaign.
+The webhook-list endpoint is documented as returning delivery records for a campaign. A healthy campaign with no deliveries should return a resource-level response such as HTTP 200 with an empty list, not a 500. The synthetic missing campaign already returns the expected 404, which is the control proving ordinary lookup is functioning.
+
+## Next deterministic check
+
+Keep the original campaign PAUSED and do not add contacts.
+
+Create a brand-new control campaign in the same confirmed Sarvam workspace with:
+
+- the same agent/app and version used by the controlled campaign;
+- the same telephony connection;
+- no customer cohort / no contacts;
+- retry OFF;
+- no Webhook URL initially;
+- a future schedule or PAUSED state so it cannot dial.
+
+Before adding a webhook or any contacts, run the same read-only `GET /campaigns/:campaign_id/webhooks?limit=1` probe against the new control campaign using `X-API-Key`.
+
+Interpretation:
+
+- **new control campaign = 2xx, original = 500**: strongly proves stale/corrupt/legacy backend state in the original campaign. Use the new clean campaign as the replacement controlled execution campaign after re-binding INSUREIT and re-verifying the webhook.
+- **new control campaign = 500, original = 500**: the issue is broader than one campaign record and should be escalated to Sarvam as a provider backend defect for existing campaign resources in this workspace.
+- **new control campaign = 401/403**: the control campaign is not being reached under the same authorization context and the credential/resource contract must be revisited.
+
+Do not change the production `SARVAM_RENEWAL_CAMPAIGN_ID` merely to perform this diagnostic. Use a separate read-only diagnostic control campaign ID so the current production binding remains intact until the clean campaign is proven healthy.
 
 Do not resume either campaign until the provider read path is healthy and the webhook secret has been rotated.
 
