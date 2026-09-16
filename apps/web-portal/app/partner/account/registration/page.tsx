@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { PartnerIcallLauncher } from "@/components/partner-portal/partner-icall-launcher";
 import { getPartnerWebRegistrationOverview } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,14 @@ function humanize(value: string | null | undefined) {
 function isComplete(value: string | null | undefined) {
   const normalized = (value || "").toLowerCase();
   return ["active", "approved", "completed", "complete", "passed", "registered", "signed", "iib_registered"].includes(normalized);
+}
+
+function trainingButtonLabel(trainingStatus: string, examStatus: string) {
+  if (examStatus === "passed") return "View completion status";
+  if (examStatus === "failed") return "Reattempt examination";
+  if (trainingStatus === "completed" && examStatus !== "not_allotted") return "Go to examination";
+  if (["opened", "in_progress"].includes(trainingStatus)) return "Continue training";
+  return "Start training";
 }
 
 export default async function PartnerRegistrationPage() {
@@ -103,6 +112,12 @@ export default async function PartnerRegistrationPage() {
         </section>
 
         <LifecycleStrip steps={lifecycle} />
+
+        {qualification && assignment ? (
+          <div className="flex justify-end">
+            <PartnerIcallLauncher buttonLabel={trainingButtonLabel(trainingStatus, examStatus)} accountLabel={linkedType} />
+          </div>
+        ) : null}
 
         <section className="grid gap-4 lg:grid-cols-2">
           <InfoCard title="Identity and contact">
