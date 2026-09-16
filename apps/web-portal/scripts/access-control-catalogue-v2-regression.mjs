@@ -81,6 +81,14 @@ for (const role of roleMatrixV2) {
   }
 }
 
+const accountsRole = roleMatrixV2.find((role) => role.code === "accounts");
+if (!accountsRole || !accountsRole.assignable || accountsRole.status !== "active") {
+  fail("Accounts must be an active assignable application role");
+}
+if (accountsRole.grants.length !== 0) {
+  fail("Accounts must not receive default V2 permissions before its permission model is explicitly defined");
+}
+
 const itSuperUser = roleMatrixV2.find((role) => role.code === "it_super_user");
 if (!itSuperUser || itSuperUser.status !== "protected" || itSuperUser.assignable) {
   fail("IT Super User must remain protected and non-assignable");
@@ -119,6 +127,7 @@ const applicationOnlyPermissionKeys = new Set([
   "policies.ocr_training.review",
   "policies.ocr_training.approve",
 ]);
+const applicationOnlyRoleCodes = new Set(["accounts"]);
 if (/access_(permissions|roles|role_permissions)_v2/.test(ocrQueueMigrationSql)) {
   fail("OCR queue migration must remain independent from the optional Access Control V2 database schema");
 }
@@ -135,6 +144,7 @@ const roleSeedSection = sectionBetween(
   "-- Canonical V2 permission catalogue.",
 );
 for (const role of roleMatrixV2) {
+  if (applicationOnlyRoleCodes.has(role.code)) continue;
   const marker = `('${role.code}'`;
   if (!roleSeedSection.includes(marker)) fail(`Phase 4 SQL role seed is missing ${role.code}`);
 }
@@ -264,6 +274,7 @@ console.log(JSON.stringify({
   criticalPermissionCount: criticalPermissions.length,
   roleCount: roleMatrixV2.length,
   assignableRoleCount: roleMatrixV2.filter((role) => role.assignable).length,
+  applicationOnlyRoleCount: applicationOnlyRoleCodes.size,
   sqlRoleGrantCount: sqlGrants.size,
   phase4SqlParity: "ok",
   phase5ResolverCases: 8,

@@ -261,6 +261,16 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
     ],
   },
   {
+    code: "accounts",
+    label: "Accounts",
+    purpose: "Assignable Accounts role with no default permissions until the Accounts permission model is explicitly defined.",
+    category: "business",
+    status: "active",
+    assignable: true,
+    defaultScope: "organization",
+    grants: [],
+  },
+  {
     code: "sales_head",
     label: "Sales Head",
     purpose: "Senior sales leader with customer, intermediary and operational visibility inside their reporting hierarchy.",
