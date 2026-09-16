@@ -41,7 +41,7 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
     if (!collapsed) return;
 
     const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof Element)) return;
 
     const aside = target.closest("aside");
     if (!aside) return;
