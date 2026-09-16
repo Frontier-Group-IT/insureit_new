@@ -21,6 +21,26 @@ type PolicyRow = {
   insurance_companies: { name?: string | null } | Array<{ name?: string | null }> | null;
 };
 
+type PayinDetailRow = {
+  policy_id: string;
+  total_projected_payin: number | string | null;
+  tds_amount: number | string | null;
+  payin_after_tds: number | string | null;
+};
+
+type PayoutDetailRow = {
+  id: string;
+  policy_id: string;
+  intermediary_type: string | null;
+  intermediary_code: string | null;
+  od_payout_percent: number | string | null;
+  tp_payout_percent: number | string | null;
+  gross_payout: number | string | null;
+  retention_amount: number | string | null;
+  commercial_status: string | null;
+  status: string | null;
+};
+
 export async function GET(request: Request) {
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) return new Response("Forbidden", { status: 403 });
@@ -49,16 +69,16 @@ export async function GET(request: Request) {
     return businessDate >= filters.fromDate && businessDate <= filters.toDate;
   });
   const policyIds = filtered.map((row) => row.id);
-  let payins: Array<Record<string, any>> = [];
-  let payouts: Array<Record<string, any>> = [];
+  let payins: PayinDetailRow[] = [];
+  let payouts: PayoutDetailRow[] = [];
   if (policyIds.length) {
     const [{ data: payinData, error: payinError }, { data: payoutData, error: payoutError }] = await Promise.all([
       db.from("policy_payin_details").select("policy_id,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", policyIds),
       db.from("policy_intermediary_payouts").select("id,policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,retention_amount,commercial_status,status").in("policy_id", policyIds),
     ]);
     if (payinError || payoutError) return new Response("Unable to generate reconciliation workbook.", { status: 500 });
-    payins = payinData ?? [];
-    payouts = payoutData ?? [];
+    payins = (payinData ?? []) as PayinDetailRow[];
+    payouts = (payoutData ?? []) as PayoutDetailRow[];
   }
 
   const policyMap = new Map(filtered.map((policy) => [policy.id, policy]));
