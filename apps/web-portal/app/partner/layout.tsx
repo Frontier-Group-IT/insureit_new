@@ -8,6 +8,16 @@ export default async function PartnerLayout({ children }: { children: ReactNode 
 
   return (
     <>
+      <style>{`
+        svg[aria-label^="Premium and policy trend"] polyline {
+          opacity: 0.35;
+          stroke-width: 1.5;
+        }
+
+        svg[aria-label^="Premium and policy trend"] circle[fill="#163968"] {
+          opacity: 0.35;
+        }
+      `}</style>
       <PartnerNavigation hideAccount={hideAccount} />
       {children}
     </>
