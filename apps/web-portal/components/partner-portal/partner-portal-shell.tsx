@@ -18,6 +18,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
   const partnerDisplayName = partnerSession.identity.actor_kind === "intermediary"
     ? partnerSession.identity.partner_name || partnerSession.identity.display_name
     : null;
+  const hideAccount = partnerSession.scope.scope_mode === "hierarchy";
 
   return (
     <div className="min-h-screen bg-[#F6F8FB] text-[#10213D]">
@@ -29,7 +30,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
         >
           <div className="flex min-h-[66px] items-center justify-between gap-2 px-2.5 py-2 sm:px-4 lg:px-6">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-              <PartnerMobileNavigation />
+              <PartnerMobileNavigation hideAccount={hideAccount} />
               <div className="hidden h-7 w-px bg-gradient-to-b from-transparent via-[#6E84A0]/35 to-transparent sm:block lg:hidden" />
               <div className="min-w-0 flex-1 overflow-hidden">
                 <PartnerBreadcrumbs title={title} />
@@ -51,7 +52,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
         </main>
       </div>
 
-      <PartnerBottomNavigation />
+      <PartnerBottomNavigation hideAccount={hideAccount} />
       <PartnerBusinessTrendResponsiveFix />
     </div>
   );
