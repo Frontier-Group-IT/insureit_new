@@ -9,6 +9,15 @@ function safeParam(value: string | null) {
   return value.slice(0, 80);
 }
 
+function appendProbe(target: URL, prefix: string, probe: Awaited<ReturnType<typeof runSarvamControlCampaignDiagnostic>>["webhookList"]) {
+  target.searchParams.set(`${prefix}_status`, probe.status === null ? "none" : String(probe.status));
+  target.searchParams.set(`${prefix}_class`, probe.classification);
+  const code = safeParam(probe.errorCode);
+  const requestId = safeParam(probe.requestId);
+  if (code) target.searchParams.set(`${prefix}_code`, code);
+  if (requestId) target.searchParams.set(`${prefix}_request`, requestId);
+}
+
 export async function POST(request: NextRequest) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
   if (!viewer?.id || viewer.role !== "it_super_user" || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) {
@@ -20,12 +29,8 @@ export async function POST(request: NextRequest) {
   try {
     const result = await runSarvamControlCampaignDiagnostic();
     target.searchParams.set("control_diag", "done");
-    target.searchParams.set("status", result.status === null ? "none" : String(result.status));
-    target.searchParams.set("class", result.classification);
-    const code = safeParam(result.errorCode);
-    const requestId = safeParam(result.requestId);
-    if (code) target.searchParams.set("code", code);
-    if (requestId) target.searchParams.set("request", requestId);
+    appendProbe(target, "webhook", result.webhookList);
+    appendProbe(target, "stream_validation", result.streamValidation);
   } catch {
     target.searchParams.set("control_diag", "config_error");
   }
