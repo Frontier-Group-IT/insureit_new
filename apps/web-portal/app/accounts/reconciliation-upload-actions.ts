@@ -71,8 +71,8 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   if (payoutRefs.length) { const { data } = await db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", payoutRefs); existingPartnerPayments = data ?? []; }
   const existingReceiptKeys = new Set(existingReceipts.map((row) => `${row.insurer_id}|${normalizeRef(row.bank_reference)}`));
   const existingPayoutKeys = new Set(existingPartnerPayments.map((row) => `${normalizeRef(row.intermediary_code)}|${normalizeRef(row.payment_reference)}`));
-  const seenPayinRefs = new Set<string>();
-  const seenPayoutRefs = new Set<string>();
+  const payinUploadGroups = new Map<string, string>();
+  const payoutUploadGroups = new Map<string, string>();
 
   const payinRows: PayinPreviewRow[] = activePayin.map(({ row, rowNumber }) => {
     const policyId = text(row["System Policy ID"]); const policy = policyMap.get(policyId); const livePayin = payinMap.get(policyId);
@@ -90,7 +90,13 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     if (amountReceived !== null && (!receiptDate || !reference)) issues.push(error("Receipt Date and UTR / Reference are required when Amount Received is entered."));
     if (amountReceived === null && (receiptDate || reference)) issues.push(error("Amount Received is required when receipt details are entered."));
     if (amountReceived !== null && actualTds !== null && billAmount !== null && money(amountReceived + actualTds) > money(billAmount) + 0.01) issues.push(error("Amount Received + Actual TDS cannot exceed the policy Bill Amount."));
-    if (amountReceived !== null && reference && policy?.insurance_company_id) { const key = `${policy.insurance_company_id}|${normalizeRef(reference)}`; if (existingReceiptKeys.has(key)) issues.push(error("This insurer UTR / Reference already exists in INSUREIT.")); if (seenPayinRefs.has(key)) issues.push(error("This insurer UTR / Reference is repeated in the uploaded Pay-In sheet.")); seenPayinRefs.add(key); }
+    if (amountReceived !== null && reference && policy?.insurance_company_id) {
+      const key = `${policy.insurance_company_id}|${normalizeRef(reference)}`;
+      if (existingReceiptKeys.has(key)) issues.push(error("This insurer UTR / Reference already exists in INSUREIT."));
+      const priorDate = payinUploadGroups.get(key);
+      if (priorDate && priorDate !== receiptDate) issues.push(error("The same insurer UTR / Reference is used with different Receipt Dates in this workbook."));
+      else if (!priorDate) payinUploadGroups.set(key, receiptDate);
+    }
     if (policy && Math.abs(number(row["Projected Pay-In"]) - projectedPayin) > 0.01) issues.push(warning("Projected Pay-In was edited in Excel; the live INSUREIT value will be used."));
     if (policy && Math.abs(number(row["Projected TDS"]) - projectedTds) > 0.01) issues.push(warning("Projected TDS was edited in Excel; the live INSUREIT value will be used."));
     if (policy && Math.abs(number(row["Projected Net Pay-In"]) - projectedNetPayin) > 0.01) issues.push(warning("Projected Net Pay-In was edited in Excel; the live INSUREIT value will be used."));
@@ -109,7 +115,13 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     if (!intermediaryCode) issues.push(error("Intermediary Code is missing for this payout."));
     if (paidAmount === null || paidAmount <= 0) issues.push(error("Paid Amount must be greater than zero for a Pay-Out transaction row."));
     if (!paidDate || !reference) issues.push(error("Paid Date and UTR / Reference are required for every Pay-Out transaction row."));
-    if (reference && intermediaryCode) { const key = `${normalizeRef(intermediaryCode)}|${normalizeRef(reference)}`; if (existingPayoutKeys.has(key)) issues.push(error("This intermediary UTR / Reference already exists in INSUREIT.")); if (seenPayoutRefs.has(key)) issues.push(error("This intermediary UTR / Reference is repeated in the uploaded Pay-Out sheet.")); seenPayoutRefs.add(key); }
+    if (reference && intermediaryCode) {
+      const key = `${normalizeRef(intermediaryCode)}|${normalizeRef(reference)}`;
+      if (existingPayoutKeys.has(key)) issues.push(error("This intermediary UTR / Reference already exists in INSUREIT."));
+      const priorDate = payoutUploadGroups.get(key);
+      if (priorDate && priorDate !== paidDate) issues.push(error("The same intermediary UTR / Reference is used with different Paid Dates in this workbook."));
+      else if (!priorDate) payoutUploadGroups.set(key, paidDate);
+    }
     if (livePayout && Math.abs(number(row["Projected Gross Payout"]) - projectedGrossPayout) > 0.01) issues.push(warning("Projected Gross Payout was edited in Excel; the live INSUREIT value will be used."));
     if (livePayout && Math.abs(number(row["Projected Retention"]) - projectedRetention) > 0.01) issues.push(warning("Projected Retention was edited in Excel; the live INSUREIT value will be used."));
     if (livePayout && Math.abs(number(row["Payout OD %"]) - payoutOdPercent) > 0.001) issues.push(warning("Payout OD % was edited in Excel; the live INSUREIT value will be used."));
