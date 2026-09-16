@@ -1,4 +1,4 @@
-# Sarvam Voice Agent Workflow — Current State (2026-09-15)
+# Sarvam Voice Agent Workflow — Current State (updated 2026-09-16)
 
 This is the current continuation record for the INSUREIT motor-renewal Sarvam Voice Agent work. Read it together with `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md` and `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md` before changing the Sarvam renewal integration.
 
@@ -81,7 +81,7 @@ Expected server-side production variables:
 
 Never store actual API keys, webhook secrets or full sensitive identifiers in repository documentation.
 
-The IT Super User readiness page currently reports schema ready, Sarvam configuration present and Partner AI calling enabled. Presence is not proof that the provider accepts authentication.
+The IT Super User readiness page reports schema ready, Sarvam configuration present and Partner AI calling enabled. Presence is not proof that the provider accepts authentication.
 
 ## Portal dispatch architecture
 
@@ -112,45 +112,64 @@ Two isolated External Renewal Opportunity records were created for the two user-
 
 A prior Sarvam-dashboard controlled pilot successfully dialed the two internal test recipients. One call ended near the greeting; another completed a full renewal conversation and produced structured outputs. This proves the Sarvam agent + Vobiz path can place calls, but it does **not** prove portal-driven dispatch or webhook/CRM closure.
 
-## Current blocker: scheduling API authentication
+## Authentication investigation history
 
-INSUREIT production readiness currently reaches the Sarvam Voice Agents scheduling API but receives HTTP **401**.
+INSUREIT production readiness reached the Sarvam Voice Agents scheduling API but returned HTTP **401**.
 
-Observed facts:
+Observed before deep diagnostics:
 
-- Production Vercel variables are present.
-- The configured Sarvam workspace ID matches the workspace shown in Sarvam Settings.
-- The active API key is shown under that same workspace.
-- PR #1864 (`Fix Sarvam campaign API authentication fallback`) merged as `793bde9032ac868f3fe4cba590c0332d54fa95f5` and is deployed/READY on Vercel.
+- Production Vercel variables were present.
+- The configured Sarvam workspace ID matched the workspace shown in Sarvam Settings.
+- The API key was shown as Active under that same workspace.
+- PR #1864 (`Fix Sarvam campaign API authentication fallback`) merged as `793bde9032ac868f3fe4cba590c0332d54fa95f5` and was deployed/READY on Vercel.
 - That fix tries `api-subscription-key` first and retries with `Authorization: Bearer` only after a definitive 401.
-- The production connection test still returns 401 after that deployment and after the user refreshed/recreated the API key in the confirmed workspace.
-- Therefore do not keep rotating credentials or guessing. The next step is deterministic deep diagnostics.
+- The production connection test still returned 401 after that deployment and after the API key was refreshed/recreated in the confirmed workspace.
 
-## Deep-diagnostics plan
+## Deep diagnostics — implemented and production verified
 
-Add an IT-Super-User-only, read-only **Run Deep Diagnostics** action. It must never place a call, stream a cohort, mutate a Sarvam campaign, expose credentials, log secrets, phone numbers, transcripts or raw customer/provider payloads.
+PR #1876 (`Add read-only Sarvam deep diagnostics`) merged as `5c20826022d6e53331a9ddfb5b84ecef139bf752`.
 
-Diagnostics should distinguish these layers:
+Deployment evidence:
 
-1. **Core Sarvam API-key probe** against `api.sarvam.ai` using a non-mutating authenticated request. A deliberately nonexistent pronunciation-dictionary ID is acceptable: valid authentication should reach resource resolution (typically 404), while an invalid API key should be rejected (typically 403).
-2. **Voice Agents scheduling probe with `api-subscription-key`** against the configured campaign read-only webhook-list endpoint.
-3. **Voice Agents scheduling probe with `Authorization: Bearer`** against the same read-only endpoint.
+- GitHub Actions production deploy run `34967973064`: **success**.
+- Vercel production deployment `dpl_2yNZPhRKuEMuex5exMQ94RE3XsQ7`: **READY**.
+- The deployed diagnostics route is `/system/voice-integration/diagnostics` and remains IT-Super-User only.
+- Diagnostics are read-only and do not place calls, stream cohorts or mutate the Sarvam campaign.
 
-Show only sanitized status, safe error classification/error code, content type and provider request/correlation header if available. Never render response bodies verbatim.
+### Production diagnostic result — 2026-09-16
 
-Interpretation target:
+The user ran **Run Deep Diagnostics** once in production while the campaign remained paused.
 
-- core auth rejected -> API key/credential issue;
-- core auth accepted/reaches resource layer, but scheduling 401 for both forms -> Voice Agents scheduling permission/auth-contract issue rather than a bad key;
-- scheduling 403 -> authenticated but unauthorized for the resource/product/workspace;
-- scheduling 404 -> organization/workspace/campaign binding mismatch;
-- scheduling 2xx -> provider auth works and the existing readiness probe/path needs correction.
+Observed results:
+
+1. **Core Sarvam API key probe**
+   - HTTP **403**
+   - classification: `api_key_rejected`
+   - provider error code: `invalid_api_key_error`
+
+2. **Voice Agents scheduling — `api-subscription-key`**
+   - HTTP **401**
+   - classification: `authentication_rejected`
+
+3. **Voice Agents scheduling — Bearer**
+   - HTTP **401**
+   - classification: `authentication_rejected`
+
+The portal also returned provider request IDs for all three probes. Those IDs are intentionally not persisted here because they are transient diagnostics evidence rather than durable configuration.
+
+### What this proves
+
+- The configured production credential is **not accepted by the core `api.sarvam.ai` probe**; Sarvam explicitly returned `invalid_api_key_error`.
+- Both tested authentication styles are also rejected by the Voice Agents scheduling API.
+- Therefore the current blocker is still at the **provider credential/authentication contract layer**. Do not resume the campaign and do not attempt customer dispatch yet.
+- The result does **not** by itself prove whether the Sarvam Voice Agents product uses a different key type, a separate scheduling credential, a product-specific API entitlement, or whether the configured key value is malformed/stale in production. The next step is to verify the exact current Sarvam Voice Agents API authentication contract before changing more credentials.
 
 ## Immediate continuation
 
-1. Keep campaign `INSUREIT-Re-e2468e47-50a8` PAUSED.
-2. Implement and deploy the read-only deep diagnostics through the normal branch/PR/CI path.
-3. Run diagnostics once from `/system/voice-integration`.
-4. Use the three layer results to identify the exact provider-auth failure before changing any more credentials.
-5. Only after provider auth passes, queue the two authorized test opportunities from INSUREIT while the campaign remains paused; verify local attempt/cohort state; then resume the campaign for the actual two-phone test.
-6. Verify webhook ingestion, idempotency and CRM projection before any broader campaign automation.
+1. Keep campaign `INSUREIT-Re-e2468e47-50a8` **PAUSED**.
+2. Do not queue any of the controlled test opportunities yet.
+3. Verify the current official Sarvam Voice Agents / scheduling API authentication requirement and whether the Voice Agents workspace key shown in the dashboard is valid for both `api.sarvam.ai` and `apps.sarvam.ai` scheduling endpoints.
+4. If Sarvam documents a separate credential/permission for scheduling, configure that server-side without exposing it to the browser or repository.
+5. After any credential/auth-contract correction, rerun **Run Deep Diagnostics** before using `Call with AI`.
+6. Only after provider authentication passes, queue the two authorized test opportunities from INSUREIT while the campaign remains paused; verify local attempt/cohort state; then resume the campaign for the actual two-phone test.
+7. Verify webhook ingestion, idempotency and CRM projection before any broader campaign automation.
