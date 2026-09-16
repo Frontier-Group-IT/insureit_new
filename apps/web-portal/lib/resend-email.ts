@@ -5,6 +5,7 @@ type ResendEmailInput = {
   bcc?: string[];
   subject: string;
   text: string;
+  html?: string;
   idempotencyKey: string;
 };
 
@@ -32,6 +33,7 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<ResendEm
       ...(input.bcc?.length ? { bcc: input.bcc } : {}),
       subject: input.subject,
       text: input.text,
+      ...(input.html ? { html: input.html } : {}),
     }),
     cache: "no-store",
   });
