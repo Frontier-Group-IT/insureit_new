@@ -270,6 +270,9 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
     const amount = Number(value ?? 0);
     return total + (Number.isFinite(amount) ? amount : 0);
   }, 0);
+  const partnerFamilyCount = network.scope_mode === "self"
+    ? network.partners.length
+    : network.partners.filter((row) => !(row as typeof row & { parent_partner_id?: string | null }).parent_partner_id).length;
 
   return (
     <PartnerPortalShell title="Home">
@@ -306,7 +309,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
         <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryCard
             label="Families"
-            value={network.total_partners}
+            value={partnerFamilyCount}
             meta={network.total_groups > 0 ? `${network.total_groups} group${network.total_groups === 1 ? "" : "s"}` : "Partner family scope"}
             href="/partner/network"
             iconSrc={homeIcons.families}
