@@ -151,33 +151,19 @@ export default async function PartnerCustomerDetailPage({
         </details>
 
         <section className="overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
-          <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D6E1EE] bg-[#F4F7FB] px-2.5 text-[11px] font-semibold text-[#2563EB]">
-              <CarFront className="h-4 w-4" />
-              Add Vehicle
-            </span>
-            <div className="flex items-center justify-end gap-2">
-              <Link
-                href="/partner/customers"
-                className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]"
-              >
-                Back
-              </Link>
-              <Link
-                href={`/partner/customers/${encodeURIComponent(id)}/fleet`}
-                className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]"
-              >
-                View Fleet
-              </Link>
-              {data.summary.policies > 0 ? (
-                <Link
-                  href="/partner/policies"
-                  className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]"
-                >
-                  View Policies
-                </Link>
-              ) : null}
-            </div>
+          <div className="flex items-center justify-end gap-2 px-4 py-3">
+            <Link
+              href="/partner/customers"
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]"
+            >
+              Back
+            </Link>
+            <Link
+              href={`/partner/customers/${encodeURIComponent(id)}/fleet`}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[#B8C7DC] bg-[#F7F9FC] px-4 text-[10.5px] font-semibold text-[#173E7B] transition hover:border-[#8EA5C3] hover:bg-[#EEF3F9]"
+            >
+              View Fleet
+            </Link>
           </div>
         </section>
       </div>
