@@ -82,7 +82,7 @@ export default async function DistributionReportsPage({ searchParams }: PageProp
           <Metric label="Active" value={formatInteger(report.summary.active_intermediary_count)} />
           <Metric label="Producing" value={formatInteger(report.summary.producing_intermediary_count)} />
           <Metric label="Policies" value={formatInteger(report.summary.policy_count)} />
-          <Metric label="Gross premium" value={formatCurrency(report.summary.gross_premium)} />
+          <Metric label="Net premium" value={formatCurrency(report.summary.net_premium)} />
           <Metric label="Open onboarding" value={formatInteger(report.summary.onboarding_open_count)} />
         </section>
 
@@ -149,9 +149,9 @@ function RmPerformance({ rows }: { rows: DistributionReport["rms"] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[900px] border-collapse text-left">
-        <thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[0.07em] text-[#7c899b]"><th className="px-5 py-3">Relationship manager</th><th className="px-3 py-3 text-right">Intermediaries</th><th className="px-3 py-3 text-right">Active</th><th className="px-3 py-3 text-right">Producing</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Customers</th><th className="px-5 py-3 text-right">Gross premium</th></tr></thead>
+        <thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[0.07em] text-[#7c899b]"><th className="px-5 py-3">Relationship manager</th><th className="px-3 py-3 text-right">Intermediaries</th><th className="px-3 py-3 text-right">Active</th><th className="px-3 py-3 text-right">Producing</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Customers</th><th className="px-5 py-3 text-right">Net premium</th></tr></thead>
         <tbody className="divide-y divide-[#edf0f4]">
-          {rows.map((row) => <tr key={`${row.employee_id ?? "none"}-${row.name}`} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold text-[#283851]">{row.name}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.intermediary_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.active_intermediary_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.producing_intermediary_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.policy_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.customer_count)}</td><td className="px-5 py-3.5 text-right font-bold tabular-nums text-[#283851]">{formatCurrency(row.gross_premium)}</td></tr>)}
+          {rows.map((row) => <tr key={`${row.employee_id ?? "none"}-${row.name}`} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold text-[#283851]">{row.name}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.intermediary_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.active_intermediary_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.producing_intermediary_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.policy_count)}</td><td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.customer_count)}</td><td className="px-5 py-3.5 text-right font-bold tabular-nums text-[#283851]">{formatCurrency(row.net_premium)}</td></tr>)}
         </tbody>
       </table>
     </div>
@@ -163,7 +163,7 @@ function IntermediaryTable({ rows }: { rows: DistributionReport["intermediaries"
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[1180px] border-collapse text-left">
-        <thead><tr className="bg-[#f8fafc] text-[8.2px] font-black uppercase tracking-[0.07em] text-[#7c899b]"><th className="px-5 py-3">Intermediary</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">RM</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Customers</th><th className="px-3 py-3 text-right">Gross premium</th><th className="px-3 py-3">Last business</th><th className="px-5 py-3 text-center">Open</th></tr></thead>
+        <thead><tr className="bg-[#f8fafc] text-[8.2px] font-black uppercase tracking-[0.07em] text-[#7c899b]"><th className="px-5 py-3">Intermediary</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">RM</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Customers</th><th className="px-3 py-3 text-right">Net premium</th><th className="px-3 py-3">Last business</th><th className="px-5 py-3 text-center">Open</th></tr></thead>
         <tbody className="divide-y divide-[#edf0f4]">
           {rows.map((row) => (
             <tr key={row.id} className="text-[10px] transition hover:bg-[#fbfcfe]">
@@ -173,7 +173,7 @@ function IntermediaryTable({ rows }: { rows: DistributionReport["intermediaries"
               <td className="px-3 py-3.5"><StatusPill value={row.account_status} /></td>
               <td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.policy_count)}</td>
               <td className="px-3 py-3.5 text-right tabular-nums text-[#536174]">{formatInteger(row.customer_count)}</td>
-              <td className="px-3 py-3.5 text-right font-bold tabular-nums text-[#24344f]">{formatCurrency(row.gross_premium)}</td>
+              <td className="px-3 py-3.5 text-right font-bold tabular-nums text-[#24344f]">{formatCurrency(row.net_premium)}</td>
               <td className="px-3 py-3.5 font-semibold text-[#536174]">{formatDate(row.last_business_date)}</td>
               <td className="px-5 py-3.5 text-center">{row.application_id ? <Link href={`/intermediaries/applications/${row.application_id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5" /></Link> : "—"}</td>
             </tr>
@@ -258,4 +258,4 @@ function formatInteger(value: number) { return new Intl.NumberFormat("en-IN", { 
 function formatDate(value: string | null) { if (!value) return "—"; return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value.slice(0, 10)}T00:00:00+05:30`)); }
 function labelize(value: string) { if (value === "—") return value; return value.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase()); }
 function fallbackFilters(): DistributionFilters { return { period: "90d", fromDate: null, toDate: null, rmEmployeeId: null, intermediaryType: null, accountStatus: null, page: 1, onboardingPage: 1 }; }
-function emptyReport(): DistributionReport { return { summary: { intermediary_count: 0, active_intermediary_count: 0, partner_count: 0, posp_count: 0, misp_count: 0, producing_intermediary_count: 0, policy_count: 0, customer_count: 0, gross_premium: 0, onboarding_open_count: 0 }, rms: [], intermediaries: { rows: [], total_count: 0, page: 1, page_size: 25 }, onboarding_summary: { total: 0, open: 0, compliance: 0, training: 0, exam: 0, agreement: 0, iib: 0, completed: 0, rejected: 0 }, onboarding: { rows: [], total_count: 0, page: 1, page_size: 25 }, filters: { rms: [], types: ["partner", "posp", "misp"], account_statuses: ["active", "under_onboarding", "inactive", "suspended", "terminated", "rejected"] } }; }
+function emptyReport(): DistributionReport { return { summary: { intermediary_count: 0, active_intermediary_count: 0, partner_count: 0, posp_count: 0, misp_count: 0, producing_intermediary_count: 0, policy_count: 0, customer_count: 0, gross_premium: 0, net_premium: 0, onboarding_open_count: 0 }, rms: [], intermediaries: { rows: [], total_count: 0, page: 1, page_size: 25 }, onboarding_summary: { total: 0, open: 0, compliance: 0, training: 0, exam: 0, agreement: 0, iib: 0, completed: 0, rejected: 0 }, onboarding: { rows: [], total_count: 0, page: 1, page_size: 25 }, filters: { rms: [], types: ["partner", "posp", "misp"], account_statuses: ["active", "under_onboarding", "inactive", "suspended", "terminated", "rejected"] } }; }
