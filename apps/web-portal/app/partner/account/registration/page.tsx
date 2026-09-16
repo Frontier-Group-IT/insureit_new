@@ -53,7 +53,7 @@ export default async function PartnerRegistrationPage() {
   const stats = [
     { icon: UserRound, label: "Account Type", value: intermediaryType === "posp" ? "POSP account" : intermediaryType === "misp" ? "MISP account" : "Partner" },
     { icon: IdCard, label: intermediaryType === "partner" ? `${linkedType} ID` : "Account Status", value: intermediaryType === "partner" ? linkedId : humanize(data.intermediary.account_status) },
-    { icon: Link2, label: intermediaryType === "partner" ? "Linked Account Status" : "Parent Partner", value: intermediaryType === "partner" ? (qualification ? humanize(qualification.registration_status) : "Not linked") : (data.intermediary.partner_code || "Not linked") },
+    { icon: Link2, label: intermediaryType === "partner" ? "Linked Account Status" : "Parent Partner", value: intermediaryType === "partner" ? (qualification ? humanize(qualification.registration_status) : "Not linked") : "Not linked" },
     { icon: UserRoundPlus, label: "Assigned RM", value: "Not assigned" },
     { icon: LogIn, label: "Portal Access", value: humanize(data.intermediary.portal_access_status) },
     { icon: CalendarDays, label: "Activation Date", value: "-" },
