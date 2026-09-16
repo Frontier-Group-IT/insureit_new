@@ -3,14 +3,18 @@ begin;
 -- Preserve enough state to make this identity-format migration reversible.
 -- This table is intentionally retained until the companion rollback is run.
 create table public.partner_code_format_migration_20260916_backup (
+  backup_id bigint generated always as identity primary key,
   record_type text not null check (record_type in ('meta', 'backfill')),
   partner_id uuid,
   old_code text,
   new_code text,
   sequence_at_apply bigint not null,
-  applied_at timestamptz not null default now(),
-  primary key (record_type, partner_id)
+  applied_at timestamptz not null default now()
 );
+
+create unique index partner_code_format_migration_20260916_partner_unique
+  on public.partner_code_format_migration_20260916_backup(partner_id)
+  where record_type = 'backfill';
 
 insert into public.partner_code_format_migration_20260916_backup (
   record_type,
