@@ -5,14 +5,20 @@ import { usePathname } from "next/navigation";
 import { PartnerCustomIcon } from "./partner-custom-icon";
 import { partnerMobileItems } from "./partner-navigation";
 
-export function PartnerBottomNavigation() {
+export function PartnerBottomNavigation({ hideAccount = false }: { hideAccount?: boolean }) {
   const pathname = usePathname();
+  const items = hideAccount
+    ? partnerMobileItems.map((item) => item.href === "/partner/account"
+      ? { ...item, href: "/partner/support", label: "More", icon: "support" as const }
+      : item)
+    : partnerMobileItems;
+
   return (
     <nav
       className="fixed inset-x-2 bottom-[max(.5rem,env(safe-area-inset-bottom))] z-[80] grid grid-cols-5 rounded-[18px] border border-[#273454] bg-[#111A35] p-1.5 shadow-[0_22px_60px_rgba(15,24,52,.42)] md:hidden"
       aria-label="Partner mobile quick navigation"
     >
-      {partnerMobileItems.map((item) => {
+      {items.map((item) => {
         const active = item.href === "/partner" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (
           <Link
