@@ -1,0 +1,37 @@
+name: Temp fix policy start label
+on:
+  push:
+    branches: [mobile/vehicle-privacy-policy-start]
+    paths: ['.github/workflows/temp-fix-policy-start-label.yml']
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: mobile/vehicle-privacy-policy-start
+          fetch-depth: 0
+      - name: Restore regression-compatible label
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('apps/mobile-app/app/customer/add-vehicle.tsx')
+          text = p.read_text()
+          old = 'PremiumDateField label="Start date *"'
+          new = 'PremiumDateField label="Start date"'
+          if old not in text:
+              raise SystemExit('Expected Start date * label not found')
+          p.write_text(text.replace(old, new, 1))
+      - name: Verify regression expectation
+        run: |
+          grep -q 'PremiumDateField label="Start date"' apps/mobile-app/app/customer/add-vehicle.tsx
+          git diff --check
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/mobile-app/app/customer/add-vehicle.tsx
+          git commit -m 'Preserve Add Vehicle policy start date regression contract'
+          git push origin HEAD:mobile/vehicle-privacy-policy-start
