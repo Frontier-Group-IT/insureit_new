@@ -92,12 +92,8 @@ begin
   classified as (
     select
       b.*,
-      regexp_replace(
-        lower(coalesce(nullif(b.partner_type,''), nullif(b.customer_type,''), '')),
-        '[^a-z0-9]+',
-        '_',
-        'g'
-      ) as normalized_customer_type
+      regexp_replace(lower(coalesce(nullif(b.partner_type,''), '')), '[^a-z0-9]+', '_', 'g') as normalized_partner_type,
+      regexp_replace(lower(coalesce(nullif(b.customer_type,''), '')), '[^a-z0-9]+', '_', 'g') as normalized_customer_type
     from base b
   ),
   filtered as (
@@ -124,11 +120,17 @@ begin
         v_customer_type='all'
         or (
           v_customer_type='individual_proprietor'
-          and c.normalized_customer_type in ('individual','proprietor','individual_proprietor')
+          and (
+            c.normalized_partner_type in ('individual','proprietor','individual_proprietor')
+            or c.normalized_customer_type in ('individual','proprietor','individual_proprietor')
+          )
         )
         or (
           v_customer_type<>'individual_proprietor'
-          and c.normalized_customer_type=v_customer_type
+          and (
+            c.normalized_partner_type=v_customer_type
+            or c.normalized_customer_type=v_customer_type
+          )
         )
       )
   )
@@ -142,7 +144,10 @@ begin
     f.email,
     f.city,
     f.state,
-    f.customer_type,
+    case
+      when f.normalized_customer_type in ('posp','misp') then f.normalized_customer_type
+      else coalesce(nullif(f.partner_type,''), nullif(f.customer_type,''))
+    end as customer_type,
     f.fleet_size_band,
     f.customer_status,
     f.intermediary_type,
