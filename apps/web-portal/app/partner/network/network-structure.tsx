@@ -200,10 +200,6 @@ export function PartnerNetworkStructure({
   );
 }
 
-function BranchMetric({ value, label }: { value: number; label: string }) {
-  return <div className="text-left sm:text-right"><p className="text-[10px] font-extrabold leading-none text-[#203858]">{value}</p><p className="mt-1 text-[7px] font-bold uppercase tracking-[0.05em] text-[#8795A8]">{label}</p></div>;
-}
-
 function RootMetric({ label, value, Icon, tone }: { label: string; value: number; Icon: React.ComponentType<{ className?: string }>; tone: "blue" | "green" | "purple" | "cyan" }) {
   const tones = {
     blue: "bg-[#E8F1FF] text-[#2563EB]",
