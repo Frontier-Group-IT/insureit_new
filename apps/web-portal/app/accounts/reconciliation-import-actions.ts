@@ -15,6 +15,7 @@ export type AccountsImportResult = {
 };
 
 type PolicyRef = { id: string; insurance_company_id: string | null };
+type InvoiceLine = { policyId: string; policyNumber: string; projectedPayin: number; billAmount: number };
 
 type InvoiceGroup = {
   insurerId: string;
@@ -22,7 +23,7 @@ type InvoiceGroup = {
   billDate: string;
   actualTds: number;
   tdsDate: string;
-  lines: Array<{ policyId: string; policyNumber: string; projectedPayin: number; billAmount: number }>;
+  lines: InvoiceLine[];
 };
 
 type ReceiptGroup = {
@@ -44,6 +45,8 @@ export async function confirmAccountsReconciliationUpload(formData: FormData): P
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
 
+  // Always validate the exact uploaded bytes again immediately before posting. A stale UI
+  // preview can never bypass live access, commercial-value or duplicate-reference checks.
   const preview = await previewAccountsReconciliationUpload(formData);
   if (!preview.totalRows) throw new Error(preview.message || "There are no transactions to import.");
   if (preview.errorRows > 0) throw new Error(`Import blocked. Resolve ${preview.errorRows} validation error${preview.errorRows === 1 ? "" : "s"} and preview the workbook again.`);
@@ -57,6 +60,7 @@ export async function confirmAccountsReconciliationUpload(formData: FormData): P
   const insurerByPolicy = new Map(((policyData ?? []) as PolicyRef[]).map((row) => [row.id, row.insurance_company_id]));
 
   const invoices = new Map<string, InvoiceGroup>();
+  const tdsByBillPolicy = new Map<string, number | null>();
   for (const row of preview.payinRows) {
     if (row.billAmount === null) throw new Error(`Pay-In row ${row.rowNumber} is missing Bill Amount.`);
     const insurerId = insurerByPolicy.get(row.policyId);
@@ -65,8 +69,32 @@ export async function confirmAccountsReconciliationUpload(formData: FormData): P
     const existing = invoices.get(key);
     if (existing && existing.billDate !== row.billDate) throw new Error(`Bill ${row.billNumber} is used with different Bill Dates.`);
     const group = existing ?? { insurerId, billNumber: row.billNumber, billDate: row.billDate, actualTds: 0, tdsDate: row.receiptDate || row.billDate, lines: [] };
-    group.lines.push({ policyId: row.policyId, policyNumber: row.policyNumber, projectedPayin: row.projectedPayin, billAmount: row.billAmount });
-    group.actualTds = money(group.actualTds + (row.actualTds ?? 0));
+
+    // A policy row may be repeated in the workbook solely to record multiple receipt
+    // installments. It must still create exactly one policy line on the insurer bill.
+    const existingLine = group.lines.find((line) => line.policyId === row.policyId);
+    if (existingLine) {
+      if (Math.abs(existingLine.billAmount - row.billAmount) > 0.01) throw new Error(`Policy ${row.policyNumber} repeats under bill ${row.billNumber} with different Bill Amounts.`);
+      if (Math.abs(existingLine.projectedPayin - row.projectedPayin) > 0.01) throw new Error(`Policy ${row.policyNumber} repeats under bill ${row.billNumber} with inconsistent projected Pay-In.`);
+    } else {
+      group.lines.push({ policyId: row.policyId, policyNumber: row.policyNumber, projectedPayin: row.projectedPayin, billAmount: row.billAmount });
+    }
+
+    // TDS is bill-policy accounting data, not receipt-installment data. Repeating the same
+    // policy must not multiply TDS. A conflicting non-blank value is rejected.
+    const tdsKey = `${key}|${row.policyId}`;
+    const incomingTds = row.actualTds;
+    if (tdsByBillPolicy.has(tdsKey)) {
+      const previous = tdsByBillPolicy.get(tdsKey);
+      if (previous !== null && incomingTds !== null && Math.abs(previous - incomingTds) > 0.01) throw new Error(`Policy ${row.policyNumber} repeats under bill ${row.billNumber} with different Actual TDS values.`);
+      if (previous === null && incomingTds !== null) {
+        tdsByBillPolicy.set(tdsKey, incomingTds);
+        group.actualTds = money(group.actualTds + incomingTds);
+      }
+    } else {
+      tdsByBillPolicy.set(tdsKey, incomingTds);
+      group.actualTds = money(group.actualTds + (incomingTds ?? 0));
+    }
     if (row.receiptDate) group.tdsDate = row.receiptDate;
     invoices.set(key, group);
   }
@@ -80,7 +108,13 @@ export async function confirmAccountsReconciliationUpload(formData: FormData): P
     const existing = receipts.get(key);
     if (existing && existing.receiptDate !== row.receiptDate) throw new Error(`Receipt ${row.reference} is used with different dates.`);
     const group = existing ?? { insurerId, receiptDate: row.receiptDate, reference: row.reference, allocations: [] };
-    group.allocations.push({ billNumber: row.billNumber, amount: row.amountReceived });
+
+    // One UTR can cover several policy rows on the same consolidated bill. The underlying
+    // receipt RPC allocates at invoice level, so combine those policy amounts into one
+    // invoice allocation before posting.
+    const billAllocation = group.allocations.find((allocation) => normalize(allocation.billNumber) === normalize(row.billNumber));
+    if (billAllocation) billAllocation.amount = money(billAllocation.amount + row.amountReceived);
+    else group.allocations.push({ billNumber: row.billNumber, amount: row.amountReceived });
     receipts.set(key, group);
   }
 
@@ -91,7 +125,9 @@ export async function confirmAccountsReconciliationUpload(formData: FormData): P
     const existing = payouts.get(key);
     if (existing && existing.paidDate !== row.paidDate) throw new Error(`Partner payment ${row.reference} is used with different dates.`);
     const group = existing ?? { intermediaryCode: row.intermediaryCode, intermediaryType: row.intermediaryType, paidDate: row.paidDate, reference: row.reference, allocations: [] };
-    group.allocations.push({ payoutId: row.payoutId, amount: row.paidAmount });
+    const payoutAllocation = group.allocations.find((allocation) => allocation.payoutId === row.payoutId);
+    if (payoutAllocation) payoutAllocation.amount = money(payoutAllocation.amount + row.paidAmount);
+    else group.allocations.push({ payoutId: row.payoutId, amount: row.paidAmount });
     payouts.set(key, group);
   }
 
