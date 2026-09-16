@@ -4,7 +4,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Plus,
   Search,
   ShieldAlert,
   SlidersHorizontal,
@@ -52,28 +51,16 @@ export default async function PartnerVehiclesPage({
   return (
     <PartnerPortalShell title="Vehicle">
       <section className="overflow-hidden rounded-[18px] border border-[#DCE5EF] bg-white shadow-[0_8px_26px_rgba(25,58,100,0.05)]">
-        <div className="flex min-h-[82px] items-center justify-between border-b border-[#E5EBF2] px-5 py-3.5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <span className="grid h-[52px] w-[52px] place-items-center rounded-[14px] bg-[#123E6E] text-white shadow-[0_5px_14px_rgba(18,62,110,0.18)]">
-              <CarFront className="h-5 w-5" />
-            </span>
-            <h1 className="text-[18px] font-extrabold tracking-[-0.02em] text-[#18243A]">Vehicle Portfolio</h1>
-          </div>
+        <div className="flex flex-col gap-3 border-b border-[#E5EBF2] px-5 py-3.5 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="grid h-[52px] w-[52px] place-items-center rounded-[14px] bg-[#123E6E] text-white shadow-[0_5px_14px_rgba(18,62,110,0.18)]">
+                <CarFront className="h-5 w-5" />
+              </span>
+              <h1 className="whitespace-nowrap text-[18px] font-extrabold tracking-[-0.02em] text-[#18243A]">Vehicle Portfolio</h1>
+            </div>
 
-          <Link
-            href="/partner/customers"
-            prefetch={false}
-            className="inline-flex h-11 items-center gap-2 rounded-[14px] bg-[#153E6D] px-[18px] text-[12px] font-extrabold text-white shadow-[0_4px_12px_rgba(21,62,109,0.18)] transition hover:bg-[#0E345E]"
-            title="Choose a customer to add a vehicle"
-          >
-            <Plus className="h-4 w-4" />
-            Add Vehicle
-          </Link>
-        </div>
-
-        <div className="flex flex-col gap-3 border-b border-[#E5EBF2] px-5 py-3 sm:px-6 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5 sm:flex-row sm:items-center">
-            <form className="relative w-full sm:max-w-[430px]" action="/partner/vehicles">
+            <form className="relative w-full lg:max-w-[390px]" action="/partner/vehicles">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#73849B]" />
               <input
                 name="q"
@@ -82,10 +69,12 @@ export default async function PartnerVehiclesPage({
                 className="h-11 w-full rounded-[13px] border border-[#CFDAE7] bg-white pl-10 pr-4 text-[11px] font-semibold text-[#243A58] outline-none transition placeholder:text-[#95A2B5] focus:border-[#7FAADD] focus:ring-2 focus:ring-[#2E7ED0]/10"
               />
             </form>
+          </div>
 
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center xl:flex-nowrap xl:justify-end">
             <button
               type="button"
-              className="inline-flex h-11 min-w-[210px] items-center justify-between rounded-[13px] border border-[#CFDAE7] bg-white px-3.5 text-[11px] font-bold text-[#344761]"
+              className="inline-flex h-11 min-w-[190px] items-center justify-between rounded-[13px] border border-[#CFDAE7] bg-white px-3.5 text-[11px] font-bold text-[#344761]"
               aria-label="All vehicle types"
             >
               <span className="flex items-center gap-2.5">
@@ -94,21 +83,21 @@ export default async function PartnerVehiclesPage({
               </span>
               <ChevronDown className="h-4 w-4 text-[#344761]" />
             </button>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-1 rounded-[14px] border border-[#CFDAE7] bg-[#F8FAFD] p-1">
-            <span className="inline-flex h-9 items-center rounded-[10px] bg-[#153E6D] px-3.5 text-[10px] font-extrabold text-white">
-              All <span className="ml-1.5 opacity-90">{total}</span>
-            </span>
-            <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
-              Registered <span className="ml-1.5 text-[#91A0B3]">{visibleRegistered}</span>
-            </span>
-            <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
-              RC pending <span className="ml-1.5 text-[#91A0B3]">{visiblePending}</span>
-            </span>
-            <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
-              Uninsured <span className="ml-1.5 text-[#91A0B3]">{visibleUninsured}</span>
-            </span>
+            <div className="flex flex-wrap items-center gap-1 rounded-[14px] border border-[#CFDAE7] bg-[#F8FAFD] p-1">
+              <span className="inline-flex h-9 items-center rounded-[10px] bg-[#153E6D] px-3.5 text-[10px] font-extrabold text-white">
+                All <span className="ml-1.5 opacity-90">{total}</span>
+              </span>
+              <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
+                Registered <span className="ml-1.5 text-[#91A0B3]">{visibleRegistered}</span>
+              </span>
+              <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
+                RC pending <span className="ml-1.5 text-[#91A0B3]">{visiblePending}</span>
+              </span>
+              <span className="inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] font-bold text-[#586A82]">
+                Uninsured <span className="ml-1.5 text-[#91A0B3]">{visibleUninsured}</span>
+              </span>
+            </div>
           </div>
         </div>
 
