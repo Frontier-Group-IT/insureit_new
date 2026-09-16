@@ -6,7 +6,7 @@ import { getAccessibleCustomerIds, getEmployeeAccessScope } from "@/lib/employee
 import { requireCustomerManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { CustomerProfileEditor } from "./customer-profile-editor";
-import { updateCustomerProfile } from "./actions";
+import { updateCustomerProfileWithMobileVerification } from "./customer-mobile-change-actions";
 import { DealershipProfileEditor } from "./dealership-profile-editor";
 import { updateDealershipProfile } from "./dealership-actions";
 import { CorporateProfileEditor } from "./corporate-profile-editor";
@@ -108,6 +108,6 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Dealership Profile">{content}</AppShell>;
   }
 
-  const content = <CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfile.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null} beforeActions={activityStatus}/>;
+  const content = <CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfileWithMobileVerification.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null} beforeActions={activityStatus}/>;
   return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Customer Profile">{content}</AppShell>;
 }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BadgeCheck, CalendarDays, CarFront, CircleAlert, CircleCheck, CirclePlus, Phone, UserCheck, UserRound, type LucideIcon } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
 import { FormSubmitButton } from "@/components/form-submit-button";
+import { CustomerMobileOtpField } from "./customer-mobile-otp-field";
 
 type Customer = { id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; email: string | null; partner_type: string | null; address_street: string | null; address_locality: string | null; address: string | null; city: string | null; state: string | null; postal_code: string | null; pan_number: string | null; aadhaar_last_four: string | null; legal_trade_name: string | null; is_gst_registered: boolean; gst_number: string | null; fleet_size_band: string | null; onboarding_status: string; assigned_agent_id: string | null; created_at: string; updated_at: string };
 type DocumentRow = { id: string; document_type: string; file_name: string; verification_status: string; created_at: string; signedUrl: string | null };
@@ -124,7 +125,7 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
             <h3 className="text-[12px] font-semibold text-[var(--text)]">Personal Information</h3>
             <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Customer name" name="contact_name" defaultValue={customer.contact_name} required />
-              <Field label="Login mobile" name="phone" type="tel" defaultValue={customer.phone} required maxLength={13} />
+              <CustomerMobileOtpField customerId={customer.id} initialMobile={customer.phone} />
               <Field label="Email" name="email" type="email" defaultValue={customer.email ?? ""} />
             </div>
           </div>
