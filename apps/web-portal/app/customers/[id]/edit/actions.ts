@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { sendCustomerLoginMobileChangedEmail, maskMobile } from "@/lib/customer-login-mobile-email";
 import { isProfileWithinAccessScope } from "@/lib/employee-access-scope";
 import { getCustomerManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -12,11 +13,17 @@ const ALLOWED_FILE_TYPES = new Set(["application/pdf", "image/jpeg", "image/png"
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const documentTypes = ["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"] as const;
 const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const MOBILE_PATTERN = /^[6-9][0-9]{9}$/;
 
 function textValue(formData: FormData, name: string) { const value = formData.get(name); return typeof value === "string" && value.trim() ? value.trim() : null; }
 function fileValue(formData: FormData, name: string) { const value = formData.get(name); return value instanceof File && value.size > 0 ? value : null; }
 function safeExtension(file: File) { if (file.type === "application/pdf") return "pdf"; if (file.type === "image/png") return "png"; return "jpg"; }
 function editErrorUrl(id: string, message: string, field?: string) { const params = new URLSearchParams({ error: message }); if (field) params.set("field", field); return `/customers/${id}/edit?${params.toString()}`; }
+function normalizeMobile(value: string | null) {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  return digits;
+}
 
 export async function updateCustomerProfile(id: string, formData: FormData) {
   const profile = await getCustomerManager(id);
@@ -30,8 +37,10 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   const panNumber = textValue(formData, "pan_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const gstNumber = textValue(formData, "gst_number")?.replace(/\s/g, "").toUpperCase() ?? null;
   const assignedAgentId = textValue(formData, "assigned_agent_id");
+  const newMobile = normalizeMobile(textValue(formData, "phone"));
   const uploadedDocumentCount = documentTypes.reduce((count, type) => count + (fileValue(formData, type) ? 1 : 0), 0);
 
+  if (!MOBILE_PATTERN.test(newMobile)) redirect(editErrorUrl(id, "Enter a valid 10-digit Indian login mobile number.", "phone"));
   if (assignedAgentId && !await isProfileWithinAccessScope(profile.id, profile.role, assignedAgentId)) {
     redirect(editErrorUrl(id, "The selected agent is outside your permitted hierarchy.", "assigned_agent_id"));
   }
@@ -40,10 +49,41 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) redirect(editErrorUrl(id, "Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number"));
 
   const admin = createSupabaseAdminClient();
+  const [{ data: existingCustomer }, { data: editorRecord }, { data: customerMemberships }] = await Promise.all([
+    admin.from("customers").select("id, customer_code, contact_name, company_name, phone, profile_id").eq("id", id).maybeSingle<{ id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; profile_id: string | null }>(),
+    admin.from("profiles").select("id, full_name, email").eq("id", profile.id).maybeSingle<{ id: string; full_name: string; email: string | null }>(),
+    admin.from("customer_memberships").select("id, profile_id, invited_phone, status").eq("customer_id", id).eq("status", "active").returns<Array<{ id: string; profile_id: string; invited_phone: string | null; status: string }>>(),
+  ]);
+  if (!existingCustomer) redirect(editErrorUrl(id, "Customer could not be loaded."));
+
+  const oldMobile = normalizeMobile(existingCustomer.phone);
+  const mobileChanged = oldMobile !== newMobile;
+  const editorAuth = await admin.auth.admin.getUserById(profile.id);
+  const editorEmail = editorRecord?.email?.trim() || editorAuth.data.user?.email?.trim() || null;
+  const editorName = editorRecord?.full_name?.trim() || profile.full_name || "INSUREIT user";
+
+  if (mobileChanged && !editorEmail) {
+    redirect(editErrorUrl(id, "Your portal account needs an email address before changing a customer login mobile.", "phone"));
+  }
+
+  if (mobileChanged) {
+    const { data: duplicateCustomers } = await admin.from("customers").select("id, phone").neq("id", id).not("phone", "is", null).returns<Array<{ id: string; phone: string }>>();
+    if ((duplicateCustomers ?? []).some((customer) => normalizeMobile(customer.phone) === newMobile)) {
+      redirect(editErrorUrl(id, "That mobile number is already assigned to another customer.", "phone"));
+    }
+    const { data: duplicateProfiles } = await admin.from("profiles").select("id, phone").neq("id", existingCustomer.profile_id ?? "00000000-0000-0000-0000-000000000000").eq("role", "customer").not("phone", "is", null).returns<Array<{ id: string; phone: string | null }>>();
+    const linkedProfileIds = new Set([existingCustomer.profile_id, ...(customerMemberships ?? []).map((membership) => membership.profile_id)].filter((value): value is string => Boolean(value)));
+    if ((duplicateProfiles ?? []).some((customerProfile) => !linkedProfileIds.has(customerProfile.id) && normalizeMobile(customerProfile.phone) === newMobile)) {
+      redirect(editErrorUrl(id, "That mobile number is already assigned to another customer login.", "phone"));
+    }
+  }
+
+  const changedAt = new Date();
   const { error } = await admin.from("customers").update({
     contact_name: contactName,
     company_name: legalTradeName,
     legal_trade_name: legalTradeName,
+    phone: newMobile,
     email: textValue(formData, "email"),
     address_street: textValue(formData, "address_street"),
     address_locality: textValue(formData, "address_locality"),
@@ -58,12 +98,51 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     onboarding_status: textValue(formData, "onboarding_status") ?? "active",
     assigned_agent_id: assignedAgentId,
     updated_by: profile.id,
-    updated_at: new Date().toISOString()
+    updated_at: changedAt.toISOString()
   }).eq("id", id);
 
   if (error) {
     if (error.message.includes("customers_gst_number_format_check")) redirect(editErrorUrl(id, "Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number"));
     redirect(editErrorUrl(id, "Customer could not be saved."));
+  }
+
+  if (mobileChanged) {
+    const linkedProfileIds = Array.from(new Set([existingCustomer.profile_id, ...(customerMemberships ?? []).map((membership) => membership.profile_id)].filter((value): value is string => Boolean(value))));
+    for (const linkedProfileId of linkedProfileIds) {
+      const { error: profileUpdateError } = await admin.from("profiles").update({ phone: `+91${newMobile}` }).eq("id", linkedProfileId).eq("role", "customer");
+      if (profileUpdateError) redirect(editErrorUrl(id, "Customer was updated, but the linked login profile could not be synchronized. Please contact IT.", "phone"));
+      // Service-role admin updates do not initiate OTP/SMS flows. Do not use signInWithOtp/updateUser here.
+      const { error: authUpdateError } = await admin.auth.admin.updateUserById(linkedProfileId, { phone: `+91${newMobile}`, phone_confirm: true });
+      if (authUpdateError) redirect(editErrorUrl(id, "Customer was updated, but the linked login identity could not be synchronized. Please contact IT.", "phone"));
+    }
+    if ((customerMemberships?.length ?? 0) > 0) {
+      const { error: membershipUpdateError } = await admin.from("customer_memberships").update({ invited_phone: `+91${newMobile}`, updated_at: changedAt.toISOString() }).eq("customer_id", id).eq("status", "active");
+      if (membershipUpdateError) redirect(editErrorUrl(id, "Customer was updated, but the login membership could not be synchronized. Please contact IT.", "phone"));
+    }
+
+    await admin.from("audit_logs").insert({
+      actor_id: profile.id,
+      action: "update_customer_login_mobile",
+      table_name: "customers",
+      record_id: id,
+      old_data: { login_mobile: maskMobile(oldMobile) },
+      new_data: { login_mobile: maskMobile(newMobile), notification_recipient: editorEmail },
+    });
+
+    try {
+      await sendCustomerLoginMobileChangedEmail({
+        to: editorEmail!,
+        editorName,
+        customerName: existingCustomer.company_name || existingCustomer.contact_name || "Customer",
+        customerCode: existingCustomer.customer_code,
+        previousMobile: oldMobile,
+        newMobile,
+        changedAt,
+        idempotencyKey: `customer-login-mobile-${id}-${changedAt.getTime()}`,
+      });
+    } catch (emailError) {
+      console.error("customer_login_mobile_notification_failed", { customerId: id, editorProfileId: profile.id, error: emailError instanceof Error ? emailError.message : "unknown" });
+    }
   }
 
   for (const documentType of documentTypes) {
@@ -81,31 +160,14 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     const { error: uploadError } = await admin.storage.from(DOCUMENT_BUCKET).upload(storagePath, new Uint8Array(await file.arrayBuffer()), { contentType: file.type, upsert: false });
     if (uploadError) redirect(editErrorUrl(id, "Document upload failed.", documentType));
 
-    const { error: metadataError } = await admin.from("customer_documents").insert({
-      customer_id: id,
-      document_type: documentType,
-      file_name: file.name,
-      storage_bucket: DOCUMENT_BUCKET,
-      storage_path: storagePath,
-      mime_type: file.type,
-      file_size: file.size,
-      verification_status: "verified",
-      upload_source: "manager_portal",
-      uploaded_by: profile.id,
-      verified_by: profile.id,
-      verified_at: new Date().toISOString()
-    });
-    if (metadataError) {
-      await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
-      redirect(editErrorUrl(id, "Document record could not be saved.", documentType));
-    }
+    const { error: metadataError } = await admin.from("customer_documents").insert({ customer_id: id, document_type: documentType, file_name: file.name, storage_bucket: DOCUMENT_BUCKET, storage_path: storagePath, mime_type: file.type, file_size: file.size, verification_status: "verified", upload_source: "manager_portal", uploaded_by: profile.id, verified_by: profile.id, verified_at: new Date().toISOString() });
+    if (metadataError) { await admin.storage.from(DOCUMENT_BUCKET).remove([storagePath]); redirect(editErrorUrl(id, "Document record could not be saved.", documentType)); }
   }
 
   const requiredTypes = isGstRegistered ? documentTypes : documentTypes.filter((type) => type !== "gst_copy");
   const { data: savedDocuments } = await admin.from("customer_documents").select("document_type").eq("customer_id", id).in("document_type", [...requiredTypes]);
   const savedTypes = new Set((savedDocuments ?? []).map((row: { document_type: string }) => row.document_type));
   const hasAllRequiredDocuments = requiredTypes.every((type) => savedTypes.has(type));
-
   await admin.from("customers").update({ onboarding_status: hasAllRequiredDocuments ? "active" : "documents_pending", updated_by: profile.id, updated_at: new Date().toISOString() }).eq("id", id);
 
   revalidatePath("/customers");
