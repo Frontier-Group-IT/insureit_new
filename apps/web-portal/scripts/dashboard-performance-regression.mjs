@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const dashboardPage = await readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8");
 const dashboardData = await readFile(new URL("../lib/operations-dashboard.ts", import.meta.url), "utf8");
+const accountsDashboardData = await readFile(new URL("../lib/accounts-dashboard.ts", import.meta.url), "utf8");
 const dashboardMigration = await readFile(
   new URL("../../../supabase/migrations/20260831174500_optimize_operations_dashboard_single_pass.sql", import.meta.url),
   "utf8",
@@ -39,6 +40,22 @@ assert.doesNotMatch(
   "Operations dashboard should not perform a second direct Auth user lookup.",
 );
 
+assert.match(
+  accountsDashboardData,
+  /\.select\("policy_id,gross_payout,retention_amount"\)/,
+  "Accounts dashboard payout totals must use the computed policy payout and retention fields.",
+);
+assert.doesNotMatch(
+  accountsDashboardData,
+  /partner_payout_amount/,
+  "Accounts dashboard must not use partner payout planning inputs as projected cashflow.",
+);
+assert.match(
+  accountsDashboardData,
+  /function payoutValue\(row: PayoutRow\) \{\s*return numberValue\(row\.gross_payout\);\s*\}/s,
+  "Accounts dashboard projected payout must resolve directly from gross_payout.",
+);
+
 for (const aggregate of [
   "customer_stats",
   "vehicle_stats",
@@ -70,7 +87,6 @@ assert.doesNotMatch(
   /'claims'\s*,\s*\(select count\(\*\) from public\.claims\)/i,
   "Dashboard totals should not re-scan claims for each metric.",
 );
-
 
 const dashboardView = await readFile(new URL("../app/dashboard-v2/dashboard-view.tsx", import.meta.url), "utf8");
 const dashboardLinks = dashboardView.match(/<Link\b[^>]*>/gs) ?? [];
