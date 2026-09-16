@@ -31,8 +31,20 @@ export const protectedPortalRoots = [
   "/vehicles"
 ] as const;
 
+export const accountsRolePortalRoots = [
+  "/accounts",
+  "/reconciliation",
+  "/policies/commercial-review",
+  "/reports/accounts",
+  "/reports/export/accounts",
+] as const;
+
 export function isProtectedPortalPath(pathname: string) {
   return protectedPortalRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`));
+}
+
+export function isAccountsRolePortalPath(pathname: string) {
+  return accountsRolePortalRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`));
 }
 
 export function safePortalReturnPath(value: string | null | undefined) {
