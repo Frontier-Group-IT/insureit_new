@@ -102,7 +102,7 @@ export default function VehicleDetailScreen() {
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
         <View style={styles.protectionRow}>
-          <View style={[styles.protectionIcon, { backgroundColor: statusTone.soft }]}>
+          <View style={[styles.protectionIcon, { backgroundColor: statusTone.soft }]}> 
             <MaterialCommunityIcons name={latestPolicy ? 'shield-check-outline' : 'shield-plus-outline'} size={20} color={statusTone.accent} />
           </View>
           <View style={styles.protectionCopy}>
@@ -158,19 +158,19 @@ export default function VehicleDetailScreen() {
           <DetailCell icon="factory" label="Make" value={vehicle.make} />
           <DetailCell icon="car-info" label="Model" value={vehicle.model} />
           <DetailCell icon="calendar-blank-outline" label="Manufacturing year" value={vehicle.year ? String(vehicle.year) : null} />
-          <DetailCell icon="weight-kilogram" label="GVW" value={privateNotApplicable(vehicle, vehicle.gvw_kg ? `${vehicle.gvw_kg.toLocaleString('en-IN')} kg` : null)} />
+          <DetailCell icon="weight-kilogram" label="GVW" value={vehicle.gvw_kg ? `${vehicle.gvw_kg.toLocaleString('en-IN')} kg` : isPrivateVehicle(vehicle) ? 'N/A' : null} />
           <DetailCell icon="calendar-check-outline" label="Registration date" value={formatDate(vehicle.registration_date)} />
           <DetailCell icon="barcode" label="Chassis no." value={maskSensitiveIdentifier(vehicle.chassis_no)} />
           <DetailCell icon="engine-outline" label="Engine no." value={maskSensitiveIdentifier(vehicle.engine_no)} />
         </View>
         <Text style={styles.detailGroupLabel}>Compliance and permits</Text>
         <View style={styles.detailGrid}>
-          <DetailCell icon="file-certificate-outline" label="Permit no." value={privateNotApplicable(vehicle, vehicle.permit_no)} />
-          <DetailCell icon="calendar-alert" label="Fitness expiry" value={privateNotApplicable(vehicle, formatDate(vehicle.fitness_expiry_date))} status={isPrivateVehicle(vehicle) ? 'ok' : complianceStatus(vehicle.fitness_expiry_date).status} />
+          <DetailCell icon="file-certificate-outline" label="Permit no." value={storedValueOrClassFallback(vehicle, vehicle.permit_no)} />
+          <DetailCell icon="calendar-alert" label="Fitness expiry" value={storedDateOrClassFallback(vehicle, vehicle.fitness_expiry_date)} status={complianceStatus(vehicle.fitness_expiry_date).status} />
           <DetailCell icon="smog" label="PUC expiry" value={formatDate(vehicle.puc_expiry_date)} status={complianceStatus(vehicle.puc_expiry_date).status} />
-          <DetailCell icon="road-variant" label="Road tax expiry" value={privateNotApplicable(vehicle, formatDate(vehicle.road_tax_expiry_date))} status={isPrivateVehicle(vehicle) ? 'ok' : complianceStatus(vehicle.road_tax_expiry_date).status} />
-          <DetailCell icon="map-marker-path" label="National permit expiry" value={privateNotApplicable(vehicle, formatDate(vehicle.national_permit_expiry_date))} status={isPrivateVehicle(vehicle) ? 'ok' : complianceStatus(vehicle.national_permit_expiry_date).status} />
-          <DetailCell icon="map-marker-radius-outline" label="Local permit expiry" value={privateNotApplicable(vehicle, formatDate(vehicle.local_permit_expiry_date))} status={isPrivateVehicle(vehicle) ? 'ok' : complianceStatus(vehicle.local_permit_expiry_date).status} />
+          <DetailCell icon="road-variant" label="Road tax expiry" value={storedDateOrClassFallback(vehicle, vehicle.road_tax_expiry_date)} status={complianceStatus(vehicle.road_tax_expiry_date).status} />
+          <DetailCell icon="map-marker-path" label="National permit expiry" value={storedDateOrClassFallback(vehicle, vehicle.national_permit_expiry_date)} status={complianceStatus(vehicle.national_permit_expiry_date).status} />
+          <DetailCell icon="map-marker-radius-outline" label="Local permit expiry" value={storedDateOrClassFallback(vehicle, vehicle.local_permit_expiry_date)} status={complianceStatus(vehicle.local_permit_expiry_date).status} />
         </View>
       </Card>
     </Screen>
@@ -324,9 +324,15 @@ function isPrivateVehicle(vehicle: Vehicle) {
   return vehicleClassCode(vehicle) === 'PCP';
 }
 
-function privateNotApplicable(vehicle: Vehicle, value?: string | null) {
-  if (isPrivateVehicle(vehicle)) return 'N/A';
-  return value;
+function storedValueOrClassFallback(vehicle: Vehicle, value?: string | null) {
+  const normalized = String(value ?? '').trim();
+  if (normalized) return normalized;
+  return isPrivateVehicle(vehicle) ? 'N/A' : null;
+}
+
+function storedDateOrClassFallback(vehicle: Vehicle, value?: string | null) {
+  if (value) return formatDate(value);
+  return isPrivateVehicle(vehicle) ? 'N/A' : '-';
 }
 
 function formatDate(value?: string | null) {
