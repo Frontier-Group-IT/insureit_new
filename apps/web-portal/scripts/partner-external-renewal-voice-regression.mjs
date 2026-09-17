@@ -66,7 +66,7 @@ assert(deployWorkflow.includes("apply-external-renewal-voice-attempts.yml"), "pr
 
 assert(sarvamClient.includes('requiredEnv("SARVAM_API_KEY")'), "Sarvam key comes from server environment");
 assert(sarvamClient.includes('process.env[name]'), "Sarvam required environment values are resolved server-side");
-assert(sarvamClient.includes('api-subscription-key'), "Sarvam API uses subscription-key authentication");
+assert(sarvamClient.includes('api-subscription-key'), "current live submission still uses the pre-diagnostic auth contract until a dedicated dispatch change is approved");
 assert(sarvamClient.includes('user_identifier: context.attempt_id'), "local attempt UUID is the provider correlation key");
 assert(sarvamClient.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "IT-controlled kill switch gates outbound calling");
 assert(sarvamClient.includes("SarvamRenewalSubmissionError"), "provider submission distinguishes definitive rejection from ambiguous delivery");
@@ -76,14 +76,17 @@ assert(!sarvamClient.includes('NEXT_PUBLIC_SARVAM'), "no Sarvam credential/confi
 assert(readinessModel.includes('import "server-only"'), "readiness model is server-only");
 assert(readinessModel.includes('SARVAM_RENEWAL_WEBHOOK_SECRET'), "readiness checks webhook-secret presence");
 assert(readinessModel.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "readiness reports the outbound kill switch");
-assert(readinessModel.includes('checkSarvamRenewalConnection'), "readiness supports an explicit read-only Sarvam connectivity check");
-assert(readinessModel.includes('/webhooks?limit=1'), "connection check uses the read-only campaign webhook-list endpoint");
-assert(readinessModel.includes('"api-subscription-key": apiKey'), "connection check authenticates server-side with the Sarvam subscription key");
+assert(readinessModel.includes('checkSarvamRenewalConnection'), "readiness supports an explicit safe Sarvam connectivity check");
+assert(readinessModel.includes('/cohorts/stream'), "connection check reaches the documented campaign stream endpoint");
+assert(readinessModel.includes('"X-API-Key": apiKey'), "connection check uses the proven Voice Agents X-API-Key header");
+assert(readinessModel.includes('users: []'), "connection check deliberately sends no contact records");
+assert(readinessModel.includes('response.status === 422 || response.status === 400'), "validation rejection is treated as proof of authenticated reachability");
+assert(!readinessModel.includes('user_phone_number'), "readiness cannot submit a callable contact");
 assert(!readinessModel.includes('NEXT_PUBLIC_SARVAM'), "readiness does not depend on browser Sarvam configuration");
 
 assert(diagnosticsModel.includes('import "server-only"'), "deep diagnostics model is server-only");
 assert(diagnosticsModel.includes('pronunciation-dictionary/insureit-diagnostic-do-not-create'), "core auth probe is a non-mutating nonexistent-resource lookup");
-assert(diagnosticsModel.includes('/webhooks?limit=1'), "deep diagnostics uses the read-only campaign webhook-list endpoint");
+assert(diagnosticsModel.includes('/webhooks?limit=1'), "deep diagnostics retains the webhook-list provider defect evidence path");
 assert(diagnosticsModel.includes('"api-subscription-key": apiKey'), "deep diagnostics tests subscription-key scheduling auth");
 assert(diagnosticsModel.includes('authorization: `Bearer ${apiKey}`'), "deep diagnostics separately tests Bearer scheduling auth");
 assert(!diagnosticsModel.includes("cohorts/stream"), "deep diagnostics cannot stream a cohort");
@@ -126,7 +129,7 @@ assert(worklistPage.includes("getPartnerExternalRenewalVoiceStates"), "Partner w
 
 assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice integration readiness requires exact IT Super User role");
 assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice integration readiness also requires critical system access");
-assert(readinessPage.includes("Test Sarvam connection"), "voice admin page exposes the explicit read-only provider connectivity check");
+assert(readinessPage.includes("Test Sarvam connection"), "voice admin page exposes the explicit safe provider connectivity check");
 assert(readinessPage.includes("No customer identity, phone number, transcript or raw provider payload"), "voice admin page explicitly preserves the minimal-data boundary");
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
