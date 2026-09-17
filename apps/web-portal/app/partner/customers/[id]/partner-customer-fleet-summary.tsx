@@ -108,13 +108,14 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                   <ChevronDown className="h-4 w-4 justify-self-end text-[#64748B] transition-transform duration-200 group-open:rotate-180" />
                 </summary>
 
-                <div className="border-t border-[#E7EDF4]">
-                  <div className="grid gap-x-6 gap-y-3 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                <div className="relative border-t border-[#E7EDF4]">
+                  <div className="grid gap-x-6 gap-y-3 px-4 py-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-[repeat(5,minmax(0,1fr))_140px]">
                     <Detail label="Registration No." value={vehicle.vehicle_no || "—"} />
                     <Detail label="Vehicle Class" value={vehicle.vehicle_type || "—"} />
                     <Detail label="Manufacturer" value={vehicle.make || "—"} />
                     <Detail label="Model" value={vehicle.model || "—"} />
                     <Detail label="Manufacturing Year" value={vehicle.year ? String(vehicle.year) : "—"} />
+                    {policies.length ? <div className="hidden xl:block" aria-hidden="true" /> : null}
                     <Detail label="Fitness Expiry" value={dateLabel(vehicle.fitness_expiry_date)} />
                     <Detail label="PUC Expiry" value={dateLabel(vehicle.puc_expiry_date)} />
                     <Detail label="Road Tax Expiry" value={dateLabel(vehicle.road_tax_expiry_date)} />
@@ -123,8 +124,8 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                   </div>
 
                   {policies.length ? (
-                    <details className="group/policies border-t border-[#EEF2F6]">
-                      <summary className="flex cursor-pointer list-none justify-end px-4 py-2.5 [&::-webkit-details-marker]:hidden">
+                    <details className="group/policies">
+                      <summary className="flex cursor-pointer list-none justify-end px-4 pb-3 [&::-webkit-details-marker]:hidden xl:absolute xl:right-4 xl:top-3 xl:p-0">
                         <span className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-[#123D82] px-3 text-[8.5px] font-bold text-white transition hover:bg-[#0D326D]">
                           <FileText className="h-3.5 w-3.5" />
                           View Policy
