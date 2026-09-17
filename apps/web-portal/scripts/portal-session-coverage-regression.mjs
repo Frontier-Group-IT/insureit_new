@@ -93,6 +93,13 @@ if (!matcherEntries.includes("/") || !matcherEntries.includes("/login")) {
   failures.push("middleware must continue covering / and /login for session bootstrap/refresh behavior");
 }
 
+if (middlewareSource.includes("accessToken && cachedRole")) {
+  failures.push("middleware must not authorize from a cached role cookie without revalidating the current profile");
+}
+if (!middlewareSource.includes("? await checkSession(accessToken)")) {
+  failures.push("middleware must revalidate the access token against the current active profile before routing");
+}
+
 if (!masterDataServerSource.includes('if (!profile) redirect("/login")')) {
   failures.push("server capability guards must distinguish a missing session from an access-denied permission result");
 }

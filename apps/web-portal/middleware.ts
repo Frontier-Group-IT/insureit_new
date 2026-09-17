@@ -104,13 +104,15 @@ export async function middleware(request: NextRequest) {
   const isRenewalVoiceLab = pathname === "/partner/renewals/voice-lab";
   let accessToken = request.cookies.get(accessTokenCookie)?.value;
   const refreshToken = request.cookies.get(refreshTokenCookie)?.value;
-  const cachedRole = request.cookies.get(sessionRoleCookie)?.value;
   let refreshedSession: RefreshedSession | null = null;
-  let check: SessionCheck = accessToken && cachedRole
-    ? { status: "authorized", role: cachedRole }
-    : accessToken
-      ? await checkSession(accessToken)
-      : { status: "invalid", role: null };
+
+  // Never authorize or route from the cached role cookie alone. The role cookie is
+  // only a response-side cache for downstream rendering; the access token must
+  // always resolve to the current active profile so role changes and shared-browser
+  // sessions cannot leave a user stuck on stale authorization state.
+  let check: SessionCheck = accessToken
+    ? await checkSession(accessToken)
+    : { status: "invalid", role: null };
 
   if (check.status === "invalid" && refreshToken) {
     refreshedSession = await refreshSession(refreshToken);
