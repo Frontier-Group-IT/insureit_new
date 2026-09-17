@@ -54,11 +54,24 @@ jobs:
       - name: Link Supabase project
         run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
 
-      - name: Apply compact POSP MISP registration IDs migration
-        run: supabase db query --linked --file supabase/migrations/20260916173000_compact_posp_misp_registration_ids.sql
-
-      - name: Record migration as applied
-        run: supabase migration repair --linked --status applied 20260916173000
+      - name: Ensure compact POSP MISP registration migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=$(supabase db query --linked --output-format json "
+            select exists (
+              select 1
+              from supabase_migrations.schema_migrations
+              where version = '20260916173000'
+            ) as applied;
+          ")
+          echo "$state"
+          if echo "$state" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Migration 20260916173000 is already recorded as applied; skipping re-application."
+          else
+            supabase db query --linked --file supabase/migrations/20260916173000_compact_posp_misp_registration_ids.sql
+            supabase migration repair --linked --status applied 20260916173000
+          fi
 
       - name: Verify compact generators and migrated system registrations
         shell: bash
@@ -87,9 +100,18 @@ jobs:
                  or record_source is null
             )
             select
-              registration_def like '%return ''POSP'' || lpad(nextval(''public.posp_code_sequence''::regclass)::text, 5, ''0'')%' as posp_generator_compact,
-              registration_def like '%return ''MISP'' || lpad(nextval(''public.misp_code_sequence''::regclass)::text, 5, ''0'')%' as misp_generator_compact,
-              posp_identity_def like '%select ''POSP'' || lpad(nextval(''public.posp_identity_seq''::regclass)::text, 5, ''0'')%' as posp_identity_compact,
+              (
+                registration_def like '%return ''POSP'' || lpad(nextval(''public.posp_code_sequence'')::text, 5, ''0'')%'
+                or registration_def like '%return ''POSP'' || lpad(nextval(''public.posp_code_sequence''::regclass)::text, 5, ''0'')%'
+              ) as posp_generator_compact,
+              (
+                registration_def like '%return ''MISP'' || lpad(nextval(''public.misp_code_sequence'')::text, 5, ''0'')%'
+                or registration_def like '%return ''MISP'' || lpad(nextval(''public.misp_code_sequence''::regclass)::text, 5, ''0'')%'
+              ) as misp_generator_compact,
+              (
+                posp_identity_def like '%select ''POSP'' || lpad(nextval(''public.posp_identity_seq'')::text, 5, ''0'')%'
+                or posp_identity_def like '%select ''POSP'' || lpad(nextval(''public.posp_identity_seq''::regclass)::text, 5, ''0'')%'
+              ) as posp_identity_compact,
               (select count from remaining_old_system_codes) = 0 as system_codes_migrated,
               (select count from legacy_rows) as legacy_rows_preserved_scope
             from defs;
