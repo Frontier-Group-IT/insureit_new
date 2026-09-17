@@ -33,7 +33,59 @@ export default async function AccountsPage({ searchParams }: Props) {
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><KpiCard icon={CalendarRange} label="Policies" value={integer(data.policyCount)} note="Policies in selected period" /><KpiCard icon={ReceiptIndianRupee} label="Net premium" value={currency(data.netPremium)} note="Premium excluding policy GST" /><KpiCard icon={WalletCards} label="Projected net pay-in" value={currency(data.projectedNetPayin)} note="Projected insurer pay-in after TDS" /><KpiCard icon={HandCoins} label="Projected net payout" value={currency(data.projectedNetPayout)} note={`${integer(data.payoutIntermediaryCount)} intermediaries included`} /><KpiCard icon={TrendingUp} label="Projected retention" value={currency(data.projectedRetention)} note="Projected retained commercial value" /></section>
 
-    <section className="rounded-2xl border border-[#dbe3ee] bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[8px] font-black uppercase tracking-[.1em] text-[#0f766e]">New Accounts workflow</p><h2 className="mt-1 text-[14px] font-semibold text-[#17365D]">Workbook → Validation → Confirm Import → MIS</h2><p className="mt-1 text-[9px] text-[#7c899b]">This workflow is self-contained. Legacy reconciliation, billing and receivable pages remain available only under Other Recon.</p></div><span className="rounded-full border border-[#dce4ee] bg-[#f8fafc] px-2.5 py-1 text-[8px] font-bold text-[#667085]">Excel-first architecture</span></div><div className="mt-3 grid gap-2 lg:grid-cols-4"><WorkflowStep number="01" title="Download workbook" value="Pay-In + Pay-Out" note="System IDs and projected commercial values are filled by INSUREIT." /><WorkflowStep number="02" title="Upload transactions" value="Accounts entries only" note="Bill, TDS, receipts and payout payments are entered in Excel." /><WorkflowStep number="03" title="Validation preview" value="Errors blocked" note="System values, access scope, duplicates and transaction rules are checked." /><WorkflowStep number="04" title="Confirm Import" value="Atomic posting" note="Validated bills, TDS, receipts and partner payments post together; any failure rolls back the full batch." /></div></section>
+    <section className="grid gap-3 xl:grid-cols-[minmax(330px,0.78fr)_minmax(720px,1.35fr)]">
+      <SummaryCard title="Insurer-wise Summary" count={data.insurerSummary.length}>
+        <div className="max-h-[360px] overflow-auto">
+          <table className="w-full min-w-[520px] border-separate border-spacing-0 text-left">
+            <thead className="sticky top-0 z-10 bg-[#f7f9fc]">
+              <tr>
+                <TableHead>Insurance Company</TableHead>
+                <TableHead numeric>Net Premium</TableHead>
+                <TableHead numeric>Projected Payin</TableHead>
+                <TableHead numeric>Received Payin</TableHead>
+              </tr>
+            </thead>
+            <tbody>
+              {data.insurerSummary.length ? data.insurerSummary.map((row) => <tr key={row.insurerId} className="group">
+                <TableCell><span className="font-semibold text-[#17365D]">{row.insuranceCompany}</span></TableCell>
+                <TableCell numeric>{currency(row.netPremium)}</TableCell>
+                <TableCell numeric>{currency(row.projectedPayin)}</TableCell>
+                <TableCell numeric emphasis>{currency(row.receivedPayin)}</TableCell>
+              </tr>) : <EmptyRow colSpan={4} label="No insurer summary is available for the selected filters." />}
+            </tbody>
+          </table>
+        </div>
+      </SummaryCard>
+
+      <SummaryCard title="Intermediary Payout Summary" count={data.intermediaryPayoutSummary.length}>
+        <div className="max-h-[360px] overflow-auto">
+          <table className="w-full min-w-[980px] border-separate border-spacing-0 text-left">
+            <thead className="sticky top-0 z-10 bg-[#f7f9fc]">
+              <tr>
+                <TableHead>Lead Source</TableHead>
+                <TableHead>RM Name</TableHead>
+                <TableHead>Intermediary Type &amp; Code</TableHead>
+                <TableHead numeric>Net Premium</TableHead>
+                <TableHead numeric>Calculated Payout</TableHead>
+                <TableHead numeric>Released Payout</TableHead>
+                <TableHead numeric>Pending Payout</TableHead>
+              </tr>
+            </thead>
+            <tbody>
+              {data.intermediaryPayoutSummary.length ? data.intermediaryPayoutSummary.map((row) => <tr key={row.key} className="group">
+                <TableCell>{row.leadSource}</TableCell>
+                <TableCell>{row.rmName}</TableCell>
+                <TableCell><div className="min-w-[150px]"><span className="block font-semibold text-[#17365D]">{row.intermediaryType}</span><span className="mt-0.5 block text-[8px] font-medium text-[#8a96a7]">{row.intermediaryCode}</span></div></TableCell>
+                <TableCell numeric>{currency(row.netPremium)}</TableCell>
+                <TableCell numeric>{currency(row.calculatedPayout)}</TableCell>
+                <TableCell numeric emphasis>{currency(row.releasedPayout)}</TableCell>
+                <TableCell numeric pending={row.pendingPayout > 0}>{currency(row.pendingPayout)}</TableCell>
+              </tr>) : <EmptyRow colSpan={7} label="No intermediary payout summary is available for the selected filters." />}
+            </tbody>
+          </table>
+        </div>
+      </SummaryCard>
+    </section>
 
     <ReconciliationTools period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} insurerId={filters.insurerId} />
   </div></AppShell>;
@@ -41,7 +93,10 @@ export default async function AccountsPage({ searchParams }: Props) {
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-1 block text-[8px] font-black uppercase tracking-[.08em] text-[#7c899b]">{label}</span>{children}</label>; }
 function KpiCard({ icon: Icon, label, value, note }: { icon: typeof Building2; label: string; value: string; note: string }) { return <article className="rounded-2xl border border-[#dbe3ee] bg-white px-4 py-3.5 shadow-sm"><div className="flex items-center justify-between gap-3"><p className="text-[8px] font-black uppercase tracking-[.08em] text-[#7c899b]">{label}</p><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#edf6f5] text-[#0f766e]"><Icon className="h-3.5 w-3.5" /></span></div><p className="mt-2.5 truncate text-[20px] font-semibold tabular-nums text-[#14213c]" title={value}>{value}</p><p className="mt-1 min-h-[14px] text-[8.5px] font-medium text-[#8490a1]">{note}</p></article>; }
-function WorkflowStep({ number, title, value, note, muted = false }: { number: string; title: string; value: string; note: string; muted?: boolean }) { return <article className={`rounded-xl border border-[#e2e8f0] p-3 ${muted ? "bg-[#f8fafc] opacity-70" : "bg-[#fbfcfe]"}`}><span className="rounded-md bg-[#e8f5f3] px-2 py-1 text-[8px] font-black text-[#0f766e]">{number}</span><p className="mt-2 text-[10px] font-bold text-[#17365D]">{title}</p><p className="mt-1 text-[12px] font-semibold text-[#14213c]">{value}</p><p className="mt-1 min-h-[28px] text-[8.5px] leading-4 text-[#7c899b]">{note}</p></article>; }
+function SummaryCard({ title, count, children }: { title: string; count: number; children: React.ReactNode }) { return <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dbe3ee] bg-white shadow-sm"><div className="flex items-center justify-between gap-3 border-b border-[#edf1f5] px-4 py-3"><div><h2 className="text-[12px] font-semibold text-[#17365D]">{title}</h2><p className="mt-0.5 text-[8px] font-medium text-[#8a96a7]">Current dashboard filters applied</p></div><span className="shrink-0 rounded-full border border-[#dce4ee] bg-[#f8fafc] px-2.5 py-1 text-[8px] font-bold tabular-nums text-[#667085]">{integer(count)} rows</span></div>{children}</section>; }
+function TableHead({ children, numeric = false }: { children: React.ReactNode; numeric?: boolean }) { return <th className={`border-b border-[#dfe6ef] px-3 py-2.5 text-[7.5px] font-black uppercase tracking-[.055em] text-[#667085] ${numeric ? "text-right" : "text-left"}`}>{children}</th>; }
+function TableCell({ children, numeric = false, emphasis = false, pending = false }: { children: React.ReactNode; numeric?: boolean; emphasis?: boolean; pending?: boolean }) { return <td className={`border-b border-[#edf1f5] px-3 py-2.5 text-[9px] leading-4 group-last:border-b-0 ${numeric ? "whitespace-nowrap text-right font-semibold tabular-nums" : "text-[#475467]"} ${emphasis ? "text-[#0f766e]" : numeric ? "text-[#243b5a]" : ""} ${pending ? "text-[#9a5b12]" : ""}`}>{children}</td>; }
+function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) { return <tr><td colSpan={colSpan} className="px-4 py-10 text-center text-[9px] font-medium text-[#98a2b3]">{label}</td></tr>; }
 function periodHref(period: (typeof PERIODS)[number]["value"], insurerId: string | null) { const params = new URLSearchParams(); params.set("period", period); if (insurerId) params.set("insurer", insurerId); return `/accounts?${params.toString()}`; }
 function currency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
