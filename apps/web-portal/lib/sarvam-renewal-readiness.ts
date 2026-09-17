@@ -40,31 +40,6 @@ function safeIdentifierHint(name: string) {
   return `…${value.slice(-6)}`;
 }
 
-async function fetchSarvamWithAuthFallback(url: string, apiKey: string, signal: AbortSignal) {
-  const primary = await fetch(url, {
-    method: "GET",
-    headers: {
-      "api-subscription-key": apiKey,
-    },
-    cache: "no-store",
-    signal,
-  });
-
-  if (primary.status !== 401) return primary;
-
-  // Sarvam documents the same API key as valid Bearer authentication. Some
-  // apps.sarvam.ai scheduling endpoints reject subscription-key auth with 401,
-  // so retry only that definitive auth rejection using the documented Bearer form.
-  return fetch(url, {
-    method: "GET",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-    },
-    cache: "no-store",
-    signal,
-  });
-}
-
 export function getSarvamRenewalReadiness(): SarvamRenewalReadiness {
   const portalOrigin = (process.env.NEXT_PUBLIC_PORTAL_URL?.trim() || "https://portal.insureit.in").replace(/\/$/, "");
   const items = [
@@ -108,14 +83,38 @@ export async function checkSarvamRenewalConnection(): Promise<SarvamRenewalConne
   const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT_MS);
 
   try {
-    const url = `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/webhooks?limit=1`;
-    const response = await fetchSarvamWithAuthFallback(url, apiKey, controller.signal);
+    const url = `${SARVAM_BASE_URL}/api/scheduling/v1/orgs/${encodeURIComponent(orgId)}/workspaces/${encodeURIComponent(workspaceId)}/campaigns/${encodeURIComponent(campaignId)}/cohorts/stream`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "X-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        name: "insureit-readiness-validation",
+        users: [],
+      }),
+      cache: "no-store",
+      signal: controller.signal,
+    });
 
-    if (response.ok) {
+    // The readiness probe intentionally sends an empty users array. Sarvam's
+    // documented stream endpoint requires 1-1000 users, so HTTP 422 proves the
+    // key, org/workspace route, campaign lookup, and stream endpoint are all
+    // reachable without creating a contact or placing a call.
+    if (response.status === 422 || response.status === 400) {
       return {
         ok: true,
         status: response.status,
-        message: "Sarvam authenticated successfully and the configured renewal campaign is reachable.",
+        message: "Sarvam authenticated successfully and the configured renewal campaign stream endpoint is reachable.",
+      };
+    }
+
+    if (response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        message: "Sarvam unexpectedly accepted the validation-only readiness payload. Stop and review provider behavior before enabling customer dispatch.",
       };
     }
 
@@ -123,7 +122,7 @@ export async function checkSarvamRenewalConnection(): Promise<SarvamRenewalConne
       return {
         ok: false,
         status: response.status,
-        message: "Sarvam rejected both supported API-key authentication forms or workspace access.",
+        message: "Sarvam rejected the X-API-Key credential or workspace access for the renewal stream endpoint.",
       };
     }
 
@@ -131,21 +130,21 @@ export async function checkSarvamRenewalConnection(): Promise<SarvamRenewalConne
       return {
         ok: false,
         status: response.status,
-        message: "Sarvam is reachable, but the configured organisation, workspace or campaign could not be found.",
+        message: "Sarvam is reachable, but the configured organisation, workspace or campaign could not be found by the stream endpoint.",
       };
     }
 
     return {
       ok: false,
       status: response.status,
-      message: `Sarvam connection check failed with provider status ${response.status}.`,
+      message: `Sarvam stream readiness check failed with provider status ${response.status}.`,
     };
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       return {
         ok: false,
         status: null,
-        message: "Sarvam did not respond to the read-only connection check within 10 seconds.",
+        message: "Sarvam did not respond to the validation-only stream readiness check within 10 seconds.",
       };
     }
 
