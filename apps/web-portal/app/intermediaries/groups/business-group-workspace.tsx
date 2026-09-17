@@ -92,7 +92,7 @@ export function BusinessGroupWorkspace({
   const [query, setQuery] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [branchOpen, setBranchOpen] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(groups.map((group) => group.id)));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set<string>());
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(Boolean(success));
 
