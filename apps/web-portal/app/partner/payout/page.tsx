@@ -139,8 +139,7 @@ export default async function PartnerPayoutPage({ searchParams }: { searchParams
             {recent.length ? (
               <div className="overflow-x-auto">
                 <div className="min-w-[760px]">
-                  <div className="grid grid-cols-[44px_minmax(300px,1.4fr)_minmax(140px,.55fr)_minmax(120px,.45fr)_64px] border-b border-[#E4EAF2] bg-[#F8FAFD] px-4 py-2 text-[8px] font-bold text-[#60728E] sm:px-5">
-                    <span>#</span>
+                  <div className="grid grid-cols-[minmax(300px,1.4fr)_minmax(140px,.55fr)_minmax(120px,.45fr)_64px] border-b border-[#E4EAF2] bg-[#F8FAFD] px-4 py-2 text-[8px] font-bold text-[#60728E] sm:px-5">
                     <span>Reference / Customer</span>
                     <span>Amount</span>
                     <span>Status</span>
@@ -152,11 +151,8 @@ export default async function PartnerPayoutPage({ searchParams }: { searchParams
                       <Link
                         key={row.id}
                         href={`/partner/policies/${encodeURIComponent(row.policy_id)}`}
-                        className="group grid min-h-[54px] grid-cols-[44px_minmax(300px,1.4fr)_minmax(140px,.55fr)_minmax(120px,.45fr)_64px] items-center border-b border-[#E7ECF3] px-4 py-2 transition last:border-b-0 hover:bg-[#F8FBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-5"
+                        className="group grid min-h-[54px] grid-cols-[minmax(300px,1.4fr)_minmax(140px,.55fr)_minmax(120px,.45fr)_64px] items-center border-b border-[#E7ECF3] px-4 py-2 transition last:border-b-0 hover:bg-[#F8FBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-5"
                       >
-                        <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EAF3FF] text-[#2973E6]">
-                          <FileText className="h-3.5 w-3.5" />
-                        </span>
                         <div className="min-w-0">
                           <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#172D53]">{row.policy_no}</p>
                           <p className="mt-0.5 break-words text-[9px] font-medium leading-4 text-[#61779A]">{row.customer_name}</p>
