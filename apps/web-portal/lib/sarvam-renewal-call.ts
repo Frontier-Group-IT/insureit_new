@@ -69,29 +69,15 @@ function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
   return variables;
 }
 
-async function postSarvamWithAuthFallback(url: string, apiKey: string, body: string, signal: AbortSignal) {
-  const primary = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "api-subscription-key": apiKey,
-    },
-    body,
-    signal,
-    cache: "no-store",
-  });
-
-  if (primary.status !== 401) return primary;
-
-  // A 401 is a definitive auth rejection and therefore proves the first request
-  // was not accepted for execution. Sarvam also documents Bearer auth for the
-  // same API key, so retry once using that supported form without risking a
-  // duplicate cohort submission.
+// Production diagnostics proved the Voice Agents stream endpoint accepts
+// X-API-Key. The legacy api-subscription-key and Bearer forms returned 401 and
+// are intentionally not used for real cohort submission.
+async function postSarvam(url: string, apiKey: string, body: string, signal: AbortSignal) {
   return fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
+      "X-API-Key": apiKey,
     },
     body,
     signal,
@@ -127,7 +113,7 @@ export async function streamExternalRenewalToSarvam(context: ExternalRenewalVoic
       ],
     });
 
-    const response = await postSarvamWithAuthFallback(url, apiKey, body, controller.signal);
+    const response = await postSarvam(url, apiKey, body, controller.signal);
 
     const text = await response.text();
     let responseBody: unknown = null;
