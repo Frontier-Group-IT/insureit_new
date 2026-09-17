@@ -6,10 +6,11 @@ Before changing this route or any related Sarvam renewal integration code, read:
 - `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md`
 - `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md`
 - `docs/SARVAM_CONTROL_CAMPAIGN_DIAGNOSTIC_2026_09_16.md`
+- `docs/SARVAM_PRODUCTION_READINESS_SUCCESS_2026_09_17.md`
 - `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`
 - `apps/web-portal/app/partner/renewals/external/AGENTS.md`
 
-Treat `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md` as the current continuation record for agent version, controlled campaign binding, portal activation state, live-test evidence and the active Sarvam authentication blocker. Read `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md` for the repeated production provider-response evidence and original-campaign isolation results. Read `docs/SARVAM_CONTROL_CAMPAIGN_DIAGNOSTIC_2026_09_16.md` for the fresh control-campaign comparison and its safety state. Keep these records current after any material provider-authentication, campaign, agent-version, webhook or portal-dispatch change.
+Treat `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md` as the current continuation record for agent version, controlled campaign binding, portal activation state, live-test evidence and the active Sarvam authentication blocker. Read `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md` for the repeated production provider-response evidence and original-campaign isolation results. Read `docs/SARVAM_CONTROL_CAMPAIGN_DIAGNOSTIC_2026_09_16.md` for the fresh control-campaign comparison and its safety state. Read `docs/SARVAM_PRODUCTION_READINESS_SUCCESS_2026_09_17.md` for the production proof that the configured campaign reaches normal `cohorts/stream` validation with `X-API-Key`, plus the remaining webhook-secret rotation gate. Keep these records current after any material provider-authentication, campaign, agent-version, webhook or portal-dispatch change.
 
 This area is IT Super User only. Preserve the exact `it_super_user` role check plus `manage_system` at `approve` access. Do not expose provider secrets, API keys, webhook secrets, raw provider payloads, customer phone numbers, or transcripts here.
 
