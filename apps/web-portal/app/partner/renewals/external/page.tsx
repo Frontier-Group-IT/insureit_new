@@ -302,8 +302,7 @@ export default async function PartnerExternalRenewalsPage({
             </div>
           </div>
 
-          <div className="hidden grid-cols-[42px_minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] items-center gap-4 bg-[#F5F8FC] px-4 py-2.5 text-[8px] font-extrabold uppercase tracking-[0.04em] text-[#6484AB] xl:grid">
-            <span />
+          <div className="hidden grid-cols-[minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] items-center gap-4 bg-[#F5F8FC] px-4 py-2.5 text-[8px] font-extrabold uppercase tracking-[0.04em] text-[#6484AB] xl:grid">
             <span>Customer / Business</span>
             <span>Policy / Reference</span>
             <span>Expiry Date</span>
@@ -317,8 +316,7 @@ export default async function PartnerExternalRenewalsPage({
               {rows.map((row) => {
                 const voiceState = voiceStateByOpportunity.get(row.opportunity_id)?.voice_state ?? (row.mobile ? "available" : "needs_details");
                 return (
-                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[42px_minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] xl:items-center xl:gap-4">
-                    <span className="hidden h-5 w-5 rounded border border-[#C8D4E2] bg-white xl:block" aria-hidden="true" />
+                  <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] xl:items-center xl:gap-4">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2F72DE]"><CalendarClock className="h-3.5 w-3.5" /></span>
                       <div className="min-w-0">

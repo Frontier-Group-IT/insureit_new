@@ -111,8 +111,7 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
             />
           </div>
 
-          <div className="hidden grid-cols-[42px_minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] items-center border-b border-[#E2E8F0] bg-[#F7F9FC] px-3 py-2.5 text-[8.5px] font-black uppercase tracking-[0.045em] text-[#61728D] lg:grid">
-            <span className="flex justify-center"><span className="h-4 w-4 rounded border border-[#AAB7C8] bg-white" aria-hidden="true" /></span>
+          <div className="hidden grid-cols-[minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] items-center border-b border-[#E2E8F0] bg-[#F7F9FC] px-3 py-2.5 text-[8.5px] font-black uppercase tracking-[0.045em] text-[#61728D] lg:grid">
             <span>Customer</span>
             <span>Customer Type</span>
             <span>Mobile</span>
@@ -128,12 +127,8 @@ export default async function PartnerCustomersPage({ searchParams }: { searchPar
                 return (
                   <div
                     key={row.customer_id}
-                    className="grid gap-3 px-3 py-3 transition hover:bg-[#FAFCFF] lg:grid-cols-[42px_minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] lg:items-center"
+                    className="grid gap-3 px-3 py-3 transition hover:bg-[#FAFCFF] lg:grid-cols-[minmax(220px,1.25fr)_minmax(170px,.85fr)_minmax(145px,.7fr)_minmax(105px,.55fr)_minmax(165px,.8fr)_52px] lg:items-center"
                   >
-                    <div className="hidden justify-center lg:flex">
-                      <span className="h-4 w-4 rounded border border-[#AAB7C8] bg-white" aria-hidden="true" />
-                    </div>
-
                     <Link
                       href={"/partner/customers/" + encodeURIComponent(row.customer_id)}
                       prefetch={false}
