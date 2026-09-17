@@ -124,13 +124,78 @@ The user prepared a new control campaign named `INSUREIT Renewal Controlled 3` u
 
 The first scheduled calling window shown in the review screen is close to the current time. For safety, do not launch with that near-term start time. Move the start to a comfortably future window (for example the next day), then launch only to create the campaign resource and immediately PAUSE it. The campaign must remain paused before its calling window and before any diagnostic comparison.
 
-## Next safe diagnostic action
+## Fresh control campaign result
 
-Complete creation of `INSUREIT Renewal Controlled 3` only after moving its start time safely into the future. Immediately PAUSE it after creation and provide only the new campaign ID. Do not change the production `SARVAM_RENEWAL_CAMPAIGN_ID` yet. Then compare the fresh campaign's read-only webhook-list response with the original campaign before any live test.
+Fresh control campaign `INSUREIT Renewal Controlled 3` was created as campaign ID `INSUREIT-Re-31885c09-3493`, kept PAUSED, and tested through the dedicated server-side control diagnostic.
 
-A fresh campaign returning 2xx while the original remains 500 would strongly prove corruption/legacy backend state in the original campaign.
+The fresh campaign returned the same HTTP **500** from:
 
-Do not resume either campaign until the provider read path is healthy and the webhook secret has been rotated.
+`GET .../campaigns/INSUREIT-Re-31885c09-3493/webhooks?limit=1`
+
+This ruled out corruption or legacy state unique to the original campaign. The webhook-list failure is broader across valid campaign resources in this workspace/product.
+
+## Decisive stream-endpoint validation result — 2026-09-17
+
+A second, validation-only probe was then deployed against the fresh paused campaign. It calls the exact CRM integration endpoint we ultimately need:
+
+`POST https://apps.sarvam.ai/api/scheduling/v1/orgs/:org_id/workspaces/:workspace_id/campaigns/:campaign_id/cohorts/stream`
+
+with:
+
+- `X-API-Key` authentication;
+- a valid diagnostic cohort name;
+- `users: []`;
+- no phone number;
+- no customer identity;
+- no callable contact;
+- no campaign resume/start/update.
+
+Production result:
+
+- webhook delivery list: HTTP **500**;
+- stream endpoint validation-only: HTTP **422**, classification `authenticated_validation_reached`.
+
+Each response included its own provider request ID.
+
+### What the HTTP 422 proves
+
+Sarvam documents the stream endpoint as requiring 1-1000 users and lists HTTP 422 as the validation-error response. Therefore the observed HTTP 422 is the expected safe rejection for the deliberately empty users array.
+
+This proves, for the fresh campaign:
+
+1. `X-API-Key` is the correct authentication form for the Voice Agents scheduling stream endpoint;
+2. the configured organization/workspace route is valid;
+3. the campaign is found successfully;
+4. the CRM `cohorts/stream` endpoint is reachable and performing normal request validation;
+5. no contact was created by the diagnostic request;
+6. the HTTP 500 is isolated to Sarvam's webhook-delivery listing endpoint and is **not** evidence that the CRM stream endpoint is broken.
+
+This is the strongest diagnostic result to date and resolves the earlier authentication uncertainty for the stream API.
+
+## Revised implementation plan
+
+Do not use the webhook-list endpoint as the primary readiness/authentication check anymore. It is demonstrably unhealthy for valid campaigns in this workspace even though the stream endpoint works normally.
+
+The safe next code step is:
+
+1. change the IT Super User `Test Sarvam connection` readiness probe to the exact `cohorts/stream` endpoint using `X-API-Key`;
+2. send only the validation-only body `{ name: "insureit-readiness-validation", users: [] }`;
+3. treat provider HTTP 422 (and defensively HTTP 400) as authenticated/reachable readiness success;
+4. treat 401/403 as auth failure, 404 as binding failure, and 5xx as provider failure;
+5. keep the actual customer dispatch path unchanged until this readiness behavior is deployed and tested against the currently configured production campaign;
+6. keep both campaigns PAUSED during this validation;
+7. rotate the previously exposed webhook secret before any live webhook processing or controlled customer dispatch is resumed.
+
+A separate later change may switch the actual cohort submission path from subscription-key/Bearer to `X-API-Key`, but only after the configured production campaign itself passes the validation-only stream readiness test.
+
+## Current safe state after decisive result
+
+- Original campaign: PAUSED.
+- Fresh control campaign: PAUSED.
+- No broader customer calling should be started yet.
+- Do not rotate the Sarvam API key based on the webhook-list 500; the stream endpoint has now authenticated successfully with `X-API-Key`.
+- The previously exposed INSUREIT webhook token still must be rotated before live webhook processing resumes.
+- Do not use the webhook-list 500 as a release blocker for CRM streaming once the configured production campaign itself returns validation HTTP 422 on the readiness probe.
 
 ## Provider escalation evidence
 
