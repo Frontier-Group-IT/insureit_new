@@ -173,39 +173,19 @@ export function BusinessGroupWorkspace({
           </div>
           {canManage ? (
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <Link
-                href="/intermediaries/groups/branches"
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]"
-              >
+              <Link href="/intermediaries/groups/branches" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]">
                 <Store className="h-3.5 w-3.5" /> Branch Register
               </Link>
-              <Link
-                href="/intermediaries/groups/branches/new"
-                aria-disabled={!hierarchyReady}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}
-              >
+              <Link href="/intermediaries/groups/branches/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}>
                 <Plus className="h-3.5 w-3.5" /> Add Branch
               </Link>
-              <button
-                type="button"
-                onClick={() => setBranchOpen(true)}
-                disabled={!hierarchyReady}
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-45"
-              >
+              <button type="button" onClick={() => setBranchOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-45">
                 <GitBranch className="h-3.5 w-3.5" /> Assign Branch
               </button>
-              <Link
-                href="/intermediaries/groups/login-access"
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]"
-              >
+              <Link href="/intermediaries/groups/login-access" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]">
                 <UsersRound className="h-3.5 w-3.5" /> Login Access
               </Link>
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                disabled={!hierarchyReady}
-                className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#315FEA] px-3.5 text-[8px] font-bold text-white shadow-[0_6px_16px_rgba(49,95,234,.20)] transition hover:bg-[#254DD0] disabled:cursor-not-allowed disabled:opacity-45"
-              >
+              <button type="button" onClick={() => setCreateOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#315FEA] px-3.5 text-[8px] font-bold text-white shadow-[0_6px_16px_rgba(49,95,234,.20)] transition hover:bg-[#254DD0] disabled:cursor-not-allowed disabled:opacity-45">
                 <Plus className="h-3.5 w-3.5" /> Create Group
               </button>
             </div>
@@ -220,9 +200,7 @@ export function BusinessGroupWorkspace({
         </div>
       </section>
 
-      {!hierarchyReady ? (
-        <Notice tone="warning" text="Hierarchy migration is not applied yet. The page remains read-only and compatible with the current live schema until the migration is applied through the protected database workflow." />
-      ) : null}
+      {!hierarchyReady ? <Notice tone="warning" text="Hierarchy migration is not applied yet. The page remains read-only and compatible with the current live schema until the migration is applied through the protected database workflow." /> : null}
       {showSuccess && success ? <SuccessToast text={successMessages[success] ?? "Action completed."} /> : null}
       {error ? <Notice tone="error" text={decodeURIComponent(error)} /> : null}
       {loadError ? <Notice tone="error" text="Some hierarchy data could not be loaded. No changes were made; refresh before editing." /> : null}
@@ -231,12 +209,7 @@ export function BusinessGroupWorkspace({
         <div className="border-b border-[#E7ECF3] bg-[#FAFCFF] p-4">
           <div className="relative max-w-2xl">
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8B9AAF]" />
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search Group, Partner or Branch"
-              className="h-10 w-full rounded-xl border border-[#D7E0EA] bg-white pl-10 pr-3 text-[10px] text-[#1E344F] shadow-sm outline-none focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]"
-            />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search Group, Partner or Branch" className="h-10 w-full rounded-xl border border-[#D7E0EA] bg-white pl-10 pr-3 text-[10px] text-[#1E344F] shadow-sm outline-none focus:border-[#7D94E6] focus:ring-2 focus:ring-[#E8EDFF]" />
           </div>
         </div>
 
@@ -258,11 +231,7 @@ export function BusinessGroupWorkspace({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="truncate text-[11px] font-bold text-[#1C3858]">{group.group_name}</h2>
-                      {group.group_mode === "legacy_employee" ? (
-                        <span className="rounded-full bg-[#FFF4D9] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#A76600]">Legacy employee-linked</span>
-                      ) : (
-                        <span className="rounded-full bg-[#EAF8EF] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#267A49]">Business hierarchy</span>
-                      )}
+                      {group.group_mode === "legacy_employee" ? <span className="rounded-full bg-[#FFF4D9] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#A76600]">Legacy employee-linked</span> : <span className="rounded-full bg-[#EAF8EF] px-2 py-0.5 text-[6.5px] font-bold uppercase tracking-[0.05em] text-[#267A49]">Business hierarchy</span>}
                     </div>
                     <p className="mt-0.5 text-[8px] text-[#7A899A]">{group.group_code} · {members.length} Partner{members.length === 1 ? "" : "s"} · {branchCount} Branch{branchCount === 1 ? "" : "es"}</p>
                   </div>
@@ -274,9 +243,7 @@ export function BusinessGroupWorkspace({
                           <FormSubmitButton label="Convert safely" pendingLabel="Converting…" className="inline-flex h-8 items-center rounded-lg border border-[#F0D79B] bg-[#FFF9EB] px-3 text-[8px] font-bold text-[#A76600] hover:bg-[#FFF3D5]" />
                         </form>
                       ) : null}
-                      <button type="button" onClick={() => setEditingGroupId(editing ? null : group.id)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#5A6F86] hover:bg-[#F5F8FC]" title="Edit Group">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
+                      <button type="button" onClick={() => setEditingGroupId(editing ? null : group.id)} className="grid h-8 w-8 place-items-center rounded-lg border border-[#D7E0EA] bg-white text-[#5A6F86] hover:bg-[#F5F8FC]" title="Edit Group"><Pencil className="h-3.5 w-3.5" /></button>
                     </div>
                   ) : null}
                 </div>
@@ -294,27 +261,12 @@ export function BusinessGroupWorkspace({
 
                 {expanded ? (
                   <div className="space-y-2 border-t border-[#EDF1F6] p-3">
-                    {members.length ? members.map((partner) => (
-                      <PartnerTreeRow
-                        key={partner.id}
-                        partner={partner}
-                        branches={branchesByParent.get(partner.id) ?? []}
-                        group={group}
-                        canManage={canManage && hierarchyReady && group.group_mode === "business"}
-                      />
-                    )) : (
-                      <div className="rounded-xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-6 text-center text-[8.5px] text-[#7C8A9C]">No Partners are assigned to this Group yet.</div>
-                    )}
+                    {members.length ? members.map((partner) => <PartnerTreeRow key={partner.id} partner={partner} branches={branchesByParent.get(partner.id) ?? []} group={group} canManage={canManage && hierarchyReady && group.group_mode === "business"} />) : <div className="rounded-xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-6 text-center text-[8.5px] text-[#7C8A9C]">No Partners are assigned to this Group yet.</div>}
 
                     {canManage && hierarchyReady && group.group_mode === "business" && ungroupedRoots.length ? (
                       <form action={assignBusinessGroupMembers} className="mt-2 flex flex-col gap-2 rounded-xl border border-[#E2E8F1] bg-[#FBFCFE] p-3 sm:flex-row sm:items-end">
                         <input type="hidden" name="group_id" value={group.id} />
-                        <Field label="Add / move Partner">
-                          <select name="partner_id" required defaultValue="" className={inputClass}>
-                            <option value="">Select ungrouped Partner</option>
-                            {ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
-                          </select>
-                        </Field>
+                        <Field label="Add / move Partner"><select name="partner_id" required defaultValue="" className={inputClass}><option value="">Select ungrouped Partner</option>{ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}</select></Field>
                         <FormSubmitButton label="Add to Group" pendingLabel="Adding…" className="inline-flex h-9 items-center justify-center rounded-lg border border-[#CCD7E4] bg-white px-4 text-[8.5px] font-bold text-[#3156B8] hover:bg-[#F5F8FF]" />
                       </form>
                     ) : null}
@@ -329,25 +281,32 @@ export function BusinessGroupWorkspace({
                 ) : null}
               </article>
             );
-          }) : (
-            <div className="rounded-2xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-10 text-center text-[9px] text-[#7C8A9C]">No Groups match the current search.</div>
-          )}
+          }) : <div className="rounded-2xl border border-dashed border-[#D9E2EC] bg-[#FBFCFE] px-4 py-10 text-center text-[9px] text-[#7C8A9C]">No Groups match the current search.</div>}
         </div>
       </section>
 
       {ungroupedRoots.length ? (
-        <section className="rounded-[22px] border border-[#F0DFC0] bg-[#FFFCF6] p-4">
-          <h2 className="text-[11px] font-bold text-[#76541E]">Ungrouped root Partners</h2>
-          <p className="mt-1 text-[8px] text-[#9A7B4B]">These are available for Group assignment.</p>
-          <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-            {ungroupedRoots.map((partner) => (
-              <div key={partner.id} className="rounded-xl border border-[#F0E3CC] bg-white px-3 py-2.5">
-                <p className="truncate text-[9px] font-bold text-[#3A4E65]">{partner.display_name}</p>
-                <p className="mt-0.5 text-[7.5px] text-[#8794A3]">{partner.partner_code}</p>
-              </div>
-            ))}
+        <details className="group overflow-hidden rounded-[22px] border border-[#F0DFC0] bg-[#FFFCF6]">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <div>
+              <h2 className="text-[11px] font-bold text-[#76541E]">Ungrouped root Partners</h2>
+              <p className="mt-1 text-[8px] text-[#9A7B4B]">{ungroupedRoots.length} available for Group assignment.</p>
+            </div>
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[#E8D8BC] bg-white text-[#8A6A35] shadow-sm">
+              <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
+            </span>
+          </summary>
+          <div className="border-t border-[#F0DFC0] px-4 pb-4 pt-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {ungroupedRoots.map((partner) => (
+                <div key={partner.id} className="rounded-xl border border-[#F0E3CC] bg-white px-3 py-2.5">
+                  <p className="truncate text-[9px] font-bold text-[#3A4E65]">{partner.display_name}</p>
+                  <p className="mt-0.5 text-[7.5px] text-[#8794A3]">{partner.partner_code}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </section>
+        </details>
       ) : null}
 
       {createOpen ? (
@@ -359,12 +318,7 @@ export function BusinessGroupWorkspace({
               <Field label="Phone number"><input name="phone" type="tel" required inputMode="tel" autoComplete="tel" className={inputClass} /></Field>
             </div>
             <Field label="Description"><input name="description" className={inputClass} /></Field>
-            <Field label="Initial Partner (optional)">
-              <select name="partner_id" defaultValue="" className={inputClass}>
-                <option value="">Create empty Group</option>
-                {ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
-              </select>
-            </Field>
+            <Field label="Initial Partner (optional)"><select name="partner_id" defaultValue="" className={inputClass}><option value="">Create empty Group</option>{ungroupedRoots.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}</select></Field>
             <p className="rounded-xl bg-[#F5F8FF] px-3 py-2 text-[7.8px] leading-4 text-[#61738A]">A secure password-setup invitation will be emailed to the Group contact. The admin never creates or sees the Group password. No Employee owner will be created; existing Employee assignments on the selected Partner remain unchanged.</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setCreateOpen(false)} className="h-9 rounded-lg border border-[#D7E0EA] bg-white px-4 text-[8.5px] font-bold text-[#5D6F82]">Cancel</button>
@@ -377,18 +331,8 @@ export function BusinessGroupWorkspace({
       {branchOpen ? (
         <Modal title="Assign Branch" onClose={() => setBranchOpen(false)}>
           <form action={assignPartnerBranch} className="space-y-3">
-            <Field label="Parent Partner">
-              <select name="parent_partner_id" required defaultValue="" className={inputClass}>
-                <option value="">Select parent Partner</option>
-                {rootPartners.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
-              </select>
-            </Field>
-            <Field label="Branch">
-              <select name="branch_partner_id" required defaultValue="" className={inputClass}>
-                <option value="">{branchCandidates.length ? "Select unassigned Branch" : "No unassigned Branches available"}</option>
-                {branchCandidates.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}
-              </select>
-            </Field>
+            <Field label="Parent Partner"><select name="parent_partner_id" required defaultValue="" className={inputClass}><option value="">Select parent Partner</option>{rootPartners.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}</select></Field>
+            <Field label="Branch"><select name="branch_partner_id" required defaultValue="" className={inputClass}><option value="">{branchCandidates.length ? "Select unassigned Branch" : "No unassigned Branches available"}</option>{branchCandidates.map((partner) => <option key={partner.id} value={partner.id}>{partner.display_name} · {partner.partner_code}</option>)}</select></Field>
             <p className="rounded-xl bg-[#FFF9EB] px-3 py-2 text-[7.8px] leading-4 text-[#84652D]">Only Branch profiles created through Branch Onboarding are shown here. POSP, MISP and ordinary Partner profiles are excluded.</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setBranchOpen(false)} className="h-9 rounded-lg border border-[#D7E0EA] bg-white px-4 text-[8.5px] font-bold text-[#5D6F82]">Cancel</button>
@@ -401,88 +345,37 @@ export function BusinessGroupWorkspace({
   );
 }
 
-function PartnerTreeRow({
-  partner,
-  branches,
-  group,
-  canManage,
-}: {
-  partner: BusinessGroupPartner;
-  branches: BusinessGroupPartner[];
-  group: BusinessGroup;
-  canManage: boolean;
-}) {
+function PartnerTreeRow({ partner, branches, group, canManage }: { partner: BusinessGroupPartner; branches: BusinessGroupPartner[]; group: BusinessGroup; canManage: boolean }) {
   return (
     <div className="rounded-xl border border-[#E1E8F1] bg-[#FCFDFF]">
       <div className="flex items-center gap-3 px-3 py-2.5">
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#EDF3FF] text-[#315FEA]"><Building2 className="h-3.5 w-3.5" /></span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[9.5px] font-bold text-[#29425E]">{partner.display_name}</p>
-          <p className="mt-0.5 text-[7.5px] text-[#8794A3]">{partner.partner_code} · {branches.length} Branch{branches.length === 1 ? "" : "es"}</p>
-        </div>
-        {canManage ? (
-          <form action={removeBusinessGroupMembers}>
-            <input type="hidden" name="group_id" value={group.id} />
-            <input type="hidden" name="partner_id" value={partner.id} />
-            <FormSubmitButton label="Remove" pendingLabel="Removing…" className="inline-flex h-8 items-center rounded-lg border border-[#E1E7EE] bg-white px-3 text-[7.8px] font-bold text-[#6A7B8E] hover:bg-[#F5F7FA]" />
-          </form>
-        ) : null}
+        <div className="min-w-0 flex-1"><p className="truncate text-[9.5px] font-bold text-[#29425E]">{partner.display_name}</p><p className="mt-0.5 text-[7.5px] text-[#8794A3]">{partner.partner_code} · {branches.length} Branch{branches.length === 1 ? "" : "es"}</p></div>
+        {canManage ? <form action={removeBusinessGroupMembers}><input type="hidden" name="group_id" value={group.id} /><input type="hidden" name="partner_id" value={partner.id} /><FormSubmitButton label="Remove" pendingLabel="Removing…" className="inline-flex h-8 items-center rounded-lg border border-[#E1E7EE] bg-white px-3 text-[7.8px] font-bold text-[#6A7B8E] hover:bg-[#F5F7FA]" /></form> : null}
       </div>
       {branches.length ? (
-        <div className="border-t border-[#EDF1F6] bg-white px-3 py-2">
-          <div className="ml-4 space-y-1.5 border-l border-[#D9E4F0] pl-4">
-            {branches.map((branch) => (
-              <div key={branch.id} className="flex items-center gap-2 rounded-lg bg-[#F8FAFD] px-2.5 py-2">
-                <GitBranch className="h-3.5 w-3.5 text-[#7A8CA1]" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[8.5px] font-semibold text-[#40566F]">{branch.display_name}</p>
-                  <p className="text-[7px] text-[#93A0AF]">{branch.partner_code}</p>
-                </div>
-                {canManage ? (
-                  <form action={removePartnerBranch}>
-                    <input type="hidden" name="branch_partner_id" value={branch.id} />
-                    <FormSubmitButton label="Detach" pendingLabel="Detaching…" className="inline-flex h-7 items-center rounded-md border border-[#E1E7EE] bg-white px-2.5 text-[7px] font-bold text-[#6A7B8E] hover:bg-[#F5F7FA]" />
-                  </form>
-                ) : null}
-              </div>
-            ))}
+        <div className="border-t border-[#EDF1F6] bg-white px-3 py-2"><div className="ml-4 space-y-1.5 border-l border-[#D9E4F0] pl-4">{branches.map((branch) => (
+          <div key={branch.id} className="flex items-center gap-2 rounded-lg bg-[#F8FAFD] px-2.5 py-2">
+            <GitBranch className="h-3.5 w-3.5 text-[#7A8CA1]" />
+            <div className="min-w-0 flex-1"><p className="truncate text-[8.5px] font-semibold text-[#40566F]">{branch.display_name}</p><p className="text-[7px] text-[#93A0AF]">{branch.partner_code}</p></div>
+            {canManage ? <form action={removePartnerBranch}><input type="hidden" name="branch_partner_id" value={branch.id} /><FormSubmitButton label="Detach" pendingLabel="Detaching…" className="inline-flex h-7 items-center rounded-md border border-[#E1E7EE] bg-white px-2.5 text-[7px] font-bold text-[#6A7B8E] hover:bg-[#F5F7FA]" /></form> : null}
           </div>
-        </div>
+        ))}</div></div>
       ) : null}
     </div>
   );
 }
 
 function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return (
-    <div className="flex min-h-[58px] items-center gap-3 px-4 py-2.5">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#315FEA] shadow-sm ring-1 ring-[#E3E9F1]">{icon}</span>
-      <div>
-        <p className="text-[14px] font-bold leading-none text-[#203A59]">{value}</p>
-        <p className="mt-1 text-[7.5px] font-semibold text-[#8794A4]">{label}</p>
-      </div>
-    </div>
-  );
+  return <div className="flex min-h-[58px] items-center gap-3 px-4 py-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#315FEA] shadow-sm ring-1 ring-[#E3E9F1]">{icon}</span><div><p className="text-[14px] font-bold leading-none text-[#203A59]">{value}</p><p className="mt-1 text-[7.5px] font-semibold text-[#8794A4]">{label}</p></div></div>;
 }
 
 function SuccessToast({ text }: { text: string }) {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="fixed right-5 top-24 z-[90] max-w-[360px] rounded-xl border border-emerald-200 bg-white px-4 py-3 text-[9px] font-semibold text-emerald-800 shadow-[0_14px_38px_rgba(16,91,64,.18)]"
-    >
-      {text}
-    </div>
-  );
+  return <div role="status" aria-live="polite" className="fixed right-5 top-24 z-[90] max-w-[360px] rounded-xl border border-emerald-200 bg-white px-4 py-3 text-[9px] font-semibold text-emerald-800 shadow-[0_14px_38px_rgba(16,91,64,.18)]">{text}</div>;
 }
 
 function Notice({ tone, text }: { tone: "success" | "error" | "warning"; text: string }) {
-  const toneClass = tone === "success"
-    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-    : tone === "warning"
-      ? "border-amber-200 bg-amber-50 text-amber-900"
-      : "border-red-200 bg-red-50 text-red-800";
+  const toneClass = tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : tone === "warning" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-red-200 bg-red-50 text-red-800";
   return <div className={`rounded-xl border px-4 py-3 text-[9px] font-semibold ${toneClass}`}>{text}</div>;
 }
 
@@ -491,17 +384,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-[80] grid place-items-center bg-[#10243A]/35 p-4 backdrop-blur-[2px]">
-      <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white shadow-[0_24px_70px_rgba(12,33,58,.24)]">
-        <div className="flex items-center justify-between border-b border-[#E7ECF3] px-4 py-3">
-          <h3 className="text-[11px] font-bold text-[#203A59]">{title}</h3>
-          <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-[#718198] hover:bg-[#F4F6F9]"><X className="h-4 w-4" /></button>
-        </div>
-        <div className="p-4">{children}</div>
-      </div>
-    </div>
-  );
+  return <div className="fixed inset-0 z-[80] grid place-items-center bg-[#10243A]/35 p-4 backdrop-blur-[2px]"><div className="w-full max-w-xl overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white shadow-[0_24px_70px_rgba(12,33,58,.24)]"><div className="flex items-center justify-between border-b border-[#E7ECF3] px-4 py-3"><h3 className="text-[11px] font-bold text-[#203A59]">{title}</h3><button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-[#718198] hover:bg-[#F4F6F9]"><X className="h-4 w-4" /></button></div><div className="p-4">{children}</div></div></div>;
 }
 
 function partnerMatches(partner: BusinessGroupPartner | undefined, query: string) {
