@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -19,13 +18,20 @@ type VehicleIdentity = {
   engineNo: string;
 };
 
+const REFRESH_TOAST_KEY = "policy-linked-master-refresh-toast";
+
 function fieldValue(document: Document, name: string) {
   const field = document.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`);
   return field?.value.trim().toUpperCase() ?? "";
 }
 
+function successMessage(kind: EditorKind) {
+  return kind === "customer"
+    ? "Customer updated successfully. Policy details refreshed."
+    : "Vehicle updated successfully. Policy details refreshed.";
+}
+
 export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustomer, canEditVehicle }: Props) {
-  const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const dirtyRef = useRef(false);
   const submittedRef = useRef<EditorKind | null>(null);
@@ -52,6 +58,18 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
     };
     findHost();
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const kind = window.sessionStorage.getItem(REFRESH_TOAST_KEY) as EditorKind | null;
+      if (kind === "customer" || kind === "vehicle") {
+        window.sessionStorage.removeItem(REFRESH_TOAST_KEY);
+        setToast(successMessage(kind));
+      }
+    } catch {
+      // The refresh itself is the important part; the toast is best-effort only.
+    }
   }, []);
 
   useEffect(() => {
@@ -109,9 +127,13 @@ export function PolicyLinkedMasterActions({ customerId, vehicleId, canEditCustom
     setEditor(null);
     setCloseWarning(false);
     setIdentifierWarning(false);
-    setToast(kind === "customer" ? "Customer updated successfully. Policy details refreshed." : "Vehicle updated successfully. Policy details refreshed.");
-    router.refresh();
-  }, [router]);
+    try {
+      window.sessionStorage.setItem(REFRESH_TOAST_KEY, kind);
+    } catch {
+      // Ignore storage failures; the reload still guarantees fresh linked-master values.
+    }
+    window.location.reload();
+  }, []);
 
   const frameReachedSuccessfulDestination = useCallback((kind: EditorKind, url: URL) => {
     const success = url.searchParams.get("success");
