@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Archive,
   Building2,
@@ -94,6 +94,24 @@ export function BusinessGroupWorkspace({
   const [branchOpen, setBranchOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set(groups.map((group) => group.id)));
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(Boolean(success));
+
+  useEffect(() => {
+    if (!success) {
+      setShowSuccess(false);
+      return;
+    }
+
+    setShowSuccess(true);
+    const timeoutId = window.setTimeout(() => {
+      setShowSuccess(false);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("success");
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    }, 2500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [success]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const membershipByPartner = useMemo(
@@ -205,7 +223,7 @@ export function BusinessGroupWorkspace({
       {!hierarchyReady ? (
         <Notice tone="warning" text="Hierarchy migration is not applied yet. The page remains read-only and compatible with the current live schema until the migration is applied through the protected database workflow." />
       ) : null}
-      {success ? <Notice tone="success" text={successMessages[success] ?? "Action completed."} /> : null}
+      {showSuccess && success ? <SuccessToast text={successMessages[success] ?? "Action completed."} /> : null}
       {error ? <Notice tone="error" text={decodeURIComponent(error)} /> : null}
       {loadError ? <Notice tone="error" text="Some hierarchy data could not be loaded. No changes were made; refresh before editing." /> : null}
 
@@ -443,6 +461,18 @@ function Metric({ label, value, icon }: { label: string; value: number; icon: Re
         <p className="text-[14px] font-bold leading-none text-[#203A59]">{value}</p>
         <p className="mt-1 text-[7.5px] font-semibold text-[#8794A4]">{label}</p>
       </div>
+    </div>
+  );
+}
+
+function SuccessToast({ text }: { text: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed right-5 top-24 z-[90] max-w-[360px] rounded-xl border border-emerald-200 bg-white px-4 py-3 text-[9px] font-semibold text-emerald-800 shadow-[0_14px_38px_rgba(16,91,64,.18)]"
+    >
+      {text}
     </div>
   );
 }
