@@ -284,18 +284,26 @@ function Modal({
   children: React.ReactNode;
   wide?: boolean;
 }) {
-  return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]" role="dialog" aria-modal="true" aria-label={title}>
-      <div className={`w-full rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)] ${wide ? "max-w-[1080px]" : "max-w-xl"}`}>
-        <div className="flex items-center justify-between border-b border-[#E7ECF3] px-5 py-4">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div
+        className={`flex max-h-[calc(100dvh-32px)] w-full flex-col overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)] ${wide ? "max-w-[1080px]" : "max-w-xl"}`}
+      >
+        <div className="flex shrink-0 items-center justify-between border-b border-[#E7ECF3] px-5 py-4">
           <h3 className="text-[13px] font-semibold text-[#17203A]">{title}</h3>
           <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9]">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div>{children}</div>
+        <div className="min-h-0 overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
