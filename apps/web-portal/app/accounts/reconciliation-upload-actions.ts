@@ -102,7 +102,7 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     return emptyPreview("Upload the original single-sheet Business MIS workbook. Sheets must not be added, removed or renamed.");
   }
 
-  const props = workbook.Custprops ?? {};
+  const props = (workbook.Custprops ?? {}) as Record<string, unknown>;
   if (text(props.INSUREITTemplate) !== TEMPLATE_VERSION) {
     return emptyPreview("This is not the current INSUREIT Business MIS reconciliation template. Download a fresh Export from the Accounts Dashboard.");
   }
