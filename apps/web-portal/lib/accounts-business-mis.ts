@@ -258,16 +258,16 @@ async function buildBusinessMisSnapshot(policies: Policy[]): Promise<{
   const invoiceLines = invoiceLineResults.flatMap((result) => (result.data ?? []) as InvoiceLine[]);
   const payables = payableResults.flatMap((result) => result.data ?? []);
   const payableIds = payables.map((row) => row.id);
-  const paymentAllocations: PaymentAllocation[] = [];
-
-  for (const ids of chunk(payableIds, 120)) {
-    const { data, error } = await db
-      .from("partner_payment_allocations")
-      .select("payable_id,allocated_amount,partner_payments(payment_date,payment_reference)")
-      .in("payable_id", ids);
-    if (error) throw new Error("Unable to load Business MIS data.");
-    paymentAllocations.push(...((data ?? []) as PaymentAllocation[]));
-  }
+  const paymentAllocationResults = await Promise.all(
+    chunk(payableIds, 120).map((ids) =>
+      db
+        .from("partner_payment_allocations")
+        .select("payable_id,allocated_amount,partner_payments(payment_date,payment_reference)")
+        .in("payable_id", ids),
+    ),
+  );
+  if (paymentAllocationResults.some((result) => result.error)) throw new Error("Unable to load Business MIS data.");
+  const paymentAllocations = paymentAllocationResults.flatMap((result) => (result.data ?? []) as PaymentAllocation[]);
 
   const premiumMap = new Map(premiums.map((row) => [row.policy_id, row]));
   const payinMap = new Map(payins.map((row) => [row.policy_id, row]));
