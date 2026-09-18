@@ -5,6 +5,7 @@ import {
   markExternalRenewalVoiceSubmitted,
   startPartnerExternalRenewalVoiceAttempt,
 } from "@/lib/partner-external-renewal-voice";
+import { assertSarvamRenewalCallingWindow } from "@/lib/sarvam-renewal-operational-policy";
 import {
   isSarvamRenewalCallingEnabled,
   normalizeIndiaPhoneForSarvam,
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   let providerRequestStarted = false;
 
   try {
+    assertSarvamRenewalCallingWindow();
     const context = await startPartnerExternalRenewalVoiceAttempt(id);
     localAttemptId = context.attempt_id;
 

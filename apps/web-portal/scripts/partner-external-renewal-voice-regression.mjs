@@ -10,6 +10,7 @@ const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/2026
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
+const sarvamOperationalPolicy = fs.readFileSync(path.join(root, "lib/sarvam-renewal-operational-policy.ts"), "utf8");
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
 const sarvamWebhookRecovery = fs.readFileSync(path.join(root, "lib/sarvam-webhook-recovery.ts"), "utf8");
 const diagnosticsModel = fs.readFileSync(path.join(root, "lib/sarvam-deep-diagnostics.ts"), "utf8");
@@ -74,6 +75,14 @@ assert(sarvamClient.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "IT-controlled k
 assert(sarvamClient.includes("SarvamRenewalSubmissionError"), "provider submission distinguishes definitive rejection from ambiguous delivery");
 assert(sarvamClient.includes("Await reconciliation before retrying"), "timeouts and ambiguous provider responses prevent unsafe immediate retry");
 assert(!sarvamClient.includes('NEXT_PUBLIC_SARVAM'), "no Sarvam credential/config is exposed as public browser environment");
+assert(sarvamOperationalPolicy.includes('const DEFAULT_START = "09:00"'), "renewal calling window defaults to the controlled 09:00-18:00 policy");
+assert(sarvamOperationalPolicy.includes('const DEFAULT_END = "18:00"'), "renewal calling window has the controlled 18:00 close");
+assert(sarvamOperationalPolicy.includes('const DEFAULT_TIME_ZONE = "Asia/Kolkata"'), "renewal calling window uses the India timezone by default");
+assert(sarvamOperationalPolicy.includes("SARVAM_RENEWAL_CALL_WINDOW_START"), "calling-window start can be changed server-side without browser exposure");
+assert(sarvamOperationalPolicy.includes("SARVAM_RENEWAL_CALL_WINDOW_END"), "calling-window end can be changed server-side without browser exposure");
+assert(sarvamOperationalPolicy.includes("withinCallingWindow"), "operational policy explicitly calculates current calling-window eligibility");
+assert(sarvamOperationalPolicy.includes("applicationAutoRetry: false"), "INSUREIT application-level automatic retries remain disabled");
+assert(!sarvamOperationalPolicy.includes("NEXT_PUBLIC_"), "operational policy stays server-side");
 
 assert(readinessModel.includes('import "server-only"'), "readiness model is server-only");
 assert(readinessModel.includes('SARVAM_RENEWAL_WEBHOOK_SECRET'), "readiness checks webhook-secret presence");
@@ -106,6 +115,7 @@ assert(!/console\.(log|error|warn)\s*\(/.test(diagnosticsModel), "deep diagnosti
 
 assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
 assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
+assert(callRoute.indexOf("assertSarvamRenewalCallingWindow()") < callRoute.indexOf("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action checks the operational window before creating the local attempt");
 assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
 assert(callRoute.includes("providerDefinitelyRejected"), "only definitive provider rejection releases the local active-attempt guard");
 
@@ -148,6 +158,9 @@ assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "
 assert(readinessPage.includes("Test Sarvam connection"), "voice admin page exposes the explicit safe provider connectivity check");
 assert(readinessPage.includes("No customer identity, phone number, transcript or raw provider payload"), "voice admin page explicitly preserves the minimal-data boundary");
 assert(readinessPage.includes("Webhook callbacks"), "voice admin page surfaces normalized webhook health");
+assert(readinessPage.includes("Calling window"), "voice admin page surfaces the enforced calling window");
+assert(readinessPage.includes("DND / terminal guard"), "voice admin page surfaces DND and terminal-state protection");
+assert(readinessPage.includes("INSUREIT auto retry"), "voice admin page surfaces application retry policy");
 assert(readinessPage.includes("Reconciliation attention required"), "voice admin page surfaces stale active attempts without auto-failing them");
 assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page uses an explicit stale-attempt observation threshold");
 assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attempt visibility preserves ambiguous-delivery safety");
