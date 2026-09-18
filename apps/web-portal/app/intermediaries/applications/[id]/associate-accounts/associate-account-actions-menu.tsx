@@ -37,6 +37,7 @@ export function AssociateAccountActionsMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,7 @@ export function AssociateAccountActionsMenu({
       if (event.key === "Escape") {
         setOpen(false);
         setEditOpen(false);
+        setDeleteOpen(false);
       }
     }
     document.addEventListener("mousedown", closeOnOutsideClick);
@@ -162,18 +164,18 @@ export function AssociateAccountActionsMenu({
                   </button>
                 </form>
 
-                <form action={deletePartnerAssociateAccount}>
-                  {commonHidden}
-                  <button
-                    type="submit"
-                    role="menuitem"
-                    onClick={() => setOpen(false)}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    setDeleteOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
 
                 <form action={resendPartnerAssociateInvite}>
                   {commonHidden}
@@ -244,6 +246,37 @@ export function AssociateAccountActionsMenu({
         </Modal>
       ) : null}
 
+      {deleteOpen ? (
+        <Modal title="Delete Associate Account" onClose={() => setDeleteOpen(false)}>
+          <form action={deletePartnerAssociateAccount}>
+            {commonHidden}
+            <div className="space-y-3 px-5 py-4">
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                <p className="text-[11px] font-semibold text-rose-700">
+                  Permanently delete {associate.name}?
+                </p>
+                <p className="mt-1 text-[10px] leading-5 text-rose-600">
+                  This removes the associate login and account permanently. This action cannot be undone.
+                </p>
+              </div>
+              <div className="rounded-xl border border-[#D8DEE9] bg-[#F8FAFC] px-4 py-3 text-[10.5px] font-medium text-[#334155]">
+                {associate.email}
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-[#E7ECF3] bg-[#FBFCFE] px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]"
+              >
+                Cancel
+              </button>
+              <DeletePermanentlyButton />
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
     </>
   );
 }
@@ -260,6 +293,21 @@ function SaveChangesButton() {
       className="inline-flex h-9 min-w-[108px] items-center justify-center rounded-md border border-[#315FEA] bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-[#2851D9] disabled:cursor-not-allowed disabled:border-[#9DB2F7] disabled:bg-[#9DB2F7] disabled:text-white/80 disabled:shadow-none"
     >
       {pending ? "Saving..." : "Save changes"}
+    </button>
+  );
+}
+
+function DeletePermanentlyButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-disabled={pending}
+      className="inline-flex h-9 min-w-[138px] items-center justify-center rounded-md border border-rose-600 bg-rose-600 px-4 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-rose-700 disabled:cursor-wait disabled:border-rose-300 disabled:bg-rose-300"
+    >
+      {pending ? "Deleting..." : "Delete Permanently"}
     </button>
   );
 }
