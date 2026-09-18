@@ -49,6 +49,16 @@ export const BUSINESS_MIS_TOTAL_COLUMNS = [8, 9, 10, 11, 16, 18, 19, 21, 23, 24,
 export type BusinessMisCell = string | number | Date;
 export type BusinessMisRow = BusinessMisCell[];
 export type BusinessMisRecord = { policyId: string; payoutId: string; row: BusinessMisRow };
+export type AccountsDashboardSnapshot = {
+  rows: BusinessMisRow[];
+  insurers: Array<{ id: string; name: string }>;
+  policyCount: number;
+  netPremium: number;
+  projectedNetPayin: number;
+  projectedNetPayout: number;
+  projectedRetention: number;
+  warnings: string[];
+};
 
 type ViewerProfile = { id: string; role: string | null };
 
@@ -76,6 +86,25 @@ type InvoiceLine = {
   accounts_invoices: { invoice_no?: string | null; invoice_date?: string | null; status?: string | null } | Array<{ invoice_no?: string | null; invoice_date?: string | null; status?: string | null }> | null;
 };
 
+type PayinSnapshotRow = {
+  policy_id: string;
+  projected_od_percent: number | string | null;
+  projected_od_amount: number | string | null;
+  projected_tp_percent: number | string | null;
+  projected_tp_amount: number | string | null;
+  total_projected_payin: number | string | null;
+  tds_amount: number | string | null;
+  payin_after_tds: number | string | null;
+};
+
+type PremiumSnapshotRow = {
+  policy_id: string;
+  od_premium: number | string | null;
+  tp_premium: number | string | null;
+  cpa_amount: number | string | null;
+  net_premium: number | string | null;
+};
+
 type PaymentAllocation = {
   payable_id: string;
   allocated_amount: number | string | null;
@@ -83,6 +112,78 @@ type PaymentAllocation = {
 };
 
 const POLICY_SELECT = "id,customer_id,insurance_company_id,policy_no,issuance_date,start_date,end_date,created_at,intermediary_type,intermediary_code,lead_source,rm_name,customers(contact_name,company_name),vehicles(vehicle_no),insurance_companies(name)";
+
+export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filters: AccountsDashboardFilters): Promise<AccountsDashboardSnapshot> {
+  const db = createSupabaseAdminClient();
+  const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
+  if (customerIds !== null && customerIds.length === 0) {
+    return { rows: [], insurers: [], policyCount: 0, netPremium: 0, projectedNetPayin: 0, projectedNetPayout: 0, projectedRetention: 0, warnings: [] };
+  }
+
+  let policyQuery = db.from("policies").select(POLICY_SELECT).limit(15000);
+  if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
+
+  const { data: policyData, error: policyError } = await policyQuery;
+  if (policyError) {
+    return {
+      rows: [],
+      insurers: [],
+      policyCount: 0,
+      netPremium: 0,
+      projectedNetPayin: 0,
+      projectedNetPayout: 0,
+      projectedRetention: 0,
+      warnings: ["Accounts dashboard business data could not be refreshed."],
+    };
+  }
+
+  const allPolicies = (policyData ?? []) as Policy[];
+  const insurerMap = new Map<string, string>();
+  for (const policy of allPolicies) {
+    if (!policy.insurance_company_id) continue;
+    const insurer = one(policy.insurance_companies);
+    insurerMap.set(policy.insurance_company_id, insurer?.name ?? "Unknown insurer");
+  }
+  const insurers = [...insurerMap.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name, "en-IN", { sensitivity: "base" }));
+
+  const filteredPolicies = allPolicies.filter((policy) => {
+    const date = businessDate(policy);
+    if (date < filters.fromDate || date > filters.toDate) return false;
+    if (filters.insurerId && policy.insurance_company_id !== filters.insurerId) return false;
+    return true;
+  });
+
+  if (!filteredPolicies.length) {
+    return { rows: [], insurers, policyCount: 0, netPremium: 0, projectedNetPayin: 0, projectedNetPayout: 0, projectedRetention: 0, warnings: [] };
+  }
+
+  try {
+    const snapshot = await buildBusinessMisSnapshot(filteredPolicies);
+    return {
+      rows: snapshot.records.map((record) => record.row),
+      insurers,
+      policyCount: filteredPolicies.length,
+      netPremium: snapshot.netPremium,
+      projectedNetPayin: snapshot.projectedNetPayin,
+      projectedNetPayout: snapshot.projectedNetPayout,
+      projectedRetention: snapshot.projectedRetention,
+      warnings: [],
+    };
+  } catch {
+    return {
+      rows: [],
+      insurers,
+      policyCount: filteredPolicies.length,
+      netPremium: 0,
+      projectedNetPayin: 0,
+      projectedNetPayout: 0,
+      projectedRetention: 0,
+      warnings: ["Accounts dashboard business data could not be refreshed."],
+    };
+  }
+}
 
 export async function loadBusinessMisRows(profile: ViewerProfile, filters: AccountsDashboardFilters): Promise<BusinessMisRow[]> {
   return (await loadBusinessMisRecords(profile, filters)).map((record) => record.row);
@@ -104,7 +205,7 @@ export async function loadBusinessMisRecords(profile: ViewerProfile, filters: Ac
     const date = businessDate(policy);
     return date >= filters.fromDate && date <= filters.toDate;
   });
-  return buildBusinessMisRecords(policies);
+  return (await buildBusinessMisSnapshot(policies)).records;
 }
 
 export async function loadBusinessMisRecordsByPolicyIds(profile: ViewerProfile, policyIds: string[]): Promise<BusinessMisRecord[]> {
@@ -124,18 +225,24 @@ export async function loadBusinessMisRecordsByPolicyIds(profile: ViewerProfile, 
   if (firstError) throw new Error(firstError.message || "Unable to load Business MIS data.");
   const policyMap = new Map(policyResults.flatMap((result) => (result.data ?? []) as Policy[]).map((policy) => [policy.id, policy]));
   const policies = uniqueIds.map((id) => policyMap.get(id)).filter((policy): policy is Policy => Boolean(policy));
-  return buildBusinessMisRecords(policies);
+  return (await buildBusinessMisSnapshot(policies)).records;
 }
 
-async function buildBusinessMisRecords(policies: Policy[]): Promise<BusinessMisRecord[]> {
-  if (!policies.length) return [];
+async function buildBusinessMisSnapshot(policies: Policy[]): Promise<{
+  records: BusinessMisRecord[];
+  netPremium: number;
+  projectedNetPayin: number;
+  projectedNetPayout: number;
+  projectedRetention: number;
+}> {
+  if (!policies.length) return { records: [], netPremium: 0, projectedNetPayin: 0, projectedNetPayout: 0, projectedRetention: 0 };
   const db = createSupabaseAdminClient();
   const policyIds = policies.map((policy) => policy.id);
   const batches = chunk(policyIds, 120);
 
   const [premiumResults, payinResults, payoutResults, invoiceLineResults, payableResults] = await Promise.all([
     Promise.all(batches.map((ids) => db.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount,net_premium").in("policy_id", ids))),
-    Promise.all(batches.map((ids) => db.from("policy_payin_details").select("policy_id,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,total_projected_payin,tds_amount").in("policy_id", ids))),
+    Promise.all(batches.map((ids) => db.from("policy_payin_details").select("policy_id,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", ids))),
     Promise.all(batches.map((ids) => db.from("policy_intermediary_payouts").select("id,policy_id,od_payout_percent,tp_payout_percent,gross_payout,retention_amount").in("policy_id", ids))),
     Promise.all(batches.map((ids) => db.from("accounts_invoice_lines").select("policy_id,invoice_line_amount,accounts_invoices(invoice_no,invoice_date,status)").in("policy_id", ids))),
     Promise.all(batches.map((ids) => db.from("partner_payables").select("id,policy_id").in("policy_id", ids))),
@@ -145,8 +252,8 @@ async function buildBusinessMisRecords(policies: Policy[]): Promise<BusinessMisR
     throw new Error("Unable to load Business MIS data.");
   }
 
-  const premiums = premiumResults.flatMap((result) => result.data ?? []);
-  const payins = payinResults.flatMap((result) => result.data ?? []);
+  const premiums = premiumResults.flatMap((result) => (result.data ?? []) as PremiumSnapshotRow[]);
+  const payins = payinResults.flatMap((result) => (result.data ?? []) as PayinSnapshotRow[]);
   const payouts = payoutResults.flatMap((result) => result.data ?? []);
   const invoiceLines = invoiceLineResults.flatMap((result) => (result.data ?? []) as InvoiceLine[]);
   const payables = payableResults.flatMap((result) => result.data ?? []);
@@ -181,7 +288,7 @@ async function buildBusinessMisRecords(policies: Policy[]): Promise<BusinessMisR
     if (policyId) pushMap(paymentMap, policyId, allocation);
   }
 
-  return [...policies]
+  const records = [...policies]
     .sort((a, b) => businessDate(a).localeCompare(businessDate(b)) || String(a.policy_no ?? "").localeCompare(String(b.policy_no ?? "")))
     .map((policy) => {
       const premium = premiumMap.get(policy.id);
@@ -241,6 +348,14 @@ async function buildBusinessMisRecords(policies: Policy[]): Promise<BusinessMisR
         ],
       };
     });
+
+  return {
+    records,
+    netPremium: sum(premiums.map((row) => row.net_premium)),
+    projectedNetPayin: sum(payins.map((row) => row.payin_after_tds)),
+    projectedNetPayout: sum(payouts.map((row) => row.gross_payout)),
+    projectedRetention: sum(payouts.map((row) => row.retention_amount)),
+  };
 }
 
 export function businessMisPeriodLabel(from: string, to: string) {
