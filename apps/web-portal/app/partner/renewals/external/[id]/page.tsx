@@ -10,7 +10,6 @@ import {
   MessageSquareText,
   MoreHorizontal,
   Phone,
-  PhoneCall,
   Send,
   ShieldCheck,
   UserRound,
@@ -19,7 +18,6 @@ import {
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerExternalRenewalDetail, getPartnerExternalRenewalIntakeLink } from "@/lib/partner-external-renewals";
 import { getLatestPartnerExternalRenewalVoiceAttempt } from "@/lib/partner-external-renewal-voice";
-import { getSarvamPartnerDispatchReadiness } from "@/lib/sarvam-partner-dispatch-readiness";
 import { InteractionNotesField } from "./interaction-notes-field";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +25,6 @@ export const revalidate = 0;
 
 const INTAKE_READY_STATUSES = new Set(["connected", "interested", "quote_requested", "quote_shared", "follow_up"]);
 const TERMINAL_STATUSES = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost"]);
-const ACTIVE_VOICE_STATUSES = new Set(["created", "submitted", "queued", "calling"]);
 
 function dateLabel(value: string | null | undefined, withTime = false) {
   if (!value) return "—";
@@ -64,18 +61,14 @@ export default async function PartnerExternalRenewalDetailPage({
   searchParams: Promise<{ saved?: string; error?: string; voice_queued?: string; voice_error?: string }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const [detail, intakeLink, latestVoiceAttempt, dispatchReadiness] = await Promise.all([
+  const [detail, intakeLink, latestVoiceAttempt] = await Promise.all([
     getPartnerExternalRenewalDetail(id),
     getPartnerExternalRenewalIntakeLink(id),
     getLatestPartnerExternalRenewalVoiceAttempt(id),
-    getSarvamPartnerDispatchReadiness(),
   ]);
   const opportunity = detail.opportunity;
   const isClosed = TERMINAL_STATUSES.has(opportunity.opportunity_status);
   const canStartIntake = !isClosed && !intakeLink?.linked && INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
-  const voiceEnabled = dispatchReadiness.ready;
-  const voiceActive = latestVoiceAttempt ? ACTIVE_VOICE_STATUSES.has(latestVoiceAttempt.submission_status) : false;
-  const canVoiceCall = voiceEnabled && !isClosed && !voiceActive && Boolean(opportunity.mobile?.trim());
   const customerName = opportunity.account_name || opportunity.customer_name || opportunity.contact_name || "Customer";
   const vehicleNumber = opportunity.registration_no || opportunity.chassis_no || "Not recorded";
   const vehicleDescription = [opportunity.vehicle_make, opportunity.vehicle_model, opportunity.vehicle_lob].filter(Boolean).join(" · ");
@@ -93,11 +86,6 @@ export default async function PartnerExternalRenewalDetailPage({
         {query.saved === "1" ? (
           <div className="flex items-center gap-2 rounded-lg border border-[#CFE6D5] bg-[#F3FAF5] px-3 py-2.5 text-[10.5px] font-semibold text-[#2F6B43]">
             <CheckCircle2 className="h-4 w-4" /> Interaction saved.
-          </div>
-        ) : null}
-        {query.voice_queued === "1" ? (
-          <div className="flex items-center gap-2 rounded-lg border border-[#CFE0F3] bg-[#F4F8FD] px-3 py-2.5 text-[10.5px] font-semibold text-[#31568B]">
-            <PhoneCall className="h-4 w-4" /> AI call queued. The result will return to this opportunity automatically after Sarvam completes the attempt.
           </div>
         ) : null}
         {query.error ? (
@@ -296,7 +284,7 @@ export default async function PartnerExternalRenewalDetailPage({
                       </p>
                     ) : (
                       <p className="text-[9.5px] leading-5 text-[#60718A]">
-                        Use INSUREIT AI outreach for this external renewal when calling is available. Provider configuration remains controlled by INSUREIT administration.
+                        AI outreach is managed centrally by INSUREIT IT. Call status and outcomes will appear here automatically.
                       </p>
                     )}
                     {latestVoiceAttempt?.follow_up_at ? (
@@ -304,20 +292,9 @@ export default async function PartnerExternalRenewalDetailPage({
                     ) : null}
                   </div>
 
-                  {canVoiceCall ? (
-                    <form method="post" action={"/api/partner/external-renewals/" + encodeURIComponent(id) + "/voice-call"}>
-                      <button
-                        type="submit"
-                        className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#0F2550] px-4 text-[10.5px] font-bold text-white transition hover:bg-[#183663] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/25"
-                      >
-                        <PhoneCall className="h-3.5 w-3.5" /> Call with AI
-                      </button>
-                    </form>
-                  ) : (
-                    <span className="inline-flex min-h-9 items-center rounded-lg bg-[#F3F5F8] px-3 text-[9.5px] font-semibold text-[#728198]">
-                      {isClosed ? "Opportunity closed" : voiceActive ? "AI call in progress" : !opportunity.mobile?.trim() ? "Mobile required" : dispatchReadiness.message}
-                    </span>
-                  )}
+                  <span className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-[#EEF4FF] px-3 text-[9px] font-bold text-[#3156B8]">
+                    <ShieldCheck className="h-3.5 w-3.5" /> IT controlled
+                  </span>
                 </div>
 
                 <div className="mt-2.5 rounded-lg bg-[#F1F5FA] px-3 py-2 text-[9px] leading-5 text-[#708198]">
