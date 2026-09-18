@@ -741,6 +741,7 @@ export type PartnerRegistrationOverview = {
     email: string | null;
     account_status: string;
     portal_access_status: string;
+    activated_at: string | null;
   };
   primary_application: {
     id: string;
@@ -749,6 +750,17 @@ export type PartnerRegistrationOverview = {
     final_type: string | null;
   };
   document_count: number;
+  documents: Array<{
+    id: string;
+    document_type: string | null;
+    file_name: string | null;
+    storage_bucket: string | null;
+    storage_path: string | null;
+    mime_type: string | null;
+    file_size: number | null;
+    verification_status: string | null;
+    created_at: string;
+  }>;
   qualification_application: {
     id: string;
     registration_status: string;

@@ -47,7 +47,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
-- **2026-09-18 — Partner Web registration existing documents + activation date sync:** branch `fix/partner-registration-existing-documents-activation`; Partner Registration now reads existing onboarding documents when finalized intermediary documents are absent, prefers finalized records when both exist, and displays the existing intermediary activation timestamp. Lifecycle document completion now follows the documents actually loaded. **IMPLEMENTED**; no schema/data mutation, PR/merge/deployment pending.
+- **2026-09-18 — Partner Web registration documents + activation date repair:** branch `fix/partner-registration-document-read-policy`; verified root cause was Partner RLS/storage access blocking direct onboarding-document reads. Registration overview now returns the authenticated account's existing onboarding document metadata and activation timestamp, with a scoped storage read policy so the same uploaded files can be opened in Partner Portal. **IMPLEMENTED**; no document/data duplication, migration + PR/merge/deployment pending.
 
 - **2026-09-18 — Partner Web External Renewal Opportunity redesign:** branch `ui/partner-external-renewal-opportunity-redesign`; compact summary strip, Opportunity Snapshot, Recent Activity & Next Steps, card-based CRM interaction form and AI Outreach layout are **IMPLEMENTED**. Existing interaction, AI-call and Policy Intake server contracts are preserved; no schema change, PR, merge or deployment yet.
 
