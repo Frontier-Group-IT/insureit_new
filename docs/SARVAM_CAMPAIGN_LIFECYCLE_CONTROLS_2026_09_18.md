@@ -93,7 +93,8 @@ Future terminal campaign operations require a separately approved workflow.
 - provider lifecycle mutation performed by this development session: **NONE**
 - canonical CI: **PENDING**
 - merge/deployment: **PENDING**
-- production Pause/Resume verification: **NOT YET RUN**
+- production Pause verification: **VERIFIED** — IT Super User action returned HTTP 200 and provider state `paused`
+- production Resume verification: **PENDING MANUAL TEST**
 
 ## First production verification after deployment
 
@@ -120,3 +121,24 @@ After Pause/Resume is verified:
 - prepare a tightly capped API-driven batch orchestration layer only after lifecycle state is dependable
 
 Bulk calling remains out of scope for this slice.
+
+
+## Production verification — Pause succeeded
+
+Date: 2026-09-18
+
+IT Super User used the production Voice Integration lifecycle control against the configured renewal campaign.
+
+Observed result:
+
+- action: `pause`
+- provider HTTP status: **200**
+- returned lifecycle state: **paused**
+- Voice Integration state check: **Verified**
+- UI exposed **Resume campaign** only after the paused state was confirmed
+- no fallback provider mutation was attempted
+- INSUREIT database had no active voice attempts at the time of verification; only the two controlled completed attempts remained
+
+This verifies the provider read + pause mutation path end to end from INSUREIT.
+
+Resume is intentionally left as a separate manual verification because it can make remaining provider-side contacts eligible for calling.
