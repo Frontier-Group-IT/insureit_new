@@ -173,7 +173,7 @@ export default async function PartnerRegistrationPage() {
           </div>
 
           {documents.length ? (
-            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {documents.map((document) => {
                 const title = documentTitle(document.document_type, document.file_name);
                 const meta = [document.mime_type?.includes("pdf") ? "PDF" : document.mime_type?.split("/")[1]?.toUpperCase(), fileSizeLabel(document.file_size)].filter(Boolean).join(" · ");
