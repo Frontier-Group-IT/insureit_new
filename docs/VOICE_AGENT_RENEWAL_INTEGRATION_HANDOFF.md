@@ -397,7 +397,7 @@ The controlled default mirrors the schedule used during the verified production 
 
 This does not enable batch calling or automatic campaign lifecycle control.
 
-## Phase B campaign lifecycle controls — IMPLEMENTED / PENDING CI
+## Phase B campaign lifecycle controls — MERGED + DEPLOYED / LIVE VERIFICATION PENDING
 
 INSUREIT now has an IT-Super-User-only campaign lifecycle client and control surface for the configured Sarvam renewal campaign.
 
@@ -415,7 +415,7 @@ Implemented contract:
 
 Detailed evidence: `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
 
-Production Pause/Resume verification is still required after CI, merge and deployment.
+PR #2074 passed canonical Verify web portal #4165, merged as `59964b54c242997d113b18adc6d76d5ea1547ce7`, and Vercel production deployment `dpl_Du1juK2xCu7AEW7sjF1ddHbjPZ82` is READY. Production Pause/Resume verification still requires an IT Super User action.
 
 ## Next safe continuation
 
