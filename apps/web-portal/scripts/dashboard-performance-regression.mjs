@@ -5,7 +5,8 @@ const dashboardPage = await readFile(new URL("../app/dashboard/page.tsx", import
 const dashboardData = await readFile(new URL("../lib/operations-dashboard.ts", import.meta.url), "utf8");
 const accountsDashboardData = await readFile(new URL("../lib/accounts-dashboard.ts", import.meta.url), "utf8");
 const accountsBusinessMis = await readFile(new URL("../lib/accounts-business-mis.ts", import.meta.url), "utf8");
-const accountsControls = await readFile(new URL("../app/accounts/accounts-controls.tsx", import.meta.url), "utf8");
+const accountsClient = await readFile(new URL("../app/accounts/accounts-dashboard-client.tsx", import.meta.url), "utf8");
+const accountsSnapshotActions = await readFile(new URL("../app/accounts/accounts-snapshot-actions.ts", import.meta.url), "utf8");
 const accountsPage = await readFile(new URL("../app/accounts/page.tsx", import.meta.url), "utf8");
 const accountsWorkbook = await readFile(new URL("../app/accounts/business-mis-export/route.ts", import.meta.url), "utf8");
 const accountsUpload = await readFile(new URL("../app/accounts/reconciliation-upload-actions.ts", import.meta.url), "utf8");
@@ -28,7 +29,11 @@ assert.doesNotMatch(accountsPage, /loadBusinessMisRows\(/, "Accounts page must n
 assert.match(accountsBusinessMis, /payin_after_tds/, "Shared Accounts snapshot must preserve projected net pay-in semantics.");
 assert.match(accountsBusinessMis, /\.or\(businessDateFilter\(filters\.fromDate, filters\.toDate\)\)/, "Accounts policy filtering must be pushed into the database query.");
 assert.match(accountsBusinessMis, /if \(filters\.insurerId\) filteredPolicyQuery = filteredPolicyQuery\.eq\("insurance_company_id", filters\.insurerId\)/, "Accounts insurer filtering must be pushed into the database query.");
-assert.match(accountsControls, /router\.prefetch\(accountsHref\(standardPeriod/, "Accounts controls should prefetch the alternate standard period.");
+assert.match(accountsClient, /loadAccountsSnapshotAction\(/, "Accounts filters should refresh through the lightweight snapshot action.");
+assert.match(accountsClient, /window\.history\.replaceState\(window\.history\.state/, "Accounts filter changes should update the URL without a full route render.");
+assert.doesNotMatch(accountsClient, /router\.replace\(/, "Accounts filter changes must not trigger full App Router page replacement.");
+assert.match(accountsClient, /cache\.current\.get\(key\)/, "Accounts client should reuse already fetched filter snapshots.");
+assert.match(accountsSnapshotActions, /loadAccountsDashboardSnapshot\(profile, filters\)/, "Accounts snapshot action must reuse the canonical shared snapshot loader.");
 assert.match(accountsBusinessMis, /policy_premium_details\(od_premium,tp_premium,cpa_amount,net_premium\)/, "Accounts snapshot must embed premium rows in the filtered policy query.");
 assert.match(accountsBusinessMis, /policy_payin_details\(projected_od_percent,[^"]*payin_after_tds\)/, "Accounts snapshot must embed pay-in rows in the filtered policy query.");
 assert.match(accountsBusinessMis, /partner_payables\(id,partner_payment_allocations\(allocated_amount,partner_payments\(payment_date,payment_reference\)\)\)/, "Accounts snapshot must embed payable payment allocations in the filtered policy query.");
