@@ -397,6 +397,26 @@ The controlled default mirrors the schedule used during the verified production 
 
 This does not enable batch calling or automatic campaign lifecycle control.
 
+## Phase B campaign lifecycle controls — IMPLEMENTED / PENDING CI
+
+INSUREIT now has an IT-Super-User-only campaign lifecycle client and control surface for the configured Sarvam renewal campaign.
+
+Implemented contract:
+
+- read the configured campaign lifecycle state
+- server-side `X-API-Key` only
+- exact IT Super User + `manage_system=approve`
+- expose **Pause** only for Active
+- expose **Resume** only for Paused
+- do not expose Sarvam's terminal Cancel action
+- preserve Sarvam's required Pause -> Edit -> Save -> Resume operating rule
+- no Partner campaign-administration controls
+- no schema change and no batch calling
+
+Detailed evidence: `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
+
+Production Pause/Resume verification is still required after CI, merge and deployment.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
