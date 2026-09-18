@@ -239,16 +239,25 @@ function validatePayload(payload: PolicyOnboardingPayload) {
 }
 async function findCustomerCandidates(name: string, phone: string) {
   const admin = createSupabaseAdminClient();
-  const [phoneResult, nameResult] = await Promise.all([
-    admin.from("customers").select("id, contact_name, company_name, phone, city, state").eq("phone", phone).limit(10).returns<CustomerRow[]>(),
-    admin.from("customers").select("id, contact_name, company_name, phone, city, state").or(`contact_name.ilike.${name},company_name.ilike.${name}`).limit(10).returns<CustomerRow[]>(),
+  const select = "id, contact_name, company_name, phone, city, state";
+  const [phoneResult, contactNameResult, companyNameResult] = await Promise.all([
+    admin.from("customers").select(select).eq("phone", phone).limit(10).returns<CustomerRow[]>(),
+    admin.from("customers").select(select).ilike("contact_name", name).limit(10).returns<CustomerRow[]>(),
+    admin.from("customers").select(select).ilike("company_name", name).limit(10).returns<CustomerRow[]>(),
   ]);
-  if (phoneResult.error) throw new Error(phoneResult.error.message);
-  if (nameResult.error) throw new Error(nameResult.error.message);
+  for (const result of [phoneResult, contactNameResult, companyNameResult]) {
+    if (result.error) throw new Error(result.error.message);
+  }
   const merged = new Map<string, CustomerRow>();
-  for (const row of [...(phoneResult.data ?? []), ...(nameResult.data ?? [])]) merged.set(row.id, row);
+  for (const row of [...(phoneResult.data ?? []), ...(contactNameResult.data ?? []), ...(companyNameResult.data ?? [])]) merged.set(row.id, row);
   const normalizedName = cleanName(name).toLowerCase();
-  return [...merged.values()].map((row) => { const displayName = row.company_name?.trim() || row.contact_name; const nameMatch = [row.company_name, row.contact_name].filter(Boolean).some((value) => cleanName(String(value)).toLowerCase() === normalizedName); return { id: row.id, name: displayName, phone: row.phone, city: row.city, state: row.state, phoneMatch: normalizedPhone(row.phone) === phone, nameMatch }; });
+  return [...merged.values()].map((row) => {
+    const displayName = row.company_name?.trim() || row.contact_name;
+    const nameMatch = [row.company_name, row.contact_name]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .some((value) => cleanName(value).toLowerCase() === normalizedName);
+    return { id: row.id, name: displayName, phone: row.phone, city: row.city, state: row.state, phoneMatch: normalizedPhone(row.phone) === phone, nameMatch };
+  });
 }
 async function findCustomerById(id: string) {
   const admin = createSupabaseAdminClient();
