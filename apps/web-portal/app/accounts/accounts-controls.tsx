@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Download, Loader2 } from "lucide-react";
 import { ReconciliationTools } from "./reconciliation-tools";
@@ -29,6 +29,12 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
   const [from, setFrom] = useState(fromDate);
   const [to, setTo] = useState(toDate);
   const [insurer, setInsurer] = useState(insurerId ?? "");
+
+  useEffect(() => {
+    setFrom(fromDate);
+    setTo(toDate);
+    setInsurer(insurerId ?? "");
+  }, [fromDate, toDate, insurerId]);
 
   const navigate = (nextPeriod: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
     const params = new URLSearchParams();
@@ -59,7 +65,7 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
       {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin text-[#667085]" aria-label="Updating dashboard" /> : null}
     </div>
 
-    <form onSubmit={(event) => { event.preventDefault(); navigate(period, from, to, insurer); }} className="mt-2 grid gap-1.5 border-t border-[#edf1f5] pt-2 md:grid-cols-2 xl:grid-cols-[135px_135px_minmax(200px,1fr)_minmax(200px,1fr)_32px]">
+    <form onSubmit={(event) => { event.preventDefault(); navigate(period, from, to, insurer); }} className="mt-2 basis-full grid gap-1.5 border-t border-[#edf1f5] pt-2 md:grid-cols-2 xl:grid-cols-[135px_135px_minmax(200px,1fr)_minmax(200px,1fr)_32px]">
       <FilterField label="From"><input name="from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} disabled={period !== "custom" || isPending} className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[8.5px] font-semibold text-[#344054] disabled:bg-[#f6f8fb] disabled:text-[#98a2b3]" /></FilterField>
       <FilterField label="To"><input name="to" type="date" value={to} onChange={(event) => setTo(event.target.value)} disabled={period !== "custom" || isPending} className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[8.5px] font-semibold text-[#344054] disabled:bg-[#f6f8fb] disabled:text-[#98a2b3]" /></FilterField>
       <FilterField label="Insurer"><select name="insurer" value={insurer} onChange={(event) => setInsurer(event.target.value)} disabled={isPending} className="h-8 w-full rounded-lg border border-[#dce4ee] bg-white px-2 text-[8.5px] font-semibold text-[#344054] disabled:bg-[#f6f8fb] disabled:text-[#98a2b3]"><option value="">All insurers</option>{insurers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></FilterField>
