@@ -48,6 +48,16 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
   const exportRows = records.map((record) => [...record.row, record.policyId, record.payoutId]);
   const worksheet = XLSX.utils.aoa_to_sheet([summary, allHeaders, ...exportRows], { cellDates: true });
   const lastRow = Math.max(3, records.length + 2);
+  const durableMetadata = {
+    template: "Business MIS Reconciliation v2",
+    rowCount: records.length,
+    structureHash: structureHash(records),
+    systemHash: systemHash(records),
+    fromDate,
+    toDate,
+  };
+  worksheet["AG1"] = { t: "s", v: JSON.stringify(durableMetadata) };
+  worksheet["AH1"] = { t: "s", v: "INSUREIT_META_V2" };
 
   for (const col of BUSINESS_MIS_TOTAL_COLUMNS) {
     const address = XLSX.utils.encode_cell({ r: 0, c: col });
@@ -95,9 +105,9 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
   XLSX.utils.book_append_sheet(workbook, worksheet, "Business MIS");
   workbook.Custprops = {
     INSUREITTemplate: "Business MIS Reconciliation v2",
-    INSUREITRowCount: records.length,
-    INSUREITStructureHash: structureHash(records),
-    INSUREITSystemHash: systemHash(records),
+    INSUREITRowCount: durableMetadata.rowCount,
+    INSUREITStructureHash: durableMetadata.structureHash,
+    INSUREITSystemHash: durableMetadata.systemHash,
     INSUREITFromDate: fromDate,
     INSUREITToDate: toDate,
   };

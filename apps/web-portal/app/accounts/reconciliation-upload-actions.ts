@@ -83,6 +83,16 @@ const TDS_INDEX = 24;
 const PAID_AMOUNT_INDEX = 29;
 const PAID_DATE_INDEX = 30;
 const UTR_INDEX = 31;
+const DURABLE_METADATA_MARKER = "INSUREIT_META_V2";
+
+type ReconciliationTemplateMetadata = {
+  template: string;
+  rowCount: number;
+  structureHash: string;
+  systemHash: string;
+  fromDate?: string;
+  toDate?: string;
+};
 
 export async function previewAccountsReconciliationUpload(formData: FormData): Promise<ReconciliationUploadPreview> {
   const profile = await requireCapability("view_accounts");
@@ -103,12 +113,12 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     return emptyPreview("Upload the original single-sheet Business MIS workbook. Sheets must not be added, removed or renamed.");
   }
 
-  const props = (workbook.Custprops ?? {}) as Record<string, unknown>;
-  if (text(props.INSUREITTemplate) !== TEMPLATE_VERSION) {
+  const sheet = workbook.Sheets["Business MIS"];
+  const metadata = readTemplateMetadata(workbook, sheet);
+  if (!metadata || metadata.template !== TEMPLATE_VERSION) {
     return emptyPreview("This is not the current INSUREIT Business MIS reconciliation template. Download a fresh Export from the Accounts Dashboard.");
   }
 
-  const sheet = workbook.Sheets["Business MIS"];
   const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: true });
   if (grid.length < 2) return emptyPreview("The Business MIS workbook is empty or damaged.");
 
@@ -121,7 +131,7 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     return emptyPreview("Extra columns were detected. Do not add columns to the Business MIS workbook.");
   }
 
-  const declaredRowCount = integer(props.INSUREITRowCount);
+  const declaredRowCount = metadata.rowCount;
   const usedRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
   if (usedRange.e.c !== PAYOUT_ID_INDEX || usedRange.e.r !== declaredRowCount + 1) {
     return emptyPreview("Business MIS rows or columns were inserted, removed or shifted. Upload the workbook exactly as exported.");
@@ -132,12 +142,12 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   }
 
   const structure = uploadedStructureHash(dataRows);
-  if (!text(props.INSUREITStructureHash) || structure !== text(props.INSUREITStructureHash)) {
+  if (!metadata.structureHash || structure !== metadata.structureHash) {
     return emptyPreview("Business MIS row order or hidden system IDs were changed. Download a fresh Export and do not add, remove, duplicate or reorder rows.");
   }
 
   const uploadedSystem = uploadedSystemHash(dataRows);
-  if (!text(props.INSUREITSystemHash) || uploadedSystem !== text(props.INSUREITSystemHash)) {
+  if (!metadata.systemHash || uploadedSystem !== metadata.systemHash) {
     return emptyPreview("System-controlled Business MIS values were edited. Only Bill Number, Bill Amount, Bill Date, Difference, Paid Amount, Paid Date and UTR Details may be filled.");
   }
 
@@ -369,6 +379,49 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     payinRows,
     payoutRows,
   };
+}
+
+function readTemplateMetadata(workbook: XLSX.WorkBook, sheet: XLSX.WorkSheet): ReconciliationTemplateMetadata | null {
+  const props = (workbook.Custprops ?? {}) as Record<string, unknown>;
+  const propertyMetadata: ReconciliationTemplateMetadata = {
+    template: text(props.INSUREITTemplate),
+    rowCount: integer(props.INSUREITRowCount),
+    structureHash: text(props.INSUREITStructureHash),
+    systemHash: text(props.INSUREITSystemHash),
+    fromDate: text(props.INSUREITFromDate),
+    toDate: text(props.INSUREITToDate),
+  };
+  if (
+    propertyMetadata.template === TEMPLATE_VERSION
+    && propertyMetadata.rowCount >= 0
+    && propertyMetadata.structureHash
+    && propertyMetadata.systemHash
+  ) return propertyMetadata;
+
+  if (text(sheet["AH1"]?.v) !== DURABLE_METADATA_MARKER) return null;
+  const raw = text(sheet["AG1"]?.v);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<ReconciliationTemplateMetadata>;
+    const durableMetadata: ReconciliationTemplateMetadata = {
+      template: text(parsed.template),
+      rowCount: integer(parsed.rowCount),
+      structureHash: text(parsed.structureHash),
+      systemHash: text(parsed.systemHash),
+      fromDate: text(parsed.fromDate),
+      toDate: text(parsed.toDate),
+    };
+    if (
+      durableMetadata.template !== TEMPLATE_VERSION
+      || durableMetadata.rowCount < 0
+      || !durableMetadata.structureHash
+      || !durableMetadata.systemHash
+    ) return null;
+    return durableMetadata;
+  } catch {
+    return null;
+  }
 }
 
 function uploadedStructureHash(rows: unknown[][]) {
