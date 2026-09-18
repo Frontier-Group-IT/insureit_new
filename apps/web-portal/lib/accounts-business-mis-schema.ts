@@ -43,3 +43,14 @@ export const BUSINESS_MIS_TOTAL_COLUMNS = [8, 9, 10, 11, 16, 18, 19, 21, 23, 24,
 export type BusinessMisCell = string | number | Date;
 export type BusinessMisClientCell = string | number;
 export type BusinessMisRow = BusinessMisCell[];
+
+export type AccountsDashboardClientSnapshot = {
+  rows: BusinessMisClientCell[][];
+  insurers: Array<{ id: string; name: string }>;
+  policyCount: number;
+  netPremium: number;
+  projectedNetPayin: number;
+  projectedNetPayout: number;
+  projectedRetention: number;
+  warnings: string[];
+};
