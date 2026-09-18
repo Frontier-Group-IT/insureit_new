@@ -43,3 +43,5 @@ This protocol is mandatory because future agents must be able to reconstruct the
 ## Voice trial continuity
 
 Every material provider/API/campaign/telephony/webhook/CRM/reconciliation trial must update the relevant dated Markdown evidence note and `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md` before closure, whether the trial succeeds or fails. Preserve durable failure lessons. Never store phone numbers, secrets, raw transcripts, or full webhook payloads.
+
+- `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`
