@@ -6,6 +6,16 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 const TERMINAL_STATUSES = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost", "duplicate"]);
 const ACTIVE_ATTEMPT_STATUSES = ["created", "submitted", "queued", "calling"];
 
+type RcEnrichmentDetails = {
+  registrationNumber?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  chassisNumber?: string | null;
+  insuranceCompany?: string | null;
+  policyNumber?: string | null;
+  policyExpiryDate?: string | null;
+};
+
 type OpportunityRow = {
   id: string;
   batch_id: string;
@@ -22,6 +32,8 @@ type OpportunityRow = {
   chassis_no: string | null;
   current_insurer: string | null;
   policy_end_date: string | null;
+  rc_enrichment_status: string | null;
+  rc_enrichment_details: RcEnrichmentDetails | null;
 };
 
 export async function startItSuperUserExternalRenewalVoiceAttempt({
@@ -35,7 +47,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,policy_end_date")
+    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,policy_end_date,rc_enrichment_status,rc_enrichment_details")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
@@ -59,6 +71,10 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   if (!opportunity.mobile?.replace(/\D/g, "")) {
     throw new Error("A valid mobile number is required before starting an AI call.");
+  }
+
+  if (opportunity.rc_enrichment_status !== "ready") {
+    throw new Error("Fetch RC details before starting the AI call.");
   }
 
   const { data: activeAttempt, error: activeAttemptError } = await admin
@@ -93,13 +109,23 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("Could not create the AI call attempt.");
   }
 
+  const enrichment = opportunity.rc_enrichment_details ?? {};
   const customerName =
     opportunity.customer_name?.trim() ||
     opportunity.contact_name?.trim() ||
     opportunity.account_name?.trim() ||
     null;
-  const vehicleMakeModel = [opportunity.vehicle_make, opportunity.vehicle_model].filter(Boolean).join(" ").trim() || null;
-  const vehicleNumber = opportunity.registration_no?.trim() || opportunity.chassis_no?.trim() || null;
+  const vehicleMake = enrichment.manufacturer?.trim() || opportunity.vehicle_make?.trim() || null;
+  const vehicleModel = enrichment.model?.trim() || opportunity.vehicle_model?.trim() || null;
+  const vehicleMakeModel = [vehicleMake, vehicleModel].filter(Boolean).join(" ").trim() || null;
+  const vehicleNumber =
+    enrichment.registrationNumber?.trim() ||
+    opportunity.registration_no?.trim() ||
+    enrichment.chassisNumber?.trim() ||
+    opportunity.chassis_no?.trim() ||
+    null;
+  const currentInsurer = enrichment.insuranceCompany?.trim() || opportunity.current_insurer?.trim() || null;
+  const policyExpiryDate = enrichment.policyExpiryDate?.trim() || opportunity.policy_end_date;
 
   return {
     attempt_id: attempt.id,
@@ -108,8 +134,8 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     customer_name: customerName,
     vehicle_make_model: vehicleMakeModel,
     vehicle_number: vehicleNumber,
-    current_insurer: opportunity.current_insurer,
-    policy_expiry_date: opportunity.policy_end_date,
+    current_insurer: currentInsurer,
+    policy_expiry_date: policyExpiryDate,
     previous_idv: null,
     previous_premium: null,
   };
