@@ -53,6 +53,7 @@ type Associate = {
   role: "admin" | "claim_head" | "insurance_head" | "bodyshop_manager";
   status: "invited" | "active" | "disabled";
   created_at: string;
+  invited_at: string | null;
 };
 
 export default async function PartnerAssociateAccountsPage({
@@ -60,7 +61,7 @@ export default async function PartnerAssociateAccountsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ success?: string; error?: string; retry_after?: string }>;
+  searchParams: Promise<{ success?: string; error?: string; associate_error?: string; retry_after?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -90,7 +91,7 @@ export default async function PartnerAssociateAccountsPage({
   }
 
   const { data: associates, error: associatesError } = await admin.from("partner_portal_associate_accounts")
-    .select("id,name,phone_number,email,designation,role,status,created_at")
+    .select("id,name,phone_number,email,designation,role,status,created_at,invited_at")
     .eq("intermediary_id", intermediary.id)
     .order("created_at", { ascending: false })
     .returns<Associate[]>();
@@ -109,7 +110,7 @@ export default async function PartnerAssociateAccountsPage({
         {query.success ? (
           <AssociateAccountResultToast tone="success" message={successMessage(query.success)} />
         ) : null}
-        {query.error ? <AssociateAccountResultToast tone="error" message={errorMessage(query.error, query.retry_after)} /> : null}
+        {query.associate_error || query.error ? <AssociateAccountResultToast tone="error" message={errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)} /> : null}
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
