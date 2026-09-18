@@ -1,0 +1,97 @@
+name: Apply Partner multi-login revert migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260918124000_revert_partner_multi_login_access.sql'
+      - '.github/workflows/apply-partner-multi-login-revert.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Partner multi-login revert migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260918124000_revert_partner_multi_login_access.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Ensure revert migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20260918124000'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Revert migration already applied; skipping."
+          else
+            supabase db query --linked --file supabase/migrations/20260918124000_revert_partner_multi_login_access.sql
+            supabase migration repair --linked --status applied 20260918124000
+          fi
+
+      - name: Verify single-login Partner contract restored
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.partner_portal_additional_users') is null as additional_users_removed,
+              to_regclass('public.partner_portal_additional_user_audit') is null as audit_removed,
+              to_regprocedure('public.partner_portal_additional_user_identity()') is null as identity_helper_removed,
+              to_regprocedure('public.service_partner_portal_refresh_access_status(uuid)') is null as refresh_helper_removed,
+              to_regprocedure('public.partner_app_current_identity_before_multi_login()') is null as preserved_identity_name_removed,
+              to_regprocedure('public.partner_app_activate_current_account_before_multi_login()') is null as preserved_activation_name_removed,
+              has_function_privilege('authenticated', 'public.partner_app_current_identity()', 'EXECUTE') as current_identity_exec,
+              has_function_privilege('authenticated', 'public.partner_app_activate_current_account()', 'EXECUTE') as activate_exec,
+              exists (
+                select 1 from pg_constraint
+                where conrelid='public.intermediary_portal_accounts'::regclass
+                  and conname='intermediary_portal_accounts_intermediary_id_key'
+              ) as single_login_constraint_present;
+          ")
+          echo "$result"
+          for key in additional_users_removed audit_removed identity_helper_removed refresh_helper_removed preserved_identity_name_removed preserved_activation_name_removed current_identity_exec activate_exec single_login_constraint_present; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done
