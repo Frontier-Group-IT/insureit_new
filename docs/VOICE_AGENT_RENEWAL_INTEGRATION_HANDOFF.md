@@ -453,6 +453,24 @@ The Partner UI no longer reports AI calling available merely because the kill sw
 
 Detailed evidence: `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`.
 
+## Production calling queue preview — IMPLEMENTED / PENDING CI
+
+IT Super User now has a read-only initial-outreach queue preview for active External Renewal opportunities due in the next 30 days.
+
+Initial eligibility is intentionally narrow:
+
+- mobile present
+- CRM stage `new` or `contact_attempted`
+- no future follow-up
+- no active AI attempt
+- terminal/DNC records held
+
+The preview creates no voice attempt, cohort or call and renders no customer identity/phone number.
+
+Detailed evidence: `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`.
+
+Bulk AI calling remains disabled under the existing External Renewal voice contract until the recovery gate is cleared or explicitly superseded by an approved production policy.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
