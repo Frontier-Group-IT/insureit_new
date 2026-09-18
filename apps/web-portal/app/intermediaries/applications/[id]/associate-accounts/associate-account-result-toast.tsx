@@ -20,6 +20,8 @@ export function AssociateAccountResultToast({
     const params = new URLSearchParams(searchParams.toString());
     params.delete("success");
     params.delete("error");
+    params.delete("associate_error");
+    params.delete("retry_after");
     const cleanUrl = params.size ? `${pathname}?${params.toString()}` : pathname;
     router.replace(cleanUrl, { scroll: false });
 
