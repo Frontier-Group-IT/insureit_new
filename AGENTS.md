@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Sarvam production calling queue preview:** branch `feat/sarvam-production-queue-preview`; IT Super User can inspect a read-only 30-day initial-outreach eligibility queue with normalized hold reasons and no customer PII display. It cannot create attempts/cohorts/calls and does not enable bulk calling. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`.
+
 - **2026-09-18 — Sarvam Partner production readiness UX:** branch `feat/sarvam-partner-production-readiness`; Partner External Renewal list/detail now use the same server-side kill-switch + calling-window + approved-campaign-state readiness contract as production dispatch. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`.
 
 - **2026-09-18 — Sarvam Phase B campaign dispatch precheck:** branch `feat/sarvam-campaign-dispatch-precheck`; Partner `Call with AI` now checks the configured Sarvam campaign state before creating a local attempt. Active/Scheduled are allowed; Paused/Ended/Cancelled/unknown are blocked. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_CAMPAIGN_DISPATCH_PRECHECK_2026_09_18.md`.
