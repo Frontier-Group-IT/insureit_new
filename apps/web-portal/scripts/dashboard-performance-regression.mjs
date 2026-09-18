@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 const dashboardPage = await readFile(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8");
 const dashboardData = await readFile(new URL("../lib/operations-dashboard.ts", import.meta.url), "utf8");
 const accountsDashboardData = await readFile(new URL("../lib/accounts-dashboard.ts", import.meta.url), "utf8");
+const accountsBusinessMis = await readFile(new URL("../lib/accounts-business-mis.ts", import.meta.url), "utf8");
 const accountsPage = await readFile(new URL("../app/accounts/page.tsx", import.meta.url), "utf8");
 const accountsWorkbook = await readFile(new URL("../app/accounts/business-mis-export/route.ts", import.meta.url), "utf8");
 const accountsUpload = await readFile(new URL("../app/accounts/reconciliation-upload-actions.ts", import.meta.url), "utf8");
@@ -19,6 +20,12 @@ assert.doesNotMatch(dashboardData, /\.auth\.getUser\(/, "Operations dashboard sh
 assert.match(accountsDashboardData, /\.select\("policy_id,gross_payout,retention_amount"\)/, "Accounts dashboard payout totals must use the computed policy payout and retention fields.");
 assert.doesNotMatch(accountsDashboardData, /\.select\("[^"]*partner_payout_amount[^"]*"\)/, "Accounts dashboard must not fetch partner payout planning inputs as projected cashflow.");
 assert.match(accountsDashboardData, /function payoutValue\(row: PayoutRow\) \{\s*return numberValue\(row\.gross_payout\);\s*\}/s, "Accounts dashboard projected payout must resolve directly from gross_payout.");
+
+assert.match(accountsPage, /loadAccountsDashboardSnapshot\(profile, filters\)/, "Accounts page must derive KPIs and Business MIS from one shared snapshot.");
+assert.doesNotMatch(accountsPage, /loadAccountsDashboard\(/, "Accounts page must not run a second KPI data pipeline beside Business MIS.");
+assert.doesNotMatch(accountsPage, /loadBusinessMisRows\(/, "Accounts page must not run a duplicate Business MIS data pipeline.");
+assert.match(accountsBusinessMis, /payin_after_tds/, "Shared Accounts snapshot must preserve projected net pay-in semantics.");
+assert.match(accountsBusinessMis, /Promise\.all\(\s*chunk\(payableIds, 120\)/s, "Accounts payment allocation reads should run in parallel by batch.");
 
 assert.doesNotMatch(accountsPage, /href="\/reconciliation"/, "New Accounts workflow must not redirect to legacy reconciliation.");
 assert.doesNotMatch(accountsPage, /href="\/accounts\/billing"/, "New Accounts workflow must not redirect to legacy billing.");
