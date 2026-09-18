@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
 import { refineIciciLombardMotorPolicy } from "../lib/policy-ocr-icici-lombard-refiner.ts";
+// @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
+import { parsePolicyDocument } from "../lib/policy-ocr-parsers.ts";
 import type { ParsedPolicyResult } from "../lib/policy-ocr-parsers.ts";
 import type { StructuredPolicyTable } from "../lib/policy-ocr-iffco-structured-refiner.ts";
 
@@ -85,6 +87,11 @@ const contaminated: ParsedPolicyResult = {
   ],
   warnings: ["This insurer format is not fully supported yet. Verify every value manually."],
 };
+
+
+const baseRoute = parsePolicyDocument(pages);
+assert.equal(baseRoute.parserId, "icici_lombard_motor_v1");
+assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance Company Limited");
 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
