@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebCustomerDetail } from "@/lib/partner-web";
+import { getPartnerWebActivity, getPartnerWebCustomerDetail, type PartnerActivityData } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -50,10 +50,38 @@ export default async function PartnerCustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await getPartnerWebCustomerDetail(id);
+  const [data, activity] = await Promise.all([
+    getPartnerWebCustomerDetail(id),
+    getPartnerWebActivity(100),
+  ]);
   const customer = data.customer;
   const relationship = display(customer.intermediary_type, customer.intermediary_code) || "Not recorded";
   const location = [customer.city, customer.state].filter(Boolean).join(", ") || "Not recorded";
+  const policyIds = new Set(data.policies.map((policy) => policy.policy_id));
+  const claimIds = new Set(data.claims.map((claim) => claim.claim_id));
+  const customerNeedles = [
+    customer.customer_name,
+    customer.customer_code,
+    customer.phone,
+    customer.company_name,
+    ...data.policies.flatMap((policy) => [policy.policy_no, policy.policy_code]),
+    ...data.vehicles.map((vehicle) => vehicle.vehicle_no),
+  ]
+    .filter((value): value is string => Boolean(value?.trim()))
+    .map((value) => value.toLocaleLowerCase("en-IN"));
+
+  const customerActivity = activity.items
+    .filter((item) => {
+      if (item.kind === "policy" && policyIds.has(item.entity_id)) return true;
+      if (item.kind === "claim" && claimIds.has(item.entity_id)) return true;
+      const haystack = [item.title, item.subtitle, item.meta]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("en-IN");
+      return customerNeedles.some((needle) => haystack.includes(needle));
+    })
+    .sort((a, b) => new Date(b.event_at).getTime() - new Date(a.event_at).getTime())
+    .slice(0, 2);
 
   return (
     <PartnerPortalShell title="Customer Detail">
@@ -137,16 +165,25 @@ export default async function PartnerCustomerDetailPage({
           </div>
         </section>
 
-        <details className="group overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
+        <details open className="group overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[10.5px] font-semibold text-[#334155] [&::-webkit-details-marker]:hidden">
             <span>Activity Status</span>
             <ChevronDown className="h-4 w-4 text-[#64748B] transition group-open:rotate-180" />
           </summary>
-          <div className="grid border-t border-[#E6EBF1] bg-[#FBFCFE] sm:grid-cols-2 lg:grid-cols-4">
-            <ActivityMetric label="Vehicles" value={data.summary.vehicles} />
-            <ActivityMetric label="Policies" value={data.summary.policies} />
-            <ActivityMetric label="Claims" value={data.summary.claims} />
-            <ActivityMetric label="Renewals due" value={data.summary.renewals_30_days} />
+          <div className="border-t border-[#E6EBF1] px-4 py-3">
+            <div className="overflow-hidden rounded-xl border border-[#DDE4EE] bg-[#FBFCFE]">
+              {customerActivity.length ? (
+                customerActivity.map((item, index) => (
+                  <CustomerActivityRow
+                    key={item.kind + "-" + item.entity_id + "-" + item.event_at}
+                    item={item}
+                    label={index === 0 ? "Latest Action" : "Previous Action"}
+                  />
+                ))
+              ) : (
+                <div className="px-4 py-5 text-[10.5px] text-[#7A899F]">No customer activity recorded yet.</div>
+              )}
+            </div>
           </div>
         </details>
 
@@ -213,11 +250,37 @@ function DocumentPlaceholder({ label }: { label: string }) {
   );
 }
 
-function ActivityMetric({ label, value }: { label: string; value: number }) {
+function activityDateTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  }).format(parsed);
+}
+
+function CustomerActivityRow({
+  item,
+  label,
+}: {
+  item: PartnerActivityData["items"][number];
+  label: "Latest Action" | "Previous Action";
+}) {
   return (
-    <div className="border-b border-[#E6EBF1] px-4 py-3 sm:border-r lg:border-b-0 lg:last:border-r-0">
-      <p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8190A4]">{label}</p>
-      <p className="mt-1 text-[16px] font-extrabold text-[#183A64]">{value}</p>
+    <div className="flex flex-col gap-3 border-b border-[#E6EBF1] px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8190A4]">{label}</p>
+        <p className="mt-1 truncate text-[12px] font-semibold text-[#183A64]">{item.title}</p>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1 text-[9px] text-[#8190A4]">
+        <span>Created By: {item.meta || "Not recorded"}</span>
+        <span>At: {activityDateTime(item.event_at)}</span>
+      </div>
     </div>
   );
 }
