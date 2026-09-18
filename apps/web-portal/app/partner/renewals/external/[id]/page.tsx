@@ -19,7 +19,7 @@ import {
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { getPartnerExternalRenewalDetail, getPartnerExternalRenewalIntakeLink } from "@/lib/partner-external-renewals";
 import { getLatestPartnerExternalRenewalVoiceAttempt } from "@/lib/partner-external-renewal-voice";
-import { isSarvamRenewalCallingEnabled } from "@/lib/sarvam-renewal-call";
+import { getSarvamPartnerDispatchReadiness } from "@/lib/sarvam-partner-dispatch-readiness";
 import { InteractionNotesField } from "./interaction-notes-field";
 
 export const dynamic = "force-dynamic";
@@ -64,15 +64,16 @@ export default async function PartnerExternalRenewalDetailPage({
   searchParams: Promise<{ saved?: string; error?: string; voice_queued?: string; voice_error?: string }>;
 }) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const [detail, intakeLink, latestVoiceAttempt] = await Promise.all([
+  const [detail, intakeLink, latestVoiceAttempt, dispatchReadiness] = await Promise.all([
     getPartnerExternalRenewalDetail(id),
     getPartnerExternalRenewalIntakeLink(id),
     getLatestPartnerExternalRenewalVoiceAttempt(id),
+    getSarvamPartnerDispatchReadiness(),
   ]);
   const opportunity = detail.opportunity;
   const isClosed = TERMINAL_STATUSES.has(opportunity.opportunity_status);
   const canStartIntake = !isClosed && !intakeLink?.linked && INTAKE_READY_STATUSES.has(opportunity.opportunity_status);
-  const voiceEnabled = isSarvamRenewalCallingEnabled();
+  const voiceEnabled = dispatchReadiness.ready;
   const voiceActive = latestVoiceAttempt ? ACTIVE_VOICE_STATUSES.has(latestVoiceAttempt.submission_status) : false;
   const canVoiceCall = voiceEnabled && !isClosed && !voiceActive && Boolean(opportunity.mobile?.trim());
   const customerName = opportunity.account_name || opportunity.customer_name || opportunity.contact_name || "Customer";
@@ -314,7 +315,7 @@ export default async function PartnerExternalRenewalDetailPage({
                     </form>
                   ) : (
                     <span className="inline-flex min-h-9 items-center rounded-lg bg-[#F3F5F8] px-3 text-[9.5px] font-semibold text-[#728198]">
-                      {isClosed ? "Opportunity closed" : voiceActive ? "AI call in progress" : !opportunity.mobile?.trim() ? "Mobile required" : "AI calling unavailable"}
+                      {isClosed ? "Opportunity closed" : voiceActive ? "AI call in progress" : !opportunity.mobile?.trim() ? "Mobile required" : dispatchReadiness.message}
                     </span>
                   )}
                 </div>
