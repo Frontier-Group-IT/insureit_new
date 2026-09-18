@@ -1,3 +1,8 @@
+## 2026-09-18 — Partner Web External Renewal Opportunity redesign
+- **IMPLEMENTED** on branch `ui/partner-external-renewal-opportunity-redesign`.
+- Redesigned `/partner/renewals/external/[id]` to the approved compact dashboard reference while preserving existing interactions, AI call, Policy Intake and closed-state contracts.
+- No schema/database changes. No PR, merge, CI or deployment yet.
+
 # Current Chat Handoff
 
 > **Consolidated:** 2026-08-24 (IST)
