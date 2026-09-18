@@ -17,6 +17,10 @@ export type PartnerIdentity =
       actor_kind: "intermediary";
       auth_user_id: string;
       portal_account_id: string;
+      portal_account_source?: "primary" | "associate";
+      associate_name?: string | null;
+      associate_role?: "claim_head" | "insurance_head" | "bodyshop_manager" | "admin" | null;
+      associate_designation?: string | null;
       intermediary_id: string;
       intermediary_type: "partner" | "posp" | "misp";
       intermediary_code: string | null;
