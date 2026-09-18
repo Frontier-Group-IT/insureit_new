@@ -5,6 +5,7 @@ import { FormSubmitButton } from "@/components/form-submit-button";
 import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createPartnerAssociateAccount } from "./actions";
+import { AssociateAccountResultToast } from "./associate-account-result-toast";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -105,9 +106,9 @@ export default async function PartnerAssociateAccountsPage({
     <AppShell title="Partner Associate Accounts" backHref={`/intermediaries/applications/${id}`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
         {query.success === "associate_account_invited" ? (
-          <Notice tone="success">Associate account saved. Activation email sent successfully.</Notice>
+          <AssociateAccountResultToast tone="success" message="Associate account saved. Activation email sent successfully." />
         ) : null}
-        {query.error ? <Notice tone="error">{errorMessage(query.error)}</Notice> : null}
+        {query.error ? <AssociateAccountResultToast tone="error" message={errorMessage(query.error)} /> : null}
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
@@ -231,9 +232,6 @@ function Info({ label, value }: { label: string; value: string }) {
 function RolePill({ value }: { value: Associate["role"] }) {
   const label = value === "claim_head" ? "Claim Head" : value === "insurance_head" ? "Insurance Head" : value === "bodyshop_manager" ? "Bodyshop Manager" : "Admin";
   return <span className="inline-flex rounded-full border border-[#D8E2EE] bg-[#F8FAFC] px-2.5 py-1 text-[8.5px] font-semibold text-[#334155]">{label}</span>;
-}
-function Notice({ tone, children }: { tone: "success" | "error"; children: React.ReactNode }) {
-  return <div className={`rounded-xl border px-4 py-3 text-[10.5px] font-medium ${tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>{children}</div>;
 }
 function UserIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6" aria-hidden="true"><circle cx="12" cy="8" r="3" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>;
