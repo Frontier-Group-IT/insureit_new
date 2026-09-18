@@ -471,6 +471,24 @@ Detailed evidence: `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`.
 
 Bulk AI calling remains disabled under the existing External Renewal voice contract until the recovery gate is cleared or explicitly superseded by an approved production policy.
 
+## Production control-center authority model — IMPLEMENTED / PENDING CI
+
+The production Voice Integration UX has been rebuilt around normal operations instead of experimental diagnostics.
+
+Current authority:
+
+- IT Super User owns all AI voice calling actions
+- Partner users are status-only and cannot start AI calls
+- legacy Partner voice-call endpoint is a server-side denial barrier
+- IT queue rows can dispatch one eligible External Renewal opportunity through a new IT-only system route
+- all existing kill-switch, calling-window, campaign-state, DNC/terminal, duplicate-attempt, webhook and isolation safeguards remain in force
+
+The main production page is compact: health strip, Production Control, Access & Policy, Calling Queue, Campaign, and Recent Voice Attempts. Verbose experimental configuration/readiness/recovery explanations are removed from the primary operations surface.
+
+Detailed evidence: `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`.
+
+Partner self-service is deferred to a later explicitly approved phase.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves

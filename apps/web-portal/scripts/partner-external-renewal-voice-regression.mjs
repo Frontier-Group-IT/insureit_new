@@ -19,6 +19,8 @@ const sarvamWebhookRecovery = fs.readFileSync(path.join(root, "lib/sarvam-webhoo
 const diagnosticsModel = fs.readFileSync(path.join(root, "lib/sarvam-deep-diagnostics.ts"), "utf8");
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
+const itDispatchModel = fs.readFileSync(path.join(root, "lib/sarvam-it-dispatch.ts"), "utf8");
+const itDispatchRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/dispatch/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
 const campaignStatusRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-campaign-status/route.ts"), "utf8");
@@ -143,12 +145,23 @@ assert(!diagnosticsModel.includes("cohorts/stream"), "deep diagnostics cannot st
 assert(!diagnosticsModel.includes('method: "POST"'), "deep diagnostics performs no provider mutation request");
 assert(!/console\.(log|error|warn)\s*\(/.test(diagnosticsModel), "deep diagnostics does not log provider responses or secrets");
 
-assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
-assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
-assert(callRoute.indexOf("assertSarvamRenewalCallingWindow()") < callRoute.indexOf("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action checks the operational window before creating the local attempt");
-assert(callRoute.indexOf("assertSarvamRenewalCampaignDispatchable()") < callRoute.indexOf("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action verifies provider campaign state before creating the local attempt");
-assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
-assert(callRoute.includes("providerDefinitelyRejected"), "only definitive provider rejection releases the local active-attempt guard");
+assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist can still read normalized AI result state");
+assert(callRoute.includes("AI voice calling is controlled by INSUREIT IT Super User"), "Partner voice-call endpoint explicitly denies Partner-triggered AI calling");
+assert(!callRoute.includes("streamExternalRenewalToSarvam"), "Partner voice-call endpoint cannot reach the provider");
+
+assert(itDispatchModel.includes('import "server-only"'), "IT dispatch helper is server-only");
+assert(itDispatchModel.includes("external_renewal_opportunities"), "IT dispatch starts only from isolated External Renewal opportunities");
+assert(itDispatchModel.includes("external_renewal_voice_one_active_attempt_uidx") || itDispatchModel.includes("An AI call is already active"), "IT dispatch preserves one-active-attempt protection");
+assert(itDispatchModel.includes("requested_by_auth_user_id"), "IT dispatch records the authenticated controller");
+assert(!/from\(["'](customers|vehicles|policies)["']\)/i.test(itDispatchModel), "IT dispatch does not write verified Customer/Vehicle/Policy masters");
+
+assert(itDispatchRoute.includes('viewer.role !== "it_super_user"'), "IT dispatch route requires exact IT Super User role");
+assert(itDispatchRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "IT dispatch route requires critical system approval access");
+assert(itDispatchRoute.includes("assertSarvamRenewalCallingWindow()"), "IT dispatch enforces the production calling window");
+assert(itDispatchRoute.includes("assertSarvamRenewalCampaignDispatchable()"), "IT dispatch verifies the approved campaign state");
+assert(itDispatchRoute.includes("startItSuperUserExternalRenewalVoiceAttempt"), "IT dispatch creates the local attempt through the IT-only helper");
+assert(itDispatchRoute.includes("streamExternalRenewalToSarvam"), "IT dispatch is the production provider submission path");
+assert(itDispatchRoute.includes("markExternalRenewalVoiceSubmitted"), "IT dispatch persists accepted campaign/cohort submission state");
 
 assert(connectionTestRoute.includes('viewer.role !== "it_super_user"'), "Sarvam connection test requires exact IT Super User role");
 assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam connection test requires critical system approval access");
@@ -184,39 +197,29 @@ assert(webhook.includes("payload.duration ?? payload.duration_in_seconds"), "web
 assert(!/interaction_transcript[^\n]*applyExternalRenewalVoiceResult/i.test(webhook), "raw transcript is not passed into persistence");
 assert(!/console\.(log|error|warn)\s*\(/.test(webhook), "webhook does not log provider/customer payloads");
 
-assert(detailPage.includes("Call with AI"), "Partner detail page exposes the single-opportunity AI action");
+assert(!detailPage.includes("Call with AI"), "Partner detail page exposes no AI call action");
+assert(detailPage.includes("IT controlled"), "Partner detail page labels AI calling as centrally controlled");
+assert(!detailPage.includes("getSarvamPartnerDispatchReadiness"), "Partner detail no longer evaluates dispatch authority");
 assert(!detailPage.includes("SARVAM_API_KEY"), "Partner detail page does not expose provider credentials");
-assert(worklistPage.includes("AI renewal outreach"), "Partner worklist explains the controlled AI outreach layer");
-assert(worklistPage.includes("getPartnerExternalRenewalVoiceStates"), "Partner worklist batches voice-state loading");
+assert(worklistPage.includes("AI outreach is managed by INSUREIT IT"), "Partner worklist states IT-only AI authority");
+assert(worklistPage.includes("getPartnerExternalRenewalVoiceStates"), "Partner worklist still shows normalized AI outcomes");
+assert(!worklistPage.includes("getSarvamPartnerDispatchReadiness"), "Partner worklist has no calling-authority readiness path");
 
-assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice integration readiness requires exact IT Super User role");
-assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice integration readiness also requires critical system access");
-assert(readinessPage.includes("Test Sarvam connection"), "voice admin page exposes the explicit safe provider connectivity check");
-assert(readinessPage.includes("No customer identity, phone number, transcript or raw provider payload"), "voice admin page explicitly preserves the minimal-data boundary");
-assert(readinessPage.includes("Webhook callbacks"), "voice admin page surfaces normalized webhook health");
-assert(readinessPage.includes("Calling window"), "voice admin page surfaces the enforced calling window");
-assert(readinessPage.includes("DND / terminal guard"), "voice admin page surfaces DND and terminal-state protection");
-assert(readinessPage.includes("INSUREIT auto retry"), "voice admin page surfaces application retry policy");
-assert(readinessPage.includes("Campaign lifecycle control"), "voice admin page exposes IT-only campaign lifecycle controls");
-assert(readinessPage.includes("Production calling queue preview"), "voice admin page includes the read-only production queue preview");
-assert(readinessPage.includes("This does not place calls or create cohorts"), "queue preview states its no-call boundary");
-assert(readinessPage.includes("Customer identity and phone numbers are not shown here"), "queue preview preserves minimal-data display");
-assert(readinessPage.includes("Pause campaign"), "voice admin page can pause an active configured campaign");
-assert(readinessPage.includes("Resume campaign"), "voice admin page can resume a paused configured campaign");
-assert(readinessPage.includes("Pause / Resume only"), "voice admin page states the non-terminal mutation boundary");
-assert(readinessPage.includes("Partner users never receive campaign lifecycle controls"), "campaign lifecycle control remains outside Partner workspace");
-assert(readinessPage.includes("Reconciliation attention required"), "voice admin page surfaces stale active attempts without auto-failing them");
-assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page uses an explicit stale-attempt observation threshold");
-assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attempt visibility preserves ambiguous-delivery safety");
-assert(readinessPage.includes("Webhook recovery"), "voice admin page exposes controlled webhook redelivery");
-assert(readinessPage.includes("Webhook retry queued by Sarvam"), "HTTP 202 is presented as queued rather than delivered");
-assert(readinessPage.includes("Delivery is still unverified until INSUREIT observes the callback"), "voice admin page does not overstate asynchronous retry success");
-assert(readinessPage.includes("This does not place another phone call"), "webhook recovery UI states the no-call boundary");
-assert(readinessPage.includes('name="provider_attempt_id"'), "webhook recovery requires an explicit provider attempt identifier");
-assert(readinessPage.includes("Phone hashes, phone numbers and interaction IDs are not accepted as substitutes"), "webhook recovery UI rejects ambiguous provider identifiers");
-assert(readinessPage.includes("provider_attempt_id,submission_status"), "voice admin page loads the authoritative stored provider attempt id");
-assert(readinessPage.includes('type="hidden" name="provider_attempt_id" value={attempt.provider_attempt_id}'), "completed-attempt retry action posts the exact stored provider attempt id");
-assert(readinessPage.includes('attempt.submission_status === "completed"'), "webhook retry button is limited to completed attempts");
+assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice production control center requires exact IT Super User role");
+assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice production control center requires critical system access");
+assert(readinessPage.includes("Production control center for AI renewal calling"), "voice page is production-oriented rather than experimental");
+assert(readinessPage.includes("Production control"), "voice page exposes compact production controls");
+assert(readinessPage.includes("Access & policy"), "voice page exposes compact access and policy status");
+assert(readinessPage.includes("Partner actions"), "voice page shows Partner action authority state");
+assert(readinessPage.includes('value="Disabled"'), "Partner AI actions are visibly disabled in production control");
+assert(readinessPage.includes("Calling queue"), "voice page exposes the IT-controlled production calling queue");
+assert(readinessPage.includes('action="/api/system/voice-integration/dispatch"'), "eligible queue rows can be dispatched only from the IT system route");
+assert(readinessPage.includes("Pause Campaign"), "voice admin page can pause an active configured campaign");
+assert(readinessPage.includes("Resume Campaign"), "voice admin page can resume a paused configured campaign");
+assert(readinessPage.includes("Recovery"), "voice admin page exposes compact recovery access");
+assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page retains stale-attempt monitoring");
+assert(readinessPage.includes('name="provider_attempt_id"'), "completed-attempt recovery posts the stored provider attempt identifier");
+assert(readinessPage.includes('attempt.submission_status === "completed"'), "webhook retry remains limited to completed attempts");
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
 

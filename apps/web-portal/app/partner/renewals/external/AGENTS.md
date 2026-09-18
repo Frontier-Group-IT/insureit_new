@@ -29,3 +29,7 @@ Partner AI calling availability must come from the server-side production dispat
 ## Production queue preview
 
 IT Super User may use the read-only production queue preview to inspect initial-outreach eligibility, but this must not be confused with enabled bulk calling. The current preview rules and hold reasons are documented in `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`.
+
+## AI voice authority
+
+Current production rule: Partner users are status-only for AI voice calling. Do not render `Call with AI`, do not expose provider lifecycle controls, and do not allow the legacy Partner voice-call endpoint to reach Sarvam. IT Super User owns all AI calling actions until a later explicitly approved Partner self-service phase. See `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`.
