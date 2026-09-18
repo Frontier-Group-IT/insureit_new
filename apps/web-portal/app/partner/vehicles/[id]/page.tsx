@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { StandardActivityStatusCard } from "@/components/standard-activity-status-card";
 import { getPartnerWebVehicleDetail } from "@/lib/partner-vehicles";
 
 export const dynamic = "force-dynamic";
@@ -217,28 +218,22 @@ export default async function PartnerVehicleDetailPage({
           </div>
         </StepSection>
 
-        <details className="group overflow-hidden rounded-[15px] border border-[#D7E0ED] bg-white">
-          <summary className="flex min-h-[48px] cursor-pointer list-none items-center justify-between px-5 text-[11px] font-semibold text-[#1F3B5F] [&::-webkit-details-marker]:hidden">
-            <span>Activity Status</span>
-            <ChevronDown className="h-4 w-4 rounded-full border border-[#D7E0ED] p-0.5 text-[#55708E] transition group-open:rotate-180" />
-          </summary>
-          <div className="grid border-t border-[#E1E7EF] bg-[#FAFCFF] md:grid-cols-3">
-            <div className="border-b border-[#E1E7EF] px-5 py-4 md:border-b-0 md:border-r">
-              <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#8493A7]">Policies</p>
-              <p className="mt-1 text-[18px] font-extrabold text-[#173F70]">{data.activity.policies}</p>
-            </div>
-            <div className="border-b border-[#E1E7EF] px-5 py-4 md:border-b-0 md:border-r">
-              <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#8493A7]">Claims</p>
-              <p className="mt-1 text-[18px] font-extrabold text-[#173F70]">{data.activity.claims}</p>
-            </div>
-            <div className="px-5 py-4">
-              <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#8493A7]">Registration</p>
-              <p className="mt-1 text-[12px] font-bold text-[#173F70]">
-                {registrationPending ? "Pending" : "Registered"}
-              </p>
-            </div>
-          </div>
-        </details>
+        <StandardActivityStatusCard
+          items={[
+            {
+              id: "vehicle-registration",
+              title: "Vehicle registration",
+              meta: registrationPending ? "Registration pending" : "Registered",
+              at: vehicle.registration_date,
+            },
+            {
+              id: "vehicle-linked-business",
+              title: "Linked business activity",
+              meta: `${data.activity.policies} policies · ${data.activity.claims} claims`,
+              at: null,
+            },
+          ]}
+        />
       </div>
     </PartnerPortalShell>
   );
