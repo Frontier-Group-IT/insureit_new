@@ -216,3 +216,23 @@ Before re-enabling any Partner-triggered AI calling, require a separate approved
 - DNC/terminal safeguards
 - duplicate suppression
 - operational support/recovery
+
+
+## IT-managed calling window editor — 2026-09-18
+
+A follow-up production-control slice adds an **Edit** action directly inside the compact **Window** card under Access & Policy.
+
+- exact `it_super_user` + `manage_system=approve` remains required;
+- Edit switches the Window card into compact start/end time inputs;
+- Save persists the production calling window without changing provider credentials or campaign state;
+- time zone remains `Asia/Kolkata`;
+- start and end must be valid `HH:MM` values and cannot be identical;
+- overnight ranges remain supported by the existing calling-window evaluator;
+- values are stored in `public.sarvam_voice_operational_settings`, service-role-only with no direct `anon`/`authenticated` access;
+- environment values remain fallback if the settings row is unavailable;
+- IT dispatch re-reads the persisted window immediately before local attempt/provider submission.
+
+Migration: `supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql`.
+Schema workflow: `.github/workflows/apply-sarvam-calling-window-settings.yml`.
+
+Evidence state: **IMPLEMENTED on `feat/voice-calling-window-editor`; schema application, merge, deployment and live runtime verification pending.**
