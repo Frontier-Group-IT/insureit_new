@@ -78,16 +78,19 @@ type Policy = {
   customers: { contact_name?: string | null; company_name?: string | null } | Array<{ contact_name?: string | null; company_name?: string | null }> | null;
   vehicles: { vehicle_no?: string | null } | Array<{ vehicle_no?: string | null }> | null;
   insurance_companies: { name?: string | null } | Array<{ name?: string | null }> | null;
+  policy_premium_details: PremiumSnapshotRow | PremiumSnapshotRow[] | null;
+  policy_payin_details: PayinSnapshotRow | PayinSnapshotRow[] | null;
+  policy_intermediary_payouts: PayoutSnapshotRow[] | null;
+  accounts_invoice_lines: InvoiceLine[] | null;
+  partner_payables: PartnerPayableNested[] | null;
 };
 
 type InvoiceLine = {
-  policy_id: string | null;
   invoice_line_amount: number | string | null;
   accounts_invoices: { invoice_no?: string | null; invoice_date?: string | null; status?: string | null } | Array<{ invoice_no?: string | null; invoice_date?: string | null; status?: string | null }> | null;
 };
 
 type PayinSnapshotRow = {
-  policy_id: string;
   projected_od_percent: number | string | null;
   projected_od_amount: number | string | null;
   projected_tp_percent: number | string | null;
@@ -98,20 +101,52 @@ type PayinSnapshotRow = {
 };
 
 type PremiumSnapshotRow = {
-  policy_id: string;
   od_premium: number | string | null;
   tp_premium: number | string | null;
   cpa_amount: number | string | null;
   net_premium: number | string | null;
 };
 
+type PayoutSnapshotRow = {
+  id: string;
+  od_payout_percent: number | string | null;
+  tp_payout_percent: number | string | null;
+  gross_payout: number | string | null;
+  retention_amount: number | string | null;
+};
+
 type PaymentAllocation = {
-  payable_id: string;
   allocated_amount: number | string | null;
   partner_payments: { payment_date?: string | null; payment_reference?: string | null } | Array<{ payment_date?: string | null; payment_reference?: string | null }> | null;
 };
 
-const POLICY_SELECT = "id,customer_id,insurance_company_id,policy_no,issuance_date,start_date,end_date,created_at,intermediary_type,intermediary_code,lead_source,rm_name,customers(contact_name,company_name),vehicles(vehicle_no),insurance_companies(name)";
+type PartnerPayableNested = {
+  id: string;
+  partner_payment_allocations: PaymentAllocation[] | null;
+};
+
+const POLICY_SELECT = [
+  "id",
+  "customer_id",
+  "insurance_company_id",
+  "policy_no",
+  "issuance_date",
+  "start_date",
+  "end_date",
+  "created_at",
+  "intermediary_type",
+  "intermediary_code",
+  "lead_source",
+  "rm_name",
+  "customers(contact_name,company_name)",
+  "vehicles(vehicle_no)",
+  "insurance_companies(name)",
+  "policy_premium_details(od_premium,tp_premium,cpa_amount,net_premium)",
+  "policy_payin_details(projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,total_projected_payin,tds_amount,payin_after_tds)",
+  "policy_intermediary_payouts(id,od_payout_percent,tp_payout_percent,gross_payout,retention_amount)",
+  "accounts_invoice_lines(invoice_line_amount,accounts_invoices(invoice_no,invoice_date,status))",
+  "partner_payables(id,partner_payment_allocations(allocated_amount,partner_payments(payment_date,payment_reference)))",
+].join(",");
 
 export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filters: AccountsDashboardFilters): Promise<AccountsDashboardSnapshot> {
   const db = createSupabaseAdminClient();
@@ -151,7 +186,7 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     };
   }
 
-  const filteredPolicies = (policyResult.data ?? []) as Policy[];
+  const filteredPolicies = (policyResult.data ?? []) as unknown as Policy[];
   const insurerMap = new Map<string, string>();
   for (const policy of (insurerOptionsResult.data ?? []) as Array<{ insurance_company_id: string | null; insurance_companies: Policy["insurance_companies"] }>) {
     if (!policy.insurance_company_id) continue;
@@ -212,7 +247,7 @@ export async function loadBusinessMisRecords(profile: ViewerProfile, filters: Ac
   const { data: policyData, error: policyError } = await policyQuery;
   if (policyError) throw new Error("Unable to load Business MIS data.");
 
-  const policies = (policyData ?? []) as Policy[];
+  const policies = (policyData ?? []) as unknown as Policy[];
   return (await buildBusinessMisSnapshot(policies)).records;
 }
 
@@ -231,7 +266,7 @@ export async function loadBusinessMisRecordsByPolicyIds(profile: ViewerProfile, 
   }));
   const firstError = policyResults.find((result) => result.error)?.error;
   if (firstError) throw new Error(firstError.message || "Unable to load Business MIS data.");
-  const policyMap = new Map(policyResults.flatMap((result) => (result.data ?? []) as Policy[]).map((policy) => [policy.id, policy]));
+  const policyMap = new Map(policyResults.flatMap((result) => (result.data ?? []) as unknown as Policy[]).map((policy) => [policy.id, policy]));
   const policies = uniqueIds.map((id) => policyMap.get(id)).filter((policy): policy is Policy => Boolean(policy));
   return (await buildBusinessMisSnapshot(policies)).records;
 }
@@ -244,66 +279,15 @@ async function buildBusinessMisSnapshot(policies: Policy[]): Promise<{
   projectedRetention: number;
 }> {
   if (!policies.length) return { records: [], netPremium: 0, projectedNetPayin: 0, projectedNetPayout: 0, projectedRetention: 0 };
-  const db = createSupabaseAdminClient();
-  const policyIds = policies.map((policy) => policy.id);
-  const batches = chunk(policyIds, 120);
-
-  const [premiumResults, payinResults, payoutResults, invoiceLineResults, payableResults] = await Promise.all([
-    Promise.all(batches.map((ids) => db.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount,net_premium").in("policy_id", ids))),
-    Promise.all(batches.map((ids) => db.from("policy_payin_details").select("policy_id,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", ids))),
-    Promise.all(batches.map((ids) => db.from("policy_intermediary_payouts").select("id,policy_id,od_payout_percent,tp_payout_percent,gross_payout,retention_amount").in("policy_id", ids))),
-    Promise.all(batches.map((ids) => db.from("accounts_invoice_lines").select("policy_id,invoice_line_amount,accounts_invoices(invoice_no,invoice_date,status)").in("policy_id", ids))),
-    Promise.all(batches.map((ids) => db.from("partner_payables").select("id,policy_id").in("policy_id", ids))),
-  ]);
-
-  if ([premiumResults, payinResults, payoutResults, invoiceLineResults, payableResults].some((group) => group.some((result) => result.error))) {
-    throw new Error("Unable to load Business MIS data.");
-  }
-
-  const premiums = premiumResults.flatMap((result) => (result.data ?? []) as PremiumSnapshotRow[]);
-  const payins = payinResults.flatMap((result) => (result.data ?? []) as PayinSnapshotRow[]);
-  const payouts = payoutResults.flatMap((result) => result.data ?? []);
-  const invoiceLines = invoiceLineResults.flatMap((result) => (result.data ?? []) as InvoiceLine[]);
-  const payables = payableResults.flatMap((result) => result.data ?? []);
-  const payableIds = payables.map((row) => row.id);
-  const paymentAllocationResults = await Promise.all(
-    chunk(payableIds, 120).map((ids) =>
-      db
-        .from("partner_payment_allocations")
-        .select("payable_id,allocated_amount,partner_payments(payment_date,payment_reference)")
-        .in("payable_id", ids),
-    ),
-  );
-  if (paymentAllocationResults.some((result) => result.error)) throw new Error("Unable to load Business MIS data.");
-  const paymentAllocations = paymentAllocationResults.flatMap((result) => (result.data ?? []) as PaymentAllocation[]);
-
-  const premiumMap = new Map(premiums.map((row) => [row.policy_id, row]));
-  const payinMap = new Map(payins.map((row) => [row.policy_id, row]));
-  const payoutMap = new Map<string, Array<Record<string, unknown>>>();
-  for (const row of payouts) pushMap(payoutMap, String(row.policy_id), row as Record<string, unknown>);
-
-  const invoiceMap = new Map<string, InvoiceLine[]>();
-  for (const row of invoiceLines) {
-    if (!row.policy_id) continue;
-    const invoice = one(row.accounts_invoices);
-    if (invoice?.status !== "Cancelled") pushMap(invoiceMap, row.policy_id, row);
-  }
-
-  const payablePolicy = new Map(payables.map((row) => [row.id, row.policy_id]));
-  const paymentMap = new Map<string, PaymentAllocation[]>();
-  for (const allocation of paymentAllocations) {
-    const policyId = payablePolicy.get(allocation.payable_id);
-    if (policyId) pushMap(paymentMap, policyId, allocation);
-  }
 
   const records = [...policies]
     .sort((a, b) => businessDate(a).localeCompare(businessDate(b)) || String(a.policy_no ?? "").localeCompare(String(b.policy_no ?? "")))
     .map((policy) => {
-      const premium = premiumMap.get(policy.id);
-      const payin = payinMap.get(policy.id);
-      const policyPayouts = payoutMap.get(policy.id) ?? [];
-      const policyInvoices = invoiceMap.get(policy.id) ?? [];
-      const policyPayments = paymentMap.get(policy.id) ?? [];
+      const premium = one(policy.policy_premium_details);
+      const payin = one(policy.policy_payin_details);
+      const policyPayouts = list(policy.policy_intermediary_payouts);
+      const policyInvoices = list(policy.accounts_invoice_lines).filter((line) => one(line.accounts_invoices)?.status !== "Cancelled");
+      const policyPayments = list(policy.partner_payables).flatMap((payable) => list(payable.partner_payment_allocations));
       const issued = businessDate(policy);
       const customer = one(policy.customers);
       const vehicle = one(policy.vehicles);
@@ -359,10 +343,10 @@ async function buildBusinessMisSnapshot(policies: Policy[]): Promise<{
 
   return {
     records,
-    netPremium: sum(premiums.map((row) => row.net_premium)),
-    projectedNetPayin: sum(payins.map((row) => row.payin_after_tds)),
-    projectedNetPayout: sum(payouts.map((row) => row.gross_payout)),
-    projectedRetention: sum(payouts.map((row) => row.retention_amount)),
+    netPremium: sum(policies.map((policy) => one(policy.policy_premium_details)?.net_premium)),
+    projectedNetPayin: sum(policies.map((policy) => one(policy.policy_payin_details)?.payin_after_tds)),
+    projectedNetPayout: sum(policies.flatMap((policy) => list(policy.policy_intermediary_payouts).map((row) => row.gross_payout))),
+    projectedRetention: sum(policies.flatMap((policy) => list(policy.policy_intermediary_payouts).map((row) => row.retention_amount))),
   };
 }
 
@@ -373,6 +357,7 @@ export function businessMisPeriodLabel(from: string, to: string) {
 }
 
 function one<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }
+function list<T>(value: T[] | null | undefined): T[] { return Array.isArray(value) ? value : []; }
 function pushMap<T>(map: Map<string, T[]>, key: string, value: T) { const list = map.get(key) ?? []; list.push(value); map.set(key, list); }
 function unique(values: Array<string | null | undefined>) { return [...new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean))]; }
 function chunk<T>(values: T[], size: number) { const result: T[][] = []; for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size)); return result; }
