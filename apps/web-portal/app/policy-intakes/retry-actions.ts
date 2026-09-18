@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { extractPolicyIntakeDocumentTrusted } from "@/lib/policy-intake-ocr-service";
 import { POLICY_INTAKE_OCR_STALE_MS, isPolicyIntakeOcrRetryable } from "@/lib/policy-intake-ocr-retry";
-import { requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
+import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { requirePolicyIntakeReviewer, requirePolicyIntakeViewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type RetryableIntake = {
@@ -23,17 +24,24 @@ export type RetryPolicyIntakeOcrResult =
   | { ok: false; error: string };
 
 export async function getPolicyIntakeOcrRetryState(id: string) {
-  await requirePolicyIntakeReviewer();
+  const profile = await requirePolicyIntakeViewer();
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("policy_intake_requests")
-    .select("status,ocr_status,created_at")
+    .select("status,ocr_status,created_at,submitted_by_profile_id")
     .eq("id", id)
-    .maybeSingle<{ status: string; ocr_status: string; created_at: string }>();
+    .maybeSingle<{ status: string; ocr_status: string; created_at: string; submitted_by_profile_id: string | null }>();
   if (error || !data) return { ok: false as const, retryable: false, error: "Retry status is unavailable." };
+
+  const canReview = await hasEffectiveCapability(profile, "review_policy_intakes", "edit");
+  const isOwner = data.submitted_by_profile_id === profile.id;
+  if (!canReview && !isOwner) {
+    return { ok: false as const, retryable: false, error: "You do not have access to this intake." };
+  }
+
   return {
     ok: true as const,
-    retryable: isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
+    retryable: canReview && isPolicyIntakeOcrRetryable({ status: data.status, ocrStatus: data.ocr_status, createdAt: data.created_at }),
     ocrStatus: data.ocr_status,
   };
 }
