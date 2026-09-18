@@ -54,6 +54,11 @@ assert.match(accountsUpload, /workbook\.SheetNames\.length !== 1 \|\| workbook\.
 assert.match(accountsUpload, /Business MIS rows were added or removed/, "Upload validation must reject added or removed Business MIS rows.");
 assert.match(accountsUpload, /System-controlled Business MIS values were edited/, "Upload validation must reject edits to system-controlled MIS values.");
 assert.match(accountsUpload, /uploaded Difference will not be updated/, "Difference mismatches must warn that INSUREIT keeps the internally calculated value.");
+assert.match(accountsUpload, /Template validated successfully\. No new Pay-In or Pay-Out changes were detected\./, "An unchanged valid workbook must report successful validation instead of an error-like state.");
+assert.match(accountsUpload, /messageKind: "success"/, "Unchanged valid workbooks must be explicitly marked as successful validation.");
+assert.match(accountsWorkbook, /Enter values only in highlighted Accounts fields/, "Business MIS export must tell Accounts where data entry is allowed.");
+assert.match(accountsWorkbook, /editableFill/, "Business MIS export must visually highlight editable reconciliation fields.");
+assert.match(accountsWorkbook, /BUSINESS_MIS_EDITABLE_COLUMNS\.has\(c\)/, "Editable styling must be driven by the canonical Accounts editable-column set.");
 assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
 assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
 assert.doesNotMatch(accountsUpload, /\.from\([^\n]+\)\.(?:insert|update|delete)\(|\.rpc\(/, "Accounts workbook preview must remain read-only; cryptographic hash updates are allowed but database writes are not.");
