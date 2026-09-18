@@ -5,6 +5,7 @@ const dashboardPage = await readFile(new URL("../app/dashboard/page.tsx", import
 const dashboardData = await readFile(new URL("../lib/operations-dashboard.ts", import.meta.url), "utf8");
 const accountsDashboardData = await readFile(new URL("../lib/accounts-dashboard.ts", import.meta.url), "utf8");
 const accountsBusinessMis = await readFile(new URL("../lib/accounts-business-mis.ts", import.meta.url), "utf8");
+const accountsControls = await readFile(new URL("../app/accounts/accounts-controls.tsx", import.meta.url), "utf8");
 const accountsPage = await readFile(new URL("../app/accounts/page.tsx", import.meta.url), "utf8");
 const accountsWorkbook = await readFile(new URL("../app/accounts/business-mis-export/route.ts", import.meta.url), "utf8");
 const accountsUpload = await readFile(new URL("../app/accounts/reconciliation-upload-actions.ts", import.meta.url), "utf8");
@@ -26,6 +27,9 @@ assert.doesNotMatch(accountsPage, /loadAccountsDashboard\(/, "Accounts page must
 assert.doesNotMatch(accountsPage, /loadBusinessMisRows\(/, "Accounts page must not run a duplicate Business MIS data pipeline.");
 assert.match(accountsBusinessMis, /payin_after_tds/, "Shared Accounts snapshot must preserve projected net pay-in semantics.");
 assert.match(accountsBusinessMis, /Promise\.all\(\s*chunk\(payableIds, 120\)/s, "Accounts payment allocation reads should run in parallel by batch.");
+assert.match(accountsBusinessMis, /\.or\(businessDateFilter\(filters\.fromDate, filters\.toDate\)\)/, "Accounts policy filtering must be pushed into the database query.");
+assert.match(accountsBusinessMis, /if \(filters\.insurerId\) filteredPolicyQuery = filteredPolicyQuery\.eq\("insurance_company_id", filters\.insurerId\)/, "Accounts insurer filtering must be pushed into the database query.");
+assert.match(accountsControls, /router\.prefetch\(accountsHref\(standardPeriod/, "Accounts controls should prefetch the alternate standard period.");
 
 assert.doesNotMatch(accountsPage, /href="\/reconciliation"/, "New Accounts workflow must not redirect to legacy reconciliation.");
 assert.doesNotMatch(accountsPage, /href="\/accounts\/billing"/, "New Accounts workflow must not redirect to legacy billing.");
