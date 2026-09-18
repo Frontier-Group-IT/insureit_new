@@ -290,15 +290,19 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
                 href="/partner/schemes"
                 prefetch={false}
                 data-partner-active-scheme="true"
-                className="group inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[9.5px] font-semibold text-[#405A7B] transition hover:bg-[#EEF4FC] hover:text-[#1F5EC7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20"
+                className="group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-[#F2BDC4] bg-gradient-to-r from-[#FFF7F8] via-[#FFECEF] to-[#FFF7F8] px-3 py-2 text-[9.5px] font-semibold text-[#7A4050] shadow-[0_6px_18px_rgba(190,70,90,0.14)] transition hover:border-[#EFAAB4] hover:shadow-[0_8px_22px_rgba(190,70,90,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E68A98]/30"
               >
-                <BadgePercent className="h-3.5 w-3.5 shrink-0 text-[#2E6CD5]" aria-hidden="true" />
-                <span className="max-w-[220px] truncate font-extrabold text-[#203A61]">{activeScheme.name}</span>
-                <span className="text-[#9AA7B8]">·</span>
-                <span>Valid till {schemeDeadline.date}</span>
-                <span className="text-[#9AA7B8]">·</span>
-                <span>{schemeDeadline.time}</span>
-                <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#2E6CD5] transition group-hover:translate-x-0.5" aria-hidden="true" />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-60 motion-safe:animate-pulse"
+                />
+                <BadgePercent className="relative h-3.5 w-3.5 shrink-0 text-[#D85C70] motion-safe:animate-pulse" aria-hidden="true" />
+                <span className="relative max-w-[220px] truncate font-extrabold text-[#7B3343]">{activeScheme.name}</span>
+                <span className="relative text-[#C58A94]">·</span>
+                <span className="relative">Valid till {schemeDeadline.date}</span>
+                <span className="relative text-[#C58A94]">·</span>
+                <span className="relative">{schemeDeadline.time}</span>
+                <ArrowRight className="relative h-3.5 w-3.5 shrink-0 text-[#D85C70] transition group-hover:translate-x-1 motion-safe:animate-pulse" aria-hidden="true" />
               </Link>
             ) : null}
             <span className="hidden whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
