@@ -3,6 +3,14 @@ import { redirect } from "next/navigation";
 import { Building2, CalendarRange, Download, HandCoins, Landmark, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { loadAccountsDashboard, type AccountsDashboardQuery } from "@/lib/accounts-dashboard";
+import {
+  BUSINESS_MIS_AMOUNT_COLUMNS,
+  BUSINESS_MIS_DATE_COLUMNS,
+  BUSINESS_MIS_HEADERS,
+  BUSINESS_MIS_PERCENT_COLUMNS,
+  loadBusinessMisRows,
+  type BusinessMisCell,
+} from "@/lib/accounts-business-mis";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { requireCapability } from "@/lib/master-data-server";
 import { ReconciliationTools } from "./reconciliation-tools";
@@ -19,6 +27,14 @@ export default async function AccountsPage({ searchParams }: Props) {
   const query = await searchParams;
   const data = await loadAccountsDashboard(profile, query);
   const { filters } = data;
+  let misRows: BusinessMisCell[][] = [];
+  let misLoadFailed = false;
+  try {
+    misRows = await loadBusinessMisRows(profile, filters);
+  } catch {
+    misLoadFailed = true;
+  }
+
   const exportParams = new URLSearchParams({ period: filters.period, from: filters.fromDate, to: filters.toDate });
   if (filters.insurerId) exportParams.set("insurer", filters.insurerId);
   const exportHref = `/accounts/business-mis-export?${exportParams.toString()}`;
@@ -33,68 +49,64 @@ export default async function AccountsPage({ searchParams }: Props) {
 
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><KpiCard icon={CalendarRange} label="Policies" value={integer(data.policyCount)} note="Policies in selected period" /><KpiCard icon={ReceiptIndianRupee} label="Net premium" value={currency(data.netPremium)} note="Premium excluding policy GST" /><KpiCard icon={WalletCards} label="Projected net pay-in" value={currency(data.projectedNetPayin)} note="Projected insurer pay-in after TDS" /><KpiCard icon={HandCoins} label="Projected net payout" value={currency(data.projectedNetPayout)} note={`${integer(data.payoutIntermediaryCount)} intermediaries included`} /><KpiCard icon={TrendingUp} label="Projected retention" value={currency(data.projectedRetention)} note="" /></section>
 
-    <section className="grid gap-3 xl:grid-cols-[minmax(330px,0.78fr)_minmax(720px,1.35fr)]">
-      <SummaryCard title="Insurer-wise Summary" count={data.insurerSummary.length}>
-        <div className="max-h-[360px] overflow-auto">
-          <table className="w-full min-w-[520px] border-separate border-spacing-0 text-left">
-            <thead className="sticky top-0 z-10 bg-[#f7f9fc]">
-              <tr>
-                <TableHead>Insurance Company</TableHead>
-                <TableHead numeric>Net Premium</TableHead>
-                <TableHead numeric>Projected Payin</TableHead>
-                <TableHead numeric>Received Payin</TableHead>
-              </tr>
-            </thead>
-            <tbody>
-              {data.insurerSummary.length ? data.insurerSummary.map((row) => <tr key={row.insurerId} className="group">
-                <TableCell><span className="font-semibold text-[#17365D]">{row.insuranceCompany}</span></TableCell>
-                <TableCell numeric>{currency(row.netPremium)}</TableCell>
-                <TableCell numeric>{currency(row.projectedPayin)}</TableCell>
-                <TableCell numeric emphasis>{currency(row.receivedPayin)}</TableCell>
-              </tr>) : <EmptyRow colSpan={4} label="No insurer summary is available for the selected filters." />}
-            </tbody>
-          </table>
-        </div>
-      </SummaryCard>
-
-      <SummaryCard title="Intermediary Payout Summary" count={data.intermediaryPayoutSummary.length}>
-        <div className="max-h-[360px] overflow-auto">
-          <table className="w-full min-w-[900px] border-separate border-spacing-0 text-left">
-            <thead className="sticky top-0 z-10 bg-[#f7f9fc]">
-              <tr>
-                <TableHead>Lead Source &amp; Intermediary Type &amp; Code</TableHead>
-                <TableHead>RM Name</TableHead>
-                <TableHead numeric>Net Premium</TableHead>
-                <TableHead numeric>Calculated Payout</TableHead>
-                <TableHead numeric>Released Payout</TableHead>
-                <TableHead numeric>Pending Payout</TableHead>
-              </tr>
-            </thead>
-            <tbody>
-              {data.intermediaryPayoutSummary.length ? data.intermediaryPayoutSummary.map((row) => <tr key={row.key} className="group">
-                <TableCell><div className="min-w-[190px]"><span className="block text-[#475467]">{row.leadSource}</span><span className="mt-0.5 block font-semibold text-[#17365D]">{row.intermediaryType} - {row.intermediaryCode}</span></div></TableCell>
-                <TableCell>{row.rmName}</TableCell>
-                <TableCell numeric>{currency(row.netPremium)}</TableCell>
-                <TableCell numeric>{currency(row.calculatedPayout)}</TableCell>
-                <TableCell numeric emphasis>{currency(row.releasedPayout)}</TableCell>
-                <TableCell numeric pending={row.pendingPayout > 0}>{currency(row.pendingPayout)}</TableCell>
-              </tr>) : <EmptyRow colSpan={6} label="No intermediary payout summary is available for the selected filters." />}
-            </tbody>
-          </table>
-        </div>
-      </SummaryCard>
-    </section>
+    <BusinessMisTable rows={misRows} loadFailed={misLoadFailed} />
 
     <ReconciliationTools period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} insurerId={filters.insurerId} />
   </div></AppShell>;
 }
 
+function BusinessMisTable({ rows, loadFailed }: { rows: BusinessMisCell[][]; loadFailed: boolean }) {
+  return <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dbe3ee] bg-white shadow-sm">
+    <div className="flex items-center justify-between gap-3 border-b border-[#e8edf4] px-4 py-3">
+      <div><h2 className="text-[13px] font-semibold text-[#17365D]">Business MIS</h2><p className="mt-0.5 text-[8px] font-medium text-[#8a96a7]">Detailed accounts register</p></div>
+      <span className="shrink-0 rounded-full border border-[#dce4ee] bg-[#f8fafc] px-2.5 py-1 text-[8px] font-bold tabular-nums text-[#667085]">{integer(rows.length)} rows</span>
+    </div>
+    {loadFailed ? <div className="px-4 py-10 text-center text-[9px] font-semibold text-[#b42318]">Business MIS data could not be refreshed.</div> :
+      <div className="max-h-[560px] overflow-auto">
+        <table className="w-max min-w-full border-separate border-spacing-0 text-left">
+          <thead className="sticky top-0 z-30">
+            <tr>{BUSINESS_MIS_HEADERS.map((header, index) => <th key={header} className={headerClass(index)}>{header}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.length ? rows.map((row, rowIndex) => <tr key={`${rowIndex}-${String(row[12] ?? "")}`} className="group hover:bg-[#f8fbff]">
+              {row.map((cell, columnIndex) => <td key={columnIndex} className={cellClass(columnIndex)}>{formatMisCell(cell, columnIndex)}</td>)}
+            </tr>) : <tr><td colSpan={BUSINESS_MIS_HEADERS.length} className="px-4 py-12 text-center text-[9px] font-medium text-[#98a2b3]">No Business MIS records are available for the selected filters.</td></tr>}
+          </tbody>
+        </table>
+      </div>}
+  </section>;
+}
+
+function headerClass(index: number) {
+  const groupTone = index <= 7 ? "bg-[#f4f6fa]" : index <= 14 ? "bg-[#edf4fb]" : index <= 24 ? "bg-[#eef8f6]" : "bg-[#fff6e9]";
+  const numeric = BUSINESS_MIS_AMOUNT_COLUMNS.has(index) || BUSINESS_MIS_PERCENT_COLUMNS.has(index) ? "text-right" : "text-left";
+  const sticky = index === 0 ? "sticky left-0 z-40 min-w-[120px]" : index === 1 ? "sticky left-[120px] z-40 min-w-[138px] shadow-[8px_0_12px_-12px_rgba(16,24,40,.45)]" : "";
+  return `${groupTone} ${numeric} ${sticky} whitespace-nowrap border-b border-r border-[#dfe6ef] px-3 py-2.5 text-[7.5px] font-black uppercase tracking-[.045em] text-[#526174]`;
+}
+
+function cellClass(index: number) {
+  const numeric = BUSINESS_MIS_AMOUNT_COLUMNS.has(index) || BUSINESS_MIS_PERCENT_COLUMNS.has(index);
+  const sticky = index === 0 ? "sticky left-0 z-10 min-w-[120px] bg-white group-hover:bg-[#f8fbff]" : index === 1 ? "sticky left-[120px] z-10 min-w-[138px] bg-white shadow-[8px_0_12px_-12px_rgba(16,24,40,.35)] group-hover:bg-[#f8fbff]" : "";
+  const width = index === 7 || index === 13 || index === 31 ? "min-w-[190px] max-w-[240px]" : index === 12 || index === 20 ? "min-w-[150px]" : index >= 8 && index <= 29 ? "min-w-[128px]" : "min-w-[132px]";
+  return `${sticky} ${width} border-b border-r border-[#edf1f5] px-3 py-2.5 text-[8.5px] leading-4 text-[#475467] ${numeric ? "whitespace-nowrap text-right font-semibold tabular-nums text-[#243b5a]" : ""}`;
+}
+
+function formatMisCell(value: BusinessMisCell, index: number) {
+  if (value === "" || value === null || value === undefined) return "—";
+  if (BUSINESS_MIS_DATE_COLUMNS.has(index) && value instanceof Date) {
+    return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(value);
+  }
+  if (BUSINESS_MIS_AMOUNT_COLUMNS.has(index) && typeof value === "number") {
+    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value);
+  }
+  if (BUSINESS_MIS_PERCENT_COLUMNS.has(index) && typeof value === "number") {
+    return new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
+  }
+  return String(value);
+}
+
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block"><span className="mb-1 block text-[8px] font-black uppercase tracking-[.08em] text-[#7c899b]">{label}</span>{children}</label>; }
 function KpiCard({ icon: Icon, label, value, note }: { icon: typeof Building2; label: string; value: string; note: string }) { return <article className="rounded-2xl border border-[#dbe3ee] bg-white px-4 py-3.5 shadow-sm"><div className="flex items-center justify-between gap-3"><p className="text-[8px] font-black uppercase tracking-[.08em] text-[#7c899b]">{label}</p><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#edf6f5] text-[#0f766e]"><Icon className="h-3.5 w-3.5" /></span></div><p className="mt-2.5 truncate text-[20px] font-semibold tabular-nums text-[#14213c]" title={value}>{value}</p>{note ? <p className="mt-1 min-h-[14px] text-[8.5px] font-medium text-[#8490a1]">{note}</p> : null}</article>; }
-function SummaryCard({ title, count, children }: { title: string; count: number; children: React.ReactNode }) { return <section className="min-w-0 overflow-hidden rounded-2xl border border-[#dbe3ee] bg-white shadow-sm"><div className="flex items-center justify-between gap-3 border-b border-[#edf1f5] px-4 py-3"><h2 className="text-[12px] font-semibold text-[#17365D]">{title}</h2><span className="shrink-0 rounded-full border border-[#dce4ee] bg-[#f8fafc] px-2.5 py-1 text-[8px] font-bold tabular-nums text-[#667085]">{integer(count)} rows</span></div>{children}</section>; }
-function TableHead({ children, numeric = false }: { children: React.ReactNode; numeric?: boolean }) { return <th className={`border-b border-[#dfe6ef] px-3 py-2.5 text-[7.5px] font-black uppercase tracking-[.055em] text-[#667085] ${numeric ? "text-right" : "text-left"}`}>{children}</th>; }
-function TableCell({ children, numeric = false, emphasis = false, pending = false }: { children: React.ReactNode; numeric?: boolean; emphasis?: boolean; pending?: boolean }) { return <td className={`border-b border-[#edf1f5] px-3 py-2.5 text-[9px] leading-4 group-last:border-b-0 ${numeric ? "whitespace-nowrap text-right font-semibold tabular-nums" : "text-[#475467]"} ${emphasis ? "text-[#0f766e]" : numeric ? "text-[#243b5a]" : ""} ${pending ? "text-[#9a5b12]" : ""}`}>{children}</td>; }
-function EmptyRow({ colSpan, label }: { colSpan: number; label: string }) { return <tr><td colSpan={colSpan} className="px-4 py-10 text-center text-[9px] font-medium text-[#98a2b3]">{label}</td></tr>; }
 function periodHref(period: (typeof PERIODS)[number]["value"], insurerId: string | null) { const params = new URLSearchParams(); params.set("period", period); if (insurerId) params.set("insurer", insurerId); return `/accounts?${params.toString()}`; }
 function currency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
