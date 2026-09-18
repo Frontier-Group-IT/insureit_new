@@ -76,3 +76,45 @@ export async function listPartnerWebVehicles({
     },
   };
 }
+
+export type PartnerVehicleDetail = {
+  vehicle: {
+    vehicle_id: string;
+    customer_id: string;
+    vehicle_no: string | null;
+    vehicle_type: string | null;
+    make: string | null;
+    model: string | null;
+    year: number | null;
+    registration_status: string | null;
+    registration_date: string | null;
+    chassis_no: string | null;
+    engine_no: string | null;
+    fuel_type: string | null;
+    gvw_kg: number | string | null;
+    fitness_expiry_date: string | null;
+    puc_expiry_date: string | null;
+    road_tax_expiry_date: string | null;
+    national_permit_expiry_date: string | null;
+    local_permit_expiry_date: string | null;
+  };
+  customer: {
+    customer_id: string;
+    customer_name: string;
+  };
+  activity: {
+    policies: number;
+    claims: number;
+  };
+};
+
+export async function getPartnerWebVehicleDetail(vehicleId: string): Promise<PartnerVehicleDetail> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_vehicle_detail", {
+    p_vehicle_id: vehicleId,
+  });
+
+  if (error || !data) throw new Error(error?.message || "Vehicle detail is unavailable.");
+  return data as PartnerVehicleDetail;
+}

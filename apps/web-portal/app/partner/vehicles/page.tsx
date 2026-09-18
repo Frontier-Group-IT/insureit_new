@@ -76,7 +76,7 @@ export default async function PartnerVehiclesPage({
                 const pending = isRegistrationPending(vehicle.registration_status);
                 const vehicleLabel = pending ? "Registration pending" : vehicle.vehicle_no || "—";
                 const makeModel = [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "—";
-                const detailHref = `/partner/vehicles/${encodeURIComponent(vehicle.vehicle_id)}?customer=${encodeURIComponent(vehicle.customer_id)}`;
+                const detailHref = `/partner/vehicles/${encodeURIComponent(vehicle.vehicle_id)}`;
                 return (
                   <tr key={vehicle.vehicle_id} className="text-[11px] text-[#273B56] transition hover:bg-[#FBFCFE]">
                     <td className="p-0"><Link href={detailHref} prefetch={false} className="group block w-full px-4 py-3.5 sm:px-6"><div className="font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A] group-hover:text-[#1458A6] group-hover:underline">{vehicleLabel}</div><div className="mt-1 text-[9px] font-medium uppercase text-[#8190A5]">{vehicle.vehicle_type || "—"}</div></Link></td>
