@@ -229,21 +229,13 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                 ) : null
               ) : <Link href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} aria-label={`Continue ${kind} onboarding`} title={`Continue ${kind} onboarding`} className={`${compactLightActionClassName} h-9 w-9 px-0`}><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-white/75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></Link>}
               {isPartner && activePartner && intermediary?.id ? (
-                <div className="group relative">
-                  <Link
-                    href={`/intermediaries/applications/${id}/associate-accounts`}
-                    aria-label="Associate account"
-                    className={`${compactLightActionClassName} h-9 w-9 px-0`}
-                  >
-                    <Icon name="associate" className="h-[18px] w-[18px] text-white/90" />
-                  </Link>
-                  <span
-                    role="tooltip"
-                    className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0F2747] px-2.5 py-1.5 text-[9px] font-semibold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
-                  >
-                    Associate Account
-                  </span>
-                </div>
+                <Link
+                  href={`/intermediaries/applications/${id}/associate-accounts`}
+                  className={`${compactLightActionClassName} h-9 gap-2 px-3 text-[9.5px] font-semibold`}
+                >
+                  <Icon name="associate" className="h-[18px] w-[18px] text-white/90" />
+                  <span>Associate Account</span>
+                </Link>
               ) : null}
               {isPartner ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} aria-label="Edit details" title="Edit details" className={`${compactLightActionClassName} h-9 w-9 px-0`}><PencilIcon /></Link> : null}
             </div>
