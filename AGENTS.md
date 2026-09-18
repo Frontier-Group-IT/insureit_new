@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Partner Web registration existing documents + activation date sync:** branch `fix/partner-registration-existing-documents-activation`; Partner Registration now reads existing onboarding documents when finalized intermediary documents are absent, prefers finalized records when both exist, and displays the existing intermediary activation timestamp. Lifecycle document completion now follows the documents actually loaded. **IMPLEMENTED**; no schema/data mutation, PR/merge/deployment pending.
+
 - **2026-09-18 — Partner Web External Renewal Opportunity redesign:** branch `ui/partner-external-renewal-opportunity-redesign`; compact summary strip, Opportunity Snapshot, Recent Activity & Next Steps, card-based CRM interaction form and AI Outreach layout are **IMPLEMENTED**. Existing interaction, AI-call and Policy Intake server contracts are preserved; no schema change, PR, merge or deployment yet.
 
 - **2026-09-16 — Accounts reconciliation workflow + Excel preview:** PR #1933; workflow stages plus filtered reconciliation template download and preview-only upload validation are **IMPLEMENTED** on the feature branch. No financial writes or schema changes. See `docs/ACCOUNTS_RECONCILIATION_WORKFLOW_STEP1_2026_09_16.md`.
