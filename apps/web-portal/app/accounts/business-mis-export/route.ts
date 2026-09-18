@@ -44,6 +44,7 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
   const allHeaders = [...BUSINESS_MIS_HEADERS, ...BUSINESS_MIS_HIDDEN_HEADERS];
   const summary = Array(allHeaders.length).fill("");
   summary[0] = businessMisPeriodLabel(fromDate, toDate);
+  summary[1] = "Enter values only in highlighted Accounts fields";
   const exportRows = records.map((record) => [...record.row, record.policyId, record.payoutId]);
   const worksheet = XLSX.utils.aoa_to_sheet([summary, allHeaders, ...exportRows], { cellDates: true });
   const lastRow = Math.max(3, records.length + 2);
@@ -58,12 +59,19 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
   const headerStyle = { font: { name: "Aptos Display", sz: 11, bold: true }, fill: { patternType: "solid", fgColor: { rgb: grey } }, alignment: { horizontal: "center", vertical: "center", wrapText: true }, border: { top: border, bottom: border, left: border, right: border } };
   const summaryStyle = { font: { name: "Aptos Display", sz: 11, bold: false }, fill: { patternType: "solid", fgColor: { rgb: grey } }, alignment: { horizontal: "center", vertical: "center" }, border: { top: border, bottom: border, left: border, right: border } };
   const bodyStyle = { font: { name: "Aptos", sz: 11 }, alignment: { horizontal: "center", vertical: "center" }, border: { top: border, bottom: border, left: border, right: border } };
+  const editableFill = { patternType: "solid", fgColor: { rgb: "FFF4CC" } };
+  const editableHeaderStyle = { ...headerStyle, fill: editableFill, font: { name: "Aptos Display", sz: 11, bold: true, color: { rgb: "7A4E00" } } };
+  const editableBodyStyle = { ...bodyStyle, fill: editableFill };
 
   for (let r = 0; r < lastRow; r++) {
     for (let c = 0; c < BUSINESS_MIS_HEADERS.length; c++) {
       const address = XLSX.utils.encode_cell({ r, c });
       const cell = worksheet[address] ?? (worksheet[address] = { t: "s", v: "" });
-      cell.s = r === 0 ? summaryStyle : r === 1 ? headerStyle : bodyStyle;
+      cell.s = r === 0
+        ? summaryStyle
+        : r === 1
+          ? BUSINESS_MIS_EDITABLE_COLUMNS.has(c) ? editableHeaderStyle : headerStyle
+          : BUSINESS_MIS_EDITABLE_COLUMNS.has(c) ? editableBodyStyle : bodyStyle;
       if (r >= 2 && BUSINESS_MIS_AMOUNT_COLUMNS.has(c)) cell.z = "#,##0.00";
       if (r >= 2 && BUSINESS_MIS_PERCENT_COLUMNS.has(c)) cell.z = "0.00";
       if (r >= 2 && BUSINESS_MIS_DATE_COLUMNS.has(c) && cell.t === "d") cell.z = "d/m/yyyy";
@@ -72,6 +80,7 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
   }
 
   worksheet["A1"].s = { ...summaryStyle, alignment: { horizontal: "left", vertical: "center" }, font: { name: "Aptos Display", sz: 11, bold: true } };
+  worksheet["B1"].s = { ...summaryStyle, alignment: { horizontal: "left", vertical: "center" }, font: { name: "Aptos", sz: 10, italic: true, color: { rgb: "7A4E00" } } };
   worksheet["!cols"] = [
     { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 28 },
     { wch: 15 }, { wch: 18 }, { wch: 12 }, { wch: 16 }, { wch: 25 }, { wch: 30 }, { wch: 14 }, { wch: 14 },
