@@ -98,7 +98,7 @@ export default function VehicleDetailScreen() {
         </View>
         <View style={styles.policySummary}>
           <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
-          <MiniStat label="Policy" value={latestPolicy?.policy_no ?? 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
+          <MiniStat label="Policy" value={latestPolicy?.policy_no ? (maskAlternateCharacters(latestPolicy.policy_no) ?? 'Not added') : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
         <View style={styles.protectionRow}>
@@ -160,8 +160,8 @@ export default function VehicleDetailScreen() {
           <DetailCell icon="calendar-blank-outline" label="Manufacturing year" value={vehicle.year ? String(vehicle.year) : null} />
           <DetailCell icon="weight-kilogram" label="GVW" value={vehicle.gvw_kg ? `${vehicle.gvw_kg.toLocaleString('en-IN')} kg` : isPrivateVehicle(vehicle) ? 'N/A' : null} />
           <DetailCell icon="calendar-check-outline" label="Registration date" value={formatDate(vehicle.registration_date)} />
-          <DetailCell icon="barcode" label="Chassis no." value={maskSensitiveIdentifier(vehicle.chassis_no)} />
-          <DetailCell icon="engine-outline" label="Engine no." value={maskSensitiveIdentifier(vehicle.engine_no)} />
+          <DetailCell icon="barcode" label="Chassis no." value={maskAlternateCharacters(vehicle.chassis_no)} />
+          <DetailCell icon="engine-outline" label="Engine no." value={maskAlternateCharacters(vehicle.engine_no)} />
         </View>
         <Text style={styles.detailGroupLabel}>Compliance and permits</Text>
         <View style={styles.detailGrid}>
@@ -191,11 +191,10 @@ function DetailCell({ icon, label, value, status = 'ok' }: { icon: keyof typeof 
   return <View style={styles.detailCell}><MaterialCommunityIcons name={icon} size={15} color={showDateDot ? status === 'expired' ? '#C43D2D' : '#B7791F' : palette.navy} /><View style={styles.detailCopy}><Text style={styles.detailLabel}>{label}</Text><View style={styles.detailValueRow}>{showDateDot ? <PulseDot tone={status === 'expired' ? 'red' : 'yellow'} /> : null}<Text style={[styles.detailValue, status === 'expired' && styles.detailValueExpired, status === 'due' && styles.detailValueDue]} numberOfLines={2}>{value || '-'}</Text></View></View></View>;
 }
 
-function maskSensitiveIdentifier(value?: string | null) {
+function maskAlternateCharacters(value?: string | null) {
   const normalized = String(value ?? '').trim();
   if (!normalized) return null;
-  if (normalized.length <= 8) return `${normalized.slice(0, 2)}${'•'.repeat(Math.max(2, normalized.length - 4))}${normalized.slice(-2)}`;
-  return `${normalized.slice(0, 4)}${'•'.repeat(Math.max(4, normalized.length - 8))}${normalized.slice(-4)}`;
+  return normalized.split('').map((char, index) => index % 2 === 1 ? '•' : char).join('');
 }
 
 function selectVehiclePolicy(policies: VehiclePolicyDisplay[]) {
