@@ -98,7 +98,7 @@ export default function VehicleDetailScreen() {
         </View>
         <View style={styles.policySummary}>
           <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
-          <MiniStat label="Policy" value={latestPolicy?.policy_no ? maskAlternateCharacters(latestPolicy.policy_no) : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
+          <MiniStat label="Policy" value={latestPolicy?.policy_no ? (maskAlternateCharacters(latestPolicy.policy_no) ?? 'Not added') : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
         <View style={styles.protectionRow}>
