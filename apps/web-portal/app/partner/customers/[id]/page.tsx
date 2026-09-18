@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebActivity, getPartnerWebCustomerDetail, type PartnerActivityData } from "@/lib/partner-web";
+import { getPartnerWebCustomerActivity, getPartnerWebCustomerDetail, type PartnerCustomerActivityData } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -52,36 +52,12 @@ export default async function PartnerCustomerDetailPage({
   const { id } = await params;
   const [data, activity] = await Promise.all([
     getPartnerWebCustomerDetail(id),
-    getPartnerWebActivity(100),
+    getPartnerWebCustomerActivity(id, 10),
   ]);
   const customer = data.customer;
   const relationship = display(customer.intermediary_type, customer.intermediary_code) || "Not recorded";
   const location = [customer.city, customer.state].filter(Boolean).join(", ") || "Not recorded";
-  const policyIds = new Set(data.policies.map((policy) => policy.policy_id));
-  const claimIds = new Set(data.claims.map((claim) => claim.claim_id));
-  const customerNeedles = [
-    customer.customer_name,
-    customer.customer_code,
-    customer.phone,
-    customer.company_name,
-    ...data.policies.flatMap((policy) => [policy.policy_no, policy.policy_code]),
-    ...data.vehicles.map((vehicle) => vehicle.vehicle_no),
-  ]
-    .filter((value): value is string => Boolean(value?.trim()))
-    .map((value) => value.toLocaleLowerCase("en-IN"));
-
-  const customerActivity = activity.items
-    .filter((item) => {
-      if (item.kind === "policy" && policyIds.has(item.entity_id)) return true;
-      if (item.kind === "claim" && claimIds.has(item.entity_id)) return true;
-      const haystack = [item.title, item.subtitle, item.meta]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("en-IN");
-      return customerNeedles.some((needle) => haystack.includes(needle));
-    })
-    .sort((a, b) => new Date(b.event_at).getTime() - new Date(a.event_at).getTime())
-    .slice(0, 2);
+  const customerActivity = activity.items.slice(0, 2);
 
   return (
     <PartnerPortalShell title="Customer Detail">
@@ -268,7 +244,7 @@ function CustomerActivityRow({
   item,
   label,
 }: {
-  item: PartnerActivityData["items"][number];
+  item: PartnerCustomerActivityData["items"][number];
   label: "Latest Action" | "Previous Action";
 }) {
   return (
@@ -278,7 +254,7 @@ function CustomerActivityRow({
         <p className="mt-1 truncate text-[12px] font-semibold text-[#183A64]">{item.title}</p>
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1 text-[9px] text-[#8190A4]">
-        <span>Created By: {item.meta || "Not recorded"}</span>
+        <span>Details: {item.meta || "Not recorded"}</span>
         <span>At: {activityDateTime(item.event_at)}</span>
       </div>
     </div>
