@@ -55,3 +55,8 @@ Every material provider/API/campaign/telephony/webhook/CRM/reconciliation trial 
 ## Current production authority model
 
 AI voice calling actions are IT-Super-User-only. Partner users may view normalized AI status/results but must not receive a call-start action or an API path that can reach Sarvam. All future Partner self-service is deferred until separately approved. The production Voice Integration page should remain compact and operations-oriented; experimental diagnostics belong on dedicated diagnostic routes/docs.
+
+
+## External Renewal RC enrichment rule
+
+Before an IT-controlled External Renewal AI call, require the isolated opportunity's `rc_enrichment_status` to be `ready`. Fetch details may use the existing server-only AuthBridge Detailed RC client and RC cache, but it must persist only privacy-minimized approved context into `external_renewal_opportunities`. Never copy owner identity/address/raw provider payloads into the opportunity, never write verified Customer/Vehicle/Policy masters, and never allow the enrichment route itself to reach Sarvam. See `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.
