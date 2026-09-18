@@ -22,6 +22,7 @@ type AssociateForMenu = {
   designation: string;
   role: Role;
   status: Status;
+  invited_at: string | null;
 };
 
 export function AssociateAccountActionsMenu({
@@ -177,16 +178,11 @@ export function AssociateAccountActionsMenu({
 
                 <form action={resendPartnerAssociateInvite}>
                   {commonHidden}
-                  <button
-                    type="submit"
-                    role="menuitem"
-                    disabled={associate.status === "disabled"}
-                    title={associate.status === "disabled" ? "Enable this account before resending the link." : undefined}
-                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <Send className="h-3.5 w-3.5 text-[#64748B]" />
-                    Resend Link
-                  </button>
+                  <ResendInviteButton
+                    associateId={associate.id}
+                    status={associate.status}
+                    invitedAt={associate.invited_at}
+                  />
                 </form>
               </div>,
               document.body,
@@ -248,6 +244,67 @@ export function AssociateAccountActionsMenu({
   );
 }
 
+
+const RESEND_COOLDOWN_SECONDS = 60;
+
+function ResendInviteButton({
+  associateId,
+  status,
+  invitedAt,
+}: {
+  associateId: string;
+  status: Status;
+  invitedAt: string | null;
+}) {
+  const { pending } = useFormStatus();
+  const storageKey = `associate-resend-cooldown:${associateId}`;
+  const [remaining, setRemaining] = useState(0);
+
+  useEffect(() => {
+    const invitedUntil = invitedAt
+      ? new Date(invitedAt).getTime() + RESEND_COOLDOWN_SECONDS * 1000
+      : 0;
+    const storedUntil = Number(window.localStorage.getItem(storageKey) ?? "0");
+    const cooldownUntil = Math.max(invitedUntil, Number.isFinite(storedUntil) ? storedUntil : 0);
+
+    const updateRemaining = () => {
+      const seconds = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+      setRemaining(seconds);
+      if (seconds === 0) window.localStorage.removeItem(storageKey);
+    };
+
+    updateRemaining();
+    if (cooldownUntil <= Date.now()) return;
+    const timer = window.setInterval(updateRemaining, 1000);
+    return () => window.clearInterval(timer);
+  }, [invitedAt, storageKey]);
+
+  const disabled = status === "disabled" || pending || remaining > 0;
+  const title = status === "disabled"
+    ? "Enable this account before resending the link."
+    : remaining > 0
+      ? `You can resend the link in ${remaining} seconds.`
+      : undefined;
+
+  return (
+    <button
+      type="submit"
+      role="menuitem"
+      disabled={disabled}
+      title={title}
+      onClick={() => {
+        if (disabled) return;
+        const cooldownUntil = Date.now() + RESEND_COOLDOWN_SECONDS * 1000;
+        window.localStorage.setItem(storageKey, String(cooldownUntil));
+        setRemaining(RESEND_COOLDOWN_SECONDS);
+      }}
+      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      <Send className="h-3.5 w-3.5 text-[#64748B]" />
+      {pending ? "Sending..." : remaining > 0 ? `Resend in ${remaining}s` : "Resend Link"}
+    </button>
+  );
+}
 
 function SaveChangesButton() {
   const { pending } = useFormStatus();
