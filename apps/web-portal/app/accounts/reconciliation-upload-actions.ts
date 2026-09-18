@@ -48,22 +48,22 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
   if (customerIds !== null && !customerIds.length) return emptyPreview("No uploaded rows are inside your Accounts access scope.");
 
-  let policies: PolicyRow[] = [];
-  let payins: PayinDetailRow[] = [];
-  let payouts: PayoutDetailRow[] = [];
-  if (policyIds.length) {
-    let policyQuery = db.from("policies").select("id,policy_no,customer_id,insurance_company_id,intermediary_type,intermediary_code,insurance_companies(name)").in("id", policyIds);
-    if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
-    const [{ data: policyData, error: policyError }, { data: payinData, error: payinError }] = await Promise.all([policyQuery, db.from("policy_payin_details").select("policy_id,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", policyIds)]);
-    if (policyError || payinError) throw new Error(policyError?.message ?? payinError?.message ?? "Unable to validate reconciliation workbook.");
-    policies = (policyData ?? []) as PolicyRow[];
-    payins = (payinData ?? []) as PayinDetailRow[];
-  }
-  if (payoutIds.length) {
-    const { data, error } = await db.from("policy_intermediary_payouts").select("id,policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,retention_amount,commercial_status,status").in("id", payoutIds);
-    if (error) throw new Error(error.message);
-    payouts = (data ?? []) as PayoutDetailRow[];
-  }
+  const policyBatches = chunk(policyIds, 120);
+  const payoutBatches = chunk(payoutIds, 120);
+  const [policyResults, payinResults, payoutResults] = await Promise.all([
+    Promise.all(policyBatches.map((ids) => {
+      let query = db.from("policies").select("id,policy_no,customer_id,insurance_company_id,intermediary_type,intermediary_code,insurance_companies(name)").in("id", ids);
+      if (customerIds !== null) query = query.in("customer_id", customerIds);
+      return query;
+    })),
+    Promise.all(policyBatches.map((ids) => db.from("policy_payin_details").select("policy_id,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", ids))),
+    Promise.all(payoutBatches.map((ids) => db.from("policy_intermediary_payouts").select("id,policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,retention_amount,commercial_status,status").in("id", ids))),
+  ]);
+  const firstDataError = [...policyResults, ...payinResults, ...payoutResults].find((result) => result.error)?.error;
+  if (firstDataError) throw new Error(firstDataError.message || "Unable to validate reconciliation workbook.");
+  const policies = policyResults.flatMap((result) => (result.data ?? []) as PolicyRow[]);
+  const payins = payinResults.flatMap((result) => (result.data ?? []) as PayinDetailRow[]);
+  const payouts = payoutResults.flatMap((result) => (result.data ?? []) as PayoutDetailRow[]);
 
   const policyMap = new Map(policies.map((policy) => [policy.id, policy]));
   const payinMap = new Map(payins.map((row) => [row.policy_id, row]));
@@ -71,10 +71,14 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
 
   const payinRefs = [...new Set(activePayin.map(({ row }) => text(row["UTR / Reference"])).filter(Boolean))];
   const payoutRefs = [...new Set(activePayout.map(({ row }) => text(row["UTR / Reference"])).filter(Boolean))];
-  let existingReceipts: ReceiptRefRow[] = [];
-  let existingPartnerPayments: PartnerPaymentRefRow[] = [];
-  if (payinRefs.length) { const { data } = await db.from("accounts_receipts").select("insurer_id,bank_reference").in("bank_reference", payinRefs); existingReceipts = (data ?? []) as ReceiptRefRow[]; }
-  if (payoutRefs.length) { const { data } = await db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", payoutRefs); existingPartnerPayments = (data ?? []) as PartnerPaymentRefRow[]; }
+  const [receiptRefResults, payoutRefResults] = await Promise.all([
+    Promise.all(chunk(payinRefs, 120).map((refs) => db.from("accounts_receipts").select("insurer_id,bank_reference").in("bank_reference", refs))),
+    Promise.all(chunk(payoutRefs, 120).map((refs) => db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", refs))),
+  ]);
+  const firstRefError = [...receiptRefResults, ...payoutRefResults].find((result) => result.error)?.error;
+  if (firstRefError) throw new Error(firstRefError.message || "Unable to check existing transaction references.");
+  const existingReceipts = receiptRefResults.flatMap((result) => (result.data ?? []) as ReceiptRefRow[]);
+  const existingPartnerPayments = payoutRefResults.flatMap((result) => (result.data ?? []) as PartnerPaymentRefRow[]);
   const existingReceiptKeys = new Set(existingReceipts.map((row) => `${row.insurer_id}|${normalizeRef(row.bank_reference)}`));
   const existingPayoutKeys = new Set(existingPartnerPayments.map((row) => `${normalizeRef(row.intermediary_code)}|${normalizeRef(row.payment_reference)}`));
   const payinUploadGroups = new Map<string, string>();
@@ -139,6 +143,7 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   return { totalRows: all.length, readyRows: all.filter((row) => row.status === "Ready").length, warningRows: all.filter((row) => row.status === "Warning").length, errorRows: all.filter((row) => row.status === "Error").length, skippedRows, payinRows, payoutRows };
 }
 
+function chunk<T>(values: T[], size: number) { const chunks: T[][] = []; for (let index = 0; index < values.length; index += size) chunks.push(values.slice(index, index + size)); return chunks; }
 function hasPayinInput(row: Record<string, unknown>) { return ["Bill Number", "Bill Amount", "Bill Date", "Actual TDS", "Amount Received", "Receipt Date", "UTR / Reference"].some((key) => text(row[key]) !== ""); }
 function hasPayoutInput(row: Record<string, unknown>) { return ["Paid Amount", "Paid Date", "UTR / Reference"].some((key) => text(row[key]) !== ""); }
 function validateHeaders(rows: Array<Record<string, unknown>>, required: readonly string[], sheet: string) { if (!rows.length) return null; const present = new Set(Object.keys(rows[0] ?? {}).map((value) => value.trim())); const missing = required.filter((header) => !present.has(header)); return missing.length ? `${sheet} is missing required column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.` : null; }
