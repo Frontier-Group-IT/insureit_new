@@ -28,7 +28,6 @@ export async function CustomerActivityStatus(props: CustomerActivityStatusProps)
         at: activity.at,
       }))}
       emptyText="Activity not recorded"
-      open={false}
     />
   );
 }
