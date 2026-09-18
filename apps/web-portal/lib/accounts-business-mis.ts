@@ -127,7 +127,7 @@ const POLICY_SELECT = [
   "partner_payables(id,partner_payment_allocations(allocated_amount,partner_payments(payment_date,payment_reference)))",
 ].join(",");
 
-export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filters: AccountsDashboardFilters): Promise<AccountsDashboardSnapshot> {
+export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filters: AccountsDashboardFilters, options: { includeInsurers?: boolean } = {}): Promise<AccountsDashboardSnapshot> {
   const db = createSupabaseAdminClient();
   const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
   if (customerIds !== null && customerIds.length === 0) {
@@ -139,19 +139,31 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     .select(POLICY_SELECT)
     .or(businessDateFilter(filters.fromDate, filters.toDate))
     .limit(15000);
-  let insurerOptionsQuery = db
-    .from("policies")
-    .select("insurance_company_id,insurance_companies(name)")
-    .not("insurance_company_id", "is", null)
-    .limit(15000);
+  const includeInsurers = options.includeInsurers !== false;
+  const insurerOptionsQuery = includeInsurers
+    ? customerIds !== null
+      ? db
+          .from("policies")
+          .select("insurance_company_id,insurance_companies(name)")
+          .not("insurance_company_id", "is", null)
+          .in("customer_id", customerIds)
+          .limit(15000)
+      : db
+          .from("policies")
+          .select("insurance_company_id,insurance_companies(name)")
+          .not("insurance_company_id", "is", null)
+          .limit(15000)
+    : Promise.resolve({ data: [], error: null });
 
   if (customerIds !== null) {
     filteredPolicyQuery = filteredPolicyQuery.in("customer_id", customerIds);
-    insurerOptionsQuery = insurerOptionsQuery.in("customer_id", customerIds);
   }
   if (filters.insurerId) filteredPolicyQuery = filteredPolicyQuery.eq("insurance_company_id", filters.insurerId);
 
-  const [policyResult, insurerOptionsResult] = await Promise.all([filteredPolicyQuery, insurerOptionsQuery]);
+  const [policyResult, insurerOptionsResult] = await Promise.all([
+    filteredPolicyQuery,
+    insurerOptionsQuery,
+  ]);
   if (policyResult.error) {
     return {
       rows: [],

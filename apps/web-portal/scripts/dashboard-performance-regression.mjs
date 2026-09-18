@@ -33,7 +33,10 @@ assert.match(accountsClient, /loadAccountsSnapshotAction\(/, "Accounts filters s
 assert.match(accountsClient, /window\.history\.replaceState\(window\.history\.state/, "Accounts filter changes should update the URL without a full route render.");
 assert.doesNotMatch(accountsClient, /router\.replace\(/, "Accounts filter changes must not trigger full App Router page replacement.");
 assert.match(accountsClient, /cache\.current\.get\(key\)/, "Accounts client should reuse already fetched filter snapshots.");
-assert.match(accountsSnapshotActions, /loadAccountsDashboardSnapshot\(profile, filters\)/, "Accounts snapshot action must reuse the canonical shared snapshot loader.");
+assert.match(accountsSnapshotActions, /loadAccountsDashboardSnapshot\(profile, filters, \{ includeInsurers: false \}\)/, "Accounts refresh action must skip the repeated insurer-options query.");
+assert.match(accountsClient, /const inflight = useRef\(new Map<string, Promise<Result>>\(\)\)/, "Accounts client must deduplicate in-flight filter requests.");
+assert.match(accountsClient, /window\.setTimeout\(\(\) => \{[\s\S]*\["last_month", "mtd"\]/, "Accounts client should prewarm standard periods shortly after load.");
+assert.match(accountsBusinessMis, /options: \{ includeInsurers\?: boolean \} = \{\}/, "Accounts snapshot loader must support omitting insurer options on refresh.");
 assert.match(accountsBusinessMis, /policy_premium_details\(od_premium,tp_premium,cpa_amount,net_premium\)/, "Accounts snapshot must embed premium rows in the filtered policy query.");
 assert.match(accountsBusinessMis, /policy_payin_details\(projected_od_percent,[^"]*payin_after_tds\)/, "Accounts snapshot must embed pay-in rows in the filtered policy query.");
 assert.match(accountsBusinessMis, /partner_payables\(id,partner_payment_allocations\(allocated_amount,partner_payments\(payment_date,payment_reference\)\)\)/, "Accounts snapshot must embed payable payment allocations in the filtered policy query.");
