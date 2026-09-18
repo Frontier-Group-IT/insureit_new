@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Sarvam controlled live voice closed loop:** two authorized internal External Renewal trials proved API cohort streaming and live PSTN calling; the first exposed a missing campaign webhook and was reconciled through the existing result-projection contract, while the second verified webhook delivery, provider event idempotency, normalized CRM projection and Partner UI closure end to end. **VERIFIED**. Detailed evidence: `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`.
+
 - **2026-09-18 — Partner vehicle detail scope repair:** branch `fix/partner-vehicle-detail-scope`; production error was caused by the vehicle detail page reopening a listed vehicle through `partner_app_customer_detail`, whose customer scope can differ from the Vehicle Portfolio commercial scope. Added dedicated `partner_app_vehicle_detail(uuid)` using the same `partner_app_commercial_scope()` rules as the vehicle list; detail links no longer depend on `?customer=...`. Existing vehicle/customer data is unchanged. **IMPLEMENTED**; PR/merge/deployment pending.
 
 - **2026-09-18 — Reversible Partner Portal multi-login access:** branch `feat/partner-multi-login-access`; additive `partner_portal_additional_users` layer, Partner login management UI, independent invitation/reset/enable/disable actions, preserved legacy primary login, dedicated schema workflow and rollback SQL are **IMPLEMENTED**. No production schema/data mutation, merge or deployment yet; PR #1999 pending. Rollback intentionally leaves additional-user rows inert so the feature can be re-enabled without business-data loss.
@@ -68,6 +70,10 @@ For INSUREIT Partner refinement work, `docs/PARTNER_APP_PRODUCTION_REFINEMENT_MA
 - Do not modify the master plan's scope without explicit user approval.
 - Preserve the Partner native-build authorization rule below: OTA-first for normal JS/TS/UI/business-logic work, and no new Partner APK/AAB without explicit permission for that exact build.
 - At phase completion, update the master plan only with concise evidence: phase status, PR/commit, checks, device/OTA evidence, unresolved risk, and next unlocked phase.
+
+## Voice Agent experiment continuity rule
+
+For every material AI Voice Agent provider/API/campaign/telephony/webhook/CRM/reconciliation trial — successful or failed — update the relevant dated Markdown evidence note and `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md` before treating the trial as closed. Preserve durable failure lessons as well as successes. Never store phone numbers, secrets, raw transcripts, or full webhook payloads. See `apps/web-portal/app/system/voice-integration/AGENTS.md`.
 
 ## Smart context retention and learning policy
 
