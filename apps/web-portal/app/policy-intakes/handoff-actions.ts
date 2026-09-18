@@ -3,6 +3,7 @@
 import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
 import { buildPolicyOcrOnboardingUpdate } from "@/lib/policy-ocr-onboarding-apply";
+import { selectPolicyIntakeCustomerMatch, type PolicyIntakeCustomerIdentityCandidate } from "@/lib/policy-intake-customer-match";
 import { requirePolicyIntakeFinalizer, requirePolicyIntakeReviewer } from "@/lib/policy-intake-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -26,7 +27,17 @@ export type PolicyIntakeDraftSaveResult =
 type ManufacturerId={id:string};
 type BrandOption={manufacturer_id:string;brand_name:string};
 type InsurerOption={id:string;name:string};
-type CustomerOption={contact_name:string;company_name:string|null};
+type CustomerOption=PolicyIntakeCustomerIdentityCandidate;
+async function resolveConfirmedIntakeCustomerId(admin:ReturnType<typeof createSupabaseAdminClient>,phone:string,insuredName:string){
+  if(!phone.trim()||!insuredName.trim())return null;
+  const{data,error}=await admin.from("customers").select("id,contact_name,company_name").eq("phone",phone).limit(20).returns<CustomerOption[]>();
+  if(error)return null;
+  return selectPolicyIntakeCustomerMatch(data??[],insuredName);
+}
+function ocrInsuredName(fields:PolicyIntakeOcrField[]){
+  return fields.find(field=>field.key==="insured_name")?.value?.trim()??"";
+}
+
 type IntakeForHandoff={
   id:string;
   intake_number:string;
@@ -76,15 +87,16 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
   }
 
   const {data:existingDraft}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
-  if(existingDraft?.draft_payload)return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId:intake.matched_customer_id};
+  if(existingDraft?.draft_payload){
+    const identityName=ocrInsuredName(intake.ocr_fields??[])||existingDraft.draft_payload.insuredName;
+    const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);
+    return{ok:true,draft:existingDraft.draft_payload,draftRevision:existingDraft.revision,matchedCustomerId};
+  }
 
-  const [manufacturerResult,brandResult,insurerResult,customerResult]=await Promise.all([
+  const [manufacturerResult,brandResult,insurerResult]=await Promise.all([
     admin.from("vehicle_manufacturers").select("id").eq("is_active",true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id,brand_name").eq("is_active",true).order("brand_name").returns<BrandOption[]>(),
     admin.from("insurance_companies").select("id,name").eq("is_active",true).order("name").returns<InsurerOption[]>(),
-    intake.matched_customer_id
-      ?admin.from("customers").select("contact_name,company_name").eq("id",intake.matched_customer_id).maybeSingle<CustomerOption>()
-      :Promise.resolve({data:null,error:null}),
   ]);
   if(manufacturerResult.error||brandResult.error||insurerResult.error)return{ok:false,error:"Policy onboarding master data is temporarily unavailable."};
 
@@ -97,7 +109,8 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
     current:{registrationNo:"",vehicleClass:"",make:"",model:"",fuelType:"",manufacturingYear:"",capacity:"",chassisNo:"",engineNo:"",rtoState:"",rtoName:"",policyProduct:"",idv:"",od:"",tp:"",cpa:"",policyNo:"",insurerId:"",validFrom:"",validUpto:""},
     fields:intake.ocr_fields??[],manufacturers:manufacturerOptions,insurers,rcVerified:false,
   });
-  const customerName=customerResult.data?.company_name?.trim()||customerResult.data?.contact_name?.trim()||"";
+  const customerName=mapped.next.insuredName?.trim()||"";
+  const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,customerName);
   const intermediaryType=intake.lead_source_type==="posp"?"POSP":intake.lead_source_type==="misp"?"MISP":"SIBL / Partner";
   const draft:PolicyIntakeDraft={
     registrationMode:mapped.registrationMode,
@@ -108,19 +121,19 @@ export async function preparePolicyIntakeHandoff(id:string,takeOver=false):Promi
   };
   const {data:storedDraft,error:draftError}=await admin.from("policy_intake_onboarding_drafts").insert({intake_id:id,draft_payload:draft,revision:1,updated_by_profile_id:reviewer.id}).select("revision").single<{revision:number}>();
   if(draftError||!storedDraft)return{ok:false,error:"Policy Onboarding draft could not be prepared. Refresh and try again."};
-  return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId:intake.matched_customer_id};
+  return{ok:true,draft,draftRevision:storedDraft.revision,matchedCustomerId};
 }
 
 export async function loadPolicyIntakeOnboardingDraft(id:string):Promise<PolicyIntakeHandoffResult>{
   await requirePolicyIntakeFinalizer(); const reviewer=await requirePolicyIntakeReviewer(); const admin=createSupabaseAdminClient();
-  const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,assigned_to_profile_id,matched_customer_id").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];assigned_to_profile_id:string|null;matched_customer_id:string|null}>();
+  const {data:intake}=await admin.from("policy_intake_requests").select("id,intake_number,status,created_at,ocr_fields,assigned_to_profile_id,matched_customer_id,customer_mobile").eq("id",id).maybeSingle<{id:string;intake_number:string;status:string;created_at:string;ocr_fields:PolicyIntakeOcrField[];assigned_to_profile_id:string|null;matched_customer_id:string|null;customer_mobile:string}>();
   if(!intake||intake.status!=="in_review"||intake.assigned_to_profile_id!==reviewer.id)return{ok:false,error:"This intake is not assigned to you for Policy Onboarding."};
   const duplicateCheck=await loadPolicyIntakeDuplicateMatches(admin,[intake]);
   if(!duplicateCheck.ok)return{ok:false,error:duplicateCheck.error};
   if(duplicateCheck.matches.has(id))return{ok:false,error:"This policy intake is a duplicate and cannot continue in Policy Onboarding."};
   const {data,error}=await admin.from("policy_intake_onboarding_drafts").select("draft_payload,revision").eq("intake_id",id).maybeSingle<{draft_payload:PolicyIntakeDraft;revision:number}>();
   if(error||!data?.draft_payload)return{ok:false,error:"The saved Policy Onboarding draft is unavailable. Return to the intake and start review again."};
-  return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId:intake.matched_customer_id};
+  const identityName=ocrInsuredName(intake.ocr_fields??[])||data.draft_payload.insuredName;const matchedCustomerId=await resolveConfirmedIntakeCustomerId(admin,intake.customer_mobile,identityName);return{ok:true,draft:data.draft_payload,draftRevision:data.revision,matchedCustomerId};
 }
 
 export async function savePolicyIntakeOnboardingDraft(id:string,expectedRevision:number,draft:PolicyIntakeDraft):Promise<PolicyIntakeDraftSaveResult>{
