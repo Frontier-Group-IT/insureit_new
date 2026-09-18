@@ -331,7 +331,7 @@ function Modal({
       aria-label={title}
     >
       <div
-        className={`flex max-h-[calc(100dvh-32px)] w-full flex-col overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)] ${wide ? "max-w-[1080px]" : "max-w-xl"}`}
+        className={`flex max-h-[calc(100dvh-32px)] w-full flex-col overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)] md:translate-x-6 ${wide ? "max-w-[1080px]" : "max-w-xl"}`}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-[#E7ECF3] px-5 py-4">
           <h3 className="text-[13px] font-semibold text-[#17203A]">{title}</h3>
