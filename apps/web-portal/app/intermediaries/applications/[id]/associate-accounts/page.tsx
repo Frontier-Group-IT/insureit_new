@@ -1,0 +1,273 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { AppShell } from "@/components/shell";
+import { FormSubmitButton } from "@/components/form-submit-button";
+import { requireScopedPospMispManager } from "@/lib/master-data-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { createPartnerAssociateAccount } from "./actions";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type Application = {
+  id: string;
+  partner_status: string | null;
+  draft_data: Record<string, unknown> | null;
+};
+type Profile = {
+  partner_id: string | null;
+  partner_type: "posp" | "misp";
+  pos_name: string | null;
+  misp_name: string | null;
+  applicant_phone: string | null;
+  applicant_email: string | null;
+  dp_phone: string | null;
+  dp_email: string | null;
+  pan_number: string | null;
+  aadhaar_last_four: string | null;
+  date_of_birth: string | null;
+  dp_date_of_birth: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_ifsc_code: string | null;
+  gst_number: string | null;
+};
+type Intermediary = {
+  id: string;
+  intermediary_code: string | null;
+  intermediary_type: string;
+  account_status: string;
+};
+type Associate = {
+  id: string;
+  name: string;
+  phone_number: string;
+  email: string;
+  designation: string;
+  role: "admin" | "claim_head" | "insurance_head" | "bodyshop_manager";
+  status: "invited" | "active" | "disabled";
+  created_at: string;
+};
+
+export default async function PartnerAssociateAccountsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ success?: string; error?: string }>;
+}) {
+  const { id } = await params;
+  const query = await searchParams;
+  await requireScopedPospMispManager(id);
+  const admin = createSupabaseAdminClient();
+
+  const [{ data: application }, { data: profile }, { data: intermediary }] = await Promise.all([
+    admin.from("intermediary_onboarding_applications")
+      .select("id,partner_status,draft_data")
+      .eq("id", id)
+      .maybeSingle<Application>(),
+    admin.from("posp_misp_onboarding_profiles")
+      .select("partner_id,partner_type,pos_name,misp_name,applicant_phone,applicant_email,dp_phone,dp_email,pan_number,aadhaar_last_four,date_of_birth,dp_date_of_birth,address,city,state,postal_code,bank_name,bank_account_number,bank_ifsc_code,gst_number")
+      .eq("application_id", id)
+      .maybeSingle<Profile>(),
+    admin.from("intermediaries")
+      .select("id,intermediary_code,intermediary_type,account_status")
+      .eq("application_id", id)
+      .maybeSingle<Intermediary>(),
+  ]);
+
+  if (!application || !profile || !intermediary) notFound();
+  const draft = asObject(application.draft_data);
+  const accountContext = draft.account_context === "posp" || draft.account_context === "misp" ? draft.account_context : "partner";
+  if (accountContext !== "partner" || application.partner_status !== "active_partner" || intermediary.intermediary_type !== "partner" || intermediary.account_status !== "active") {
+    notFound();
+  }
+
+  const { data: associates, error: associatesError } = await admin.from("partner_portal_associate_accounts")
+    .select("id,name,phone_number,email,designation,role,status,created_at")
+    .eq("intermediary_id", intermediary.id)
+    .order("created_at", { ascending: false })
+    .returns<Associate[]>();
+  if (associatesError) throw new Error("Associate accounts could not be loaded.");
+
+  const name = (profile.partner_type === "misp" ? profile.misp_name : profile.pos_name) ?? "Unnamed applicant";
+  const phone = profile.partner_type === "misp" ? profile.dp_phone ?? profile.applicant_phone : profile.applicant_phone;
+  const email = profile.partner_type === "misp" ? profile.dp_email ?? profile.applicant_email : profile.applicant_email;
+  const dob = profile.partner_type === "misp" ? profile.dp_date_of_birth : profile.date_of_birth;
+  const partnerId = profile.partner_id && !profile.partner_id.startsWith("PENDING-") ? profile.partner_id : intermediary.intermediary_code;
+  const returnPath = `/intermediaries/applications/${id}/associate-accounts`;
+
+  return (
+    <AppShell title="Partner Associate Accounts" backHref={`/intermediaries/applications/${id}`}>
+      <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
+        {query.success === "associate_account_invited" ? (
+          <Notice tone="success">Associate account saved. Activation email sent successfully.</Notice>
+        ) : null}
+        {query.error ? <Notice tone="error">{errorMessage(query.error)}</Notice> : null}
+
+        <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
+          <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md">
+                <UserIcon />
+              </span>
+              <div className="min-w-0">
+                <h1 className="truncate text-xl font-semibold">Partner Application Review</h1>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <p className="truncate text-[13px] font-semibold text-white/90">{name}</p>
+                  {partnerId ? <span className="inline-flex rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold">{partnerId}</span> : null}
+                </div>
+              </div>
+            </div>
+            <Link href={`/intermediaries/applications/${id}`} className="inline-flex h-9 items-center rounded-xl border border-white/20 bg-white/10 px-4 text-[10px] font-semibold text-white hover:bg-white/15">
+              Back to Partner
+            </Link>
+          </div>
+        </section>
+
+        <section className="grid gap-4 lg:grid-cols-2">
+          <Card title="Identity and contact">
+            <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <Info label="Name" value={name} />
+              <Info label="PAN" value={maskPan(profile.pan_number)} />
+              <Info label="Aadhaar" value={maskAadhaar(profile.aadhaar_last_four)} />
+              <Info label="Date of birth" value={date(dob)} />
+              <Info label="Mobile" value={phone ?? "-"} />
+              <Info label="Email" value={email ?? "-"} />
+            </dl>
+          </Card>
+          <Card title="Address, bank and tax">
+            <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+              <Info label="Address" value={completeAddress(profile)} />
+              <Info label="PIN code" value={profile.postal_code ?? "-"} />
+              <Info label="Bank" value={profile.bank_name ?? "-"} />
+              <Info label="Account" value={maskAccount(profile.bank_account_number)} />
+              <Info label="IFSC" value={profile.bank_ifsc_code ?? "-"} />
+              <Info label="GST" value={profile.gst_number ?? "Not applicable"} />
+            </dl>
+          </Card>
+        </section>
+
+        <section className="rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+          <div className="border-b border-[#E7ECF3] px-5 py-4">
+            <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
+          </div>
+          <form action={createPartnerAssociateAccount} className="grid gap-3 p-5 xl:grid-cols-[1.2fr_1fr_1.4fr_1.2fr_1.15fr_auto] xl:items-end">
+            <input type="hidden" name="application_id" value={id} />
+            <input type="hidden" name="intermediary_id" value={intermediary.id} />
+            <input type="hidden" name="return_path" value={returnPath} />
+            <Field label="Name"><input name="name" required className={inputClass} placeholder="Associate name" /></Field>
+            <Field label="Phone Number"><input name="phone_number" required className={inputClass} placeholder="+91..." inputMode="tel" /></Field>
+            <Field label="Email"><input name="email" type="email" required className={inputClass} placeholder="user@company.com" /></Field>
+            <Field label="Designation"><input name="designation" required className={inputClass} placeholder="Designation" /></Field>
+            <Field label="Role">
+              <select name="role" required defaultValue="" className={inputClass}>
+                <option value="" disabled>Select role</option>
+                <option value="admin" disabled>Admin</option>
+                <option value="claim_head">Claim Head</option>
+                <option value="insurance_head">Insurance Head</option>
+                <option value="bodyshop_manager">Bodyshop Manager</option>
+              </select>
+            </Field>
+            <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" />
+          </form>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
+          <div className="border-b border-[#E7ECF3] px-5 py-4">
+            <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts Register</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-[10.5px]">
+              <thead className="border-b border-[#E7ECF3] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">
+                <tr>
+                  <th className="px-5 py-3">Name</th>
+                  <th className="px-3 py-3">Phone Number</th>
+                  <th className="px-3 py-3">Email</th>
+                  <th className="px-3 py-3">Designation</th>
+                  <th className="px-3 py-3">Role</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EEF2F6]">
+                {(associates ?? []).map((associate) => (
+                  <tr key={associate.id} className="hover:bg-[#FAFCFF]">
+                    <td className="px-5 py-3 font-semibold text-[#17203A]">{associate.name}</td>
+                    <td className="px-3 py-3 text-[#475569]">{associate.phone_number}</td>
+                    <td className="px-3 py-3">
+                      <div className="font-medium text-[#17203A]">{associate.email}</div>
+                      <div className="mt-0.5 text-[8.5px] capitalize text-[#64748B]">{associate.status}</div>
+                    </td>
+                    <td className="px-3 py-3 text-[#475569]">{associate.designation}</td>
+                    <td className="px-3 py-3"><RolePill value={associate.role} /></td>
+                  </tr>
+                ))}
+                {!(associates ?? []).length ? (
+                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </AppShell>
+  );
+}
+
+const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}</span>{children}</label>;
+}
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2>{children}</section>;
+}
+function Info({ label, value }: { label: string; value: string }) {
+  return <div className="flex min-w-0 items-baseline gap-1.5 text-[10.5px] leading-5"><dt className="shrink-0 font-semibold text-[#64748B]">{label}:</dt><dd className="min-w-0 break-words font-semibold text-[#0F172A]">{value}</dd></div>;
+}
+function RolePill({ value }: { value: Associate["role"] }) {
+  const label = value === "claim_head" ? "Claim Head" : value === "insurance_head" ? "Insurance Head" : value === "bodyshop_manager" ? "Bodyshop Manager" : "Admin";
+  return <span className="inline-flex rounded-full border border-[#D8E2EE] bg-[#F8FAFC] px-2.5 py-1 text-[8.5px] font-semibold text-[#334155]">{label}</span>;
+}
+function Notice({ tone, children }: { tone: "success" | "error"; children: React.ReactNode }) {
+  return <div className={`rounded-xl border px-4 py-3 text-[10.5px] font-medium ${tone === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-rose-200 bg-rose-50 text-rose-700"}`}>{children}</div>;
+}
+function UserIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6" aria-hidden="true"><circle cx="12" cy="8" r="3" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>;
+}
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+function completeAddress(profile: Profile) {
+  const parts = [profile.address, profile.city, profile.state].map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+  return parts.length ? parts.join(", ") : "-";
+}
+function maskPan(value: string | null) {
+  return value && value.length >= 7 ? `${value.slice(0, 2).toUpperCase()}****${value.slice(-3).toUpperCase()}` : "Not available";
+}
+function maskAadhaar(value: string | null | undefined) {
+  return value ? `**** ${value.slice(-4)}` : "Not available";
+}
+function maskAccount(value: string | null) {
+  return value ? `•••• ${value.slice(-4)}` : "Not available";
+}
+function date(value: string | null | undefined) {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(parsed);
+}
+function errorMessage(value: string) {
+  const decoded = safeDecode(value);
+  if (decoded === "associate_account_invalid") return "Complete all associate account fields.";
+  if (decoded === "associate_email_invalid") return "Enter a valid email address.";
+  if (decoded === "associate_phone_invalid") return "Enter a valid phone number.";
+  if (decoded === "associate_role_blocked") return "Admin access is blocked by default. Select another role.";
+  if (decoded === "associate_email_in_use") return "That email is already used by another portal account.";
+  if (decoded === "associate_not_authorized") return "You do not have permission to manage this Partner.";
+  if (decoded === "associate_partner_not_available") return "Associate accounts are available only for an active Partner.";
+  return "The associate account could not be saved.";
+}
+function safeDecode(value: string) { try { return decodeURIComponent(value); } catch { return value; } }
