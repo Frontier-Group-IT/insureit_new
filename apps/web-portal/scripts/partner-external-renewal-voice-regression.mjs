@@ -91,6 +91,10 @@ assert(sarvamCampaignLifecycle.includes('/campaigns/'), "campaign lifecycle targ
 assert(sarvamCampaignLifecycle.includes('/status'), "campaign lifecycle mutation uses the documented campaign status endpoint");
 assert(sarvamCampaignLifecycle.includes('JSON.stringify({ action })'), "campaign lifecycle mutation sends a single explicit action");
 assert(sarvamCampaignLifecycle.includes('type SarvamCampaignAction = "pause" | "resume"'), "campaign lifecycle code excludes terminal cancel from the UI control contract");
+assert(sarvamCampaignLifecycle.includes("assertSarvamRenewalCampaignDispatchable"), "campaign lifecycle exports a dispatchability precheck");
+assert(sarvamCampaignLifecycle.includes('state.status === "paused"'), "campaign dispatch precheck blocks paused state");
+assert(sarvamCampaignLifecycle.includes('state.status === "ended" || state.status === "cancelled"'), "campaign dispatch precheck blocks terminal states");
+assert(sarvamCampaignLifecycle.includes('state.status !== "active" && state.status !== "scheduled"'), "campaign dispatch precheck permits only active or scheduled campaigns");
 assert(!sarvamCampaignLifecycle.includes("NEXT_PUBLIC_"), "campaign lifecycle credentials remain server-side");
 
 assert(readinessModel.includes('import "server-only"'), "readiness model is server-only");
@@ -125,6 +129,7 @@ assert(!/console\.(log|error|warn)\s*\(/.test(diagnosticsModel), "deep diagnosti
 assert(voiceAdapter.includes('supabase.rpc("partner_app_external_renewal_voice_states"'), "Partner worklist loads voice state through scoped RPC");
 assert(callRoute.includes("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action starts through scoped RPC");
 assert(callRoute.indexOf("assertSarvamRenewalCallingWindow()") < callRoute.indexOf("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action checks the operational window before creating the local attempt");
+assert(callRoute.indexOf("assertSarvamRenewalCampaignDispatchable()") < callRoute.indexOf("startPartnerExternalRenewalVoiceAttempt(id)"), "Partner call action verifies provider campaign state before creating the local attempt");
 assert(callRoute.includes("providerRequestStarted"), "Partner route tracks whether the provider request may have been sent");
 assert(callRoute.includes("providerDefinitelyRejected"), "only definitive provider rejection releases the local active-attempt guard");
 
