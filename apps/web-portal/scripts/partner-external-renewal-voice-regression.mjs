@@ -7,6 +7,7 @@ const repoRoot = path.resolve(root, "../..");
 
 const migration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913220500_external_renewal_voice_attempts.sql"), "utf8");
 const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql"), "utf8");
+const operationalSettingsMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql"), "utf8");
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
@@ -21,6 +22,7 @@ const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renew
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const itDispatchModel = fs.readFileSync(path.join(root, "lib/sarvam-it-dispatch.ts"), "utf8");
 const itDispatchRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/dispatch/route.ts"), "utf8");
+const callingWindowRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/calling-window/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
 const campaignStatusRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-campaign-status/route.ts"), "utf8");
@@ -157,11 +159,22 @@ assert(!/from\(["'](customers|vehicles|policies)["']\)/i.test(itDispatchModel), 
 
 assert(itDispatchRoute.includes('viewer.role !== "it_super_user"'), "IT dispatch route requires exact IT Super User role");
 assert(itDispatchRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "IT dispatch route requires critical system approval access");
-assert(itDispatchRoute.includes("assertSarvamRenewalCallingWindow()"), "IT dispatch enforces the production calling window");
+assert(itDispatchRoute.includes("assertConfiguredSarvamRenewalCallingWindow()"), "IT dispatch enforces the persisted production calling window");
 assert(itDispatchRoute.includes("assertSarvamRenewalCampaignDispatchable()"), "IT dispatch verifies the approved campaign state");
 assert(itDispatchRoute.includes("startItSuperUserExternalRenewalVoiceAttempt"), "IT dispatch creates the local attempt through the IT-only helper");
 assert(itDispatchRoute.includes("streamExternalRenewalToSarvam"), "IT dispatch is the production provider submission path");
 assert(itDispatchRoute.includes("markExternalRenewalVoiceSubmitted"), "IT dispatch persists accepted campaign/cohort submission state");
+
+assert(operationalSettingsMigration.includes("sarvam_voice_operational_settings"), "calling-window migration defines the server-only operational settings table");
+assert(operationalSettingsMigration.includes("revoke all on table public.sarvam_voice_operational_settings from anon, authenticated"), "authenticated users cannot directly read or mutate calling-window settings");
+assert(sarvamOperationalPolicy.includes("getConfiguredSarvamRenewalOperationalPolicy"), "operational policy can resolve the persisted IT-managed calling window");
+assert(sarvamOperationalPolicy.includes("sarvam_voice_operational_settings"), "operational policy reads the persisted calling-window table");
+assert(callingWindowRoute.includes('viewer.role !== "it_super_user"'), "calling-window update requires exact IT Super User role");
+assert(callingWindowRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "calling-window update requires critical system approval access");
+assert(callingWindowRoute.includes('from("sarvam_voice_operational_settings")'), "calling-window update writes only the voice operational settings table");
+assert(!callingWindowRoute.includes("streamExternalRenewalToSarvam"), "calling-window update cannot place a call");
+assert(readinessPage.includes('href="/system/voice-integration?edit_window=1"'), "Voice Integration Window card exposes an inline Edit action");
+assert(readinessPage.includes('action="/api/system/voice-integration/calling-window"'), "Window editor posts to the protected system route");
 
 assert(connectionTestRoute.includes('viewer.role !== "it_super_user"'), "Sarvam connection test requires exact IT Super User role");
 assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam connection test requires critical system approval access");
