@@ -346,7 +346,7 @@ export default async function PartnerExternalRenewalDetailPage({
                       </Link>
                     </div>
                   ) : intakeLink?.linked ? (
-                    <span>Policy Intake has already been started for this opportunity by another Partner user.</span>
+                    <span>Policy Intake has already been started for this opportunity. Its details remain with the Partner user who started it.</span>
                   ) : isClosed ? (
                     <span>This renewal opportunity is closed. No new Policy Intake can be started from it.</span>
                   ) : canStartIntake ? (
