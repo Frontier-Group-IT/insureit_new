@@ -49,6 +49,18 @@ function fileSizeLabel(value: number | null) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatActivationDate(value: string | null | undefined) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Kolkata",
+  }).format(date);
+}
+
 export default async function PartnerRegistrationPage() {
   const data = await getPartnerWebRegistrationOverview();
   const assignment = data.assignment;
@@ -63,32 +75,37 @@ export default async function PartnerRegistrationPage() {
   const linkedId = qualification ? `${linkedType} linked` : "Not linked";
   const active = data.intermediary.account_status === "active" || data.intermediary.portal_access_status === "active";
 
-  const stats = [
-    { icon: UserRound, label: "Account Type", value: intermediaryType === "posp" ? "POSP account" : intermediaryType === "misp" ? "MISP account" : "Partner" },
-    { icon: IdCard, label: intermediaryType === "partner" ? `${linkedType} ID` : "Account Status", value: intermediaryType === "partner" ? linkedId : humanize(data.intermediary.account_status) },
-    { icon: Link2, label: intermediaryType === "partner" ? "Linked Account Status" : "Parent Partner", value: intermediaryType === "partner" ? (qualification ? humanize(qualification.registration_status) : "Not linked") : "Not linked" },
-    { icon: UserRoundPlus, label: "Assigned RM", value: "Not assigned" },
-    { icon: LogIn, label: "Portal Access", value: humanize(data.intermediary.portal_access_status) },
-    { icon: CalendarDays, label: "Activation Date", value: "-" },
-  ];
-
-  const lifecycle = [
-    { label: "Primary details", complete: Boolean(data.intermediary.display_name && data.intermediary.mobile) },
-    { label: "Documents", complete: data.document_count > 0 },
-    { label: "Registration", complete: isComplete(registrationStatus) || active },
-    { label: "Training & Exam", complete: intermediaryType === "partner" || (trainingStatus === "completed" && examStatus === "passed") },
-    { label: "Agreement", complete: intermediaryType === "partner" || isComplete(agreementStatus) },
-    { label: "IIB Upload", complete: intermediaryType === "partner" || isComplete(iibStatus) },
-  ];
-
   const supabase = await createServerSupabaseClient();
-  const { data: rawDocuments } = await supabase
-    .from("intermediary_documents")
-    .select("id, document_type, file_name, storage_bucket, storage_path, mime_type, file_size, verification_status, created_at")
-    .eq("intermediary_id", data.intermediary.id)
-    .order("created_at", { ascending: true });
+  const [directDocumentsResult, onboardingDocumentsResult, intermediaryRecordResult] = await Promise.all([
+    supabase
+      .from("intermediary_documents")
+      .select("id, document_type, file_name, storage_bucket, storage_path, mime_type, file_size, verification_status, created_at")
+      .eq("intermediary_id", data.intermediary.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("intermediary_onboarding_documents")
+      .select("id, document_type, file_name, storage_bucket, storage_path, mime_type, file_size, verification_status, created_at")
+      .eq("application_id", data.primary_application.id)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("intermediaries")
+      .select("activated_at")
+      .eq("id", data.intermediary.id)
+      .maybeSingle(),
+  ]);
 
-  const visibleDocuments = (rawDocuments ?? []).filter((document) => {
+  const documentByType = new Map<string, NonNullable<typeof onboardingDocumentsResult.data>[number]>();
+  for (const document of onboardingDocumentsResult.data ?? []) {
+    documentByType.set((document.document_type || document.id).trim().toLowerCase(), document);
+  }
+  for (const document of directDocumentsResult.data ?? []) {
+    documentByType.set((document.document_type || document.id).trim().toLowerCase(), document);
+  }
+  const rawDocuments = Array.from(documentByType.values()).sort(
+    (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime(),
+  );
+
+  const visibleDocuments = rawDocuments.filter((document) => {
     const type = (document.document_type || "").trim().toLowerCase().replaceAll("_", " ");
     return type !== "other" && type !== "other document" && type !== "others";
   });
@@ -100,6 +117,24 @@ export default async function PartnerRegistrationPage() {
       return { ...document, openUrl: signed?.signedUrl ?? null };
     }),
   );
+
+  const stats = [
+    { icon: UserRound, label: "Account Type", value: intermediaryType === "posp" ? "POSP account" : intermediaryType === "misp" ? "MISP account" : "Partner" },
+    { icon: IdCard, label: intermediaryType === "partner" ? `${linkedType} ID` : "Account Status", value: intermediaryType === "partner" ? linkedId : humanize(data.intermediary.account_status) },
+    { icon: Link2, label: intermediaryType === "partner" ? "Linked Account Status" : "Parent Partner", value: intermediaryType === "partner" ? (qualification ? humanize(qualification.registration_status) : "Not linked") : "Not linked" },
+    { icon: UserRoundPlus, label: "Assigned RM", value: "Not assigned" },
+    { icon: LogIn, label: "Portal Access", value: humanize(data.intermediary.portal_access_status) },
+    { icon: CalendarDays, label: "Activation Date", value: formatActivationDate(intermediaryRecordResult.data?.activated_at) },
+  ];
+
+  const lifecycle = [
+    { label: "Primary details", complete: Boolean(data.intermediary.display_name && data.intermediary.mobile) },
+    { label: "Documents", complete: documents.length > 0 },
+    { label: "Registration", complete: isComplete(registrationStatus) || active },
+    { label: "Training & Exam", complete: intermediaryType === "partner" || (trainingStatus === "completed" && examStatus === "passed") },
+    { label: "Agreement", complete: intermediaryType === "partner" || isComplete(agreementStatus) },
+    { label: "IIB Upload", complete: intermediaryType === "partner" || isComplete(iibStatus) },
+  ];
 
   return (
     <PartnerPortalShell title="Registration">
