@@ -186,7 +186,7 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     };
   }
 
-  const filteredPolicies = (policyResult.data ?? []) as Policy[];
+  const filteredPolicies = (policyResult.data ?? []) as unknown as Policy[];
   const insurerMap = new Map<string, string>();
   for (const policy of (insurerOptionsResult.data ?? []) as Array<{ insurance_company_id: string | null; insurance_companies: Policy["insurance_companies"] }>) {
     if (!policy.insurance_company_id) continue;
@@ -247,7 +247,7 @@ export async function loadBusinessMisRecords(profile: ViewerProfile, filters: Ac
   const { data: policyData, error: policyError } = await policyQuery;
   if (policyError) throw new Error("Unable to load Business MIS data.");
 
-  const policies = (policyData ?? []) as Policy[];
+  const policies = (policyData ?? []) as unknown as Policy[];
   return (await buildBusinessMisSnapshot(policies)).records;
 }
 
@@ -266,7 +266,7 @@ export async function loadBusinessMisRecordsByPolicyIds(profile: ViewerProfile, 
   }));
   const firstError = policyResults.find((result) => result.error)?.error;
   if (firstError) throw new Error(firstError.message || "Unable to load Business MIS data.");
-  const policyMap = new Map(policyResults.flatMap((result) => (result.data ?? []) as Policy[]).map((policy) => [policy.id, policy]));
+  const policyMap = new Map(policyResults.flatMap((result) => (result.data ?? []) as unknown as Policy[]).map((policy) => [policy.id, policy]));
   const policies = uniqueIds.map((id) => policyMap.get(id)).filter((policy): policy is Policy => Boolean(policy));
   return (await buildBusinessMisSnapshot(policies)).records;
 }
