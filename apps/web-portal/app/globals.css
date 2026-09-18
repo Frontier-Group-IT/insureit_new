@@ -463,6 +463,16 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
   color: #ef4444 !important;
 }
 
+/* Partner home Active Scheme status pill: override the existing generated
+   blue pill without creating a new pseudo-element when one is not present. */
+.partner-active-scheme::before,
+[data-partner-active-scheme="true"]::before {
+  background: #dc2626 !important;
+  border-color: #b91c1c !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .partner-active-scheme__shimmer,
   .partner-active-scheme__icon,
