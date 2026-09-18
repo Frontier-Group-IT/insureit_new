@@ -13,7 +13,6 @@ import {
   BUSINESS_MIS_HIDDEN_HEADERS,
   BUSINESS_MIS_PERCENT_COLUMNS,
   loadBusinessMisRecordsByPolicyIds,
-  type BusinessMisCell,
   type BusinessMisRecord,
 } from "@/lib/accounts-business-mis";
 
@@ -61,9 +60,11 @@ export type ReconciliationUploadPreview = {
   warningRows: number;
   errorRows: number;
   skippedRows: number;
+  validatedWorkbookRows?: number;
+  message?: string;
+  messageKind?: "success" | "warning" | "error";
   payinRows: PayinPreviewRow[];
   payoutRows: PayoutPreviewRow[];
-  message?: string;
 };
 
 type PolicyRef = { id: string; insurance_company_id: string | null };
@@ -353,8 +354,9 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   const all = [...payinRows, ...payoutRows];
   if (!all.length) {
     return {
-      ...emptyPreview("No new Pay-In or Pay-Out values were entered. Fill only the blank Bill Number, Bill Amount, Bill Date, Difference, Paid Amount, Paid Date or UTR Details cells."),
+      ...emptyPreview("Template validated successfully. No new Pay-In or Pay-Out changes were detected.", "success"),
       skippedRows: dataRows.length,
+      validatedWorkbookRows: dataRows.length,
     };
   }
 
@@ -415,7 +417,7 @@ function summarize(issues: Array<{ status: PreviewStatus; message: string }>): {
 
 function error(message: string) { return { status: "Error" as const, message }; }
 function warning(message: string) { return { status: "Warning" as const, message }; }
-function emptyPreview(message: string): ReconciliationUploadPreview { return { totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message }; }
+function emptyPreview(message: string, messageKind: "success" | "warning" | "error" = "error"): ReconciliationUploadPreview { return { totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message, messageKind }; }
 function text(value: unknown) { return String(value ?? "").trim(); }
 function nonBlank(value: unknown) { return text(value) !== ""; }
 function normalizeRef(value: unknown) { return text(value).replace(/\s+/g, "").toUpperCase(); }

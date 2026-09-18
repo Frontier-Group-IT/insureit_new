@@ -6,7 +6,7 @@ import { previewAccountsReconciliationUpload, type ReconciliationUploadPreview, 
 import { confirmAccountsReconciliationUpload, type AccountsImportResult } from "./reconciliation-import-actions";
 
 const inr = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value);
-const empty = (message: string): ReconciliationUploadPreview => ({ totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message });
+const empty = (message: string): ReconciliationUploadPreview => ({ totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message, messageKind: "error" });
 const VALIDATION_TIMEOUT_MS = 45_000;
 
 export function ReconciliationTools() {
@@ -108,7 +108,16 @@ function ValidationProgress({ value }: { value: number }) {
 }
 
 function PreviewPanel({ preview, isImportPending, onConfirm }: { preview: ReconciliationUploadPreview; isImportPending: boolean; onConfirm: () => void }) {
-  if (preview.message && !preview.totalRows) return <div className="mt-2 rounded-lg border border-[#f1d7a7] bg-[#fffaf0] px-3 py-2 text-[8.5px] font-semibold text-[#8a5a13]">{preview.message}</div>;
+  if (preview.message && !preview.totalRows) {
+    const isSuccess = preview.messageKind === "success";
+    return <div className={`mt-2 flex items-start gap-2 rounded-lg border px-3 py-2 text-[8.5px] font-semibold ${isSuccess ? "border-[#bfe3d5] bg-[#f0faf6] text-[#0f766e]" : "border-[#f1d7a7] bg-[#fffaf0] text-[#8a5a13]"}`}>
+      {isSuccess ? <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" /> : null}
+      <div>
+        <p>{preview.message}</p>
+        {isSuccess ? <p className="mt-1 text-[7.5px] font-medium text-[#52766d]">{preview.validatedWorkbookRows ?? preview.skippedRows} rows checked. Confirm Import remains disabled because there is nothing new to post.</p> : null}
+      </div>
+    </div>;
+  }
   const canImport = preview.totalRows > 0 && preview.errorRows === 0;
   return <div className="mt-2">
     <div className="grid gap-1.5 sm:grid-cols-5"><Metric label="Transactions" value={preview.totalRows} /><Metric label="Ready" value={preview.readyRows} /><Metric label="Warnings" value={preview.warningRows} /><Metric label="Errors" value={preview.errorRows} /><Metric label="Blank ignored" value={preview.skippedRows} /></div>
