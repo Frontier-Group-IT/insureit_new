@@ -22,7 +22,6 @@ import {
   type PartnerExternalRenewalWindow,
 } from "@/lib/partner-external-renewals";
 import { getPartnerExternalRenewalVoiceStates } from "@/lib/partner-external-renewal-voice";
-import { getSarvamPartnerDispatchReadiness } from "@/lib/sarvam-partner-dispatch-readiness";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -141,15 +140,13 @@ export default async function PartnerExternalRenewalsPage({
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [summary, rows, dispatchReadiness] = await Promise.all([
+  const [summary, rows] = await Promise.all([
     getPartnerExternalRenewalSummary(),
     listPartnerExternalRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window, status, followUp, intake }),
-    getSarvamPartnerDispatchReadiness(),
   ]);
 
   const voiceStates = await getPartnerExternalRenewalVoiceStates(rows.map((row) => row.opportunity_id));
   const voiceStateByOpportunity = new Map(voiceStates.map((state) => [state.opportunity_id, state]));
-  const voiceEnabled = dispatchReadiness.ready;
 
   const total = rows[0]?.total_count ?? 0;
   const hasPrevious = page > 1;
@@ -215,15 +212,12 @@ export default async function PartnerExternalRenewalsPage({
           })}
         </section>
 
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#DDE6F0] bg-white px-4 py-3 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
-          <div className="flex items-center gap-3">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EAF3FF] text-[#2A6FD8]"><Bot className="h-4 w-4" /></span>
-            <div>
-              <p className="text-[11px] font-extrabold text-[#1B3152]">AI renewal outreach</p>
-              <p className="mt-0.5 text-[9px] text-[#7184A0]">{dispatchReadiness.message} Single-customer AI calls remain controlled from each opportunity.</p>
-            </div>
+        <section className="flex items-center justify-between gap-3 rounded-xl border border-[#DDE6F0] bg-white px-4 py-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EAF3FF] text-[#2A6FD8]"><Bot className="h-4 w-4" /></span>
+            <p className="text-[10px] font-bold text-[#1B3152]">AI outreach is managed by INSUREIT IT.</p>
           </div>
-          <span className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EAF8F0] text-[#25875A]" : "bg-[#F1F4F8] text-[#6B7E98]")}>{voiceEnabled ? "AI calling available" : "AI calling unavailable"}</span>
+          <span className="rounded-full bg-[#EEF4FF] px-2.5 py-1 text-[8px] font-bold text-[#3156B8]">IT Managed</span>
         </section>
 
         <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_14px_rgba(31,55,86,0.04)]">
@@ -343,7 +337,7 @@ export default async function PartnerExternalRenewalsPage({
                             : "No interaction yet"}
                       </p>
                     </div>
-                    <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + (voiceEnabled ? voiceStateClass(voiceState) : "bg-[#EEF3F8] text-[#687D99]")}><Bot className="h-3 w-3" />{voiceEnabled ? voiceStateLabel(voiceState) : "AI Not Enabled"}</span>
+                    <span className={"inline-flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1 text-[9px] font-bold " + voiceStateClass(voiceState)}><Bot className="h-3 w-3" />{voiceStateLabel(voiceState)}</span>
                     <span className="hidden h-8 w-8 place-items-center justify-self-end rounded-full text-[#176AF0] transition group-hover:bg-[#EEF4FF] xl:grid"><MoreHorizontal className="h-4 w-4" /></span>
                   </Link>
                 );
