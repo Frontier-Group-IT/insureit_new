@@ -46,6 +46,7 @@ export function BrokerRegisterShell({
   compactMetrics?: boolean;
   children: ReactNode;
 }) {
+  const branchRegisterTitleOnly = title === "Branch Register";
   const showSupportingCopy = title !== "Customer Portfolio" && title !== "Vehicle Portfolio" && title !== "Policy Portfolio" && title !== "External Policy Portfolio" && title !== "External Policies";
   const policyIntakeCompactLayout = title === "Policy Intake Queue" || title === "My Policy Intakes";
   const compactReferenceLayout = title === "Customer Portfolio" || title === "Vehicle Portfolio" || title === "Policy Portfolio" || title === "External Policy Portfolio" || title === "External Policies";
@@ -102,8 +103,10 @@ export function BrokerRegisterShell({
 
   return (
     <section className="mx-auto max-w-[1480px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.07)]">
-      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${compactReferenceLayout || useCompactMetrics ? "py-3" : "py-4"}`}>
-        {compactReferenceLayout ? (
+      <div className={`border-b border-[#E5ECF5] bg-[#F8FAFC] px-4 sm:px-5 ${branchRegisterTitleOnly || compactReferenceLayout || useCompactMetrics ? "py-3" : "py-4"}`}>
+        {branchRegisterTitleOnly ? (
+          <h2 className="text-[18px] font-semibold leading-tight text-[#0F172A]">{title}</h2>
+        ) : compactReferenceLayout ? (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#17365D] text-white shadow-[0_10px_22px_rgba(23,54,93,0.18)]">{icon}</span>
