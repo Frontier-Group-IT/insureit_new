@@ -226,7 +226,8 @@ function explicitMoney(text: string, label: RegExp): number | null {
   for (let i = 0; i < escaped.length; i += 1) {
     const line = escaped[i];
     if (!label.test(line)) continue;
-    const after = line.replace(label, " ");
+    const labelIndex = line.search(label);
+    const after = labelIndex >= 0 ? line.slice(labelIndex).replace(label, " ") : line;
     const direct = money(after);
     if (direct != null) return direct;
     for (let j = i + 1; j <= Math.min(i + 2, escaped.length - 1); j += 1) {
