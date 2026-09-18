@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — External Renewal AuthBridge enrichment + AI readiness gate:** branch `feat/external-renewal-authbridge-enrichment`; IT Voice Integration can fetch one opportunity's RC context through the existing protected AuthBridge/cache path, persists only a privacy-minimized snapshot in the isolated External Renewal layer, and blocks Sarvam dispatch until enrichment is ready. Customer/Vehicle/Policy masters remain untouched. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.
+
 - **2026-09-18 — Sarvam IT calling-window editor:** branch `feat/voice-calling-window-editor`; the IT Super User Voice Integration `Window` card gains an inline Edit action for start/end time. Values persist in a server-only operational-settings table, Partner/authenticated clients have no direct table access, and IT dispatch rechecks the persisted window before creating an attempt. **IMPLEMENTED; PR/CI/schema application/merge/deployment pending.** See `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`.
 
 - **2026-09-18 — ICICI Lombard GCV OCR training:** PR #2087 merged as `f59162a99112382d920f19c420c333af73197cfb`; PR #2088 merged as `686f04cd440b0dd7f27ba017e85ae01607a41f28` after canonical Verify #4186 passed. Dedicated ICICI GCV extraction plus first-class insurer-family routing now prevent New India pre-processing and repair structured vehicle, IDV and reconciled premium fields. **MERGED / NOT DEPLOYED**. See `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`.
