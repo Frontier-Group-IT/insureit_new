@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebCustomerDetail } from "@/lib/partner-web";
+import { getPartnerWebVehicleDetail } from "@/lib/partner-vehicles";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -115,30 +115,20 @@ function StepSection({
 
 export default async function PartnerVehicleDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ customer?: string }>;
 }) {
   const { id } = await params;
-  const query = await searchParams;
-  const customerId = query.customer?.trim();
-  if (!customerId) notFound();
-
-  const data = await getPartnerWebCustomerDetail(customerId);
-  const vehicle = data.vehicles.find((item) => item.vehicle_id === id);
+  const data = await getPartnerWebVehicleDetail(id);
+  const vehicle = data.vehicle;
   if (!vehicle) notFound();
 
-  const vehiclePolicies = data.policies.filter((policy) => {
-    if (!vehicle.vehicle_no || !policy.vehicle_no) return false;
-    return policy.vehicle_no.trim().toLowerCase() === vehicle.vehicle_no.trim().toLowerCase();
-  });
-  const vehicleClaims = data.claims.filter((claim) => {
-    if (!vehicle.vehicle_no || !claim.vehicle_no) return false;
-    return claim.vehicle_no.trim().toLowerCase() === vehicle.vehicle_no.trim().toLowerCase();
-  });
-
-  const registrationPending = !vehicle.vehicle_no || vehicle.vehicle_no.toUpperCase().startsWith("NEW-");
+  const registrationPending =
+    !vehicle.vehicle_no ||
+    vehicle.vehicle_no.toUpperCase().startsWith("NEW-") ||
+    ["registration_pending", "pending", "rc_pending"].includes(
+      (vehicle.registration_status ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_"),
+    );
 
   return (
     <PartnerPortalShell title="Vehicle Details">
@@ -195,7 +185,7 @@ export default async function PartnerVehicleDetailPage({
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <ReadOnlyField label="Customer" value={data.customer.customer_name} required />
             <ReadOnlyField label="RC / Registration number" value={vehicle.vehicle_no || "Registration pending"} required />
-            <DateField label="Registration date" value={null} />
+            <DateField label="Registration date" value={vehicle.registration_date} />
             <SelectLikeField label="Manufacturer" value={vehicle.make} required />
             <SelectLikeField label="MFG Year" value={vehicle.year} />
             <ReadOnlyField label="Model" value={vehicle.model} />
@@ -210,10 +200,10 @@ export default async function PartnerVehicleDetailPage({
               required
               hint={vehicle.vehicle_type ? "Goods Carrying Vehicle" : undefined}
             />
-            <ReadOnlyField label="Chassis number" value={null} />
-            <ReadOnlyField label="Engine number" value={null} />
-            <SelectLikeField label="Fuel Type" value={null} />
-            <ReadOnlyField label="Capacity (GVW)" value={null} />
+            <ReadOnlyField label="Chassis number" value={vehicle.chassis_no} />
+            <ReadOnlyField label="Engine number" value={vehicle.engine_no} />
+            <SelectLikeField label="Fuel Type" value={vehicle.fuel_type} />
+            <ReadOnlyField label="Capacity (GVW)" value={vehicle.gvw_kg} />
           </div>
         </StepSection>
 
@@ -235,11 +225,11 @@ export default async function PartnerVehicleDetailPage({
           <div className="grid border-t border-[#E1E7EF] bg-[#FAFCFF] md:grid-cols-3">
             <div className="border-b border-[#E1E7EF] px-5 py-4 md:border-b-0 md:border-r">
               <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#8493A7]">Policies</p>
-              <p className="mt-1 text-[18px] font-extrabold text-[#173F70]">{vehiclePolicies.length}</p>
+              <p className="mt-1 text-[18px] font-extrabold text-[#173F70]">{data.activity.policies}</p>
             </div>
             <div className="border-b border-[#E1E7EF] px-5 py-4 md:border-b-0 md:border-r">
               <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#8493A7]">Claims</p>
-              <p className="mt-1 text-[18px] font-extrabold text-[#173F70]">{vehicleClaims.length}</p>
+              <p className="mt-1 text-[18px] font-extrabold text-[#173F70]">{data.activity.claims}</p>
             </div>
             <div className="px-5 py-4">
               <p className="text-[9px] font-bold uppercase tracking-[0.05em] text-[#8493A7]">Registration</p>
