@@ -66,7 +66,7 @@ assert(deployWorkflow.includes("apply-external-renewal-voice-attempts.yml"), "pr
 
 assert(sarvamClient.includes('requiredEnv("SARVAM_API_KEY")'), "Sarvam key comes from server environment");
 assert(sarvamClient.includes('process.env[name]'), "Sarvam required environment values are resolved server-side");
-assert(sarvamClient.includes('api-subscription-key'), "current live submission still uses the pre-diagnostic auth contract until a dedicated dispatch change is approved");
+assert(sarvamClient.includes('"X-API-Key": apiKey'), "live cohort submission uses the proven Voice Agents X-API-Key header");
 assert(sarvamClient.includes('user_identifier: context.attempt_id'), "local attempt UUID is the provider correlation key");
 assert(sarvamClient.includes('SARVAM_RENEWAL_CALLING_ENABLED'), "IT-controlled kill switch gates outbound calling");
 assert(sarvamClient.includes("SarvamRenewalSubmissionError"), "provider submission distinguishes definitive rejection from ambiguous delivery");
@@ -131,6 +131,10 @@ assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice integra
 assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice integration readiness also requires critical system access");
 assert(readinessPage.includes("Test Sarvam connection"), "voice admin page exposes the explicit safe provider connectivity check");
 assert(readinessPage.includes("No customer identity, phone number, transcript or raw provider payload"), "voice admin page explicitly preserves the minimal-data boundary");
+assert(readinessPage.includes("Webhook callbacks"), "voice admin page surfaces normalized webhook health");
+assert(readinessPage.includes("Reconciliation attention required"), "voice admin page surfaces stale active attempts without auto-failing them");
+assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page uses an explicit stale-attempt observation threshold");
+assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attempt visibility preserves ambiguous-delivery safety");
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
 
