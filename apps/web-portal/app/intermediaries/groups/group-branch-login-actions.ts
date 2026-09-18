@@ -49,7 +49,7 @@ export async function createGroupBranchPortalLogin(formData: FormData) {
   if (!displayName) fail("The selected Group or Branch is not available.");
 
   const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(loginEmail, inviteOptions(displayName, entityType));
-  if (inviteError || !invite.user?.id) fail(inviteError?.message || "Unable to send the portal invitation.");
+  if (inviteError || !invite.user?.id) authEmailFail(inviteError?.message || "Unable to send the portal invitation.", entityType, entityId);
 
   const profileId = invite.user.id;
   const now = new Date().toISOString();
@@ -83,7 +83,7 @@ export async function createGroupBranchPortalLogin(formData: FormData) {
     fail(mappingError.message);
   }
 
-  done("portal_invite_sent");
+  done("portal_invite_sent", entityType, entityId, 60);
 }
 
 export async function resendGroupBranchPortalInvite(formData: FormData) {
@@ -93,8 +93,8 @@ export async function resendGroupBranchPortalInvite(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.auth.resetPasswordForEmail(mapping.login_email, resetOptions());
-  if (error) fail(error.message);
-  done("portal_invite_resent");
+  if (error) authEmailFail(error.message, mapping.entity_type, mapping.entity_id);
+  done("portal_invite_resent", mapping.entity_type, mapping.entity_id, 60);
 }
 
 export async function sendGroupBranchPortalPasswordReset(formData: FormData) {
@@ -104,8 +104,8 @@ export async function sendGroupBranchPortalPasswordReset(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { error } = await admin.auth.resetPasswordForEmail(mapping.login_email, resetOptions());
-  if (error) fail(error.message);
-  done("portal_password_email_sent");
+  if (error) authEmailFail(error.message, mapping.entity_type, mapping.entity_id);
+  done("portal_password_email_sent", mapping.entity_type, mapping.entity_id, 60);
 }
 
 export async function setGroupBranchPortalLoginStatus(formData: FormData) {
@@ -275,11 +275,45 @@ function phoneNumber(value: string) {
   return digits.length >= 10 && digits.length <= 15;
 }
 
-function done(event: string): never {
+function done(
+  event: string,
+  entityType?: AccessEntityType,
+  entityId?: string,
+  cooldownSeconds = 0,
+): never {
   revalidatePath(returnPath);
   revalidatePath("/intermediaries/groups");
   revalidatePath("/intermediaries/groups/branches");
-  redirect(`${returnPath}?success=${encodeURIComponent(event)}`);
+
+  const params = new URLSearchParams({ success: event });
+  if (entityType && entityId && cooldownSeconds > 0) {
+    params.set("cooldown_entity_type", entityType);
+    params.set("cooldown_entity_id", entityId);
+    params.set("cooldown_until", String(Date.now() + cooldownSeconds * 1000));
+  }
+  redirect(`${returnPath}?${params.toString()}`);
+}
+
+function authEmailFail(message: string, entityType: AccessEntityType, entityId: string): never {
+  const retryAfter = authEmailRetryAfterSeconds(message);
+  if (retryAfter) {
+    const params = new URLSearchParams({
+      error_code: "email_cooldown",
+      retry_after: String(retryAfter),
+      cooldown_entity_type: entityType,
+      cooldown_entity_id: entityId,
+      cooldown_until: String(Date.now() + retryAfter * 1000),
+    });
+    redirect(`${returnPath}?${params.toString()}`);
+  }
+  fail(message);
+}
+
+function authEmailRetryAfterSeconds(message: string) {
+  const match = message.match(/after\s+(\d+)\s+seconds?/i);
+  if (!match) return 0;
+  const seconds = Number(match[1]);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 0;
 }
 
 function fail(message: string): never {
