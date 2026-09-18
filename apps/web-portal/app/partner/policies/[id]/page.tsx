@@ -3,7 +3,6 @@ import {
   Check,
   ChevronRight,
   FileText,
-  FileUp,
   IndianRupee,
   ShieldCheck,
 } from "lucide-react";
@@ -69,11 +68,8 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
     <PartnerPortalShell title="Edit Policy">
       <div className="pb-5">
         <section className="overflow-hidden rounded-[14px] border border-[#D8E0EB] bg-white shadow-[0_8px_24px_rgba(42,61,92,0.07)]">
-          <div className="flex min-h-[64px] items-center justify-between bg-gradient-to-r from-[#0B2C62] via-[#0D3978] to-[#2C5D9F] px-5 text-white">
+          <div className="flex min-h-[64px] items-center bg-gradient-to-r from-[#0B2C62] via-[#0D3978] to-[#2C5D9F] px-5 text-white">
             <h1 className="text-[16px] font-extrabold tracking-[-0.02em]">Policy Details</h1>
-            <span className="grid h-11 w-11 place-items-center rounded-xl border border-[#5E8BC3] bg-[#1D588F]/80 text-[#70E0D8] shadow-inner">
-              <FileUp className="h-[18px] w-[18px]" />
-            </span>
           </div>
 
           <div className="flex min-h-[38px] items-center gap-6 border-b border-[#DDE5EF] bg-[#F7F9FC] px-5 text-[10px] font-semibold text-[#65748A]">
