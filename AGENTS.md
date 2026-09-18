@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Reversible Partner Portal multi-login access:** branch `feat/partner-multi-login-access`; additive `partner_portal_additional_users` layer, Partner login management UI, independent invitation/reset/enable/disable actions, preserved legacy primary login, dedicated schema workflow and rollback SQL are **IMPLEMENTED**. No production schema/data mutation, merge or deployment yet; PR #1999 pending. Rollback intentionally leaves additional-user rows inert so the feature can be re-enabled without business-data loss.
+
 - **2026-09-18 — Partner Web registration documents + activation date repair:** branch `fix/partner-registration-document-read-policy`; verified root cause was Partner RLS/storage access blocking direct onboarding-document reads. Registration overview now returns the authenticated account's existing onboarding document metadata and activation timestamp, with a scoped storage read policy so the same uploaded files can be opened in Partner Portal. **IMPLEMENTED**; no document/data duplication, migration + PR/merge/deployment pending.
 
 - **2026-09-18 — Partner Web External Renewal Opportunity redesign:** branch `ui/partner-external-renewal-opportunity-redesign`; compact summary strip, Opportunity Snapshot, Recent Activity & Next Steps, card-based CRM interaction form and AI Outreach layout are **IMPLEMENTED**. Existing interaction, AI-call and Policy Intake server contracts are preserved; no schema change, PR, merge or deployment yet.
