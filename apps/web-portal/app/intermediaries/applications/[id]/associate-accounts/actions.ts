@@ -9,6 +9,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const allowedRoles = new Set(["claim_head", "insurance_head", "bodyshop_manager"]);
 
+type Reviewer = Awaited<ReturnType<typeof requirePospMispManager>>;
 type AssociateRole = "claim_head" | "insurance_head" | "bodyshop_manager";
 type AssociateStatus = "invited" | "active" | "disabled";
 type ManagedAssociate = {
@@ -43,7 +44,7 @@ export async function createPartnerAssociateAccount(formData: FormData) {
   if (!/^\+?[0-9]{7,15}$/.test(phone)) redirect(`${returnPath}?error=associate_phone_invalid`);
   if (role === "admin" || !allowedRoles.has(role)) redirect(`${returnPath}?error=associate_role_blocked`);
 
-  await assertPartnerAccess(reviewer.id, reviewer.role, applicationId, intermediaryId, returnPath);
+  await assertPartnerAccess(reviewer, applicationId, intermediaryId, returnPath);
 
   const admin = createSupabaseAdminClient();
   const [{ data: primary }, { data: associate }, { data: groupBranch }, { data: profile }] = await Promise.all([
@@ -281,7 +282,7 @@ async function loadManagedAssociate(formData: FormData) {
     redirect(`${returnPath}?error=associate_account_invalid`);
   }
 
-  await assertPartnerAccess(reviewer.id, reviewer.role, applicationId, intermediaryId, returnPath);
+  await assertPartnerAccess(reviewer, applicationId, intermediaryId, returnPath);
 
   const admin = createSupabaseAdminClient();
   const { data: associate } = await admin.from("partner_portal_associate_accounts")
@@ -303,16 +304,15 @@ async function loadManagedAssociate(formData: FormData) {
 }
 
 async function assertPartnerAccess(
-  reviewerId: string,
-  reviewerRole: string,
+  reviewer: Reviewer,
   applicationId: string,
   intermediaryId: string,
   returnPath: string,
 ) {
-  if (!(await hasEffectiveCapability({ id: reviewerId, role: reviewerRole } as never, "review_intermediary_application", "edit"))) {
+  if (!(await hasEffectiveCapability(reviewer, "review_intermediary_application", "edit"))) {
     redirect(`${returnPath}?error=associate_not_authorized`);
   }
-  if (!(await canAccessIntermediary(reviewerId, reviewerRole, intermediaryId))) {
+  if (!(await canAccessIntermediary(reviewer.id, reviewer.role, intermediaryId))) {
     redirect(`${returnPath}?error=associate_not_authorized`);
   }
 
