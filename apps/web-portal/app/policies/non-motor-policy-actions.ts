@@ -22,7 +22,7 @@ export type NonMotorPolicyPayload = {
   source: { issuanceDate: string; intermediaryType: string; intermediaryCode: string; leadSource: string; rmName: string };
   customerId?: string;
   customer: { customerType: "Individual" | "Organisation"; insuredName: string; contactName?: string; phone: string; email?: string; address?: string };
-  policy: { policyNumber: string; insurerId: string; productName: string; category: string; status: string; startDate: string; endDate: string; sumInsured: string; netPremium: string; gstAmount: string; grossPremium: string; deductible?: string };
+  policy: { policyNumber: string; insurerId: string; productName: string; category: string; status: string; startDate: string; endDate: string; sumInsured: string; odPremium: string; tpPremium: string; netPremium: string; gstAmount: string; grossPremium: string; deductible?: string };
   commercial?: NonMotorCommercialPayload;
   risk: Record<string, string>;
   additional: Record<string, string>;
@@ -73,9 +73,10 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   const issuanceDate = clean(payload.source.issuanceDate);
   const sumInsured = numberOrNull(payload.policy.sumInsured);
   const grossPremium = numberOrNull(payload.policy.grossPremium);
-  const enteredNetPremium = numberOrNull(payload.policy.netPremium);
+  const odPremium = moneyOrZero(payload.policy.odPremium);
+  const tpPremium = 0;
+  const netPremium = odPremium + tpPremium;
   const enteredGst = numberOrNull(payload.policy.gstAmount);
-  const netPremium = enteredNetPremium ?? Math.max(0, (grossPremium ?? 0) - (enteredGst ?? 0));
   const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
 
   const payinPercentEntered = clean(commercial.payinPercent) !== "";
@@ -99,7 +100,7 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
   if (endDate < startDate) return { ok:false, error:"Policy expiry cannot be before the start date." };
   if (sumInsured === null || sumInsured <= 0) return { ok:false, error:"Enter a valid sum insured or liability limit." };
   if (grossPremium === null || grossPremium < 0) return { ok:false, error:"Enter a valid gross premium." };
-  if (netPremium < 0 || gstAmount < 0) return { ok:false, error:"Premium values cannot be negative." };
+  if (odPremium < 0 || netPremium < 0 || gstAmount < 0) return { ok:false, error:"Premium values cannot be negative." };
   if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok:false, error:"Pay-in and payout percentages must be between 0 and 100." };
   if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok:false, error:"Commercial amounts cannot be negative." };
 
@@ -184,8 +185,8 @@ export async function updateNonMotorPolicy(policyId: string, payload: NonMotorPo
 
   const { error: premiumError } = await admin.from("policy_premium_details").upsert({
     policy_id:id,
-    od_premium:0,
-    tp_premium:0,
+    od_premium:odPremium,
+    tp_premium:tpPremium,
     cpa_opted:false,
     cpa_amount:0,
     net_premium:netPremium,
@@ -268,9 +269,10 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   const issuanceDate = clean(payload.source.issuanceDate);
   const sumInsured = numberOrNull(payload.policy.sumInsured);
   const grossPremium = numberOrNull(payload.policy.grossPremium);
-  const enteredNetPremium = numberOrNull(payload.policy.netPremium);
+  const odPremium = moneyOrZero(payload.policy.odPremium);
+  const tpPremium = 0;
+  const netPremium = odPremium + tpPremium;
   const enteredGst = numberOrNull(payload.policy.gstAmount);
-  const netPremium = enteredNetPremium ?? Math.max(0, (grossPremium ?? 0) - (enteredGst ?? 0));
   const gstAmount = enteredGst ?? Math.max(0, (grossPremium ?? 0) - netPremium);
 
   const payinPercentEntered = clean(commercial.payinPercent) !== "";
@@ -294,7 +296,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
   if (endDate < startDate) return { ok:false, error:"Policy expiry cannot be before the start date." };
   if (sumInsured === null || sumInsured <= 0) return { ok:false, error:"Enter a valid sum insured or liability limit." };
   if (grossPremium === null || grossPremium < 0) return { ok:false, error:"Enter a valid gross premium." };
-  if (netPremium < 0 || gstAmount < 0) return { ok:false, error:"Premium values cannot be negative." };
+  if (odPremium < 0 || netPremium < 0 || gstAmount < 0) return { ok:false, error:"Premium values cannot be negative." };
   if (payinPercent < 0 || payinPercent > 100 || payoutPercent < 0 || payoutPercent > 100) return { ok:false, error:"Pay-in and payout percentages must be between 0 and 100." };
   if (payinFixedAmount < 0 || schemeAmount < 0 || payoutFixedAmount < 0) return { ok:false, error:"Commercial amounts cannot be negative." };
 
@@ -384,7 +386,7 @@ export async function createNonMotorPolicy(payload: NonMotorPolicyPayload): Prom
     if (detailsError) throw new Error(detailsError.message);
 
     const { error: premiumError } = await admin.from("policy_premium_details").insert({
-      policy_id:policy.id, od_premium:0, tp_premium:0, cpa_opted:false, cpa_amount:0, net_premium:netPremium, gst_amount:gstAmount,
+      policy_id:policy.id, od_premium:odPremium, tp_premium:tpPremium, cpa_opted:false, cpa_amount:0, net_premium:netPremium, gst_amount:gstAmount,
       gross_premium:grossPremium, gst_rule:"Manual Non-Motor entry", calculation_version:"non_motor_commercial_v1", calculation_overridden:false,
     });
     if (premiumError) throw new Error(premiumError.message);
