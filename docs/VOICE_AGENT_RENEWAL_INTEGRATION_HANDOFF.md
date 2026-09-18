@@ -1,6 +1,6 @@
 # INSUREIT Renewal Voice Agent Integration Handoff
 
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-09-18
 >
 > Source of truth for INSUREIT External Renewal Opportunities -> Sarvam outbound voice-agent integration. Read this before changing Partner external-renewal AI outreach, Sarvam campaign/webhook integration, voice-attempt schema, or the IT Super User voice-integration readiness area.
 
@@ -22,19 +22,26 @@ Evidence:
 
 The protected schema workflow confirmed the voice attempt/event tables and Partner/service-role RPC contract in the production Supabase project before Vercel deployment proceeded.
 
-### Production calling state — NOT YET OPERATIONALLY VERIFIED
+### Production single-opportunity calling state — VERIFIED END TO END
 
-The code and schema are live, but real Partner-triggered AI customer calling is not considered production-ready until all of the following are verified:
+The single-opportunity Partner-triggered AI calling lifecycle is now verified in production for controlled internal tests.
 
-- Sarvam server environment values are configured in production
-- approved Sarvam campaign and committed agent/app version are bound
-- campaign webhook points to INSUREIT and carries the INSUREIT-controlled secret
-- committed Sarvam output variables match the INSUREIT normalization contract
-- operational calling-window/contact-policy/DND/opt-out rule is approved
-- `SARVAM_RENEWAL_CALLING_ENABLED=true` is intentionally enabled
-- one controlled External Renewal opportunity is called end to end and the resulting provider attempt, webhook, CRM projection and Partner UI state are inspected
+Verified on 2026-09-18:
 
-Do not describe the feature as fully operational merely because PR #1779 is deployed.
+- production Sarvam scheduling authentication works with `X-API-Key`
+- Partner `Call with AI` creates one local attempt and one streamed cohort user
+- API-created cohort execution produced successful live PSTN calls
+- Sarvam agent v4 returned structured output variables
+- the campaign webhook successfully reached INSUREIT after the webhook URL was actually saved on the campaign
+- provider attempt/idempotency event creation succeeded
+- normalized result projection updated the External Renewal opportunity and Partner UI
+- a missing-webhook first trial was reconciled through the existing `apply_external_renewal_voice_result(...)` contract after provider-export evidence proved completion
+- no verified Customer, Vehicle or Policy master was used as the projection target
+
+Detailed evidence and failed/successful trial chronology:
+`docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`.
+
+Important limitation: this verifies the **single-opportunity closed loop only**. Bulk calling, autonomous scheduling, production calling-hour/DND policy, monitoring, stale-attempt reconciliation automation, and scaled campaign controls are not yet production-approved.
 
 ## Durable architecture
 
@@ -320,7 +327,7 @@ Do not begin bulk calling after only one successful PSTN connection. The whole I
 - no verified master writes
 - IT Super User readiness role boundary when that page is present
 
-## Deferred until single-call production verification
+## Deferred until post-single-call production hardening
 
 - bulk/select-many AI calling
 - scheduled autonomous campaigns from INSUREIT
