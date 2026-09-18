@@ -106,7 +106,7 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
 
       {access.viewPolicies ? <BusinessPerformance business={business} /> : null}
 
-      {business.commercial ? <CommercialOperations business={business} /> : null}
+      {business.commercial ? <CommercialOperations business={business} canOpenControl={access.viewAccounts} /> : null}
 
       {showHealth ? <PortfolioHealth data={data} renewalTotal={renewalTotal} /> : null}
 
@@ -384,7 +384,7 @@ function BusinessPerformance({ business }: { business: DashboardBusinessData }) 
   );
 }
 
-function CommercialOperations({ business }: { business: DashboardBusinessData }) {
+function CommercialOperations({ business, canOpenControl }: { business: DashboardBusinessData; canOpenControl: boolean }) {
   const commercial = business.commercial!;
 
   return (
@@ -397,7 +397,9 @@ function CommercialOperations({ business }: { business: DashboardBusinessData })
             <p className="mt-0.5 text-[7.5px] font-bold uppercase tracking-[.11em] text-[#8A96A8]">{business.periodLabel}</p>
           </div>
         </div>
-        <Link prefetch={false} href="/policies/commercial-review" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Open control ↗</Link>
+        {canOpenControl ? (
+          <Link prefetch={false} href="/policies/commercial-review" className="text-[8.5px] font-bold text-[#65758B] hover:text-[#203A63]">Open control ↗</Link>
+        ) : null}
       </div>
 
       <div className="grid border-t border-[#E7ECF2] md:grid-cols-3">

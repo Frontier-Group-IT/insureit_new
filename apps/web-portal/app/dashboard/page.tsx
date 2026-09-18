@@ -39,6 +39,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const accountsCapability = can("view_accounts");
 
   const commercial = canAccessPolicyCommercials(profile);
+  const isRelationshipManager = profile?.role === "relationship_manager";
+  const dashboardCommercialAccess = commercial || isRelationshipManager;
+  const dashboardCommercialOperationsAccess = (accountsCapability && commercial) || isRelationshipManager;
   const access: DashboardAccess = {
     viewPolicies,
     viewVehicles,
@@ -55,7 +58,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const [data, business] = await Promise.all([
     getDashboardCurrentData(profile, access, base),
-    getDashboardBusinessData(profile, query, commercial, accountsCapability && commercial),
+    getDashboardBusinessData(profile, query, dashboardCommercialAccess, dashboardCommercialOperationsAccess),
   ]);
 
   return (
