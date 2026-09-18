@@ -22,7 +22,7 @@ import {
   type PartnerExternalRenewalWindow,
 } from "@/lib/partner-external-renewals";
 import { getPartnerExternalRenewalVoiceStates } from "@/lib/partner-external-renewal-voice";
-import { isSarvamRenewalCallingEnabled } from "@/lib/sarvam-renewal-call";
+import { getSarvamPartnerDispatchReadiness } from "@/lib/sarvam-partner-dispatch-readiness";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -141,14 +141,15 @@ export default async function PartnerExternalRenewalsPage({
   const page = pageNumber(query.page);
   const offset = (page - 1) * PAGE_SIZE;
 
-  const [summary, rows] = await Promise.all([
+  const [summary, rows, dispatchReadiness] = await Promise.all([
     getPartnerExternalRenewalSummary(),
     listPartnerExternalRenewals({ limit: PAGE_SIZE, offset, search: q, mode, window, status, followUp, intake }),
+    getSarvamPartnerDispatchReadiness(),
   ]);
 
   const voiceStates = await getPartnerExternalRenewalVoiceStates(rows.map((row) => row.opportunity_id));
   const voiceStateByOpportunity = new Map(voiceStates.map((state) => [state.opportunity_id, state]));
-  const voiceEnabled = isSarvamRenewalCallingEnabled();
+  const voiceEnabled = dispatchReadiness.ready;
 
   const total = rows[0]?.total_count ?? 0;
   const hasPrevious = page > 1;
@@ -219,10 +220,10 @@ export default async function PartnerExternalRenewalsPage({
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EAF3FF] text-[#2A6FD8]"><Bot className="h-4 w-4" /></span>
             <div>
               <p className="text-[11px] font-extrabold text-[#1B3152]">AI renewal outreach</p>
-              <p className="mt-0.5 text-[9px] text-[#7184A0]">Single-customer AI calls are controlled from each opportunity. Provider administration is not exposed here.</p>
+              <p className="mt-0.5 text-[9px] text-[#7184A0]">{dispatchReadiness.message} Single-customer AI calls remain controlled from each opportunity.</p>
             </div>
           </div>
-          <span className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EAF8F0] text-[#25875A]" : "bg-[#F1F4F8] text-[#6B7E98]")}>{voiceEnabled ? "AI calling available" : "AI calling not enabled"}</span>
+          <span className={"rounded-full px-3 py-1.5 text-[8.5px] font-bold " + (voiceEnabled ? "bg-[#EAF8F0] text-[#25875A]" : "bg-[#F1F4F8] text-[#6B7E98]")}>{voiceEnabled ? "AI calling available" : "AI calling unavailable"}</span>
         </section>
 
         <section className="overflow-hidden rounded-xl border border-[#DDE6F0] bg-white shadow-[0_4px_14px_rgba(31,55,86,0.04)]">
