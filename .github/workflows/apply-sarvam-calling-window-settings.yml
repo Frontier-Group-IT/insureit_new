@@ -1,0 +1,84 @@
+name: Apply Sarvam calling window settings
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql'
+      - '.github/workflows/apply-sarvam-calling-window-settings.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Sarvam calling window settings
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply calling window settings migration
+        run: |
+          set -euo pipefail
+          supabase db query --linked --file supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql
+          supabase migration repair --linked --status applied 20260918233000
+
+      - name: Verify settings contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.sarvam_voice_operational_settings') is not null as settings_table_ready,
+              exists (
+                select 1
+                from public.sarvam_voice_operational_settings
+                where id = 'production'
+                  and window_start = time '09:00'
+                  and window_end = time '18:00'
+                  and time_zone = 'Asia/Kolkata'
+              ) as default_row_ready,
+              not has_table_privilege('authenticated','public.sarvam_voice_operational_settings','SELECT') as no_authenticated_read,
+              not has_table_privilege('authenticated','public.sarvam_voice_operational_settings','UPDATE') as no_authenticated_update
+          ")
+          echo "$result"
+          for key in settings_table_ready default_row_ready no_authenticated_read no_authenticated_update; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done
