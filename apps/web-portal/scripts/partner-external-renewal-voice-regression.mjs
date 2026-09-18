@@ -152,6 +152,8 @@ assert(readinessPage.includes("Reconciliation attention required"), "voice admin
 assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page uses an explicit stale-attempt observation threshold");
 assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attempt visibility preserves ambiguous-delivery safety");
 assert(readinessPage.includes("Webhook recovery"), "voice admin page exposes controlled webhook redelivery");
+assert(readinessPage.includes("Webhook retry queued by Sarvam"), "HTTP 202 is presented as queued rather than delivered");
+assert(readinessPage.includes("Delivery is still unverified until INSUREIT observes the callback"), "voice admin page does not overstate asynchronous retry success");
 assert(readinessPage.includes("This does not place another phone call"), "webhook recovery UI states the no-call boundary");
 assert(readinessPage.includes('name="provider_attempt_id"'), "webhook recovery requires an explicit provider attempt identifier");
 assert(readinessPage.includes("Phone hashes, phone numbers and interaction IDs are not accepted as substitutes"), "webhook recovery UI rejects ambiguous provider identifiers");
