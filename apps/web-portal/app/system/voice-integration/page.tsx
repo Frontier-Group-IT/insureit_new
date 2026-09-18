@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell, Card, PageHeader } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { getSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
 import { getSarvamRenewalReadiness } from "@/lib/sarvam-renewal-readiness";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -77,6 +78,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const webhookRetryFailed = webhookRetry === "failed";
 
   const readiness = getSarvamRenewalReadiness();
+  const operationalPolicy = getSarvamRenewalOperationalPolicy();
   const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
     (key) => readiness.items.find((item) => item.key === key)?.configured,
   );
@@ -98,7 +100,11 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
 
   const schemaReady = !attemptsError && !eventsError;
   const providerConfigReady = readiness.requiredConfigured;
-  const operationalReady = schemaReady && providerConfigReady && readiness.callingEnabled;
+  const operationalReady =
+    schemaReady &&
+    providerConfigReady &&
+    readiness.callingEnabled &&
+    operationalPolicy.withinCallingWindow;
   const nowMs = Date.now();
   const staleActiveAttempts = (attempts ?? []).filter((attempt) => isStaleActiveAttempt(attempt, nowMs));
   const latestWebhookEvent = attemptEvents?.[0] ?? null;
@@ -195,12 +201,18 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           <p className="mt-1 text-[10.5px] leading-5 text-[#64748B]">
             Technical readiness does not by itself authorize scaled customer outreach. The single-opportunity closed loop is proven; production expansion still requires approved calling hours, retry policy, DND/opt-out handling, monitoring and reconciliation controls.
           </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
             <Gate label="Schema applied" ready={schemaReady} />
             <Gate label="Provider config" ready={providerConfigReady} />
             <Gate label="Kill switch" ready={readiness.callingEnabled} />
             <Gate label="Webhook observed" ready={webhookObserved} detail={webhookObserved ? "At least one normalized callback event exists" : "No callback event visible"} />
-            <Gate label="Operational policy" ready={false} detail="Calling hours / retry / DND approval pending" />
+            <Gate
+              label="Calling window"
+              ready={operationalPolicy.withinCallingWindow}
+              detail={`${operationalPolicy.start}–${operationalPolicy.end} · ${operationalPolicy.timeZone}`}
+            />
+            <Gate label="DND / terminal guard" ready={operationalPolicy.dndAndTerminalGuard} detail="Server rechecks DNC and closed states before creating an attempt" />
+            <Gate label="INSUREIT auto retry" ready={!operationalPolicy.applicationAutoRetry} detail="Disabled; ambiguous delivery is held for reconciliation" />
           </div>
         </Card>
 
