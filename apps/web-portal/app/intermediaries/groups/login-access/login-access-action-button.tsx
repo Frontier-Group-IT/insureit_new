@@ -10,16 +10,18 @@ export function LoginAccessActionButton({
   label,
   cooldownLabel,
   cooldownUntil = 0,
+  initialRemaining = 0,
   className,
   disabled = false,
 }: {
   label: string;
   cooldownLabel?: string;
   cooldownUntil?: number;
+  initialRemaining?: number;
   className: string;
   disabled?: boolean;
 }) {
-  const [remaining, setRemaining] = useState(() => secondsRemaining(cooldownUntil));
+  const [remaining, setRemaining] = useState(initialRemaining);
 
   useEffect(() => {
     setRemaining(secondsRemaining(cooldownUntil));
@@ -48,8 +50,8 @@ export function LoginAccessActionButton({
   );
 }
 
-export function EmailCooldownNotice({ cooldownUntil }: { cooldownUntil: number }) {
-  const [remaining, setRemaining] = useState(() => secondsRemaining(cooldownUntil));
+export function EmailCooldownNotice({ cooldownUntil, initialRemaining }: { cooldownUntil: number; initialRemaining: number }) {
+  const [remaining, setRemaining] = useState(initialRemaining);
 
   useEffect(() => {
     setRemaining(secondsRemaining(cooldownUntil));
