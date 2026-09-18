@@ -8,7 +8,7 @@ import {
   markExternalRenewalVoiceSubmissionFailed,
   markExternalRenewalVoiceSubmitted,
 } from "@/lib/partner-external-renewal-voice";
-import { assertSarvamRenewalCallingWindow } from "@/lib/sarvam-renewal-operational-policy";
+import { assertConfiguredSarvamRenewalCallingWindow } from "@/lib/sarvam-renewal-operational-policy";
 import {
   isSarvamRenewalCallingEnabled,
   SarvamRenewalSubmissionError,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   let providerRequestStarted = false;
 
   try {
-    assertSarvamRenewalCallingWindow();
+    await assertConfiguredSarvamRenewalCallingWindow();
     await assertSarvamRenewalCampaignDispatchable();
 
     const context = await startItSuperUserExternalRenewalVoiceAttempt({

@@ -21,6 +21,8 @@ Treat `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md` as the current co
 
 This area is IT Super User only. Preserve the exact `it_super_user` role check plus `manage_system` at `approve` access. Do not expose provider secrets, API keys, webhook secrets, raw provider payloads, customer phone numbers, or transcripts here.
 
+The calling window is an IT Super User operational control. The Voice Integration Window card may edit start/end time through the protected system route; persisted values must remain server-only, must not be writable by authenticated clients directly, and IT dispatch must re-read the persisted setting immediately before creating an attempt.
+
 The page may report whether required server-side configuration is present and may show non-secret provider identifiers in masked form. Read-only diagnostics may show sanitized HTTP status/error classification and provider request/correlation identifiers, but never raw response bodies or credentials. It must not turn Partner users into Sarvam administrators.
 
 Do not add bulk calling or autonomous campaign controls until the single-opportunity production lifecycle is verified end to end. `won` remains a Policy Intake conversion state and must never be set by the voice agent.
