@@ -177,6 +177,7 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
   const cooldownEntityKey = query.cooldown_entity_type && query.cooldown_entity_id
     ? `${query.cooldown_entity_type}:${query.cooldown_entity_id}`
     : "";
+  const cooldownRemaining = activeCooldownUntil ? Math.max(0, Math.ceil((activeCooldownUntil - Date.now()) / 1000)) : 0;
 
   return (
     <AppShell title="Group / Branch Login Access" backHref="/intermediaries/groups">
@@ -193,7 +194,7 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
         </div>
 
         {query.success ? <Notice tone="success">{successMessage(query.success)}</Notice> : null}
-        {query.error_code === "email_cooldown" && activeCooldownUntil ? <EmailCooldownNotice cooldownUntil={activeCooldownUntil} /> : null}
+        {query.error_code === "email_cooldown" && activeCooldownUntil ? <EmailCooldownNotice cooldownUntil={activeCooldownUntil} initialRemaining={cooldownRemaining} /> : null}
         {query.error ? <Notice tone="error">{friendlyErrorMessage(query.error)}</Notice> : null}
         {migrationMissing ? (
           <Notice tone="warning">The additive Group/Branch login migration has not been applied in this environment yet. Existing hierarchy screens remain available, but login provisioning is disabled.</Notice>
@@ -244,6 +245,7 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                         label="Send Invitation"
                         cooldownLabel="Send"
                         cooldownUntil={entityCooldownUntil}
+                        initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
                         disabled={migrationMissing}
                         className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
                       />
@@ -258,6 +260,8 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                             label="Resend Invitation"
                             cooldownLabel="Resend"
                             cooldownUntil={entityCooldownUntil}
+                            initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
+                        initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
                             className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                           />
                         </form>
@@ -270,6 +274,8 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                             label="Reset Password"
                             cooldownLabel="Reset"
                             cooldownUntil={entityCooldownUntil}
+                            initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
+                        initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
                             className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                           />
                         </form>
