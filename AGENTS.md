@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Activity Status collapsed by default:** branch `ui/activity-status-collapsed-default`; changed the shared Activity Status component default from expanded to collapsed. This applies consistently wherever the shared card is used, including Partner Customer, Partner Vehicle, Partner Policy, and the aligned Operations activity cards. **IMPLEMENTED**; UI-only, no database/schema/data changes, no PR created yet.
+
 - **2026-09-18 — Sarvam webhook retry pending-state semantics:** live HTTP 202 evidence proved provider acceptance does not equal callback delivery. Voice Integration now labels 202 as **queued by Sarvam / delivery unverified** until INSUREIT actually observes the callback. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
 
 - **2026-09-18 — Activity Status visual standardization:** branch `ui/standardize-activity-status-cards`; introduced one shared Activity Status card matching the Partner Customer reference and applied it to Partner Customer, Partner Vehicle, Partner Policy, plus existing Operations customer/policy/vehicle activity components. Claim workflow remains unchanged because it uses claim stages rather than this generic activity card. **IMPLEMENTED**; UI-only, no database/schema/data changes, no PR created per request.
