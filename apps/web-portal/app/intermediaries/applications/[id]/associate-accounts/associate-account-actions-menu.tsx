@@ -197,36 +197,41 @@ export function AssociateAccountActionsMenu({
       </div>
 
       {editOpen ? (
-        <Modal title="Edit Associate Account" onClose={() => setEditOpen(false)}>
-          <form action={updatePartnerAssociateAccount} className="space-y-4">
+        <Modal title="Edit Associate Account" onClose={() => setEditOpen(false)} wide>
+          <form
+            action={updatePartnerAssociateAccount}
+            className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1.4fr_1.2fr_1.15fr_auto] xl:items-end"
+          >
             {commonHidden}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Name">
-                <input name="name" required defaultValue={associate.name} className={inputClass} />
-              </Field>
-              <Field label="Phone Number">
-                <input name="phone_number" required defaultValue={associate.phone_number} inputMode="tel" className={inputClass} />
-              </Field>
-              <Field label="Email">
-                <input value={associate.email} readOnly disabled className={`${inputClass} cursor-not-allowed bg-[#F8FAFC] text-[#64748B]`} />
-              </Field>
-              <Field label="Designation">
-                <input name="designation" required defaultValue={associate.designation} className={inputClass} />
-              </Field>
-              <Field label="Role">
-                <select name="role" required defaultValue={associate.role} className={inputClass}>
-                  <option value="admin" disabled>Admin</option>
-                  <option value="claim_head">Claim Head</option>
-                  <option value="insurance_head">Insurance Head</option>
-                  <option value="bodyshop_manager">Bodyshop Manager</option>
-                </select>
-              </Field>
-            </div>
-            <p className="text-[10px] text-[#64748B]">Email is locked because it is the associate&apos;s portal login ID.</p>
-            <div className="flex justify-end gap-2 border-t border-[#E7ECF3] pt-4">
-              <button type="button" onClick={() => setEditOpen(false)} className="h-9 rounded-xl border border-[#D8E2EE] px-4 text-[10px] font-semibold text-[#475569] hover:bg-[#F8FAFC]">Cancel</button>
-              <button type="submit" className="h-9 rounded-xl bg-[#17365D] px-4 text-[10px] font-bold text-white hover:bg-[#102A4C]">Save Changes</button>
-            </div>
+            <Field label="Name">
+              <input name="name" required defaultValue={associate.name} className={inputClass} />
+            </Field>
+            <Field label="Phone Number">
+              <input name="phone_number" required defaultValue={associate.phone_number} inputMode="tel" className={inputClass} />
+            </Field>
+            <Field label="Email">
+              <input
+                value={associate.email}
+                readOnly
+                disabled
+                title="Email is locked because it is the associate's portal login ID."
+                className={`${inputClass} cursor-not-allowed bg-[#F8FAFC] text-[#64748B]`}
+              />
+            </Field>
+            <Field label="Designation">
+              <input name="designation" required defaultValue={associate.designation} className={inputClass} />
+            </Field>
+            <Field label="Role">
+              <select name="role" required defaultValue={associate.role} className={inputClass}>
+                <option value="admin" disabled>Admin</option>
+                <option value="claim_head">Claim Head</option>
+                <option value="insurance_head">Insurance Head</option>
+                <option value="bodyshop_manager">Bodyshop Manager</option>
+              </select>
+            </Field>
+            <button type="submit" className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]">
+              Save Changes
+            </button>
           </form>
         </Modal>
       ) : null}
@@ -253,10 +258,20 @@ export function AssociateAccountActionsMenu({
   );
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+function Modal({
+  title,
+  onClose,
+  children,
+  wide = false,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  wide?: boolean;
+}) {
   return (
     <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="w-full max-w-xl rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)]">
+      <div className={`w-full rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)] ${wide ? "max-w-[1480px]" : "max-w-xl"}`}>
         <div className="flex items-center justify-between border-b border-[#E7ECF3] px-5 py-4">
           <h3 className="text-[13px] font-semibold text-[#17203A]">{title}</h3>
           <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9]">
