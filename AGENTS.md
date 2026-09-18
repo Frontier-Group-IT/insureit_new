@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Sarvam voice operational hardening:** branch `feat/sarvam-voice-operational-hardening`; IT Super User Voice Integration now surfaces normalized webhook callback health and flags active attempts unchanged for >60 minutes as reconciliation attention without auto-failing/retrying ambiguous provider state. Voice regression now asserts the proven `X-API-Key` dispatch contract. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_OPERATIONAL_HARDENING_2026_09_18.md`.
+
 - **2026-09-18 — Sarvam controlled live voice closed loop:** two authorized internal External Renewal trials proved API cohort streaming and live PSTN calling; the first exposed a missing campaign webhook and was reconciled through the existing result-projection contract, while the second verified webhook delivery, provider event idempotency, normalized CRM projection and Partner UI closure end to end. **VERIFIED**. Detailed evidence: `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`.
 
 - **2026-09-18 — Partner vehicle detail scope repair:** branch `fix/partner-vehicle-detail-scope`; production error was caused by the vehicle detail page reopening a listed vehicle through `partner_app_customer_detail`, whose customer scope can differ from the Vehicle Portfolio commercial scope. Added dedicated `partner_app_vehicle_detail(uuid)` using the same `partner_app_commercial_scope()` rules as the vehicle list; detail links no longer depend on `?customer=...`. Existing vehicle/customer data is unchanged. **IMPLEMENTED**; PR/merge/deployment pending.
