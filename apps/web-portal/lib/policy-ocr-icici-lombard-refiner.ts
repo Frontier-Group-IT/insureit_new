@@ -1,0 +1,309 @@
+import type { ParsedPolicyField, ParsedPolicyResult } from "@/lib/policy-ocr-parsers";
+import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-refiner";
+
+type Fields = Map<string, ParsedPolicyField>;
+
+const LABELS: Record<string, string> = {
+  vehicle_registration_status: "Registration status",
+  vehicle_registration_number: "Registration number",
+  vehicle_class: "Vehicle class",
+  vehicle_make: "Vehicle make",
+  vehicle_model: "Vehicle model",
+  vehicle_manufacturing_year: "Manufacturing year",
+  vehicle_chassis_number: "Chassis number",
+  vehicle_engine_number: "Engine number",
+  vehicle_rto_name: "RTO name",
+  policy_product: "Policy product",
+  idv: "IDV / Sum insured",
+  od_premium: "OD premium",
+  tp_premium: "Third party premium",
+  cpa_opted: "CPA opted",
+  cpa_premium: "CPA amount",
+  policy_number: "Policy number",
+  insurer_name: "Insurance company",
+  policy_start_date: "Valid from",
+  policy_end_date: "Valid upto",
+  total_premium: "Printed net premium",
+  tax_amount: "Printed GST",
+  gross_premium: "Printed gross premium",
+};
+
+const ICICI = /ICICI\s+LOMBARD(?:\s+GENERAL\s+INSURANCE\s+COMPANY\s+LIMITED)?/i;
+const FAMILY = /GOODS\s+CARRYING\s+VEHICLES?\s+PACKAGE\s+POLICY/i;
+const MONEY_TOLERANCE = 2;
+
+export function refineIciciLombardMotorPolicy(
+  pages: string[],
+  tables: StructuredPolicyTable[],
+  parsed: ParsedPolicyResult,
+): ParsedPolicyResult {
+  const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 180).join(" ");
+  const firstTwo = pages.slice(0, 2).join("\n");
+  if (!ICICI.test(header) && !ICICI.test(firstTwo)) return parsed;
+  if (!FAMILY.test(firstTwo) && !/Product\s+Code\s*:\s*3003/i.test(firstTwo)) return parsed;
+
+  const fields: Fields = new Map(parsed.fields.map((field) => [field.key, field]));
+  const warnings = parsed.warnings.filter((warning) => !/insurer format is not fully supported/i.test(warning));
+
+  set(fields, "insurer_name", "ICICI Lombard General Insurance Company Limited", .999, 1, "ICICI Lombard legal name on policy");
+  set(fields, "policy_product", "Package", .999, 2, "Goods Carrying Vehicles Package Policy");
+
+  const policy = currentPolicyNumber(pages);
+  if (policy) set(fields, "policy_number", policy.value, .999, policy.page, policy.evidence);
+
+  const period = currentPeriod(pages);
+  if (period) {
+    set(fields, "policy_start_date", period.start, .999, period.page, period.evidence);
+    set(fields, "policy_end_date", period.end, .999, period.page, period.evidence);
+  }
+
+  const registration = registrationNumber(pages, tables);
+  if (registration) {
+    set(fields, "vehicle_registration_number", registration.value, .999, registration.page, registration.evidence);
+    set(fields, "vehicle_registration_status", "registered", .999, registration.page, registration.evidence);
+  }
+
+  const vehicleClass = structuredColumn(tables, [/^Vehicle\s+Class$/i])
+    ?? labelValue(pages, /Vehicle\s+Class/i, 1);
+  if (vehicleClass) set(fields, "vehicle_class", cleanVehicle(vehicleClass.value), .995, vehicleClass.page, vehicleClass.evidence);
+
+  const make = structuredColumn(tables, [/^Make$/i]);
+  const model = structuredColumn(tables, [/^Model$/i]);
+  const makeModel = labelPair(pages, /Vehicle\s+Make\s*\/\s*Model/i);
+  if (make) set(fields, "vehicle_make", cleanVehicle(make.value), .999, make.page, make.evidence);
+  else if (makeModel?.left) set(fields, "vehicle_make", cleanVehicle(makeModel.left), .995, makeModel.page, makeModel.evidence);
+  if (model) set(fields, "vehicle_model", cleanVehicle(model.value), .999, model.page, model.evidence);
+  else if (makeModel?.right) set(fields, "vehicle_model", cleanVehicle(makeModel.right), .995, makeModel.page, makeModel.evidence);
+
+  const year = structuredColumn(tables, [/^Mfg\s*Yr$/i, /Manufactur(?:ing|e)\s+Year/i]);
+  if (year && /^(?:19|20)\d{2}$/.test(year.value.trim())) {
+    set(fields, "vehicle_manufacturing_year", year.value.trim(), .999, year.page, year.evidence);
+  }
+
+  const chassis = structuredColumn(tables, [/^Chassis\s+No\.?$/i])
+    ?? labelValue(pages, /Chassis\s+No\.?/i, 1);
+  const engine = structuredColumn(tables, [/^Engine\s+No\.?$/i])
+    ?? labelValue(pages, /Engine\s+No\.?/i, 1);
+  if (chassis) set(fields, "vehicle_chassis_number", compactId(chassis.value), .999, chassis.page, chassis.evidence);
+  if (engine) set(fields, "vehicle_engine_number", compactId(engine.value), .999, engine.page, engine.evidence);
+
+  const rto = labelValue(pages, /RTO\s+(?:City|Location)/i, 2);
+  if (rto) set(fields, "vehicle_rto_name", cleanVehicle(rto.value), .995, rto.page, rto.evidence);
+
+  const idv = structuredColumn(tables, [/^Total\s+IDV(?:\s*\(.*\))?$/i]);
+  if (idv) setMoney(fields, "idv", money(idv.value), .999, idv.page, idv.evidence);
+  else fields.delete("idv");
+
+  const od = explicitMoney(firstTwo, /Total\s+Own\s+Damage\s+Premium\s*\(A\)/i);
+  const tp = explicitMoney(firstTwo, /Total\s+Liability\s+Premium\s*\(B\)/i);
+  const net = explicitMoney(firstTwo, /Total\s+Package\s+Premium\s*\(A\s*\+\s*B\)/i);
+  const tax = explicitMoney(firstTwo, /Total\s+Tax\s+Payable(?:\s+in)?/i);
+  const gross = explicitMoney(firstTwo, /Total\s+Premium\s+Payable(?:\s+in)?/i);
+
+  const explicitCpaZero =
+    /Compulsory\s+Personal\s+Accident\s+cover\s+has\s+not\s+been\s+opted/i.test(firstTwo)
+    || /PA\s+Cover\s+for\s+Owner[-\s]*Driver[^\n]{0,80}CSI\s*0(?:\.00)?/i.test(firstTwo);
+
+  if (od != null && tp != null && net != null && close(od + tp, net)) {
+    setMoney(fields, "od_premium", od, .999, 2, "ICICI Total Own Damage Premium(A)");
+    setMoney(fields, "tp_premium", tp, .999, 2, "ICICI Total Liability Premium(B)");
+    setMoney(fields, "total_premium", net, .999, 2, "ICICI Total Package Premium(A+B)");
+  } else {
+    fields.delete("od_premium");
+    fields.delete("tp_premium");
+    if (net != null) setMoney(fields, "total_premium", net, .995, 2, "ICICI Total Package Premium(A+B)");
+    warnings.push("Review required. ICICI OD/TP values did not reconcile to Total Package Premium; unsafe OD/TP values were withheld.");
+  }
+
+  if (tax != null) setMoney(fields, "tax_amount", tax, .999, 2, "ICICI Total Tax Payable");
+  if (gross != null) setMoney(fields, "gross_premium", gross, .999, 2, "ICICI Total Premium Payable");
+  if (net != null && tax != null && gross != null && !close(net + tax, gross)) {
+    warnings.push("Review required. ICICI net premium plus displayed tax does not exactly reconcile to gross premium; retained only explicit labelled totals.");
+  }
+
+  if (explicitCpaZero) {
+    setMoney(fields, "cpa_premium", 0, .999, 2, "ICICI explicit CPA not opted / CSI 0.00");
+    set(fields, "cpa_opted", "No", .999, 2, "ICICI explicit CPA not opted / CSI 0.00");
+  }
+
+  removeHeaderArtifacts(fields);
+  requireEvidence(fields, warnings);
+
+  return {
+    parserId: "icici_lombard_motor_v1",
+    parserVersion: "icici_lombard_motor_v1.0.0+gcv-structured-v1",
+    fields: [...fields.values()],
+    warnings,
+  };
+}
+
+function currentPolicyNumber(pages: string[]) {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const lines = rawLines(pages[page]);
+    for (let i = 0; i < lines.length; i += 1) {
+      if (!/Policy\s+No\.?/i.test(lines[i]) || /Previous\s+Policy/i.test(lines[i])) continue;
+      const block = lines.slice(i, i + 2).join(" ");
+      const hit = block.match(/Policy\s+No\.?\s*[:#-]?\s*([A-Z0-9][A-Z0-9/-]{7,34})/i)?.[1];
+      if (hit) return { value: hit.replace(/[.,;:]$/, ""), page: page + 1, evidence: block };
+    }
+  }
+  return null;
+}
+
+function currentPeriod(pages: string[]) {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const text = pages[page];
+    const hit = text.match(/(?:Period\s+of\s+Insurance\s*[:\-]?\s*)?([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})(?:\s+00:00)?\s+to\s+(?:Midnight\s+of\s+)?([A-Z][a-z]{2}\s+\d{1,2},\s+\d{4})/i);
+    if (!hit) continue;
+    const start = namedDate(hit[1]);
+    const end = namedDate(hit[2]);
+    if (start && end) return { start, end, page: page + 1, evidence: hit[0] };
+  }
+  return null;
+}
+
+function registrationNumber(pages: string[], tables: StructuredPolicyTable[]) {
+  const structured = structuredColumn(tables, [/^Vehicle\s+Registration\s+No\.?$/i]);
+  if (structured) {
+    const value = compactId(structured.value);
+    if (validRegistration(value)) return { ...structured, value };
+  }
+  const found = labelValue(pages, /Vehicle\s+Registration\s+No\.?/i, 1);
+  if (!found) return null;
+  const value = compactId(found.value);
+  return validRegistration(value) ? { ...found, value } : null;
+}
+
+function structuredColumn(tables: StructuredPolicyTable[], labels: RegExp[]) {
+  for (const table of tables) {
+    for (let r = 0; r < table.rows.length; r += 1) {
+      const row = table.rows[r] ?? [];
+      for (let c = 0; c < row.length; c += 1) {
+        const cell = clean(row[c] ?? "");
+        if (!labels.some((label) => label.test(cell))) continue;
+        for (let next = r + 1; next <= Math.min(r + 3, table.rows.length - 1); next += 1) {
+          const value = clean(table.rows[next]?.[c] ?? "");
+          if (!value) continue;
+          if (labels.some((label) => label.test(value))) break;
+          return { value, page: table.page, evidence: `${cell} column => ${value}` };
+        }
+        if (c + 1 < row.length) {
+          const right = clean(row[c + 1] ?? "");
+          if (right && !labels.some((label) => label.test(right))) return { value: right, page: table.page, evidence: `${cell} => ${right}` };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function labelValue(pages: string[], label: RegExp, maxPage: number) {
+  for (let page = 0; page < Math.min(maxPage, pages.length); page += 1) {
+    const lines = rawLines(pages[page]);
+    for (let i = 0; i < lines.length; i += 1) {
+      if (!label.test(lines[i])) continue;
+      const same = clean(lines[i].replace(label, "").replace(/^\s*[:#-]\s*/, ""));
+      if (same && !looksLikeLabel(same)) return { value: same, page: page + 1, evidence: lines[i] };
+      for (let j = i + 1; j <= Math.min(i + 2, lines.length - 1); j += 1) {
+        if (looksLikeLabel(lines[j])) break;
+        return { value: lines[j], page: page + 1, evidence: `${lines[i]} => ${lines[j]}` };
+      }
+    }
+  }
+  return null;
+}
+
+function labelPair(pages: string[], label: RegExp) {
+  const found = labelValue(pages, label, 1);
+  if (!found) return null;
+  const parts = found.value.split("/").map(clean).filter(Boolean);
+  if (parts.length < 2) return null;
+  return { left: parts[0], right: parts.slice(1).join(" / "), page: found.page, evidence: found.evidence };
+}
+
+function explicitMoney(text: string, label: RegExp): number | null {
+  const escaped = text.split(/\r?\n/).map(clean);
+  for (let i = 0; i < escaped.length; i += 1) {
+    const line = escaped[i];
+    if (!label.test(line)) continue;
+    const after = line.replace(label, " ");
+    const direct = money(after);
+    if (direct != null) return direct;
+    for (let j = i + 1; j <= Math.min(i + 2, escaped.length - 1); j += 1) {
+      if (/Total\s+(?:Own\s+Damage|Liability|Package|Tax|Premium)|Premium\s+Taxable|IGST|CGST|SGST/i.test(escaped[j])) break;
+      const value = money(escaped[j]);
+      if (value != null) return value;
+    }
+  }
+  return null;
+}
+
+function money(value: string): number | null {
+  const matches = value.match(/\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+(?:\.\d{1,2})?/g) ?? [];
+  for (const raw of matches) {
+    const parsed = Number(raw.replace(/,/g, ""));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function removeHeaderArtifacts(fields: Fields) {
+  const invalid = /^(?:CATEGORY|MODEL|CITY|RTO\s*CITY|RTO\s*LOCATION|MAKE|VEHICLE\s+CLASS|VEHICLE\s+SUBCLASS)$/i;
+  for (const key of ["vehicle_class", "vehicle_make", "vehicle_model", "vehicle_rto_name"]) {
+    const value = fields.get(key)?.value?.trim() ?? "";
+    if (!value || invalid.test(value)) fields.delete(key);
+  }
+  const idv = fields.get("idv");
+  if (idv && money(idv.value) == null) fields.delete("idv");
+}
+
+function requireEvidence(fields: Fields, warnings: string[]) {
+  const required = ["policy_number", "vehicle_registration_number", "vehicle_make", "vehicle_model", "idv", "total_premium", "gross_premium"];
+  const missing = required.filter((key) => !fields.get(key)?.value?.trim());
+  if (missing.length) warnings.push(`Review required. ICICI structured extraction could not safely prove: ${missing.join(", ")}.`);
+}
+
+function set(fields: Fields, key: string, value: string, confidence: number, page: number | null, evidence: string) {
+  const cleanValue = value.trim();
+  if (!cleanValue) return;
+  fields.set(key, { key, label: LABELS[key] ?? key, value: cleanValue, confidence, page, evidence });
+}
+
+function setMoney(fields: Fields, key: string, value: number | null, confidence: number, page: number | null, evidence: string) {
+  if (value == null || !Number.isFinite(value)) return;
+  set(fields, key, Number.isInteger(value) ? String(value) : String(round2(value)), confidence, page, evidence);
+}
+
+function namedDate(raw: string) {
+  const hit = raw.match(/^([A-Z][a-z]{2})\s+(\d{1,2}),\s+(\d{4})$/i);
+  if (!hit) return null;
+  const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const month = months.indexOf(hit[1].slice(0, 3).toLowerCase()) + 1;
+  if (!month) return null;
+  const year = Number(hit[3]);
+  const day = Number(hit[2]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function validRegistration(value: string) {
+  return /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}$/.test(value);
+}
+
+function compactId(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+function cleanVehicle(value: string) {
+  return clean(value).replace(/\s{2,}/g, " ").trim();
+}
+
+function looksLikeLabel(value: string) {
+  return /^(?:Name\s+of\s+the\s+Insured|Period\s+of\s+Insurance|Vehicle\s+Make|RTO\s+City|Vehicle\s+Registration|Engine\s+No|Chassis\s+No|Current\s+Year\s+NCB|Vehicle\s+Usage|Previous\s+Policy|Vehicle\s+Class|Category|Invoice\s+No)/i.test(value);
+}
+
+function rawLines(value: string) { return value.split(/\r?\n/).map(clean).filter(Boolean); }
+function clean(value: string) { return value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim(); }
+function round2(value: number) { return Math.round((value + Number.EPSILON) * 100) / 100; }
+function close(a: number, b: number) { return Math.abs(a - b) <= MONEY_TOLERANCE; }
