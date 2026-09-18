@@ -181,3 +181,16 @@ Sarvam's current documentation states that HTTP 202 means the retry request is *
 This strengthens the provider-side investigation requirement. Do not convert HTTP 202 into a successful recovery state unless the callback is actually observed.
 
 If a future retry is needed for proof, prefer a completed attempt known to have had a successful original webhook delivery. If that also remains undelivered after HTTP 202, collect the provider attempt ID and timestamp for Sarvam support rather than repeatedly retrying or altering CRM state.
+
+
+## UI semantics correction after HTTP 202 trial
+
+The provider retry endpoint returns HTTP 202 immediately and processes delivery asynchronously. Production evidence showed that 202 can be followed by no observed callback for an extended period.
+
+Therefore the Voice Integration UI must never present 202 as completed webhook recovery. The correct user-facing state is:
+
+**Webhook retry queued by Sarvam — delivery unverified until INSUREIT observes the callback.**
+
+This distinction is now implemented on branch `fix/sarvam-webhook-retry-pending-state`.
+
+Provider documentation also confirms campaign webhook delivery records are listable as `running`, `completed`, or `failed`, and that retry requests are asynchronous. INSUREIT's earlier campaign webhook-list probe currently receives provider HTTP 500 for valid campaigns, so callback arrival in INSUREIT remains the authoritative operational evidence until Sarvam fixes that listing defect.
