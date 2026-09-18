@@ -61,6 +61,7 @@ type InsurerFamily =
   | "united_india"
   | "hdfc_ergo"
   | "royal_sundaram"
+  | "icici_lombard"
   | "generic";
 
 export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
@@ -74,7 +75,7 @@ export function parsePolicyDocument(pages: string[]): ParsedPolicyResult {
     result = parseIffco(cleanPages);
   } else if (family === "new_india") {
     result = parseNewIndia(cleanPages);
-  } else if (family === "shriram" || family === "oriental" || family === "national" || family === "universal_sompo" || family === "united_india" || family === "hdfc_ergo" || family === "royal_sundaram") {
+  } else if (family === "shriram" || family === "oriental" || family === "national" || family === "universal_sompo" || family === "united_india" || family === "hdfc_ergo" || family === "royal_sundaram" || family === "icici_lombard") {
     result = parseKnownInsurer(cleanPages, family);
   } else {
     result = parseGeneric(cleanPages);
@@ -158,6 +159,7 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   let unitedIndia = 0;
   let hdfcErgo = 0;
   let royalSundaram = 0;
+  let iciciLombard = 0;
 
   // Insurer names near the beginning of page 1 are the strongest evidence.
   if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(firstPage)) digit += 12;
@@ -170,6 +172,8 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   if (/UNITED\s+INDIA\s+INSURANCE/.test(firstPage)) unitedIndia += 12;
   if (/HDFC\s+ERGO\s+GENERAL\s+INSURANCE/.test(firstPage)) hdfcErgo += 12;
   if (/ROYAL\s+SUNDARAM\s+(?:GENERAL\s+)?INSURANCE/.test(firstPage)) royalSundaram += 12;
+  if (/ICICI\s+LOMBARD\s+GENERAL\s+INSURANCE\s+COMPANY\s+LIMITED/.test(firstPage)) iciciLombard += 14;
+  else if (/ICICI\s+LOMBARD/.test(firstPage)) iciciLombard += 12;
 
   // Family-specific schedule structure is more reliable than one stray insurer phrase.
   if (/DIGIT\s+COMMERCIAL\s+VEHICLE\s+(?:COMPREHENSIVE|PACKAGE)\s+POLICY/i.test(text)) digit += 8;
@@ -189,6 +193,7 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   if (/Policy\s+Schedule-Motor\s+-\s+Goods\s+Carrying\s+Vehicle\s+-\s+Package|customer\.support@nic\.co\.in|Vehicle\s+IDV\s*₹/i.test(text)) national += 8;
   if (/Motor\s+Private\s+Car\s+-\s+Bundled|Certificate\s+of\s+Insurance\s+cum\s+Policy\s+Schedule|TOTAL\s+PACKAGE\s+PREMIUM/i.test(text)) universalSompo += 8;
   if (/PCV\s+4\s+WHEELER[\s\S]{0,120}?PACKAGE|MOTOR\s+INSURANCE\s+-\s+PCV|Gross\s+OD\s*&\s*TP/i.test(text)) unitedIndia += 8;
+  if (/Product\s+Code\s*:\s*3003/i.test(text) && /GOODS\s+CARRYING\s+VEHICLES?\s+PACKAGE\s+POLICY/i.test(text)) iciciLombard += 6;
 
   // Full-document legal-name evidence is useful, but intentionally weaker than page-1/header evidence.
   if (/GO\s+DIGIT\s+GENERAL\s+INSURANCE/.test(upper)) digit += 2;
@@ -201,6 +206,7 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
   if (/UNITED\s+INDIA\s+INSURANCE/.test(upper)) unitedIndia += 2;
   if (/HDFC\s+ERGO\s+GENERAL\s+INSURANCE/.test(upper)) hdfcErgo += 2;
   if (/ROYAL\s+SUNDARAM\s+(?:GENERAL\s+)?INSURANCE/.test(upper)) royalSundaram += 2;
+  if (/ICICI\s+LOMBARD(?:\s+GENERAL\s+INSURANCE\s+COMPANY\s+LIMITED)?/.test(upper)) iciciLombard += 2;
 
   const ranked = [
     { family: "digit" as const, score: digit },
@@ -213,6 +219,7 @@ function detectInsurerFamily(pages: string[]): InsurerFamily {
     { family: "united_india" as const, score: unitedIndia },
     { family: "hdfc_ergo" as const, score: hdfcErgo },
     { family: "royal_sundaram" as const, score: royalSundaram },
+    { family: "icici_lombard" as const, score: iciciLombard },
   ].sort((a, b) => b.score - a.score);
 
   if (ranked[0].score < 5) return "generic";
@@ -348,6 +355,11 @@ function parseKnownInsurer(pages: string[], family: Exclude<InsurerFamily, "digi
       insurer: "Royal Sundaram General Insurance Co. Limited",
       parserId: "royal_sundaram_motor_v1",
       version: "royal_sundaram_motor_v1.0.0",
+    },
+    icici_lombard: {
+      insurer: "ICICI Lombard General Insurance Company Limited",
+      parserId: "icici_lombard_motor_v1",
+      version: "icici_lombard_motor_v1.0.0",
     },
   };
   const selected = config[family];
