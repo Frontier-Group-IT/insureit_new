@@ -21,3 +21,7 @@ Before modifying anything under Partner External Renewal Opportunities, read:
 - Bulk AI calling stays disabled until the single-opportunity lifecycle, idempotency, opt-out handling and webhook recovery path are verified.
 
 Update `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md` whenever this contract, schema, provider mapping, production state or continuation plan materially changes.
+
+## Current production readiness source
+
+Partner AI calling availability must come from the server-side production dispatch readiness contract (kill switch + calling window + configured Sarvam campaign lifecycle), not from the kill switch alone. See `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`.
