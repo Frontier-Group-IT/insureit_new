@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Sarvam webhook retry pending-state semantics:** live HTTP 202 evidence proved provider acceptance does not equal callback delivery. Voice Integration now labels 202 as **queued by Sarvam / delivery unverified** until INSUREIT actually observes the callback. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
+
 - **2026-09-18 — Activity Status visual standardization:** branch `ui/standardize-activity-status-cards`; introduced one shared Activity Status card matching the Partner Customer reference and applied it to Partner Customer, Partner Vehicle, Partner Policy, plus existing Operations customer/policy/vehicle activity components. Claim workflow remains unchanged because it uses claim stages rather than this generic activity card. **IMPLEMENTED**; UI-only, no database/schema/data changes, no PR created per request.
 
 - **2026-09-18 — Sarvam webhook retry identifier UX fix:** first live recovery attempt failed locally because a Sarvam 64-char phone hash was entered instead of the UUID-shaped provider attempt ID. Branch `fix/sarvam-webhook-retry-id-selection` changes recovery to post the authoritative stored `provider_attempt_id` from completed attempts via a one-click action; no provider retry/call occurred in the failed trial. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
