@@ -11,6 +11,7 @@ const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/de
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
 const sarvamOperationalPolicy = fs.readFileSync(path.join(root, "lib/sarvam-renewal-operational-policy.ts"), "utf8");
+const sarvamPartnerDispatchReadiness = fs.readFileSync(path.join(root, "lib/sarvam-partner-dispatch-readiness.ts"), "utf8");
 const sarvamCampaignLifecycle = fs.readFileSync(path.join(root, "lib/sarvam-campaign-lifecycle.ts"), "utf8");
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
 const sarvamWebhookRecovery = fs.readFileSync(path.join(root, "lib/sarvam-webhook-recovery.ts"), "utf8");
@@ -85,6 +86,13 @@ assert(sarvamOperationalPolicy.includes("SARVAM_RENEWAL_CALL_WINDOW_END"), "call
 assert(sarvamOperationalPolicy.includes("withinCallingWindow"), "operational policy explicitly calculates current calling-window eligibility");
 assert(sarvamOperationalPolicy.includes("applicationAutoRetry: false"), "INSUREIT application-level automatic retries remain disabled");
 assert(!sarvamOperationalPolicy.includes("NEXT_PUBLIC_"), "operational policy stays server-side");
+assert(sarvamPartnerDispatchReadiness.includes('import "server-only"'), "Partner readiness is server-only");
+assert(sarvamPartnerDispatchReadiness.includes("getSarvamRenewalCampaignState"), "Partner readiness includes live campaign lifecycle state");
+assert(sarvamPartnerDispatchReadiness.includes("getSarvamRenewalOperationalPolicy"), "Partner readiness includes calling-window state");
+assert(sarvamPartnerDispatchReadiness.includes("isSarvamRenewalCallingEnabled"), "Partner readiness includes the global kill switch");
+assert(sarvamPartnerDispatchReadiness.includes('reason: "campaign_paused"'), "Partner readiness distinguishes administrative pause");
+assert(sarvamPartnerDispatchReadiness.includes('reason: "outside_calling_window"'), "Partner readiness distinguishes calling-window closure");
+assert(!sarvamPartnerDispatchReadiness.includes("NEXT_PUBLIC_"), "Partner readiness exposes no browser provider configuration");
 assert(sarvamCampaignLifecycle.includes('import "server-only"'), "campaign lifecycle client is server-only");
 assert(sarvamCampaignLifecycle.includes('"X-API-Key": apiKey'), "campaign lifecycle uses the proven X-API-Key contract");
 assert(sarvamCampaignLifecycle.includes('/campaigns/'), "campaign lifecycle targets the configured campaign resource");

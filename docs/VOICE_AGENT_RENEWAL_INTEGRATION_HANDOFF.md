@@ -441,6 +441,18 @@ This prevents new Partner requests from accumulating behind an administrative Pa
 
 Detailed evidence: `docs/SARVAM_CAMPAIGN_DISPATCH_PRECHECK_2026_09_18.md`.
 
+## Partner production readiness UX — IMPLEMENTED / PENDING CI
+
+Partner External Renewal list/detail now use one server-side readiness contract combining:
+
+- global kill switch
+- INSUREIT calling window
+- configured Sarvam campaign lifecycle state
+
+The Partner UI no longer reports AI calling available merely because the kill switch is enabled. It now mirrors the same production conditions enforced before dispatch and explains operational unavailability without exposing provider administration.
+
+Detailed evidence: `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
