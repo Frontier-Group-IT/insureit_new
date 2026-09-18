@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Sarvam webhook re-delivery recovery:** branch `feat/sarvam-webhook-retry-recovery`; IT Super User can submit one known Sarvam provider attempt ID to the documented campaign `/webhooks/retry` endpoint using server-side `X-API-Key`. The action re-delivers the original webhook only; it cannot create a cohort or place another call and continues through normal idempotent CRM projection. **IMPLEMENTED; live provider retry test/CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
+
 - **2026-09-18 — Sarvam voice operational hardening:** branch `feat/sarvam-voice-operational-hardening`; IT Super User Voice Integration now surfaces normalized webhook callback health and flags active attempts unchanged for >60 minutes as reconciliation attention without auto-failing/retrying ambiguous provider state. Voice regression now asserts the proven `X-API-Key` dispatch contract. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_OPERATIONAL_HARDENING_2026_09_18.md`.
 
 - **2026-09-18 — Sarvam controlled live voice closed loop:** two authorized internal External Renewal trials proved API cohort streaming and live PSTN calling; the first exposed a missing campaign webhook and was reconciled through the existing result-projection contract, while the second verified webhook delivery, provider event idempotency, normalized CRM projection and Partner UI closure end to end. **VERIFIED**. Detailed evidence: `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`.
