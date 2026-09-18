@@ -30,6 +30,12 @@ assert.match(accountsBusinessMis, /Promise\.all\(\s*chunk\(payableIds, 120\)/s, 
 assert.match(accountsBusinessMis, /\.or\(businessDateFilter\(filters\.fromDate, filters\.toDate\)\)/, "Accounts policy filtering must be pushed into the database query.");
 assert.match(accountsBusinessMis, /if \(filters\.insurerId\) filteredPolicyQuery = filteredPolicyQuery\.eq\("insurance_company_id", filters\.insurerId\)/, "Accounts insurer filtering must be pushed into the database query.");
 assert.match(accountsControls, /router\.prefetch\(accountsHref\(standardPeriod/, "Accounts controls should prefetch the alternate standard period.");
+assert.match(accountsBusinessMis, /policy_premium_details\(od_premium,tp_premium,cpa_amount,net_premium\)/, "Accounts snapshot must embed premium rows in the filtered policy query.");
+assert.match(accountsBusinessMis, /policy_payin_details\(projected_od_percent,[^"]*payin_after_tds\)/, "Accounts snapshot must embed pay-in rows in the filtered policy query.");
+assert.match(accountsBusinessMis, /partner_payables\(id,partner_payment_allocations\(allocated_amount,partner_payments\(payment_date,payment_reference\)\)\)/, "Accounts snapshot must embed payable payment allocations in the filtered policy query.");
+assert.doesNotMatch(accountsBusinessMis, /db\.from\("policy_premium_details"\)/, "Accounts snapshot must not issue a separate premium query.");
+assert.doesNotMatch(accountsBusinessMis, /db\.from\("policy_payin_details"\)/, "Accounts snapshot must not issue a separate pay-in query.");
+assert.doesNotMatch(accountsBusinessMis, /db\.from\("partner_payment_allocations"\)/, "Accounts snapshot must not issue a separate payment-allocation query.");
 
 assert.doesNotMatch(accountsPage, /href="\/reconciliation"/, "New Accounts workflow must not redirect to legacy reconciliation.");
 assert.doesNotMatch(accountsPage, /href="\/accounts\/billing"/, "New Accounts workflow must not redirect to legacy billing.");
