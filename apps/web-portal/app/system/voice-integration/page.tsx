@@ -215,11 +215,11 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           {webhookRetryAccepted || webhookRetryFailed ? (
             <div className={`mt-4 rounded-xl border px-3.5 py-3 ${webhookRetryAccepted ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
               <p className={`text-[10px] font-semibold ${webhookRetryAccepted ? "text-emerald-800" : "text-amber-900"}`}>
-                {webhookRetryAccepted ? "Webhook re-delivery accepted" : "Webhook re-delivery needs attention"}
+                {webhookRetryAccepted ? "Webhook retry queued by Sarvam" : "Webhook re-delivery needs attention"}
               </p>
               <p className={`mt-1 text-[9.5px] leading-4 ${webhookRetryAccepted ? "text-emerald-700" : "text-amber-800"}`}>
                 {webhookRetryAccepted
-                  ? "Sarvam accepted the stored provider attempt for asynchronous webhook re-delivery. No phone call is placed."
+                  ? "Sarvam accepted the stored provider attempt for asynchronous webhook re-delivery. Delivery is still unverified until INSUREIT observes the callback. No phone call is placed."
                   : webhookRetryStatus
                     ? "Sarvam did not accept the webhook re-delivery request. Review the provider status below before trying again."
                     : "INSUREIT rejected the submitted identifier before contacting Sarvam. Use the Retry webhook button beside a completed attempt below."}
