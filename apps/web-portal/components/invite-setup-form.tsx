@@ -9,6 +9,10 @@ import { BlockingWorkPanel, InsureItButtonLoader } from "@/components/loading/in
 
 type InviteStatus = "checking" | "ready" | "expired" | "error" | "done";
 
+function isPartnerAssociateSession(session: Session) {
+  return session.user.user_metadata?.portal_account_type === "partner_associate";
+}
+
 function readInviteError() {
   if (typeof window === "undefined") return null;
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -116,6 +120,25 @@ export function InviteSetupForm() {
       return;
     }
 
+    const partnerAssociate = isPartnerAssociateSession(session);
+    if (partnerAssociate) {
+      if (profile.role !== "intermediary") {
+        await supabase.auth.signOut();
+        setIsSubmitting(false);
+        setStatus("error");
+        setMessage("This Partner associate invitation is not linked to an intermediary profile.");
+        return;
+      }
+
+      const { data: identity, error: activationError } = await supabase.rpc("partner_app_activate_current_account");
+      if (activationError || !identity) {
+        setIsSubmitting(false);
+        setStatus("error");
+        setMessage(activationError?.message ?? "Your Partner associate account could not be activated. Please request a fresh invitation.");
+        return;
+      }
+    }
+
     const { data: refreshed } = await supabase.auth.getSession();
     const activeSession = refreshed.session ?? session;
     const response = await fetch("/auth/session", {
@@ -136,7 +159,7 @@ export function InviteSetupForm() {
     }
 
     setStatus("done");
-    window.location.replace("/");
+    window.location.replace(isPartnerAssociateSession(activeSession) ? "/partner" : "/");
   }
 
   if (status === "checking") {
