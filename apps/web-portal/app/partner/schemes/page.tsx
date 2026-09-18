@@ -97,7 +97,7 @@ export default async function PartnerSchemesPage({ searchParams }: { searchParam
                 href={`/partner/schemes?status=${tab.value}`}
                 prefetch={false}
                 className={`inline-flex h-8 items-center gap-2 rounded-lg px-3 text-[10px] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 ${
-                  active ? "bg-[#163968] text-white" : "text-[#526783] hover:bg-[#F3F6FA]"
+                  active ? (tab.value === "active" ? "bg-[#DC2626] text-white" : "bg-[#163968] text-white") : "text-[#526783] hover:bg-[#F3F6FA]"
                 }`}
               >
                 <span>{tab.label}</span>
