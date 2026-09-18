@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const context = await startItSuperUserExternalRenewalVoiceAttempt({
       opportunityId,
-      requestedByAuthUserId: viewer.auth_user_id ?? viewer.id,
+      requestedByAuthUserId: viewer.id,
     });
     localAttemptId = context.attempt_id;
 
