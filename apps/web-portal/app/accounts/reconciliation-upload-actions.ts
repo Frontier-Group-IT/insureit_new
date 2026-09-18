@@ -121,6 +121,10 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   }
 
   const declaredRowCount = integer(props.INSUREITRowCount);
+  const usedRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+  if (usedRange.e.c !== PAYOUT_ID_INDEX || usedRange.e.r !== declaredRowCount + 1) {
+    return emptyPreview("Business MIS rows or columns were inserted, removed or shifted. Upload the workbook exactly as exported.");
+  }
   const dataRows = grid.slice(2).filter((row) => text(row?.[POLICY_ID_INDEX]) !== "" || row.slice(0, BUSINESS_MIS_HEADERS.length).some((value) => text(value) !== ""));
   if (declaredRowCount < 0 || dataRows.length !== declaredRowCount) {
     return emptyPreview("Business MIS rows were added or removed. Upload the workbook exactly as exported and only fill the allowed blank transaction cells.");
