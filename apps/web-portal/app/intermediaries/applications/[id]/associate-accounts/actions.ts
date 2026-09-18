@@ -24,6 +24,7 @@ type ManagedAssociate = {
   role: AssociateRole | "admin";
   status: AssociateStatus;
   activated_at: string | null;
+  invited_at: string | null;
 };
 
 export async function createPartnerAssociateAccount(formData: FormData) {
@@ -248,6 +249,15 @@ export async function resendPartnerAssociateInvite(formData: FormData) {
     redirect(`${context.returnPath}?error=associate_enable_before_resend`);
   }
 
+  const resendCooldownSeconds = 60;
+  if (context.associate.invited_at) {
+    const elapsedSeconds = Math.floor((Date.now() - new Date(context.associate.invited_at).getTime()) / 1000);
+    const retryAfter = Math.max(0, resendCooldownSeconds - elapsedSeconds);
+    if (retryAfter > 0) {
+      redirect(`${context.returnPath}?associate_error=associate_email_cooldown&retry_after=${retryAfter}`);
+    }
+  }
+
   const admin = createSupabaseAdminClient();
   const { error } = await admin.auth.resetPasswordForEmail(context.associate.email, resetOptions());
   if (error) redirectAuthEmailError(context.returnPath, error.message);
@@ -286,7 +296,7 @@ async function loadManagedAssociate(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { data: associate } = await admin.from("partner_portal_associate_accounts")
-    .select("id,intermediary_id,application_id,auth_user_id,name,phone_number,email,designation,role,status,activated_at")
+    .select("id,intermediary_id,application_id,auth_user_id,name,phone_number,email,designation,role,status,activated_at,invited_at")
     .eq("id", associateId)
     .eq("intermediary_id", intermediaryId)
     .eq("application_id", applicationId)
@@ -347,7 +357,7 @@ function authRedirectTo() {
 function redirectAuthEmailError(returnPath: string, message: string): never {
   const retry = message.match(/after\s+(\d+)\s+seconds?/i);
   if (retry?.[1]) {
-    redirect(`${returnPath}?error=associate_email_cooldown&retry_after=${encodeURIComponent(retry[1])}`);
+    redirect(`${returnPath}?associate_error=associate_email_cooldown&retry_after=${encodeURIComponent(retry[1])}`);
   }
   redirect(`${returnPath}?error=${encodeURIComponent(message)}`);
 }
