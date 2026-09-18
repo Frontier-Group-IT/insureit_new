@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Partner Network header refinement:** PR #2062 merged as `a4995d0dfc3db2144fa897cfcbc23c7b5bd3cc92`; removed the header summary metrics beside Network search and changed the placeholder to `Search branch, group or POSP/MISP...`, while preserving hierarchy/search behavior and backend scope. **MERGED / deployment pending canonical production release.**
+
 - **2026-09-18 — Activity Status collapsed by default:** branch `ui/activity-status-collapsed-default`; changed the shared Activity Status component default from expanded to collapsed. This applies consistently wherever the shared card is used, including Partner Customer, Partner Vehicle, Partner Policy, and the aligned Operations activity cards. **IMPLEMENTED**; UI-only, no database/schema/data changes, no PR created yet.
 
 - **2026-09-18 — Sarvam webhook retry pending-state semantics:** live HTTP 202 evidence proved provider acceptance does not equal callback delivery. Voice Integration now labels 202 as **queued by Sarvam / delivery unverified** until INSUREIT actually observes the callback. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
