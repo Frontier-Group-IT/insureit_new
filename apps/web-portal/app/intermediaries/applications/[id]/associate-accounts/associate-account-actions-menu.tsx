@@ -10,7 +10,7 @@ import {
   updatePartnerAssociateAccount,
 } from "./actions";
 
-type Role = "claim_head" | "insurance_head" | "bodyshop_manager";
+type Role = "admin" | "claim_head" | "insurance_head" | "bodyshop_manager";
 type Status = "invited" | "active" | "disabled";
 
 type AssociateForMenu = {
@@ -160,6 +160,7 @@ export function AssociateAccountActionsMenu({
               </Field>
               <Field label="Role">
                 <select name="role" required defaultValue={associate.role} className={inputClass}>
+                  <option value="admin" disabled>Admin</option>
                   <option value="claim_head">Claim Head</option>
                   <option value="insurance_head">Insurance Head</option>
                   <option value="bodyshop_manager">Bodyshop Manager</option>
