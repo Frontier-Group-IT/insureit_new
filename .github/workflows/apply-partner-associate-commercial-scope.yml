@@ -76,69 +76,84 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          result=$(supabase db query --linked --output-format json "
-            select
-              position('partner_app_current_identity()' in pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure)) > 0 as canonical_identity_used,
-              position('v_identity := public.partner_app_legacy_current_identity()' in pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure)) = 0 as legacy_direct_fallback_removed,
-              has_function_privilege('authenticated', 'public.partner_app_commercial_scope()', 'EXECUTE') as authenticated_exec,
-              to_regprocedure('public.partner_app_current_identity()') is not null as current_identity_ready,
-              to_regprocedure('public.partner_portal_associate_identity()') is not null as associate_identity_ready;
-          ")
-          echo "$result"
-          for key in canonical_identity_used legacy_direct_fallback_removed authenticated_exec current_identity_ready associate_identity_ready; do
-            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
-          done
+          cat > /tmp/verify_partner_associate_scope.sql <<'SQL'
+          do $verify$
+          begin
+            if position(
+              'partner_app_current_identity()'
+              in pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure)
+            ) = 0 then
+              raise exception 'partner_app_commercial_scope does not use canonical current identity';
+            end if;
+
+            if position(
+              'v_identity := public.partner_app_legacy_current_identity()'
+              in pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure)
+            ) > 0 then
+              raise exception 'partner_app_commercial_scope still bypasses canonical identity';
+            end if;
+
+            if not has_function_privilege('authenticated', 'public.partner_app_commercial_scope()', 'EXECUTE') then
+              raise exception 'authenticated cannot execute partner_app_commercial_scope';
+            end if;
+
+            if to_regprocedure('public.partner_app_current_identity()') is null then
+              raise exception 'partner_app_current_identity is missing';
+            end if;
+
+            if to_regprocedure('public.partner_portal_associate_identity()') is null then
+              raise exception 'partner_portal_associate_identity is missing';
+            end if;
+          end
+          $verify$;
+          SQL
+          supabase db query --linked --file /tmp/verify_partner_associate_scope.sql
 
       - name: Verify active associate resolves Partner family scope
         shell: bash
         run: |
           set -euo pipefail
-          result=$(supabase db query --linked --output-format json "
-            with candidate as (
-              select
-                a.auth_user_id,
-                public.partner_app_resolve_partner_family(a.intermediary_id) as expected_partner_id
-              from public.partner_portal_associate_accounts a
-              where a.status = 'active'
-              order by a.activated_at desc nulls last, a.created_at desc
-              limit 1
-            ),
-            configured as (
-              select
-                c.auth_user_id,
-                c.expected_partner_id,
-                set_config('request.jwt.claim.sub', c.auth_user_id::text, true) as set_sub,
-                set_config('request.jwt.claim.role', 'authenticated', true) as set_role
-              from candidate c
-            ),
-            resolved as (
-              select
-                configured.expected_partner_id,
-                public.partner_app_commercial_scope() as scope
-              from configured
-            )
+          cat > /tmp/verify_active_associate_scope.sql <<'SQL'
+          do $verify$
+          declare
+            v_auth_user_id uuid;
+            v_expected_partner_id uuid;
+            v_scope jsonb;
+          begin
             select
-              case
-                when not exists (select 1 from candidate) then true
-                else coalesce((select scope ->> 'actor_kind' = 'intermediary' from resolved), false)
-              end as associate_actor_ok,
-              case
-                when not exists (select 1 from candidate) then true
-                else coalesce((select scope ->> 'scope_mode' = 'partner_family' from resolved), false)
-              end as associate_scope_mode_ok,
-              case
-                when not exists (select 1 from candidate) then true
-                else coalesce((
-                  select exists (
-                    select 1
-                    from jsonb_array_elements_text(scope -> 'partner_ids') x(value)
-                    where x.value::uuid = expected_partner_id
-                  )
-                  from resolved
-                ), false)
-              end as associate_partner_scope_ok;
-          ")
-          echo "$result"
-          for key in associate_actor_ok associate_scope_mode_ok associate_partner_scope_ok; do
-            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
-          done
+              a.auth_user_id,
+              public.partner_app_resolve_partner_family(a.intermediary_id)
+            into v_auth_user_id, v_expected_partner_id
+            from public.partner_portal_associate_accounts a
+            where a.status = 'active'
+            order by a.activated_at desc nulls last, a.created_at desc
+            limit 1;
+
+            if v_auth_user_id is null then
+              return;
+            end if;
+
+            perform set_config('request.jwt.claim.sub', v_auth_user_id::text, true);
+            perform set_config('request.jwt.claim.role', 'authenticated', true);
+
+            v_scope := public.partner_app_commercial_scope();
+
+            if coalesce(v_scope ->> 'actor_kind', '') <> 'intermediary' then
+              raise exception 'associate actor_kind is not intermediary: %', v_scope;
+            end if;
+
+            if coalesce(v_scope ->> 'scope_mode', '') <> 'partner_family' then
+              raise exception 'associate scope_mode is not partner_family: %', v_scope;
+            end if;
+
+            if not exists (
+              select 1
+              from jsonb_array_elements_text(coalesce(v_scope -> 'partner_ids', '[]'::jsonb)) x(value)
+              where x.value::uuid = v_expected_partner_id
+            ) then
+              raise exception 'associate scope does not contain expected Partner: %', v_scope;
+            end if;
+          end
+          $verify$;
+          SQL
+          supabase db query --linked --file /tmp/verify_active_associate_scope.sql
