@@ -27,7 +27,7 @@ function formatTimestamp(value: string | null | undefined) {
 export function StandardActivityStatusCard({
   items,
   emptyText = "No activity recorded yet.",
-  open = true,
+  open = false,
 }: {
   items: StandardActivityItem[];
   emptyText?: string;
