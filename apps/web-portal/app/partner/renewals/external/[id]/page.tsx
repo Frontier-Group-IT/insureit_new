@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  ArrowLeft,
   Bot,
   CalendarDays,
   CheckCircle2,
@@ -85,22 +84,9 @@ export default async function PartnerExternalRenewalDetailPage({
 
   return (
     <PartnerPortalShell title="External Renewal Opportunity">
-      <div className="space-y-4 pb-6">
-        <header className="flex flex-col gap-4 border-b border-[#D9E2EC] pb-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.16em] text-[#71839C]">External Renewal Opportunity</p>
-            <h1 className="mt-1 text-[25px] font-black leading-none tracking-[-0.03em] text-[#172A49]">{customerName}</h1>
-            <p className="mt-2 text-[10px] leading-5 text-[#71839C]">
-              Track contact attempts and follow-ups without changing verified INSUREIT customer, vehicle or policy records.
-            </p>
-          </div>
-          <Link
-            href="/partner/renewals/external"
-            prefetch={false}
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-[#CDD9E8] bg-white px-4 text-[10px] font-bold text-[#203653] shadow-sm transition hover:bg-[#F8FAFD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3156B8]/20 lg:self-auto"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Opportunities
-          </Link>
+      <div className="space-y-3 pb-5">
+        <header className="border-b border-[#D9E2EC] pb-2">
+          <h1 className="text-[24px] font-black leading-none tracking-[-0.03em] text-[#172A49]">{customerName}</h1>
         </header>
 
         {query.saved === "1" ? (
@@ -125,19 +111,19 @@ export default async function PartnerExternalRenewalDetailPage({
           <SummaryItem icon={Car} title={vehicleDescription || vehicleNumber} detail={vehicleNumber} />
           <SummaryItem icon={FileText} title="Policy" detail={policyValue} />
           <SummaryItem icon={CalendarDays} title="Coverage" detail={coverageValue} />
-          <div className="flex min-h-[78px] items-center gap-3 border-t border-[#E8EEF5] px-4 py-3 sm:border-l sm:border-t-0">
+          <div className="flex min-h-[62px] items-center gap-2.5 border-t border-[#E8EEF5] px-3 py-2 sm:border-l sm:border-t-0">
             <div className="h-3 w-3 shrink-0 rounded-full bg-[#24B36B]" />
-            <div className="min-w-0 rounded-lg bg-[#ECFAF2] px-3 py-2">
+            <div className="min-w-0 rounded-lg bg-[#ECFAF2] px-2.5 py-1.5">
               <p className="text-[11px] font-black text-[#169653]">{titleCase(opportunity.opportunity_status)}</p>
               <p className="mt-0.5 text-[9px] font-semibold text-[#45A06C]">Opportunity Status</p>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[.92fr_1.08fr]">
-          <div className="space-y-4">
+        <section className="grid gap-3 xl:grid-cols-[.92fr_1.08fr]">
+          <div className="space-y-3">
             <CardShell icon={ShieldCheck} title="Opportunity Snapshot">
-              <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+              <div className="grid gap-x-5 gap-y-3 sm:grid-cols-2">
                 <SnapshotItem icon={UserRound} label="Contact" value={opportunity.contact_name || customerName} detail={opportunity.mobile || "Not recorded"} />
                 <SnapshotItem icon={Car} label="Vehicle" value={vehicleNumber} detail={vehicleDescription || "Not recorded"} />
                 <SnapshotItem icon={FileText} label="Policy" value={opportunity.current_policy_no || "Not recorded"} detail={opportunity.current_insurer || undefined} />
@@ -156,7 +142,7 @@ export default async function PartnerExternalRenewalDetailPage({
               {recentInteractions.length ? (
                 <div className="space-y-2">
                   {recentInteractions.map((interaction) => (
-                    <div key={interaction.interaction_id} className="rounded-lg bg-[#F5F8FC] px-3 py-3">
+                    <div key={interaction.interaction_id} className="rounded-lg bg-[#F5F8FC] px-3 py-2.5">
                       <div className="flex items-center justify-between gap-3">
                         <p className="flex items-center gap-2 text-[10px] font-bold text-[#263D5E]">
                           {interaction.interaction_type === "call" ? <Phone className="h-3.5 w-3.5 text-[#3156B8]" /> : <MessageSquareText className="h-3.5 w-3.5 text-[#3156B8]" />}
@@ -172,7 +158,7 @@ export default async function PartnerExternalRenewalDetailPage({
                   ))}
                 </div>
               ) : (
-                <div className="rounded-lg bg-[#F4F7FB] px-3 py-3">
+                <div className="rounded-lg bg-[#F4F7FB] px-3 py-2.5">
                   <div className="flex items-start gap-3">
                     <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#607AA3]" />
                     <div>
@@ -183,7 +169,7 @@ export default async function PartnerExternalRenewalDetailPage({
                 </div>
               )}
 
-              <div className="mt-2 rounded-lg bg-[#EEF4FF] px-3 py-3">
+              <div className="mt-2 rounded-lg bg-[#EEF4FF] px-3 py-2.5">
                 <div className="flex items-start gap-3">
                   <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-[#3156B8]" />
                   <div>
@@ -199,9 +185,9 @@ export default async function PartnerExternalRenewalDetailPage({
             </CardShell>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <section className="overflow-hidden rounded-xl border border-[#D9E2EC] bg-white shadow-[0_8px_24px_rgba(29,53,87,0.04)]">
-              <div className="flex items-center gap-3 border-b border-[#E5EBF2] px-4 py-3">
+              <div className="flex items-center gap-3 border-b border-[#E5EBF2] px-3.5 py-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#3156B8]">
                   <Phone className="h-4 w-4" />
                 </div>
@@ -214,7 +200,7 @@ export default async function PartnerExternalRenewalDetailPage({
               </div>
 
               {isClosed ? (
-                <div className="p-4">
+                <div className="p-3.5">
                   <div className="flex items-start gap-3 rounded-lg bg-[#F6F8FB] px-3.5 py-3">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#65758B]" />
                     <div>
@@ -226,8 +212,8 @@ export default async function PartnerExternalRenewalDetailPage({
                   </div>
                 </div>
               ) : (
-                <form method="post" action={"/api/partner/external-renewals/" + encodeURIComponent(id) + "/interactions"} className="space-y-3 p-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
+                <form method="post" action={"/api/partner/external-renewals/" + encodeURIComponent(id) + "/interactions"} className="space-y-2.5 p-3.5">
+                  <div className="grid gap-2.5 sm:grid-cols-2">
                     <label className="text-[9px] font-black text-[#6D7D94]">
                       Interaction <span className="text-[#E15555]">*</span>
                       <select
@@ -286,7 +272,7 @@ export default async function PartnerExternalRenewalDetailPage({
             </section>
 
             <section className="overflow-hidden rounded-xl border border-[#D9E2EC] bg-white shadow-[0_8px_24px_rgba(29,53,87,0.04)]">
-              <div className="flex items-center justify-between gap-3 border-b border-[#E5EBF2] px-4 py-3">
+              <div className="flex items-center justify-between gap-2.5 border-b border-[#E5EBF2] px-3.5 py-2.5">
                 <div className="flex items-center gap-3">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#3156B8]">
                     <Bot className="h-4 w-4" />
@@ -298,8 +284,8 @@ export default async function PartnerExternalRenewalDetailPage({
                 <span className="rounded-full bg-[#EEF4FF] px-2.5 py-1 text-[8px] font-black text-[#3156B8]">INSUREIT AI</span>
               </div>
 
-              <div className="p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="p-3.5">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     {latestVoiceAttempt?.call_summary ? (
                       <p className="text-[9.5px] leading-5 text-[#60718A]">{latestVoiceAttempt.call_summary}</p>
@@ -333,7 +319,7 @@ export default async function PartnerExternalRenewalDetailPage({
                   )}
                 </div>
 
-                <div className="mt-3 rounded-lg bg-[#F1F5FA] px-3 py-2.5 text-[9px] leading-5 text-[#708198]">
+                <div className="mt-2.5 rounded-lg bg-[#F1F5FA] px-3 py-2 text-[9px] leading-5 text-[#708198]">
                   {intakeLink?.linked && intakeLink.owned && intakeLink.intake_id ? (
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <span>Policy Intake already started: {intakeLink.intake_number || "Policy Intake"}{intakeLink.status ? " · " + titleCase(intakeLink.status) : ""}</span>
@@ -383,8 +369,8 @@ function SummaryItem({
   detail: string;
 }) {
   return (
-    <div className="flex min-h-[78px] items-center gap-3 border-b border-[#E8EEF5] px-4 py-3 sm:border-b-0 sm:border-r">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#3156B8]">
+    <div className="flex min-h-[62px] items-center gap-2.5 border-b border-[#E8EEF5] px-3 py-2 sm:border-b-0 sm:border-r">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#3156B8]">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
@@ -415,7 +401,7 @@ function CardShell({
         </div>
         <MoreHorizontal className="h-4 w-4 text-[#3156B8]" aria-hidden="true" />
       </div>
-      <div className="p-4">{children}</div>
+      <div className="p-3.5">{children}</div>
     </section>
   );
 }
@@ -434,7 +420,7 @@ function SnapshotItem({
   badge?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-3">
+    <div className="flex min-w-0 items-start gap-2.5">
       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#3156B8]">
         <Icon className="h-3.5 w-3.5" />
       </div>
