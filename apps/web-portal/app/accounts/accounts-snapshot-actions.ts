@@ -14,7 +14,7 @@ export async function loadAccountsSnapshotAction(query: AccountsDashboardQuery):
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
 
   const filters = resolveAccountsDashboardFilters(query);
-  const data = await loadAccountsDashboardSnapshot(profile, filters);
+  const data = await loadAccountsDashboardSnapshot(profile, filters, { includeInsurers: false });
 
   return {
     filters,
