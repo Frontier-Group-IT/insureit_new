@@ -173,21 +173,20 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
 
   const now = Date.now();
   if (cached && Date.parse(cached.expires_at) > now) {
-    const details = fromNormalized(cached.normalized_details, registrationNumber);
+    const normalized = fromNormalized(cached.normalized_details, registrationNumber);
+    const details = usefulFieldCount(normalized) > 0 ? normalized : fromRaw(cached.raw_response, registrationNumber);
     if (usefulFieldCount(details) > 0) {
       await persistOpportunityResult(opportunity.id, "ready", details, "local_cache", null);
       return { status: "ready" as const, source: "local_cache" as const, details };
     }
+
+    await persistOpportunityResult(opportunity.id, "no_data", details, "local_cache", "no_usable_fields");
+    return { status: "no_data" as const, source: "local_cache" as const, details };
   }
 
   try {
     const result = await lookupAuthbridgeRc(registrationNumber);
     const details = fromRaw(result.data, registrationNumber);
-    if (!usefulFieldCount(details)) {
-      await persistOpportunityResult(opportunity.id, "no_data", details, "authbridge", "no_usable_fields");
-      return { status: "no_data" as const, source: "authbridge" as const, details };
-    }
-
     const fetchedAt = result.lookedUpAt ?? new Date(now).toISOString();
     const expiresAt = new Date(Date.parse(fetchedAt) + RC_CACHE_TTL_MS).toISOString();
     await admin.from("vehicle_rc_lookup_cache").upsert({
@@ -204,11 +203,17 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
       updated_at: new Date(now).toISOString(),
     }, { onConflict: "registration_number_normalized" });
 
+    if (!usefulFieldCount(details)) {
+      await persistOpportunityResult(opportunity.id, "no_data", details, "authbridge", "no_usable_fields");
+      return { status: "no_data" as const, source: "authbridge" as const, details };
+    }
+
     await persistOpportunityResult(opportunity.id, "ready", details, "authbridge", null);
     return { status: "ready" as const, source: "authbridge" as const, details };
   } catch {
     if (cached) {
-      const details = fromNormalized(cached.normalized_details, registrationNumber);
+      const normalized = fromNormalized(cached.normalized_details, registrationNumber);
+      const details = usefulFieldCount(normalized) > 0 ? normalized : fromRaw(cached.raw_response, registrationNumber);
       if (usefulFieldCount(details) > 0) {
         await persistOpportunityResult(opportunity.id, "ready", details, "stale_cache", null);
         return { status: "ready" as const, source: "stale_cache" as const, details };
