@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { Building2, CalendarRange, HandCoins, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { loadAccountsDashboard, resolveAccountsDashboardFilters, type AccountsDashboardQuery } from "@/lib/accounts-dashboard";
+import { resolveAccountsDashboardFilters, type AccountsDashboardQuery } from "@/lib/accounts-dashboard";
 import {
   BUSINESS_MIS_AMOUNT_COLUMNS,
   BUSINESS_MIS_DATE_COLUMNS,
   BUSINESS_MIS_HEADERS,
   BUSINESS_MIS_PERCENT_COLUMNS,
-  loadBusinessMisRows,
+  loadAccountsDashboardSnapshot,
   type BusinessMisCell,
 } from "@/lib/accounts-business-mis";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -23,14 +23,10 @@ export default async function AccountsPage({ searchParams }: Props) {
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) redirect("/access-denied");
   const query = await searchParams;
-  const resolvedFilters = resolveAccountsDashboardFilters(query);
-  const [data, misResult] = await Promise.all([
-    loadAccountsDashboard(profile, query),
-    loadBusinessMisRows(profile, resolvedFilters).then((rows) => ({ rows, failed: false })).catch(() => ({ rows: [] as BusinessMisCell[][], failed: true })),
-  ]);
-  const { filters } = data;
-  const misRows = misResult.rows;
-  const misLoadFailed = misResult.failed;
+  const filters = resolveAccountsDashboardFilters(query);
+  const data = await loadAccountsDashboardSnapshot(profile, filters);
+  const misRows = data.rows;
+  const misLoadFailed = data.warnings.length > 0 && data.rows.length === 0;
 
   const exportParams = new URLSearchParams({ period: filters.period, from: filters.fromDate, to: filters.toDate });
   if (filters.insurerId) exportParams.set("insurer", filters.insurerId);
@@ -39,7 +35,7 @@ export default async function AccountsPage({ searchParams }: Props) {
   return <AppShell title="Accounts Dashboard"><div className="mx-auto max-w-[1560px] space-y-2 pb-4">
     <section className="rounded-2xl border border-[#dbe3ee] bg-white px-3 py-2.5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold leading-5 text-[#17365D]">Accounts Dashboard</h1><p className="text-[8px] font-medium text-[#7c899b]">{data.periodLabel}</p></div>
+        <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold leading-5 text-[#17365D]">Accounts Dashboard</h1><p className="text-[8px] font-medium text-[#7c899b]">{displayRange(filters.fromDate, filters.toDate)}</p></div>
         <AccountsControls period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} insurerId={filters.insurerId} insurers={data.insurers} exportHref={exportHref} />
       </div>
     </section>
@@ -110,3 +106,7 @@ function formatMisCell(value: BusinessMisCell, index: number) {
 function KpiCard({ icon: Icon, label, value }: { icon: typeof Building2; label: string; value: string }) { return <article className="flex min-h-[58px] items-center justify-between gap-3 rounded-xl border border-[#dbe3ee] bg-white px-3 py-2 shadow-sm"><div className="min-w-0"><p className="truncate text-[7.5px] font-black uppercase tracking-[.07em] text-[#7c899b]">{label}</p><p className="mt-1 truncate text-[17px] font-semibold leading-5 tabular-nums text-[#14213c]" title={value}>{value}</p></div><span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#edf6f5] text-[#0f766e]"><Icon className="h-3.5 w-3.5" /></span></article>; }
 function currency(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function integer(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
+function displayRange(from: string, to: string) {
+  const format = (value: string) => new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`));
+  return from === to ? format(from) : `${format(from)} – ${format(to)}`;
+}
