@@ -1,0 +1,220 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { Ban, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
+
+import {
+  deletePartnerAssociateAccount,
+  resendPartnerAssociateInvite,
+  togglePartnerAssociateAccountStatus,
+  updatePartnerAssociateAccount,
+} from "./actions";
+
+type Role = "claim_head" | "insurance_head" | "bodyshop_manager";
+type Status = "invited" | "active" | "disabled";
+
+type AssociateForMenu = {
+  id: string;
+  name: string;
+  phone_number: string;
+  email: string;
+  designation: string;
+  role: Role;
+  status: Status;
+};
+
+export function AssociateAccountActionsMenu({
+  associate,
+  applicationId,
+  intermediaryId,
+  returnPath,
+}: {
+  associate: AssociateForMenu;
+  applicationId: string;
+  intermediaryId: string;
+  returnPath: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setEditOpen(false);
+        setDeleteOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  const commonHidden = (
+    <>
+      <input type="hidden" name="application_id" value={applicationId} />
+      <input type="hidden" name="intermediary_id" value={intermediaryId} />
+      <input type="hidden" name="associate_id" value={associate.id} />
+      <input type="hidden" name="return_path" value={returnPath} />
+    </>
+  );
+
+  return (
+    <>
+      <div ref={rootRef} className="relative inline-flex">
+        <button
+          type="button"
+          aria-label={`Actions for ${associate.name}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="grid h-8 w-8 place-items-center rounded-lg border border-transparent text-[#334155] transition hover:border-[#DCE5EF] hover:bg-[#F1F5F9]"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </button>
+
+        {open ? (
+          <div
+            role="menu"
+            className="absolute right-0 top-9 z-40 w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_16px_40px_rgba(15,23,42,.16)]"
+          >
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                setEditOpen(true);
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
+            >
+              <Pencil className="h-3.5 w-3.5 text-[#64748B]" />
+              Edit
+            </button>
+
+            <form action={togglePartnerAssociateAccountStatus}>
+              {commonHidden}
+              <button
+                type="submit"
+                role="menuitem"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
+              >
+                <Ban className="h-3.5 w-3.5 text-[#64748B]" />
+                {associate.status === "disabled" ? "Enable" : "Disable"}
+              </button>
+            </form>
+
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                setDeleteOpen(true);
+              }}
+              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+
+            <form action={resendPartnerAssociateInvite}>
+              {commonHidden}
+              <button
+                type="submit"
+                role="menuitem"
+                disabled={associate.status === "disabled"}
+                title={associate.status === "disabled" ? "Enable this account before resending the link." : undefined}
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Send className="h-3.5 w-3.5 text-[#64748B]" />
+                Resend Link
+              </button>
+            </form>
+          </div>
+        ) : null}
+      </div>
+
+      {editOpen ? (
+        <Modal title="Edit Associate Account" onClose={() => setEditOpen(false)}>
+          <form action={updatePartnerAssociateAccount} className="space-y-4">
+            {commonHidden}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Name">
+                <input name="name" required defaultValue={associate.name} className={inputClass} />
+              </Field>
+              <Field label="Phone Number">
+                <input name="phone_number" required defaultValue={associate.phone_number} inputMode="tel" className={inputClass} />
+              </Field>
+              <Field label="Email">
+                <input value={associate.email} readOnly disabled className={`${inputClass} cursor-not-allowed bg-[#F8FAFC] text-[#64748B]`} />
+              </Field>
+              <Field label="Designation">
+                <input name="designation" required defaultValue={associate.designation} className={inputClass} />
+              </Field>
+              <Field label="Role">
+                <select name="role" required defaultValue={associate.role} className={inputClass}>
+                  <option value="claim_head">Claim Head</option>
+                  <option value="insurance_head">Insurance Head</option>
+                  <option value="bodyshop_manager">Bodyshop Manager</option>
+                </select>
+              </Field>
+            </div>
+            <p className="text-[10px] text-[#64748B]">Email is locked because it is the associate&apos;s portal login ID.</p>
+            <div className="flex justify-end gap-2 border-t border-[#E7ECF3] pt-4">
+              <button type="button" onClick={() => setEditOpen(false)} className="h-9 rounded-xl border border-[#D8E2EE] px-4 text-[10px] font-semibold text-[#475569] hover:bg-[#F8FAFC]">Cancel</button>
+              <button type="submit" className="h-9 rounded-xl bg-[#17365D] px-4 text-[10px] font-bold text-white hover:bg-[#102A4C]">Save Changes</button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {deleteOpen ? (
+        <Modal title="Delete Associate Account" onClose={() => setDeleteOpen(false)}>
+          <div className="space-y-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
+              <p className="text-[11px] font-semibold text-rose-700">Permanently delete {associate.name}?</p>
+              <p className="mt-1 text-[10px] leading-5 text-rose-600">This removes the associate login and account permanently. This action cannot be undone.</p>
+            </div>
+            <div className="rounded-xl border border-[#E7ECF3] bg-[#F8FAFC] px-3 py-2.5 text-[10px] text-[#475569]">
+              <span className="font-semibold text-[#17203A]">{associate.email}</span>
+            </div>
+            <form action={deletePartnerAssociateAccount} className="flex justify-end gap-2">
+              {commonHidden}
+              <button type="button" onClick={() => setDeleteOpen(false)} className="h-9 rounded-xl border border-[#D8E2EE] px-4 text-[10px] font-semibold text-[#475569] hover:bg-[#F8FAFC]">Cancel</button>
+              <button type="submit" className="h-9 rounded-xl bg-rose-600 px-4 text-[10px] font-bold text-white hover:bg-rose-700">Delete Permanently</button>
+            </form>
+          </div>
+        </Modal>
+      ) : null}
+    </>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/35 p-4 backdrop-blur-[1px]" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="w-full max-w-xl rounded-2xl border border-[#DCE5EF] bg-white shadow-[0_24px_70px_rgba(15,23,42,.22)]">
+        <div className="flex items-center justify-between border-b border-[#E7ECF3] px-5 py-4">
+          <h3 className="text-[13px] font-semibold text-[#17203A]">{title}</h3>
+          <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg text-[#64748B] hover:bg-[#F1F5F9]">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}</span>{children}</label>;
+}
