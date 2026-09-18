@@ -70,6 +70,10 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const sarvamStatus = queryValue(query.sarvam_status);
   const sarvamTestOk = sarvamTest === "ok";
   const sarvamTestFailed = sarvamTest === "failed";
+  const webhookRetry = queryValue(query.webhook_retry);
+  const webhookRetryStatus = queryValue(query.webhook_retry_status);
+  const webhookRetryAccepted = webhookRetry === "accepted";
+  const webhookRetryFailed = webhookRetry === "failed";
 
   const readiness = getSarvamRenewalReadiness();
   const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
@@ -197,6 +201,51 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             <Gate label="Webhook observed" ready={webhookObserved} detail={webhookObserved ? "At least one normalized callback event exists" : "No callback event visible"} />
             <Gate label="Operational policy" ready={false} detail="Calling hours / retry / DND approval pending" />
           </div>
+        </Card>
+
+        <Card>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#17203A]">Webhook recovery</h2>
+              <p className="mt-1 max-w-2xl text-[10px] leading-5 text-[#64748B]">
+                Re-deliver one completed Sarvam campaign attempt through the configured webhook. This does not place another phone call; Sarvam re-sends the original attempt result and INSUREIT processes it through the normal idempotent webhook contract.
+              </p>
+            </div>
+            <form action="/api/system/voice-integration/sarvam-webhook-retry" method="post" className="flex w-full max-w-xl flex-col gap-2 sm:flex-row">
+              <input
+                name="provider_attempt_id"
+                type="text"
+                required
+                maxLength={80}
+                placeholder="Sarvam provider attempt ID"
+                className="min-h-9 flex-1 rounded-lg border border-[#C8D7EA] bg-white px-3 font-mono text-[9.5px] text-[#24345A] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
+              />
+              <button
+                type="submit"
+                className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#111A35] px-4 text-[9.5px] font-semibold text-white transition hover:bg-[#1B2A50]"
+              >
+                Retry webhook
+              </button>
+            </form>
+          </div>
+
+          {webhookRetryAccepted || webhookRetryFailed ? (
+            <div className={`mt-4 rounded-xl border px-3.5 py-3 ${webhookRetryAccepted ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+              <p className={`text-[10px] font-semibold ${webhookRetryAccepted ? "text-emerald-800" : "text-amber-900"}`}>
+                {webhookRetryAccepted ? "Webhook re-delivery accepted" : "Webhook re-delivery needs attention"}
+              </p>
+              <p className={`mt-1 text-[9.5px] leading-4 ${webhookRetryAccepted ? "text-emerald-700" : "text-amber-800"}`}>
+                {webhookRetryAccepted
+                  ? "Sarvam accepted the provider attempt for asynchronous webhook re-delivery. Refresh recent attempts after the callback arrives."
+                  : "Sarvam did not accept the webhook re-delivery request. Verify the provider attempt ID and campaign binding before trying again."}
+              </p>
+              {webhookRetryStatus ? <span className="mt-2 inline-flex rounded-full border border-current/15 px-2.5 py-1 text-[8.5px] font-semibold">HTTP {webhookRetryStatus}</span> : null}
+            </div>
+          ) : null}
+
+          <p className="mt-3 text-[9px] leading-4 text-[#94A3B8]">
+            Recovery requires the Sarvam provider attempt ID from provider evidence. Do not use phone numbers for correlation. A retry request can safely be repeated because the INSUREIT provider-attempt event key is idempotent.
+          </p>
         </Card>
 
         {staleActiveAttempts.length ? (
