@@ -6,6 +6,7 @@ import { requireScopedPospMispManager } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createPartnerAssociateAccount } from "./actions";
 import { AssociateAccountResultToast } from "./associate-account-result-toast";
+import { AssociateAccountActionsMenu } from "./associate-account-actions-menu";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -59,7 +60,7 @@ export default async function PartnerAssociateAccountsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ success?: string; error?: string }>;
+  searchParams: Promise<{ success?: string; error?: string; retry_after?: string }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -105,10 +106,10 @@ export default async function PartnerAssociateAccountsPage({
   return (
     <AppShell title="Partner Associate Accounts" backHref={`/intermediaries/applications/${id}`}>
       <div className="mx-auto max-w-[1480px] space-y-4 pb-8">
-        {query.success === "associate_account_invited" ? (
-          <AssociateAccountResultToast tone="success" message="Associate account saved. Activation email sent successfully." />
+        {query.success ? (
+          <AssociateAccountResultToast tone="success" message={successMessage(query.success)} />
         ) : null}
-        {query.error ? <AssociateAccountResultToast tone="error" message={errorMessage(query.error)} /> : null}
+        {query.error ? <AssociateAccountResultToast tone="error" message={errorMessage(query.error, query.retry_after)} /> : null}
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
@@ -183,7 +184,7 @@ export default async function PartnerAssociateAccountsPage({
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts Register</h2>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-[10.5px]">
+            <table className="w-full min-w-[1120px] text-left text-[10.5px]">
               <thead className="border-b border-[#E7ECF3] bg-[#F8FAFC] text-[8.5px] font-bold uppercase tracking-[.06em] text-[#64748B]">
                 <tr>
                   <th className="px-5 py-3">Name</th>
@@ -191,6 +192,8 @@ export default async function PartnerAssociateAccountsPage({
                   <th className="px-3 py-3">Email</th>
                   <th className="px-3 py-3">Designation</th>
                   <th className="px-3 py-3">Role</th>
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EEF2F6]">
@@ -198,16 +201,22 @@ export default async function PartnerAssociateAccountsPage({
                   <tr key={associate.id} className="hover:bg-[#FAFCFF]">
                     <td className="px-5 py-3 font-semibold text-[#17203A]">{associate.name}</td>
                     <td className="px-3 py-3 text-[#475569]">{associate.phone_number}</td>
-                    <td className="px-3 py-3">
-                      <div className="font-medium text-[#17203A]">{associate.email}</div>
-                      <div className="mt-0.5 text-[8.5px] capitalize text-[#64748B]">{associate.status}</div>
-                    </td>
+                    <td className="px-3 py-3 font-medium text-[#17203A]">{associate.email}</td>
                     <td className="px-3 py-3 text-[#475569]">{associate.designation}</td>
                     <td className="px-3 py-3"><RolePill value={associate.role} /></td>
+                    <td className="px-3 py-3"><StatusPill value={associate.status} /></td>
+                    <td className="px-3 py-3 text-center">
+                      <AssociateAccountActionsMenu
+                        associate={associate}
+                        applicationId={id}
+                        intermediaryId={intermediary.id}
+                        returnPath={returnPath}
+                      />
+                    </td>
                   </tr>
                 ))}
                 {!(associates ?? []).length ? (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
+                  <tr><td colSpan={7} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -233,6 +242,15 @@ function RolePill({ value }: { value: Associate["role"] }) {
   const label = value === "claim_head" ? "Claim Head" : value === "insurance_head" ? "Insurance Head" : value === "bodyshop_manager" ? "Bodyshop Manager" : "Admin";
   return <span className="inline-flex rounded-full border border-[#D8E2EE] bg-[#F8FAFC] px-2.5 py-1 text-[8.5px] font-semibold text-[#334155]">{label}</span>;
 }
+function StatusPill({ value }: { value: Associate["status"] }) {
+  const label = value === "invited" ? "Invitation Sent" : value === "active" ? "Active" : "Disabled";
+  const style = value === "invited"
+    ? "border-blue-200 bg-blue-50 text-blue-700"
+    : value === "active"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : "border-slate-200 bg-slate-100 text-slate-600";
+  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[8.5px] font-semibold ${style}`}>{label}</span>;
+}
 function UserIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-6 w-6" aria-hidden="true"><circle cx="12" cy="8" r="3" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></svg>;
 }
@@ -257,7 +275,16 @@ function date(value: string | null | undefined) {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" }).format(parsed);
 }
-function errorMessage(value: string) {
+function successMessage(value: string) {
+  if (value === "associate_account_invited") return "Associate account saved. Activation email sent successfully.";
+  if (value === "associate_account_updated") return "Associate account updated successfully.";
+  if (value === "associate_account_disabled") return "Associate account disabled. Portal access is blocked.";
+  if (value === "associate_account_enabled") return "Associate account enabled successfully.";
+  if (value === "associate_account_deleted") return "Associate account deleted permanently.";
+  if (value === "associate_invite_resent") return "Invitation link sent again successfully.";
+  return "Associate account updated successfully.";
+}
+function errorMessage(value: string, retryAfter?: string) {
   const decoded = safeDecode(value);
   if (decoded === "associate_account_invalid") return "Complete all associate account fields.";
   if (decoded === "associate_email_invalid") return "Enter a valid email address.";
@@ -266,6 +293,19 @@ function errorMessage(value: string) {
   if (decoded === "associate_email_in_use") return "That email is already used by another portal account.";
   if (decoded === "associate_not_authorized") return "You do not have permission to manage this Partner.";
   if (decoded === "associate_partner_not_available") return "Associate accounts are available only for an active Partner.";
-  return "The associate account could not be saved.";
+  if (decoded === "associate_not_found") return "That associate account is no longer available.";
+  if (decoded === "associate_update_failed") return "The associate details could not be updated.";
+  if (decoded === "associate_status_failed") return "The associate login status could not be changed.";
+  if (decoded === "associate_delete_failed") return "The associate account could not be deleted.";
+  if (decoded === "associate_enable_before_resend") return "Enable this associate account before resending the invitation link.";
+  if (decoded === "associate_email_cooldown") {
+    const seconds = Number(retryAfter ?? "0");
+    return seconds > 0
+      ? `An authentication email was sent recently. Please wait ${seconds} seconds before resending the link.`
+      : "An authentication email was sent recently. Please wait a moment before resending the link.";
+  }
+  const rateLimit = decoded.match(/after\s+(\d+)\s+seconds?/i);
+  if (rateLimit?.[1]) return `An authentication email was sent recently. Please wait ${rateLimit[1]} seconds before trying again.`;
+  return "The associate account action could not be completed.";
 }
 function safeDecode(value: string) { try { return decodeURIComponent(value); } catch { return value; } }
