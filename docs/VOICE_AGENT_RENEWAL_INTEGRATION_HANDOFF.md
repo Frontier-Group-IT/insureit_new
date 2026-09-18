@@ -471,7 +471,7 @@ Detailed evidence: `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`.
 
 Bulk AI calling remains disabled under the existing External Renewal voice contract until the recovery gate is cleared or explicitly superseded by an approved production policy.
 
-## Production control-center authority model — IMPLEMENTED / PENDING CI
+## Production control-center authority model — MERGED + DEPLOYED
 
 The production Voice Integration UX has been rebuilt around normal operations instead of experimental diagnostics.
 
@@ -486,6 +486,8 @@ Current authority:
 The main production page is compact: health strip, Production Control, Access & Policy, Calling Queue, Campaign, and Recent Voice Attempts. Verbose experimental configuration/readiness/recovery explanations are removed from the primary operations surface.
 
 Detailed evidence: `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`.
+
+PR #2084 passed canonical Verify #4182, merged as `8e5afeba02075404a3ddcad78f8b0e53a359356d`, and Vercel production `dpl_5mzUSXDo4AnQojLzF26wMqCyfrMz` is READY on `portal.insureit.in`. Live IT-dispatch verification is the next operational test.
 
 Partner self-service is deferred to a later explicitly approved phase.
 
