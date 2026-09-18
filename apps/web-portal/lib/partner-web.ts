@@ -297,6 +297,33 @@ export async function getPartnerWebCustomerDetail(customerId: string): Promise<P
 }
 
 
+export type PartnerCustomerActivityData = {
+  generated_at: string;
+  customer_id: string;
+  items: {
+    kind: "customer" | "policy" | "claim";
+    entity_id: string;
+    event_at: string;
+    title: string;
+    meta: string;
+  }[];
+};
+
+export async function getPartnerWebCustomerActivity(
+  customerId: string,
+  limit = 20,
+): Promise<PartnerCustomerActivityData> {
+  await getPartnerWebSession();
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("partner_app_customer_activity", {
+    p_customer_id: customerId,
+    p_limit: Math.max(1, Math.min(limit, 50)),
+  });
+  if (error || !data) throw new Error(error?.message ?? "Customer activity is unavailable.");
+  return data as PartnerCustomerActivityData;
+}
+
+
 export type PartnerPolicyLifecycle = "all" | "in_force" | "expiring" | "expired" | "upcoming";
 
 export type PartnerPolicySummary = {
