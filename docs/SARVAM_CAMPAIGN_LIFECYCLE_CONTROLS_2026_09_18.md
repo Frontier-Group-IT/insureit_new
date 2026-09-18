@@ -91,9 +91,10 @@ Future terminal campaign operations require a separately approved workflow.
 - regression guards: **IMPLEMENTED**
 - schema change: **NONE**
 - provider lifecycle mutation performed by this development session: **NONE**
-- canonical CI: **PENDING**
-- merge/deployment: **PENDING**
-- production Pause/Resume verification: **NOT YET RUN**
+- canonical CI: **VERIFIED / SUCCESS** (Verify web portal #4165)
+- merge: **MERGED** as `59964b54c242997d113b18adc6d76d5ea1547ce7`
+- deployment: **DEPLOYED / READY** on Vercel production `dpl_Du1juK2xCu7AEW7sjF1ddHbjPZ82`
+- production Pause/Resume verification: **NOT YET RUN — manual IT Super User action required**
 
 ## First production verification after deployment
 
