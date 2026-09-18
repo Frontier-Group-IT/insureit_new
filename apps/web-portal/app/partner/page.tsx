@@ -290,7 +290,7 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
                 href="/partner/schemes"
                 prefetch={false}
                 data-partner-active-scheme="true"
-                className="group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-[#E999A6] bg-gradient-to-r from-[#FFE9ED] via-[#FFD6DD] to-[#FFE9ED] px-3 py-2 text-[9.5px] font-semibold text-[#7A3444] shadow-[0_6px_20px_rgba(190,70,90,0.22)] ring-1 ring-[#F7C4CC]/70 transition hover:border-[#E27F8F] hover:shadow-[0_8px_24px_rgba(190,70,90,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C70]/35"
+                className="group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-[#F3C6CD] bg-gradient-to-r from-[#FFF6F8] via-[#FDEFF2] to-[#FFF6F8] px-3 py-2 text-[9.5px] font-semibold text-[#7A4050] shadow-[0_5px_16px_rgba(190,70,90,0.12)] ring-1 ring-[#FBE3E7]/80 transition hover:border-[#EFAFB9] hover:shadow-[0_7px_20px_rgba(190,70,90,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C70]/25"
               >
                 <span
                   aria-hidden="true"
