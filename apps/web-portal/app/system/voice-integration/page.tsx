@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { AppShell, Card, PageHeader } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { getSarvamRenewalCampaignState } from "@/lib/sarvam-campaign-lifecycle";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
 import { getSarvamRenewalReadiness } from "@/lib/sarvam-renewal-readiness";
@@ -76,9 +77,14 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const webhookRetryStatus = queryValue(query.webhook_retry_status);
   const webhookRetryAccepted = webhookRetry === "accepted";
   const webhookRetryFailed = webhookRetry === "failed";
+  const campaignActionResult = queryValue(query.campaign_action);
+  const campaignActionName = queryValue(query.campaign_action_name);
+  const campaignActionState = queryValue(query.campaign_state);
+  const campaignActionHttpStatus = queryValue(query.campaign_status);
 
   const readiness = getSarvamRenewalReadiness();
   const operationalPolicy = getSarvamRenewalOperationalPolicy();
+  const campaignLifecycle = await getSarvamRenewalCampaignState();
   const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
     (key) => readiness.items.find((item) => item.key === key)?.configured,
   );
@@ -194,6 +200,66 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
               Configure this endpoint on the approved Sarvam renewal campaign. Keep the webhook secret private and use the INSUREIT-controlled secret mechanism already implemented by the route.
             </p>
           </div>
+        </Card>
+
+        <Card>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#17203A]">Campaign lifecycle control</h2>
+              <p className="mt-1 max-w-3xl text-[10px] leading-5 text-[#64748B]">
+                IT Super User can pause or resume only the configured Sarvam renewal campaign. Cancel is intentionally not exposed because it is terminal. Sarvam requires Pause → Edit → Save → Resume for live configuration changes.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold ${campaignLifecycle.ok ? tone(true) : tone(false)}`}>
+                {campaignLifecycle.ok ? labelize(campaignLifecycle.status) : "State unavailable"}
+              </span>
+              {campaignLifecycle.status === "active" ? (
+                <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
+                  <input type="hidden" name="action" value="pause" />
+                  <button type="submit" className="inline-flex min-h-8 items-center justify-center rounded-lg border border-[#C8D7EA] bg-white px-3 text-[9.5px] font-semibold text-[#24345A] transition hover:bg-[#F7FAFE]">
+                    Pause campaign
+                  </button>
+                </form>
+              ) : null}
+              {campaignLifecycle.status === "paused" ? (
+                <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
+                  <input type="hidden" name="action" value="resume" />
+                  <button type="submit" className="inline-flex min-h-8 items-center justify-center rounded-lg bg-[#111A35] px-3 text-[9.5px] font-semibold text-white transition hover:bg-[#1B2A50]">
+                    Resume campaign
+                  </button>
+                </form>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] px-3.5 py-3">
+            <div className="grid gap-2 sm:grid-cols-3">
+              <div><p className="text-[8.5px] uppercase tracking-[.06em] text-[#94A3B8]">Provider state</p><p className="mt-1 text-[10px] font-semibold text-[#24345A]">{labelize(campaignLifecycle.status)}</p></div>
+              <div><p className="text-[8.5px] uppercase tracking-[.06em] text-[#94A3B8]">State check</p><p className="mt-1 text-[10px] font-semibold text-[#24345A]">{campaignLifecycle.ok ? "Verified" : "Unavailable"}</p></div>
+              <div><p className="text-[8.5px] uppercase tracking-[.06em] text-[#94A3B8]">Mutation boundary</p><p className="mt-1 text-[10px] font-semibold text-[#24345A]">Pause / Resume only</p></div>
+            </div>
+          </div>
+
+          {campaignActionResult ? (
+            <div className={`mt-3 rounded-xl border px-3.5 py-3 ${campaignActionResult === "ok" ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+              <p className={`text-[10px] font-semibold ${campaignActionResult === "ok" ? "text-emerald-800" : "text-amber-900"}`}>
+                {campaignActionResult === "ok"
+                  ? `Campaign ${campaignActionName === "pause" ? "pause" : "resume"} confirmed`
+                  : "Campaign lifecycle action needs attention"}
+              </p>
+              <p className={`mt-1 text-[9.5px] leading-4 ${campaignActionResult === "ok" ? "text-emerald-700" : "text-amber-800"}`}>
+                {campaignActionResult === "ok"
+                  ? `Sarvam returned lifecycle state ${labelize(campaignActionState ?? null)}.`
+                  : "Sarvam did not confirm the requested lifecycle action. No fallback campaign mutation was attempted."}
+              </p>
+              {campaignActionHttpStatus ? <span className="mt-2 inline-flex rounded-full border border-current/15 px-2.5 py-1 text-[8.5px] font-semibold">HTTP {campaignActionHttpStatus}</span> : null}
+            </div>
+          ) : null}
+
+          <p className="mt-3 text-[9px] leading-4 text-[#94A3B8]">
+            Scheduled, ended and cancelled campaigns are observation-only here. Partner users never receive campaign lifecycle controls.
+          </p>
         </Card>
 
         <Card>

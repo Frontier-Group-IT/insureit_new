@@ -76,8 +76,9 @@ Provider retries remain separately controlled in Sarvam until campaign lifecycle
 - regression guards: **IMPLEMENTED**
 - schema change: **NONE**
 - live phone call: **NOT REQUIRED for this slice**
-- canonical CI: **PENDING**
-- merge/deployment: **PENDING**
+- canonical CI: **VERIFIED / SUCCESS** (Verify web portal #4158)
+- merge: **MERGED** as `fd1ae95261886669602652a1c57874469b82bd95`
+- deployment: **DEPLOYED / READY** on Vercel production `dpl_2chmbbhnWbEDf98rH1XXkcXkQ7di`
 
 ## Next planned phase
 

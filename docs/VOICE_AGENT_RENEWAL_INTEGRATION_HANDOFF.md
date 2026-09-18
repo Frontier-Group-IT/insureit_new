@@ -380,7 +380,7 @@ INSUREIT must treat recovery as complete only after the callback is actually obs
 
 Current provider limitation: the documented campaign webhook-delivery list endpoint is expected to expose `running`, `completed`, and `failed` delivery records, but production probes against valid campaigns have returned provider HTTP 500. Therefore INSUREIT callback observation is the current operational proof source.
 
-## Phase A operational calling policy — IMPLEMENTED / PENDING CI
+## Phase A operational calling policy — MERGED + DEPLOYED
 
 INSUREIT now enforces its own server-side renewal calling window before creating a local voice attempt or streaming a cohort.
 
@@ -393,9 +393,29 @@ Current policy:
 - application-level automatic retries remain disabled
 - ambiguous provider delivery remains held for reconciliation
 
-The controlled default mirrors the schedule used during the verified production campaign. Detailed evidence: `docs/SARVAM_OPERATIONAL_CALLING_POLICY_2026_09_18.md`.
+The controlled default mirrors the schedule used during the verified production campaign. PR #2071 passed canonical Verify web portal #4158, merged as `fd1ae95261886669602652a1c57874469b82bd95`, and Vercel production deployment `dpl_2chmbbhnWbEDf98rH1XXkcXkQ7di` is READY. Detailed evidence: `docs/SARVAM_OPERATIONAL_CALLING_POLICY_2026_09_18.md`.
 
 This does not enable batch calling or automatic campaign lifecycle control.
+
+## Phase B campaign lifecycle controls — IMPLEMENTED / PENDING CI
+
+INSUREIT now has an IT-Super-User-only campaign lifecycle client and control surface for the configured Sarvam renewal campaign.
+
+Implemented contract:
+
+- read the configured campaign lifecycle state
+- server-side `X-API-Key` only
+- exact IT Super User + `manage_system=approve`
+- expose **Pause** only for Active
+- expose **Resume** only for Paused
+- do not expose Sarvam's terminal Cancel action
+- preserve Sarvam's required Pause -> Edit -> Save -> Resume operating rule
+- no Partner campaign-administration controls
+- no schema change and no batch calling
+
+Detailed evidence: `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
+
+Production Pause/Resume verification is still required after CI, merge and deployment.
 
 ## Next safe continuation
 

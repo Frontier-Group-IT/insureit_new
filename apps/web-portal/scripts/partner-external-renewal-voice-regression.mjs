@@ -11,6 +11,7 @@ const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/de
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
 const sarvamOperationalPolicy = fs.readFileSync(path.join(root, "lib/sarvam-renewal-operational-policy.ts"), "utf8");
+const sarvamCampaignLifecycle = fs.readFileSync(path.join(root, "lib/sarvam-campaign-lifecycle.ts"), "utf8");
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
 const sarvamWebhookRecovery = fs.readFileSync(path.join(root, "lib/sarvam-webhook-recovery.ts"), "utf8");
 const diagnosticsModel = fs.readFileSync(path.join(root, "lib/sarvam-deep-diagnostics.ts"), "utf8");
@@ -18,6 +19,7 @@ const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renew
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
+const campaignStatusRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-campaign-status/route.ts"), "utf8");
 const diagnosticsRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-deep-diagnostics/route.ts"), "utf8");
 const webhook = fs.readFileSync(path.join(root, "app/api/integrations/sarvam/voice-campaign-webhook/route.ts"), "utf8");
 const detailPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/[id]/page.tsx"), "utf8");
@@ -83,6 +85,13 @@ assert(sarvamOperationalPolicy.includes("SARVAM_RENEWAL_CALL_WINDOW_END"), "call
 assert(sarvamOperationalPolicy.includes("withinCallingWindow"), "operational policy explicitly calculates current calling-window eligibility");
 assert(sarvamOperationalPolicy.includes("applicationAutoRetry: false"), "INSUREIT application-level automatic retries remain disabled");
 assert(!sarvamOperationalPolicy.includes("NEXT_PUBLIC_"), "operational policy stays server-side");
+assert(sarvamCampaignLifecycle.includes('import "server-only"'), "campaign lifecycle client is server-only");
+assert(sarvamCampaignLifecycle.includes('"X-API-Key": apiKey'), "campaign lifecycle uses the proven X-API-Key contract");
+assert(sarvamCampaignLifecycle.includes('/campaigns/'), "campaign lifecycle targets the configured campaign resource");
+assert(sarvamCampaignLifecycle.includes('/status'), "campaign lifecycle mutation uses the documented campaign status endpoint");
+assert(sarvamCampaignLifecycle.includes('JSON.stringify({ action })'), "campaign lifecycle mutation sends a single explicit action");
+assert(sarvamCampaignLifecycle.includes('type SarvamCampaignAction = "pause" | "resume"'), "campaign lifecycle code excludes terminal cancel from the UI control contract");
+assert(!sarvamCampaignLifecycle.includes("NEXT_PUBLIC_"), "campaign lifecycle credentials remain server-side");
 
 assert(readinessModel.includes('import "server-only"'), "readiness model is server-only");
 assert(readinessModel.includes('SARVAM_RENEWAL_WEBHOOK_SECRET'), "readiness checks webhook-secret presence");
@@ -129,6 +138,11 @@ assert(webhookRetryRoute.includes('hasEffectiveCapability(viewer, "manage_system
 assert(webhookRetryRoute.includes("retrySarvamCampaignWebhookDelivery"), "webhook retry route delegates to the server-only recovery client");
 assert(!webhookRetryRoute.includes("streamExternalRenewalToSarvam"), "webhook retry cannot queue another phone call");
 assert(!webhookRetryRoute.includes("SARVAM_API_KEY"), "webhook retry route never reads or renders the API key directly");
+assert(campaignStatusRoute.includes('viewer.role !== "it_super_user"'), "campaign status route requires exact IT Super User role");
+assert(campaignStatusRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "campaign status route requires critical system approval access");
+assert(campaignStatusRoute.includes('new Set<SarvamCampaignAction>(["pause", "resume"])'), "campaign status route permits only pause and resume");
+assert(!campaignStatusRoute.includes('"cancel"'), "campaign status route does not expose terminal cancel");
+assert(!campaignStatusRoute.includes("SARVAM_API_KEY"), "campaign status route delegates secrets to the server-only lifecycle client");
 
 assert(diagnosticsRoute.includes('viewer.role !== "it_super_user"'), "Sarvam deep diagnostics requires exact IT Super User role");
 assert(diagnosticsRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam deep diagnostics requires critical system approval access");
@@ -161,6 +175,11 @@ assert(readinessPage.includes("Webhook callbacks"), "voice admin page surfaces n
 assert(readinessPage.includes("Calling window"), "voice admin page surfaces the enforced calling window");
 assert(readinessPage.includes("DND / terminal guard"), "voice admin page surfaces DND and terminal-state protection");
 assert(readinessPage.includes("INSUREIT auto retry"), "voice admin page surfaces application retry policy");
+assert(readinessPage.includes("Campaign lifecycle control"), "voice admin page exposes IT-only campaign lifecycle controls");
+assert(readinessPage.includes("Pause campaign"), "voice admin page can pause an active configured campaign");
+assert(readinessPage.includes("Resume campaign"), "voice admin page can resume a paused configured campaign");
+assert(readinessPage.includes("Pause / Resume only"), "voice admin page states the non-terminal mutation boundary");
+assert(readinessPage.includes("Partner users never receive campaign lifecycle controls"), "campaign lifecycle control remains outside Partner workspace");
 assert(readinessPage.includes("Reconciliation attention required"), "voice admin page surfaces stale active attempts without auto-failing them");
 assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page uses an explicit stale-attempt observation threshold");
 assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attempt visibility preserves ambiguous-delivery safety");
