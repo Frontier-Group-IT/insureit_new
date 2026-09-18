@@ -14,6 +14,7 @@ const ACTIVE_ATTEMPT_STATUSES = new Set(["created", "submitted", "queued", "call
 
 type AttemptRow = {
   id: string;
+  provider_attempt_id: string | null;
   submission_status: string;
   connectivity_status: string | null;
   call_disposition: string | null;
@@ -83,7 +84,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const [{ data: attempts, error: attemptsError }, { data: attemptEvents, error: eventsError }] = await Promise.all([
     admin
       .from("external_renewal_voice_attempts")
-      .select("id,submission_status,connectivity_status,call_disposition,created_at,updated_at")
+      .select("id,provider_attempt_id,submission_status,connectivity_status,call_disposition,created_at,updated_at")
       .order("created_at", { ascending: false })
       .limit(12)
       .returns<AttemptRow[]>(),
@@ -204,29 +205,11 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
         </Card>
 
         <Card>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <h2 className="text-[15px] font-semibold text-[#17203A]">Webhook recovery</h2>
-              <p className="mt-1 max-w-2xl text-[10px] leading-5 text-[#64748B]">
-                Re-deliver one completed Sarvam campaign attempt through the configured webhook. This does not place another phone call; Sarvam re-sends the original attempt result and INSUREIT processes it through the normal idempotent webhook contract.
-              </p>
-            </div>
-            <form action="/api/system/voice-integration/sarvam-webhook-retry" method="post" className="flex w-full max-w-xl flex-col gap-2 sm:flex-row">
-              <input
-                name="provider_attempt_id"
-                type="text"
-                required
-                maxLength={80}
-                placeholder="Sarvam provider attempt ID"
-                className="min-h-9 flex-1 rounded-lg border border-[#C8D7EA] bg-white px-3 font-mono text-[9.5px] text-[#24345A] outline-none focus:border-[#3156B8] focus:ring-2 focus:ring-[#3156B8]/10"
-              />
-              <button
-                type="submit"
-                className="inline-flex min-h-9 items-center justify-center rounded-lg bg-[#111A35] px-4 text-[9.5px] font-semibold text-white transition hover:bg-[#1B2A50]"
-              >
-                Retry webhook
-              </button>
-            </form>
+          <div>
+            <h2 className="text-[15px] font-semibold text-[#17203A]">Webhook recovery</h2>
+            <p className="mt-1 max-w-3xl text-[10px] leading-5 text-[#64748B]">
+              Re-deliver a completed Sarvam campaign result through the configured webhook. This does not place another phone call. Use the Retry webhook action beside a completed attempt below so INSUREIT sends the exact stored provider attempt ID instead of relying on a copied Sarvam hash or phone identifier.
+            </p>
           </div>
 
           {webhookRetryAccepted || webhookRetryFailed ? (
@@ -236,15 +219,17 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
               </p>
               <p className={`mt-1 text-[9.5px] leading-4 ${webhookRetryAccepted ? "text-emerald-700" : "text-amber-800"}`}>
                 {webhookRetryAccepted
-                  ? "Sarvam accepted the provider attempt for asynchronous webhook re-delivery. Refresh recent attempts after the callback arrives."
-                  : "Sarvam did not accept the webhook re-delivery request. Verify the provider attempt ID and campaign binding before trying again."}
+                  ? "Sarvam accepted the stored provider attempt for asynchronous webhook re-delivery. No phone call is placed."
+                  : webhookRetryStatus
+                    ? "Sarvam did not accept the webhook re-delivery request. Review the provider status below before trying again."
+                    : "INSUREIT rejected the submitted identifier before contacting Sarvam. Use the Retry webhook button beside a completed attempt below."}
               </p>
               {webhookRetryStatus ? <span className="mt-2 inline-flex rounded-full border border-current/15 px-2.5 py-1 text-[8.5px] font-semibold">HTTP {webhookRetryStatus}</span> : null}
             </div>
           ) : null}
 
           <p className="mt-3 text-[9px] leading-4 text-[#94A3B8]">
-            Recovery requires the Sarvam provider attempt ID from provider evidence. Do not use phone numbers for correlation. A retry request can safely be repeated because the INSUREIT provider-attempt event key is idempotent.
+            Recovery is correlated only by the stored Sarvam provider attempt ID. Phone hashes, phone numbers and interaction IDs are not accepted as substitutes. Provider-attempt events remain idempotent.
           </p>
         </Card>
 
@@ -268,8 +253,8 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             <span className="text-[10px] font-semibold text-[#64748B]">{attempts?.length ?? 0} shown</span>
           </div>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-[10px]">
-              <thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-2.5">Submitted</th><th className="px-3 py-2.5">Connectivity</th><th className="px-3 py-2.5">Disposition</th><th className="px-3 py-2.5">Health</th><th className="px-3 py-2.5">Created</th><th className="px-3 py-2.5">Updated</th></tr></thead>
+            <table className="w-full min-w-[940px] text-left text-[10px]">
+              <thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-2.5">Submitted</th><th className="px-3 py-2.5">Connectivity</th><th className="px-3 py-2.5">Disposition</th><th className="px-3 py-2.5">Health</th><th className="px-3 py-2.5">Created</th><th className="px-3 py-2.5">Updated</th><th className="px-3 py-2.5">Recovery</th></tr></thead>
               <tbody className="divide-y divide-[#EDF2F7]">
                 {(attempts ?? []).map((attempt) => {
                   const stale = isStaleActiveAttempt(attempt, nowMs);
@@ -285,10 +270,25 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                       </td>
                       <td className="px-3 py-3 text-[#64748B]">{formatDateTime(attempt.created_at)}</td>
                       <td className="px-3 py-3 text-[#64748B]">{formatDateTime(attempt.updated_at)}</td>
+                      <td className="px-3 py-3">
+                        {attempt.provider_attempt_id && attempt.submission_status === "completed" ? (
+                          <form action="/api/system/voice-integration/sarvam-webhook-retry" method="post">
+                            <input type="hidden" name="provider_attempt_id" value={attempt.provider_attempt_id} />
+                            <button
+                              type="submit"
+                              className="inline-flex min-h-7 items-center justify-center rounded-lg border border-[#C8D7EA] bg-white px-2.5 text-[8.5px] font-semibold text-[#24345A] transition hover:bg-[#F7FAFE]"
+                            >
+                              Retry webhook
+                            </button>
+                          </form>
+                        ) : (
+                          <span className="text-[8.5px] text-[#94A3B8]">—</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
-                {!attempts?.length ? <tr><td colSpan={6} className="px-3 py-6 text-center text-[10px] text-[#94A3B8]">No production voice attempts recorded yet.</td></tr> : null}
+                {!attempts?.length ? <tr><td colSpan={7} className="px-3 py-6 text-center text-[10px] text-[#94A3B8]">No production voice attempts recorded yet.</td></tr> : null}
               </tbody>
             </table>
           </div>

@@ -105,3 +105,33 @@ Use a completed controlled internal provider attempt whose result is already ide
 7. record success/failure in this document and the main voice handoff.
 
 Only after an idempotent completed-attempt retry is proven should this be used to recover a genuinely stale production attempt.
+
+
+## Live verification attempt 1 — FAILED BEFORE PROVIDER CALL
+
+Date: 2026-09-18
+
+The first production use of the recovery form returned `webhook_retry=failed` without an HTTP provider status.
+
+Verified evidence:
+
+- the submitted value was a 64-character hexadecimal Sarvam value copied from the campaign UI;
+- production INSUREIT stores the real Sarvam `provider_attempt_id` as a UUID-shaped identifier;
+- Vercel logs show the authenticated retry route executed and redirected, but no provider status was returned;
+- therefore the request failed local provider-attempt-ID validation before INSUREIT contacted Sarvam;
+- no phone call was placed;
+- no webhook retry was sent to Sarvam;
+- no CRM/provider-event data changed.
+
+Root cause:
+
+The Sarvam campaign UI also displays a **Phone (hashed)** identifier. That value can look like a provider identifier, but it is not the `attempt_id` required by the webhook retry API.
+
+Durable correction:
+
+- do not ask IT users to manually copy a provider attempt ID from mixed provider UI identifiers;
+- Voice Integration must use the already persisted `external_renewal_voice_attempts.provider_attempt_id` as the authoritative retry identifier;
+- completed attempts should expose a server-rendered **Retry webhook** action that posts the exact stored provider attempt ID;
+- phone numbers, phone hashes, interaction IDs and cohort IDs must not be accepted as substitutes.
+
+The failed trial is preserved because it identified a real operational UX ambiguity; it is not evidence that Sarvam's `/webhooks/retry` endpoint failed.

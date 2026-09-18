@@ -154,7 +154,10 @@ assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attemp
 assert(readinessPage.includes("Webhook recovery"), "voice admin page exposes controlled webhook redelivery");
 assert(readinessPage.includes("This does not place another phone call"), "webhook recovery UI states the no-call boundary");
 assert(readinessPage.includes('name="provider_attempt_id"'), "webhook recovery requires an explicit provider attempt identifier");
-assert(readinessPage.includes("Do not use phone numbers for correlation"), "webhook recovery UI preserves provider/local identifier correlation");
+assert(readinessPage.includes("Phone hashes, phone numbers and interaction IDs are not accepted as substitutes"), "webhook recovery UI rejects ambiguous provider identifiers");
+assert(readinessPage.includes("provider_attempt_id,submission_status"), "voice admin page loads the authoritative stored provider attempt id");
+assert(readinessPage.includes('type="hidden" name="provider_attempt_id" value={attempt.provider_attempt_id}'), "completed-attempt retry action posts the exact stored provider attempt id");
+assert(readinessPage.includes('attempt.submission_status === "completed"'), "webhook retry button is limited to completed attempts");
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
 

@@ -359,6 +359,19 @@ Detailed record: `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
 
 This slice is not considered verified until a previously completed controlled attempt is re-delivered successfully with no new call and no duplicate CRM interaction.
 
+## Webhook recovery identifier lesson — 2026-09-18
+
+First live use of the recovery form failed **before contacting Sarvam** because a 64-character provider UI hash was submitted instead of the UUID-shaped `provider_attempt_id`.
+
+Correction implemented on branch `fix/sarvam-webhook-retry-id-selection`:
+
+- completed attempts load their authoritative stored `provider_attempt_id`;
+- IT Super User uses a per-row **Retry webhook** button;
+- the browser no longer depends on copying an ambiguous provider identifier;
+- phone hashes, phone numbers, interaction IDs and cohort IDs remain invalid recovery keys.
+
+Detailed evidence remains in `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
