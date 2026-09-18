@@ -53,6 +53,12 @@ assert(intakeForm.includes("Upload couldn't be completed"),"Upload failures must
 const queue=read("app/policy-intakes/page.tsx");
 assert(queue.includes("loadPolicyIntakeDuplicateMatches(admin, rows)"),"Policy Intake queue must use the shared duplicate detector");
 assert(queue.includes('status: "Duplicate"'),"Detected duplicates must be removed from Ready for review and shown in the Duplicate bucket");
+const retryActions=read("app/policy-intakes/retry-actions.ts");
+assert(retryActions.includes("requirePolicyIntakeViewer()"),"Retry-state lookup must be safe for normal Policy Intake viewers such as RM submitters");
+assert(retryActions.includes('hasEffectiveCapability(profile, "review_policy_intakes", "edit")'),"Retry-state lookup must only expose retryability to actual reviewers");
+assert(retryActions.includes("retryable: canReview && isPolicyIntakeOcrRetryable"),"Non-reviewers must never receive a retryable OCR action");
+assert(retryActions.includes("await requirePolicyIntakeReviewer();"),"Actual OCR retry execution must remain reviewer-only");
+
 const detail=read("app/policy-intakes/[id]/page.tsx");
 assert(detail.includes("PolicyIntakeResponseUpload"),"Needs-attention intake must expose the response uploader to its initiator");
 assert(/hasEffectiveCapability\(profile,\s*["']finalize_policy_intakes["'],\s*["']approve["']\)/.test(detail),"Detail page must distinguish Review from Finalize authority");
