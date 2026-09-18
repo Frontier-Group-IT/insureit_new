@@ -415,7 +415,9 @@ Implemented contract:
 
 Detailed evidence: `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
 
-Production Pause/Resume verification is still required after CI, merge and deployment.
+Pause verification evidence: provider HTTP 200, lifecycle state `paused`, state check Verified, and no active INSUREIT voice attempts.
+
+Production Pause is now VERIFIED: IT Super User received HTTP 200 and Sarvam returned `paused`. Resume remains a separate manual verification because it may make provider-side contacts eligible.
 
 ## Next safe continuation
 
