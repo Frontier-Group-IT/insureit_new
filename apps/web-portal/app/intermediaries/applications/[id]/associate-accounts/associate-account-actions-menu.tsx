@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import { Ban, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
 
 import {
@@ -238,18 +238,29 @@ export function AssociateAccountActionsMenu({
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="inline-flex h-9 items-center justify-center rounded-md border border-[#315FEA] bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-[#2851D9]"
-              >
-                Save changes
-              </button>
+              <SaveChangesButton />
             </div>
           </form>
         </Modal>
       ) : null}
 
     </>
+  );
+}
+
+
+function SaveChangesButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      aria-disabled={pending}
+      className="inline-flex h-9 min-w-[108px] items-center justify-center rounded-md border border-[#315FEA] bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-[#2851D9] disabled:cursor-not-allowed disabled:border-[#9DB2F7] disabled:bg-[#9DB2F7] disabled:text-white/80 disabled:shadow-none"
+    >
+      {pending ? "Saving..." : "Save changes"}
+    </button>
   );
 }
 
