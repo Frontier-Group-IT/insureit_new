@@ -9,12 +9,23 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const STALE_ACTIVE_ATTEMPT_MS = 60 * 60 * 1000;
+const ACTIVE_ATTEMPT_STATUSES = new Set(["created", "submitted", "queued", "calling"]);
+
 type AttemptRow = {
+  id: string;
   submission_status: string;
   connectivity_status: string | null;
   call_disposition: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type AttemptEventRow = {
+  voice_attempt_id: string;
+  connectivity_status: string | null;
+  completion_status: string | null;
+  created_at: string;
 };
 
 type VoiceIntegrationPageProps = {
@@ -36,6 +47,18 @@ function queryValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleString("en-IN");
+}
+
+function isStaleActiveAttempt(attempt: AttemptRow, nowMs: number) {
+  if (!ACTIVE_ATTEMPT_STATUSES.has(attempt.submission_status)) return false;
+  const updatedMs = new Date(attempt.updated_at).getTime();
+  return Number.isFinite(updatedMs) && nowMs - updatedMs > STALE_ACTIVE_ATTEMPT_MS;
+}
+
 export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegrationPageProps) {
   const viewer = (await getAuthenticatedProfile(await getServerAccessToken())).profile;
   if (!viewer?.id || viewer.role !== "it_super_user" || !(await hasEffectiveCapability(viewer, "manage_system", "approve"))) {
@@ -53,26 +76,44 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
     (key) => readiness.items.find((item) => item.key === key)?.configured,
   );
   const admin = createSupabaseAdminClient();
-  const { data: attempts, error } = await admin
-    .from("external_renewal_voice_attempts")
-    .select("submission_status,connectivity_status,call_disposition,created_at,updated_at")
-    .order("created_at", { ascending: false })
-    .limit(12)
-    .returns<AttemptRow[]>();
+  const [{ data: attempts, error: attemptsError }, { data: attemptEvents, error: eventsError }] = await Promise.all([
+    admin
+      .from("external_renewal_voice_attempts")
+      .select("id,submission_status,connectivity_status,call_disposition,created_at,updated_at")
+      .order("created_at", { ascending: false })
+      .limit(12)
+      .returns<AttemptRow[]>(),
+    admin
+      .from("external_renewal_voice_attempt_events")
+      .select("voice_attempt_id,connectivity_status,completion_status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(12)
+      .returns<AttemptEventRow[]>(),
+  ]);
 
-  const schemaReady = !error;
+  const schemaReady = !attemptsError && !eventsError;
   const providerConfigReady = readiness.requiredConfigured;
   const operationalReady = schemaReady && providerConfigReady && readiness.callingEnabled;
+  const nowMs = Date.now();
+  const staleActiveAttempts = (attempts ?? []).filter((attempt) => isStaleActiveAttempt(attempt, nowMs));
+  const latestWebhookEvent = attemptEvents?.[0] ?? null;
+  const webhookObserved = Boolean(latestWebhookEvent);
 
   return (
     <AppShell title="Voice Integration">
       <div className="mx-auto max-w-[1320px] space-y-4 pb-8">
         <PageHeader title="Voice Integration" />
 
-        <section className="grid gap-3 md:grid-cols-3">
-          <StatusCard label="INSUREIT schema" value={schemaReady ? "Ready" : "Unavailable"} ready={schemaReady} detail={schemaReady ? "Voice attempt tables and RPC-backed workflow are reachable." : "Production voice schema could not be read."} />
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <StatusCard label="INSUREIT schema" value={schemaReady ? "Ready" : "Unavailable"} ready={schemaReady} detail={schemaReady ? "Voice attempt and retry-safe event tables are reachable." : "Production voice schema could not be read."} />
           <StatusCard label="Sarvam configuration" value={providerConfigReady ? "Configured" : "Incomplete"} ready={providerConfigReady} detail="Only configuration presence is shown. Secret values are never rendered." />
           <StatusCard label="Partner AI calling" value={readiness.callingEnabled ? "Enabled" : "Disabled"} ready={readiness.callingEnabled} detail={readiness.callingEnabled ? "The server kill switch currently permits outbound submission." : "The server kill switch blocks outbound submission."} />
+          <StatusCard
+            label="Webhook callbacks"
+            value={webhookObserved ? "Observed" : "Not observed"}
+            ready={webhookObserved}
+            detail={webhookObserved ? `Latest normalized provider event: ${formatDateTime(latestWebhookEvent?.created_at ?? null)}.` : "No normalized Sarvam callback event is visible yet."}
+          />
         </section>
 
         <Card>
@@ -108,12 +149,12 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                   </p>
                   <p className={`mt-1 text-[9.5px] leading-4 ${sarvamTestOk ? "text-emerald-700" : "text-amber-800"}`}>
                     {sarvamTestOk
-                      ? "INSUREIT authenticated with Sarvam and reached the configured renewal campaign using a read-only provider request."
+                      ? "INSUREIT authenticated with Sarvam and reached the configured renewal campaign using the validation-only stream request."
                       : sarvamStatus === "401" || sarvamStatus === "403"
                         ? "Sarvam rejected the configured API credentials or workspace access."
                         : sarvamStatus === "404"
                           ? "Sarvam is reachable, but the configured organisation, workspace or campaign was not found."
-                          : "The read-only Sarvam connection check did not complete successfully. Review the server configuration and provider availability."}
+                          : "The validation-only Sarvam connection check did not complete successfully. Review the server configuration and provider availability."}
                   </p>
                 </div>
                 {sarvamStatus ? <span className="rounded-full border border-current/15 px-2.5 py-1 text-[8.5px] font-semibold">HTTP {sarvamStatus}</span> : null}
@@ -147,15 +188,27 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
         <Card>
           <h2 className="text-[15px] font-semibold text-[#17203A]">Activation gate</h2>
           <p className="mt-1 text-[10.5px] leading-5 text-[#64748B]">
-            Technical readiness does not by itself authorize automated customer outreach. Before enabling production calls, confirm the committed Sarvam agent output variables, campaign calling hours, DND/opt-out handling, contact-policy approval and one controlled single-opportunity test.
+            Technical readiness does not by itself authorize scaled customer outreach. The single-opportunity closed loop is proven; production expansion still requires approved calling hours, retry policy, DND/opt-out handling, monitoring and reconciliation controls.
           </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <Gate label="Schema applied" ready={schemaReady} />
             <Gate label="Provider config" ready={providerConfigReady} />
             <Gate label="Kill switch" ready={readiness.callingEnabled} />
-            <Gate label="Operational policy" ready={false} detail="Manual verification required" />
+            <Gate label="Webhook observed" ready={webhookObserved} detail={webhookObserved ? "At least one normalized callback event exists" : "No callback event visible"} />
+            <Gate label="Operational policy" ready={false} detail="Calling hours / retry / DND approval pending" />
           </div>
         </Card>
+
+        {staleActiveAttempts.length ? (
+          <Card>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+              <p className="text-[10.5px] font-semibold text-amber-900">Reconciliation attention required</p>
+              <p className="mt-1 text-[9.5px] leading-4 text-amber-800">
+                {staleActiveAttempts.length} active voice attempt{staleActiveAttempts.length === 1 ? "" : "s"} shown below have not changed for more than 60 minutes. This is an observation only: INSUREIT does not auto-fail or retry them because provider delivery may be ambiguous.
+              </p>
+            </div>
+          </Card>
+        ) : null}
 
         <Card>
           <div className="flex items-center justify-between gap-3">
@@ -166,19 +219,27 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             <span className="text-[10px] font-semibold text-[#64748B]">{attempts?.length ?? 0} shown</span>
           </div>
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-[10px]">
-              <thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-2.5">Submitted</th><th className="px-3 py-2.5">Connectivity</th><th className="px-3 py-2.5">Disposition</th><th className="px-3 py-2.5">Created</th><th className="px-3 py-2.5">Updated</th></tr></thead>
+            <table className="w-full min-w-[860px] text-left text-[10px]">
+              <thead><tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]"><th className="px-3 py-2.5">Submitted</th><th className="px-3 py-2.5">Connectivity</th><th className="px-3 py-2.5">Disposition</th><th className="px-3 py-2.5">Health</th><th className="px-3 py-2.5">Created</th><th className="px-3 py-2.5">Updated</th></tr></thead>
               <tbody className="divide-y divide-[#EDF2F7]">
-                {(attempts ?? []).map((attempt, index) => (
-                  <tr key={`${attempt.created_at}-${index}`}>
-                    <td className="px-3 py-3 font-semibold text-[#24345A]">{labelize(attempt.submission_status)}</td>
-                    <td className="px-3 py-3 text-[#475569]">{labelize(attempt.connectivity_status)}</td>
-                    <td className="px-3 py-3 text-[#475569]">{labelize(attempt.call_disposition)}</td>
-                    <td className="px-3 py-3 text-[#64748B]">{new Date(attempt.created_at).toLocaleString("en-IN")}</td>
-                    <td className="px-3 py-3 text-[#64748B]">{new Date(attempt.updated_at).toLocaleString("en-IN")}</td>
-                  </tr>
-                ))}
-                {!attempts?.length ? <tr><td colSpan={5} className="px-3 py-6 text-center text-[10px] text-[#94A3B8]">No production voice attempts recorded yet.</td></tr> : null}
+                {(attempts ?? []).map((attempt) => {
+                  const stale = isStaleActiveAttempt(attempt, nowMs);
+                  return (
+                    <tr key={attempt.id}>
+                      <td className="px-3 py-3 font-semibold text-[#24345A]">{labelize(attempt.submission_status)}</td>
+                      <td className="px-3 py-3 text-[#475569]">{labelize(attempt.connectivity_status)}</td>
+                      <td className="px-3 py-3 text-[#475569]">{labelize(attempt.call_disposition)}</td>
+                      <td className="px-3 py-3">
+                        <span className={`rounded-full border px-2 py-0.5 text-[8.5px] font-semibold ${stale ? "border-amber-200 bg-amber-50 text-amber-800" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                          {stale ? "Reconcile" : "Normal"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-[#64748B]">{formatDateTime(attempt.created_at)}</td>
+                      <td className="px-3 py-3 text-[#64748B]">{formatDateTime(attempt.updated_at)}</td>
+                    </tr>
+                  );
+                })}
+                {!attempts?.length ? <tr><td colSpan={6} className="px-3 py-6 text-center text-[10px] text-[#94A3B8]">No production voice attempts recorded yet.</td></tr> : null}
               </tbody>
             </table>
           </div>

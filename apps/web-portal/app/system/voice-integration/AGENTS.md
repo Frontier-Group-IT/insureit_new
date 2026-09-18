@@ -7,6 +7,7 @@ Before changing this route or any related Sarvam renewal integration code, read:
 - `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md`
 - `docs/SARVAM_CONTROL_CAMPAIGN_DIAGNOSTIC_2026_09_16.md`
 - `docs/SARVAM_PRODUCTION_READINESS_SUCCESS_2026_09_17.md`
+- `docs/SARVAM_OPERATIONAL_HARDENING_2026_09_18.md`
 - `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`
 - `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`
 - `apps/web-portal/app/partner/renewals/external/AGENTS.md`
@@ -32,3 +33,8 @@ For each new provider/API/campaign/telephony/webhook/CRM/reconciliation experime
 - do not overwrite a failed result with a later success; preserve the durable learning and clearly mark the later superseding state.
 
 This protocol is mandatory because future agents must be able to reconstruct the Voice Agent production journey without relying on chat memory.
+
+
+## Voice trial continuity
+
+Every material provider/API/campaign/telephony/webhook/CRM/reconciliation trial must update the relevant dated Markdown evidence note and `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md` before closure, whether the trial succeeds or fails. Preserve durable failure lessons. Never store phone numbers, secrets, raw transcripts, or full webhook payloads.
