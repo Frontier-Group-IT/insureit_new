@@ -36,26 +36,15 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
     setInsurer(insurerId ?? "");
   }, [fromDate, toDate, insurerId]);
 
-  const hrefFor = (nextPeriod: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
-    const params = new URLSearchParams();
-    params.set("period", nextPeriod);
-    if (nextPeriod === "custom") {
-      params.set("from", nextFrom);
-      params.set("to", nextTo);
-    }
-    if (nextInsurer) params.set("insurer", nextInsurer);
-    return `/accounts?${params.toString()}`;
-  };
-
   useEffect(() => {
     for (const standardPeriod of ["last_month", "mtd"] as const) {
-      if (standardPeriod !== period) router.prefetch(hrefFor(standardPeriod, fromDate, toDate, insurerId ?? ""));
+      if (standardPeriod !== period) router.prefetch(accountsHref(standardPeriod, fromDate, toDate, insurerId ?? ""));
     }
   }, [router, period, fromDate, toDate, insurerId]);
 
   const navigate = (nextPeriod: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
     startTransition(() => {
-      router.replace(hrefFor(nextPeriod, nextFrom, nextTo, nextInsurer), { scroll: false });
+      router.replace(accountsHref(nextPeriod, nextFrom, nextTo, nextInsurer), { scroll: false });
     });
   };
 
@@ -67,7 +56,7 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
         <Download className="h-3.5 w-3.5" />
       </a>
       <div className="flex rounded-lg border border-[#dce4ee] bg-[#f8fafc] p-0.5">
-        {PERIODS.map((item) => <button key={item.value} type="button" disabled={isPending} onMouseEnter={() => router.prefetch(hrefFor(item.value))} onFocus={() => router.prefetch(hrefFor(item.value))} onClick={() => navigate(item.value)} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
+        {PERIODS.map((item) => <button key={item.value} type="button" disabled={isPending} onMouseEnter={() => router.prefetch(accountsHref(item.value, from, to, insurer))} onFocus={() => router.prefetch(accountsHref(item.value, from, to, insurer))} onClick={() => navigate(item.value)} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
           {item.label}
         </button>)}
       </div>
@@ -82,6 +71,17 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
       <button type="submit" disabled={isPending} title="Apply filters" aria-label="Apply filters" className="mt-auto grid h-8 w-8 place-items-center rounded-lg bg-[#17365D] text-white shadow-sm hover:bg-[#234b7a] disabled:cursor-wait disabled:opacity-60">{isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}</button>
     </form>
   </>;
+}
+
+function accountsHref(period: Period, from: string, to: string, insurer: string) {
+  const params = new URLSearchParams();
+  params.set("period", period);
+  if (period === "custom") {
+    params.set("from", from);
+    params.set("to", to);
+  }
+  if (insurer) params.set("insurer", insurer);
+  return `/accounts?${params.toString()}`;
 }
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
