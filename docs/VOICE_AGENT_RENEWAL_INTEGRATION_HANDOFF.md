@@ -340,6 +340,25 @@ Do not begin bulk calling after only one successful PSTN connection. The whole I
 - Partner provider administration
 - editable in-app Sarvam campaign/version/telephony controls
 
+## Webhook recovery hardening — IMPLEMENTED / NOT YET LIVE-VERIFIED
+
+Branch `feat/sarvam-webhook-retry-recovery` adds an IT-Super-User-only recovery action that asks Sarvam to re-deliver one known provider attempt through the documented campaign `/webhooks/retry` endpoint.
+
+Safety rules:
+
+- exact `it_super_user` + `manage_system=approve`
+- server-side `X-API-Key`
+- one explicit provider attempt ID per action
+- no phone-number correlation
+- no cohort creation / no phone call
+- original webhook payload remains the source of truth
+- existing webhook secret/campaign/app checks remain authoritative
+- existing provider-attempt event idempotency prevents duplicate CRM outcomes
+
+Detailed record: `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
+
+This slice is not considered verified until a previously completed controlled attempt is re-delivered successfully with no new call and no duplicate CRM interaction.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
