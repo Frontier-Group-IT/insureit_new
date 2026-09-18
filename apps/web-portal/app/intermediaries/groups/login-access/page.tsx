@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { EmailCooldownNotice, LoginAccessActionButton } from "./login-access-action-button";
+
 import { AppShell } from "@/components/shell";
 import {
   getIntermediaryGroupEmployeeScope,
@@ -17,7 +19,7 @@ import {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Query = { success?: string; error?: string };
+type Query = { success?: string; error?: string; error_code?: string; retry_after?: string; cooldown_until?: string; cooldown_entity_type?: string; cooldown_entity_id?: string };
 type AccessRow = {
   profile_id: string;
   entity_type: "group" | "branch";
@@ -170,6 +172,12 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
   }
 
   const migrationMissing = Boolean(accessError && /relation .*portal_access_identities.* does not exist|schema cache/i.test(accessError.message));
+  const parsedCooldownUntil = Number(query.cooldown_until ?? "0");
+  const activeCooldownUntil = Number.isFinite(parsedCooldownUntil) && parsedCooldownUntil > Date.now() ? parsedCooldownUntil : 0;
+  const cooldownEntityKey = query.cooldown_entity_type && query.cooldown_entity_id
+    ? `${query.cooldown_entity_type}:${query.cooldown_entity_id}`
+    : "";
+  const cooldownRemaining = activeCooldownUntil ? Math.max(0, Math.ceil((activeCooldownUntil - Date.now()) / 1000)) : 0;
 
   return (
     <AppShell title="Group / Branch Login Access" backHref="/intermediaries/groups">
@@ -186,7 +194,8 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
         </div>
 
         {query.success ? <Notice tone="success">{successMessage(query.success)}</Notice> : null}
-        {query.error ? <Notice tone="error">{query.error}</Notice> : null}
+        {query.error_code === "email_cooldown" && activeCooldownUntil ? <EmailCooldownNotice cooldownUntil={activeCooldownUntil} initialRemaining={cooldownRemaining} /> : null}
+        {query.error ? <Notice tone="error">{friendlyErrorMessage(query.error)}</Notice> : null}
         {migrationMissing ? (
           <Notice tone="warning">The additive Group/Branch login migration has not been applied in this environment yet. Existing hierarchy screens remain available, but login provisioning is disabled.</Notice>
         ) : null}
@@ -201,6 +210,7 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
             const invitationPending = Boolean(mapping && mapping.status === "active" && authState?.exists && !authState.hasSignedIn);
             const active = Boolean(mapping && mapping.status === "active" && authState?.hasSignedIn);
             const statusLabel = !mapping ? "No Access" : mapping.status === "disabled" ? "Disabled" : invitationPending ? "Invitation Sent" : active ? "Active" : "Access Issue";
+            const entityCooldownUntil = cooldownEntityKey === `${entity.entityType}:${entity.id}` ? activeCooldownUntil : 0;
             const statusClass = !mapping
               ? "bg-slate-100 text-slate-600"
               : mapping.status === "disabled"
@@ -231,7 +241,14 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                       <input type="hidden" name="entity_id" value={entity.id} />
                       <input name="login_email" type="email" required disabled={migrationMissing} placeholder="Login email" autoComplete="email" className="min-w-0 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400 disabled:bg-slate-50" />
                       <input name="phone" type="tel" required disabled={migrationMissing} placeholder="Phone" autoComplete="tel" className="min-w-0 rounded-lg border border-slate-200 px-2.5 py-2 text-xs outline-none focus:border-slate-400 disabled:bg-slate-50" />
-                      <button disabled={migrationMissing} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">Send Invitation</button>
+                      <LoginAccessActionButton
+                        label="Send Invitation"
+                        cooldownLabel="Send"
+                        cooldownUntil={entityCooldownUntil}
+                        initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
+                        disabled={migrationMissing}
+                        className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+                      />
                     </form>
                   ) : (
                     <div className="flex flex-wrap items-center gap-2">
@@ -239,14 +256,26 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                         <form action={resendGroupBranchPortalInvite}>
                           <input type="hidden" name="entity_type" value={entity.entityType} />
                           <input type="hidden" name="entity_id" value={entity.id} />
-                          <button className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">Resend Invitation</button>
+                          <LoginAccessActionButton
+                            label="Resend Invitation"
+                            cooldownLabel="Resend"
+                            cooldownUntil={entityCooldownUntil}
+                            initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
+                            className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          />
                         </form>
                       ) : null}
                       {mapping.status === "active" && active ? (
                         <form action={sendGroupBranchPortalPasswordReset}>
                           <input type="hidden" name="entity_type" value={entity.entityType} />
                           <input type="hidden" name="entity_id" value={entity.id} />
-                          <button className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">Reset Password</button>
+                          <LoginAccessActionButton
+                            label="Reset Password"
+                            cooldownLabel="Reset"
+                            cooldownUntil={entityCooldownUntil}
+                            initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          />
                         </form>
                       ) : null}
                       <form action={setGroupBranchPortalLoginStatus}>
@@ -285,4 +314,13 @@ function successMessage(event: string) {
   if (event === "portal_login_enabled") return "Portal login enabled.";
   if (event === "portal_login_disabled") return "Portal login disabled. The business hierarchy was not changed.";
   return "Portal login access updated.";
+}
+
+
+function friendlyErrorMessage(message: string) {
+  const match = message.match(/after\s+(\d+)\s+seconds?/i);
+  if (match) {
+    return `An authentication email was sent recently. Please wait ${match[1]} seconds before trying again.`;
+  }
+  return message;
 }
