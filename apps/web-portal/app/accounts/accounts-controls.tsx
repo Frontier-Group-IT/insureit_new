@@ -36,7 +36,7 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
     setInsurer(insurerId ?? "");
   }, [fromDate, toDate, insurerId]);
 
-  const navigate = (nextPeriod: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
+  const hrefFor = (nextPeriod: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
     const params = new URLSearchParams();
     params.set("period", nextPeriod);
     if (nextPeriod === "custom") {
@@ -44,9 +44,18 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
       params.set("to", nextTo);
     }
     if (nextInsurer) params.set("insurer", nextInsurer);
+    return `/accounts?${params.toString()}`;
+  };
 
+  useEffect(() => {
+    for (const standardPeriod of ["last_month", "mtd"] as const) {
+      if (standardPeriod !== period) router.prefetch(hrefFor(standardPeriod, fromDate, toDate, insurerId ?? ""));
+    }
+  }, [router, period, fromDate, toDate, insurerId]);
+
+  const navigate = (nextPeriod: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
     startTransition(() => {
-      router.replace(`/accounts?${params.toString()}`, { scroll: false });
+      router.replace(hrefFor(nextPeriod, nextFrom, nextTo, nextInsurer), { scroll: false });
     });
   };
 
@@ -58,7 +67,7 @@ export function AccountsControls({ period, fromDate, toDate, insurerId, insurers
         <Download className="h-3.5 w-3.5" />
       </a>
       <div className="flex rounded-lg border border-[#dce4ee] bg-[#f8fafc] p-0.5">
-        {PERIODS.map((item) => <button key={item.value} type="button" disabled={isPending} onClick={() => navigate(item.value)} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
+        {PERIODS.map((item) => <button key={item.value} type="button" disabled={isPending} onMouseEnter={() => router.prefetch(hrefFor(item.value))} onFocus={() => router.prefetch(hrefFor(item.value))} onClick={() => navigate(item.value)} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold transition ${period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"} disabled:cursor-wait disabled:opacity-70`}>
           {item.label}
         </button>)}
       </div>
