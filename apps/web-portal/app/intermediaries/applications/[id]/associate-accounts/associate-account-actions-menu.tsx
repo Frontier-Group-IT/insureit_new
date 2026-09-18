@@ -198,39 +198,53 @@ export function AssociateAccountActionsMenu({
 
       {editOpen ? (
         <Modal title="Edit Associate Account" onClose={() => setEditOpen(false)} wide>
-          <form action={updatePartnerAssociateAccount} className="space-y-4">
+          <form action={updatePartnerAssociateAccount}>
             {commonHidden}
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Name">
-                <input name="name" required defaultValue={associate.name} className={inputClass} />
-              </Field>
-              <Field label="Phone Number">
-                <input name="phone_number" required defaultValue={associate.phone_number} inputMode="tel" className={inputClass} />
-              </Field>
-              <Field label="Email">
-                <input
-                  value={associate.email}
-                  readOnly
-                  disabled
-                  title="Email is locked because it is the associate's portal login ID."
-                  className={`${inputClass} cursor-not-allowed bg-[#F8FAFC] text-[#64748B]`}
-                />
-              </Field>
+            <div className="space-y-4 p-5">
+              <div className="grid gap-3 lg:grid-cols-3">
+                <Field label="Name">
+                  <input name="name" required defaultValue={associate.name} className={inputClass} />
+                </Field>
+                <Field label="Phone Number">
+                  <input name="phone_number" required defaultValue={associate.phone_number} inputMode="tel" className={inputClass} />
+                </Field>
+                <Field label="Email">
+                  <input
+                    value={associate.email}
+                    readOnly
+                    disabled
+                    title="Email is locked because it is the associate's portal login ID."
+                    className={`${inputClass} cursor-not-allowed bg-[#F8FAFC] text-[#64748B]`}
+                  />
+                </Field>
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                <Field label="Designation">
+                  <input name="designation" required defaultValue={associate.designation} className={inputClass} />
+                </Field>
+                <Field label="Role">
+                  <select name="role" required defaultValue={associate.role} className={inputClass}>
+                    <option value="admin" disabled>Admin</option>
+                    <option value="claim_head">Claim Head</option>
+                    <option value="insurance_head">Insurance Head</option>
+                    <option value="bodyshop_manager">Bodyshop Manager</option>
+                  </select>
+                </Field>
+              </div>
             </div>
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-              <Field label="Designation">
-                <input name="designation" required defaultValue={associate.designation} className={inputClass} />
-              </Field>
-              <Field label="Role">
-                <select name="role" required defaultValue={associate.role} className={inputClass}>
-                  <option value="admin" disabled>Admin</option>
-                  <option value="claim_head">Claim Head</option>
-                  <option value="insurance_head">Insurance Head</option>
-                  <option value="bodyshop_manager">Bodyshop Manager</option>
-                </select>
-              </Field>
-              <button type="submit" className="h-10 min-w-[118px] rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]">
-                Save Changes
+            <div className="flex items-center justify-end gap-2 border-t border-[#E7ECF3] bg-[#FBFCFE] px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setEditOpen(false)}
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[#CBD5E1] bg-white px-4 text-[10.5px] font-semibold text-[#334155] transition hover:bg-[#F8FAFC]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[#315FEA] bg-[#315FEA] px-4 text-[10.5px] font-semibold text-white shadow-sm transition hover:bg-[#2851D9]"
+              >
+                Save changes
               </button>
             </div>
           </form>
@@ -279,7 +293,7 @@ function Modal({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div>{children}</div>
       </div>
     </div>
   );
