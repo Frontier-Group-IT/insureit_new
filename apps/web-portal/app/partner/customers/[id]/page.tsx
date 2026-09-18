@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { StandardActivityStatusCard } from "@/components/standard-activity-status-card";
-import { getPartnerWebCustomerActivity, getPartnerWebCustomerDetail, type PartnerCustomerActivityData } from "@/lib/partner-web";
+import { getPartnerWebCustomerActivity, getPartnerWebCustomerDetail } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
