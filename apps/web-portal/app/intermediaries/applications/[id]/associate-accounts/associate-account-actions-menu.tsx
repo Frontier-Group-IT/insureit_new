@@ -37,7 +37,6 @@ export function AssociateAccountActionsMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -58,7 +57,6 @@ export function AssociateAccountActionsMenu({
       if (event.key === "Escape") {
         setOpen(false);
         setEditOpen(false);
-        setDeleteOpen(false);
       }
     }
     document.addEventListener("mousedown", closeOnOutsideClick);
@@ -164,18 +162,18 @@ export function AssociateAccountActionsMenu({
                   </button>
                 </form>
 
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setOpen(false);
-                    setDeleteOpen(true);
-                  }}
-                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </button>
+                <form action={deletePartnerAssociateAccount}>
+                  {commonHidden}
+                  <button
+                    type="submit"
+                    role="menuitem"
+                    onClick={() => setOpen(false)}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
+                </form>
 
                 <form action={resendPartnerAssociateInvite}>
                   {commonHidden}
@@ -251,24 +249,6 @@ export function AssociateAccountActionsMenu({
         </Modal>
       ) : null}
 
-      {deleteOpen ? (
-        <Modal title="Delete Associate Account" onClose={() => setDeleteOpen(false)}>
-          <div className="space-y-4">
-            <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
-              <p className="text-[11px] font-semibold text-rose-700">Permanently delete {associate.name}?</p>
-              <p className="mt-1 text-[10px] leading-5 text-rose-600">This removes the associate login and account permanently. This action cannot be undone.</p>
-            </div>
-            <div className="rounded-xl border border-[#E7ECF3] bg-[#F8FAFC] px-3 py-2.5 text-[10px] text-[#475569]">
-              <span className="font-semibold text-[#17203A]">{associate.email}</span>
-            </div>
-            <form action={deletePartnerAssociateAccount} className="flex justify-end gap-2">
-              {commonHidden}
-              <button type="button" onClick={() => setDeleteOpen(false)} className="h-9 rounded-xl border border-[#D8E2EE] px-4 text-[10px] font-semibold text-[#475569] hover:bg-[#F8FAFC]">Cancel</button>
-              <button type="submit" className="h-9 rounded-xl bg-rose-600 px-4 text-[10px] font-bold text-white hover:bg-rose-700">Delete Permanently</button>
-            </form>
-          </div>
-        </Modal>
-      ) : null}
     </>
   );
 }
