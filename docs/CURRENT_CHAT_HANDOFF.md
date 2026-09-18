@@ -1,3 +1,15 @@
+# Active continuation — Sarvam Voice Agent controlled live verification (2026-09-18)
+
+- Single-opportunity INSUREIT -> Sarvam -> PSTN -> webhook -> CRM -> Partner UI closed loop is **VERIFIED** in production through two authorized internal External Renewal test opportunities.
+- Trial 1 proved API cohort creation and live calling but failed callback projection because the campaign webhook URL was not present; its stale queued attempt was later reconciled through the existing `apply_external_renewal_voice_result(...)` contract using provider-export evidence.
+- Trial 2, after the rotated webhook URL was saved, completed successfully: connected/completed provider event, normalized `already_renewed` result, CRM projection to `renewed_elsewhere`, and Partner UI closure.
+- Actual dispatch auth is `X-API-Key`; PR #1978 merged as `229a597a405c285c218d2bd94ee6bf623a741671` and production deployment succeeded.
+- Bulk calling/autonomous campaign control remains disabled. Next work is operational hardening, stale-attempt reconciliation visibility, campaign lifecycle automation, calling-hours/DND/retry policy, then tightly capped controlled batches.
+- Detailed durable evidence and trial log: `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`.
+- Mandatory process: every material Voice Agent trial, success or failure, must update the relevant Markdown evidence/handoff before closure; never store phone numbers, secrets, raw transcripts, or full webhook payloads.
+
+---
+
 # Active continuation — Partner Portal multi-login (2026-09-18)
 
 - Branch: `feat/partner-multi-login-access`, PR #1999.
