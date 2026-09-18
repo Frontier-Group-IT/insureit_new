@@ -380,6 +380,23 @@ INSUREIT must treat recovery as complete only after the callback is actually obs
 
 Current provider limitation: the documented campaign webhook-delivery list endpoint is expected to expose `running`, `completed`, and `failed` delivery records, but production probes against valid campaigns have returned provider HTTP 500. Therefore INSUREIT callback observation is the current operational proof source.
 
+## Phase A operational calling policy — IMPLEMENTED / PENDING CI
+
+INSUREIT now enforces its own server-side renewal calling window before creating a local voice attempt or streaming a cohort.
+
+Current policy:
+
+- default `09:00–18:00`
+- default timezone `Asia/Kolkata`
+- optional server-only overrides for start/end/timezone
+- existing DNC and terminal-state database guards remain authoritative
+- application-level automatic retries remain disabled
+- ambiguous provider delivery remains held for reconciliation
+
+The controlled default mirrors the schedule used during the verified production campaign. Detailed evidence: `docs/SARVAM_OPERATIONAL_CALLING_POLICY_2026_09_18.md`.
+
+This does not enable batch calling or automatic campaign lifecycle control.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
