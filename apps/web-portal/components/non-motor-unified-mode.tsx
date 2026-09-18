@@ -73,6 +73,8 @@ type FormState = {
   annualTurnover: string;
   sumInsured: string;
   deductible: string;
+  odPremium: string;
+  tpPremium: string;
   netPremium: string;
   gstAmount: string;
   grossPremium: string;
@@ -114,7 +116,7 @@ const emptyForm: FormState = {
   customerMode: "existing", customerId: "", customerType: "Organisation", insuredName: "", contactName: "", phone: "", email: "", address: "",
   policyNumber: "", insurerId: "", productName: "", category: "", status: "Active",
   riskTitle: "", riskLocation: "", occupancyType: "", cargoDescription: "", transitFrom: "", transitTo: "", transitMode: "", projectName: "", projectValue: "", natureOfBusiness: "", liabilityType: "", employeeCount: "", annualWages: "", businessName: "", annualTurnover: "",
-  sumInsured: "", deductible: "", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
+  sumInsured: "", deductible: "", odPremium: "", tpPremium: "0", netPremium: "", gstAmount: "", grossPremium: "", startDate: "", endDate: "",
   payinBasis: "NET_PREMIUM_PERCENT", payinPercent: "", payinFixedAmount: "", insurerSchemeAmount: "",
   payoutBasis: "NET_PREMIUM_PERCENT", payoutPercent: "", payoutFixedAmount: "",
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
@@ -216,7 +218,7 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
       source: { issuanceDate: source.issuanceDate, intermediaryType: source.intermediaryType, intermediaryCode: selectedSource.code, leadSource: selectedSource.label, rmName: selectedSource.rmName },
       customerId: form.customerMode === "existing" ? form.customerId : undefined,
       customer: { customerType: form.customerType, insuredName: form.insuredName, contactName: form.contactName, phone: form.phone, email: form.email, address: form.address },
-      policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
+      policy: { policyNumber: form.policyNumber, insurerId: form.insurerId, productName: form.productName, category: form.category, status: form.status, startDate: form.startDate, endDate: form.endDate, sumInsured: form.sumInsured, odPremium: form.odPremium, tpPremium: "0", netPremium: form.netPremium, gstAmount: form.gstAmount, grossPremium: form.grossPremium, deductible: form.deductible },
       commercial: commercialAccess ? { payinBasis: form.payinBasis, payinPercent: form.payinPercent, payinFixedAmount: form.payinFixedAmount, insurerSchemeAmount: form.insurerSchemeAmount, payoutBasis: form.payoutBasis, payoutPercent: form.payoutPercent, payoutFixedAmount: form.payoutFixedAmount } : undefined,
       risk: buildRiskPayload(form),
       additional: { proposalNumber: form.proposalNumber, previousInsurer: form.previousInsurer, previousPolicyNumber: form.previousPolicyNumber, previousClaims: form.previousClaims, addOns: form.addOns, warranties: form.warranties, specialConditions: form.specialConditions, endorsements: form.endorsements, remarks: form.remarks },
@@ -293,7 +295,9 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
         <Section number="04" title="Cover, premium & validity">
           <Field label={form.category === "Liability" ? "Liability limit" : "Sum insured / limit"} value={form.sumInsured} onChange={(e) => update("sumInsured", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
           <Field label="Deductible / excess" value={form.deductible} onChange={(e) => update("deductible", numeric(e.target.value))} placeholder="Optional" inputMode="decimal" />
-          <Field label="Net premium" value={form.netPremium} onChange={(e) => { const net = numeric(e.target.value); update("netPremium", net); if (net && form.gstAmount) update("grossPremium", String(Number(net) + Number(form.gstAmount))); }} placeholder="₹ 0.00" inputMode="decimal" />
+          <Field label="OD premium" value={form.odPremium} onChange={(e) => { const od = numeric(e.target.value); const net = od || ""; setForm((current) => ({ ...current, odPremium: od, tpPremium: "0", netPremium: net, ...(current.gstAmount && net ? { grossPremium: String(Number(net) + Number(current.gstAmount)) } : {}) })); }} placeholder="₹ 0.00" inputMode="decimal" />
+          <Field label="TP premium" value="0" disabled readOnly placeholder="₹ 0.00" inputMode="decimal" />
+          <Field label="Net premium" value={form.netPremium} disabled readOnly placeholder="₹ 0.00" inputMode="decimal" />
           <Field label="GST" value={form.gstAmount} onChange={(e) => { const gst = numeric(e.target.value); update("gstAmount", gst); if (form.netPremium) update("grossPremium", String(Number(form.netPremium) + Number(gst || 0))); }} placeholder="₹ 0.00" inputMode="decimal" />
           <Field label="Gross premium" value={form.grossPremium} onChange={(e) => update("grossPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
           <Field label="Policy start" type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} required />
