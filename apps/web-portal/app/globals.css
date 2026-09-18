@@ -409,26 +409,26 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
    Keep these explicit declarations outside Tailwind arbitrary-value utilities
    so the production banner always matches the approved blush reference. */
 .partner-active-scheme {
-  background: #fef0f3 !important;
-  border: 1px solid #e8b8c0 !important;
-  color: #7a4050 !important;
+  background: #fff1f2 !important;
+  border: 1px solid #ef4444 !important;
+  color: #991b1b !important;
   box-shadow:
-    0 5px 16px rgba(190, 70, 90, 0.12),
-    0 0 0 1px rgba(247, 216, 222, 0.9) !important;
+    0 5px 16px rgba(220, 38, 38, 0.14),
+    0 0 0 1px rgba(254, 202, 202, 0.95) !important;
 }
 
 .partner-active-scheme:hover {
-  background: #fde9ed !important;
-  border-color: #dfa1ac !important;
+  background: #ffe4e6 !important;
+  border-color: #dc2626 !important;
   box-shadow:
-    0 7px 20px rgba(190, 70, 90, 0.16),
-    0 0 0 1px rgba(247, 216, 222, 0.9) !important;
+    0 7px 20px rgba(220, 38, 38, 0.18),
+    0 0 0 1px rgba(254, 202, 202, 0.95) !important;
 }
 
 .partner-active-scheme:focus-visible {
   box-shadow:
-    0 0 0 2px rgba(216, 92, 112, 0.25),
-    0 5px 16px rgba(190, 70, 90, 0.12) !important;
+    0 0 0 2px rgba(220, 38, 38, 0.28),
+    0 5px 16px rgba(220, 38, 38, 0.14) !important;
 }
 
 .partner-active-scheme__shimmer {
@@ -444,7 +444,7 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 
 .partner-active-scheme__icon,
 .partner-active-scheme__arrow {
-  color: #c8445b !important;
+  color: #dc2626 !important;
 }
 
 .partner-active-scheme__icon {
@@ -456,11 +456,11 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
 }
 
 .partner-active-scheme__name {
-  color: #702739 !important;
+  color: #991b1b !important;
 }
 
 .partner-active-scheme__separator {
-  color: #b96d79 !important;
+  color: #ef4444 !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
