@@ -140,7 +140,7 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     .or(businessDateFilter(filters.fromDate, filters.toDate))
     .limit(15000);
   const includeInsurers = options.includeInsurers !== false;
-  let insurerOptionsQuery = includeInsurers
+  let insurerOptionsQuery: any = includeInsurers
     ? db
         .from("policies")
         .select("insurance_company_id,insurance_companies(name)")
