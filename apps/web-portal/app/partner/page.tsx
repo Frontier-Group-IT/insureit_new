@@ -252,7 +252,9 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
       : businessPerformance.trend.slice(-6);
   const trendPeriodLabel = trendPeriodOptions.find((option) => option.value === trendPeriod)?.label ?? "Last 6 Months";
 
-  const name = identity.display_name?.trim() || "Partner";
+  const name = identity.actor_kind === "intermediary"
+    ? identity.associate_name?.trim() || identity.display_name?.trim() || "Partner"
+    : identity.display_name?.trim() || "Partner";
   const updatedTime = formatUpdatedTime(new Date());
   const schemeDeadline = activeScheme ? formatSchemeDeadline(activeScheme.ends_at) : null;
   const payoutValue = payout.available ? formatIndianCurrency(payout.paid_amount) : "Restricted";

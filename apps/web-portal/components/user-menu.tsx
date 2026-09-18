@@ -13,6 +13,7 @@ type UserMenuProps = {
   user: Pick<User, "email" | "id"> | null;
   homeHref?: string;
   displayNameOverride?: string | null;
+  roleDisplayOverride?: string | null;
 };
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
@@ -36,7 +37,7 @@ function Avatar({ src, initials, className }: { src: string | null; initials: st
   );
 }
 
-export function UserMenu({ profile, user, homeHref = internalLaunchHome, displayNameOverride }: UserMenuProps) {
+export function UserMenu({ profile, user, homeHref = internalLaunchHome, displayNameOverride, roleDisplayOverride }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,7 +221,7 @@ export function UserMenu({ profile, user, homeHref = internalLaunchHome, display
             <div className="border-y border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-600">
               <dl className="space-y-2">
                 <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Email</dt><dd className="truncate text-right text-slate-700">{user?.email ?? "—"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Role</dt><dd className="text-right capitalize text-slate-700">{profile?.role?.replaceAll("_", " ") ?? "—"}</dd></div>
+                <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Role</dt><dd className="text-right capitalize text-slate-700">{roleDisplayOverride?.replaceAll("_", " ") || profile?.role?.replaceAll("_", " ") || "—"}</dd></div>
                 <div className="flex justify-between gap-3"><dt className="font-semibold text-slate-500">Status</dt><dd className="text-right text-slate-700">{profile?.is_active ? "Active" : "Inactive"}</dd></div>
               </dl>
             </div>

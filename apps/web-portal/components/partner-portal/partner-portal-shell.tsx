@@ -17,7 +17,12 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
   ]);
 
   const partnerDisplayName = partnerSession.identity.actor_kind === "intermediary"
-    ? partnerSession.identity.partner_name || partnerSession.identity.display_name
+    ? partnerSession.identity.associate_name?.trim()
+      || partnerSession.identity.partner_name
+      || partnerSession.identity.display_name
+    : null;
+  const partnerRoleDisplay = partnerSession.identity.actor_kind === "intermediary"
+    ? partnerSession.identity.associate_role ?? null
     : null;
   const branchPortal = "portal_access_type" in partnerSession.scope && partnerSession.scope.portal_access_type === "branch";
   const hideAccount = partnerSession.scope.scope_mode === "hierarchy" || branchPortal;
@@ -44,6 +49,7 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
                 user={user ? { id: user.id, email: user.email } : null}
                 homeHref="/partner"
                 displayNameOverride={partnerDisplayName}
+                roleDisplayOverride={partnerRoleDisplay}
               />
             </div>
           </div>
