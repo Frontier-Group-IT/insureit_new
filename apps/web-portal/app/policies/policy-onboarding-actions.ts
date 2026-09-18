@@ -61,7 +61,7 @@ export type PolicyOnboardingResult =
   | { ok: false; kind: "ownership_conflict"; conflict: PolicyOwnershipConflict }
   | { ok: false; kind: "business_conflict"; conflict: PolicyBusinessConflict };
 
-type CustomerRow = { id: string; contact_name: string; phone: string; city: string | null; state: string | null };
+type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string; city: string | null; state: string | null };
 type VehicleOwnerRow = { id: string; vehicle_no: string; vehicle_no_normalized: string | null; customer_id: string; customers: { contact_name: string; phone: string } | null };
 type ExistingVehicleRow = {
   id: string;
@@ -239,20 +239,29 @@ function validatePayload(payload: PolicyOnboardingPayload) {
 }
 async function findCustomerCandidates(name: string, phone: string) {
   const admin = createSupabaseAdminClient();
-  const [phoneResult, nameResult] = await Promise.all([
-    admin.from("customers").select("id, contact_name, phone, city, state").eq("phone", phone).limit(10).returns<CustomerRow[]>(),
-    admin.from("customers").select("id, contact_name, phone, city, state").ilike("contact_name", name).limit(10).returns<CustomerRow[]>(),
+  const select = "id, contact_name, company_name, phone, city, state";
+  const [phoneResult, contactNameResult, companyNameResult] = await Promise.all([
+    admin.from("customers").select(select).eq("phone", phone).limit(10).returns<CustomerRow[]>(),
+    admin.from("customers").select(select).ilike("contact_name", name).limit(10).returns<CustomerRow[]>(),
+    admin.from("customers").select(select).ilike("company_name", name).limit(10).returns<CustomerRow[]>(),
   ]);
-  if (phoneResult.error) throw new Error(phoneResult.error.message);
-  if (nameResult.error) throw new Error(nameResult.error.message);
+  for (const result of [phoneResult, contactNameResult, companyNameResult]) {
+    if (result.error) throw new Error(result.error.message);
+  }
   const merged = new Map<string, CustomerRow>();
-  for (const row of [...(phoneResult.data ?? []), ...(nameResult.data ?? [])]) merged.set(row.id, row);
+  for (const row of [...(phoneResult.data ?? []), ...(contactNameResult.data ?? []), ...(companyNameResult.data ?? [])]) merged.set(row.id, row);
   const normalizedName = cleanName(name).toLowerCase();
-  return [...merged.values()].map((row) => ({ id: row.id, name: row.contact_name, phone: row.phone, city: row.city, state: row.state, phoneMatch: normalizedPhone(row.phone) === phone, nameMatch: cleanName(row.contact_name).toLowerCase() === normalizedName }));
+  return [...merged.values()].map((row) => {
+    const displayName = row.company_name?.trim() || row.contact_name;
+    const nameMatch = [row.company_name, row.contact_name]
+      .filter((value): value is string => Boolean(value?.trim()))
+      .some((value) => cleanName(value).toLowerCase() === normalizedName);
+    return { id: row.id, name: displayName, phone: row.phone, city: row.city, state: row.state, phoneMatch: normalizedPhone(row.phone) === phone, nameMatch };
+  });
 }
 async function findCustomerById(id: string) {
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.from("customers").select("id, contact_name, phone, city, state").eq("id", id).maybeSingle<CustomerRow>();
+  const { data, error } = await admin.from("customers").select("id, contact_name, company_name, phone, city, state").eq("id", id).maybeSingle<CustomerRow>();
   if (error) throw new Error(error.message);
   return data;
 }
@@ -427,10 +436,24 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   const mode = registrationMode(payload);
   const chassis = normalizedVehicleIdentity(payload.vehicle.chassisNumber);
   const engine = normalizedVehicleIdentity(payload.vehicle.engineNumber);
-  const selectedCustomerId = payload.resolution?.selectedCustomerId?.trim() || null;
+  let selectedCustomerId = payload.resolution?.selectedCustomerId?.trim() || null;
   const createNewCustomer = payload.resolution?.createNewCustomer === true;
 
   try {
+    if (selectedCustomerId) {
+      const selectedCustomer = await findCustomerById(selectedCustomerId);
+      if (!selectedCustomer) {
+        selectedCustomerId = null;
+      } else {
+        const selectedNames = [selectedCustomer.company_name, selectedCustomer.contact_name]
+          .filter((value): value is string => Boolean(value?.trim()))
+          .map((value) => cleanName(value).toLowerCase());
+        const selectedIdentityMatches = selectedNames.includes(name.toLowerCase())
+          && normalizedPhone(selectedCustomer.phone) === phone;
+        if (!selectedIdentityMatches) selectedCustomerId = null;
+      }
+    }
+
     const customerCandidates = await findCustomerCandidates(name, phone);
     const phoneMatches = customerCandidates.filter((candidate) => candidate.phoneMatch);
     const exactNameMatches = customerCandidates.filter((candidate) => candidate.nameMatch);

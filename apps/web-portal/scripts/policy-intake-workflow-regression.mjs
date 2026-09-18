@@ -2,6 +2,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import { roleCapabilities } from "../lib/roles.ts";
 import { normalizePolicyNumber, policyNumberFromIntake } from "../lib/policy-intake-duplicate.ts";
+import { selectPolicyIntakeCustomerMatch } from "../lib/policy-intake-customer-match.ts";
 
 const read=(path)=>fs.readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
 const salesCreators=["director","sales_head","zonal_head","asm","sales_manager","relationship_manager"];
@@ -34,6 +35,15 @@ assert(!actions.includes('remove([intake.storage_path])'),"Replacement uploads m
 assert(actions.includes('.from("policy_documents")'),"Finalization must attach the accepted intake copy to the final policy");
 assert(actions.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Claiming an intake for review must re-check duplicate status server-side");
 assert(actions.includes("duplicate and cannot be claimed for review"),"Duplicate intakes must be blocked from entering Operations review");
+assert(actions.includes("matched_customer_id:null"),"Policy Intake submission must not preselect a customer from mobile alone");
+assert(actions.includes("resolveMatchedCustomerIdByIdentity"),"Policy Intake OCR completion must resolve customer identity from mobile plus insured name");
+assert.equal(selectPolicyIntakeCustomerMatch([
+  {id:"cust-rajesh",contact_name:"Rajesh Kumar",company_name:null},
+  {id:"cust-abc",contact_name:"Accounts Contact",company_name:"ABC Transport Pvt Ltd"},
+],"ABC TRANSPORT PVT. LTD."),"cust-abc","Same mobile with a different legal owner must resolve to the matching insured identity");
+assert.equal(selectPolicyIntakeCustomerMatch([
+  {id:"cust-rajesh",contact_name:"Rajesh Kumar",company_name:null},
+],"ABC Transport Pvt Ltd"),null,"Same mobile alone must never force an unrelated existing customer");
 
 const intakeForm=read("components/policy-intake-form.tsx");
 assert(intakeForm.includes('fetch(signedUrl,{method:"PUT"'),"Browser must upload policy bytes directly to signed private storage");
@@ -96,6 +106,11 @@ assert(handoff.includes("buildPolicyOcrOnboardingUpdate"),"Operations handoff mu
 assert(handoff.includes('cpaOpted:"No"'),"OCR liability amount must not silently opt owner-driver CPA in");
 assert(handoff.includes("loadPolicyIntakeDuplicateMatches(admin,[intake])"),"Policy Onboarding handoff must re-check duplicate status server-side");
 assert(handoff.includes("duplicate and cannot be sent to Policy Onboarding")&&handoff.includes("duplicate and cannot continue in Policy Onboarding"),"Duplicate intakes must be blocked both before handoff and when reopening an existing onboarding draft");
+assert(handoff.includes("resolveConfirmedIntakeCustomerId"),"Policy Intake handoff must re-confirm mobile matches against insured identity");
+assert(handoff.includes("ocrInsuredName"),"Existing Intake drafts must use OCR insured identity to defend against legacy phone-only matches");
+const onboardingActions=read("app/policies/policy-onboarding-actions.ts");
+assert(onboardingActions.includes("selectedIdentityMatches"),"Policy booking must validate a preselected customer against the submitted insured name and mobile");
+assert(onboardingActions.includes("if (!selectedIdentityMatches) selectedCustomerId = null"),"Stale or phone-only customer selections must be cleared before policy booking");
 const migration=read("../../supabase/migrations/202608240001_policy_intake_workflow.sql");assert(migration.includes("create table if not exists public.policy_intake_requests"),"Intake table migration missing");assert(migration.includes("enable row level security"),"Intake table must enable RLS");assert(migration.includes("revoke all on public.policy_intake_requests from anon, authenticated"),"Browser roles must not receive direct intake-table access");
 const lineage=read("../../supabase/migrations/20260824164500_policy_intake_document_lineage.sql");assert(lineage.includes("create table if not exists public.policy_intake_documents"),"Intake document history migration missing");assert(lineage.includes("source_intake_id"),"Official policy document must retain its source intake lineage");
 const permissions=read("lib/permission-management.ts");assert(permissions.includes('label:"Initiate policy intake"'),"Permission UI must use Initiate terminology");assert(permissions.includes('label:"Review policy intake"'),"Permission UI must use Review terminology");assert(permissions.includes('label:"Finalize policy intake"'),"Permission UI must expose separate Finalize authority");
