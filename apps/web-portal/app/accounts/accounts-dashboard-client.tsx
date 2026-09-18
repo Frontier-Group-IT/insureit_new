@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Building2, CalendarRange, Check, Download, HandCoins, Loader2, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import {
   BUSINESS_MIS_AMOUNT_COLUMNS,
@@ -41,14 +41,12 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
   const [insurer, setInsurer] = useState(initialFilters.insurerId ?? "");
   const [isPending, setIsPending] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const cache = useRef(new Map<string, Result>());
-
-  useEffect(() => {
-    cache.current.set(cacheKey(filters.period, filters.fromDate, filters.toDate, filters.insurerId ?? ""), {
-      filters,
-      snapshot,
-    });
-  }, []); // Seed only the server-rendered snapshot.
+  const cache = useRef(new Map<string, Result>([
+    [cacheKey(initialFilters.period, initialFilters.fromDate, initialFilters.toDate, initialFilters.insurerId ?? ""), {
+      filters: initialFilters,
+      snapshot: initialSnapshot,
+    }],
+  ]));
 
   const exportHref = useMemo(() => {
     const params = new URLSearchParams({
