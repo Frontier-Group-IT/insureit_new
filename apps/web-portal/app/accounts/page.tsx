@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, CalendarRange, Check, Download, HandCoins, Landmark, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
+import { Building2, CalendarRange, Check, Download, HandCoins, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { loadAccountsDashboard, type AccountsDashboardQuery } from "@/lib/accounts-dashboard";
 import {
@@ -42,11 +42,10 @@ export default async function AccountsPage({ searchParams }: Props) {
   return <AppShell title="Accounts Dashboard"><div className="mx-auto max-w-[1560px] space-y-2 pb-4">
     <section className="rounded-2xl border border-[#dbe3ee] bg-white px-3 py-2.5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#e8f5f3] text-[#0f766e]"><Landmark className="h-3.5 w-3.5" /></span>
-          <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold leading-5 text-[#17365D]">Accounts Dashboard</h1><p className="text-[8px] font-medium text-[#7c899b]">{data.periodLabel}</p></div>
-        </div>
+        <div className="min-w-0"><h1 className="truncate text-[15px] font-semibold leading-5 text-[#17365D]">Accounts Dashboard</h1><p className="text-[8px] font-medium text-[#7c899b]">{data.periodLabel}</p></div>
         <div className="flex items-center gap-1.5">
+          <ReconciliationTools period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} insurerId={filters.insurerId} />
+          <span className="h-5 w-px bg-[#dce4ee]" aria-hidden="true" />
           <a href={exportHref} title="Export Business MIS" aria-label="Export Business MIS" className="grid h-8 w-8 place-items-center rounded-lg border border-[#17365D] bg-white text-[#17365D] shadow-sm transition hover:bg-[#f3f7fb]"><Download className="h-3.5 w-3.5" /></a>
           <div className="flex rounded-lg border border-[#dce4ee] bg-[#f8fafc] p-0.5">{PERIODS.map(item => <Link key={item.value} prefetch={false} href={periodHref(item.value, filters.insurerId)} className={`rounded-md px-2.5 py-1.5 text-[8px] font-bold ${filters.period === item.value ? "bg-[#17365D] text-white shadow-sm" : "text-[#667085] hover:bg-white hover:text-[#17365D]"}`}>{item.label}</Link>)}</div>
         </div>
@@ -72,7 +71,6 @@ export default async function AccountsPage({ searchParams }: Props) {
 
     <BusinessMisTable rows={misRows} loadFailed={misLoadFailed} />
 
-    <ReconciliationTools period={filters.period} fromDate={filters.fromDate} toDate={filters.toDate} insurerId={filters.insurerId} />
   </div></AppShell>;
 }
 
