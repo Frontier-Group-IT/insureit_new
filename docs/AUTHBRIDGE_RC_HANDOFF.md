@@ -308,3 +308,14 @@ Bulk behavior:
 - no new database migration is required
 
 **PREPARED is not PRODUCTION-LIVE.** Do not describe this page as available in production until PR #1754 is merged and the portal production deployment is directly verified.
+
+
+## External Renewal voice enrichment consumer — 2026-09-18
+
+A new controlled consumer is implemented on branch `feat/external-renewal-authbridge-enrichment`: IT Super User may enrich an isolated External Renewal Opportunity before AI calling.
+
+The consumer reuses fresh `vehicle_rc_lookup_cache` entries and otherwise uses the existing server-only Detailed RC service-372 client. Only registration, make/model, chassis, insurer, policy number and policy-expiry normalized fields may enter the isolated enrichment snapshot. Raw provider payloads remain in the existing protected cache. Owner identity/address and unrelated RC fields are excluded.
+
+The enrichment step does not create/update verified Customer, Vehicle or Policy masters and does not expose AuthBridge actions to Partner users.
+
+See `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.
