@@ -44,6 +44,8 @@ import { refineNewIndiaEnhancedCoversPolicy } from "./policy-ocr-new-india-enhan
 import { refineNewIndiaEnhancedCoversLiveResiduals } from "./policy-ocr-new-india-enhanced-covers-live-residual-refiner.ts";
 // @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
 import { refineNewIndiaSeparatedVehicleEvidence } from "./policy-ocr-new-india-separated-vehicle-evidence-refiner.ts";
+// @ts-expect-error -- raw Node OCR regression requires explicit TypeScript extension.
+import { refineIciciLombardMotorPolicy } from "./policy-ocr-icici-lombard-refiner.ts";
 
 export function refineApprovedMotorPolicyLayout(
   pages: string[],
@@ -52,6 +54,10 @@ export function refineApprovedMotorPolicyLayout(
 ): ParsedPolicyResult {
   const approved = refineApprovedMotorPolicyLayoutBase(pages, tables, parsed);
   const header = (pages[0] ?? "").split(/\r?\n/).slice(0, 140).join(" ");
+
+  if (/ICICI\s+LOMBARD(?:\s+GENERAL\s+INSURANCE\s+COMPANY\s+LIMITED)?/i.test(header)) {
+    return refineIciciLombardMotorPolicy(pages, tables, approved);
+  }
 
   if (/TATA\s+AIG\s+GENERAL\s+INSURANCE/i.test(header)) {
     const tata = guardTataAigPolicyNumber(pages, refineTataAigBundledTwoWheelerPolicy(pages, approved));
