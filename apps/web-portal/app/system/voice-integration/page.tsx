@@ -6,6 +6,7 @@ import { getSarvamRenewalCampaignState } from "@/lib/sarvam-campaign-lifecycle";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
 import { getSarvamRenewalReadiness } from "@/lib/sarvam-renewal-readiness";
+import { getSarvamProductionQueuePreview } from "@/lib/sarvam-production-queue";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +86,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const readiness = getSarvamRenewalReadiness();
   const operationalPolicy = getSarvamRenewalOperationalPolicy();
   const campaignLifecycle = await getSarvamRenewalCampaignState();
+  const queuePreview = await getSarvamProductionQueuePreview();
   const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
     (key) => readiness.items.find((item) => item.key === key)?.configured,
   );
@@ -283,6 +285,58 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
         </Card>
 
         <Card>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-[15px] font-semibold text-[#17203A]">Production calling queue preview</h2>
+              <p className="mt-1 max-w-3xl text-[10px] leading-5 text-[#64748B]">
+                Read-only preview of External Renewal opportunities due in the next 30 days. This does not place calls or create cohorts. It shows which records would be eligible for the initial production outreach queue under current CRM safeguards.
+              </p>
+            </div>
+            <div className="grid min-w-[310px] grid-cols-3 gap-2">
+              <QueueMetric label="Due window" value={queuePreview.totalDueWindow} />
+              <QueueMetric label="Eligible" value={queuePreview.eligibleCount} />
+              <QueueMetric label="Held" value={queuePreview.heldCount} />
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[860px] text-left text-[10px]">
+              <thead>
+                <tr className="border-y border-[#E2E8F0] bg-[#F8FAFC] text-[8.5px] uppercase tracking-[.05em] text-[#64748B]">
+                  <th className="px-3 py-2.5">Opportunity ref</th>
+                  <th className="px-3 py-2.5">Expiry</th>
+                  <th className="px-3 py-2.5">CRM stage</th>
+                  <th className="px-3 py-2.5">Queue state</th>
+                  <th className="px-3 py-2.5">Reason</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EDF2F7]">
+                {queuePreview.rows.slice(0, 20).map((row) => (
+                  <tr key={row.opportunityId}>
+                    <td className="px-3 py-3 font-mono text-[9px] text-[#475569]">{row.opportunityId.slice(0, 8)}</td>
+                    <td className="px-3 py-3 text-[#475569]">{row.policyEndDate ?? "—"}</td>
+                    <td className="px-3 py-3 text-[#475569]">{labelize(row.opportunityStatus)}</td>
+                    <td className="px-3 py-3">
+                      <span className={`rounded-full border px-2 py-0.5 text-[8.5px] font-semibold ${row.reason === "eligible" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+                        {row.reason === "eligible" ? "Eligible" : "Held"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-[#64748B]">{queueReasonLabel(row.reason)}</td>
+                  </tr>
+                ))}
+                {!queuePreview.rows.length ? (
+                  <tr><td colSpan={5} className="px-3 py-6 text-center text-[10px] text-[#94A3B8]">No active External Renewal opportunities are due in the next 30 days.</td></tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="mt-3 text-[9px] leading-4 text-[#94A3B8]">
+            Initial production eligibility is intentionally narrow: active opportunity, due within 30 days, mobile present, CRM stage New or Contact Attempted, no future follow-up, and no active AI attempt. Customer identity and phone numbers are not shown here.
+          </p>
+        </Card>
+
+        <Card>
           <div>
             <h2 className="text-[15px] font-semibold text-[#17203A]">Webhook recovery</h2>
             <p className="mt-1 max-w-3xl text-[10px] leading-5 text-[#64748B]">
@@ -382,4 +436,26 @@ function StatusCard({ label, value, ready, detail }: { label: string; value: str
 
 function Gate({ label, ready, detail }: { label: string; ready: boolean; detail?: string }) {
   return <div className="rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] p-3"><div className="flex items-center justify-between gap-2"><p className="text-[10px] font-semibold text-[#334155]">{label}</p><span className={`rounded-full border px-2 py-0.5 text-[8.5px] font-semibold ${tone(ready)}`}>{ready ? "Ready" : "Pending"}</span></div>{detail ? <p className="mt-1.5 text-[8.5px] text-[#94A3B8]">{detail}</p> : null}</div>;
+}
+
+
+function queueReasonLabel(reason: string) {
+  const labels: Record<string, string> = {
+    eligible: "Ready for initial outreach",
+    missing_mobile: "Mobile missing",
+    terminal: "Terminal / DNC state",
+    future_follow_up: "Future follow-up already scheduled",
+    active_attempt: "AI attempt already active",
+    crm_stage: "CRM stage not in initial outreach set",
+  };
+  return labels[reason] ?? reason.replaceAll("_", " ");
+}
+
+function QueueMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] px-3 py-2.5 text-center">
+      <p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#94A3B8]">{label}</p>
+      <p className="mt-1 text-[16px] font-semibold text-[#17203A]">{value}</p>
+    </div>
+  );
 }

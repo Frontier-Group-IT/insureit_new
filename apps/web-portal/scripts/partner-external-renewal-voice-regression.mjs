@@ -12,6 +12,7 @@ const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ap
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
 const sarvamOperationalPolicy = fs.readFileSync(path.join(root, "lib/sarvam-renewal-operational-policy.ts"), "utf8");
 const sarvamPartnerDispatchReadiness = fs.readFileSync(path.join(root, "lib/sarvam-partner-dispatch-readiness.ts"), "utf8");
+const sarvamProductionQueue = fs.readFileSync(path.join(root, "lib/sarvam-production-queue.ts"), "utf8");
 const sarvamCampaignLifecycle = fs.readFileSync(path.join(root, "lib/sarvam-campaign-lifecycle.ts"), "utf8");
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
 const sarvamWebhookRecovery = fs.readFileSync(path.join(root, "lib/sarvam-webhook-recovery.ts"), "utf8");
@@ -93,6 +94,14 @@ assert(sarvamPartnerDispatchReadiness.includes("isSarvamRenewalCallingEnabled"),
 assert(sarvamPartnerDispatchReadiness.includes('reason: "campaign_paused"'), "Partner readiness distinguishes administrative pause");
 assert(sarvamPartnerDispatchReadiness.includes('reason: "outside_calling_window"'), "Partner readiness distinguishes calling-window closure");
 assert(!sarvamPartnerDispatchReadiness.includes("NEXT_PUBLIC_"), "Partner readiness exposes no browser provider configuration");
+assert(sarvamProductionQueue.includes('import "server-only"'), "production queue preview is server-only");
+assert(sarvamProductionQueue.includes('INITIAL_OUTREACH_STATUSES = new Set(["new", "contact_attempted"])'), "initial production queue is intentionally narrow");
+assert(sarvamProductionQueue.includes('ACTIVE_ATTEMPT_STATUSES'), "production queue excludes active AI attempts");
+assert(sarvamProductionQueue.includes('next_follow_up_at'), "production queue respects scheduled follow-up state");
+assert(sarvamProductionQueue.includes('.gte("policy_end_date", start)'), "production queue begins at current date");
+assert(sarvamProductionQueue.includes('.lte("policy_end_date", dateOnly(end))'), "production queue is capped to the next 30 days");
+assert(!sarvamProductionQueue.includes("streamExternalRenewalToSarvam"), "production queue preview cannot place calls");
+assert(!sarvamProductionQueue.includes("SARVAM_API_KEY"), "production queue preview contains no provider credential logic");
 assert(sarvamCampaignLifecycle.includes('import "server-only"'), "campaign lifecycle client is server-only");
 assert(sarvamCampaignLifecycle.includes('"X-API-Key": apiKey'), "campaign lifecycle uses the proven X-API-Key contract");
 assert(sarvamCampaignLifecycle.includes('/campaigns/'), "campaign lifecycle targets the configured campaign resource");
@@ -189,6 +198,9 @@ assert(readinessPage.includes("Calling window"), "voice admin page surfaces the 
 assert(readinessPage.includes("DND / terminal guard"), "voice admin page surfaces DND and terminal-state protection");
 assert(readinessPage.includes("INSUREIT auto retry"), "voice admin page surfaces application retry policy");
 assert(readinessPage.includes("Campaign lifecycle control"), "voice admin page exposes IT-only campaign lifecycle controls");
+assert(readinessPage.includes("Production calling queue preview"), "voice admin page includes the read-only production queue preview");
+assert(readinessPage.includes("This does not place calls or create cohorts"), "queue preview states its no-call boundary");
+assert(readinessPage.includes("Customer identity and phone numbers are not shown here"), "queue preview preserves minimal-data display");
 assert(readinessPage.includes("Pause campaign"), "voice admin page can pause an active configured campaign");
 assert(readinessPage.includes("Resume campaign"), "voice admin page can resume a paused configured campaign");
 assert(readinessPage.includes("Pause / Resume only"), "voice admin page states the non-terminal mutation boundary");

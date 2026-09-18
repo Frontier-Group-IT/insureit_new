@@ -25,3 +25,7 @@ Update `docs/VOICE_AGENT_RENEWAL_INTEGRATION_HANDOFF.md` whenever this contract,
 ## Current production readiness source
 
 Partner AI calling availability must come from the server-side production dispatch readiness contract (kill switch + calling window + configured Sarvam campaign lifecycle), not from the kill switch alone. See `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`.
+
+## Production queue preview
+
+IT Super User may use the read-only production queue preview to inspect initial-outreach eligibility, but this must not be confused with enabled bulk calling. The current preview rules and hold reasons are documented in `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`.
