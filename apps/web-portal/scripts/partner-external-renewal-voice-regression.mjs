@@ -11,10 +11,12 @@ const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/de
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
 const readinessModel = fs.readFileSync(path.join(root, "lib/sarvam-renewal-readiness.ts"), "utf8");
+const sarvamWebhookRecovery = fs.readFileSync(path.join(root, "lib/sarvam-webhook-recovery.ts"), "utf8");
 const diagnosticsModel = fs.readFileSync(path.join(root, "lib/sarvam-deep-diagnostics.ts"), "utf8");
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
+const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
 const diagnosticsRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-deep-diagnostics/route.ts"), "utf8");
 const webhook = fs.readFileSync(path.join(root, "app/api/integrations/sarvam/voice-campaign-webhook/route.ts"), "utf8");
 const detailPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/[id]/page.tsx"), "utf8");
@@ -84,6 +86,15 @@ assert(readinessModel.includes('response.status === 422 || response.status === 4
 assert(!readinessModel.includes('user_phone_number'), "readiness cannot submit a callable contact");
 assert(!readinessModel.includes('NEXT_PUBLIC_SARVAM'), "readiness does not depend on browser Sarvam configuration");
 
+assert(sarvamWebhookRecovery.includes('import "server-only"'), "webhook recovery client is server-only");
+assert(sarvamWebhookRecovery.includes('/webhooks/retry'), "webhook recovery uses Sarvam campaign redelivery endpoint");
+assert(sarvamWebhookRecovery.includes('"X-API-Key": apiKey'), "webhook recovery uses the proven X-API-Key contract");
+assert(sarvamWebhookRecovery.includes('attempt_ids: [normalizedAttemptId]'), "webhook recovery re-delivers exactly one explicit provider attempt");
+assert(sarvamWebhookRecovery.includes('response.status === 202'), "webhook recovery requires provider acceptance before reporting success");
+assert(!sarvamWebhookRecovery.includes('user_phone_number'), "webhook recovery does not correlate by phone number");
+assert(!sarvamWebhookRecovery.includes('cohorts/stream'), "webhook recovery cannot create a callable cohort");
+assert(!/console\.(log|error|warn)\s*\(/.test(sarvamWebhookRecovery), "webhook recovery does not log secrets or provider payloads");
+
 assert(diagnosticsModel.includes('import "server-only"'), "deep diagnostics model is server-only");
 assert(diagnosticsModel.includes('pronunciation-dictionary/insureit-diagnostic-do-not-create'), "core auth probe is a non-mutating nonexistent-resource lookup");
 assert(diagnosticsModel.includes('/webhooks?limit=1'), "deep diagnostics retains the webhook-list provider defect evidence path");
@@ -103,6 +114,11 @@ assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_syst
 assert(connectionTestRoute.includes("checkSarvamRenewalConnection()"), "Sarvam connection test invokes only the readiness probe");
 assert(!connectionTestRoute.includes("streamExternalRenewalToSarvam"), "Sarvam connection test cannot queue a customer call");
 assert(!connectionTestRoute.includes("SARVAM_API_KEY"), "Sarvam connection-test route never reads or renders the API key directly");
+assert(webhookRetryRoute.includes('viewer.role !== "it_super_user"'), "webhook retry requires exact IT Super User role");
+assert(webhookRetryRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "webhook retry requires critical system approval access");
+assert(webhookRetryRoute.includes("retrySarvamCampaignWebhookDelivery"), "webhook retry route delegates to the server-only recovery client");
+assert(!webhookRetryRoute.includes("streamExternalRenewalToSarvam"), "webhook retry cannot queue another phone call");
+assert(!webhookRetryRoute.includes("SARVAM_API_KEY"), "webhook retry route never reads or renders the API key directly");
 
 assert(diagnosticsRoute.includes('viewer.role !== "it_super_user"'), "Sarvam deep diagnostics requires exact IT Super User role");
 assert(diagnosticsRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam deep diagnostics requires critical system approval access");
@@ -135,6 +151,10 @@ assert(readinessPage.includes("Webhook callbacks"), "voice admin page surfaces n
 assert(readinessPage.includes("Reconciliation attention required"), "voice admin page surfaces stale active attempts without auto-failing them");
 assert(readinessPage.includes("STALE_ACTIVE_ATTEMPT_MS"), "voice admin page uses an explicit stale-attempt observation threshold");
 assert(readinessPage.includes("does not auto-fail or retry them"), "stale-attempt visibility preserves ambiguous-delivery safety");
+assert(readinessPage.includes("Webhook recovery"), "voice admin page exposes controlled webhook redelivery");
+assert(readinessPage.includes("This does not place another phone call"), "webhook recovery UI states the no-call boundary");
+assert(readinessPage.includes('name="provider_attempt_id"'), "webhook recovery requires an explicit provider attempt identifier");
+assert(readinessPage.includes("Do not use phone numbers for correlation"), "webhook recovery UI preserves provider/local identifier correlation");
 assert(!readinessPage.includes("process.env.SARVAM_API_KEY"), "voice admin page does not render the API key directly");
 assert(!readinessPage.includes("process.env.SARVAM_RENEWAL_WEBHOOK_SECRET"), "voice admin page does not render the webhook secret directly");
 
