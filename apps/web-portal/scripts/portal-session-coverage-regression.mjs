@@ -100,6 +100,19 @@ if (!middlewareSource.includes("? await checkSession(accessToken)")) {
   failures.push("middleware must revalidate the access token against the current active profile before routing");
 }
 
+if (!middlewareSource.includes('const canonicalPortalHost = "portal.insureit.in"')) {
+  failures.push("middleware must declare portal.insureit.in as the canonical production portal host");
+}
+if (!middlewareSource.includes('process.env.VERCEL_ENV === "production"') || !middlewareSource.includes('hostname.endsWith(".vercel.app")')) {
+  failures.push("middleware must normalize production Vercel aliases without affecting preview deployments");
+}
+if (!middlewareSource.includes("canonicalPortalRedirect(request)")) {
+  failures.push("middleware must canonicalize production Vercel aliases before session authorization");
+}
+if (!matcherEntries.includes("/access-denied")) {
+  failures.push("middleware must cover /access-denied so stale production Vercel alias links normalize back to the canonical portal");
+}
+
 if (!masterDataServerSource.includes('if (!profile) redirect("/login")')) {
   failures.push("server capability guards must distinguish a missing session from an access-denied permission result");
 }

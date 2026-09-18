@@ -9,6 +9,23 @@ type SessionCheck = { status: SessionStatus; role: string | null };
 type RefreshedSession = { access_token: string; refresh_token: string; expires_in: number };
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 const accountsHome = "/accounts";
+const canonicalPortalHost = "portal.insureit.in";
+
+function canonicalPortalRedirect(request: NextRequest) {
+  const hostname = request.nextUrl.hostname.toLowerCase();
+  const isProductionVercelAlias =
+    process.env.VERCEL_ENV === "production" &&
+    hostname.endsWith(".vercel.app") &&
+    hostname !== canonicalPortalHost;
+
+  if (!isProductionVercelAlias) return null;
+
+  const canonicalUrl = request.nextUrl.clone();
+  canonicalUrl.protocol = "https:";
+  canonicalUrl.hostname = canonicalPortalHost;
+  canonicalUrl.port = "";
+  return NextResponse.redirect(canonicalUrl, 307);
+}
 
 function getSupabaseEnvironment() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -100,6 +117,9 @@ function continueRequest(request: NextRequest, session?: RefreshedSession | null
 }
 
 export async function middleware(request: NextRequest) {
+  const canonicalRedirect = canonicalPortalRedirect(request);
+  if (canonicalRedirect) return canonicalRedirect;
+
   const { pathname } = request.nextUrl;
   const isRenewalVoiceLab = pathname === "/partner/renewals/voice-lab";
   let accessToken = request.cookies.get(accessTokenCookie)?.value;
@@ -168,6 +188,7 @@ export const config = {
   // Keep this list in parity with protectedPortalRoots. The session coverage regression enforces it.
   matcher: [
     "/",
+    "/access-denied",
     "/login",
     "/accounts/:path*",
     "/claim-documents/:path*",
