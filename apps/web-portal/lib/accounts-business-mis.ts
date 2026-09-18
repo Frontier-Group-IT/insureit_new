@@ -356,7 +356,8 @@ export function businessMisPeriodLabel(from: string, to: string) {
   return fromMonth === toMonth ? fromMonth : `${fromMonth} - ${toMonth}`;
 }
 
-function one<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }\nfunction list<T>(value: T[] | null | undefined): T[] { return Array.isArray(value) ? value : []; }
+function one<T>(value: T | T[] | null | undefined): T | null { return Array.isArray(value) ? value[0] ?? null : value ?? null; }
+function list<T>(value: T[] | null | undefined): T[] { return Array.isArray(value) ? value : []; }
 function pushMap<T>(map: Map<string, T[]>, key: string, value: T) { const list = map.get(key) ?? []; list.push(value); map.set(key, list); }
 function unique(values: Array<string | null | undefined>) { return [...new Set(values.map((value) => String(value ?? "").trim()).filter(Boolean))]; }
 function chunk<T>(values: T[], size: number) { const result: T[][] = []; for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size)); return result; }
