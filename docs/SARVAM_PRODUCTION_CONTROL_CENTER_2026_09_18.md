@@ -182,13 +182,13 @@ Existing deep diagnostic routes remain available to IT for troubleshooting, but 
 
 ## Evidence state
 
-- production control-center redesign: **IMPLEMENTED on feature branch**
-- IT-only dispatch route/helper: **IMPLEMENTED**
-- Partner AI action removal: **IMPLEMENTED**
-- Partner API bypass barrier: **IMPLEMENTED**
-- regression guards: **IMPLEMENTED**
+- production control-center redesign: **MERGED + DEPLOYED**
+- IT-only dispatch route/helper: **MERGED + DEPLOYED**
+- Partner AI action removal: **MERGED + DEPLOYED**
+- Partner API bypass barrier: **MERGED + DEPLOYED**
+- regression guards: **VERIFIED** by canonical Verify web portal #4182
 - database migration: **NONE**
-- production deployment: **PENDING**
+- production deployment: **READY** — PR #2084 merged as `8e5afeba02075404a3ddcad78f8b0e53a359356d`; Vercel `dpl_5mzUSXDo4AnQojLzF26wMqCyfrMz` aliased to `portal.insureit.in`
 - live IT-dispatch verification: **PENDING**
 
 ## Next verification after deployment
