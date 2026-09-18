@@ -94,7 +94,7 @@ Future terminal campaign operations require a separately approved workflow.
 - canonical CI: **PENDING**
 - merge/deployment: **PENDING**
 - production Pause verification: **VERIFIED** — IT Super User action returned HTTP 200 and provider state `paused`
-- production Resume verification: **PENDING MANUAL TEST**
+- production Resume verification: **VERIFIED** — IT Super User action returned HTTP 200 and provider state `scheduled` because the campaign resumed outside its configured calling window
 
 ## First production verification after deployment
 
@@ -142,3 +142,26 @@ Observed result:
 This verifies the provider read + pause mutation path end to end from INSUREIT.
 
 Resume is intentionally left as a separate manual verification because it can make remaining provider-side contacts eligible for calling.
+
+
+## Production verification — Resume succeeded and returned Scheduled
+
+Date: 2026-09-18
+
+IT Super User used the production **Resume campaign** control after Pause had already been verified.
+
+Observed result:
+
+- action: `resume`
+- provider HTTP status: **200**
+- returned lifecycle state: **scheduled**
+- Voice Integration state check: **Verified**
+- no phone call was created by the lifecycle action itself
+- INSUREIT database still showed no active voice attempts; only the two completed controlled attempts remained
+- the activation gate showed the current INSUREIT calling window as Pending because the test occurred after the configured 09:00–18:00 Asia/Kolkata window
+
+Durable interpretation:
+
+A successful Sarvam Resume does not necessarily return `active`. When the provider campaign is outside its execution window, Sarvam can validly return `scheduled`. INSUREIT must treat both provider-controlled states according to their semantics rather than assuming Resume always means Active.
+
+For a safe resting state during continued integration work, the controlled campaign should be paused again after this lifecycle verification.
