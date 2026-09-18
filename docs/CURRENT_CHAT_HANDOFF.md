@@ -1,3 +1,16 @@
+# Active continuation — Partner Portal multi-login (2026-09-18)
+
+- Branch: `feat/partner-multi-login-access`, PR #1999.
+- Requirement: one existing Partner Portal may be accessed by multiple independent email/password accounts, all resolving to the same Partner family/business scope.
+- Implementation is additive: the original `intermediary_portal_accounts` row remains the protected Primary login; extra users live in `partner_portal_additional_users`.
+- New route: `/intermediaries/portal-users/[intermediaryId]` lists Primary + Additional logins and supports Add Login, resend invitation, password reset, disable and enable for Additional users.
+- Identity/activation RPCs are wrapped to resolve Additional logins before delegating to the preserved pre-feature implementation; Group/Branch and legacy Partner paths remain fallback behavior.
+- Migration: `20260918114500_partner_multi_login_access.sql`; rollback: same version under `supabase/rollbacks`. Rollback restores the prior RPCs and leaves additional-user records inert/non-authorizing rather than deleting them.
+- Dedicated schema workflow: `apply-partner-multi-login-access.yml`; production deploy gate mapping added.
+- State: **IMPLEMENTED on refreshed PR branch only**. Migration is **NOT APPLIED**, PR **NOT MERGED**, feature **NOT DEPLOYED**.
+
+---
+
 ## 2026-09-18 — Partner Web External Renewal Opportunity redesign
 - **IMPLEMENTED** on branch `ui/partner-external-renewal-opportunity-redesign`.
 - Redesigned `/partner/renewals/external/[id]` to the approved compact dashboard reference while preserving existing interactions, AI call, Policy Intake and closed-state contracts.

@@ -160,16 +160,18 @@ function PortalAction({ row }: { row: PortalUserRow }) {
     </form>;
   }
 
+  const manageHref = `/intermediaries/portal-users/${intermediary.id}`;
+  const manageLink = <Link prefetch={false} href={manageHref} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#CBD5E1] bg-white px-3 text-[9px] font-bold text-[#334155] transition hover:bg-[#F8FAFC]">Manage Logins</Link>;
+
   if (status === "invited") {
-    return <form action={resendIntermediaryPortalInvite} className="inline-flex">
+    return <div className="inline-flex items-center gap-2"><form action={resendIntermediaryPortalInvite} className="inline-flex">
       <input type="hidden" name="intermediary_id" value={intermediary.id} />
       <input type="hidden" name="return_path" value="/intermediaries/portal-users" />
       <FormSubmitButton label="Resend Invite" pendingLabel="Sending..." className="inline-flex h-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-3 text-[9px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60" />
-    </form>;
+    </form>{manageLink}</div>;
   }
 
-  if (status === "active") return <span className="inline-flex rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[9px] font-bold text-emerald-700">Active</span>;
-  if (status === "disabled" || status === "suspended") return <span className="text-[9px] font-semibold text-[#94A3B8]">Managed from account review</span>;
+  if (status === "active" || status === "disabled" || status === "suspended") return manageLink;
   return <span className="text-[9px] text-[#94A3B8]">—</span>;
 }
 
