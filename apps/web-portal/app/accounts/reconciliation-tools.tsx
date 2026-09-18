@@ -1,27 +1,20 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { CheckCircle2, Download, Loader2, UploadCloud, X } from "lucide-react";
+import { useState, useTransition } from "react";
+import { CheckCircle2, Loader2, UploadCloud, X } from "lucide-react";
 import { previewAccountsReconciliationUpload, type ReconciliationUploadPreview, type PreviewStatus } from "./reconciliation-upload-actions";
 import { confirmAccountsReconciliationUpload, type AccountsImportResult } from "./reconciliation-import-actions";
 
-type Props = { period: string; fromDate: string; toDate: string; insurerId: string | null };
 const inr = (value: number | null) => value === null ? "—" : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value);
 const empty = (message: string): ReconciliationUploadPreview => ({ totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message });
 
-export function ReconciliationTools({ period, fromDate, toDate, insurerId }: Props) {
+export function ReconciliationTools() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ReconciliationUploadPreview | null>(null);
   const [importResult, setImportResult] = useState<AccountsImportResult | null>(null);
   const [importError, setImportError] = useState("");
   const [isPreviewPending, startPreview] = useTransition();
   const [isImportPending, startImport] = useTransition();
-  const downloadHref = useMemo(() => {
-    const params = new URLSearchParams({ period, from: fromDate, to: toDate });
-    if (insurerId) params.set("insurer", insurerId);
-    return `/accounts/reconciliation-template?${params.toString()}`;
-  }, [period, fromDate, toDate, insurerId]);
-
   const previewFile = (nextFile: File) => {
     setFile(nextFile);
     setImportResult(null);
@@ -55,10 +48,6 @@ export function ReconciliationTools({ period, fromDate, toDate, insurerId }: Pro
   const showPopover = isPreviewPending || preview || importResult || importError;
 
   return <div className="relative flex items-center gap-1.5">
-    <a href={downloadHref} title="Download reconciliation template" aria-label="Download reconciliation template" className="grid h-8 w-8 place-items-center rounded-lg border border-[#0f766e] bg-[#f0faf6] text-[#0f766e] shadow-sm transition hover:bg-[#e3f5ef]">
-      <Download className="h-3.5 w-3.5" />
-    </a>
-
     <label title="Upload reconciliation figures" aria-label="Upload reconciliation figures" className="grid h-8 w-8 cursor-pointer place-items-center rounded-lg border border-[#3156b8] bg-[#eef4ff] text-[#3156b8] shadow-sm transition hover:bg-[#e3edff]">
       <input type="file" accept=".xlsx" className="hidden" onChange={(event) => { const nextFile = event.target.files?.[0]; if (nextFile) previewFile(nextFile); event.currentTarget.value = ""; }} />
       {isPreviewPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <UploadCloud className="h-3.5 w-3.5" />}
