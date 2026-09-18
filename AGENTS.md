@@ -47,7 +47,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
-- **2026-09-18 — Sarvam Phase B campaign lifecycle controls:** branch `feat/sarvam-campaign-lifecycle-controls`; IT Super User can read the configured Sarvam campaign state and invoke only non-terminal Pause/Resume through the documented `/campaigns/:campaign_id/status` endpoint using server-side `X-API-Key`. Cancel remains intentionally unavailable. **IMPLEMENTED; CI/merge/deployment/live provider verification pending.** See `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
+- **2026-09-18 — Sarvam Phase B campaign lifecycle controls:** PR #2074; IT Super User can read the configured Sarvam campaign state and invoke only non-terminal Pause/Resume through the documented `/campaigns/:campaign_id/status` endpoint using server-side `X-API-Key`. Cancel remains intentionally unavailable. **MERGED + DEPLOYED** as `59964b54c242997d113b18adc6d76d5ea1547ce7`; Vercel `dpl_Du1juK2xCu7AEW7sjF1ddHbjPZ82` **READY**; live Pause/Resume provider verification pending. See `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
 
 - **2026-09-18 — Sarvam Phase A operational calling policy:** PR #2071; INSUREIT enforces a server-side 09:00–18:00 Asia/Kolkata calling window before creating an attempt, keeps DNC/terminal guards authoritative, and keeps app-level automatic retry disabled. **MERGED + DEPLOYED** as `fd1ae95261886669602652a1c57874469b82bd95`; Vercel `dpl_2chmbbhnWbEDf98rH1XXkcXkQ7di` **READY**. See `docs/SARVAM_OPERATIONAL_CALLING_POLICY_2026_09_18.md`.
 
