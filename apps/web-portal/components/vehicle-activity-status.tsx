@@ -19,7 +19,6 @@ export async function VehicleActivityStatus({ vehicleId, createdAt, updatedAt }:
         at: activity.at,
       }))}
       emptyText="Activity not recorded"
-      open={false}
     />
   );
 }
