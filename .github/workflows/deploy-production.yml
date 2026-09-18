@@ -193,6 +193,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260910113000_external_claim_immediate_document_draft.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-claim-immediate-document-draft.yml"
             echo "External Claim immediate document draft migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260918154500_fix_external_claim_finalize_claim_id_ambiguity.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-external-claim-finalize-ambiguity-fix.yml"
+            echo "External Claim finalize ambiguity fix detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260912093000_partner_web_claim_outstanding.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-web-claim-outstanding.yml"
             echo "Partner web claim outstanding migration detected. Waiting for its schema workflow..."
