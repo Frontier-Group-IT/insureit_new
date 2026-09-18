@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Activity Status visual standardization:** branch `ui/standardize-activity-status-cards`; introduced one shared Activity Status card matching the Partner Customer reference and applied it to Partner Customer, Partner Vehicle, Partner Policy, plus existing Operations customer/policy/vehicle activity components. Claim workflow remains unchanged because it uses claim stages rather than this generic activity card. **IMPLEMENTED**; UI-only, no database/schema/data changes, no PR created per request.
+
 - **2026-09-18 — Sarvam webhook retry identifier UX fix:** first live recovery attempt failed locally because a Sarvam 64-char phone hash was entered instead of the UUID-shaped provider attempt ID. Branch `fix/sarvam-webhook-retry-id-selection` changes recovery to post the authoritative stored `provider_attempt_id` from completed attempts via a one-click action; no provider retry/call occurred in the failed trial. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
 
 - **2026-09-18 — Sarvam webhook re-delivery recovery:** branch `feat/sarvam-webhook-retry-recovery`; IT Super User can submit one known Sarvam provider attempt ID to the documented campaign `/webhooks/retry` endpoint using server-side `X-API-Key`. The action re-delivers the original webhook only; it cannot create a cohort or place another call and continues through normal idempotent CRM projection. **IMPLEMENTED; live provider retry test/CI/merge/deployment pending.** See `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.

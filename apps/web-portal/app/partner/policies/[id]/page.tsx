@@ -7,6 +7,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { StandardActivityStatusCard } from "@/components/standard-activity-status-card";
 import { getPartnerWebPolicyDetail } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -172,6 +173,25 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
               </div>
             </div>
           </aside>
+        </div>
+
+        <div className="mt-4">
+          <StandardActivityStatusCard
+            items={[
+              {
+                id: "policy-status",
+                title: "Policy status",
+                meta: humanize(statusComplete),
+                at: data.policy.issuance_date,
+              },
+              {
+                id: "policy-period",
+                title: "Policy period",
+                meta: `${dateInput(data.policy.start_date)} → ${dateInput(data.policy.end_date)}`,
+                at: data.policy.start_date,
+              },
+            ]}
+          />
         </div>
       </div>
     </PartnerPortalShell>
