@@ -120,11 +120,25 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     return { rows: [], insurers: [], policyCount: 0, netPremium: 0, projectedNetPayin: 0, projectedNetPayout: 0, projectedRetention: 0, warnings: [] };
   }
 
-  let policyQuery = db.from("policies").select(POLICY_SELECT).limit(15000);
-  if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
+  let filteredPolicyQuery = db
+    .from("policies")
+    .select(POLICY_SELECT)
+    .or(businessDateFilter(filters.fromDate, filters.toDate))
+    .limit(15000);
+  let insurerOptionsQuery = db
+    .from("policies")
+    .select("insurance_company_id,insurance_companies(name)")
+    .not("insurance_company_id", "is", null)
+    .limit(15000);
 
-  const { data: policyData, error: policyError } = await policyQuery;
-  if (policyError) {
+  if (customerIds !== null) {
+    filteredPolicyQuery = filteredPolicyQuery.in("customer_id", customerIds);
+    insurerOptionsQuery = insurerOptionsQuery.in("customer_id", customerIds);
+  }
+  if (filters.insurerId) filteredPolicyQuery = filteredPolicyQuery.eq("insurance_company_id", filters.insurerId);
+
+  const [policyResult, insurerOptionsResult] = await Promise.all([filteredPolicyQuery, insurerOptionsQuery]);
+  if (policyResult.error) {
     return {
       rows: [],
       insurers: [],
@@ -137,9 +151,9 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     };
   }
 
-  const allPolicies = (policyData ?? []) as Policy[];
+  const filteredPolicies = (policyResult.data ?? []) as Policy[];
   const insurerMap = new Map<string, string>();
-  for (const policy of allPolicies) {
+  for (const policy of (insurerOptionsResult.data ?? []) as Array<{ insurance_company_id: string | null; insurance_companies: Policy["insurance_companies"] }>) {
     if (!policy.insurance_company_id) continue;
     const insurer = one(policy.insurance_companies);
     insurerMap.set(policy.insurance_company_id, insurer?.name ?? "Unknown insurer");
@@ -147,13 +161,6 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
   const insurers = [...insurerMap.entries()]
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name, "en-IN", { sensitivity: "base" }));
-
-  const filteredPolicies = allPolicies.filter((policy) => {
-    const date = businessDate(policy);
-    if (date < filters.fromDate || date > filters.toDate) return false;
-    if (filters.insurerId && policy.insurance_company_id !== filters.insurerId) return false;
-    return true;
-  });
 
   if (!filteredPolicies.length) {
     return { rows: [], insurers, policyCount: 0, netPremium: 0, projectedNetPayin: 0, projectedNetPayout: 0, projectedRetention: 0, warnings: [] };
@@ -194,17 +201,18 @@ export async function loadBusinessMisRecords(profile: ViewerProfile, filters: Ac
   const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
   if (customerIds !== null && customerIds.length === 0) return [];
 
-  let policyQuery = db.from("policies").select(POLICY_SELECT).limit(15000);
+  let policyQuery = db
+    .from("policies")
+    .select(POLICY_SELECT)
+    .or(businessDateFilter(filters.fromDate, filters.toDate))
+    .limit(15000);
   if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
   if (filters.insurerId) policyQuery = policyQuery.eq("insurance_company_id", filters.insurerId);
 
   const { data: policyData, error: policyError } = await policyQuery;
   if (policyError) throw new Error("Unable to load Business MIS data.");
 
-  const policies = ((policyData ?? []) as Policy[]).filter((policy) => {
-    const date = businessDate(policy);
-    return date >= filters.fromDate && date <= filters.toDate;
-  });
+  const policies = (policyData ?? []) as Policy[];
   return (await buildBusinessMisSnapshot(policies)).records;
 }
 
@@ -373,5 +381,18 @@ function money(value: unknown) { return Math.round(number(value) * 100) / 100; }
 function sum(values: unknown[]) { return money(values.reduce<number>((total, value) => total + number(value), 0)); }
 function average(values: unknown[]) { const numbers = values.map(number).filter((value) => value !== 0); return numbers.length ? money(numbers.reduce((total, value) => total + value, 0) / numbers.length) : 0; }
 function businessDate(policy: Policy) { return policy.issuance_date || policy.start_date || String(policy.created_at ?? "").slice(0, 10); }
+function businessDateFilter(fromDate: string, toDate: string) {
+  const nextDate = addDays(toDate, 1);
+  return [
+    `and(issuance_date.gte.${fromDate},issuance_date.lte.${toDate})`,
+    `and(issuance_date.is.null,start_date.gte.${fromDate},start_date.lte.${toDate})`,
+    `and(issuance_date.is.null,start_date.is.null,created_at.gte.${fromDate}T00:00:00+05:30,created_at.lt.${nextDate}T00:00:00+05:30)`,
+  ].join(",");
+}
+function addDays(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00+05:30`);
+  date.setDate(date.getDate() + days);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
 function excelDate(value: string | null | undefined): Date | "" { return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00+05:30`) : ""; }
 function monthLabel(value: string) { if (!value) return ""; return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(`${value}T00:00:00+05:30`)); }
