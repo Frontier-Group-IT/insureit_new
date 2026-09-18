@@ -217,6 +217,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260917231500_sync_vehicle_class_fields.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-vehicle-class-sync.yml"
             echo "Vehicle class synchronization migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260918114500_partner_multi_login_access.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-partner-multi-login-access.yml"
+            echo "Partner multi-login access migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
