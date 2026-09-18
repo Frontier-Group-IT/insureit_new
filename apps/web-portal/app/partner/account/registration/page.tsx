@@ -76,36 +76,7 @@ export default async function PartnerRegistrationPage() {
   const active = data.intermediary.account_status === "active" || data.intermediary.portal_access_status === "active";
 
   const supabase = await createServerSupabaseClient();
-  const [directDocumentsResult, onboardingDocumentsResult, intermediaryRecordResult] = await Promise.all([
-    supabase
-      .from("intermediary_documents")
-      .select("id, document_type, file_name, storage_bucket, storage_path, mime_type, file_size, verification_status, created_at")
-      .eq("intermediary_id", data.intermediary.id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("intermediary_onboarding_documents")
-      .select("id, document_type, file_name, storage_bucket, storage_path, mime_type, file_size, verification_status, created_at")
-      .eq("application_id", data.primary_application.id)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("intermediaries")
-      .select("activated_at")
-      .eq("id", data.intermediary.id)
-      .maybeSingle(),
-  ]);
-
-  const documentByType = new Map<string, NonNullable<typeof onboardingDocumentsResult.data>[number]>();
-  for (const document of onboardingDocumentsResult.data ?? []) {
-    documentByType.set((document.document_type || document.id).trim().toLowerCase(), document);
-  }
-  for (const document of directDocumentsResult.data ?? []) {
-    documentByType.set((document.document_type || document.id).trim().toLowerCase(), document);
-  }
-  const rawDocuments = Array.from(documentByType.values()).sort(
-    (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime(),
-  );
-
-  const visibleDocuments = rawDocuments.filter((document) => {
+  const visibleDocuments = (data.documents ?? []).filter((document) => {
     const type = (document.document_type || "").trim().toLowerCase().replaceAll("_", " ");
     return type !== "other" && type !== "other document" && type !== "others";
   });
@@ -124,7 +95,7 @@ export default async function PartnerRegistrationPage() {
     { icon: Link2, label: intermediaryType === "partner" ? "Linked Account Status" : "Parent Partner", value: intermediaryType === "partner" ? (qualification ? humanize(qualification.registration_status) : "Not linked") : "Not linked" },
     { icon: UserRoundPlus, label: "Assigned RM", value: "Not assigned" },
     { icon: LogIn, label: "Portal Access", value: humanize(data.intermediary.portal_access_status) },
-    { icon: CalendarDays, label: "Activation Date", value: formatActivationDate(intermediaryRecordResult.data?.activated_at) },
+    { icon: CalendarDays, label: "Activation Date", value: formatActivationDate(data.intermediary.activated_at) },
   ];
 
   const lifecycle = [
