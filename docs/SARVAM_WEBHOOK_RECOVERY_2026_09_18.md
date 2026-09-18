@@ -165,3 +165,19 @@ Next safe step:
 4. if no callback arrives after a reasonable provider delay, treat that as a provider webhook re-delivery issue and investigate with the known attempt ID / provider support evidence rather than retrying calls or mutating CRM state manually.
 
 Evidence state: **RETRY REQUEST ACCEPTED / CALLBACK PENDING**.
+
+
+### Follow-up observation — callback still absent after provider delay
+
+A later production recheck approximately 25+ minutes after the HTTP 202 acceptance still showed:
+
+- no request to the INSUREIT campaign webhook route;
+- provider event count unchanged at 2;
+- latest provider event timestamp unchanged;
+- both controlled attempts remained completed with no duplicate CRM projection.
+
+Sarvam's current documentation states that HTTP 202 means the retry request is **queued for asynchronous processing**; it does not guarantee that the webhook has already been delivered. Therefore the accepted retry must remain classified as **provider accepted / delivery not observed**.
+
+This strengthens the provider-side investigation requirement. Do not convert HTTP 202 into a successful recovery state unless the callback is actually observed.
+
+If a future retry is needed for proof, prefer a completed attempt known to have had a successful original webhook delivery. If that also remains undelivered after HTTP 202, collect the provider attempt ID and timestamp for Sarvam support rather than repeatedly retrying or altering CRM state.
