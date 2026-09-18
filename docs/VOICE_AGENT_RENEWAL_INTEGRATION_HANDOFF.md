@@ -500,3 +500,12 @@ Partner self-service is deferred to a later explicitly approved phase.
 5. approve the operational DND/contact/calling-window rule
 6. enable the kill switch only for one controlled External Renewal opportunity
 7. inspect the full INSUREIT -> Sarvam -> webhook -> CRM -> Partner UI lifecycle before any bulk-calling work
+
+
+## IT Super User calling-window editor — IMPLEMENTED / PENDING CI
+
+The production Voice Integration `Window` card now has an IT-only Edit action for start/end calling time. The selected range persists in a service-role-only operational settings table and the IT dispatch route rechecks that persisted value immediately before creating a voice attempt. `Asia/Kolkata` remains fixed; environment values are fallback only.
+
+Migration: `20260918233000_sarvam_voice_operational_settings.sql`.
+Branch: `feat/voice-calling-window-editor`.
+Current state: **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.**
