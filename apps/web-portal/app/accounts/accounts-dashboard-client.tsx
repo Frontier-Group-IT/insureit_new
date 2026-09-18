@@ -124,11 +124,28 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
   useEffect(() => {
     const timer = window.setTimeout(() => {
       for (const standardPeriod of ["last_month", "mtd"] as const) {
-        if (standardPeriod !== filters.period) prefetchResult(standardPeriod, from, to, insurer);
+        if (standardPeriod === filters.period) continue;
+        const key = cacheKey(standardPeriod, from, to, insurer);
+        if (cache.current.has(key) || inflight.current.has(key)) continue;
+
+        const request = loadAccountsSnapshotAction({
+          period: standardPeriod,
+          insurer: insurer || undefined,
+        }).then((raw) => {
+          const result = raw as Result;
+          const nextInsurers = result.snapshot.insurers.length ? result.snapshot.insurers : insurersRef.current;
+          const normalized = { ...result, snapshot: { ...result.snapshot, insurers: nextInsurers } };
+          cache.current.set(cacheKey(normalized.filters.period, normalized.filters.fromDate, normalized.filters.toDate, normalized.filters.insurerId ?? ""), normalized);
+          return normalized;
+        }).finally(() => {
+          inflight.current.delete(key);
+        });
+
+        inflight.current.set(key, request);
       }
     }, 300);
     return () => window.clearTimeout(timer);
-  }, [filters.period, insurer]);
+  }, [filters.period, insurer, from, to]);
 
   const misLoadFailed = snapshot.warnings.length > 0 && snapshot.rows.length === 0;
 
