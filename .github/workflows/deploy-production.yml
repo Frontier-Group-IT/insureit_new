@@ -229,6 +229,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260918114500_partner_multi_login_access.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-multi-login-access.yml"
             echo "Partner multi-login access migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260918150000_partner_associate_commercial_scope.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-partner-associate-commercial-scope.yml"
+            echo "Partner associate commercial scope migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260918134500_partner_associate_accounts.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-associate-accounts.yml"
             echo "Partner associate accounts migration detected. Waiting for its schema workflow..."
