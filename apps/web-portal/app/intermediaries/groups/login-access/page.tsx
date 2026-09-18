@@ -261,7 +261,6 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                             cooldownLabel="Resend"
                             cooldownUntil={entityCooldownUntil}
                             initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
-                        initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
                             className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
                           />
                         </form>
@@ -275,7 +274,6 @@ export default async function GroupBranchLoginAccessPage({ searchParams }: { sea
                             cooldownLabel="Reset"
                             cooldownUntil={entityCooldownUntil}
                             initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
-                        initialRemaining={entityCooldownUntil ? cooldownRemaining : 0}
                             className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                           />
                         </form>
