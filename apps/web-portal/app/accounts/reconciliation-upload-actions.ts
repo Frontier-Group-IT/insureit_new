@@ -84,6 +84,8 @@ const PAID_AMOUNT_INDEX = 29;
 const PAID_DATE_INDEX = 30;
 const UTR_INDEX = 31;
 const DURABLE_METADATA_MARKER = "INSUREIT_META_V2";
+const METADATA_SHEET_NAME = "INSUREIT_META";
+const METADATA_SHEET_MARKER = "INSUREIT_META_V3";
 
 type ReconciliationTemplateMetadata = {
   template: string;
@@ -109,12 +111,13 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     return emptyPreview("The workbook could not be read. Upload the Business MIS Excel exported from the Accounts Dashboard.");
   }
 
-  if (workbook.SheetNames.length !== 1 || workbook.SheetNames[0] !== "Business MIS") {
-    return emptyPreview("Upload the original single-sheet Business MIS workbook. Sheets must not be added, removed or renamed.");
+  const allowedSheets = new Set(["Business MIS", METADATA_SHEET_NAME]);
+  if (!workbook.SheetNames.includes("Business MIS") || workbook.SheetNames.some((name) => !allowedSheets.has(name))) {
+    return emptyPreview("Upload the original Business MIS workbook. The Business MIS sheet must not be removed or renamed, and no extra sheets may be added.");
   }
 
   const sheet = workbook.Sheets["Business MIS"];
-  const metadata = readTemplateMetadata(workbook, sheet);
+  const metadata = readTemplateMetadata(workbook, sheet, workbook.Sheets[METADATA_SHEET_NAME]);
   if (!metadata || metadata.template !== TEMPLATE_VERSION) {
     return emptyPreview("This is not the current INSUREIT Business MIS reconciliation template. Download a fresh Export from the Accounts Dashboard.");
   }
@@ -381,7 +384,7 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   };
 }
 
-function readTemplateMetadata(workbook: XLSX.WorkBook, sheet: XLSX.WorkSheet): ReconciliationTemplateMetadata | null {
+function readTemplateMetadata(workbook: XLSX.WorkBook, sheet: XLSX.WorkSheet, metadataSheet?: XLSX.WorkSheet): ReconciliationTemplateMetadata | null {
   const props = (workbook.Custprops ?? {}) as Record<string, unknown>;
   const propertyMetadata: ReconciliationTemplateMetadata = {
     template: text(props.INSUREITTemplate),
@@ -398,30 +401,56 @@ function readTemplateMetadata(workbook: XLSX.WorkBook, sheet: XLSX.WorkSheet): R
     && propertyMetadata.systemHash
   ) return propertyMetadata;
 
+  const hiddenSheetMetadata = readHiddenMetadataSheet(metadataSheet);
+  if (hiddenSheetMetadata) return hiddenSheetMetadata;
+
   if (text(sheet["AH1"]?.v) !== DURABLE_METADATA_MARKER) return null;
   const raw = text(sheet["AG1"]?.v);
   if (!raw) return null;
 
   try {
     const parsed = JSON.parse(raw) as Partial<ReconciliationTemplateMetadata>;
-    const durableMetadata: ReconciliationTemplateMetadata = {
-      template: text(parsed.template),
-      rowCount: integer(parsed.rowCount),
-      structureHash: text(parsed.structureHash),
-      systemHash: text(parsed.systemHash),
-      fromDate: text(parsed.fromDate),
-      toDate: text(parsed.toDate),
-    };
-    if (
-      durableMetadata.template !== TEMPLATE_VERSION
-      || durableMetadata.rowCount < 0
-      || !durableMetadata.structureHash
-      || !durableMetadata.systemHash
-    ) return null;
-    return durableMetadata;
+    return normalizeTemplateMetadata(parsed);
   } catch {
     return null;
   }
+}
+
+function readHiddenMetadataSheet(sheet?: XLSX.WorkSheet): ReconciliationTemplateMetadata | null {
+  if (!sheet || text(sheet["A1"]?.v) !== METADATA_SHEET_MARKER) return null;
+
+  const values = new Map<string, unknown>();
+  for (let row = 2; row <= 7; row++) {
+    const key = text(sheet[`A${row}`]?.v);
+    if (key) values.set(key, sheet[`B${row}`]?.v);
+  }
+
+  return normalizeTemplateMetadata({
+    template: values.get("template"),
+    rowCount: values.get("rowCount"),
+    structureHash: values.get("structureHash"),
+    systemHash: values.get("systemHash"),
+    fromDate: values.get("fromDate"),
+    toDate: values.get("toDate"),
+  });
+}
+
+function normalizeTemplateMetadata(value: Partial<Record<keyof ReconciliationTemplateMetadata, unknown>>): ReconciliationTemplateMetadata | null {
+  const metadata: ReconciliationTemplateMetadata = {
+    template: text(value.template),
+    rowCount: integer(value.rowCount),
+    structureHash: text(value.structureHash),
+    systemHash: text(value.systemHash),
+    fromDate: text(value.fromDate),
+    toDate: text(value.toDate),
+  };
+  if (
+    metadata.template !== TEMPLATE_VERSION
+    || metadata.rowCount < 0
+    || !metadata.structureHash
+    || !metadata.systemHash
+  ) return null;
+  return metadata;
 }
 
 function uploadedStructureHash(rows: unknown[][]) {

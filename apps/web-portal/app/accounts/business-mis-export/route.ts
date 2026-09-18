@@ -56,8 +56,6 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
     fromDate,
     toDate,
   };
-  worksheet["AG1"] = { t: "s", v: JSON.stringify(durableMetadata) };
-  worksheet["AH1"] = { t: "s", v: "INSUREIT_META_V2" };
 
   for (const col of BUSINESS_MIS_TOTAL_COLUMNS) {
     const address = XLSX.utils.encode_cell({ r: 0, c: col });
@@ -103,6 +101,21 @@ function workbookResponse(records: BusinessMisRecord[], fromDate: string, toDate
 
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Business MIS");
+  const metadataSheet = XLSX.utils.aoa_to_sheet([
+    ["INSUREIT_META_V3", ""],
+    ["template", durableMetadata.template],
+    ["rowCount", durableMetadata.rowCount],
+    ["structureHash", durableMetadata.structureHash],
+    ["systemHash", durableMetadata.systemHash],
+    ["fromDate", durableMetadata.fromDate],
+    ["toDate", durableMetadata.toDate],
+  ]);
+  XLSX.utils.book_append_sheet(workbook, metadataSheet, "INSUREIT_META");
+  workbook.Workbook = workbook.Workbook ?? {};
+  workbook.Workbook.Sheets = [
+    { name: "Business MIS", Hidden: 0 },
+    { name: "INSUREIT_META", Hidden: 1 },
+  ];
   workbook.Custprops = {
     INSUREITTemplate: "Business MIS Reconciliation v2",
     INSUREITRowCount: durableMetadata.rowCount,

@@ -50,12 +50,12 @@ assert.doesNotMatch(accountsPage, /href="\/accounts\/receivables"/, "New Account
 assert.match(accountsWorkbook, /book_append_sheet\(workbook, worksheet, "Business MIS"\)/, "Accounts reconciliation workbook must reuse the single Business MIS sheet.");
 assert.match(accountsWorkbook, /BUSINESS_MIS_HIDDEN_HEADERS/, "Business MIS export must include hidden system IDs for reconciliation matching.");
 assert.match(accountsWorkbook, /INSUREITTemplate/, "Business MIS export must carry template metadata for structural validation.");
-assert.match(accountsWorkbook, /worksheet\["AG1"\] = \{ t: "s", v: JSON\.stringify\(durableMetadata\) \}/, "Business MIS export must persist durable reconciliation metadata in a hidden worksheet cell.");
-assert.match(accountsWorkbook, /worksheet\["AH1"\] = \{ t: "s", v: "INSUREIT_META_V2" \}/, "Business MIS export must mark its durable hidden metadata.");
-assert.match(accountsUpload, /readTemplateMetadata\(workbook, sheet\)/, "Upload validation must resolve template metadata through the compatibility reader.");
-assert.match(accountsUpload, /sheet\["AH1"\]\?\.v/, "Upload validation must support hidden worksheet metadata when custom properties are stripped.");
-assert.match(accountsUpload, /JSON\.parse\(raw\)/, "Upload validation must parse durable hidden reconciliation metadata.");
-assert.match(accountsUpload, /workbook\.SheetNames\.length !== 1 \|\| workbook\.SheetNames\[0\] !== "Business MIS"/, "Upload validation must require exactly the single Business MIS sheet.");
+assert.match(accountsWorkbook, /book_append_sheet\(workbook, metadataSheet, "INSUREIT_META"\)/, "Business MIS export must persist durable reconciliation metadata in a dedicated worksheet.");
+assert.match(accountsWorkbook, /\{ name: "INSUREIT_META", Hidden: 1 \}/, "INSUREIT metadata worksheet must be hidden from normal Accounts users.");
+assert.match(accountsWorkbook, /\["INSUREIT_META_V3", ""\]/, "Hidden metadata worksheet must carry the durable marker.");
+assert.match(accountsUpload, /readTemplateMetadata\(workbook, sheet, workbook\.Sheets\[METADATA_SHEET_NAME\]\)/, "Upload validation must resolve metadata from the dedicated hidden sheet.");
+assert.match(accountsUpload, /readHiddenMetadataSheet\(metadataSheet\)/, "Upload validation must support the hidden metadata sheet when custom properties are stripped.");
+assert.match(accountsUpload, /workbook\.SheetNames\.some\(\(name\) => !allowedSheets\.has\(name\)\)/, "Upload validation must reject unexpected extra sheets while allowing the hidden metadata sheet.");
 assert.match(accountsUpload, /Business MIS rows were added or removed/, "Upload validation must reject added or removed Business MIS rows.");
 assert.match(accountsUpload, /System-controlled Business MIS values were edited/, "Upload validation must reject edits to system-controlled MIS values.");
 assert.match(accountsUpload, /uploaded Difference will not be updated/, "Difference mismatches must warn that INSUREIT keeps the internally calculated value.");
