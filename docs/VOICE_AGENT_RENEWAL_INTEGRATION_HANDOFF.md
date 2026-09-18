@@ -417,6 +417,26 @@ Detailed evidence: `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
 
 Production Pause/Resume verification is still required after CI, merge and deployment.
 
+## Phase B campaign dispatch precheck — IMPLEMENTED / PENDING CI
+
+The Partner `Call with AI` route now verifies the configured Sarvam campaign state **before** creating a local voice attempt.
+
+Allowed states:
+
+- `active`
+- `scheduled`
+
+Blocked states:
+
+- `paused` — INSUREIT treats admin Pause as a real stop even though Sarvam technically allows cohort streaming while paused
+- `ended`
+- `cancelled`
+- unknown/unavailable state
+
+This prevents new Partner requests from accumulating behind an administrative Pause and prevents provider-state failures from leaving stale local active attempts.
+
+Detailed evidence: `docs/SARVAM_CAMPAIGN_DISPATCH_PRECHECK_2026_09_18.md`.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves
