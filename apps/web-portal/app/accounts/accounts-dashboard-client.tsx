@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Building2, CalendarRange, Check, Download, HandCoins, Loader2, ReceiptIndianRupee, TrendingUp, WalletCards } from "lucide-react";
 import {
   BUSINESS_MIS_AMOUNT_COLUMNS,
@@ -47,6 +47,8 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
       snapshot: initialSnapshot,
     }],
   ]));
+  const inflight = useRef(new Map<string, Promise<Result>>());
+  const insurersRef = useRef(initialSnapshot.insurers);
 
   const exportHref = useMemo(() => {
     const params = new URLSearchParams({
@@ -57,6 +59,37 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
     if (filters.insurerId) params.set("insurer", filters.insurerId);
     return `/accounts/business-mis-export?${params.toString()}`;
   }, [filters]);
+
+  const normalizeResult = (result: Result): Result => {
+    const nextInsurers = result.snapshot.insurers.length ? result.snapshot.insurers : insurersRef.current;
+    if (result.snapshot.insurers.length) insurersRef.current = result.snapshot.insurers;
+    return { ...result, snapshot: { ...result.snapshot, insurers: nextInsurers } };
+  };
+
+  const requestResult = (period: Period, nextFrom: string, nextTo: string, nextInsurer: string): Promise<Result> => {
+    const key = cacheKey(period, nextFrom, nextTo, nextInsurer);
+    const cached = cache.current.get(key);
+    if (cached) return Promise.resolve(cached);
+
+    const pending = inflight.current.get(key);
+    if (pending) return pending;
+
+    const request = loadAccountsSnapshotAction({
+      period,
+      from: period === "custom" ? nextFrom : undefined,
+      to: period === "custom" ? nextTo : undefined,
+      insurer: nextInsurer || undefined,
+    }).then((raw) => {
+      const result = normalizeResult(raw as Result);
+      cache.current.set(cacheKey(result.filters.period, result.filters.fromDate, result.filters.toDate, result.filters.insurerId ?? ""), result);
+      return result;
+    }).finally(() => {
+      inflight.current.delete(key);
+    });
+
+    inflight.current.set(key, request);
+    return request;
+  };
 
   const applyResult = (result: Result, href: string) => {
     setFilters(result.filters);
@@ -70,24 +103,11 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
 
   const fetchResult = async (period: Period, nextFrom: string, nextTo: string, nextInsurer: string) => {
     const href = accountsHref(period, nextFrom, nextTo, nextInsurer);
-    const key = cacheKey(period, nextFrom, nextTo, nextInsurer);
-    const cached = cache.current.get(key);
-    if (cached) {
-      applyResult(cached, href);
-      return;
-    }
-
     setIsPending(true);
     setLoadError("");
     try {
-      const result = await loadAccountsSnapshotAction({
-        period,
-        from: period === "custom" ? nextFrom : undefined,
-        to: period === "custom" ? nextTo : undefined,
-        insurer: nextInsurer || undefined,
-      });
-      cache.current.set(cacheKey(result.filters.period, result.filters.fromDate, result.filters.toDate, result.filters.insurerId ?? ""), result as Result);
-      applyResult(result as Result, href);
+      const result = await requestResult(period, nextFrom, nextTo, nextInsurer);
+      applyResult(result, href);
     } catch {
       setLoadError("Accounts data could not be refreshed. Your current figures are still shown.");
     } finally {
@@ -96,18 +116,19 @@ export function AccountsDashboardClient({ initialFilters, initialSnapshot }: Pro
   };
 
   const prefetchResult = (period: Period, nextFrom = from, nextTo = to, nextInsurer = insurer) => {
-    if (isPending) return;
     const key = cacheKey(period, nextFrom, nextTo, nextInsurer);
-    if (cache.current.has(key)) return;
-    void loadAccountsSnapshotAction({
-      period,
-      from: period === "custom" ? nextFrom : undefined,
-      to: period === "custom" ? nextTo : undefined,
-      insurer: nextInsurer || undefined,
-    }).then((result) => {
-      cache.current.set(cacheKey(result.filters.period, result.filters.fromDate, result.filters.toDate, result.filters.insurerId ?? ""), result as Result);
-    }).catch(() => undefined);
+    if (cache.current.has(key) || inflight.current.has(key)) return;
+    void requestResult(period, nextFrom, nextTo, nextInsurer).catch(() => undefined);
   };
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      for (const standardPeriod of ["last_month", "mtd"] as const) {
+        if (standardPeriod !== filters.period) prefetchResult(standardPeriod, from, to, insurer);
+      }
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [filters.period, insurer]);
 
   const misLoadFailed = snapshot.warnings.length > 0 && snapshot.rows.length === 0;
 
