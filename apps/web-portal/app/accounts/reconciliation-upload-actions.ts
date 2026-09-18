@@ -296,7 +296,7 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
         billNumber,
         billAmount,
         billDate,
-        actualTds: projectedTds,
+        actualTds: 0,
         amountReceived: billAmount,
         receiptDate: billDate,
         reference: billNumber,
