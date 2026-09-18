@@ -9,6 +9,7 @@ import {
   Database,
   LockKeyhole,
   Pause,
+  Pencil,
   PhoneCall,
   Play,
   RefreshCw,
@@ -24,7 +25,7 @@ import { AppShell } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getSarvamRenewalCampaignState } from "@/lib/sarvam-campaign-lifecycle";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
-import { getSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
+import { getConfiguredSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
 import { getSarvamRenewalReadiness } from "@/lib/sarvam-renewal-readiness";
 import { getSarvamProductionQueuePreview } from "@/lib/sarvam-production-queue";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -109,10 +110,13 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const campaignActionHttpStatus = queryValue(query.campaign_status);
   const dispatch = queryValue(query.dispatch);
   const dispatchError = queryValue(query.dispatch_error);
+  const windowUpdate = queryValue(query.window_update);
+  const windowError = queryValue(query.window_error);
+  const editWindow = queryValue(query.edit_window) === "1";
 
   const readiness = getSarvamRenewalReadiness();
-  const operationalPolicy = getSarvamRenewalOperationalPolicy();
-  const [campaignLifecycle, queuePreview] = await Promise.all([
+  const [operationalPolicy, campaignLifecycle, queuePreview] = await Promise.all([
+    getConfiguredSarvamRenewalOperationalPolicy(),
     getSarvamRenewalCampaignState(),
     getSarvamProductionQueuePreview(),
   ]);
@@ -151,7 +155,12 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const latestWebhookEvent = attemptEvents?.[0] ?? null;
 
   const actionNotice =
-    dispatch === "queued"
+    windowUpdate
+      ? {
+          ok: windowUpdate === "saved",
+          text: windowUpdate === "saved" ? "Calling window updated." : windowError || "Calling window could not be saved.",
+        }
+      : dispatch === "queued"
       ? { ok: true, text: "AI call queued." }
       : dispatch === "failed"
         ? { ok: false, text: dispatchError || "AI call could not be queued." }
@@ -260,7 +269,12 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
             <PolicyTile icon={UsersRound} label="Controller" value="IT Super User" good />
             <PolicyTile icon={LockKeyhole} label="Partner" value="No actions" />
-            <PolicyTile icon={Clock3} label="Window" value={`${operationalPolicy.start}–${operationalPolicy.end}`} good={operationalPolicy.withinCallingWindow} />
+            <CallingWindowPolicyTile
+              start={operationalPolicy.start}
+              end={operationalPolicy.end}
+              withinCallingWindow={operationalPolicy.withinCallingWindow}
+              editing={editWindow}
+            />
             <PolicyTile icon={ShieldCheck} label="DND / terminal" value="Active" good />
             <PolicyTile icon={RotateCcw} label="Auto retry" value="Disabled" good />
           </div>
@@ -465,6 +479,54 @@ function PolicyTile({ icon: Icon, label, value, good = false }: { icon: typeof U
         <p className="text-[7px] font-black uppercase tracking-[.05em] text-[#8998AA]">{label}</p>
         <p className={`truncate text-[8.5px] font-bold ${good ? "text-emerald-700" : "text-[#52667F]"}`}>{value}</p>
       </div>
+    </div>
+  );
+}
+
+function CallingWindowPolicyTile({
+  start,
+  end,
+  withinCallingWindow,
+  editing,
+}: {
+  start: string;
+  end: string;
+  withinCallingWindow: boolean;
+  editing: boolean;
+}) {
+  if (editing) {
+    return (
+      <form
+        action="/api/system/voice-integration/calling-window"
+        method="post"
+        className="rounded-lg border border-[#D7E2F0] bg-[#FAFCFF] px-2.5 py-2"
+      >
+        <div className="flex items-center gap-1.5">
+          <Clock3 className="h-3.5 w-3.5 shrink-0 text-[#3156B8]" />
+          <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-1">
+            <input type="time" name="window_start" defaultValue={start} required className="h-7 min-w-0 rounded-md border border-[#D6E0EC] bg-white px-1.5 text-[8.5px] font-bold text-[#29415F]" aria-label="Calling window start" />
+            <span className="text-[8px] font-bold text-[#94A3B8]">to</span>
+            <input type="time" name="window_end" defaultValue={end} required className="h-7 min-w-0 rounded-md border border-[#D6E0EC] bg-white px-1.5 text-[8.5px] font-bold text-[#29415F]" aria-label="Calling window end" />
+          </div>
+        </div>
+        <div className="mt-1.5 flex items-center justify-end gap-1.5">
+          <Link href="/system/voice-integration" className="inline-flex h-6 items-center rounded-md px-2 text-[7.5px] font-bold text-[#6B7E98]">Cancel</Link>
+          <button type="submit" className="inline-flex h-6 items-center rounded-md bg-[#102A56] px-2.5 text-[7.5px] font-bold text-white">Save</button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex h-10 items-center gap-2 rounded-lg border border-[#E1E8F0] bg-[#FAFCFF] px-3">
+      <Clock3 className="h-3.5 w-3.5 shrink-0 text-[#3156B8]" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[7px] font-black uppercase tracking-[.05em] text-[#8998AA]">Window</p>
+        <p className={`truncate text-[8.5px] font-bold ${withinCallingWindow ? "text-emerald-700" : "text-[#52667F]"}`}>{start}–{end}</p>
+      </div>
+      <Link href="/system/voice-integration?edit_window=1" className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-[#D6E0EC] bg-white px-2 text-[7.5px] font-bold text-[#3156B8] hover:bg-[#F5F8FC]" aria-label="Edit calling window">
+        <Pencil className="h-2.5 w-2.5" /> Edit
+      </Link>
     </div>
   );
 }
