@@ -1,160 +1,429 @@
 "use server";
 
+import { createHash } from "node:crypto";
 import * as XLSX from "xlsx";
-import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import {
+  BUSINESS_MIS_AMOUNT_COLUMNS,
+  BUSINESS_MIS_DATE_COLUMNS,
+  BUSINESS_MIS_EDITABLE_COLUMNS,
+  BUSINESS_MIS_HEADERS,
+  BUSINESS_MIS_HIDDEN_HEADERS,
+  BUSINESS_MIS_PERCENT_COLUMNS,
+  loadBusinessMisRecordsByPolicyIds,
+  type BusinessMisCell,
+  type BusinessMisRecord,
+} from "@/lib/accounts-business-mis";
 
 export type PreviewStatus = "Ready" | "Warning" | "Error";
-export type PayinPreviewRow = { rowNumber: number; policyId: string; policyNumber: string; insurer: string; projectedPayin: number; projectedTds: number; projectedNetPayin: number; billNumber: string; billAmount: number | null; billDate: string; actualTds: number | null; amountReceived: number | null; receiptDate: string; reference: string; difference: number | null; status: PreviewStatus; message: string };
-export type PayoutPreviewRow = { rowNumber: number; payoutId: string; policyId: string; policyNumber: string; intermediaryType: string; intermediaryCode: string; payoutOdPercent: number; payoutTpPercent: number; projectedGrossPayout: number; projectedRetention: number; paidAmount: number | null; paidDate: string; reference: string; status: PreviewStatus; message: string };
-export type ReconciliationUploadPreview = { totalRows: number; readyRows: number; warningRows: number; errorRows: number; skippedRows: number; payinRows: PayinPreviewRow[]; payoutRows: PayoutPreviewRow[]; message?: string };
+export type PayinPreviewRow = {
+  rowNumber: number;
+  policyId: string;
+  policyNumber: string;
+  insurer: string;
+  projectedPayin: number;
+  projectedTds: number;
+  projectedNetPayin: number;
+  billNumber: string;
+  billAmount: number | null;
+  billDate: string;
+  actualTds: number | null;
+  amountReceived: number | null;
+  receiptDate: string;
+  reference: string;
+  difference: number | null;
+  uploadedDifference: number | null;
+  status: PreviewStatus;
+  message: string;
+};
+export type PayoutPreviewRow = {
+  rowNumber: number;
+  payoutId: string;
+  policyId: string;
+  policyNumber: string;
+  intermediaryType: string;
+  intermediaryCode: string;
+  payoutOdPercent: number;
+  payoutTpPercent: number;
+  projectedGrossPayout: number;
+  projectedRetention: number;
+  paidAmount: number | null;
+  paidDate: string;
+  reference: string;
+  status: PreviewStatus;
+  message: string;
+};
+export type ReconciliationUploadPreview = {
+  totalRows: number;
+  readyRows: number;
+  warningRows: number;
+  errorRows: number;
+  skippedRows: number;
+  payinRows: PayinPreviewRow[];
+  payoutRows: PayoutPreviewRow[];
+  message?: string;
+};
 
-type PolicyRow = { id: string; policy_no: string | null; customer_id: string; insurance_company_id: string | null; intermediary_type: string | null; intermediary_code: string | null; insurance_companies: { name?: string | null } | Array<{ name?: string | null }> | null };
-type PayinDetailRow = { policy_id: string; total_projected_payin: number | string | null; tds_amount: number | string | null; payin_after_tds: number | string | null };
-type PayoutDetailRow = { id: string; policy_id: string; intermediary_type: string | null; intermediary_code: string | null; od_payout_percent: number | string | null; tp_payout_percent: number | string | null; gross_payout: number | string | null; retention_amount: number | string | null; commercial_status: string | null; status: string | null };
+type PolicyRef = { id: string; insurance_company_id: string | null };
+type PayoutRef = { id: string; commercial_status: string | null; status: string | null };
 type ReceiptRefRow = { insurer_id: string; bank_reference: string | null };
 type PartnerPaymentRefRow = { intermediary_code: string | null; payment_reference: string | null };
 
-const PAYIN_HEADERS = ["System Policy ID", "Policy Number", "Insurance Company", "Projected Pay-In", "Projected TDS", "Projected Net Pay-In", "Bill Number", "Bill Amount", "Bill Date", "Actual TDS", "Amount Received", "Receipt Date", "UTR / Reference"] as const;
-const PAYOUT_HEADERS = ["System Payout ID", "System Policy ID", "Policy Number", "Intermediary Type", "Intermediary Code", "Payout OD %", "Payout TP %", "Projected Gross Payout", "Projected Retention", "Paid Amount", "Paid Date", "UTR / Reference"] as const;
+const TEMPLATE_VERSION = "Business MIS Reconciliation v2";
+const POLICY_ID_INDEX = BUSINESS_MIS_HEADERS.length;
+const PAYOUT_ID_INDEX = BUSINESS_MIS_HEADERS.length + 1;
+const BILL_NUMBER_INDEX = 20;
+const BILL_AMOUNT_INDEX = 21;
+const BILL_DATE_INDEX = 22;
+const DIFFERENCE_INDEX = 23;
+const TDS_INDEX = 24;
+const PAID_AMOUNT_INDEX = 29;
+const PAID_DATE_INDEX = 30;
+const UTR_INDEX = 31;
 
 export async function previewAccountsReconciliationUpload(formData: FormData): Promise<ReconciliationUploadPreview> {
   const profile = await requireCapability("view_accounts");
   if (!canAccessPolicyCommercials(profile)) throw new Error("Commercial details restricted");
+
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return emptyPreview("Choose an Excel file to preview.");
+  if (!(file instanceof File) || file.size === 0) return emptyPreview("Choose the Business MIS Excel exported from the Accounts Dashboard.");
   if (file.size > 8 * 1024 * 1024) return emptyPreview("The upload must be 8 MB or smaller.");
 
   let workbook: XLSX.WorkBook;
-  try { workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: false }); } catch { return emptyPreview("The workbook could not be read. Upload an .xlsx file generated from the Accounts workbook."); }
-  if (!workbook.SheetNames.includes("Pay-In") || !workbook.SheetNames.includes("Pay-Out")) return emptyPreview("The workbook must contain both Pay-In and Pay-Out sheets generated by INSUREIT.");
+  try {
+    workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+  } catch {
+    return emptyPreview("The workbook could not be read. Upload the Business MIS Excel exported from the Accounts Dashboard.");
+  }
 
-  const payinRaw = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets["Pay-In"], { defval: "", raw: false });
-  const payoutRaw = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets["Pay-Out"], { defval: "", raw: false });
-  const headerError = validateHeaders(payinRaw, PAYIN_HEADERS, "Pay-In") ?? validateHeaders(payoutRaw, PAYOUT_HEADERS, "Pay-Out");
-  if (headerError) return emptyPreview(headerError);
-  if (payinRaw.length + payoutRaw.length > 2000) return emptyPreview("Preview supports up to 2,000 workbook rows at a time.");
+  if (workbook.SheetNames.length !== 1 || workbook.SheetNames[0] !== "Business MIS") {
+    return emptyPreview("Upload the original single-sheet Business MIS workbook. Sheets must not be added, removed or renamed.");
+  }
 
-  const activePayin = payinRaw.map((row, index) => ({ row, rowNumber: index + 2 })).filter(({ row }) => hasPayinInput(row));
-  const activePayout = payoutRaw.map((row, index) => ({ row, rowNumber: index + 2 })).filter(({ row }) => hasPayoutInput(row));
-  const skippedRows = payinRaw.length + payoutRaw.length - activePayin.length - activePayout.length;
-  if (!activePayin.length && !activePayout.length) return { ...emptyPreview("No Pay-In or Pay-Out transaction values were entered in the workbook."), skippedRows };
+  const props = (workbook.Custprops ?? {}) as Record<string, unknown>;
+  if (text(props.INSUREITTemplate) !== TEMPLATE_VERSION) {
+    return emptyPreview("This is not the current INSUREIT Business MIS reconciliation template. Download a fresh Export from the Accounts Dashboard.");
+  }
 
-  const policyIds = [...new Set([...activePayin.map(({ row }) => text(row["System Policy ID"])), ...activePayout.map(({ row }) => text(row["System Policy ID"]))].filter(validUuid))];
-  const payoutIds = [...new Set(activePayout.map(({ row }) => text(row["System Payout ID"])).filter(validUuid))];
+  const sheet = workbook.Sheets["Business MIS"];
+  const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: true });
+  if (grid.length < 2) return emptyPreview("The Business MIS workbook is empty or damaged.");
+
+  const expectedHeaders = [...BUSINESS_MIS_HEADERS, ...BUSINESS_MIS_HIDDEN_HEADERS];
+  const uploadedHeaders = Array.from({ length: expectedHeaders.length }, (_, index) => text(grid[1]?.[index]));
+  if (uploadedHeaders.some((header, index) => header !== expectedHeaders[index])) {
+    return emptyPreview("Business MIS columns were changed. Do not add, remove, rename or reorder any column; download a fresh Export and enter only the allowed transaction fields.");
+  }
+  if ((grid[1]?.slice(expectedHeaders.length) ?? []).some((value) => text(value) !== "")) {
+    return emptyPreview("Extra columns were detected. Do not add columns to the Business MIS workbook.");
+  }
+
+  const declaredRowCount = integer(props.INSUREITRowCount);
+  const usedRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
+  if (usedRange.e.c !== PAYOUT_ID_INDEX || usedRange.e.r !== declaredRowCount + 1) {
+    return emptyPreview("Business MIS rows or columns were inserted, removed or shifted. Upload the workbook exactly as exported.");
+  }
+  const dataRows = grid.slice(2).filter((row) => text(row?.[POLICY_ID_INDEX]) !== "" || row.slice(0, BUSINESS_MIS_HEADERS.length).some((value) => text(value) !== ""));
+  if (declaredRowCount < 0 || dataRows.length !== declaredRowCount) {
+    return emptyPreview("Business MIS rows were added or removed. Upload the workbook exactly as exported and only fill the allowed blank transaction cells.");
+  }
+
+  const structure = uploadedStructureHash(dataRows);
+  if (!text(props.INSUREITStructureHash) || structure !== text(props.INSUREITStructureHash)) {
+    return emptyPreview("Business MIS row order or hidden system IDs were changed. Download a fresh Export and do not add, remove, duplicate or reorder rows.");
+  }
+
+  const uploadedSystem = uploadedSystemHash(dataRows);
+  if (!text(props.INSUREITSystemHash) || uploadedSystem !== text(props.INSUREITSystemHash)) {
+    return emptyPreview("System-controlled Business MIS values were edited. Only Bill Number, Bill Amount, Bill Date, Difference, Paid Amount, Paid Date and UTR Details may be filled.");
+  }
+
+  const policyIds = dataRows.map((row) => text(row[POLICY_ID_INDEX]));
+  if (policyIds.some((id) => !validUuid(id)) || new Set(policyIds).size !== policyIds.length) {
+    return emptyPreview("Business MIS hidden policy IDs are invalid or duplicated. Download a fresh Export.");
+  }
+
+  const liveRecords = await loadBusinessMisRecordsByPolicyIds(profile, policyIds);
+  const liveByPolicy = new Map(liveRecords.map((record) => [record.policyId, record]));
+  if (liveRecords.length !== policyIds.length) {
+    return emptyPreview("One or more Business MIS rows are no longer available in your Accounts scope. Download a fresh Export.");
+  }
+
   const db = createSupabaseAdminClient();
-  const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
-  if (customerIds !== null && !customerIds.length) return emptyPreview("No uploaded rows are inside your Accounts access scope.");
-
-  const policyBatches = chunk(policyIds, 120);
-  const payoutBatches = chunk(payoutIds, 120);
-  const [policyResults, payinResults, payoutResults] = await Promise.all([
-    Promise.all(policyBatches.map((ids) => {
-      let query = db.from("policies").select("id,policy_no,customer_id,insurance_company_id,intermediary_type,intermediary_code,insurance_companies(name)").in("id", ids);
-      if (customerIds !== null) query = query.in("customer_id", customerIds);
-      return query;
-    })),
-    Promise.all(policyBatches.map((ids) => db.from("policy_payin_details").select("policy_id,total_projected_payin,tds_amount,payin_after_tds").in("policy_id", ids))),
-    Promise.all(payoutBatches.map((ids) => db.from("policy_intermediary_payouts").select("id,policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,retention_amount,commercial_status,status").in("id", ids))),
+  const [policyResults, payoutResults] = await Promise.all([
+    Promise.all(chunk(policyIds, 120).map((ids) => db.from("policies").select("id,insurance_company_id").in("id", ids))),
+    Promise.all(chunk(dataRows.map((row) => text(row[PAYOUT_ID_INDEX])).filter(validUuid), 120).map((ids) => db.from("policy_intermediary_payouts").select("id,commercial_status,status").in("id", ids))),
   ]);
-  const firstDataError = [...policyResults, ...payinResults, ...payoutResults].find((result) => result.error)?.error;
-  if (firstDataError) throw new Error(firstDataError.message || "Unable to validate reconciliation workbook.");
-  const policies = policyResults.flatMap((result) => (result.data ?? []) as PolicyRow[]);
-  const payins = payinResults.flatMap((result) => (result.data ?? []) as PayinDetailRow[]);
-  const payouts = payoutResults.flatMap((result) => (result.data ?? []) as PayoutDetailRow[]);
+  const firstLiveError = [...policyResults, ...payoutResults].find((result) => result.error)?.error;
+  if (firstLiveError) throw new Error(firstLiveError.message || "Unable to validate live Accounts data.");
+  const policyRefs = policyResults.flatMap((result) => (result.data ?? []) as PolicyRef[]);
+  const payoutRefs = payoutResults.flatMap((result) => (result.data ?? []) as PayoutRef[]);
+  const insurerByPolicy = new Map(policyRefs.map((row) => [row.id, row.insurance_company_id]));
+  const payoutRefById = new Map(payoutRefs.map((row) => [row.id, row]));
 
-  const policyMap = new Map(policies.map((policy) => [policy.id, policy]));
-  const payinMap = new Map(payins.map((row) => [row.policy_id, row]));
-  const payoutMap = new Map(payouts.map((row) => [row.id, row]));
+  const rowChecks: Array<{
+    row: unknown[];
+    rowNumber: number;
+    live: BusinessMisRecord;
+    errors: string[];
+    warnings: string[];
+    hasNewPayin: boolean;
+    hasNewPayout: boolean;
+  }> = [];
 
-  const payinRefs = [...new Set(activePayin.map(({ row }) => text(row["UTR / Reference"])).filter(Boolean))];
-  const payoutRefs = [...new Set(activePayout.map(({ row }) => text(row["UTR / Reference"])).filter(Boolean))];
-  const [receiptRefResults, payoutRefResults] = await Promise.all([
-    Promise.all(chunk(payinRefs, 120).map((refs) => db.from("accounts_receipts").select("insurer_id,bank_reference").in("bank_reference", refs))),
-    Promise.all(chunk(payoutRefs, 120).map((refs) => db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", refs))),
+  for (let index = 0; index < dataRows.length; index++) {
+    const row = dataRows[index];
+    const rowNumber = index + 3;
+    const policyId = text(row[POLICY_ID_INDEX]);
+    const payoutId = text(row[PAYOUT_ID_INDEX]);
+    const live = liveByPolicy.get(policyId)!;
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (payoutId !== live.payoutId) errors.push("The hidden payout reference no longer matches live INSUREIT data.");
+
+    for (let columnIndex = 0; columnIndex < BUSINESS_MIS_HEADERS.length; columnIndex++) {
+      if (BUSINESS_MIS_EDITABLE_COLUMNS.has(columnIndex)) continue;
+      if (canonicalCell(row[columnIndex], columnIndex) !== canonicalCell(live.row[columnIndex], columnIndex)) {
+        errors.push(`${BUSINESS_MIS_HEADERS[columnIndex]} changed since this workbook was downloaded. Download a fresh Export before posting.`);
+        break;
+      }
+    }
+
+    const livePayinValues = [live.row[BILL_NUMBER_INDEX], live.row[BILL_AMOUNT_INDEX], live.row[BILL_DATE_INDEX], live.row[DIFFERENCE_INDEX]];
+    const uploadedPayinValues = [row[BILL_NUMBER_INDEX], row[BILL_AMOUNT_INDEX], row[BILL_DATE_INDEX], row[DIFFERENCE_INDEX]];
+    const liveHasPayin = livePayinValues.slice(0, 3).some(nonBlank);
+    const uploadedHasPayin = uploadedPayinValues.some(nonBlank);
+    let hasNewPayin = false;
+
+    if (liveHasPayin) {
+      if (uploadedPayinValues.some((value, i) => canonicalEditable(value, [BILL_NUMBER_INDEX, BILL_AMOUNT_INDEX, BILL_DATE_INDEX, DIFFERENCE_INDEX][i]) !== canonicalEditable(livePayinValues[i], [BILL_NUMBER_INDEX, BILL_AMOUNT_INDEX, BILL_DATE_INDEX, DIFFERENCE_INDEX][i]))) {
+        errors.push("Existing posted Pay-In values cannot be edited through the upload workbook.");
+      }
+    } else if (uploadedHasPayin) {
+      hasNewPayin = true;
+      const billNumber = text(row[BILL_NUMBER_INDEX]);
+      const billAmount = optionalMoney(row[BILL_AMOUNT_INDEX]);
+      const billDate = normalizedDate(row[BILL_DATE_INDEX]);
+      const uploadedDifference = optionalMoney(row[DIFFERENCE_INDEX]);
+      const totalPayin = money(live.row[19]);
+      const calculatedDifference = money(totalPayin - (billAmount ?? 0));
+
+      if (!billNumber || billAmount === null || !billDate) errors.push("Bill Number, Bill Amount and Bill Date are required together for Pay-In.");
+      if (billAmount !== null && billAmount <= 0) errors.push("Bill Amount must be greater than zero.");
+      if (uploadedDifference !== null && billAmount !== null && Math.abs(uploadedDifference - calculatedDifference) > 0.01) {
+        warnings.push(`Uploaded Difference ${formatAmount(uploadedDifference)} does not match INSUREIT Difference ${formatAmount(calculatedDifference)}. The uploaded Difference will not be updated; INSUREIT will always use the internally calculated value.`);
+      }
+    }
+
+    const livePayoutValues = [live.row[PAID_AMOUNT_INDEX], live.row[PAID_DATE_INDEX], live.row[UTR_INDEX]];
+    const uploadedPayoutValues = [row[PAID_AMOUNT_INDEX], row[PAID_DATE_INDEX], row[UTR_INDEX]];
+    const liveHasPayout = livePayoutValues.some(nonBlank);
+    const uploadedHasPayout = uploadedPayoutValues.some(nonBlank);
+    let hasNewPayout = false;
+
+    if (liveHasPayout) {
+      if (uploadedPayoutValues.some((value, i) => canonicalEditable(value, [PAID_AMOUNT_INDEX, PAID_DATE_INDEX, UTR_INDEX][i]) !== canonicalEditable(livePayoutValues[i], [PAID_AMOUNT_INDEX, PAID_DATE_INDEX, UTR_INDEX][i]))) {
+        errors.push("Existing posted Pay-Out values cannot be edited through the upload workbook.");
+      }
+    } else if (uploadedHasPayout) {
+      hasNewPayout = true;
+      const paidAmount = optionalMoney(row[PAID_AMOUNT_INDEX]);
+      const paidDate = normalizedDate(row[PAID_DATE_INDEX]);
+      const reference = text(row[UTR_INDEX]);
+      if (!validUuid(payoutId) || !payoutRefById.has(payoutId)) errors.push("This row has no valid live payout reference.");
+      const payoutRef = payoutRefById.get(payoutId);
+      if (payoutRef && !["entered", "reviewed"].includes(text(payoutRef.commercial_status).toLowerCase())) errors.push("Commercial payout terms are not finalized. Complete Commercial Review first.");
+      if (money(live.row[27]) <= 0) errors.push("Gross Payout must be greater than zero before Accounts can record a payment.");
+      if (paidAmount === null || paidAmount <= 0) errors.push("Paid Amount must be greater than zero.");
+      if (!paidDate || !reference) errors.push("Paid Date and UTR Details are required together for Pay-Out.");
+    }
+
+    rowChecks.push({ row, rowNumber, live, errors, warnings, hasNewPayin, hasNewPayout });
+  }
+
+  const payinRefs = rowChecks.filter((item) => item.hasNewPayin).map((item) => text(item.row[BILL_NUMBER_INDEX])).filter(Boolean);
+  const payoutRefsInput = rowChecks.filter((item) => item.hasNewPayout).map((item) => text(item.row[UTR_INDEX])).filter(Boolean);
+  const [receiptRefResults, payoutPaymentResults] = await Promise.all([
+    Promise.all(chunk([...new Set(payinRefs)], 120).map((refs) => db.from("accounts_receipts").select("insurer_id,bank_reference").in("bank_reference", refs))),
+    Promise.all(chunk([...new Set(payoutRefsInput)], 120).map((refs) => db.from("partner_payments").select("intermediary_code,payment_reference").in("payment_reference", refs))),
   ]);
-  const firstRefError = [...receiptRefResults, ...payoutRefResults].find((result) => result.error)?.error;
-  if (firstRefError) throw new Error(firstRefError.message || "Unable to check existing transaction references.");
+  const firstRefError = [...receiptRefResults, ...payoutPaymentResults].find((result) => result.error)?.error;
+  if (firstRefError) throw new Error(firstRefError.message || "Unable to check transaction references.");
   const existingReceipts = receiptRefResults.flatMap((result) => (result.data ?? []) as ReceiptRefRow[]);
-  const existingPartnerPayments = payoutRefResults.flatMap((result) => (result.data ?? []) as PartnerPaymentRefRow[]);
+  const existingPartnerPayments = payoutPaymentResults.flatMap((result) => (result.data ?? []) as PartnerPaymentRefRow[]);
   const existingReceiptKeys = new Set(existingReceipts.map((row) => `${row.insurer_id}|${normalizeRef(row.bank_reference)}`));
   const existingPayoutKeys = new Set(existingPartnerPayments.map((row) => `${normalizeRef(row.intermediary_code)}|${normalizeRef(row.payment_reference)}`));
+
   const payinUploadGroups = new Map<string, string>();
   const payoutUploadGroups = new Map<string, string>();
+  const payinRows: PayinPreviewRow[] = [];
+  const payoutRows: PayoutPreviewRow[] = [];
 
-  const payinRows: PayinPreviewRow[] = activePayin.map(({ row, rowNumber }) => {
-    const policyId = text(row["System Policy ID"]); const policy = policyMap.get(policyId); const livePayin = payinMap.get(policyId);
-    const relation = policy?.insurance_companies;
-    const insurer = Array.isArray(relation) ? relation[0]?.name ?? "" : relation?.name ?? text(row["Insurance Company"]);
-    const projectedPayin = money(livePayin?.total_projected_payin); const projectedTds = money(livePayin?.tds_amount); const projectedNetPayin = money(livePayin?.payin_after_tds);
-    const billNumber = text(row["Bill Number"]); const billAmount = optionalMoney(row["Bill Amount"]); const billDate = normalizedDate(row["Bill Date"]); const actualTds = optionalMoney(row["Actual TDS"]); const amountReceived = optionalMoney(row["Amount Received"]); const receiptDate = normalizedDate(row["Receipt Date"]); const reference = text(row["UTR / Reference"]); const difference = billAmount === null ? null : money(projectedPayin - billAmount);
-    const issues: Array<{ status: PreviewStatus; message: string }> = [];
-    if (!validUuid(policyId) || !policy) issues.push(error("System Policy ID is invalid, inaccessible, or no longer matches a policy."));
-    if (policy && !livePayin) issues.push(error("Projected Pay-In is missing for this policy. Complete Policy Onboarding / Commercial Review first."));
-    if (!billNumber || billAmount === null || !billDate) issues.push(error("Bill Number, Bill Amount and Bill Date are required for every Pay-In transaction row."));
-    if (billAmount !== null && billAmount <= 0) issues.push(error("Bill Amount must be greater than zero."));
-    if (actualTds !== null && actualTds < 0) issues.push(error("Actual TDS cannot be negative."));
-    if (amountReceived !== null && amountReceived <= 0) issues.push(error("Amount Received must be greater than zero when entered."));
-    if (amountReceived !== null && (!receiptDate || !reference)) issues.push(error("Receipt Date and UTR / Reference are required when Amount Received is entered."));
-    if (amountReceived === null && (receiptDate || reference)) issues.push(error("Amount Received is required when receipt details are entered."));
-    if (amountReceived !== null && actualTds !== null && billAmount !== null && money(amountReceived + actualTds) > money(billAmount) + 0.01) issues.push(error("Amount Received + Actual TDS cannot exceed the policy Bill Amount."));
-    if (amountReceived !== null && reference && policy?.insurance_company_id) {
-      const key = `${policy.insurance_company_id}|${normalizeRef(reference)}`;
-      if (existingReceiptKeys.has(key)) issues.push(error("This insurer UTR / Reference already exists in INSUREIT."));
-      const priorDate = payinUploadGroups.get(key);
-      if (priorDate && priorDate !== receiptDate) issues.push(error("The same insurer UTR / Reference is used with different Receipt Dates in this workbook."));
-      else if (!priorDate) payinUploadGroups.set(key, receiptDate);
-    }
-    if (policy && Math.abs(number(row["Projected Pay-In"]) - projectedPayin) > 0.01) issues.push(warning("Projected Pay-In was edited in Excel; the live INSUREIT value will be used."));
-    if (policy && Math.abs(number(row["Projected TDS"]) - projectedTds) > 0.01) issues.push(warning("Projected TDS was edited in Excel; the live INSUREIT value will be used."));
-    if (policy && Math.abs(number(row["Projected Net Pay-In"]) - projectedNetPayin) > 0.01) issues.push(warning("Projected Net Pay-In was edited in Excel; the live INSUREIT value will be used."));
-    return { rowNumber, policyId, policyNumber: policy?.policy_no ?? text(row["Policy Number"]), insurer, projectedPayin, projectedTds, projectedNetPayin, billNumber, billAmount, billDate, actualTds, amountReceived, receiptDate, reference, difference, ...summarize(issues) };
-  });
+  for (const item of rowChecks) {
+    const { row, rowNumber, live } = item;
+    const policyId = live.policyId;
+    const policyNumber = text(live.row[12]);
+    const intermediaryType = text(live.row[3]);
+    const intermediaryCode = text(live.row[5]);
 
-  const payoutRows: PayoutPreviewRow[] = activePayout.map(({ row, rowNumber }) => {
-    const payoutId = text(row["System Payout ID"]); const policyId = text(row["System Policy ID"]); const policy = policyMap.get(policyId); const livePayout = payoutMap.get(payoutId);
-    const intermediaryType = text(livePayout?.intermediary_type ?? policy?.intermediary_type ?? row["Intermediary Type"]); const intermediaryCode = text(livePayout?.intermediary_code ?? policy?.intermediary_code ?? row["Intermediary Code"]);
-    const payoutOdPercent = money(livePayout?.od_payout_percent); const payoutTpPercent = money(livePayout?.tp_payout_percent); const projectedGrossPayout = money(livePayout?.gross_payout); const projectedRetention = money(livePayout?.retention_amount); const paidAmount = optionalMoney(row["Paid Amount"]); const paidDate = normalizedDate(row["Paid Date"]); const reference = text(row["UTR / Reference"]);
-    const issues: Array<{ status: PreviewStatus; message: string }> = [];
-    if (!validUuid(policyId) || !policy) issues.push(error("System Policy ID is invalid or outside your Accounts access scope."));
-    if (!validUuid(payoutId) || !livePayout || livePayout.policy_id !== policyId) issues.push(error("System Payout ID is invalid or no longer belongs to this policy."));
-    if (livePayout && !["entered", "reviewed"].includes(text(livePayout.commercial_status).toLowerCase())) issues.push(error("Commercial payout terms are not finalized. Complete Commercial Review first."));
-    if (projectedGrossPayout <= 0) issues.push(error("Projected Gross Payout must be greater than zero before Accounts can record a payment."));
-    if (!intermediaryCode) issues.push(error("Intermediary Code is missing for this payout."));
-    if (paidAmount === null || paidAmount <= 0) issues.push(error("Paid Amount must be greater than zero for a Pay-Out transaction row."));
-    if (!paidDate || !reference) issues.push(error("Paid Date and UTR / Reference are required for every Pay-Out transaction row."));
-    if (reference && intermediaryCode) {
-      const key = `${normalizeRef(intermediaryCode)}|${normalizeRef(reference)}`;
-      if (existingPayoutKeys.has(key)) issues.push(error("This intermediary UTR / Reference already exists in INSUREIT."));
-      const priorDate = payoutUploadGroups.get(key);
-      if (priorDate && priorDate !== paidDate) issues.push(error("The same intermediary UTR / Reference is used with different Paid Dates in this workbook."));
-      else if (!priorDate) payoutUploadGroups.set(key, paidDate);
+    if (item.hasNewPayin) {
+      const insurerId = insurerByPolicy.get(policyId);
+      const billNumber = text(row[BILL_NUMBER_INDEX]);
+      const billAmount = optionalMoney(row[BILL_AMOUNT_INDEX]);
+      const billDate = normalizedDate(row[BILL_DATE_INDEX]);
+      const uploadedDifference = optionalMoney(row[DIFFERENCE_INDEX]);
+      const projectedPayin = money(live.row[19]);
+      const projectedTds = money(live.row[TDS_INDEX]);
+      const calculatedDifference = billAmount === null ? null : money(projectedPayin - billAmount);
+      const issues = [...item.errors.map(error), ...item.warnings.map(warning)];
+
+      if (!insurerId) issues.push(error("Insurance Company is missing for this policy."));
+      if (insurerId && billNumber) {
+        const key = `${insurerId}|${normalizeRef(billNumber)}`;
+        if (existingReceiptKeys.has(key)) issues.push(error("This insurer Bill Number / reference already exists in INSUREIT."));
+        const priorDate = payinUploadGroups.get(key);
+        if (priorDate && priorDate !== billDate) issues.push(error("The same insurer Bill Number is used with different Bill Dates in this workbook."));
+        else if (!priorDate) payinUploadGroups.set(key, billDate);
+      }
+
+      payinRows.push({
+        rowNumber,
+        policyId,
+        policyNumber,
+        insurer: text(live.row[13]),
+        projectedPayin,
+        projectedTds,
+        projectedNetPayin: money(projectedPayin - projectedTds),
+        billNumber,
+        billAmount,
+        billDate,
+        actualTds: 0,
+        amountReceived: billAmount,
+        receiptDate: billDate,
+        reference: billNumber,
+        difference: calculatedDifference,
+        uploadedDifference,
+        ...summarize(issues),
+      });
     }
-    if (livePayout && Math.abs(number(row["Projected Gross Payout"]) - projectedGrossPayout) > 0.01) issues.push(warning("Projected Gross Payout was edited in Excel; the live INSUREIT value will be used."));
-    if (livePayout && Math.abs(number(row["Projected Retention"]) - projectedRetention) > 0.01) issues.push(warning("Projected Retention was edited in Excel; the live INSUREIT value will be used."));
-    if (livePayout && Math.abs(number(row["Payout OD %"]) - payoutOdPercent) > 0.001) issues.push(warning("Payout OD % was edited in Excel; the live INSUREIT value will be used."));
-    if (livePayout && Math.abs(number(row["Payout TP %"]) - payoutTpPercent) > 0.001) issues.push(warning("Payout TP % was edited in Excel; the live INSUREIT value will be used."));
-    return { rowNumber, payoutId, policyId, policyNumber: policy?.policy_no ?? text(row["Policy Number"]), intermediaryType, intermediaryCode, payoutOdPercent, payoutTpPercent, projectedGrossPayout, projectedRetention, paidAmount, paidDate, reference, ...summarize(issues) };
-  });
+
+    if (item.hasNewPayout) {
+      const payoutId = live.payoutId;
+      const paidAmount = optionalMoney(row[PAID_AMOUNT_INDEX]);
+      const paidDate = normalizedDate(row[PAID_DATE_INDEX]);
+      const reference = text(row[UTR_INDEX]);
+      const issues = [...item.errors.map(error), ...item.warnings.map(warning)];
+
+      if (reference && intermediaryCode) {
+        const key = `${normalizeRef(intermediaryCode)}|${normalizeRef(reference)}`;
+        if (existingPayoutKeys.has(key)) issues.push(error("This intermediary UTR Details reference already exists in INSUREIT."));
+        const priorDate = payoutUploadGroups.get(key);
+        if (priorDate && priorDate !== paidDate) issues.push(error("The same intermediary UTR Details reference is used with different Paid Dates in this workbook."));
+        else if (!priorDate) payoutUploadGroups.set(key, paidDate);
+      }
+
+      payoutRows.push({
+        rowNumber,
+        payoutId,
+        policyId,
+        policyNumber,
+        intermediaryType,
+        intermediaryCode,
+        payoutOdPercent: money(live.row[25]),
+        payoutTpPercent: money(live.row[26]),
+        projectedGrossPayout: money(live.row[27]),
+        projectedRetention: money(live.row[28]),
+        paidAmount,
+        paidDate,
+        reference,
+        ...summarize(issues),
+      });
+    }
+  }
+
+  const rowLevelBlockingErrors = rowChecks.filter((item) => item.errors.length && !item.hasNewPayin && !item.hasNewPayout);
+  if (rowLevelBlockingErrors.length) {
+    const first = rowLevelBlockingErrors[0];
+    return emptyPreview(`Row ${first.rowNumber}: ${first.errors.join(" ")}`);
+  }
 
   const all = [...payinRows, ...payoutRows];
-  return { totalRows: all.length, readyRows: all.filter((row) => row.status === "Ready").length, warningRows: all.filter((row) => row.status === "Warning").length, errorRows: all.filter((row) => row.status === "Error").length, skippedRows, payinRows, payoutRows };
+  if (!all.length) {
+    return {
+      ...emptyPreview("No new Pay-In or Pay-Out values were entered. Fill only the blank Bill Number, Bill Amount, Bill Date, Difference, Paid Amount, Paid Date or UTR Details cells."),
+      skippedRows: dataRows.length,
+    };
+  }
+
+  return {
+    totalRows: all.length,
+    readyRows: all.filter((row) => row.status === "Ready").length,
+    warningRows: all.filter((row) => row.status === "Warning").length,
+    errorRows: all.filter((row) => row.status === "Error").length,
+    skippedRows: dataRows.length - new Set([...payinRows.map((row) => row.rowNumber), ...payoutRows.map((row) => row.rowNumber)]).size,
+    payinRows,
+    payoutRows,
+  };
 }
 
-function chunk<T>(values: T[], size: number) { const chunks: T[][] = []; for (let index = 0; index < values.length; index += size) chunks.push(values.slice(index, index + size)); return chunks; }
-function hasPayinInput(row: Record<string, unknown>) { return ["Bill Number", "Bill Amount", "Bill Date", "Actual TDS", "Amount Received", "Receipt Date", "UTR / Reference"].some((key) => text(row[key]) !== ""); }
-function hasPayoutInput(row: Record<string, unknown>) { return ["Paid Amount", "Paid Date", "UTR / Reference"].some((key) => text(row[key]) !== ""); }
-function validateHeaders(rows: Array<Record<string, unknown>>, required: readonly string[], sheet: string) { if (!rows.length) return null; const present = new Set(Object.keys(rows[0] ?? {}).map((value) => value.trim())); const missing = required.filter((header) => !present.has(header)); return missing.length ? `${sheet} is missing required column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.` : null; }
-function summarize(issues: Array<{ status: PreviewStatus; message: string }>): { status: PreviewStatus; message: string } { if (!issues.length) return { status: "Ready", message: "Ready for Confirm Import once the posting stage is enabled." }; const status: PreviewStatus = issues.some((item) => item.status === "Error") ? "Error" : "Warning"; return { status, message: issues.map((item) => item.message).join(" ") }; }
+function uploadedStructureHash(rows: unknown[][]) {
+  return sha(rows.map((row) => `${text(row[POLICY_ID_INDEX])}|${text(row[PAYOUT_ID_INDEX])}`).join("\n"));
+}
+
+function uploadedSystemHash(rows: unknown[][]) {
+  return sha(rows.map((row) => {
+    const controlled = Array.from({ length: BUSINESS_MIS_HEADERS.length }, (_, index) => BUSINESS_MIS_EDITABLE_COLUMNS.has(index) ? "" : canonicalCell(row[index], index));
+    return [text(row[POLICY_ID_INDEX]), text(row[PAYOUT_ID_INDEX]), ...controlled].join("|");
+  }).join("\n"));
+}
+
+function canonicalEditable(value: unknown, index: number) {
+  if (!nonBlank(value)) return "";
+  if (BUSINESS_MIS_DATE_COLUMNS.has(index)) return normalizedDate(value);
+  if (BUSINESS_MIS_AMOUNT_COLUMNS.has(index) || BUSINESS_MIS_PERCENT_COLUMNS.has(index)) return money(value).toFixed(2);
+  return text(value);
+}
+
+function canonicalCell(value: unknown, index: number) {
+  if (!nonBlank(value)) return "";
+  if (BUSINESS_MIS_DATE_COLUMNS.has(index)) return normalizedDate(value);
+  if (BUSINESS_MIS_AMOUNT_COLUMNS.has(index) || BUSINESS_MIS_PERCENT_COLUMNS.has(index)) return money(value).toFixed(2);
+  return text(value);
+}
+
+function normalizedDate(value: unknown) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(value);
+  }
+  const raw = text(value);
+  if (!raw) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const dmy = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? "" : new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(parsed);
+}
+
+function summarize(issues: Array<{ status: PreviewStatus; message: string }>): { status: PreviewStatus; message: string } {
+  if (!issues.length) return { status: "Ready", message: "Ready for Confirm Import." };
+  const status: PreviewStatus = issues.some((item) => item.status === "Error") ? "Error" : "Warning";
+  return { status, message: issues.map((item) => item.message).join(" ") };
+}
+
 function error(message: string) { return { status: "Error" as const, message }; }
 function warning(message: string) { return { status: "Warning" as const, message }; }
 function emptyPreview(message: string): ReconciliationUploadPreview { return { totalRows: 0, readyRows: 0, warningRows: 0, errorRows: 0, skippedRows: 0, payinRows: [], payoutRows: [], message }; }
 function text(value: unknown) { return String(value ?? "").trim(); }
+function nonBlank(value: unknown) { return text(value) !== ""; }
 function normalizeRef(value: unknown) { return text(value).replace(/\s+/g, "").toUpperCase(); }
-function number(value: unknown) { const parsed = Number(String(value ?? "").replace(/,/g, "").trim() || 0); return Number.isFinite(parsed) ? parsed : 0; }
+function number(value: unknown) { const parsed = Number(String(value ?? "").replace(/,/g, "").replace(/₹/g, "").trim() || 0); return Number.isFinite(parsed) ? parsed : 0; }
 function money(value: unknown) { return Math.round(number(value) * 100) / 100; }
-function optionalMoney(value: unknown) { const raw = text(value); return raw === "" ? null : money(raw); }
+function optionalMoney(value: unknown) { return nonBlank(value) ? money(value) : null; }
 function validUuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
-function normalizedDate(value: unknown) { const raw = text(value); if (!raw) return ""; if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw; const parsed = new Date(raw); if (Number.isNaN(parsed.getTime())) return ""; return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(parsed); }
+function integer(value: unknown) { const parsed = Number(value); return Number.isFinite(parsed) ? Math.trunc(parsed) : -1; }
+function chunk<T>(values: T[], size: number) { const result: T[][] = []; for (let index = 0; index < values.length; index += size) result.push(values.slice(index, index + size)); return result; }
+function sha(value: string) { return createHash("sha256").update(value).digest("hex"); }
+function formatAmount(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value); }

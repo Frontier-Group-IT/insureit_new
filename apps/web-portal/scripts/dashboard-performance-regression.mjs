@@ -5,7 +5,7 @@ const dashboardPage = await readFile(new URL("../app/dashboard/page.tsx", import
 const dashboardData = await readFile(new URL("../lib/operations-dashboard.ts", import.meta.url), "utf8");
 const accountsDashboardData = await readFile(new URL("../lib/accounts-dashboard.ts", import.meta.url), "utf8");
 const accountsPage = await readFile(new URL("../app/accounts/page.tsx", import.meta.url), "utf8");
-const accountsWorkbook = await readFile(new URL("../app/accounts/reconciliation-template/route.ts", import.meta.url), "utf8");
+const accountsWorkbook = await readFile(new URL("../app/accounts/business-mis-export/route.ts", import.meta.url), "utf8");
 const accountsUpload = await readFile(new URL("../app/accounts/reconciliation-upload-actions.ts", import.meta.url), "utf8");
 const dashboardMigration = await readFile(new URL("../../../supabase/migrations/20260831174500_optimize_operations_dashboard_single_pass.sql", import.meta.url), "utf8");
 
@@ -23,14 +23,16 @@ assert.match(accountsDashboardData, /function payoutValue\(row: PayoutRow\) \{\s
 assert.doesNotMatch(accountsPage, /href="\/reconciliation"/, "New Accounts workflow must not redirect to legacy reconciliation.");
 assert.doesNotMatch(accountsPage, /href="\/accounts\/billing"/, "New Accounts workflow must not redirect to legacy billing.");
 assert.doesNotMatch(accountsPage, /href="\/accounts\/receivables"/, "New Accounts workflow must not redirect to legacy receivables.");
-assert.match(accountsWorkbook, /book_append_sheet\(workbook, payinSheet, "Pay-In"\)/, "Accounts workbook must contain a Pay-In sheet.");
-assert.match(accountsWorkbook, /book_append_sheet\(workbook, payoutSheet, "Pay-Out"\)/, "Accounts workbook must contain a Pay-Out sheet.");
-assert.match(accountsWorkbook, /"Projected Gross Payout"/, "Pay-Out sheet must expose system projected gross payout.");
-assert.match(accountsUpload, /workbook\.SheetNames\.includes\("Pay-In"\)/, "Upload validation must require the Pay-In sheet.");
-assert.match(accountsUpload, /workbook\.SheetNames\.includes\("Pay-Out"\)/, "Upload validation must require the Pay-Out sheet.");
-assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must support grouping one insurer UTR across multiple policy rows.");
-assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must support grouping one intermediary UTR across multiple payable rows.");
-assert.doesNotMatch(accountsUpload, /\.insert\(|\.update\(|\.delete\(|\.rpc\(/, "Accounts workbook preview must remain read-only until the explicit Confirm Import posting stage is implemented.");
+assert.match(accountsWorkbook, /book_append_sheet\(workbook, worksheet, "Business MIS"\)/, "Accounts reconciliation workbook must reuse the single Business MIS sheet.");
+assert.match(accountsWorkbook, /BUSINESS_MIS_HIDDEN_HEADERS/, "Business MIS export must include hidden system IDs for reconciliation matching.");
+assert.match(accountsWorkbook, /INSUREITTemplate/, "Business MIS export must carry template metadata for structural validation.");
+assert.match(accountsUpload, /workbook\.SheetNames\.length !== 1 \|\| workbook\.SheetNames\[0\] !== "Business MIS"/, "Upload validation must require exactly the single Business MIS sheet.");
+assert.match(accountsUpload, /Business MIS rows were added or removed/, "Upload validation must reject added or removed Business MIS rows.");
+assert.match(accountsUpload, /System-controlled Business MIS values were edited/, "Upload validation must reject edits to system-controlled MIS values.");
+assert.match(accountsUpload, /uploaded Difference will not be updated/, "Difference mismatches must warn that INSUREIT keeps the internally calculated value.");
+assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
+assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
+assert.doesNotMatch(accountsUpload, /\.from\([^\n]+\)\.(?:insert|update|delete)\(|\.rpc\(/, "Accounts workbook preview must remain read-only; cryptographic hash updates are allowed but database writes are not.");
 
 for (const aggregate of ["customer_stats", "vehicle_stats", "policy_stats", "claim_stats", "onboarding_stats", "task_stats", "document_stats", "activity_stats"]) {
   assert.match(dashboardMigration, new RegExp(`\\b${aggregate}\\s+as\\s*\\(`, "i"), `Operations dashboard migration should keep ${aggregate} as a consolidated aggregate.`);

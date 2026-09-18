@@ -39,6 +39,8 @@ export const BUSINESS_MIS_HEADERS = [
   "UTR Details",
 ] as const;
 
+export const BUSINESS_MIS_HIDDEN_HEADERS = ["System Policy ID", "System Payout ID"] as const;
+export const BUSINESS_MIS_EDITABLE_COLUMNS = new Set([20, 21, 22, 23, 29, 30, 31]);
 export const BUSINESS_MIS_AMOUNT_COLUMNS = new Set([8, 9, 10, 11, 16, 18, 19, 21, 23, 24, 27, 28, 29]);
 export const BUSINESS_MIS_PERCENT_COLUMNS = new Set([15, 17, 25, 26]);
 export const BUSINESS_MIS_DATE_COLUMNS = new Set([1, 14, 22, 30]);
@@ -46,6 +48,7 @@ export const BUSINESS_MIS_TOTAL_COLUMNS = [8, 9, 10, 11, 16, 18, 19, 21, 23, 24,
 
 export type BusinessMisCell = string | number | Date;
 export type BusinessMisRow = BusinessMisCell[];
+export type BusinessMisRecord = { policyId: string; payoutId: string; row: BusinessMisRow };
 
 type ViewerProfile = { id: string; role: string | null };
 
@@ -79,15 +82,18 @@ type PaymentAllocation = {
   partner_payments: { payment_date?: string | null; payment_reference?: string | null } | Array<{ payment_date?: string | null; payment_reference?: string | null }> | null;
 };
 
+const POLICY_SELECT = "id,customer_id,insurance_company_id,policy_no,issuance_date,start_date,end_date,created_at,intermediary_type,intermediary_code,lead_source,rm_name,customers(contact_name,company_name),vehicles(vehicle_no),insurance_companies(name)";
+
 export async function loadBusinessMisRows(profile: ViewerProfile, filters: AccountsDashboardFilters): Promise<BusinessMisRow[]> {
+  return (await loadBusinessMisRecords(profile, filters)).map((record) => record.row);
+}
+
+export async function loadBusinessMisRecords(profile: ViewerProfile, filters: AccountsDashboardFilters): Promise<BusinessMisRecord[]> {
   const db = createSupabaseAdminClient();
   const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
   if (customerIds !== null && customerIds.length === 0) return [];
 
-  let policyQuery = db
-    .from("policies")
-    .select("id,customer_id,insurance_company_id,policy_no,issuance_date,start_date,end_date,created_at,intermediary_type,intermediary_code,lead_source,rm_name,customers(contact_name,company_name),vehicles(vehicle_no),insurance_companies(name)")
-    .limit(15000);
+  let policyQuery = db.from("policies").select(POLICY_SELECT).limit(15000);
   if (customerIds !== null) policyQuery = policyQuery.in("customer_id", customerIds);
   if (filters.insurerId) policyQuery = policyQuery.eq("insurance_company_id", filters.insurerId);
 
@@ -98,10 +104,35 @@ export async function loadBusinessMisRows(profile: ViewerProfile, filters: Accou
     const date = businessDate(policy);
     return date >= filters.fromDate && date <= filters.toDate;
   });
-  const policyIds = policies.map((policy) => policy.id);
-  if (!policyIds.length) return [];
+  return buildBusinessMisRecords(policies);
+}
 
+export async function loadBusinessMisRecordsByPolicyIds(profile: ViewerProfile, policyIds: string[]): Promise<BusinessMisRecord[]> {
+  const uniqueIds = [...new Set(policyIds.filter(Boolean))];
+  if (!uniqueIds.length) return [];
+
+  const db = createSupabaseAdminClient();
+  const customerIds = await getAccessibleCustomerIds(profile.id, profile.role, "view_accounts");
+  if (customerIds !== null && customerIds.length === 0) return [];
+
+  const policyResults = await Promise.all(chunk(uniqueIds, 120).map((ids) => {
+    let query = db.from("policies").select(POLICY_SELECT).in("id", ids);
+    if (customerIds !== null) query = query.in("customer_id", customerIds);
+    return query;
+  }));
+  const firstError = policyResults.find((result) => result.error)?.error;
+  if (firstError) throw new Error(firstError.message || "Unable to load Business MIS data.");
+  const policyMap = new Map(policyResults.flatMap((result) => (result.data ?? []) as Policy[]).map((policy) => [policy.id, policy]));
+  const policies = uniqueIds.map((id) => policyMap.get(id)).filter((policy): policy is Policy => Boolean(policy));
+  return buildBusinessMisRecords(policies);
+}
+
+async function buildBusinessMisRecords(policies: Policy[]): Promise<BusinessMisRecord[]> {
+  if (!policies.length) return [];
+  const db = createSupabaseAdminClient();
+  const policyIds = policies.map((policy) => policy.id);
   const batches = chunk(policyIds, 120);
+
   const [premiumResults, payinResults, payoutResults, invoiceLineResults, payableResults] = await Promise.all([
     Promise.all(batches.map((ids) => db.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount,net_premium").in("policy_id", ids))),
     Promise.all(batches.map((ids) => db.from("policy_payin_details").select("policy_id,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,total_projected_payin,tds_amount").in("policy_id", ids))),
@@ -150,7 +181,7 @@ export async function loadBusinessMisRows(profile: ViewerProfile, filters: Accou
     if (policyId) pushMap(paymentMap, policyId, allocation);
   }
 
-  return policies
+  return [...policies]
     .sort((a, b) => businessDate(a).localeCompare(businessDate(b)) || String(a.policy_no ?? "").localeCompare(String(b.policy_no ?? "")))
     .map((policy) => {
       const premium = premiumMap.get(policy.id);
@@ -169,41 +200,46 @@ export async function loadBusinessMisRows(profile: ViewerProfile, filters: Accou
       const totalPayin = money(payin?.total_projected_payin);
       const paymentRefs = unique(policyPayments.map((allocation) => one(allocation.partner_payments)?.payment_reference).filter(Boolean));
       const paymentDates = unique(policyPayments.map((allocation) => one(allocation.partner_payments)?.payment_date).filter(Boolean)).sort();
+      const payoutId = policyPayouts.length === 1 ? String(policyPayouts[0]?.id ?? "") : "";
 
-      return [
-        monthLabel(issued),
-        excelDate(issued),
-        policy.rm_name ?? "",
-        policy.intermediary_type ?? "",
-        policy.lead_source ?? "",
-        policy.intermediary_code ?? "",
-        vehicle?.vehicle_no ?? "",
-        customer?.contact_name || customer?.company_name || "",
-        money(premium?.od_premium),
-        money(premium?.tp_premium),
-        money(premium?.cpa_amount),
-        money(premium?.net_premium),
-        policy.policy_no ?? "",
-        insurer?.name ?? "",
-        excelDate(policy.end_date),
-        money(payin?.projected_od_percent),
-        money(payin?.projected_od_amount),
-        money(payin?.projected_tp_percent),
-        money(payin?.projected_tp_amount),
-        totalPayin,
-        billNumbers.join(", "),
-        billAmount || "",
-        excelDate(billDates.at(-1) ?? null),
-        billAmount ? money(totalPayin - billAmount) : "",
-        money(payin?.tds_amount),
-        average(policyPayouts.map((row) => row.od_payout_percent)),
-        average(policyPayouts.map((row) => row.tp_payout_percent)),
-        sum(policyPayouts.map((row) => row.gross_payout)),
-        sum(policyPayouts.map((row) => row.retention_amount)),
-        sum(policyPayments.map((allocation) => allocation.allocated_amount)) || "",
-        excelDate(paymentDates.at(-1) ?? null),
-        paymentRefs.join(", "),
-      ];
+      return {
+        policyId: policy.id,
+        payoutId,
+        row: [
+          monthLabel(issued),
+          excelDate(issued),
+          policy.rm_name ?? "",
+          policy.intermediary_type ?? "",
+          policy.lead_source ?? "",
+          policy.intermediary_code ?? "",
+          vehicle?.vehicle_no ?? "",
+          customer?.contact_name || customer?.company_name || "",
+          money(premium?.od_premium),
+          money(premium?.tp_premium),
+          money(premium?.cpa_amount),
+          money(premium?.net_premium),
+          policy.policy_no ?? "",
+          insurer?.name ?? "",
+          excelDate(policy.end_date),
+          money(payin?.projected_od_percent),
+          money(payin?.projected_od_amount),
+          money(payin?.projected_tp_percent),
+          money(payin?.projected_tp_amount),
+          totalPayin,
+          billNumbers.join(", "),
+          billAmount || "",
+          excelDate(billDates.at(-1) ?? null),
+          billAmount ? money(totalPayin - billAmount) : "",
+          money(payin?.tds_amount),
+          average(policyPayouts.map((row) => row.od_payout_percent)),
+          average(policyPayouts.map((row) => row.tp_payout_percent)),
+          sum(policyPayouts.map((row) => row.gross_payout)),
+          sum(policyPayouts.map((row) => row.retention_amount)),
+          sum(policyPayments.map((allocation) => allocation.allocated_amount)) || "",
+          excelDate(paymentDates.at(-1) ?? null),
+          paymentRefs.join(", "),
+        ],
+      };
     });
 }
 
