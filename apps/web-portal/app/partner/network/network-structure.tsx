@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart3, Building2, ChevronDown, FileText, Layers3, MapPin, Network, RefreshCcw, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+import { BarChart3, Building2, ChevronDown, FileText, MapPin, Network, RefreshCcw, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
 import type { PartnerNetworkRow } from "@/lib/partner-web";
 
 type PartnerNetworkHierarchyRow = PartnerNetworkRow & {
@@ -76,13 +76,6 @@ export function PartnerNetworkStructure({
       .filter((section) => section.rows.length > 0);
   }, [branchesByParent, query, rows]);
 
-  const rootMetrics = useMemo(() => ({
-    partnerFamilies: rows.length,
-    groups: totalGroups,
-    children: [...rows, ...branchRows].reduce((sum, row) => sum + row.child_count, 0),
-    policies: rows.reduce((sum, row) => sum + row.metrics.total_policies, 0),
-    customers: rows.reduce((sum, row) => sum + row.metrics.total_customers, 0),
-  }), [branchRows, rows, totalGroups]);
 
   const rootLabel = useMemo(() => {
     const namedGroups = sections.filter((section) => !section.key.startsWith("ungrouped:"));
@@ -109,18 +102,10 @@ export function PartnerNetworkStructure({
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search partner, branch, group or POSP/MISP..."
+              placeholder="Search branch, group or POSP/MISP..."
               className="w-full min-w-0 flex-1 appearance-none !border-0 !bg-transparent !p-0 text-[10.5px] font-medium text-[#213A60] !shadow-none !outline-none placeholder:text-[#8090A5] focus:!border-0 focus:!outline-none focus:!ring-0"
             />
           </label>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 lg:justify-end">
-          <RootMetric label="Partner Families" value={rootMetrics.partnerFamilies} Icon={UsersRound} tone="blue" />
-          <RootMetric label="Groups" value={rootMetrics.groups} Icon={Layers3} tone="green" />
-          <RootMetric label="POSP / MISP" value={rootMetrics.children} Icon={FileText} tone="purple" />
-          <RootMetric label="Policies" value={rootMetrics.policies} Icon={FileText} tone="purple" />
-          <RootMetric label="Customers" value={rootMetrics.customers} Icon={UsersRound} tone="cyan" />
         </div>
       </div>
 
@@ -198,16 +183,6 @@ export function PartnerNetworkStructure({
       </div>
     </section>
   );
-}
-
-function RootMetric({ label, value, Icon, tone }: { label: string; value: number; Icon: React.ComponentType<{ className?: string }>; tone: "blue" | "green" | "purple" | "cyan" }) {
-  const tones = {
-    blue: "bg-[#E8F1FF] text-[#2563EB]",
-    green: "bg-[#E8F8F0] text-[#13A36B]",
-    purple: "bg-[#F2EAFF] text-[#7C3AED]",
-    cyan: "bg-[#E8F8FB] text-[#0EA5B7]",
-  } as const;
-  return <div className="flex items-center gap-2"><span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full ${tones[tone]}`}><Icon className="h-3.5 w-3.5" /></span><div><p className="text-[10.5px] font-extrabold leading-none text-[#172846]">{value}</p><p className="mt-1 text-[7px] font-bold text-[#78879B]">{label}</p></div></div>;
 }
 
 function InlineMetric({ label, value, Icon, tone }: { label: string; value: number; Icon: React.ComponentType<{ className?: string }>; tone: "blue" | "green" | "purple" | "orange" | "pink" }) {
