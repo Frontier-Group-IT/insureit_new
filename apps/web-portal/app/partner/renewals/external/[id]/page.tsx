@@ -185,7 +185,7 @@ export default async function PartnerExternalRenewalDetailPage({
             </CardShell>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <section className="overflow-hidden rounded-xl border border-[#D9E2EC] bg-white shadow-[0_8px_24px_rgba(29,53,87,0.04)]">
               <div className="flex items-center gap-3 border-b border-[#E5EBF2] px-3.5 py-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#EEF4FF] text-[#3156B8]">
