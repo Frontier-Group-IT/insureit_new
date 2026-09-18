@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-18 — Sarvam Phase B campaign dispatch precheck:** branch `feat/sarvam-campaign-dispatch-precheck`; Partner `Call with AI` now checks the configured Sarvam campaign state before creating a local attempt. Active/Scheduled are allowed; Paused/Ended/Cancelled/unknown are blocked. **IMPLEMENTED; CI/merge/deployment pending.** See `docs/SARVAM_CAMPAIGN_DISPATCH_PRECHECK_2026_09_18.md`.
+
 - **2026-09-18 — RM dashboard commercial KPIs:** branch `feat/rm-dashboard-commercial-metrics`; Relationship Manager dashboard now receives the same scoped Net Premium and Avg. net / policy Business Performance KPIs plus the Commercial operations section for policies accessible to that RM. Existing Accounts/commercial-review route permissions are unchanged, so RM users do not gain Accounts workspace/control access. **IMPLEMENTED**; no database/schema changes, PR/merge/deployment pending.
 
 - **2026-09-18 — Sarvam Phase B campaign lifecycle controls:** branch `feat/sarvam-campaign-lifecycle-controls`; IT Super User can read the configured Sarvam campaign state and invoke only non-terminal Pause/Resume through the documented `/campaigns/:campaign_id/status` endpoint using server-side `X-API-Key`. Cancel remains intentionally unavailable. **IMPLEMENTED; CI/merge/deployment/live provider verification pending.** See `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`.
