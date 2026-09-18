@@ -51,6 +51,9 @@ set portal_access_status = coalesce((
 updated_at = now()
 where i.intermediary_type = 'partner';
 
+drop trigger if exists partner_portal_additional_user_validate_target
+  on public.partner_portal_additional_users;
+
 drop function if exists public.service_partner_portal_refresh_access_status(uuid);
 drop function if exists public.partner_portal_additional_user_identity();
 drop function if exists public.partner_portal_additional_user_validate_target();
