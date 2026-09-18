@@ -47,7 +47,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
-- **2026-09-18 — ICICI Lombard GCV OCR training:** PR #2087 merged as `f59162a99112382d920f19c420c333af73197cfb`; dedicated ICICI GCV refiner now repairs insurer routing, structured vehicle fields, IDV and reconciled premium totals with privacy-safe regression coverage. **MERGED / NOT DEPLOYED**. Follow-up branch `ocr/icici-lombard-routing-hardening` adds first-class base-family routing so ICICI is not preprocessed as New India before the dedicated refiner. See `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`.
+- **2026-09-18 — ICICI Lombard GCV OCR training:** PR #2087 merged as `f59162a99112382d920f19c420c333af73197cfb`; PR #2088 merged as `686f04cd440b0dd7f27ba017e85ae01607a41f28` after canonical Verify #4186 passed. Dedicated ICICI GCV extraction plus first-class insurer-family routing now prevent New India pre-processing and repair structured vehicle, IDV and reconciled premium fields. **MERGED / NOT DEPLOYED**. See `docs/POLICY_OCR_GOOGLE_DOCUMENT_AI_HANDOFF.md`.
 
 - **2026-09-18 — AI Voice production control center + IT-only authority:** PR #2084; `/system/voice-integration` is redesigned as a compact production console and IT Super User is the only AI call controller. Partner `Call with AI` is removed and the legacy Partner voice endpoint is server-blocked; IT queue dispatch preserves all production safeguards. **MERGED + DEPLOYED** as `8e5afeba02075404a3ddcad78f8b0e53a359356d`; canonical Verify #4182 passed; Vercel `dpl_5mzUSXDo4AnQojLzF26wMqCyfrMz` **READY** on `portal.insureit.in`; live IT-dispatch verification pending. See `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`.
 
