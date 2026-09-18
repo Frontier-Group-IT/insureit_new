@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Ban, MoreVertical, Pencil, Send, Trash2, X } from "lucide-react";
 
 import {
@@ -38,10 +39,20 @@ export function AssociateAccountActionsMenu({
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     function closeOnOutsideClick(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(target) &&
+        !menuRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
     }
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -58,6 +69,44 @@ export function AssociateAccountActionsMenu({
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+
+    function positionMenu() {
+      const button = buttonRef.current;
+      if (!button) return;
+
+      const rect = button.getBoundingClientRect();
+      const menuWidth = 176;
+      const menuHeight = 154;
+      const gap = 8;
+      const viewportPadding = 12;
+
+      const left = Math.min(
+        Math.max(viewportPadding, rect.right - menuWidth),
+        window.innerWidth - menuWidth - viewportPadding,
+      );
+      const fitsBelow = rect.bottom + gap + menuHeight <= window.innerHeight - viewportPadding;
+      const top = fitsBelow
+        ? rect.bottom + gap
+        : Math.max(viewportPadding, rect.top - gap - menuHeight);
+
+      setMenuPosition({ top, left });
+    }
+
+    positionMenu();
+    window.addEventListener("resize", positionMenu);
+    window.addEventListener("scroll", positionMenu, true);
+
+    return () => {
+      window.removeEventListener("resize", positionMenu);
+      window.removeEventListener("scroll", positionMenu, true);
+    };
+  }, [open]);
+
   const commonHidden = (
     <>
       <input type="hidden" name="application_id" value={applicationId} />
@@ -71,6 +120,7 @@ export function AssociateAccountActionsMenu({
     <>
       <div ref={rootRef} className="relative inline-flex">
         <button
+          ref={buttonRef}
           type="button"
           aria-label={`Actions for ${associate.name}`}
           aria-haspopup="menu"
@@ -81,64 +131,69 @@ export function AssociateAccountActionsMenu({
           <MoreVertical className="h-4 w-4" />
         </button>
 
-        {open ? (
-          <div
-            role="menu"
-            className="absolute right-0 top-9 z-40 w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_16px_40px_rgba(15,23,42,.16)]"
-          >
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                setEditOpen(true);
-              }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
-            >
-              <Pencil className="h-3.5 w-3.5 text-[#64748B]" />
-              Edit
-            </button>
-
-            <form action={togglePartnerAssociateAccountStatus}>
-              {commonHidden}
-              <button
-                type="submit"
-                role="menuitem"
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
+        {open && menuPosition
+          ? createPortal(
+              <div
+                ref={menuRef}
+                role="menu"
+                style={{ top: menuPosition.top, left: menuPosition.left }}
+                className="fixed z-[200] w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,.18)]"
               >
-                <Ban className="h-3.5 w-3.5 text-[#64748B]" />
-                {associate.status === "disabled" ? "Enable" : "Disable"}
-              </button>
-            </form>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    setEditOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
+                >
+                  <Pencil className="h-3.5 w-3.5 text-[#64748B]" />
+                  Edit
+                </button>
 
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                setDeleteOpen(true);
-              }}
-              className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
-            </button>
+                <form action={togglePartnerAssociateAccountStatus}>
+                  {commonHidden}
+                  <button
+                    type="submit"
+                    role="menuitem"
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC]"
+                  >
+                    <Ban className="h-3.5 w-3.5 text-[#64748B]" />
+                    {associate.status === "disabled" ? "Enable" : "Disable"}
+                  </button>
+                </form>
 
-            <form action={resendPartnerAssociateInvite}>
-              {commonHidden}
-              <button
-                type="submit"
-                role="menuitem"
-                disabled={associate.status === "disabled"}
-                title={associate.status === "disabled" ? "Enable this account before resending the link." : undefined}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Send className="h-3.5 w-3.5 text-[#64748B]" />
-                Resend Link
-              </button>
-            </form>
-          </div>
-        ) : null}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setOpen(false);
+                    setDeleteOpen(true);
+                  }}
+                  className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-rose-600 hover:bg-rose-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+
+                <form action={resendPartnerAssociateInvite}>
+                  {commonHidden}
+                  <button
+                    type="submit"
+                    role="menuitem"
+                    disabled={associate.status === "disabled"}
+                    title={associate.status === "disabled" ? "Enable this account before resending the link." : undefined}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[10.5px] font-medium text-[#334155] hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Send className="h-3.5 w-3.5 text-[#64748B]" />
+                    Resend Link
+                  </button>
+                </form>
+              </div>,
+              document.body,
+            )
+          : null}
       </div>
 
       {editOpen ? (
