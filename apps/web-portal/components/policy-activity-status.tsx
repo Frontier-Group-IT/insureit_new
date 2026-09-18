@@ -20,7 +20,6 @@ export async function PolicyActivityStatus({ policyId, createdBy, createdAt, upd
         at: activity.at,
       }))}
       emptyText="Activity not recorded"
-      open={false}
     />
   );
 }
