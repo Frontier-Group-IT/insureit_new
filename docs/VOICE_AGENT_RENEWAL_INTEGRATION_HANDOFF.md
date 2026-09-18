@@ -372,6 +372,14 @@ Correction implemented on branch `fix/sarvam-webhook-retry-id-selection`:
 
 Detailed evidence remains in `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`.
 
+## Webhook retry delivery state rule — 2026-09-18
+
+A Sarvam campaign webhook retry HTTP 202 means only that the retry request was queued for asynchronous processing. It is **not** proof that the callback was delivered.
+
+INSUREIT must treat recovery as complete only after the callback is actually observed and normal idempotent result processing runs. Until then the UI/state should read **queued by Sarvam / delivery unverified**.
+
+Current provider limitation: the documented campaign webhook-delivery list endpoint is expected to expose `running`, `completed`, and `failed` delivery records, but production probes against valid campaigns have returned provider HTTP 500. Therefore INSUREIT callback observation is the current operational proof source.
+
 ## Next safe continuation
 
 1. merge/deploy the IT Super User readiness page only after canonical CI succeeds and user explicitly approves

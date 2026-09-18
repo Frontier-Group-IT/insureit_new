@@ -9,6 +9,7 @@ Before changing this route or any related Sarvam renewal integration code, read:
 - `docs/SARVAM_PRODUCTION_READINESS_SUCCESS_2026_09_17.md`
 - `docs/SARVAM_OPERATIONAL_HARDENING_2026_09_18.md`
 - `docs/SARVAM_WEBHOOK_RECOVERY_2026_09_18.md`
+- `docs/SARVAM_SUPPORT_EVIDENCE_2026_09_18.md`
 - `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`
 - `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`
 - `apps/web-portal/app/partner/renewals/external/AGENTS.md`
