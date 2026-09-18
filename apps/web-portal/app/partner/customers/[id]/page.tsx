@@ -3,12 +3,12 @@ import {
   BadgeCheck,
   CalendarDays,
   CarFront,
-  ChevronDown,
   Phone,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
+import { StandardActivityStatusCard } from "@/components/standard-activity-status-card";
 import { getPartnerWebCustomerActivity, getPartnerWebCustomerDetail, type PartnerCustomerActivityData } from "@/lib/partner-web";
 
 export const dynamic = "force-dynamic";
@@ -141,27 +141,15 @@ export default async function PartnerCustomerDetailPage({
           </div>
         </section>
 
-        <details open className="group overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[10.5px] font-semibold text-[#334155] [&::-webkit-details-marker]:hidden">
-            <span>Activity Status</span>
-            <ChevronDown className="h-4 w-4 text-[#64748B] transition group-open:rotate-180" />
-          </summary>
-          <div className="border-t border-[#E6EBF1] px-4 py-3">
-            <div className="overflow-hidden rounded-xl border border-[#DDE4EE] bg-[#FBFCFE]">
-              {customerActivity.length ? (
-                customerActivity.map((item, index) => (
-                  <CustomerActivityRow
-                    key={item.kind + "-" + item.entity_id + "-" + item.event_at}
-                    item={item}
-                    label={index === 0 ? "Latest Action" : "Previous Action"}
-                  />
-                ))
-              ) : (
-                <div className="px-4 py-5 text-[10.5px] text-[#7A899F]">No customer activity recorded yet.</div>
-              )}
-            </div>
-          </div>
-        </details>
+        <StandardActivityStatusCard
+          items={customerActivity.map((item) => ({
+            id: item.kind + "-" + item.entity_id + "-" + item.event_at,
+            title: item.title,
+            meta: item.meta,
+            at: item.event_at,
+          }))}
+          emptyText="No customer activity recorded yet."
+        />
 
         <section className="overflow-hidden rounded-2xl border border-[#DDE4EE] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.035)]">
           <div className="flex items-center justify-end gap-2 px-4 py-3">
@@ -222,41 +210,6 @@ function DocumentPlaceholder({ label }: { label: string }) {
         <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8px] font-semibold text-amber-700">Unavailable</span>
       </div>
       <div className="mt-2 flex h-7 items-center justify-center rounded-md border border-dashed border-[#C8D2E0] bg-white text-[9.5px] font-semibold text-[#94A0AF]">Document access not exposed</div>
-    </div>
-  );
-}
-
-function activityDateTime(value: string) {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Kolkata",
-  }).format(parsed);
-}
-
-function CustomerActivityRow({
-  item,
-  label,
-}: {
-  item: PartnerCustomerActivityData["items"][number];
-  label: "Latest Action" | "Previous Action";
-}) {
-  return (
-    <div className="flex flex-col gap-3 border-b border-[#E6EBF1] px-4 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-[8px] font-bold uppercase tracking-[0.06em] text-[#8190A4]">{label}</p>
-        <p className="mt-1 truncate text-[12px] font-semibold text-[#183A64]">{item.title}</p>
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-x-7 gap-y-1 text-[9px] text-[#8190A4]">
-        <span>Details: {item.meta || "Not recorded"}</span>
-        <span>At: {activityDateTime(item.event_at)}</span>
-      </div>
     </div>
   );
 }
