@@ -13,7 +13,6 @@ import {
   BUSINESS_MIS_HIDDEN_HEADERS,
   BUSINESS_MIS_PERCENT_COLUMNS,
   loadBusinessMisRecordsByPolicyIds,
-  type BusinessMisCell,
   type BusinessMisRecord,
 } from "@/lib/accounts-business-mis";
 
