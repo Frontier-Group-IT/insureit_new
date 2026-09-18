@@ -228,7 +228,7 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                   </form>
                 ) : null
               ) : <Link href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} aria-label={`Continue ${kind} onboarding`} title={`Continue ${kind} onboarding`} className={`${compactLightActionClassName} h-9 w-9 px-0`}><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-white/75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></Link>}
-              {isPartner && activePartner && intermediary?.id ? <Link href={`/intermediaries/applications/${id}/associate-accounts`} className={`${compactLightActionClassName} h-9 px-3 text-[9.5px] font-semibold`}>Add Associate Accounts</Link> : null}
+              {isPartner && activePartner && intermediary?.id ? <Link href={`/intermediaries/applications/${id}/associate-accounts`} className={`${compactLightActionClassName} h-9 px-3 text-[9.5px] font-semibold`}>ADD ASSOCIATE ACCOUNTS</Link> : null}
               {isPartner ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} aria-label="Edit details" title="Edit details" className={`${compactLightActionClassName} h-9 w-9 px-0`}><PencilIcon /></Link> : null}
             </div>
           </div>
