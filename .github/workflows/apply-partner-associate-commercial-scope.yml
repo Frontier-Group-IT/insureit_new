@@ -1,0 +1,144 @@
+name: Apply Partner associate commercial scope migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260918150000_partner_associate_commercial_scope.sql'
+      - '.github/workflows/apply-partner-associate-commercial-scope.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Partner associate commercial scope migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260918150000_partner_associate_commercial_scope.sql
+          test -f supabase/rollbacks/20260918150000_partner_associate_commercial_scope.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Ensure Partner associate commercial scope migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20260918150000'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/20260918150000_partner_associate_commercial_scope.sql
+            supabase migration repair --linked --status applied 20260918150000
+          fi
+
+      - name: Verify Partner associate commercial scope contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              position('partner_app_current_identity()' in pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure)) > 0 as canonical_identity_used,
+              position('v_identity := public.partner_app_legacy_current_identity()' in pg_get_functiondef('public.partner_app_commercial_scope()'::regprocedure)) = 0 as legacy_direct_fallback_removed,
+              has_function_privilege('authenticated', 'public.partner_app_commercial_scope()', 'EXECUTE') as authenticated_exec,
+              to_regprocedure('public.partner_app_current_identity()') is not null as current_identity_ready,
+              to_regprocedure('public.partner_portal_associate_identity()') is not null as associate_identity_ready;
+          ")
+          echo "$result"
+          for key in canonical_identity_used legacy_direct_fallback_removed authenticated_exec current_identity_ready associate_identity_ready; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done
+
+      - name: Verify active associate resolves Partner family scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            with candidate as (
+              select
+                a.auth_user_id,
+                public.partner_app_resolve_partner_family(a.intermediary_id) as expected_partner_id
+              from public.partner_portal_associate_accounts a
+              where a.status = 'active'
+              order by a.activated_at desc nulls last, a.created_at desc
+              limit 1
+            ),
+            configured as (
+              select
+                c.auth_user_id,
+                c.expected_partner_id,
+                set_config('request.jwt.claim.sub', c.auth_user_id::text, true) as set_sub,
+                set_config('request.jwt.claim.role', 'authenticated', true) as set_role
+              from candidate c
+            ),
+            resolved as (
+              select
+                configured.expected_partner_id,
+                public.partner_app_commercial_scope() as scope
+              from configured
+            )
+            select
+              case
+                when not exists (select 1 from candidate) then true
+                else coalesce((select scope ->> 'actor_kind' = 'intermediary' from resolved), false)
+              end as associate_actor_ok,
+              case
+                when not exists (select 1 from candidate) then true
+                else coalesce((select scope ->> 'scope_mode' = 'partner_family' from resolved), false)
+              end as associate_scope_mode_ok,
+              case
+                when not exists (select 1 from candidate) then true
+                else coalesce((
+                  select exists (
+                    select 1
+                    from jsonb_array_elements_text(scope -> 'partner_ids') x(value)
+                    where x.value::uuid = expected_partner_id
+                  )
+                  from resolved
+                ), false)
+              end as associate_partner_scope_ok;
+          ")
+          echo "$result"
+          for key in associate_actor_ok associate_scope_mode_ok associate_partner_scope_ok; do
+            echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
+          done
