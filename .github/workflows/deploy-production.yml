@@ -151,6 +151,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260907010000_external_renewal_reporting.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-external-renewal-reporting.yml"
             echo "External renewal reporting migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-sarvam-calling-window-settings.yml"
+            echo "Sarvam calling window settings migration detected. Waiting for its schema workflow..."
           elif grep -qxE 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql|supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql' <<<"$changed_migrations"; then
             unexpected_migrations=$(grep -vxE 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql|supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then
