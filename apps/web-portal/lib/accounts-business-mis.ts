@@ -140,23 +140,29 @@ export async function loadAccountsDashboardSnapshot(profile: ViewerProfile, filt
     .or(businessDateFilter(filters.fromDate, filters.toDate))
     .limit(15000);
   const includeInsurers = options.includeInsurers !== false;
-  let insurerOptionsQuery: any = includeInsurers
-    ? db
-        .from("policies")
-        .select("insurance_company_id,insurance_companies(name)")
-        .not("insurance_company_id", "is", null)
-        .limit(15000)
-    : null;
+  const insurerOptionsQuery = includeInsurers
+    ? customerIds !== null
+      ? db
+          .from("policies")
+          .select("insurance_company_id,insurance_companies(name)")
+          .not("insurance_company_id", "is", null)
+          .in("customer_id", customerIds)
+          .limit(15000)
+      : db
+          .from("policies")
+          .select("insurance_company_id,insurance_companies(name)")
+          .not("insurance_company_id", "is", null)
+          .limit(15000)
+    : Promise.resolve({ data: [], error: null });
 
   if (customerIds !== null) {
     filteredPolicyQuery = filteredPolicyQuery.in("customer_id", customerIds);
-    if (insurerOptionsQuery) insurerOptionsQuery = insurerOptionsQuery.in("customer_id", customerIds);
   }
   if (filters.insurerId) filteredPolicyQuery = filteredPolicyQuery.eq("insurance_company_id", filters.insurerId);
 
   const [policyResult, insurerOptionsResult] = await Promise.all([
     filteredPolicyQuery,
-    insurerOptionsQuery ?? Promise.resolve({ data: [], error: null }),
+    insurerOptionsQuery,
   ]);
   if (policyResult.error) {
     return {
