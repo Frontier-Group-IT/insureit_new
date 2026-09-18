@@ -290,19 +290,19 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
                 href="/partner/schemes"
                 prefetch={false}
                 data-partner-active-scheme="true"
-                className="group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-[#F2BDC4] bg-gradient-to-r from-[#FFF7F8] via-[#FFECEF] to-[#FFF7F8] px-3 py-2 text-[9.5px] font-semibold text-[#7A4050] shadow-[0_6px_18px_rgba(190,70,90,0.14)] transition hover:border-[#EFAAB4] hover:shadow-[0_8px_22px_rgba(190,70,90,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E68A98]/30"
+                className="group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-[#E999A6] bg-gradient-to-r from-[#FFE9ED] via-[#FFD6DD] to-[#FFE9ED] px-3 py-2 text-[9.5px] font-semibold text-[#7A3444] shadow-[0_6px_20px_rgba(190,70,90,0.22)] ring-1 ring-[#F7C4CC]/70 transition hover:border-[#E27F8F] hover:shadow-[0_8px_24px_rgba(190,70,90,0.28)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C70]/35"
               >
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-transparent via-white/70 to-transparent opacity-60 motion-safe:animate-pulse"
+                  className="pointer-events-none absolute inset-y-[-35%] left-0 w-16 rotate-12 bg-gradient-to-r from-transparent via-white/85 to-transparent opacity-90 motion-safe:animate-[insureit-route-rail_3s_ease-in-out_infinite]"
                 />
-                <BadgePercent className="relative h-3.5 w-3.5 shrink-0 text-[#D85C70] motion-safe:animate-pulse" aria-hidden="true" />
-                <span className="relative max-w-[220px] truncate font-extrabold text-[#7B3343]">{activeScheme.name}</span>
-                <span className="relative text-[#C58A94]">·</span>
+                <BadgePercent className="relative h-3.5 w-3.5 shrink-0 text-[#C8445B] motion-safe:animate-[insureit-blip_1.8s_ease-in-out_infinite]" aria-hidden="true" />
+                <span className="relative max-w-[220px] truncate font-extrabold text-[#702739]">{activeScheme.name}</span>
+                <span className="relative text-[#B96D79]">·</span>
                 <span className="relative">Valid till {schemeDeadline.date}</span>
-                <span className="relative text-[#C58A94]">·</span>
+                <span className="relative text-[#B96D79]">·</span>
                 <span className="relative">{schemeDeadline.time}</span>
-                <ArrowRight className="relative h-3.5 w-3.5 shrink-0 text-[#D85C70] transition group-hover:translate-x-1 motion-safe:animate-pulse" aria-hidden="true" />
+                <ArrowRight className="relative h-3.5 w-3.5 shrink-0 text-[#C8445B] transition duration-300 group-hover:translate-x-1.5 motion-safe:animate-[insureit-pulse_2s_ease-in-out_infinite]" aria-hidden="true" />
               </Link>
             ) : null}
             <span className="hidden whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>
