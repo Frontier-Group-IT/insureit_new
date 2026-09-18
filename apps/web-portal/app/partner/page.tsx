@@ -292,19 +292,19 @@ export default async function PartnerHomePage({ searchParams }: { searchParams: 
                 href="/partner/schemes"
                 prefetch={false}
                 data-partner-active-scheme="true"
-                className="group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl border border-[#E8B8C0] bg-[#FEF0F3] px-3 py-2 text-[9.5px] font-semibold text-[#7A4050] shadow-[0_5px_16px_rgba(190,70,90,0.12)] ring-1 ring-[#F7D8DE]/90 transition hover:border-[#DFA1AC] hover:bg-[#FDE9ED] hover:shadow-[0_7px_20px_rgba(190,70,90,0.16)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D85C70]/25"
+                className="partner-active-scheme group relative inline-flex items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-xl px-3 py-2 text-[9.5px] font-semibold transition focus-visible:outline-none"
               >
                 <span
                   aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-[-35%] left-0 w-16 rotate-12 bg-gradient-to-r from-transparent via-white/85 to-transparent opacity-90 motion-safe:animate-[insureit-route-rail_3s_ease-in-out_infinite]"
+                  className="partner-active-scheme__shimmer pointer-events-none absolute inset-y-[-35%] left-0 w-16 rotate-12"
                 />
-                <BadgePercent className="relative h-3.5 w-3.5 shrink-0 text-[#C8445B] motion-safe:animate-[insureit-blip_1.8s_ease-in-out_infinite]" aria-hidden="true" />
-                <span className="relative max-w-[220px] truncate font-extrabold text-[#702739]">{activeScheme.name}</span>
-                <span className="relative text-[#B96D79]">·</span>
+                <BadgePercent className="partner-active-scheme__icon relative h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="partner-active-scheme__name relative max-w-[220px] truncate font-extrabold">{activeScheme.name}</span>
+                <span className="partner-active-scheme__separator relative">·</span>
                 <span className="relative">Valid till {schemeDeadline.date}</span>
-                <span className="relative text-[#B96D79]">·</span>
+                <span className="partner-active-scheme__separator relative">·</span>
                 <span className="relative">{schemeDeadline.time}</span>
-                <ArrowRight className="relative h-3.5 w-3.5 shrink-0 text-[#C8445B] transition duration-300 group-hover:translate-x-1.5 motion-safe:animate-[insureit-pulse_2s_ease-in-out_infinite]" aria-hidden="true" />
+                <ArrowRight className="partner-active-scheme__arrow relative h-3.5 w-3.5 shrink-0 transition duration-300 group-hover:translate-x-1.5" aria-hidden="true" />
               </Link>
             ) : null}
             <span className="hidden whitespace-nowrap text-[10px] font-medium text-[#7A899E]">Updated {updatedTime}</span>

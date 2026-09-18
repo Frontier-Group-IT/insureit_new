@@ -404,3 +404,69 @@ form:has(input[name="fitness_valid_upto"]) > div:last-child button {
     animation-duration: 5s !important;
   }
 }
+
+/* Partner home: deterministic Active Scheme styling.
+   Keep these explicit declarations outside Tailwind arbitrary-value utilities
+   so the production banner always matches the approved blush reference. */
+.partner-active-scheme {
+  background: #fef0f3 !important;
+  border: 1px solid #e8b8c0 !important;
+  color: #7a4050 !important;
+  box-shadow:
+    0 5px 16px rgba(190, 70, 90, 0.12),
+    0 0 0 1px rgba(247, 216, 222, 0.9) !important;
+}
+
+.partner-active-scheme:hover {
+  background: #fde9ed !important;
+  border-color: #dfa1ac !important;
+  box-shadow:
+    0 7px 20px rgba(190, 70, 90, 0.16),
+    0 0 0 1px rgba(247, 216, 222, 0.9) !important;
+}
+
+.partner-active-scheme:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(216, 92, 112, 0.25),
+    0 5px 16px rgba(190, 70, 90, 0.12) !important;
+}
+
+.partner-active-scheme__shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.88),
+    transparent
+  );
+  opacity: 0.9;
+  animation: insureit-route-rail 3s ease-in-out infinite;
+}
+
+.partner-active-scheme__icon,
+.partner-active-scheme__arrow {
+  color: #c8445b !important;
+}
+
+.partner-active-scheme__icon {
+  animation: insureit-blip 1.8s ease-in-out infinite;
+}
+
+.partner-active-scheme__arrow {
+  animation: insureit-pulse 2s ease-in-out infinite;
+}
+
+.partner-active-scheme__name {
+  color: #702739 !important;
+}
+
+.partner-active-scheme__separator {
+  color: #b96d79 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .partner-active-scheme__shimmer,
+  .partner-active-scheme__icon,
+  .partner-active-scheme__arrow {
+    animation: none !important;
+  }
+}
