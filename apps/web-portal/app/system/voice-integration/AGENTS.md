@@ -12,6 +12,7 @@ Before changing this route or any related Sarvam renewal integration code, read:
 - `docs/SARVAM_SUPPORT_EVIDENCE_2026_09_18.md`
 - `docs/SARVAM_OPERATIONAL_CALLING_POLICY_2026_09_18.md`
 - `docs/SARVAM_CAMPAIGN_LIFECYCLE_CONTROLS_2026_09_18.md`
+- `docs/SARVAM_CAMPAIGN_DISPATCH_PRECHECK_2026_09_18.md`
 - `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`
 - `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`
 - `apps/web-portal/app/partner/renewals/external/AGENTS.md`

@@ -146,3 +146,26 @@ export async function updateSarvamRenewalCampaignStatus(
     };
   }
 }
+
+
+export async function assertSarvamRenewalCampaignDispatchable() {
+  const state = await getSarvamRenewalCampaignState();
+
+  if (!state.ok) {
+    throw new Error("AI renewal calling is temporarily unavailable because INSUREIT could not verify the Sarvam campaign state.");
+  }
+
+  if (state.status === "paused") {
+    throw new Error("AI renewal calling is paused by INSUREIT administration.");
+  }
+
+  if (state.status === "ended" || state.status === "cancelled") {
+    throw new Error("The configured Sarvam renewal campaign is no longer available for new calls.");
+  }
+
+  if (state.status !== "active" && state.status !== "scheduled") {
+    throw new Error("The configured Sarvam renewal campaign is not ready for new calls.");
+  }
+
+  return state;
+}
