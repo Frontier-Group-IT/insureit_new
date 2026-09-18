@@ -8,6 +8,7 @@ const repoRoot = path.resolve(root, "../..");
 const migration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913220500_external_renewal_voice_attempts.sql"), "utf8");
 const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql"), "utf8");
 const operationalSettingsMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql"), "utf8");
+const rcEnrichmentMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918235000_external_renewal_rc_enrichment.sql"), "utf8");
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
@@ -21,8 +22,10 @@ const diagnosticsModel = fs.readFileSync(path.join(root, "lib/sarvam-deep-diagno
 const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renewal-voice.ts"), "utf8");
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const itDispatchModel = fs.readFileSync(path.join(root, "lib/sarvam-it-dispatch.ts"), "utf8");
+const rcEnrichmentModel = fs.readFileSync(path.join(root, "lib/external-renewal-authbridge.ts"), "utf8");
 const itDispatchRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/dispatch/route.ts"), "utf8");
 const callingWindowRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/calling-window/route.ts"), "utf8");
+const rcEnrichmentRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/rc-enrichment/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
 const campaignStatusRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-campaign-status/route.ts"), "utf8");
@@ -175,6 +178,26 @@ assert(callingWindowRoute.includes('from("sarvam_voice_operational_settings")'),
 assert(!callingWindowRoute.includes("streamExternalRenewalToSarvam"), "calling-window update cannot place a call");
 assert(readinessPage.includes('href="/system/voice-integration?edit_window=1"'), "Voice Integration Window card exposes an inline Edit action");
 assert(readinessPage.includes('action="/api/system/voice-integration/calling-window"'), "Window editor posts to the protected system route");
+
+assert(rcEnrichmentMigration.includes("rc_enrichment_status"), "External Renewal schema records RC enrichment readiness");
+assert(rcEnrichmentMigration.includes("rc_enrichment_details jsonb"), "External Renewal schema stores only a normalized RC snapshot");
+assert(!/insert\s+into\s+public\.(customers|vehicles|policies)\b/i.test(rcEnrichmentMigration), "RC enrichment migration never creates verified business masters");
+assert(rcEnrichmentModel.includes('import "server-only"'), "External Renewal AuthBridge enrichment stays server-only");
+assert(rcEnrichmentModel.includes("vehicle_rc_lookup_cache"), "External Renewal enrichment reuses the paid RC cache");
+assert(rcEnrichmentModel.includes("lookupAuthbridgeRc"), "External Renewal enrichment can call the protected AuthBridge client");
+assert(rcEnrichmentModel.includes("rc_enrichment_details"), "External Renewal enrichment persists only the safe normalized snapshot");
+assert(!rcEnrichmentModel.includes('from("customers")') && !rcEnrichmentModel.includes('from("vehicles")') && !rcEnrichmentModel.includes('from("policies")'), "External Renewal enrichment never writes verified Customer/Vehicle/Policy masters");
+assert(rcEnrichmentRoute.includes('viewer.role !== "it_super_user"'), "RC enrichment route requires exact IT Super User role");
+assert(rcEnrichmentRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "RC enrichment route requires critical system approval access");
+assert(!rcEnrichmentRoute.includes("streamExternalRenewalToSarvam"), "RC enrichment cannot place an AI call");
+assert(sarvamProductionQueue.includes("needs_rc_enrichment"), "voice queue holds records until RC enrichment is ready");
+assert(sarvamProductionQueue.includes("rc_enrichment_status"), "voice queue reads persisted enrichment readiness");
+assert(itDispatchModel.includes('opportunity.rc_enrichment_status !== "ready"'), "IT dispatch rechecks RC enrichment before creating a call attempt");
+assert(itDispatchModel.includes("rc_enrichment_details"), "IT dispatch uses the safe AuthBridge snapshot for agent context");
+assert(readinessPage.includes('action="/api/system/voice-integration/rc-enrichment"'), "Voice Integration queue exposes Fetch details from the IT-only surface");
+assert(readinessPage.includes("Fetch details"), "Voice Integration queue labels the RC enrichment action clearly");
+assert(deployWorkflow.includes("20260918235000_external_renewal_rc_enrichment.sql"), "production deploy gate recognizes External Renewal RC enrichment schema");
+assert(deployWorkflow.includes("apply-external-renewal-rc-enrichment.yml"), "production deploy waits for External Renewal RC enrichment schema workflow");
 
 assert(connectionTestRoute.includes('viewer.role !== "it_super_user"'), "Sarvam connection test requires exact IT Super User role");
 assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam connection test requires critical system approval access");
