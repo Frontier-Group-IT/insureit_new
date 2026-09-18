@@ -106,7 +106,7 @@ type PanJob = {
   last_error: string | null;
 };
 type JourneyItem = { label: string; done: boolean; active: boolean };
-type IconName = "user" | "account" | "id" | "rm" | "portal" | "calendar" | "documents" | "link";
+type IconName = "user" | "account" | "id" | "rm" | "associate" | "portal" | "calendar" | "documents" | "link";
 
 const partnerDocuments = [
   ["aadhaar_front", "Aadhaar Front"],
@@ -228,7 +228,23 @@ export default async function IntermediaryAccountReviewPage({ params, searchPara
                   </form>
                 ) : null
               ) : <Link href={`/intermediaries/applications/${id}/workflow?stage=${stageFor(profile)}`} aria-label={`Continue ${kind} onboarding`} title={`Continue ${kind} onboarding`} className={`${compactLightActionClassName} h-9 w-9 px-0`}><svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 text-white/75" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></svg></Link>}
-              {isPartner && activePartner && intermediary?.id ? <Link href={`/intermediaries/applications/${id}/associate-accounts`} className={`${compactLightActionClassName} h-9 px-3 text-[9.5px] font-semibold`}>ADD ASSOCIATE ACCOUNTS</Link> : null}
+              {isPartner && activePartner && intermediary?.id ? (
+                <div className="group relative">
+                  <Link
+                    href={`/intermediaries/applications/${id}/associate-accounts`}
+                    aria-label="Associate account"
+                    className={`${compactLightActionClassName} h-9 w-9 px-0`}
+                  >
+                    <Icon name="associate" className="h-[18px] w-[18px] text-white/90" />
+                  </Link>
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#0F2747] px-2.5 py-1.5 text-[9px] font-semibold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
+                  >
+                    Associate Account
+                  </span>
+                </div>
+              ) : null}
               {isPartner ? <Link href={`/intermediaries/applications/${id}/workflow?stage=primary`} aria-label="Edit details" title="Edit details" className={`${compactLightActionClassName} h-9 w-9 px-0`}><PencilIcon /></Link> : null}
             </div>
           </div>
@@ -383,7 +399,7 @@ function Journey({ label, done, active, index, detailedStatus }: JourneyItem & {
   );
 }
 function Notice({ tone, text }: { tone: "error" | "success"; text: string }) { return <div className={`rounded-xl border px-4 py-3 text-[10.5px] ${tone === "error" ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>{text}</div>; }
-function Icon({ name, className = "h-4 w-4" }: { name: IconName; className?: string }) { const paths: Record<IconName, React.ReactNode> = { user: <><circle cx="12" cy="8" r="3" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>, account: <><circle cx="12" cy="12" r="9" /><path d="M8 15c1-2.5 7-2.5 8 0M12 7.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z" /></>, id: <><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8" cy="11" r="2" /><path d="M6 16c.8-1.8 3.2-1.8 4 0M13 10h5M13 14h5" /></>, rm: <><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M17 8v6M14 11h6" /></>, portal: <><circle cx="12" cy="12" r="9" /><path d="M8 12h8M13 9l3 3-3 3" /></>, calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" /></>, documents: <><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v5h5M9 13h6M9 17h6" /></>, link: <><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" /></> }; return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{paths[name]}</svg>; }
+function Icon({ name, className = "h-4 w-4" }: { name: IconName; className?: string }) { const paths: Record<IconName, React.ReactNode> = { user: <><circle cx="12" cy="8" r="3" /><path d="M5.5 20a6.5 6.5 0 0 1 13 0" /></>, account: <><circle cx="12" cy="12" r="9" /><path d="M8 15c1-2.5 7-2.5 8 0M12 7.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Z" /></>, id: <><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8" cy="11" r="2" /><path d="M6 16c.8-1.8 3.2-1.8 4 0M13 10h5M13 14h5" /></>, rm: <><circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0M17 8v6M14 11h6" /></>, associate: <><circle cx="9" cy="8" r="3" /><circle cx="16.5" cy="9.5" r="2.5" /><path d="M3.5 20a5.5 5.5 0 0 1 11 0M13.5 15.5a4.5 4.5 0 0 1 6.5 4.1" /></>, portal: <><circle cx="12" cy="12" r="9" /><path d="M8 12h8M13 9l3 3-3 3" /></>, calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M7 3v4M17 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" /></>, documents: <><path d="M6 3h9l4 4v14H6z" /><path d="M15 3v5h5M9 13h6M9 17h6" /></>, link: <><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" /></> }; return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{paths[name]}</svg>; }
 function portalLabel(value: string | undefined) { if (value === "invited") return "Portal User Invited"; if (value === "active") return "Portal User Active"; if (value === "suspended") return "Portal User Suspended"; return "Portal User Not Created"; }
 function portalAccessLabel(value: string | undefined) { if (value === "not_created" || !value) return "Create User"; if (value === "invited") return "Resend Link"; if (value === "active") return "Active"; if (value === "suspended") return "Suspended"; return pretty(value); }
 function portalAccessAction(value: string | undefined): PortalAccessAction | undefined { if (value === "not_created" || !value) return "create_user"; if (value === "invited") return "resend_link"; return undefined; }
