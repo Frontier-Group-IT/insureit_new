@@ -47,3 +47,9 @@ Every material provider/API/campaign/telephony/webhook/CRM/reconciliation trial 
 - `docs/SARVAM_PARTNER_PRODUCTION_READINESS_2026_09_18.md`
 
 - `docs/SARVAM_PRODUCTION_QUEUE_PREVIEW_2026_09_18.md`
+
+- `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`
+
+## Current production authority model
+
+AI voice calling actions are IT-Super-User-only. Partner users may view normalized AI status/results but must not receive a call-start action or an API path that can reach Sarvam. All future Partner self-service is deferred until separately approved. The production Voice Integration page should remain compact and operations-oriented; experimental diagnostics belong on dedicated diagnostic routes/docs.
