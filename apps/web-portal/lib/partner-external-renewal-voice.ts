@@ -125,6 +125,17 @@ export async function getPartnerExternalRenewalVoiceStates(opportunityIds: strin
   return (data ?? []) as ExternalRenewalVoiceWorklistState[];
 }
 
+export type ExternalRenewalVoiceSalesMemory = {
+  insurer_preference: "same_insurer" | "compare_options" | "open_to_any" | "unknown";
+  preferred_insurer: string | null;
+  claim_status: "no_claim" | "claim_reported" | "unknown";
+  renewal_priority: "premium" | "coverage" | "balanced" | "unknown";
+  requested_addons: string[];
+  discussed_topics: string[];
+  human_requested: boolean;
+  next_step_agreed: "quote" | "callback" | "human_transfer" | "no_action" | "closed";
+};
+
 export type ApplyExternalRenewalVoiceResultInput = {
   attemptId: string;
   providerAttemptId: string;
@@ -145,6 +156,7 @@ export type ApplyExternalRenewalVoiceResultInput = {
   followUpAt?: string | null;
   customerObjection?: string | null;
   callSummary?: string | null;
+  salesMemory?: ExternalRenewalVoiceSalesMemory | null;
 };
 
 export async function applyExternalRenewalVoiceResult(input: ApplyExternalRenewalVoiceResultInput) {
@@ -171,5 +183,20 @@ export async function applyExternalRenewalVoiceResult(input: ApplyExternalRenewa
     p_call_summary: input.callSummary ?? null,
   });
   if (error || !data) throw new Error(error?.message ?? "Could not apply Sarvam call result.");
+
+  if (input.salesMemory) {
+    const { error: memoryError } = await admin
+      .from("external_renewal_voice_attempts")
+      .update({
+        sales_memory: input.salesMemory,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", input.attemptId);
+
+    if (memoryError) {
+      throw new Error("Could not persist structured Sarvam sales memory.");
+    }
+  }
+
   return data;
 }
