@@ -189,7 +189,7 @@ const wrappedIdentifierPage = pages[1]
   )
   .replace(
     "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2 MA1TESTCHASSIS123 EN12AB34567890 0",
-    "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2\nMA1TESTCHA\nSSIS123456\nEN12AB3456\n7890\n0",
+    "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2\nMA1TESTCHA\nSSIS123\nEN12AB3456\n7890\n0",
   );
 const wrappedIdentifiers = refineIciciLombardMotorPolicy(
   [pageOneWithoutVehicleIds, wrappedIdentifierPage],
@@ -201,7 +201,7 @@ const wrappedIdentifiers = refineIciciLombardMotorPolicy(
   })),
   contaminated,
 );
-assert.equal(field(wrappedIdentifiers, "vehicle_chassis_number"), "MA1TESTCHASSIS123456");
+assert.equal(field(wrappedIdentifiers, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
 assert.equal(field(wrappedIdentifiers, "vehicle_engine_number"), "EN12AB34567890");
 assert.equal(field(wrappedIdentifiers, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
 assert.equal(field(wrappedIdentifiers, "vehicle_rto_state"), "Madhya Pradesh");
