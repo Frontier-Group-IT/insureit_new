@@ -21,7 +21,9 @@ import { refineNewIndiaStructuredPolicy } from "@/lib/policy-ocr-new-india-struc
 import { refineApprovedMotorPolicyLayout } from "@/lib/policy-ocr-approved-layout-refiner";
 import {
   extractNativePdfTextPages,
+  refineIciciNativePdfEvidence,
   refineNewIndiaNativePdfVehicleEvidence,
+  summarizeIciciNativePdfEvidence,
   summarizeNativePdfVehicleEvidence,
 } from "@/lib/policy-ocr-native-pdf";
 import { requirePolicyOcrTrainingOperator } from "@/lib/policy-ocr-training-access";
@@ -188,22 +190,40 @@ async function extractPolicyFile(
     parsed = refineApprovedMotorPolicyLayout(pages, tables, parsed);
 
     let usedNativePdfVehicleEvidence = false;
-    if (file.type === "application/pdf" && parsed.parserId === "new_india_motor_v1" && needsNewIndiaNativeVehicleFallback(parsed)) {
+    if (file.type === "application/pdf" && (
+      (parsed.parserId === "new_india_motor_v1" && needsNewIndiaNativeVehicleFallback(parsed))
+      || parsed.parserId === "icici_lombard_motor_v1"
+    )) {
       try {
         const nativePages = await extractNativePdfTextPages(fileBytes);
-        const nativeRefined = refineNewIndiaNativePdfVehicleEvidence(nativePages, parsed);
-        usedNativePdfVehicleEvidence = nativeRefined !== parsed;
-        parsed = nativeRefined;
-        console.info(JSON.stringify({
-          level: "info",
-          message: "policy_ocr_new_india_native_pdf_fallback",
-          used: usedNativePdfVehicleEvidence,
-          ...summarizeNativePdfVehicleEvidence(nativePages, parsed),
-        }));
+
+        if (parsed.parserId === "new_india_motor_v1") {
+          const nativeRefined = refineNewIndiaNativePdfVehicleEvidence(nativePages, parsed);
+          usedNativePdfVehicleEvidence = nativeRefined !== parsed;
+          parsed = nativeRefined;
+          console.info(JSON.stringify({
+            level: "info",
+            message: "policy_ocr_new_india_native_pdf_fallback",
+            used: usedNativePdfVehicleEvidence,
+            ...summarizeNativePdfVehicleEvidence(nativePages, parsed),
+          }));
+        } else if (parsed.parserId === "icici_lombard_motor_v1") {
+          const nativeRefined = refineIciciNativePdfEvidence(nativePages, parsed);
+          usedNativePdfVehicleEvidence = nativeRefined !== parsed;
+          parsed = nativeRefined;
+          console.info(JSON.stringify({
+            level: "info",
+            message: "policy_ocr_icici_native_pdf_evidence",
+            used: usedNativePdfVehicleEvidence,
+            ...summarizeIciciNativePdfEvidence(nativePages, parsed),
+          }));
+        }
       } catch (error) {
         console.warn(JSON.stringify({
           level: "warning",
-          message: "policy_ocr_new_india_native_pdf_fallback_failed",
+          message: parsed.parserId === "icici_lombard_motor_v1"
+            ? "policy_ocr_icici_native_pdf_evidence_failed"
+            : "policy_ocr_new_india_native_pdf_fallback_failed",
           error: safeErrorName(error),
         }));
       }
