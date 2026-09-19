@@ -1,7 +1,7 @@
 "use server";
 
 import { isClaimStatus, type ClaimStatus } from "@/lib/claim-workflow";
-import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
+import { insertAuthorizedClaimStageDetail, requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 import { revalidatePath } from "next/cache";
 
 type OperationsStageKey =
@@ -114,7 +114,8 @@ function spotSurveyorDetailsChanged(previousDetails: Record<string, unknown> | n
 }
 
 export async function completeClaimJourneyStage(claimId: string, formData: FormData) {
-  const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
+  const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
+  const { profile, supabase } = access;
   const stageKeyValue = textValue(formData, "milestone_key");
   if (!isStageKey(stageKeyValue)) throw new Error("This claim stage cannot be saved from this form.");
   const stageKey = stageKeyValue;
@@ -160,8 +161,7 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
     notifySpotStatusEdit = spotSurveyorDetailsChanged(previousSpotStatus?.details, formData);
   }
 
-  const { error: detailError } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: detailStageStatus[stageKey], details: shouldAdvance ? { ...details, completed_at: new Date().toISOString() } : details, created_by: profile.id });
-  if (detailError) throw new Error(detailError.message);
+  await insertAuthorizedClaimStageDetail(access, { claim_id: claimId, stage: detailStageStatus[stageKey], details: shouldAdvance ? { ...details, completed_at: new Date().toISOString() } : details, created_by: profile.id });
 
   if (!shouldAdvance) {
     if (notifySpotStatusEdit) {
