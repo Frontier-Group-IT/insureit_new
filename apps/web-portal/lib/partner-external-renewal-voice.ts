@@ -25,6 +25,7 @@ export type ExternalRenewalVoiceStartContext = {
   last_call_summary: string | null;
   previous_conversation_context: string | null;
   opening_line: string;
+  opening_follow_up: string;
 };
 
 export type ExternalRenewalVoiceLatestAttempt = {
