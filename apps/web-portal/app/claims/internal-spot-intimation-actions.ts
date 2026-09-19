@@ -101,7 +101,8 @@ export async function advanceInternalSpotIntimation(claimId: string, formData: F
 export async function saveInternalSpotIntimationDetails(claimId: string, formData: FormData) {
   normalizeSpotIntimationDateTimes(formData);
   requireInternalSpotIntimationDriverDetails(formData);
-  const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
+  const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
+  const { profile, supabase } = access;
   const claim = await loadManagedClaim(claimId, supabase);
   const { normalized, location, accidentDescription, details } = normalizedDetails(claim, formData);
   const { data: persistedClaim, error: claimError } = await supabase.from("claims").update({ accident_at: normalized.incidentAt, spot_intimation_at: normalized.spotIntimationAt, accident_location: location, accident_description: accidentDescription }).eq("id", claimId).select("id").maybeSingle<{ id: string }>();
