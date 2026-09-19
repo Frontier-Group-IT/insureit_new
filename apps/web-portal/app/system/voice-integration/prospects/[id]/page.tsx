@@ -77,24 +77,66 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
   const fetchedFields = [
     ["Registration number", rc.registrationNumber],
     ["Registration date", rc.registrationDate],
+    ["RTO", rc.rto],
+    ["RC status", rc.rcStatus],
+    ["RC status as on", rc.rcStatusAsOn],
+    ["RC owner name", rc.ownerName],
+    ["Owner serial number", rc.ownerSerialNumber],
+    ["Father/Husband name", rc.fatherHusbandName],
+    ["Permanent address", rc.permanentAddress],
+    ["Permanent city", rc.permanentAddressCity],
+    ["Permanent district", rc.permanentAddressDistrict],
+    ["Permanent state", rc.permanentAddressState],
+    ["Permanent pincode", rc.permanentAddressPincode],
+    ["Permanent country", rc.permanentAddressCountry],
+    ["Present address", rc.presentAddress],
+    ["Present city", rc.presentAddressCity],
+    ["Present district", rc.presentAddressDistrict],
+    ["Present state", rc.presentAddressState],
+    ["Present pincode", rc.presentAddressPincode],
+    ["Present country", rc.presentAddressCountry],
     ["Manufacturer", rc.manufacturer],
     ["Model", rc.model],
+    ["Manufacture date", rc.manufactureDate],
     ["Manufacturing year", rc.manufacturingYear],
     ["Vehicle class", rc.vehicleClass],
+    ["Vehicle category", rc.vehicleCategory],
+    ["Body type", rc.bodyType],
+    ["Colour", rc.color],
     ["Fuel type", rc.fuelType],
+    ["Emission norm", rc.normsType],
+    ["Engine number", rc.engineNumber],
     ["Engine capacity (cc)", rc.engineCapacityCc],
+    ["Cylinder count", rc.cylinderCount],
     ["Seating capacity", rc.seatingCapacity],
+    ["Standing capacity", rc.standingCapacity],
+    ["Sleeper capacity", rc.sleeperCapacity],
+    ["Wheelbase (mm)", rc.wheelBaseMm],
     ["GVW (kg)", rc.gvwKg],
+    ["Unladen weight (kg)", rc.unladenWeightKg],
+    ["Commercial vehicle", rc.commercial],
     ["Chassis number", rc.chassisNumber],
     ["Fitness expiry", rc.fitnessExpiryDate],
-    ["PUC expiry", rc.pucExpiryDate],
     ["Road tax expiry", rc.roadTaxExpiryDate],
-    ["National permit expiry", rc.nationalPermitExpiryDate],
+    ["Vehicle tax upto", rc.vehicleTaxUptoDate],
+    ["PUC number", rc.pucNumber],
+    ["PUC expiry", rc.pucExpiryDate],
+    ["Permit number", rc.permitNumber],
+    ["Permit type", rc.permitType],
+    ["Permit issue date", rc.permitIssueDate],
+    ["Permit valid from", rc.permitValidFrom],
     ["Local permit expiry", rc.localPermitExpiryDate],
+    ["National permit number", rc.nationalPermitNumber],
+    ["National permit issued by", rc.nationalPermitIssuedBy],
+    ["National permit expiry", rc.nationalPermitExpiryDate],
+    ["Financed", rc.financed],
+    ["Financer name", rc.financerName],
     ["Insurance company", rc.insuranceCompany],
     ["Policy number", rc.policyNumber],
     ["Policy expiry", rc.policyExpiryDate],
-  ] as const;
+    ["Blacklist status", rc.blacklistStatus],
+    ["NOC details", rc.nocDetails],
+  ] as const;;
 
   return (
     <AppShell title="Voice Prospect">
@@ -161,29 +203,61 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
             </div>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <Field name="customerName" label="Customer name" value={effective.customerName} />
+              <Field name="customerName" label="Customer / insured name" value={effective.customerName} />
               <Field name="mobile" label="Mobile number" value={effective.mobile} inputMode="tel" />
               <Field name="registrationNumber" label="Registration number" value={effective.registrationNumber} />
+              <Field name="rcOwnerName" label="RC owner name" value={effective.rcOwnerName} />
+              <Field name="ownerSerialNumber" label="Owner serial number" value={effective.ownerSerialNumber} />
+              <Field name="fatherHusbandName" label="Father / husband name" value={effective.fatherHusbandName} />
+              <Field name="registrationDate" label="Registration date" value={effective.registrationDate} type="date" />
+              <Field name="rto" label="RTO" value={effective.rto} />
+              <Field name="rcStatus" label="RC status" value={effective.rcStatus} />
+              <Field name="rcStatusAsOn" label="RC status as on" value={effective.rcStatusAsOn} type="date" />
               <Field name="manufacturer" label="Manufacturer" value={effective.manufacturer} />
               <Field name="model" label="Model" value={effective.model} />
+              <Field name="manufactureDate" label="Manufacture date" value={effective.manufactureDate} />
+              <Field name="manufacturingYear" label="Manufacturing year" value={effective.manufacturingYear} />
+              <Field name="vehicleClass" label="Vehicle class" value={effective.vehicleClass} />
+              <Field name="vehicleCategory" label="Vehicle category" value={effective.vehicleCategory} />
+              <Field name="bodyType" label="Body type" value={effective.bodyType} />
+              <Field name="color" label="Colour" value={effective.color} />
+              <Field name="fuelType" label="Fuel type" value={effective.fuelType} />
+              <Field name="normsType" label="Emission norm" value={effective.normsType} />
+              <Field name="engineNumber" label="Engine number" value={effective.engineNumber} />
+              <Field name="engineCapacityCc" label="Engine capacity (cc)" value={effective.engineCapacityCc} inputMode="decimal" />
+              <Field name="cylinderCount" label="Cylinder count" value={effective.cylinderCount} inputMode="numeric" />
+              <Field name="seatingCapacity" label="Seating capacity" value={effective.seatingCapacity} inputMode="numeric" />
+              <Field name="standingCapacity" label="Standing capacity" value={effective.standingCapacity} inputMode="numeric" />
+              <Field name="sleeperCapacity" label="Sleeper capacity" value={effective.sleeperCapacity} inputMode="numeric" />
+              <Field name="wheelBaseMm" label="Wheelbase (mm)" value={effective.wheelBaseMm} inputMode="decimal" />
+              <Field name="gvwKg" label="GVW (kg)" value={effective.gvwKg} inputMode="decimal" />
+              <Field name="unladenWeightKg" label="Unladen weight (kg)" value={effective.unladenWeightKg} inputMode="decimal" />
+              <Field name="commercial" label="Commercial vehicle" value={effective.commercial} />
               <Field name="chassisNumber" label="Chassis number" value={effective.chassisNumber} />
+              <Field name="fitnessExpiryDate" label="Fitness expiry" value={effective.fitnessExpiryDate} type="date" />
+              <Field name="roadTaxExpiryDate" label="Road tax expiry" value={effective.roadTaxExpiryDate} type="date" />
+              <Field name="vehicleTaxUptoDate" label="Vehicle tax upto" value={effective.vehicleTaxUptoDate} type="date" />
+              <Field name="pucNumber" label="PUC number" value={effective.pucNumber} />
+              <Field name="pucExpiryDate" label="PUC expiry" value={effective.pucExpiryDate} type="date" />
+              <Field name="permitNumber" label="Permit number" value={effective.permitNumber} />
+              <Field name="permitType" label="Permit type" value={effective.permitType} />
+              <Field name="permitIssueDate" label="Permit issue date" value={effective.permitIssueDate} type="date" />
+              <Field name="permitValidFrom" label="Permit valid from" value={effective.permitValidFrom} type="date" />
+              <Field name="localPermitExpiryDate" label="Local permit expiry" value={effective.localPermitExpiryDate} type="date" />
+              <Field name="nationalPermitNumber" label="National permit number" value={effective.nationalPermitNumber} />
+              <Field name="nationalPermitIssuedBy" label="National permit issued by" value={effective.nationalPermitIssuedBy} />
+              <Field name="nationalPermitExpiryDate" label="National permit expiry" value={effective.nationalPermitExpiryDate} type="date" />
+              <Field name="financed" label="Financed" value={effective.financed} />
+              <Field name="financerName" label="Financer name" value={effective.financerName} />
               <Field name="insuranceCompany" label="Insurance company" value={effective.insuranceCompany} />
               <Field name="policyNumber" label="Policy number" value={effective.policyNumber} />
               <Field name="policyExpiryDate" label="Policy expiry" value={effective.policyExpiryDate} type="date" />
+              <Field name="blacklistStatus" label="Blacklist status" value={effective.blacklistStatus} />
+              <Field name="nocDetails" label="NOC details" value={effective.nocDetails} />
               <Field name="previousIdv" label="Previous IDV" value={effective.previousIdv} inputMode="decimal" />
               <Field name="previousPremium" label="Previous premium" value={effective.previousPremium} inputMode="decimal" />
-              <Field name="registrationDate" label="Registration date" value={effective.registrationDate} type="date" />
-              <Field name="manufacturingYear" label="Manufacturing year" value={effective.manufacturingYear} />
-              <Field name="vehicleClass" label="Vehicle class" value={effective.vehicleClass} />
-              <Field name="fuelType" label="Fuel type" value={effective.fuelType} />
-              <Field name="engineCapacityCc" label="Engine capacity (cc)" value={effective.engineCapacityCc} inputMode="decimal" />
-              <Field name="seatingCapacity" label="Seating capacity" value={effective.seatingCapacity} inputMode="numeric" />
-              <Field name="gvwKg" label="GVW (kg)" value={effective.gvwKg} inputMode="decimal" />
-              <Field name="fitnessExpiryDate" label="Fitness expiry" value={effective.fitnessExpiryDate} type="date" />
-              <Field name="pucExpiryDate" label="PUC expiry" value={effective.pucExpiryDate} type="date" />
-              <Field name="roadTaxExpiryDate" label="Road tax expiry" value={effective.roadTaxExpiryDate} type="date" />
-              <Field name="nationalPermitExpiryDate" label="National permit expiry" value={effective.nationalPermitExpiryDate} type="date" />
-              <Field name="localPermitExpiryDate" label="Local permit expiry" value={effective.localPermitExpiryDate} type="date" />
+              <Field name="permanentAddress" label="Permanent address" value={effective.permanentAddress} />
+              <Field name="presentAddress" label="Present address" value={effective.presentAddress} />
             </div>
 
             <div className="mt-3 rounded-xl border border-[#E4EBF3] bg-[#F8FAFC] px-3 py-2 text-[8px] text-[#657A94]">
@@ -205,7 +279,7 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
               </div>
               <div className="mt-3 flex items-start gap-2 rounded-lg bg-[#F4F7FB] px-3 py-2 text-[8px] text-[#64748B]">
                 <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-[#3156B8]" />
-                Only approved normalized RC/policy fields are shown here. Raw provider payloads, owner identity and provider-returned addresses remain outside this page.
+                Normalized provider fields are shown with their real meaning. “RC Owner Name” is not treated as insurer-confirmed insured name; Raw provider payloads remain outside this page.
               </div>
             </section>
 
