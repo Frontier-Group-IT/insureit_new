@@ -73,7 +73,7 @@ assert.match(accountsUpload, /populatedWorksheetBounds\(sheet\)/, "Reconciliatio
 assert.doesNotMatch(accountsUpload, /decode_range\(sheet\["!ref"\] \|\| "A1:A1"\)/, "Google Sheets compatibility must not depend on the optional worksheet !ref dimension.");
 assert.match(accountsUpload, /decode_cell\(address\)/, "Worksheet bounds must be derived from actual populated cell addresses.");
 assert.match(accountsUpload, /if \(!candidateRows\.length\)/, "A structurally valid workbook with no Accounts input should return before live policy queries.");
-assert.ok(accountsUpload.includes(String.raw`const dmy = raw.match(/^(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{2}|\\d{4})$/);`), "Reconciliation dates must accept DD/MM/YY as exported by Google Sheets.");
+assert.ok(accountsUpload.includes("(\\d{2}|\\d{4})") && accountsUpload.includes('dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]'), "Reconciliation dates must accept DD/MM/YY as exported by Google Sheets.");
 assert.doesNotMatch(accountsUpload, /Gross Payout must be greater than zero before Accounts can record a payment\./, "Zero projected gross payout must not block recording an actual payout.");
 assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
 assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
