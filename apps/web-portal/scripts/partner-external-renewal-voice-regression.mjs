@@ -235,6 +235,15 @@ assert(prospectProfileRoute.includes('hasEffectiveCapability(viewer, "manage_sys
 assert(!prospectProfileRoute.includes("streamExternalRenewalToSarvam"), "editing prospect details cannot place a call");
 assert(itDispatchModel.includes("ai_profile_overrides"), "IT dispatch uses approved operator corrections");
 assert(itDispatchModel.includes("cohort_context: cohortContext"), "IT dispatch snapshots effective values before provider submission");
+assert(itDispatchModel.includes('eq("connectivity_status", "connected")'), "repeat-call memory only treats connected attempts as prior conversations");
+assert(itDispatchModel.includes("buildPreviousConversationContext"), "IT dispatch builds normalized cross-call conversation memory");
+assert(itDispatchModel.includes("repeatCallOpening"), "IT dispatch generates separate first-call and repeat-call openings");
+assert(itDispatchModel.includes("previous_connected_call_count"), "IT dispatch snapshots prior connected-call count into cohort context");
+assert(itDispatchModel.includes("previous_conversation_context"), "IT dispatch snapshots normalized prior-call memory into cohort context");
+assert(sarvamRenewalCall.includes("opening_line: context.opening_line"), "Sarvam cohort receives the server-generated opening line");
+assert(sarvamRenewalCall.includes("repeat_call: context.repeat_call"), "Sarvam cohort receives repeat-call state");
+assert(sarvamRenewalCall.includes("previous_conversation_context"), "Sarvam cohort receives normalized prior-conversation context");
+
 assert(prospectDetailPage.includes("AI calling profile"), "prospect detail exposes the editable calling profile");
 assert(prospectDetailPage.includes("AuthBridge normalized details"), "prospect detail exposes approved normalized AuthBridge fields");
 assert(prospectDetailPage.includes("Sarvam call history"), "prospect detail exposes normalized call outcomes");
