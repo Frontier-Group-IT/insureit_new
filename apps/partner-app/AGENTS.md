@@ -4,8 +4,8 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 ## Current installed-build rules
 
-- The user's installed Partner APK is `preview`, runtime/app version `0.1.0`, Android version code `3`, native build commit `71cc1d0`.
-- For that APK, use the approved compatibility source `74039199991888777911deb30cf248e8f36cf8a8` plus narrow OTA-safe patches.
+- The user's currently installed Partner APK is `preview`, runtime/app version `0.1.0`, Android version code `5` (confirmed 2026-09-19). The successful native build is EAS build `a97a3ee6-b871-4825-b135-2a93f5a7eabb`; it was produced from the approved 0.1.0 compatibility source line.
+- For that installed `0.1.0 (5)` APK, use the approved compatibility source `74039199991888777911deb30cf248e8f36cf8a8` plus narrow OTA-safe patches.
 - **Never publish current `main` to runtime `0.1.0` by only changing the version/runtime label.** That previously caused fallback to the embedded old dashboard.
 - Normal JS/TS/UI changes are OTA-first. **Never create a new Partner APK/AAB/native EAS build without explicit user permission for that exact build.**
 - Do not add a native dependency to a `0.1.0` OTA unless it already exists in the installed binary. Prefer JS-only alternatives.

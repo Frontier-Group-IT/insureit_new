@@ -1,3 +1,16 @@
+## 2026-09-19 — Claims reference-layout redesign for installed Partner 0.1.0 (5)
+
+- Branch: `ui/partner-claims-reference-redesign`.
+- User requested the Partner Claims list to match the supplied premium blue reference layout and explicitly required the existing logo to remain unchanged.
+- UI implementation keeps the existing official `assets/partner-login-logo.png` asset untouched and uses it as-is in the Claims hero.
+- Claims now uses: deep-blue hero, Claims title/subtitle, activity + profile controls, overlapping search/filter bar, four live claim KPI cards, All/Active/Completed lifecycle tabs, sort sheet, dense rounded claim cards, existing claim-detail navigation, and a manual Load More affordance.
+- Monthly-trend percentages from the reference are not fabricated because the current Partner claim summary RPC does not provide comparison-period data; the KPI cards identify the current authorized scope instead.
+- Existing `partner_app_claim_summary` and `partner_app_list_claims` contracts, authorization scope, search, pagination and claim detail routes are preserved. No schema/RLS/backend change.
+- Runtime 0.1.0 compatibility copy is stored at `scripts/partner/compat/partner-claims-reference-0-1.tsx`; the approved compatibility OTA workflow is prepared to install it into the `74039199991888777911deb30cf248e8f36cf8a8` source before publishing preview runtime 0.1.0.
+- **IMPLEMENTED only. NOT MERGED, NOT OTA-PUBLISHED, NO APK/AAB BUILD.**
+
+---
+
 # INSUREIT Partner App — Operational Handoff (2026-09-13)
 
 > **Purpose:** durable handoff for any new AI agent continuing INSUREIT Partner work.

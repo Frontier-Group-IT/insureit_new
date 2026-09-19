@@ -13,6 +13,7 @@ on:
       - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-more-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-policies-reference-0-1.tsx'
+      - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
 
@@ -161,6 +162,17 @@ jobs:
           grep -q 'Profile & registration' 'compat/apps/partner-app/app/(tabs)/more.tsx'
           grep -q 'Settings & app info' 'compat/apps/partner-app/app/(tabs)/more.tsx'
 
+      - name: Install reference-style Claims layout for runtime 0.1.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-claims-reference-0-1.tsx \
+            'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q 'Support. Settle. Keep' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q 'Total Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q 'Load More Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "partner-login-logo.png" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+
       - name: Require Expo token
         shell: bash
         run: |
@@ -198,7 +210,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 Business + Policies + More reference layouts" \
+            --message "Partner 0.1.0 Business + Policies + Claims + More reference layouts" \
             --non-interactive \
             --json > partner-0-1-home-refinements-update.json
           cat partner-0-1-home-refinements-update.json
@@ -216,6 +228,7 @@ jobs:
             echo "- Home: Policy Intake quick-action visible icon scaled to match the other Quick Action icons; prior hero/compact-home refinements preserved"
             echo "- Business Report: reference-style compact dashboard layout + JS-only date range preserved"
             echo "- Policies: reference-style hero, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards"
+            echo "- Claims: reference-style hero, official existing Partner logo, search/filter controls, KPI cards, lifecycle tabs, dense claim cards and manual Load More"
             echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions"
             echo "- No native build or dependency change"
           } >> "$GITHUB_STEP_SUMMARY"
