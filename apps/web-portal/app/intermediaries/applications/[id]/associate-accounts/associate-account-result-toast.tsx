@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, X, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, X, XCircle } from "lucide-react";
 
 export function AssociateAccountResultToast({
   tone,
   message,
+  acknowledge = false,
 }: {
   tone: "success" | "error";
   message: string;
+  acknowledge?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,17 +27,60 @@ export function AssociateAccountResultToast({
     const cleanUrl = params.size ? `${pathname}?${params.toString()}` : pathname;
     router.replace(cleanUrl, { scroll: false });
 
+    if (acknowledge) return;
+
     const timer = window.setTimeout(() => setVisible(false), 3500);
     return () => window.clearTimeout(timer);
-  }, [pathname, router, searchParams]);
+  }, [acknowledge, pathname, router, searchParams]);
 
   if (!visible) return null;
 
   const success = tone === "success";
 
+  if (acknowledge && tone === "error") {
+    return (
+      <div
+        className="fixed inset-0 z-[140] grid place-items-center bg-slate-950/20 px-4 backdrop-blur-[1px]"
+        role="presentation"
+      >
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="associate-email-in-use-title"
+          aria-describedby="associate-email-in-use-message"
+          className="w-full max-w-[360px] rounded-2xl border border-[#E7ECF3] bg-white p-5 shadow-[0_24px_70px_rgba(15,23,42,0.22)]"
+        >
+          <div className="flex items-start gap-3">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
+              <AlertTriangle className="h-4.5 w-4.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 id="associate-email-in-use-title" className="text-[13px] font-bold text-[#17203A]">
+                Email Already in Use
+              </h2>
+              <p id="associate-email-in-use-message" className="mt-1.5 text-[10.5px] leading-5 text-[#5B667A]">
+                {message}
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              autoFocus
+              onClick={() => setVisible(false)}
+              className="h-9 min-w-[76px] rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white transition hover:bg-[#102A4C] focus:outline-none focus:ring-2 focus:ring-[#C9D8EE]"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      role={success ? "status" : "alert"}
+      role={success ? "status" : "alert"
       aria-live={success ? "polite" : "assertive"}
       className="fixed right-4 top-4 z-[120] w-[min(92vw,390px)] animate-[associate-toast-in_180ms_ease-out] sm:right-6 sm:top-6"
     >
