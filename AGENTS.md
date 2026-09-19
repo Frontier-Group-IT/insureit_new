@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Compact Customer Application Review UI:** branch `ui/compact-customer-application-review`; tightens the Customer Application Review hero, five-metric status strip, page spacing, summary detail tiles, verification documents panel, shared Corporate/Dealership review sections, fields and save bars. Data queries, approval logic, routes, permissions and schema remain unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-19 — Collapsed desktop sidebar tooltip stacking fix:** branch `fix/collapsed-sidebar-tooltip-stack`; collapsed sidebar no longer reuses visible navigation text spans as tooltips. Labels are fully hidden in compact mode and a single hover/focus tooltip is generated from `data-sidebar-label`, preventing the stacked black labels seen on Customer KYC and other pages. Expanded sidebar behavior is unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-19 — Desktop sidebar login collapse fix:** branch `fix/sidebar-login-submenus-collapsed`; removes persisted open-section/open-group restoration from desktop navigation so a fresh login/dashboard load starts with workspace submenus collapsed. Manual expand/collapse and active-route expansion during the current session remain intact. **IMPLEMENTED; PR/CI/merge/deployment pending.**
