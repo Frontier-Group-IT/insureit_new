@@ -13,14 +13,15 @@ const HEADERS = [
   "Make", "Model", "Fuel Type", "Capacity / GVW", "Year of Mfg", "Chassis No.", "Engine No.",
   "Policy Product", "IDV / SI", "OD Premium", "Third Party Premium", "CPA", "Net Premium", "GST", "Gross Premium",
   "Policy Number", "Insurance Company", "Valid From", "Valid Upto", "RTO State", "RTO Name", "Pay-in Basis",
-  "Pay-in % OD", "OD Pay-in Amount", "Pay-in % TP", "TP Pay-in Amount", "Total Pay-in", "TDS",
-  "Payout OD %", "Payout TP %", "Gross Payout", "Retention",
+  "Pay-in % OD (NET PAYIN % FOR NM)", "OD Pay-in Amount", "Pay-in % TP", "Base", "Insurance Scheme / Incentive",
+  "TP Pay-in Amount", "Total Pay-in", "TDS", "Pay-in after TDS", "Payout Basis",
+  "Payout OD % (NET PAYOUT % FOR NM)", "Payout TP %", "Gross Payout", "Retention",
 ] as const;
 
-const MONEY_COLUMNS = new Set(["U", "V", "W", "X", "Y", "Z", "AA", "AJ", "AL", "AM", "AN", "AQ", "AR"]);
-const PERCENT_COLUMNS = new Set(["AI", "AK", "AO", "AP"]);
+const MONEY_COLUMNS = new Set(["U", "V", "W", "X", "Y", "Z", "AA", "AJ", "AL", "AM", "AN", "AO", "AP", "AQ", "AU", "AV"]);
+const PERCENT_COLUMNS = new Set(["AI", "AK", "AS", "AT"]);
 const NUMERIC_COLUMNS = new Set(["P", "Q"]);
-const SUMMARY_COLUMNS = ["V", "W", "X", "Y", "Z", "AA", "AJ", "AL", "AM", "AN", "AQ", "AR"] as const;
+const SUMMARY_COLUMNS = ["V", "W", "X", "Y", "Z", "AA", "AJ", "AL", "AM", "AN", "AO", "AP", "AQ", "AU", "AV"] as const;
 
 export async function GET(request: NextRequest) {
   const profile = await requireCapability("view_reports");
@@ -63,8 +64,8 @@ function buildWorkbook(rows: PolicyBusinessMisRow[]) {
     const property = summaryProperty(column);
     sheet[`${column}1`] = { t: "n", f: `SUM(${column}3:${column}${lastRow})`, v: totals[property] };
   }
-  sheet["!ref"] = `A1:AR${Math.max(rows.length + 2, 2)}`;
-  sheet["!autofilter"] = { ref: `A2:AR${Math.max(rows.length + 2, 2)}` };
+  sheet["!ref"] = `A1:AV${Math.max(rows.length + 2, 2)}`;
+  sheet["!autofilter"] = { ref: `A2:AV${Math.max(rows.length + 2, 2)}` };
   sheet["!cols"] = columnWidths();
   sheet["!rows"] = [{ hpt: 22 }, { hpt: 38 }];
 
@@ -83,7 +84,8 @@ function toSpreadsheetRow(row: PolicyBusinessMisRow) {
     row.make, row.model, row.fuelType, row.capacity, row.manufacturingYear, row.chassisNo, row.engineNo,
     row.policyProduct, row.idv, row.odPremium, row.tpPremium, row.cpa, row.netPremium, row.gst, row.grossPremium,
     row.policyNumber, row.insuranceCompany, row.validFrom, row.validUpto, row.rtoState, row.rtoName, row.payinBasis,
-    row.payinOdPercent / 100, row.payinOdAmount, row.payinTpPercent / 100, row.payinTpAmount, row.totalPayin, row.tds,
+    row.payinOdPercent / 100, row.payinOdAmount, row.payinTpPercent / 100, row.payinBase, row.insurerScheme,
+    row.payinTpAmount, row.totalPayin, row.tds, row.payinAfterTds, row.payoutBasis,
     row.payoutOdPercent / 100, row.payoutTpPercent / 100, row.grossPayout, row.retention,
   ];
 }
@@ -97,20 +99,23 @@ function totalsFor(rows: PolicyBusinessMisRow[]) {
     gst: total.gst + row.gst,
     grossPremium: total.grossPremium + row.grossPremium,
     payinOdAmount: total.payinOdAmount + row.payinOdAmount,
+    payinBase: total.payinBase + row.payinBase,
+    insurerScheme: total.insurerScheme + row.insurerScheme,
     payinTpAmount: total.payinTpAmount + row.payinTpAmount,
     totalPayin: total.totalPayin + row.totalPayin,
     tds: total.tds + row.tds,
+    payinAfterTds: total.payinAfterTds + row.payinAfterTds,
     grossPayout: total.grossPayout + row.grossPayout,
     retention: total.retention + row.retention,
-  }), { odPremium: 0, tpPremium: 0, cpa: 0, netPremium: 0, gst: 0, grossPremium: 0, payinOdAmount: 0, payinTpAmount: 0, totalPayin: 0, tds: 0, grossPayout: 0, retention: 0 });
+  }), { odPremium: 0, tpPremium: 0, cpa: 0, netPremium: 0, gst: 0, grossPremium: 0, payinOdAmount: 0, payinBase: 0, insurerScheme: 0, payinTpAmount: 0, totalPayin: 0, tds: 0, payinAfterTds: 0, grossPayout: 0, retention: 0 });
 }
 
 function summaryProperty(column: typeof SUMMARY_COLUMNS[number]): keyof ReturnType<typeof totalsFor> {
-  return ({ V: "odPremium", W: "tpPremium", X: "cpa", Y: "netPremium", Z: "gst", AA: "grossPremium", AJ: "payinOdAmount", AL: "payinTpAmount", AM: "totalPayin", AN: "tds", AQ: "grossPayout", AR: "retention" } as const)[column];
+  return ({ V: "odPremium", W: "tpPremium", X: "cpa", Y: "netPremium", Z: "gst", AA: "grossPremium", AJ: "payinOdAmount", AL: "payinBase", AM: "insurerScheme", AN: "payinTpAmount", AO: "totalPayin", AP: "tds", AQ: "payinAfterTds", AU: "grossPayout", AV: "retention" } as const)[column];
 }
 
 function columnWidths() {
-  const widths = [10, 14, 20, 17, 24, 18, 13, 18, 28, 15, 24, 18, 18, 30, 14, 16, 12, 24, 22, 18, 14, 14, 16, 12, 14, 12, 14, 25, 30, 14, 14, 18, 24, 14, 13, 16, 13, 16, 15, 13, 13, 13, 16, 16];
+  const widths = [10, 14, 20, 17, 24, 18, 13, 18, 28, 15, 24, 18, 18, 30, 14, 16, 12, 24, 22, 18, 14, 14, 16, 12, 14, 12, 14, 25, 30, 14, 14, 18, 24, 18, 25, 16, 13, 14, 22, 16, 15, 13, 16, 18, 28, 13, 16, 16];
   return widths.map((wch) => ({ wch }));
 }
 
