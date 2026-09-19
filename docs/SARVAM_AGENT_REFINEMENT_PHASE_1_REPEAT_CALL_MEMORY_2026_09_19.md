@@ -20,6 +20,7 @@ Add these variables to the Sarvam agent under **Variables & personalization → 
 - `last_call_summary`
 - `previous_conversation_context`
 - `opening_line`
+- `opening_follow_up`
 
 All values are supplied by INSUREIT at cohort dispatch time.
 
@@ -27,43 +28,55 @@ For privacy/logging, flag `last_call_summary`, `last_customer_objection`, and `p
 
 ## Greeting change
 
-Replace the current fixed greeting:
-
-```text
-Namaste customer_name ji, main INSUREIT se bol raha hoon aapki vehicle_make_model ki policy renewal ke baare mein. Kya do minute baat kar sakte hain?
-```
-
-with the single variable:
+Replace the current fixed greeting with the single variable:
 
 ```text
 opening_line
 ```
 
-Insert it using Sarvam's variable picker so the greeting is populated from the campaign row.
+Insert it using Sarvam's variable picker.
 
-INSUREIT now generates two styles:
+**Important:** `opening_line` is intentionally only the first short human-sounding turn. It does not include the vehicle, purpose, automation disclosure, or convenience question.
 
-### First connected conversation
-
-```text
-Namaste Rajesh ji, main INSUREIT ka automated renewal assistant bol raha hoon, aapki Scorpio N ki policy renewal ke regarding. Kya do minute convenient hain?
-```
-
-### Repeat conversation
-
-Generic continuation:
+Example:
 
 ```text
-Namaste Rajesh ji, main INSUREIT ka automated renewal assistant bol raha hoon. Pichli baar hum aapki policy renewal par baat kar chuke hain. Main wahi discussion continue karne ke liye call kar raha hoon—abhi do minute convenient hain?
+Namaste Rajesh ji, main INSUREIT se bol raha hoon.
 ```
 
-When the previous disposition is specific, INSUREIT makes the continuity more relevant, for example:
+Then the agent must **wait for the customer to respond**.
 
-- prior follow-up → "Pichli baar aapne baad mein baat karne ko kaha tha..."
-- prior quote request → "Pichli baar hum renewal quotation aur options ko lekar baat kar rahe the..."
-- prior interested → "Pichli baar hum aapki renewal requirements par baat kar rahe the..."
+After the customer replies naturally ("haan", "ji", "hello", "bolo", etc.), use `opening_follow_up` exactly once.
 
-No unsupported claim is made that a quote was prepared, callback was scheduled, or human action happened.
+Examples:
+
+### First conversation
+
+```text
+Aapki Scorpio N ki renewal aa rahi hai—abhi ek minute hai?
+```
+
+### Repeat call after a callback request
+
+```text
+Pichli baar aapne baad mein baat karne ko kaha tha—abhi convenient hai?
+```
+
+### Repeat call after quotation/options discussion
+
+```text
+Pichli baar quotation options ki baat hui thi—usi ko continue karein?
+```
+
+### Repeat call after a general interested conversation
+
+```text
+Pichli baar renewal requirements discuss hui thi—usi ko continue karein?
+```
+
+The opening must not volunteer phrases such as "automated assistant", "AI assistant", "voice bot", or "virtual assistant". If the customer directly asks whether the caller is AI/automated, answer truthfully and briefly.
+
+The first turn should usually be under roughly 4 seconds. The second turn should also be one short thought/question.
 
 ## Prompt patch to add near the top of the agent instructions
 
@@ -73,13 +86,17 @@ CROSS-CALL MEMORY — HIGH PRIORITY
 You may receive repeat_call, previous_connected_call_count,
 last_call_date, last_call_disposition, last_customer_interest,
 last_customer_objection, last_follow_up_time, last_call_summary,
-previous_conversation_context and opening_line from INSUREIT.
+previous_conversation_context, opening_line and opening_follow_up from INSUREIT.
 
 Use opening_line exactly once as the first spoken message.
+Then STOP and wait for the customer's response.
+After the customer responds, use opening_follow_up exactly once unless their response requires a more direct reply.
 
 If repeat_call = yes:
 - This is a continuation, not a fresh sales call.
 - Never restart the full first-call introduction.
+- Do not announce that you are an automated assistant unless the customer asks whether you are AI/automated.
+- Never combine identity, vehicle, renewal purpose, prior-call recap and convenience check into one long opening turn.
 - Never ask again for information already clearly present in previous_conversation_context or last_call_summary.
 - Continue from the most useful unresolved point.
 - If the customer requested a callback earlier, acknowledge that context briefly and continue.
