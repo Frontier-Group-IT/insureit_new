@@ -213,7 +213,7 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Home: Policy Intake quick-action visible icon scaled to match the other Quick Action icons; prior hero/compact-home refinements preserved"
             echo "- Business Report: reference-style compact dashboard layout + JS-only date range preserved"
-            echo "- Policies: reference-style hero, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards
-            echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions""
+            echo "- Policies: reference-style hero, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards"
+            echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions"
             echo "- No native build or dependency change"
           } >> "$GITHUB_STEP_SUMMARY"
