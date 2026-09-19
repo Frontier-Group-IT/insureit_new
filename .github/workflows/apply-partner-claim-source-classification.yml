@@ -72,13 +72,12 @@ jobs:
                 'public.partner_app_list_claims(integer,integer,text,text)',
                 'EXECUTE'
               ) as authenticated_execute,
-              exists (
-                select 1
-                from information_schema.routine_columns
-                where specific_schema = 'public'
-                  and routine_name = 'partner_app_list_claims'
-                  and column_name = 'policy_service_source'
-              ) as source_column_ready
+              position(
+                'policy_service_source text'
+                in pg_get_function_result(
+                  'public.partner_app_list_claims(integer,integer,text,text)'::regprocedure
+                )
+              ) > 0 as source_column_ready
           ")
           echo "$result"
           echo "$result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
