@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { matchesRequiredDocument, requiredDocumentTypesForStatus, verifiedStatusFor, type ClaimStatus } from "@/lib/claim-workflow";
-import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
+import { insertAuthorizedClaimStageDetail, requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 
 const bucketName = "claim-documents";
 const maxDocumentSizeBytes = 5 * 1024 * 1024;
@@ -151,7 +151,7 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     const documentIds = parseDocumentIds(String(formData.get("documentId") ?? "").trim());
     const claimId = String(formData.get("claimId") ?? "").trim();
     if (!documentIds.length || !claimId) throw new Error("Missing claim or document id.");
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     const rawDetails = collectVerificationDetails(formData);
     const incidentDate = incidentDateOnly(claim.accident_at);
     const { data: selectedDocuments, error: documentError } = await supabase.from("claim_documents").select("id, document_type, verification_status").eq("claim_id", claimId).in("id", documentIds).returns<ClaimDocumentStatus[]>();
@@ -183,8 +183,9 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
     const idsToVerify = documentsToVerify.map((document) => document.id);
     const { error: reviewError } = await supabase.from("claim_documents").update({ verification_status: "verified", verified_by: profile.id, verified_at: verifiedAt, rejection_reason: null }).eq("claim_id", claimId).in("id", idsToVerify);
     if (reviewError) throw new Error(reviewError.message);
-    const { error: stageDetailsError } = await supabase.from("claim_stage_details").insert(attempts.map((attempt) => ({ claim_id: claimId, stage: claim.current_status, details: attempt.detailsPayload, created_by: profile.id })));
-    if (stageDetailsError) throw new Error(stageDetailsError.message);
+    for (const attempt of attempts) {
+      await insertAuthorizedClaimStageDetail({ isPartner, supabase }, { claim_id: claimId, stage: claim.current_status, details: attempt.detailsPayload, created_by: profile.id });
+    }
     const { error: verificationError } = await supabase.from("claim_document_verifications").insert(attempts.map((attempt) => ({ claim_id: claimId, document_id: attempt.document.id, document_type: attempt.document.document_type, verification_type: verificationTypeForDocument(attempt.document.document_type), incident_date: incidentDate, is_valid: true, invalid_reason: null, details: attempt.detailsPayload, verified_by: profile.id })));
     if (verificationError) throw new Error(verificationError.message);
     await advanceAfterInitialDocumentsVerified(supabase, claim, profile.id);
@@ -201,7 +202,7 @@ export async function verifySpotSurveyDocument(formData: FormData): Promise<Acti
 export async function finalizeInitialDocumentVerification(claimId: string): Promise<ActionResult> {
   try {
     if (!claimId.trim()) throw new Error("Missing claim id.");
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     const advanced = await advanceAfterInitialDocumentsVerified(supabase, claim, profile.id);
     if (!advanced) throw new Error("This claim is not eligible for initial document finalization.");
     revalidateClaimPaths(claimId);
@@ -218,13 +219,13 @@ export async function requestSpotSurveyDocumentReupload(formData: FormData): Pro
     const claimId = String(formData.get("claimId") ?? "").trim();
     const reason = String(formData.get("reason") ?? "Document reupload requested by claim manager.").trim() || "Document reupload requested by claim manager.";
     if (!documentId || !claimId) throw new Error("Missing claim or document id.");
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     const { data: document, error: documentError } = await supabase.from("claim_documents").select("id, document_type, file_name").eq("id", documentId).eq("claim_id", claimId).maybeSingle<{ id: string; document_type: string; file_name: string }>();
     if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
     const { error: updateError } = await supabase.from("claim_documents").update({ verification_status: "rejected", rejection_reason: reason, verified_by: profile.id, verified_at: new Date().toISOString() }).eq("id", documentId).eq("claim_id", claimId);
     if (updateError) throw new Error(updateError.message);
     const detailsPayload = { verification_type: "reupload_requested", document_type: document.document_type, document_id: document.id, file_name: document.file_name, reason, requested_at: new Date().toISOString(), requested_by: profile.id };
-    await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile.id });
+    await insertAuthorizedClaimStageDetail({ isPartner, supabase }, { claim_id: claimId, stage: claim.current_status, details: detailsPayload, created_by: profile.id });
     await saveVerificationHistory(supabase, { claimId, documentId: document.id, documentType: document.document_type, verificationType: verificationTypeForDocument(document.document_type), incidentDate: incidentDateOnly(claim.accident_at), isValid: false, invalidReason: reason, details: detailsPayload, verifiedBy: profile.id });
     await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `Reupload requested for ${document.document_type}. ${reason}`, changed_by: profile.id });
     await supabase.from("customer_activity_events").insert({ customer_id: claim.customer_id, claim_id: claimId, source_table: "claim_documents", source_id: document.id, event_type: "claim_document_reuploaded", title: `${document.document_type} reupload requested`, message: reason, priority: "high", status: "new", metadata: { document_type: document.document_type, document_id: document.id, file_name: document.file_name, requested_by: profile.id } });
@@ -243,10 +244,9 @@ export async function verifySpotSurveyDetail(formData: FormData): Promise<Action
     const detailLabel = String(formData.get("detailLabel") ?? "").trim();
     const detailValue = String(formData.get("detailValue") ?? "").trim();
     if (!claimId || !detailKey) throw new Error("Missing claim or detail id.");
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     const detailPayload = { verification_type: "spot_survey_detail", spot_survey_detail_key: detailKey, label: detailLabel, value: detailValue, verified: true, verified_at: new Date().toISOString() };
-    const { error: detailError } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details: detailPayload, created_by: profile.id });
-    if (detailError) throw new Error(detailError.message);
+    await insertAuthorizedClaimStageDetail({ isPartner, supabase }, { claim_id: claimId, stage: claim.current_status, details: detailPayload, created_by: profile.id });
     await saveVerificationHistory(supabase, { claimId, documentId: null, documentType: detailLabel || detailKey, verificationType: "detail", incidentDate: incidentDateOnly(claim.accident_at), isValid: true, invalidReason: null, details: detailPayload, verifiedBy: profile.id });
     await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: claim.current_status, notes: `${detailLabel || detailKey} verified during spot survey.`, changed_by: profile.id });
     revalidateClaimPaths(claimId);
@@ -269,7 +269,7 @@ export async function uploadSpotSurveyMedia(formData: FormData): Promise<ActionR
       const maxFileSize = isVideo ? maxVideoSizeBytes : maxSpotPhotoSizeBytes;
       if (file.size > maxFileSize) throw new Error(`${file.name} exceeds the ${isVideo ? "50MB video" : "20MB photo"} per-file limit.`);
     }
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     const uploadedPaths: string[] = [];
     const rows: Array<{ claim_id: string; customer_id: string; document_type: string; file_name: string; storage_bucket: string; storage_path: string; verification_status: "pending" }> = [];
     try {
@@ -303,7 +303,7 @@ export async function classifySpotSurveyAttachment(formData: FormData): Promise<
     const documentType = String(formData.get("documentType") ?? "").trim();
     const allowedTypes = new Set(["Accident Photo", "Accident Video", "RC Copy", "Insurance Copy", "Driver Licence", "GR / Load Bill"]);
     if (!claimId || !documentId || !allowedTypes.has(documentType)) throw new Error("Choose a valid document category.");
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     const { data: document, error: documentError } = await supabase.from("claim_documents").select("id, document_type, file_name").eq("id", documentId).eq("claim_id", claimId).maybeSingle<{ id: string; document_type: string; file_name: string }>();
     if (documentError || !document) throw new Error(documentError?.message ?? "Document not found.");
     if (document.document_type !== "Spot Intimation Attachment") throw new Error("This attachment has already been classified.");
@@ -336,7 +336,7 @@ export async function replaceSpotSurveyDocument(formData: FormData): Promise<Act
     const allowedTypes = isVideo ? ["video/mp4", "video/quicktime", "video/webm"] : ["image/jpeg", "image/png", "image/webp", "application/pdf"];
     const extensionAllowed = isVideo ? /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name) : /\.(jpg|jpeg|png|webp|pdf)$/i.test(file.name);
     if (file.type && !allowedTypes.includes(file.type) && !extensionAllowed) throw new Error("Unsupported document format.");
-    const { profile, claim, supabase } = await context(claimId);
+    const { profile, claim, supabase, isPartner } = await context(claimId);
     if (customerId !== claim.customer_id) throw new Error("The document customer does not match this claim.");
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const storagePath = `${claimId}/${Date.now()}-${safeName}`;
