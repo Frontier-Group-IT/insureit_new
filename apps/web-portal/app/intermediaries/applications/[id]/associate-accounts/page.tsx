@@ -50,6 +50,10 @@ type Associate = {
   phone_number: string;
   email: string;
   designation: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
   role: "admin" | "claim_head" | "insurance_head" | "bodyshop_manager";
   status: "invited" | "active" | "disabled";
   created_at: string;
@@ -91,7 +95,7 @@ export default async function PartnerAssociateAccountsPage({
   }
 
   const { data: associates, error: associatesError } = await admin.from("partner_portal_associate_accounts")
-    .select("id,name,phone_number,email,designation,role,status,created_at,invited_at")
+    .select("id,name,phone_number,email,designation,address,city,state,postal_code,role,status,created_at,invited_at")
     .eq("intermediary_id", intermediary.id)
     .order("created_at", { ascending: false })
     .returns<Associate[]>();
@@ -159,24 +163,32 @@ export default async function PartnerAssociateAccountsPage({
           <div className="border-b border-[#E7ECF3] px-5 py-4">
             <h2 className="text-[13px] font-semibold text-[#17203A]">Associate Accounts</h2>
           </div>
-          <form action={createPartnerAssociateAccount} className="grid gap-3 p-5 xl:grid-cols-[1.2fr_1fr_1.4fr_1.2fr_1.15fr_auto] xl:items-end">
+          <form action={createPartnerAssociateAccount} className="p-5">
             <input type="hidden" name="application_id" value={id} />
             <input type="hidden" name="intermediary_id" value={intermediary.id} />
             <input type="hidden" name="return_path" value={returnPath} />
-            <Field label="Name"><input name="name" required className={inputClass} placeholder="Associate name" /></Field>
-            <Field label="Phone Number"><input name="phone_number" required className={inputClass} placeholder="+91..." inputMode="tel" /></Field>
-            <Field label="Email"><input name="email" type="email" required className={inputClass} placeholder="user@company.com" /></Field>
-            <Field label="Designation"><input name="designation" required className={inputClass} placeholder="Designation" /></Field>
-            <Field label="Role">
-              <select name="role" required defaultValue="" className={inputClass}>
-                <option value="" disabled>Select role</option>
-                <option value="admin" disabled>Admin</option>
-                <option value="claim_head">Claim Head</option>
-                <option value="insurance_head">Insurance Head</option>
-                <option value="bodyshop_manager">Bodyshop Manager</option>
-              </select>
-            </Field>
-            <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" />
+            <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1.4fr_1.2fr_1.15fr_auto] xl:items-end">
+              <Field label="Name" required><input name="name" required className={inputClass} placeholder="Associate name" /></Field>
+              <Field label="Phone Number" required><input name="phone_number" required className={inputClass} placeholder="+91..." inputMode="tel" /></Field>
+              <Field label="Email" required><input name="email" type="email" required className={inputClass} placeholder="user@company.com" /></Field>
+              <Field label="Designation" required><input name="designation" required className={inputClass} placeholder="Designation" /></Field>
+              <Field label="Role" required>
+                <select name="role" required defaultValue="" className={inputClass}>
+                  <option value="" disabled>Select role</option>
+                  <option value="admin" disabled>Admin</option>
+                  <option value="claim_head">Claim Head</option>
+                  <option value="insurance_head">Insurance Head</option>
+                  <option value="bodyshop_manager">Bodyshop Manager</option>
+                </select>
+              </Field>
+              <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" />
+            </div>
+            <div className="mt-4 grid gap-3 xl:grid-cols-[2fr_1fr_1fr_1fr]">
+              <Field label="Address"><input name="address" className={inputClass} placeholder="Address" /></Field>
+              <Field label="City"><input name="city" className={inputClass} placeholder="City" /></Field>
+              <Field label="State"><input name="state" className={inputClass} placeholder="State" /></Field>
+              <Field label="PIN Code"><input name="postal_code" className={inputClass} placeholder="PIN Code" inputMode="numeric" /></Field>
+            </div>
           </form>
         </section>
 
@@ -192,6 +204,7 @@ export default async function PartnerAssociateAccountsPage({
                   <th className="px-3 py-3">Phone Number</th>
                   <th className="px-3 py-3">Email</th>
                   <th className="px-3 py-3">Designation</th>
+                  <th className="px-3 py-3">Address</th>
                   <th className="px-3 py-3">Role</th>
                   <th className="px-3 py-3">Status</th>
                   <th className="px-3 py-3 text-center">Action</th>
@@ -204,6 +217,7 @@ export default async function PartnerAssociateAccountsPage({
                     <td className="px-3 py-3 text-[#475569]">{associate.phone_number}</td>
                     <td className="px-3 py-3 font-medium text-[#17203A]">{associate.email}</td>
                     <td className="px-3 py-3 text-[#475569]">{associate.designation}</td>
+                    <td className="max-w-[260px] px-3 py-3 text-[#475569]">{associateAddress(associate)}</td>
                     <td className="px-3 py-3"><RolePill value={associate.role} /></td>
                     <td className="px-3 py-3"><StatusPill value={associate.status} /></td>
                     <td className="px-3 py-3 text-center">
@@ -217,7 +231,7 @@ export default async function PartnerAssociateAccountsPage({
                   </tr>
                 ))}
                 {!(associates ?? []).length ? (
-                  <tr><td colSpan={7} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
+                  <tr><td colSpan={8} className="px-5 py-10 text-center text-[10.5px] text-[#94A3B8]">No associate accounts added yet.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -230,8 +244,8 @@ export default async function PartnerAssociateAccountsPage({
 
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}</span>{children}</label>;
+function Field({ label, children, required = false }: { label: string; children: React.ReactNode; required?: boolean }) {
+  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}{required ? <span className="text-red-600"> *</span> : null}</span>{children}</label>;
 }
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm"><h2 className="mb-4 text-[13px] font-semibold text-[#17203A]">{title}</h2>{children}</section>;
@@ -257,6 +271,12 @@ function UserIcon() {
 }
 function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+function associateAddress(associate: Associate) {
+  const parts = [associate.address, associate.city, associate.state, associate.postal_code]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  return parts.length ? parts.join(", ") : "-";
 }
 function completeAddress(profile: Profile) {
   const parts = [profile.address, profile.city, profile.state].map((value) => value?.trim()).filter((value): value is string => Boolean(value));
