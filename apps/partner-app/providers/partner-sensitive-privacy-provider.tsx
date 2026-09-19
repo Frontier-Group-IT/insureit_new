@@ -19,12 +19,24 @@ export function isPartnerSensitivePath(pathname: string) {
   return SENSITIVE_ROUTE_PATTERNS.some((pattern) => pattern.test(pathname));
 }
 
+const SCREEN_CAPTURE_RESTRICTION_ENABLED = false;
+
 export function PartnerSensitivePrivacyProvider({ children }: PropsWithChildren) {
   const pathname = usePathname();
   const sensitive = isPartnerSensitivePath(pathname);
 
   useEffect(() => {
-    if (!sensitive) return;
+    if (!SCREEN_CAPTURE_RESTRICTION_ENABLED) {
+      void releasePartnerSensitiveScreen();
+      void disablePartnerAppSwitcherPrivacy();
+      return;
+    }
+
+    if (!sensitive) {
+      void releasePartnerSensitiveScreen();
+      void disablePartnerAppSwitcherPrivacy();
+      return;
+    }
 
     void protectPartnerSensitiveScreen();
     void enablePartnerAppSwitcherPrivacy();
