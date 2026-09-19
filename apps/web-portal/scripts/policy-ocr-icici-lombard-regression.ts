@@ -101,20 +101,23 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.3.0+gcv-live-replay-v4");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.6.0+gcv-live-replay-v7");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
+assert.equal(field(result, "insured_name"), "SYNTHETIC TRANSPORT COMPANY");
 assert.equal(field(result, "policy_product"), "Package");
 assert.equal(field(result, "policy_start_date"), "2026-10-01");
 assert.equal(field(result, "policy_end_date"), "2027-09-30");
 assert.equal(field(result, "vehicle_registration_status"), "registered");
 assert.equal(field(result, "vehicle_registration_number"), "MP20AB1234");
-assert.equal(field(result, "vehicle_class"), "Public Carrier");
+assert.equal(field(result, "vehicle_class"), "GCV");
 assert.equal(field(result, "vehicle_make"), "ALPHAMOTORS");
 assert.equal(field(result, "vehicle_model"), "7000 HAULER");
 assert.equal(field(result, "vehicle_manufacturing_year"), "2024");
+assert.equal(field(result, "vehicle_capacity"), "55000");
 assert.equal(field(result, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
 assert.equal(field(result, "vehicle_engine_number"), "EN12AB34567890");
 assert.equal(field(result, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
+assert.equal(field(result, "vehicle_rto_state"), "Madhya Pradesh");
 assert.equal(field(result, "idv"), "4567890");
 assert.equal(field(result, "od_premium"), "50000");
 assert.equal(field(result, "tp_premium"), "40000");
@@ -153,6 +156,31 @@ assert.equal(field(scheduleFallback, "vehicle_registration_number"), "MP20AB1234
 assert.equal(field(scheduleFallback, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
 assert.equal(field(scheduleFallback, "vehicle_engine_number"), "EN12AB34567890");
 assert.equal(field(scheduleFallback, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
+
+const multilineSchedulePage = pages[1]
+  .replace(
+    "RTO Location : MADHYA PRADESH-INDORE",
+    "RTO Location\nMADHYA PRADESH-INDORE",
+  )
+  .replace(
+    "Vehicle Class : Public Carrier",
+    "Vehicle Class\nPublic Carrier",
+  )
+  .replace(
+    "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2 MA1TESTCHASSIS123 EN12AB34567890 0",
+    "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000\n2024 2\nMA1TESTCHASSIS123\nEN12AB34567890\n0",
+  );
+const multilineSchedule = refineIciciLombardMotorPolicy(
+  [pageOneWithoutVehicleIds, multilineSchedulePage],
+  tables,
+  contaminated,
+);
+assert.equal(field(multilineSchedule, "vehicle_class"), "GCV");
+assert.equal(field(multilineSchedule, "vehicle_capacity"), "55000");
+assert.equal(field(multilineSchedule, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
+assert.equal(field(multilineSchedule, "vehicle_engine_number"), "EN12AB34567890");
+assert.equal(field(multilineSchedule, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
+assert.equal(field(multilineSchedule, "vehicle_rto_state"), "Madhya Pradesh");
 
 const unsafe = refineIciciLombardMotorPolicy(
   [pages[0], pages[1].replace("40,000.00", "35,000.00")],

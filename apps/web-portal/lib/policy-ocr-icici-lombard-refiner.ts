@@ -4,15 +4,18 @@ import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-re
 type Fields = Map<string, ParsedPolicyField>;
 
 const LABELS: Record<string, string> = {
+  insured_name: "Insured name",
   vehicle_registration_status: "Registration status",
   vehicle_registration_number: "Registration number",
   vehicle_class: "Vehicle class",
   vehicle_make: "Vehicle make",
   vehicle_model: "Vehicle model",
   vehicle_manufacturing_year: "Manufacturing year",
+  vehicle_capacity: "Vehicle capacity",
   vehicle_chassis_number: "Chassis number",
   vehicle_engine_number: "Engine number",
   vehicle_rto_name: "RTO name",
+  vehicle_rto_state: "RTO state",
   policy_product: "Policy product",
   idv: "IDV / Sum insured",
   od_premium: "OD premium",
@@ -48,6 +51,9 @@ export function refineIciciLombardMotorPolicy(
   set(fields, "insurer_name", "ICICI Lombard General Insurance Company Limited", .999, 1, "ICICI Lombard legal name on policy");
   set(fields, "policy_product", "Package", .999, 2, "Goods Carrying Vehicles Package Policy");
 
+  const insured = insuredNameFromIcici(pages);
+  if (insured) set(fields, "insured_name", insured.value, .995, insured.page, insured.evidence);
+
   const policy = currentPolicyNumber(pages);
   if (policy) set(fields, "policy_number", policy.value, .999, policy.page, policy.evidence);
 
@@ -73,8 +79,16 @@ export function refineIciciLombardMotorPolicy(
   );
 
   const vehicleClass = structuredColumn(tables, [/^Vehicle\s+Class$/i])
+    ?? explicitVehicleClassValue(pages)
     ?? labelValue(pages, /Vehicle\s+Class/i, 2);
-  if (vehicleClass) set(fields, "vehicle_class", cleanVehicle(vehicleClass.value), .995, vehicleClass.page, vehicleClass.evidence);
+  set(
+    fields,
+    "vehicle_class",
+    "GCV",
+    .999,
+    vehicleClass?.page ?? 2,
+    vehicleClass?.evidence ?? "ICICI Goods Carrying Vehicles Package Policy",
+  );
 
   const make = riskVehicle?.make
     ?? structuredColumn(tables, [/^Make$/i]);
@@ -90,6 +104,13 @@ export function refineIciciLombardMotorPolicy(
     ?? structuredColumn(tables, [/^Mfg\s*Yr$/i, /Manufactur(?:ing|e)\s+Year/i]);
   if (year && /^(?:19|20)\d{2}$/.test(year.value.trim())) {
     set(fields, "vehicle_manufacturing_year", year.value.trim(), .999, year.page, year.evidence);
+  }
+
+  const capacityValue = structuredColumn(tables, [/^GVW(?:\s*\(KG\))?$/i, /^Gross\s+Vehicle\s+Weight/i])
+    ?? scheduleVehicleCapacity(pages[1] ?? "", registration?.value ?? fields.get("vehicle_registration_number")?.value ?? "");
+  if (capacityValue) {
+    const capacity = numericCapacity(capacityValue.value);
+    if (capacity != null) set(fields, "vehicle_capacity", String(capacity), .999, capacityValue.page, capacityValue.evidence);
   }
 
   const structuredChassis = structuredColumn(tables, [/^Chassis\s+No\.?$/i]);
@@ -115,8 +136,15 @@ export function refineIciciLombardMotorPolicy(
     ?? scheduleVehicle?.rto
     ?? explicitRtoValue(pages)
     ?? safeRtoValue(labelValue(pages, /RTO\s+(?:City|Location)/i, 2));
-  if (rto) set(fields, "vehicle_rto_name", cleanVehicle(rto.value), .999, rto.page, rto.evidence);
-  else fields.delete("vehicle_rto_name");
+  if (rto) {
+    const rtoName = cleanVehicle(rto.value);
+    set(fields, "vehicle_rto_name", rtoName, .999, rto.page, rto.evidence);
+    const state = rtoStateFromName(rtoName);
+    if (state) set(fields, "vehicle_rto_state", state, .995, rto.page, "Derived from explicit ICICI RTO location: " + rtoName);
+  } else {
+    fields.delete("vehicle_rto_name");
+    fields.delete("vehicle_rto_state");
+  }
 
   const structuredIdv = structuredColumn(tables, [/^Total\s+IDV(?:\s*\(.*\))?$/i]);
   const textIdv = findIciciTotalIdv(pages);
@@ -166,10 +194,41 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.3.0+gcv-live-replay-v4",
+    parserVersion: "icici_lombard_motor_v1.6.0+gcv-live-replay-v7",
     fields: [...fields.values()],
     warnings,
   };
+}
+
+
+function insuredNameFromIcici(pages: string[]): VehicleEvidence | null {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const lines = rawLines(pages[page] ?? "");
+    for (let i = 0; i < lines.length; i += 1) {
+      const same = lines[i].match(/Name\s+of\s+the\s+Insured\s*[:#-]\s*(.+?)(?:\s+Policy\s+No\.?\s*[:#-]|$)/i);
+      if (same) {
+        const value = clean(same[1]);
+        if (safeInsuredName(value)) return { value, page: page + 1, evidence: "ICICI explicit insured-name label" };
+      }
+      if (/^Name\s+of\s+the\s+Insured\s*:?$/i.test(lines[i])) {
+        for (let j = i + 1; j <= Math.min(i + 12, lines.length - 1); j += 1) {
+          const candidate = clean(lines[j]);
+          if (!candidate || looksLikeRiskLabel(candidate) || /Period\s+of\s+Insurance/i.test(candidate)) continue;
+          if (safeInsuredName(candidate)) {
+            return { value: candidate, page: page + 1, evidence: "ICICI insured-name next value" };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function safeInsuredName(value: string) {
+  const cleaned = clean(value);
+  if (cleaned.length < 2 || cleaned.length > 120) return false;
+  if (/^(?:NA|N\/A|NAME|POLICY|PERIOD|VEHICLE|RTO|REGISTRATION|ENGINE|CHASSIS)$/i.test(cleaned)) return false;
+  return /[A-Z]/i.test(cleaned);
 }
 
 function currentPolicyNumber(pages: string[]) {
@@ -407,45 +466,179 @@ function scheduleVehicleDetails(pageTwo: string, registration: string): {
   rto: VehicleEvidence | null;
 } | null {
   if (!pageTwo.trim()) return null;
-  const lines = rawLines(pageTwo);
-  const normalizedRegistration = compactId(registration);
 
+  const normalizedRegistration = compactId(registration);
+  const lines = rawLines(pageTwo);
   let chassis: VehicleEvidence | null = null;
   let engine: VehicleEvidence | null = null;
 
+  // First try a clean single-line row.
   for (const line of lines) {
     if (!normalizedRegistration || !compactId(line).includes(normalizedRegistration)) continue;
-    const tokens = line.split(/\s+/).map(clean).filter(Boolean);
-    const yearIndex = tokens.findIndex((token) => /^(?:19|20)\d{2}$/.test(token.replace(/[^0-9]/g, "")));
-    if (yearIndex < 0) continue;
-
-    const candidates = tokens
-      .slice(yearIndex + 1)
-      .map((token) => ({ raw: token, compact: compactId(token) }))
-      .filter((entry) =>
-        entry.compact !== normalizedRegistration
-        && validVehicleId(entry.compact)
-        && !/TRAILER|MODEL|CARRIER|BHARAT|BENZ/i.test(entry.compact)
-      );
-
-    if (candidates.length >= 2) {
-      chassis = {
-        value: candidates[0].compact,
-        page: 2,
-        evidence: "ICICI policy schedule row after manufacturing year: " + candidates[0].raw,
-      };
-      engine = {
-        value: candidates[1].compact,
-        page: 2,
-        evidence: "ICICI policy schedule row after manufacturing year: " + candidates[1].raw,
-      };
+    const parsed = vehicleIdsFromScheduleText(line, normalizedRegistration);
+    if (parsed.chassis || parsed.engine) {
+      chassis = parsed.chassis;
+      engine = parsed.engine;
       break;
+    }
+  }
+
+  // Live Google Layout can fragment one schedule row over several text lines.
+  // Bound the search to the registration row through the IDV header/value block,
+  // then use the documented ICICI column order after manufacturing year.
+  if (!chassis || !engine) {
+    const regIndex = lines.findIndex((line) =>
+      normalizedRegistration && compactId(line).includes(normalizedRegistration)
+    );
+    if (regIndex >= 0) {
+      let endIndex = Math.min(lines.length, regIndex + 12);
+      for (let i = regIndex + 1; i < Math.min(lines.length, regIndex + 18); i += 1) {
+        if (/^(?:Trailer\s+Registration\s+No\.|Body\s+IDV|Premium\s+Details)/i.test(lines[i])) {
+          endIndex = i;
+          break;
+        }
+      }
+      const bounded = lines.slice(regIndex, endIndex).join(" ");
+      const parsed = vehicleIdsFromScheduleText(bounded, normalizedRegistration);
+      chassis = chassis ?? parsed.chassis;
+      engine = engine ?? parsed.engine;
     }
   }
 
   const rto = explicitRtoFromText(pageTwo, 2);
   if (!chassis && !engine && !rto) return null;
   return { chassis, engine, rto };
+}
+
+function vehicleIdsFromScheduleText(text: string, normalizedRegistration: string) {
+  const tokens = clean(text).split(/\s+/).filter(Boolean);
+  const regIndex = tokens.findIndex((token) => compactId(token) === normalizedRegistration);
+  const searchStart = regIndex >= 0 ? regIndex + 1 : 0;
+
+  const yearIndex = tokens.findIndex((token, index) =>
+    index >= searchStart && /^(?:19|20)\d{2}$/.test(token.replace(/[^0-9]/g, ""))
+  );
+  if (yearIndex < 0) return { chassis: null, engine: null };
+
+  const candidates = tokens
+    .slice(yearIndex + 1)
+    .map((token) => ({ raw: token, compact: compactId(token) }))
+    .filter((entry) =>
+      entry.compact !== normalizedRegistration
+      && validVehicleId(entry.compact)
+      && !/^(?:TRAILER|MODEL|CARRIER|PUBLICCARRIER|PARTIALLYBUILT|OPEN|BHARAT|BENZ|BHARATBENZ)$/i.test(entry.compact)
+    );
+
+  const first = candidates[0] ?? null;
+  const second = candidates[1] ?? null;
+  return {
+    chassis: first ? {
+      value: first.compact,
+      page: 2,
+      evidence: "ICICI policy schedule bounded vehicle row: " + first.raw,
+    } : null,
+    engine: second ? {
+      value: second.compact,
+      page: 2,
+      evidence: "ICICI policy schedule bounded vehicle row: " + second.raw,
+    } : null,
+  };
+}
+
+
+function scheduleVehicleCapacity(pageTwo: string, registration: string): VehicleEvidence | null {
+  const normalizedRegistration = compactId(registration);
+  if (!pageTwo.trim() || !normalizedRegistration) return null;
+
+  const lines = rawLines(pageTwo);
+  const regIndex = lines.findIndex((line) => compactId(line).includes(normalizedRegistration));
+  if (regIndex < 0) return null;
+
+  const bounded = lines.slice(regIndex, Math.min(lines.length, regIndex + 10)).join(" ");
+  const tokens = clean(bounded).split(/\s+/).filter(Boolean);
+  const registrationTokenIndex = tokens.findIndex((token) => compactId(token) === normalizedRegistration);
+  const yearIndex = tokens.findIndex((token, index) =>
+    index > registrationTokenIndex && /^(?:19|20)\d{2}$/.test(token.replace(/[^0-9]/g, ""))
+  );
+  if (yearIndex < 0) return null;
+
+  // ICICI GCV schedule order places GVW immediately before Mfg Yr.
+  for (let i = yearIndex - 1; i > Math.max(registrationTokenIndex, yearIndex - 6); i -= 1) {
+    const raw = tokens[i];
+    const parsed = numericCapacity(raw);
+    if (parsed != null && parsed >= 1000) {
+      return {
+        value: String(parsed),
+        page: 2,
+        evidence: "ICICI policy schedule GVW immediately before manufacturing year: " + raw,
+      };
+    }
+  }
+  return null;
+}
+
+function numericCapacity(value: string): number | null {
+  const hit = value.replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+  if (!hit) return null;
+  const parsed = Number(hit[0]);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) return null;
+  return parsed;
+}
+
+function rtoStateFromName(value: string): string | null {
+  const normalized = clean(value).toUpperCase();
+  const states: Array<[RegExp, string]> = [
+    [/^RAJASTHAN\b/, "Rajasthan"],
+    [/^MADHYA\s+PRADESH\b/, "Madhya Pradesh"],
+    [/^MAHARASHTRA\b/, "Maharashtra"],
+    [/^GUJARAT\b/, "Gujarat"],
+    [/^UTTAR\s+PRADESH\b/, "Uttar Pradesh"],
+    [/^DELHI\b/, "Delhi"],
+    [/^HARYANA\b/, "Haryana"],
+    [/^PUNJAB\b/, "Punjab"],
+    [/^CHHATTISGARH\b/, "Chhattisgarh"],
+    [/^UTTARAKHAND\b/, "Uttarakhand"],
+    [/^BIHAR\b/, "Bihar"],
+    [/^JHARKHAND\b/, "Jharkhand"],
+    [/^WEST\s+BENGAL\b/, "West Bengal"],
+    [/^ODISHA\b/, "Odisha"],
+    [/^KARNATAKA\b/, "Karnataka"],
+    [/^TAMIL\s+NADU\b/, "Tamil Nadu"],
+    [/^TELANGANA\b/, "Telangana"],
+    [/^ANDHRA\s+PRADESH\b/, "Andhra Pradesh"],
+    [/^KERALA\b/, "Kerala"],
+    [/^ASSAM\b/, "Assam"],
+  ];
+  return states.find(([pattern]) => pattern.test(normalized))?.[1] ?? null;
+}
+
+function explicitVehicleClassValue(pages: string[]): VehicleEvidence | null {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const lines = rawLines(pages[page] ?? "");
+    for (let i = 0; i < lines.length; i += 1) {
+      const same = lines[i].match(/Vehicle\s+Class\s*[:#-]\s*(.+)$/i);
+      if (same) {
+        const value = clean(same[1]).replace(/\s{2,}.*/, "").trim();
+        if (isSafeVehicleClass(value)) {
+          return { value, page: page + 1, evidence: "ICICI explicit Vehicle Class label: " + lines[i] };
+        }
+      }
+      if (/^Vehicle\s+Class\s*:?$/i.test(lines[i])) {
+        const next = clean(lines[i + 1] ?? "");
+        if (isSafeVehicleClass(next)) {
+          return { value: next, page: page + 1, evidence: "ICICI Vehicle Class next-line value: " + next };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function isSafeVehicleClass(value: string) {
+  const cleaned = clean(value);
+  return Boolean(cleaned)
+    && cleaned.length <= 80
+    && !/^(?:Category|Make|Model|RTO\s+(?:City|Location)|Vehicle\s+Registration)/i.test(cleaned);
 }
 
 function explicitRtoValue(pages: string[]): VehicleEvidence | null {
@@ -457,16 +650,22 @@ function explicitRtoValue(pages: string[]): VehicleEvidence | null {
 }
 
 function explicitRtoFromText(text: string, page: number): VehicleEvidence | null {
-  for (const line of rawLines(text)) {
-    const hit = line.match(/RTO\s+(?:City|Location)\s*[:#-]\s*(.+)$/i);
-    if (!hit) continue;
-    const value = clean(hit[1]).replace(/\s{2,}.*/, "").trim();
-    if (!isSafeRto(value)) continue;
-    return {
-      value,
-      page,
-      evidence: "ICICI explicit RTO label: " + line,
-    };
+  const lines = rawLines(text);
+  for (let i = 0; i < lines.length; i += 1) {
+    const same = lines[i].match(/RTO\s+(?:City|Location)\s*[:#-]\s*(.+)$/i);
+    if (same) {
+      const value = clean(same[1]).replace(/\s{2,}.*/, "").trim();
+      if (isSafeRto(value)) {
+        return { value, page, evidence: "ICICI explicit RTO label: " + lines[i] };
+      }
+    }
+
+    if (/^RTO\s+(?:City|Location)\s*:?$/i.test(lines[i])) {
+      const next = clean(lines[i + 1] ?? "");
+      if (isSafeRto(next)) {
+        return { value: next, page, evidence: "ICICI RTO next-line value: " + next };
+      }
+    }
   }
   return null;
 }
