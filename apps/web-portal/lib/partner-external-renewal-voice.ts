@@ -15,6 +15,16 @@ export type ExternalRenewalVoiceStartContext = {
   policy_expiry_date: string | null;
   previous_idv: string | null;
   previous_premium: string | null;
+  repeat_call: "yes" | "no";
+  previous_connected_call_count: number;
+  last_call_date: string | null;
+  last_call_disposition: string | null;
+  last_customer_interest: string | null;
+  last_customer_objection: string | null;
+  last_follow_up_time: string | null;
+  last_call_summary: string | null;
+  previous_conversation_context: string | null;
+  opening_line: string;
 };
 
 export type ExternalRenewalVoiceLatestAttempt = {
