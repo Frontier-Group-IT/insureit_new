@@ -71,6 +71,7 @@ function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
     last_call_summary: stringVariable(context.last_call_summary),
     previous_conversation_context: stringVariable(context.previous_conversation_context),
     opening_line: context.opening_line,
+    opening_follow_up: context.opening_follow_up,
   };
 
   for (const [key, value] of Object.entries(candidates)) {
