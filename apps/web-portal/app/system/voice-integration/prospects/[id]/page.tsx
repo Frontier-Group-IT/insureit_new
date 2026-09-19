@@ -55,10 +55,18 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
   const rcError = q(query.rc_enrichment_error);
   const dispatch = q(query.dispatch);
   const dispatchError = q(query.dispatch_error);
+  const quickAdd = q(query.quick_add);
   const returnTo = `/system/voice-integration/prospects/${id}`;
 
   const notice =
-    profileUpdate
+    quickAdd && rcUpdate === "ready"
+      ? {
+          ok: true,
+          text: quickAdd === "created"
+            ? "Quick Add prospect created and AuthBridge details fetched."
+            : "Existing prospect added to the calling queue and AuthBridge details refreshed.",
+        }
+      : profileUpdate
       ? { ok: profileUpdate === "saved", text: profileUpdate === "saved" ? "AI calling profile saved." : profileError || "Could not save profile." }
       : rcUpdate
         ? { ok: rcUpdate === "ready", text: rcUpdate === "ready" ? "RC details refreshed." : rcError || "RC details could not be refreshed." }
@@ -97,7 +105,12 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="min-w-0">
-              <p className="text-[8px] font-black uppercase tracking-[.08em] text-[#7A8DA6]">External renewal prospect</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[8px] font-black uppercase tracking-[.08em] text-[#7A8DA6]">External renewal prospect</p>
+                {opportunity.voice_queue_source === "it_quick_add" ? (
+                  <span className="rounded-full bg-[#EEF3FF] px-2 py-0.5 text-[6.5px] font-black uppercase tracking-[.05em] text-[#3156B8]">Quick add</span>
+                ) : null}
+              </div>
               <h1 className="truncate text-[18px] font-black text-[#173154]">{effective.customerName ?? opportunity.account_name ?? "Prospect"}</h1>
               <p className="mt-0.5 font-mono text-[8px] text-[#8091A7]">{opportunity.id}</p>
             </div>
@@ -209,7 +222,10 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
                 <ReadField label="LOB" value={text(opportunity.vehicle_lob)} />
                 <ReadField label="Current insurer" value={text(opportunity.current_insurer)} />
                 <ReadField label="Policy number" value={text(opportunity.current_policy_no)} />
-                <ReadField label="Source expiry" value={text(opportunity.policy_end_date)} />
+                <ReadField
+                  label="Source expiry"
+                  value={opportunity.voice_queue_source === "it_quick_add" ? "Quick Add uses AuthBridge expiry" : text(opportunity.policy_end_date)}
+                />
                 <ReadField label="CRM status" value={labelize(opportunity.opportunity_status)} />
                 <ReadField label="Address" value={text([opportunity.address, opportunity.city, opportunity.state, opportunity.postal_code].filter(Boolean).join(", "))} wide />
               </div>
