@@ -101,7 +101,7 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.7.0+gcv-live-replay-v8");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.8.0+gcv-live-replay-v9");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
 assert.equal(field(result, "insured_name"), "SYNTHETIC TRANSPORT COMPANY");
 assert.equal(field(result, "policy_product"), "Package");
@@ -181,6 +181,30 @@ assert.equal(field(multilineSchedule, "vehicle_chassis_number"), "MA1TESTCHASSIS
 assert.equal(field(multilineSchedule, "vehicle_engine_number"), "EN12AB34567890");
 assert.equal(field(multilineSchedule, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
 assert.equal(field(multilineSchedule, "vehicle_rto_state"), "Madhya Pradesh");
+
+const wrappedIdentifierPage = pages[1]
+  .replace(
+    "RTO Location : MADHYA PRADESH-INDORE",
+    "Relationship : - RTO Location : MADHYA PRADESH-INDORE",
+  )
+  .replace(
+    "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2 MA1TESTCHASSIS123 EN12AB34567890 0",
+    "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2\nMA1TESTCHA\nSSIS123\nEN12AB3456\n7890\n0",
+  );
+const wrappedIdentifiers = refineIciciLombardMotorPolicy(
+  [pageOneWithoutVehicleIds, wrappedIdentifierPage],
+  tables.map((table) => ({
+    ...table,
+    rows: table.rows.map((row) =>
+      row.map((cell) => cell === "CURRENTYEARNCB" || cell === "CHASSISNO" ? "" : cell)
+    ),
+  })),
+  contaminated,
+);
+assert.equal(field(wrappedIdentifiers, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
+assert.equal(field(wrappedIdentifiers, "vehicle_engine_number"), "EN12AB34567890");
+assert.equal(field(wrappedIdentifiers, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
+assert.equal(field(wrappedIdentifiers, "vehicle_rto_state"), "Madhya Pradesh");
 
 const registrationNeighborhoodPage = pages[0]
   .replace("Insured & Vehicle Details\n", "")
