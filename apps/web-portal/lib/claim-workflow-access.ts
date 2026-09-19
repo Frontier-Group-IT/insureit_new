@@ -67,3 +67,22 @@ export async function canOpenClaimWorkflowResource(claimId: string) {
     return false;
   }
 }
+
+export async function insertAuthorizedClaimStageDetail(
+  access: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>,
+  payload: { claim_id: string; stage: string; details: Record<string, unknown>; created_by: string },
+) {
+  if (access.isPartner) {
+    const scoped = await createServerSupabaseClient();
+    const { error } = await scoped.rpc("partner_app_insert_claim_stage_detail", {
+      p_claim_id: payload.claim_id,
+      p_stage: payload.stage,
+      p_details: payload.details,
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const { error } = await access.supabase.from("claim_stage_details").insert(payload);
+  if (error) throw new Error(error.message);
+}
