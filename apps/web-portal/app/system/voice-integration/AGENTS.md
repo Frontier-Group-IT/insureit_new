@@ -70,3 +70,8 @@ The Voice Integration queue and recent attempts may open the IT-only prospect de
 ## Quick Add RC boundary
 
 IT Super User may add an ad-hoc calling prospect by RC + mobile only. The action must remain server-only, validate both values, reuse an existing active RC instead of duplicating it, auto-run the protected AuthBridge enrichment path, and never call Sarvam automatically. Quick Add source rows remain isolated External Renewal opportunities and must never create/update verified Customer, Vehicle or Policy masters. Terminal/DNC records must not be revived. See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
+
+
+## Sarvam natural-sales behavior rule
+
+For the production renewal agent, preserve the Phase 3 conversation policy in `docs/SARVAM_AGENT_REFINEMENT_PHASE_3_PRODUCTION_CONVERSATION_POLICY_2026_09_19.md`. The agent should answer ordinary supported renewal questions itself, keep turns short, avoid repeated name/note-taking/handoff language, use real transfer only when needed, and never invent premium/coverage/eligibility facts. Do not weaken cross-call memory or structured-sales-memory rules when changing the prompt.
