@@ -10,9 +10,11 @@ const LABELS: Record<string, string> = {
   vehicle_make: "Vehicle make",
   vehicle_model: "Vehicle model",
   vehicle_manufacturing_year: "Manufacturing year",
+  vehicle_capacity: "Vehicle capacity",
   vehicle_chassis_number: "Chassis number",
   vehicle_engine_number: "Engine number",
   vehicle_rto_name: "RTO name",
+  vehicle_rto_state: "RTO state",
   policy_product: "Policy product",
   idv: "IDV / Sum insured",
   od_premium: "OD premium",
@@ -75,7 +77,14 @@ export function refineIciciLombardMotorPolicy(
   const vehicleClass = structuredColumn(tables, [/^Vehicle\s+Class$/i])
     ?? explicitVehicleClassValue(pages)
     ?? labelValue(pages, /Vehicle\s+Class/i, 2);
-  if (vehicleClass) set(fields, "vehicle_class", cleanVehicle(vehicleClass.value), .995, vehicleClass.page, vehicleClass.evidence);
+  set(
+    fields,
+    "vehicle_class",
+    "GCV",
+    .999,
+    vehicleClass?.page ?? 2,
+    vehicleClass?.evidence ?? "ICICI Goods Carrying Vehicles Package Policy",
+  );
 
   const make = riskVehicle?.make
     ?? structuredColumn(tables, [/^Make$/i]);
@@ -91,6 +100,13 @@ export function refineIciciLombardMotorPolicy(
     ?? structuredColumn(tables, [/^Mfg\s*Yr$/i, /Manufactur(?:ing|e)\s+Year/i]);
   if (year && /^(?:19|20)\d{2}$/.test(year.value.trim())) {
     set(fields, "vehicle_manufacturing_year", year.value.trim(), .999, year.page, year.evidence);
+  }
+
+  const capacityValue = structuredColumn(tables, [/^GVW(?:\s*\(KG\))?$/i, /^Gross\s+Vehicle\s+Weight/i])
+    ?? scheduleVehicleCapacity(pages[1] ?? "", registration?.value ?? fields.get("vehicle_registration_number")?.value ?? "");
+  if (capacityValue) {
+    const capacity = numericCapacity(capacityValue.value);
+    if (capacity != null) set(fields, "vehicle_capacity", String(capacity), .999, capacityValue.page, capacityValue.evidence);
   }
 
   const structuredChassis = structuredColumn(tables, [/^Chassis\s+No\.?$/i]);
@@ -116,8 +132,15 @@ export function refineIciciLombardMotorPolicy(
     ?? scheduleVehicle?.rto
     ?? explicitRtoValue(pages)
     ?? safeRtoValue(labelValue(pages, /RTO\s+(?:City|Location)/i, 2));
-  if (rto) set(fields, "vehicle_rto_name", cleanVehicle(rto.value), .999, rto.page, rto.evidence);
-  else fields.delete("vehicle_rto_name");
+  if (rto) {
+    const rtoName = cleanVehicle(rto.value);
+    set(fields, "vehicle_rto_name", rtoName, .999, rto.page, rto.evidence);
+    const state = rtoStateFromName(rtoName);
+    if (state) set(fields, "vehicle_rto_state", state, .995, rto.page, "Derived from explicit ICICI RTO location: " + rtoName);
+  } else {
+    fields.delete("vehicle_rto_name");
+    fields.delete("vehicle_rto_state");
+  }
 
   const structuredIdv = structuredColumn(tables, [/^Total\s+IDV(?:\s*\(.*\))?$/i]);
   const textIdv = findIciciTotalIdv(pages);
@@ -167,7 +190,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.4.0+gcv-live-replay-v5",
+    parserVersion: "icici_lombard_motor_v1.5.0+gcv-live-replay-v6",
     fields: [...fields.values()],
     warnings,
   };
@@ -485,6 +508,73 @@ function vehicleIdsFromScheduleText(text: string, normalizedRegistration: string
       evidence: "ICICI policy schedule bounded vehicle row: " + second.raw,
     } : null,
   };
+}
+
+
+function scheduleVehicleCapacity(pageTwo: string, registration: string): VehicleEvidence | null {
+  const normalizedRegistration = compactId(registration);
+  if (!pageTwo.trim() || !normalizedRegistration) return null;
+
+  const lines = rawLines(pageTwo);
+  const regIndex = lines.findIndex((line) => compactId(line).includes(normalizedRegistration));
+  if (regIndex < 0) return null;
+
+  const bounded = lines.slice(regIndex, Math.min(lines.length, regIndex + 10)).join(" ");
+  const tokens = clean(bounded).split(/\s+/).filter(Boolean);
+  const registrationTokenIndex = tokens.findIndex((token) => compactId(token) === normalizedRegistration);
+  const yearIndex = tokens.findIndex((token, index) =>
+    index > registrationTokenIndex && /^(?:19|20)\d{2}$/.test(token.replace(/[^0-9]/g, ""))
+  );
+  if (yearIndex < 0) return null;
+
+  // ICICI GCV schedule order places GVW immediately before Mfg Yr.
+  for (let i = yearIndex - 1; i > Math.max(registrationTokenIndex, yearIndex - 6); i -= 1) {
+    const raw = tokens[i];
+    const parsed = numericCapacity(raw);
+    if (parsed != null && parsed >= 1000) {
+      return {
+        value: String(parsed),
+        page: 2,
+        evidence: "ICICI policy schedule GVW immediately before manufacturing year: " + raw,
+      };
+    }
+  }
+  return null;
+}
+
+function numericCapacity(value: string): number | null {
+  const hit = value.replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+  if (!hit) return null;
+  const parsed = Number(hit[0]);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100000) return null;
+  return parsed;
+}
+
+function rtoStateFromName(value: string): string | null {
+  const normalized = clean(value).toUpperCase();
+  const states: Array<[RegExp, string]> = [
+    [/^RAJASTHAN\b/, "Rajasthan"],
+    [/^MADHYA\s+PRADESH\b/, "Madhya Pradesh"],
+    [/^MAHARASHTRA\b/, "Maharashtra"],
+    [/^GUJARAT\b/, "Gujarat"],
+    [/^UTTAR\s+PRADESH\b/, "Uttar Pradesh"],
+    [/^DELHI\b/, "Delhi"],
+    [/^HARYANA\b/, "Haryana"],
+    [/^PUNJAB\b/, "Punjab"],
+    [/^CHHATTISGARH\b/, "Chhattisgarh"],
+    [/^UTTARAKHAND\b/, "Uttarakhand"],
+    [/^BIHAR\b/, "Bihar"],
+    [/^JHARKHAND\b/, "Jharkhand"],
+    [/^WEST\s+BENGAL\b/, "West Bengal"],
+    [/^ODISHA\b/, "Odisha"],
+    [/^KARNATAKA\b/, "Karnataka"],
+    [/^TAMIL\s+NADU\b/, "Tamil Nadu"],
+    [/^TELANGANA\b/, "Telangana"],
+    [/^ANDHRA\s+PRADESH\b/, "Andhra Pradesh"],
+    [/^KERALA\b/, "Kerala"],
+    [/^ASSAM\b/, "Assam"],
+  ];
+  return states.find(([pattern]) => pattern.test(normalized))?.[1] ?? null;
 }
 
 function explicitVehicleClassValue(pages: string[]): VehicleEvidence | null {
