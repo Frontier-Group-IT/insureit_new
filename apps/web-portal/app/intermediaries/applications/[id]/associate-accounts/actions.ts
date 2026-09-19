@@ -59,10 +59,21 @@ export async function createPartnerAssociateAccount(formData: FormData) {
   const [{ data: primary }, { data: associate }, { data: groupBranch }, { data: profile }] = await Promise.all([
     admin.from("intermediary_portal_accounts").select("id").ilike("email", email).maybeSingle(),
     admin.from("partner_portal_associate_accounts").select("id").ilike("email", email).maybeSingle(),
-    admin.from("portal_access_identities").select("id").ilike("login_email", email).maybeSingle(),
-    admin.from("profiles").select("id").ilike("email", email).maybeSingle(),
+    admin.from("portal_access_identities").select("id,entity_type").ilike("login_email", email).maybeSingle<{ id:string; entity_type:string }>(),
+    admin.from("profiles").select("id,role").ilike("email", email).maybeSingle<{ id:string; role:string }>(),
   ]);
-  if (primary || associate || groupBranch || profile) redirect(`${returnPath}?associate_error=associate_email_in_use`);
+  if (groupBranch?.entity_type === "branch") {
+    redirect(`${returnPath}?associate_error=associate_email_in_use_branch`);
+  }
+  if (groupBranch?.entity_type === "group") {
+    redirect(`${returnPath}?associate_error=associate_email_in_use_group`);
+  }
+  if (primary || associate) {
+    redirect(`${returnPath}?associate_error=associate_email_in_use_partner`);
+  }
+  if (profile) {
+    redirect(`${returnPath}?associate_error=associate_email_in_use_operations`);
+  }
 
   const inviteOptions = associateInviteOptions(name, role as AssociateRole);
   const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, inviteOptions);
