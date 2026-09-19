@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -200,10 +201,10 @@ export default function ClaimsScreen() {
           </View>
         ) : (
           <View style={styles.kpiGrid}>
-            <MetricCard icon="document-text-outline" value={summary.data?.total_claims ?? 0} label="Total Claims" tone="blue" />
-            <MetricCard icon="shield-checkmark-outline" value={summary.data?.active_claims ?? 0} label="Active Claims" tone="blue" />
-            <MetricCard icon="hourglass-outline" value={summary.data?.completed_claims ?? 0} label="Completed Claims" tone="blue" />
-            <MetricCard icon="headset-outline" value={summary.data?.assistance_requested ?? 0} label="Assistance" tone="blue" />
+            <MetricCard icon="document-text-outline" value={summary.data?.total_claims ?? 0} label="Total Claims" />
+            <MetricCard icon="shield-checkmark-outline" value={summary.data?.active_claims ?? 0} label="Active Claims" />
+            <MetricCard icon="hourglass-outline" value={summary.data?.completed_claims ?? 0} label="Completed Claims" />
+            <MetricCard icon="headset-outline" value={summary.data?.assistance_requested ?? 0} label="Assistance" />
           </View>
         )}
 
@@ -350,7 +351,7 @@ export default function ClaimsScreen() {
   );
 }
 
-function MetricCard({ icon, value, label }: { icon: keyof typeof Ionicons.glyphMap; value: number; label: string; tone: 'blue' }) {
+function MetricCard({ icon, value, label }: { icon: ComponentProps<typeof Ionicons>['name']; value: number; label: string }) {
   return (
     <View style={styles.kpiCard}>
       <View style={styles.kpiIconWrap}>
