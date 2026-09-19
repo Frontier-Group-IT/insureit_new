@@ -60,7 +60,8 @@ export function refineIciciLombardMotorPolicy(
   const riskVehicle = riskAssumptionVehicleDetails(pages[0] ?? "");
 
   const registration = riskVehicle?.registration
-    ?? registrationNumber(pages, tables);
+    ?? registrationNumber(pages, tables)
+    ?? existingValidRegistration(fields);
   if (registration) {
     set(fields, "vehicle_registration_number", registration.value, .999, registration.page, registration.evidence);
     set(fields, "vehicle_registration_status", "registered", .999, registration.page, registration.evidence);
@@ -156,7 +157,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.1.0+gcv-live-replay-v2",
+    parserVersion: "icici_lombard_motor_v1.2.0+gcv-live-replay-v3",
     fields: [...fields.values()],
     warnings,
   };
@@ -288,50 +289,105 @@ type RiskVehicleDetails = {
 
 function riskAssumptionVehicleDetails(pageOne: string): RiskVehicleDetails | null {
   const lines = rawLines(pageOne);
-  const start = lines.findIndex((line) => /^Insured\s*&\s*Vehicle\s+Details$/i.test(line));
-  const previous = lines.findIndex((line, index) => index > start && /^Previous\s+Policy\s+Details$/i.test(line));
+  const strict = strictRiskAssumptionVehicleDetails(lines);
+  if (strict) return strict;
+  return looseRiskAssumptionVehicleDetails(lines);
+}
+
+function strictRiskAssumptionVehicleDetails(lines: string[]): RiskVehicleDetails | null {
+  const start = lines.findIndex((line) => /^Insured\s*&\s*Vehicle\s+Details\s*:?$/i.test(line));
+  const previous = lines.findIndex((line, index) => index > start && /^Previous\s+Policy\s+Details\s*:?$/i.test(line));
   if (start < 0 || previous < 0) return null;
 
   const section = lines.slice(start + 1, previous);
   const labels = [
-    /^Name\s+of\s+the\s+Insured$/i,
-    /^Period\s+of\s+Insurance$/i,
-    /^Vehicle\s+Make\s*\/\s*Model$/i,
-    /^RTO\s+City$/i,
-    /^Vehicle\s+Registration\s+No\.?$/i,
-    /^Vehicle\s+Registration\s+Date$/i,
-    /^Engine\s+No\.?$/i,
-    /^Chassis\s+No\.?$/i,
-    /^Current\s+Year\s+NCB(?:\(%\))?$/i,
-    /^Vehicle\s+Usage$/i,
+    /^Name\s+of\s+the\s+Insured\s*:?$/i,
+    /^Period\s+of\s+Insurance\s*:?$/i,
+    /^Vehicle\s+Make\s*\/\s*Model\s*:?$/i,
+    /^RTO\s+City\s*:?$/i,
+    /^Vehicle\s+Registration\s+No\.?\s*:?$/i,
+    /^Vehicle\s+Registration\s+Date\s*:?$/i,
+    /^Engine\s+No\.?\s*:?$/i,
+    /^Chassis\s+No\.?\s*:?$/i,
+    /^Current\s+Year\s+NCB(?:\(%\))?\s*:?$/i,
+    /^Vehicle\s+Usage\s*:?$/i,
   ];
 
   const labelPositions = labels.map((pattern) => section.findIndex((line) => pattern.test(line)));
   if (labelPositions.some((index) => index < 0)) return null;
   const lastLabel = Math.max(...labelPositions);
   const values = section.slice(lastLabel + 1).filter(Boolean);
-  if (values.length < labels.length) return null;
+  return vehicleDetailsFromOrderedValues(values);
+}
 
-  const value = (index: number): VehicleEvidence => ({
-    value: values[index],
-    page: 1,
-    evidence: "ICICI Risk Assumption vehicle block: " + values[index],
-  });
+function looseRiskAssumptionVehicleDetails(lines: string[]): RiskVehicleDetails | null {
+  const previous = lines.findIndex((line) => /Previous\s+Policy\s+Details/i.test(line));
+  const usage = lines.findIndex((line, index) =>
+    (previous < 0 || index < previous) && /Vehicle\s+Usage/i.test(line)
+  );
+  if (usage < 0) return null;
 
-  const makeModel = values[2].split("/").map(clean).filter(Boolean);
-  const registrationValue = compactId(values[4]);
-  const yearHit = values[5].match(/\b(?:19|20)\d{2}\b/)?.[0] ?? null;
-  const engineValue = compactId(values[6]);
-  const chassisValue = compactId(values[7]);
+  const end = previous > usage ? previous : Math.min(lines.length, usage + 18);
+  const values = lines
+    .slice(usage + 1, end)
+    .map(clean)
+    .filter(Boolean)
+    .filter((line) => !looksLikeRiskLabel(line));
+
+  if (values.length < 6) return null;
+  return vehicleDetailsFromOrderedValues(values);
+}
+
+function vehicleDetailsFromOrderedValues(values: string[]): RiskVehicleDetails | null {
+  const registrationIndex = values.findIndex((entry) => validRegistration(compactId(entry)));
+  if (registrationIndex < 0) return null;
+
+  const registrationValue = compactId(values[registrationIndex]);
+  const before = values.slice(0, registrationIndex);
+  const after = values.slice(registrationIndex + 1);
+
+  const makeModelRaw = [...before].reverse().find((entry) =>
+    entry.includes("/") && /[A-Z]/i.test(entry) && !/\d{1,2}[-/][A-Z]{3}[-/]?\d{2,4}/i.test(entry)
+  ) ?? null;
+  const makeModel = makeModelRaw ? makeModelRaw.split("/").map(clean).filter(Boolean) : [];
+
+  const rtoRaw = before.length ? before[before.length - 1] : "";
+  const rto = isSafeRto(rtoRaw) && rtoRaw !== makeModelRaw ? rtoRaw : "";
+
+  const dateIndex = after.findIndex((entry) =>
+    /^(?:[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}|\d{1,2}[-/]\d{1,2}[-/]\d{4})$/i.test(entry)
+  );
+  const idCandidates = after
+    .slice(dateIndex >= 0 ? dateIndex + 1 : 0)
+    .map((entry) => ({ raw: entry, compact: compactId(entry) }))
+    .filter((entry) => validVehicleId(entry.compact));
+
+  const evidence = (raw: string) => "ICICI Risk Assumption ordered vehicle values: " + raw;
 
   return {
-    registration: validRegistration(registrationValue) ? { ...value(4), value: registrationValue } : null,
-    make: makeModel[0] ? { ...value(2), value: makeModel[0] } : null,
-    model: makeModel[1] ? { ...value(2), value: makeModel.slice(1).join(" / ") } : null,
-    rto: isSafeRto(values[3]) ? value(3) : null,
-    year: yearHit ? { ...value(5), value: yearHit } : null,
-    chassis: validVehicleId(chassisValue) ? { ...value(7), value: chassisValue } : null,
-    engine: validVehicleId(engineValue) ? { ...value(6), value: engineValue } : null,
+    registration: { value: registrationValue, page: 1, evidence: evidence(values[registrationIndex]) },
+    make: makeModel[0] ? { value: makeModel[0], page: 1, evidence: evidence(makeModelRaw ?? "") } : null,
+    model: makeModel[1] ? { value: makeModel.slice(1).join(" / "), page: 1, evidence: evidence(makeModelRaw ?? "") } : null,
+    rto: rto ? { value: rto, page: 1, evidence: evidence(rto) } : null,
+    year: null,
+    engine: idCandidates[0] ? { value: idCandidates[0].compact, page: 1, evidence: evidence(idCandidates[0].raw) } : null,
+    chassis: idCandidates[1] ? { value: idCandidates[1].compact, page: 1, evidence: evidence(idCandidates[1].raw) } : null,
+  };
+}
+
+function looksLikeRiskLabel(value: string) {
+  return /^(?:Name\s+of\s+the\s+Insured|Period\s+of\s+Insurance|Vehicle\s+Make|RTO\s+City|Vehicle\s+Registration|Engine\s+No|Chassis\s+No|Current\s+Year\s+NCB|Vehicle\s+Usage|Previous\s+Policy)/i.test(value);
+}
+
+function existingValidRegistration(fields: Fields): VehicleEvidence | null {
+  const field = fields.get("vehicle_registration_number");
+  if (!field) return null;
+  const value = compactId(field.value);
+  if (!validRegistration(value)) return null;
+  return {
+    value,
+    page: field.page ?? 1,
+    evidence: field.evidence || "Validated existing registration candidate",
   };
 }
 
