@@ -105,7 +105,7 @@ export default function ClaimsScreen() {
     <View>
       <View style={styles.hero}>
         <Image
-          source={require('../../assets/generated-dashboard/home-header-insurance.jpg')}
+          source={require('../../assets/figma-dashboard/hero-banner.jpg')}
           resizeMode="cover"
           style={styles.heroBackdrop}
         />
