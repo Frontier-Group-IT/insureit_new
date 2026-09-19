@@ -69,7 +69,7 @@ export async function canOpenClaimWorkflowResource(claimId: string) {
 }
 
 export async function insertAuthorizedClaimStageDetail(
-  access: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>,
+  access: Pick<Awaited<ReturnType<typeof requireClaimWorkflowAccess>>, "isPartner" | "supabase">,
   payload: { claim_id: string; stage: string; details: Record<string, unknown>; created_by: string },
 ) {
   if (access.isPartner) {
