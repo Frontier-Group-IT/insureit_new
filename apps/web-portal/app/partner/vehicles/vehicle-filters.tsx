@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
+import { useTransition } from "react";
 import type { VehicleStatusFilter, VehicleTypeFilter } from "./vehicle-filter-types";
 import { VEHICLE_TYPE_OPTIONS } from "./vehicle-filter-types";
 
@@ -24,6 +25,7 @@ export function VehicleFilters({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   function navigate(nextStatus: VehicleStatusFilter, nextVehicleType: VehicleTypeFilter) {
     const params = new URLSearchParams(searchParams.toString());
@@ -36,7 +38,9 @@ export function VehicleFilters({
     else params.set("vehicleType", nextVehicleType);
 
     const query = params.toString();
-    router.push(query ? `${pathname}?${query}` : pathname);
+    startTransition(() => {
+      router.push(query ? `${pathname}?${query}` : pathname);
+    });
   }
 
   const statusButtons: Array<{ value: VehicleStatusFilter; label: string; count: number }> = [
@@ -53,8 +57,9 @@ export function VehicleFilters({
         <select
           aria-label="Vehicle type"
           value={vehicleType}
+          disabled={isPending}
           onChange={(event) => navigate(status, event.target.value as VehicleTypeFilter)}
-          className="h-full w-full cursor-pointer appearance-auto rounded-[13px] bg-transparent pl-10 pr-3 text-[11px] font-bold text-[#344761] outline-none"
+          className="h-full w-full cursor-pointer appearance-auto rounded-[13px] bg-transparent pl-10 pr-3 text-[11px] font-bold text-[#344761] outline-none disabled:cursor-wait disabled:opacity-60"
         >
           {VEHICLE_TYPE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -72,8 +77,9 @@ export function VehicleFilters({
               key={item.value}
               type="button"
               aria-pressed={active}
+              disabled={isPending}
               onClick={() => navigate(item.value, vehicleType)}
-              className={`inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] transition ${
+              className={`inline-flex h-9 items-center rounded-[10px] px-3.5 text-[10px] transition disabled:cursor-wait disabled:opacity-60 ${
                 active
                   ? "bg-[#153E6D] font-extrabold text-white"
                   : "font-bold text-[#586A82] hover:bg-white hover:text-[#294766]"
