@@ -1,3 +1,15 @@
+## 2026-09-19 — Non-Motor onboarding Net Premium restoration
+
+- Branch: `fix/non-motor-net-premium-entry`.
+- User requested Section 04 `Cover, premium & validity` to remove OD Premium and TP Premium for Non-Motor and restore Net Premium as an enabled editable field.
+- UI now shows Sum insured / limit, Deductible / excess, Net Premium, GST, Gross Premium, Policy Start, and Policy Expiry.
+- Submit payload no longer depends on OD Premium; it sends OD/TP as zero and the user-entered Net Premium separately.
+- Server create/update logic now treats `payload.policy.netPremium` as canonical for Non-Motor, persists `od_premium=0`, `tp_premium=0`, and uses Net Premium for GST fallback and commercial pay-in/payout calculations.
+- No schema/RLS/database migration is required.
+- **IMPLEMENTED; REVERSIBLE APP-ONLY CHANGE. NOT MERGED, NOT DEPLOYED.**
+
+---
+
 ## 2026-09-19 — Business MIS commercial export columns
 
 - Branch: `fix/business-mis-commercial-columns`.
