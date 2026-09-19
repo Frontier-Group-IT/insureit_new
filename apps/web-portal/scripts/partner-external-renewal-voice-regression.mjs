@@ -193,6 +193,18 @@ assert(rcEnrichmentMigration.includes("rc_enrichment_status"), "External Renewal
 assert(rcEnrichmentMigration.includes("rc_enrichment_details jsonb"), "External Renewal schema stores only a normalized RC snapshot");
 assert(!/insert\s+into\s+public\.(customers|vehicles|policies)\b/i.test(rcEnrichmentMigration), "RC enrichment migration never creates verified business masters");
 assert(rcEnrichmentModel.includes('import "server-only"'), "External Renewal AuthBridge enrichment stays server-only");
+assert(rcEnrichmentModel.includes("function exactProviderValue("), "AuthBridge RC mapper prefers exact provider sections before aliases");
+assert(rcEnrichmentModel.includes('"Owners Details", "Owners Name"'), "AuthBridge RC mapper captures RC owner name");
+assert(rcEnrichmentModel.includes('"Registration Details", "RTO"'), "AuthBridge RC mapper captures RTO");
+assert(rcEnrichmentModel.includes('"Vehicle Details", "Engine Number"'), "AuthBridge RC mapper captures engine number");
+assert(rcEnrichmentModel.includes('"Vehicle Details", "Norms Type"'), "AuthBridge RC mapper captures emission norm");
+assert(rcEnrichmentModel.includes('"Insurance Details", "Policy Number"'), "AuthBridge RC mapper captures policy number");
+assert(rcEnrichmentModel.includes('"Insurance Details", "Insurance To Date/Insurance Upto"'), "AuthBridge RC mapper captures policy expiry");
+assert(prospectDetailPage.includes("RC owner name"), "voice prospect detail shows RC owner name distinctly from customer/insured name");
+assert(prospectDetailPage.includes("Vehicle category"), "voice prospect detail shows expanded normalized RC fields");
+assert(prospectDetailPage.includes("Engine number"), "voice prospect detail shows engine number");
+assert(prospectDetailPage.includes("Financer name"), "voice prospect detail shows finance context");
+assert(prospectDetailPage.includes("Normalized provider fields are shown with their real meaning"), "voice prospect detail explains owner-vs-insured naming boundary");
 assert(rcEnrichmentModel.includes("function mergeDetails("), "External Renewal enrichment merges legacy normalized cache with raw provider fields");
 assert(rcEnrichmentModel.includes("rawDetails = fromRaw(cached.raw_response"), "fresh/stale cache repair re-reads raw provider evidence");
 assert(rcEnrichmentModel.includes("normalized_details: details"), "fresh cache repair persists upgraded normalized details for reuse");
