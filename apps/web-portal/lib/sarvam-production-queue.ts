@@ -97,9 +97,15 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
   const rows = (opportunities ?? []).map<SarvamQueuePreviewRow>((row) => {
     const enrichmentStatus = row.rc_enrichment_status ?? "not_fetched";
     const overrides = row.ai_profile_overrides && typeof row.ai_profile_overrides === "object" ? row.ai_profile_overrides : {};
-    const effectiveMobile = typeof overrides.mobile === "string" ? overrides.mobile : row.mobile;
-    const effectiveRegistration = typeof overrides.registrationNumber === "string" ? overrides.registrationNumber : row.registration_no;
-    const effectivePolicyExpiry = typeof overrides.policyExpiryDate === "string" ? overrides.policyExpiryDate : row.policy_end_date;
+    const effectiveMobile = Object.prototype.hasOwnProperty.call(overrides, "mobile")
+      ? (typeof overrides.mobile === "string" ? overrides.mobile : null)
+      : row.mobile;
+    const effectiveRegistration = Object.prototype.hasOwnProperty.call(overrides, "registrationNumber")
+      ? (typeof overrides.registrationNumber === "string" ? overrides.registrationNumber : null)
+      : row.registration_no;
+    const effectivePolicyExpiry = Object.prototype.hasOwnProperty.call(overrides, "policyExpiryDate")
+      ? (typeof overrides.policyExpiryDate === "string" ? overrides.policyExpiryDate : null)
+      : row.policy_end_date;
     const hasRegistration = Boolean(effectiveRegistration?.trim());
     const otherwiseFetchable =
       Boolean(effectiveMobile?.trim()) &&
