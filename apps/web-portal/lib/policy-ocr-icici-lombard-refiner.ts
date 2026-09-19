@@ -4,6 +4,7 @@ import type { StructuredPolicyTable } from "@/lib/policy-ocr-iffco-structured-re
 type Fields = Map<string, ParsedPolicyField>;
 
 const LABELS: Record<string, string> = {
+  insured_name: "Insured name",
   vehicle_registration_status: "Registration status",
   vehicle_registration_number: "Registration number",
   vehicle_class: "Vehicle class",
@@ -49,6 +50,9 @@ export function refineIciciLombardMotorPolicy(
 
   set(fields, "insurer_name", "ICICI Lombard General Insurance Company Limited", .999, 1, "ICICI Lombard legal name on policy");
   set(fields, "policy_product", "Package", .999, 2, "Goods Carrying Vehicles Package Policy");
+
+  const insured = insuredNameFromIcici(pages);
+  if (insured) set(fields, "insured_name", insured.value, .995, insured.page, insured.evidence);
 
   const policy = currentPolicyNumber(pages);
   if (policy) set(fields, "policy_number", policy.value, .999, policy.page, policy.evidence);
@@ -190,10 +194,41 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.5.0+gcv-live-replay-v6",
+    parserVersion: "icici_lombard_motor_v1.6.0+gcv-live-replay-v7",
     fields: [...fields.values()],
     warnings,
   };
+}
+
+
+function insuredNameFromIcici(pages: string[]): VehicleEvidence | null {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const lines = rawLines(pages[page] ?? "");
+    for (let i = 0; i < lines.length; i += 1) {
+      const same = lines[i].match(/Name\s+of\s+the\s+Insured\s*[:#-]\s*(.+?)(?:\s+Policy\s+No\.?\s*[:#-]|$)/i);
+      if (same) {
+        const value = clean(same[1]);
+        if (safeInsuredName(value)) return { value, page: page + 1, evidence: "ICICI explicit insured-name label" };
+      }
+      if (/^Name\s+of\s+the\s+Insured\s*:?$/i.test(lines[i])) {
+        for (let j = i + 1; j <= Math.min(i + 12, lines.length - 1); j += 1) {
+          const candidate = clean(lines[j]);
+          if (!candidate || looksLikeRiskLabel(candidate) || /Period\s+of\s+Insurance/i.test(candidate)) continue;
+          if (safeInsuredName(candidate)) {
+            return { value: candidate, page: page + 1, evidence: "ICICI insured-name next value" };
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function safeInsuredName(value: string) {
+  const cleaned = clean(value);
+  if (cleaned.length < 2 || cleaned.length > 120) return false;
+  if (/^(?:NA|N\/A|NAME|POLICY|PERIOD|VEHICLE|RTO|REGISTRATION|ENGINE|CHASSIS)$/i.test(cleaned)) return false;
+  return /[A-Z]/i.test(cleaned);
 }
 
 function currentPolicyNumber(pages: string[]) {
