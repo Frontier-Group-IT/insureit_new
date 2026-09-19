@@ -6,6 +6,7 @@ import { SurveyDoneButton } from "./survey-done-button";
 import { SurveyorDeputationForm } from "./surveyor-deputation-form";
 import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-document-verification-button";
 import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
+import { ClassifySubmitButton } from "./classify-submit-button";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
 
 export type SpotSurveyClaim = {
@@ -226,7 +227,7 @@ function UnclassifiedAttachments({ claimId, documents }: { claimId: string; docu
               <option value="" disabled>Assign category</option>
               {categories.map((category) => <option key={category} value={category}>{category}</option>)}
             </select>
-            <button type="submit" className="h-8 rounded-md bg-[#071D49] px-3 text-[11px] font-semibold text-white">Classify</button>
+            <ClassifySubmitButton />
           </form>
         ))}
       </div>
