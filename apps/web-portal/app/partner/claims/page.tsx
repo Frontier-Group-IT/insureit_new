@@ -9,7 +9,6 @@ const BATCH_SIZE = 200;
 const MAX_ROWS = 5000;
 
 type ExtendedPartnerClaimRow = PartnerClaimRow & {
-  policy_service_source?: string | null;
   customer_phone?: string | null;
   vehicle_make?: string | null;
   vehicle_model?: string | null;
@@ -39,10 +38,9 @@ export default async function PartnerClaimsPage() {
     controlNo: row.claim_no,
     insurerClaimNo: row.insurer_claim_no,
     currentStatus: row.current_status,
-    // Partner claim RPCs historically represented external-policy claims first.
-    // If the scoped RPC exposes policy_service_source, use it; otherwise retain
-    // the safe legacy external classification rather than querying around scope.
-    source: row.policy_service_source === "internal" ? "internal" : "external",
+    // Use the same canonical claim source as Operations. Only an explicit
+    // external source is external; null/legacy/internal values stay internal.
+    source: row.policy_service_source === "external" ? "external" : "internal",
     customerName: row.customer_name,
     customerPhone: row.customer_phone ?? null,
     vehicleNo: row.vehicle_no,

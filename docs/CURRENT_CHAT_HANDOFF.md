@@ -1,3 +1,14 @@
+# Active continuation — Partner claim source parity (2026-09-19)
+
+- Branch: `fix/partner-claim-source-classification`.
+- Root cause: Partner `partner_app_list_claims` omitted `claims.policy_service_source`; the Partner claims page treated a missing value as External, so scoped internal claims could appear under External Claims.
+- Fix: migration `20260919103000_partner_claim_source_classification.sql` extends the scoped RPC with canonical `policy_service_source`; Partner web typing consumes it; UI classification now treats only explicit `external` as External and all other/legacy-null values as Internal, matching Operations behavior.
+- Rollback: `supabase/rollbacks/20260919103000_partner_claim_source_classification.sql`.
+- Regression guard added to `apps/web-portal/scripts/partner-web-core-regression.mjs`.
+- Evidence state: **IMPLEMENTED; PR/CI/schema application/merge/deployment pending.**
+
+---
+
 # Active continuation — Sarvam Voice Agent controlled live verification (2026-09-18)
 
 - Single-opportunity INSUREIT -> Sarvam -> PSTN -> webhook -> CRM -> Partner UI closed loop is **VERIFIED** in production through two authorized internal External Renewal test opportunities.

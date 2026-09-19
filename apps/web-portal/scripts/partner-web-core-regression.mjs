@@ -111,6 +111,19 @@ assert(partnerMobileNavigation.includes("External Renewal"), "Partner mobile nav
 
 const partnerWeb = read("lib/partner-web.ts");
 assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
+assert(partnerWeb.includes("policy_service_source: string | null"), "Partner claim rows must expose the canonical claim source");
+
+const partnerClaimsPage = read("app/partner/claims/page.tsx");
+assert(partnerClaimsPage.includes('row.policy_service_source === "external" ? "external" : "internal"'), "Partner claims must classify only explicit external sources as external");
+assert(!partnerClaimsPage.includes('row.policy_service_source === "internal" ? "internal" : "external"'), "Partner claims must not default missing claim source to external");
+
+const partnerClaimSourceMigrationPath = path.resolve(root, "../../supabase/migrations/20260919103000_partner_claim_source_classification.sql");
+assert(fs.existsSync(partnerClaimSourceMigrationPath), "Partner claim source classification migration is missing");
+if (fs.existsSync(partnerClaimSourceMigrationPath)) {
+  const migration = fs.readFileSync(partnerClaimSourceMigrationPath, "utf8");
+  assert(migration.includes("cl.policy_service_source::text as policy_service_source"), "Partner claims RPC must return claims.policy_service_source");
+  assert(migration.includes("f.policy_service_source"), "Partner claims RPC result must project policy_service_source");
+}
 
 const externalRenewalPage = read("app/partner/renewals/external/page.tsx");
 assert(externalRenewalPage.includes("listPartnerExternalRenewals"), "external renewal page must use the isolated external renewal adapter");

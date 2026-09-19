@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Partner claim internal/external source parity:** branch `fix/partner-claim-source-classification`; Partner Claims now consumes the canonical `claims.policy_service_source` through `partner_app_list_claims` and defaults only explicit `external` rows to External, preventing internal claims from being misclassified when the source field is absent. Includes migration + rollback + regression guard. **IMPLEMENTED; PR/CI/schema application/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
+
 - **2026-09-18 — External Renewal AuthBridge enrichment + AI readiness gate:** branch `feat/external-renewal-authbridge-enrichment`; IT Voice Integration can fetch one opportunity's RC context through the existing protected AuthBridge/cache path, persists only a privacy-minimized snapshot in the isolated External Renewal layer, and blocks Sarvam dispatch until enrichment is ready. Customer/Vehicle/Policy masters remain untouched. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.
 
 - **2026-09-18 — Sarvam IT calling-window editor:** branch `feat/voice-calling-window-editor`; the IT Super User Voice Integration `Window` card gains an inline Edit action for start/end time. Values persist in a server-only operational-settings table, Partner/authenticated clients have no direct table access, and IT dispatch rechecks the persisted window before creating an attempt. **IMPLEMENTED; PR/CI/schema application/merge/deployment pending.** See `docs/SARVAM_PRODUCTION_CONTROL_CENTER_2026_09_18.md`.
