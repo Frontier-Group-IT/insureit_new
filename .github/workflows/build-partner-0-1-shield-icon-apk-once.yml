@@ -11,6 +11,8 @@ on:
       - 'scripts/partner/patch-0-1-home-refinements.mjs'
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
       - 'scripts/partner/compat/partner-business-date-filter.tsx'
+      - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
+      - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
 
 permissions:
@@ -64,6 +66,21 @@ jobs:
           node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
           cp tooling/scripts/partner/compat/partner-business-date-filter.tsx compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
           node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
+
+      - name: Install reference-style Business layout for runtime 0.1.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs \
+            'compat/apps/partner-app/components/partner-screen.tsx'
+          cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
+            'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'hideTopBar' 'compat/apps/partner-app/components/partner-screen.tsx'
+          grep -q 'Business Overview' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'Month-wise Trend' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'Business by Product' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'Quick Actions' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
       - name: Install shield-only native app icon
         shell: bash
@@ -138,5 +155,5 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Profile/channel: preview"
             echo "- Native change: shield-only Partner launcher icon rendered to a 1024x1024 PNG"
-            echo "- Existing accepted Home and Business Report compatibility patches are embedded"
+            echo "- Existing accepted Home refinements and the reference-style Business Report compatibility layout are embedded"
           } >> "$GITHUB_STEP_SUMMARY"
