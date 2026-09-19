@@ -16,6 +16,16 @@ type RcEnrichmentDetails = {
   policyExpiryDate?: string | null;
 };
 
+type PreviousConnectedAttemptRow = {
+  call_disposition: string | null;
+  customer_interest: string | null;
+  customer_objection: string | null;
+  call_summary: string | null;
+  follow_up_at: string | null;
+  ended_at: string | null;
+  created_at: string;
+};
+
 type OpportunityRow = {
   id: string;
   batch_id: string;
@@ -38,6 +48,69 @@ type OpportunityRow = {
   ai_profile_overrides: Record<string, unknown> | null;
   voice_queue_source: "import" | "it_quick_add" | null;
 };
+
+function firstName(value: string | null) {
+  const normalized = value?.trim().replace(/\s+/g, " ");
+  return normalized ? normalized.split(" ")[0] : null;
+}
+
+function dateForSpeech(value: string | null) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function repeatCallOpening({
+  customerName,
+  vehicleMakeModel,
+  previous,
+}: {
+  customerName: string | null;
+  vehicleMakeModel: string | null;
+  previous: PreviousConnectedAttemptRow[];
+}) {
+  const shortName = firstName(customerName);
+  const address = shortName ? `${shortName} ji` : "ji";
+  if (!previous.length) {
+    const vehicle = vehicleMakeModel ? ` aapki ${vehicleMakeModel} ki policy renewal ke regarding` : " aapki policy renewal ke regarding";
+    return `Namaste ${address}, main INSUREIT ka automated renewal assistant bol raha hoon,${vehicle}. Kya do minute convenient hain?`;
+  }
+
+  const last = previous[0];
+  const continuation =
+    last.call_disposition === "follow_up"
+      ? "Pichli baar aapne baad mein baat karne ko kaha tha"
+      : last.call_disposition === "quote_requested"
+        ? "Pichli baar hum renewal quotation aur options ko lekar baat kar rahe the"
+        : last.call_disposition === "interested"
+          ? "Pichli baar hum aapki renewal requirements par baat kar rahe the"
+          : last.call_disposition === "human_assistance"
+            ? "Pichli baar renewal discussion mein aapne human assistance prefer ki thi"
+            : "Pichli baar hum aapki policy renewal par baat kar chuke hain";
+
+  return `Namaste ${address}, main INSUREIT ka automated renewal assistant bol raha hoon. ${continuation}. Main wahi discussion continue karne ke liye call kar raha hoon—abhi do minute convenient hain?`;
+}
+
+function buildPreviousConversationContext(previous: PreviousConnectedAttemptRow[]) {
+  if (!previous.length) return null;
+
+  return previous.slice(0, 3).map((attempt, index) => {
+    const parts = [
+      attempt.call_summary?.trim() || null,
+      attempt.customer_objection?.trim() ? `Objection/concern: ${attempt.customer_objection.trim()}` : null,
+      attempt.follow_up_at ? `Follow-up requested: ${dateForSpeech(attempt.follow_up_at) ?? attempt.follow_up_at}` : null,
+      attempt.call_disposition ? `Outcome: ${attempt.call_disposition}` : null,
+      attempt.customer_interest ? `Interest: ${attempt.customer_interest}` : null,
+    ].filter(Boolean);
+    return `Previous connected call ${index + 1}: ${parts.join(". ")}`;
+  }).join("\n");
+}
 
 function overrideText(overrides: Record<string, unknown>, key: string, fallback: string | null | undefined) {
   if (!Object.prototype.hasOwnProperty.call(overrides, key)) return fallback?.trim() || null;
@@ -133,6 +206,30 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("An AI call is already active for this opportunity.");
   }
 
+  const { data: previousConnectedAttempts, error: previousAttemptError } = await admin
+    .from("external_renewal_voice_attempts")
+    .select("call_disposition,customer_interest,customer_objection,call_summary,follow_up_at,ended_at,created_at")
+    .eq("opportunity_id", opportunity.id)
+    .eq("connectivity_status", "connected")
+    .order("created_at", { ascending: false })
+    .limit(5)
+    .returns<PreviousConnectedAttemptRow[]>();
+
+  if (previousAttemptError) {
+    throw new Error("Could not load the customer's previous AI conversation context.");
+  }
+
+  const previous = previousConnectedAttempts ?? [];
+  const repeatCall = previous.length > 0 ? "yes" : "no";
+  const last = previous[0] ?? null;
+  const lastCallDate = dateForSpeech(last?.ended_at ?? last?.created_at ?? null);
+  const previousConversationContext = buildPreviousConversationContext(previous);
+  const openingLine = repeatCallOpening({
+    customerName,
+    vehicleMakeModel,
+    previous,
+  });
+
   const cohortContext = {
     customer_name: customerName,
     mobile,
@@ -143,6 +240,16 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     policy_expiry_date: policyExpiryDate,
     previous_idv: previousIdv,
     previous_premium: previousPremium,
+    repeat_call: repeatCall,
+    previous_connected_call_count: previous.length,
+    last_call_date: lastCallDate,
+    last_call_disposition: last?.call_disposition ?? null,
+    last_customer_interest: last?.customer_interest ?? null,
+    last_customer_objection: last?.customer_objection ?? null,
+    last_follow_up_time: last?.follow_up_at ?? null,
+    last_call_summary: last?.call_summary ?? null,
+    previous_conversation_context: previousConversationContext,
+    opening_line: openingLine,
   };
 
   const { data: attempt, error: attemptError } = await admin
@@ -174,5 +281,15 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     policy_expiry_date: policyExpiryDate,
     previous_idv: previousIdv,
     previous_premium: previousPremium,
+    repeat_call: repeatCall,
+    previous_connected_call_count: previous.length,
+    last_call_date: lastCallDate,
+    last_call_disposition: last?.call_disposition ?? null,
+    last_customer_interest: last?.customer_interest ?? null,
+    last_customer_objection: last?.customer_objection ?? null,
+    last_follow_up_time: last?.follow_up_at ?? null,
+    last_call_summary: last?.call_summary ?? null,
+    previous_conversation_context: previousConversationContext,
+    opening_line: openingLine,
   };
 }
