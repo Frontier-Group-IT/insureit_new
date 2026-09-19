@@ -237,10 +237,14 @@ assert(itDispatchModel.includes("ai_profile_overrides"), "IT dispatch uses appro
 assert(itDispatchModel.includes("cohort_context: cohortContext"), "IT dispatch snapshots effective values before provider submission");
 assert(itDispatchModel.includes('eq("connectivity_status", "connected")'), "repeat-call memory only treats connected attempts as prior conversations");
 assert(itDispatchModel.includes("buildPreviousConversationContext"), "IT dispatch builds normalized cross-call conversation memory");
-assert(itDispatchModel.includes("repeatCallOpening"), "IT dispatch generates separate first-call and repeat-call openings");
+assert(itDispatchModel.includes("function callOpening("), "IT dispatch generates a short first-turn INSUREIT opening");
+assert(itDispatchModel.includes("function openingFollowUp("), "IT dispatch generates a separate contextual second opening turn");
+assert(itDispatchModel.includes("main INSUREIT se bol raha hoon"), "first opening turn identifies INSUREIT without a long sales pitch");
+assert(!itDispatchModel.includes("automated renewal assistant bol raha hoon"), "opening no longer volunteers robotic automated-assistant wording");
 assert(itDispatchModel.includes("previous_connected_call_count"), "IT dispatch snapshots prior connected-call count into cohort context");
 assert(itDispatchModel.includes("previous_conversation_context"), "IT dispatch snapshots normalized prior-call memory into cohort context");
 assert(sarvamClient.includes("opening_line: context.opening_line"), "Sarvam cohort receives the server-generated opening line");
+assert(sarvamClient.includes("opening_follow_up: context.opening_follow_up"), "Sarvam cohort receives the short contextual second opening turn");
 assert(sarvamClient.includes("repeat_call: context.repeat_call"), "Sarvam cohort receives repeat-call state");
 assert(sarvamClient.includes("previous_conversation_context"), "Sarvam cohort receives normalized prior-conversation context");
 
