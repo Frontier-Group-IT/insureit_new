@@ -67,6 +67,11 @@ export function refineIciciLombardMotorPolicy(
     set(fields, "vehicle_registration_status", "registered", .999, registration.page, registration.evidence);
   }
 
+  const scheduleVehicle = scheduleVehicleDetails(
+    pages[1] ?? "",
+    registration?.value ?? fields.get("vehicle_registration_number")?.value ?? "",
+  );
+
   const vehicleClass = structuredColumn(tables, [/^Vehicle\s+Class$/i])
     ?? labelValue(pages, /Vehicle\s+Class/i, 2);
   if (vehicleClass) set(fields, "vehicle_class", cleanVehicle(vehicleClass.value), .995, vehicleClass.page, vehicleClass.evidence);
@@ -90,8 +95,10 @@ export function refineIciciLombardMotorPolicy(
   const structuredChassis = structuredColumn(tables, [/^Chassis\s+No\.?$/i]);
   const structuredEngine = structuredColumn(tables, [/^Engine\s+No\.?$/i]);
   const chassis = riskVehicle?.chassis
+    ?? scheduleVehicle?.chassis
     ?? (structuredChassis && validVehicleId(structuredChassis.value) ? structuredChassis : null);
   const engine = riskVehicle?.engine
+    ?? scheduleVehicle?.engine
     ?? (structuredEngine && validVehicleId(structuredEngine.value) ? structuredEngine : null);
   if (chassis && validVehicleId(chassis.value)) {
     set(fields, "vehicle_chassis_number", compactId(chassis.value), .999, chassis.page, chassis.evidence);
@@ -105,6 +112,8 @@ export function refineIciciLombardMotorPolicy(
   }
 
   const rto = riskVehicle?.rto
+    ?? scheduleVehicle?.rto
+    ?? explicitRtoValue(pages)
     ?? safeRtoValue(labelValue(pages, /RTO\s+(?:City|Location)/i, 2));
   if (rto) set(fields, "vehicle_rto_name", cleanVehicle(rto.value), .999, rto.page, rto.evidence);
   else fields.delete("vehicle_rto_name");
@@ -157,7 +166,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.2.0+gcv-live-replay-v3",
+    parserVersion: "icici_lombard_motor_v1.3.0+gcv-live-replay-v4",
     fields: [...fields.values()],
     warnings,
   };
@@ -389,6 +398,77 @@ function existingValidRegistration(fields: Fields): VehicleEvidence | null {
     page: field.page ?? 1,
     evidence: field.evidence || "Validated existing registration candidate",
   };
+}
+
+
+function scheduleVehicleDetails(pageTwo: string, registration: string): {
+  chassis: VehicleEvidence | null;
+  engine: VehicleEvidence | null;
+  rto: VehicleEvidence | null;
+} | null {
+  if (!pageTwo.trim()) return null;
+  const lines = rawLines(pageTwo);
+  const normalizedRegistration = compactId(registration);
+
+  let chassis: VehicleEvidence | null = null;
+  let engine: VehicleEvidence | null = null;
+
+  for (const line of lines) {
+    if (!normalizedRegistration || !compactId(line).includes(normalizedRegistration)) continue;
+    const tokens = line.split(/\s+/).map(clean).filter(Boolean);
+    const yearIndex = tokens.findIndex((token) => /^(?:19|20)\d{2}$/.test(token.replace(/[^0-9]/g, "")));
+    if (yearIndex < 0) continue;
+
+    const candidates = tokens
+      .slice(yearIndex + 1)
+      .map((token) => ({ raw: token, compact: compactId(token) }))
+      .filter((entry) =>
+        entry.compact !== normalizedRegistration
+        && validVehicleId(entry.compact)
+        && !/TRAILER|MODEL|CARRIER|BHARAT|BENZ/i.test(entry.compact)
+      );
+
+    if (candidates.length >= 2) {
+      chassis = {
+        value: candidates[0].compact,
+        page: 2,
+        evidence: "ICICI policy schedule row after manufacturing year: " + candidates[0].raw,
+      };
+      engine = {
+        value: candidates[1].compact,
+        page: 2,
+        evidence: "ICICI policy schedule row after manufacturing year: " + candidates[1].raw,
+      };
+      break;
+    }
+  }
+
+  const rto = explicitRtoFromText(pageTwo, 2);
+  if (!chassis && !engine && !rto) return null;
+  return { chassis, engine, rto };
+}
+
+function explicitRtoValue(pages: string[]): VehicleEvidence | null {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const hit = explicitRtoFromText(pages[page] ?? "", page + 1);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function explicitRtoFromText(text: string, page: number): VehicleEvidence | null {
+  for (const line of rawLines(text)) {
+    const hit = line.match(/RTO\s+(?:City|Location)\s*[:#-]\s*(.+)$/i);
+    if (!hit) continue;
+    const value = clean(hit[1]).replace(/\s{2,}.*/, "").trim();
+    if (!isSafeRto(value)) continue;
+    return {
+      value,
+      page,
+      evidence: "ICICI explicit RTO label: " + line,
+    };
+  }
+  return null;
 }
 
 function structuredMoney(tables: StructuredPolicyTable[], label: RegExp): number | null {
