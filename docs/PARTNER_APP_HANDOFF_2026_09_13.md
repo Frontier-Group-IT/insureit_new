@@ -217,6 +217,13 @@ Never state this PR is deployed until it is merged, the OTA workflow succeeds, a
 
 ---
 
+## 2026-09-19 — Development screenshot policy
+
+- User explicitly requested screenshot blocking to be disabled while the Partner app remains in development.
+- `PartnerSensitivePrivacyProvider` now positively releases any existing screen-capture restriction on all routes instead of enabling protection on customer/claim/policy-intake detail screens.
+- Biometric/session/native-security structure remains intact so screenshot protection can be re-enabled later as a controlled production-hardening change.
+- This is a JS/TS behavior change only; no native rebuild is required for source states where `expo-screen-capture` is already present in the binary. The currently installed 0.1.0 compatibility APK must still follow its separate compatibility/OTA rules.
+
 ## 9. OTA publication discipline
 
 For the current installed app:
