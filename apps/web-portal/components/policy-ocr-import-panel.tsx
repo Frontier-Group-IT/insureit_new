@@ -68,7 +68,6 @@ const APPLY_ORDER = [
   "policy_end_date",
 ];
 
-const IDENTITY_FIELDS = new Set([INSURED_NAME_FIELD, INSURED_PHONE_FIELD]);
 
 export type PolicyOcrImportContext = {
   mode: "create" | "edit";
