@@ -64,6 +64,11 @@ assert.match(accountsUpload, /messageKind: "success"/, "Unchanged valid workbook
 assert.match(accountsWorkbook, /Enter values only in highlighted Accounts fields/, "Business MIS export must tell Accounts where data entry is allowed.");
 assert.match(accountsWorkbook, /editableFill/, "Business MIS export must visually highlight editable reconciliation fields.");
 assert.match(accountsWorkbook, /BUSINESS_MIS_EDITABLE_COLUMNS\.has\(c\)/, "Editable styling must be driven by the canonical Accounts editable-column set.");
+assert.match(accountsUpload, /const candidateRows = dataRows[\s\S]*\.filter\(\(\{ row \}\) => hasEditableInput\(row\)\)/, "Reconciliation preview must identify Accounts-input rows before live validation.");
+assert.match(accountsUpload, /loadBusinessMisRecordsByPolicyIds\(profile, candidatePolicyIds\)/, "Reconciliation preview must load heavyweight live MIS data only for candidate policy rows.");
+assert.doesNotMatch(accountsUpload, /loadBusinessMisRecordsByPolicyIds\(profile, policyIds\)/, "Reconciliation preview must not reload live MIS data for every workbook policy.");
+assert.match(accountsUpload, /candidatePayoutIds/, "Payout validation queries must be restricted to candidate rows.");
+assert.match(accountsUpload, /if \(!candidateRows\.length\)/, "A structurally valid workbook with no Accounts input should return before live policy queries.");
 assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
 assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
 assert.doesNotMatch(accountsUpload, /\.from\([^\n]+\)\.(?:insert|update|delete)\(|\.rpc\(/, "Accounts workbook preview must remain read-only; cryptographic hash updates are allowed but database writes are not.");
