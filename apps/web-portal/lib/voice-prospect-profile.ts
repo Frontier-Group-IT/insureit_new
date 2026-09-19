@@ -6,26 +6,58 @@ export type ExternalRenewalAiProfile = {
   customerName: string | null;
   mobile: string | null;
   registrationNumber: string | null;
+  registrationDate: string | null;
+  rto: string | null;
+  rcStatus: string | null;
+  rcStatusAsOn: string | null;
+  rcOwnerName: string | null;
+  ownerSerialNumber: string | null;
+  fatherHusbandName: string | null;
+  permanentAddress: string | null;
+  presentAddress: string | null;
   manufacturer: string | null;
   model: string | null;
+  manufactureDate: string | null;
+  manufacturingYear: string | null;
+  vehicleClass: string | null;
+  vehicleCategory: string | null;
+  bodyType: string | null;
+  color: string | null;
+  fuelType: string | null;
+  normsType: string | null;
+  engineNumber: string | null;
+  engineCapacityCc: string | null;
+  cylinderCount: string | null;
+  seatingCapacity: string | null;
+  standingCapacity: string | null;
+  sleeperCapacity: string | null;
+  wheelBaseMm: string | null;
+  gvwKg: string | null;
+  unladenWeightKg: string | null;
+  commercial: string | null;
   chassisNumber: string | null;
+  fitnessExpiryDate: string | null;
+  roadTaxExpiryDate: string | null;
+  vehicleTaxUptoDate: string | null;
+  pucNumber: string | null;
+  pucExpiryDate: string | null;
+  permitNumber: string | null;
+  permitType: string | null;
+  permitIssueDate: string | null;
+  permitValidFrom: string | null;
+  localPermitExpiryDate: string | null;
+  nationalPermitNumber: string | null;
+  nationalPermitIssuedBy: string | null;
+  nationalPermitExpiryDate: string | null;
+  financed: string | null;
+  financerName: string | null;
   insuranceCompany: string | null;
   policyNumber: string | null;
   policyExpiryDate: string | null;
+  blacklistStatus: string | null;
+  nocDetails: string | null;
   previousIdv: string | null;
   previousPremium: string | null;
-  registrationDate: string | null;
-  manufacturingYear: string | null;
-  vehicleClass: string | null;
-  fuelType: string | null;
-  engineCapacityCc: string | null;
-  seatingCapacity: string | null;
-  gvwKg: string | null;
-  fitnessExpiryDate: string | null;
-  pucExpiryDate: string | null;
-  roadTaxExpiryDate: string | null;
-  nationalPermitExpiryDate: string | null;
-  localPermitExpiryDate: string | null;
 };
 
 export type ExternalRenewalSourceProfile = {
@@ -104,10 +136,14 @@ export type VoiceAttemptEventDetail = {
 };
 
 const PROFILE_FIELDS = [
-  "customerName","mobile","registrationNumber","manufacturer","model","chassisNumber","insuranceCompany",
-  "policyNumber","policyExpiryDate","previousIdv","previousPremium","registrationDate","manufacturingYear",
-  "vehicleClass","fuelType","engineCapacityCc","seatingCapacity","gvwKg","fitnessExpiryDate","pucExpiryDate",
-  "roadTaxExpiryDate","nationalPermitExpiryDate","localPermitExpiryDate",
+  "customerName","mobile","registrationNumber","registrationDate","rto","rcStatus","rcStatusAsOn","rcOwnerName",
+  "ownerSerialNumber","fatherHusbandName","permanentAddress","presentAddress","manufacturer","model","manufactureDate",
+  "manufacturingYear","vehicleClass","vehicleCategory","bodyType","color","fuelType","normsType","engineNumber",
+  "engineCapacityCc","cylinderCount","seatingCapacity","standingCapacity","sleeperCapacity","wheelBaseMm","gvwKg",
+  "unladenWeightKg","commercial","chassisNumber","fitnessExpiryDate","roadTaxExpiryDate","vehicleTaxUptoDate",
+  "pucNumber","pucExpiryDate","permitNumber","permitType","permitIssueDate","permitValidFrom","localPermitExpiryDate",
+  "nationalPermitNumber","nationalPermitIssuedBy","nationalPermitExpiryDate","financed","financerName",
+  "insuranceCompany","policyNumber","policyExpiryDate","blacklistStatus","nocDetails","previousIdv","previousPremium",
 ] as const;
 
 function text(value: unknown) {
@@ -126,29 +162,60 @@ export function baselineExternalRenewalAiProfile(row: ExternalRenewalSourceProfi
     customerName: text(row.customer_name) ?? text(row.contact_name) ?? text(row.account_name),
     mobile: text(row.mobile),
     registrationNumber: text(rc.registrationNumber) ?? text(row.registration_no),
+    registrationDate: text(rc.registrationDate),
+    rto: text(rc.rto),
+    rcStatus: text(rc.rcStatus),
+    rcStatusAsOn: text(rc.rcStatusAsOn),
+    rcOwnerName: text(rc.ownerName),
+    ownerSerialNumber: text(rc.ownerSerialNumber),
+    fatherHusbandName: text(rc.fatherHusbandName),
+    permanentAddress: text(rc.permanentAddress),
+    presentAddress: text(rc.presentAddress),
     manufacturer: text(rc.manufacturer) ?? text(row.vehicle_make),
     model: text(rc.model) ?? text(row.vehicle_model),
+    manufactureDate: text(rc.manufactureDate),
+    manufacturingYear: text(rc.manufacturingYear),
+    vehicleClass: text(rc.vehicleClass),
+    vehicleCategory: text(rc.vehicleCategory),
+    bodyType: text(rc.bodyType),
+    color: text(rc.color),
+    fuelType: text(rc.fuelType),
+    normsType: text(rc.normsType),
+    engineNumber: text(rc.engineNumber),
+    engineCapacityCc: text(rc.engineCapacityCc),
+    cylinderCount: text(rc.cylinderCount),
+    seatingCapacity: text(rc.seatingCapacity),
+    standingCapacity: text(rc.standingCapacity),
+    sleeperCapacity: text(rc.sleeperCapacity),
+    wheelBaseMm: text(rc.wheelBaseMm),
+    gvwKg: text(rc.gvwKg),
+    unladenWeightKg: text(rc.unladenWeightKg),
+    commercial: text(rc.commercial),
     chassisNumber: text(rc.chassisNumber) ?? text(row.chassis_no),
+    fitnessExpiryDate: text(rc.fitnessExpiryDate),
+    roadTaxExpiryDate: text(rc.roadTaxExpiryDate),
+    vehicleTaxUptoDate: text(rc.vehicleTaxUptoDate),
+    pucNumber: text(rc.pucNumber),
+    pucExpiryDate: text(rc.pucExpiryDate),
+    permitNumber: text(rc.permitNumber),
+    permitType: text(rc.permitType),
+    permitIssueDate: text(rc.permitIssueDate),
+    permitValidFrom: text(rc.permitValidFrom),
+    localPermitExpiryDate: text(rc.localPermitExpiryDate),
+    nationalPermitNumber: text(rc.nationalPermitNumber),
+    nationalPermitIssuedBy: text(rc.nationalPermitIssuedBy),
+    nationalPermitExpiryDate: text(rc.nationalPermitExpiryDate),
+    financed: text(rc.financed),
+    financerName: text(rc.financerName),
     insuranceCompany: text(rc.insuranceCompany) ?? text(row.current_insurer),
     policyNumber: text(rc.policyNumber) ?? text(row.current_policy_no),
     policyExpiryDate: text(rc.policyExpiryDate) ?? (row.voice_queue_source === "it_quick_add" ? null : text(row.policy_end_date)),
+    blacklistStatus: text(rc.blacklistStatus),
+    nocDetails: text(rc.nocDetails),
     previousIdv: null,
     previousPremium: null,
-    registrationDate: text(rc.registrationDate),
-    manufacturingYear: text(rc.manufacturingYear),
-    vehicleClass: text(rc.vehicleClass),
-    fuelType: text(rc.fuelType),
-    engineCapacityCc: text(rc.engineCapacityCc),
-    seatingCapacity: text(rc.seatingCapacity),
-    gvwKg: text(rc.gvwKg),
-    fitnessExpiryDate: text(rc.fitnessExpiryDate),
-    pucExpiryDate: text(rc.pucExpiryDate),
-    roadTaxExpiryDate: text(rc.roadTaxExpiryDate),
-    nationalPermitExpiryDate: text(rc.nationalPermitExpiryDate),
-    localPermitExpiryDate: text(rc.localPermitExpiryDate),
   };
 }
-
 export function effectiveExternalRenewalAiProfile(row: ExternalRenewalSourceProfile): ExternalRenewalAiProfile {
   const baseline = baselineExternalRenewalAiProfile(row);
   const overrides = normalizedDetails(row.ai_profile_overrides);
