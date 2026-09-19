@@ -260,7 +260,7 @@ export default function BusinessScreen() {
               asset={PartnerAssets.actions.payoutGrowth}
               label="Payout"
               meta={payout?.available ? `${payout.pending_count} pending` : 'Restricted'}
-              onPress={() => router.push('/payout')}
+              onPress={() => router.push('/(tabs)/more')}
             />
             <QuickAction
               asset={PartnerAssets.actions.addCustomer}
