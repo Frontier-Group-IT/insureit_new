@@ -224,6 +224,16 @@ Never state this PR is deployed until it is merged, the OTA workflow succeeds, a
 - Biometric/session/native-security structure remains intact so screenshot protection can be re-enabled later as a controlled production-hardening change.
 - This is a JS/TS behavior change only; no native rebuild is required for source states where `expo-screen-capture` is already present in the binary. The currently installed 0.1.0 compatibility APK must still follow its separate compatibility/OTA rules.
 
+## 2026-09-19 — Policies reference-layout redesign (reversible)
+
+- Branch: `ui/partner-policies-reference-layout`.
+- Scope is UI-only in `apps/partner-app/app/(tabs)/policies.tsx`.
+- Replaces the existing Policies presentation with the supplied reference hierarchy: deep-blue hero header, compact search/filter row, four policy KPI cards, full-width Policy Intake CTA, compact lifecycle tabs, dense rounded policy cards and manual Load More affordance.
+- Existing `partner_app_policy_summary` / `partner_app_list_policies` data sources, Partner scope, policy detail navigation, lifecycle values, search and pagination remain unchanged.
+- Reference-only labels map existing lifecycle values as `in_force -> Active`, `expiring -> Expiring Soon`, `expired -> Lapsed`; `upcoming` remains available rather than inventing a non-existent Cancelled backend state.
+- No schema, Supabase, permission, accounting or native dependency changes. Revert is one feature commit/PR revert.
+- **IMPLEMENTED; PR/CI/merge/OTA/device verification pending.**
+
 ## 9. OTA publication discipline
 
 For the current installed app:
