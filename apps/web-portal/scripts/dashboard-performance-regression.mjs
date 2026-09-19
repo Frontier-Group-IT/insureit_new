@@ -68,6 +68,9 @@ assert.match(accountsUpload, /const candidateRows = dataRows[\s\S]*\.filter\(\(\
 assert.match(accountsUpload, /loadBusinessMisRecordsByPolicyIds\(profile, candidatePolicyIds\)/, "Reconciliation preview must load heavyweight live MIS data only for candidate policy rows.");
 assert.doesNotMatch(accountsUpload, /loadBusinessMisRecordsByPolicyIds\(profile, policyIds\)/, "Reconciliation preview must not reload live MIS data for every workbook policy.");
 assert.match(accountsUpload, /candidatePayoutIds/, "Payout validation queries must be restricted to candidate rows.");
+assert.match(accountsUpload, /populatedWorksheetBounds\(sheet\)/, "Reconciliation upload must calculate populated worksheet bounds instead of trusting optional Excel dimension metadata.");
+assert.doesNotMatch(accountsUpload, /decode_range\(sheet\["!ref"\] \|\| "A1:A1"\)/, "Google Sheets compatibility must not depend on the optional worksheet !ref dimension.");
+assert.match(accountsUpload, /decode_cell\(address\)/, "Worksheet bounds must be derived from actual populated cell addresses.");
 assert.match(accountsUpload, /if \(!candidateRows\.length\)/, "A structurally valid workbook with no Accounts input should return before live policy queries.");
 assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
 assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
