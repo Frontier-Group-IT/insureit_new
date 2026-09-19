@@ -4,6 +4,7 @@ import { type MouseEvent as ReactMouseEvent, type ReactNode, useEffect, useState
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 const STORAGE_KEY = "insureit:desktop-sidebar-collapsed";
+const SIDEBAR_EXPANDED_EVENT = "insureit:desktop-sidebar-expanded";
 
 export function DesktopSidebarFrame({ navigation, children }: { navigation: ReactNode; children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -24,15 +25,21 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
     }
   }
 
+  function notifySidebarExpanded() {
+    window.dispatchEvent(new Event(SIDEBAR_EXPANDED_EVENT));
+  }
+
   function openSidebar() {
     setCollapsed(false);
     persistCollapsed(false);
+    notifySidebarExpanded();
   }
 
   function toggleSidebar() {
     setCollapsed((current) => {
       const next = !current;
       persistCollapsed(next);
+      if (!next) notifySidebarExpanded();
       return next;
     });
   }
