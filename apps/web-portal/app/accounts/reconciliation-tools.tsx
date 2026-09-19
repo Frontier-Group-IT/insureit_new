@@ -78,7 +78,7 @@ export function ReconciliationTools() {
       {isPreviewing ? <span className="text-[7px] font-black tabular-nums">{validationProgress}%</span> : <UploadCloud className="h-3.5 w-3.5" />}
     </label>
 
-    {showPopover ? <div className="absolute right-0 top-10 z-50 w-[min(920px,calc(100vw-32px))] rounded-xl border border-[#dbe3ee] bg-white p-3 shadow-xl">
+    {showPopover ? <div className="absolute right-0 top-10 z-50 w-[min(780px,calc(100vw-24px))] rounded-xl border border-[#dbe3ee] bg-white p-2.5 shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-[#edf1f5] pb-2">
         <div className="min-w-0">
           <p className="truncate text-[9px] font-semibold text-[#17365D]">{file?.name ?? "Reconciliation upload"}</p>
@@ -120,9 +120,9 @@ function PreviewPanel({ preview, isImportPending, onConfirm }: { preview: Reconc
   }
   const canImport = preview.totalRows > 0 && preview.errorRows === 0;
   return <div className="mt-2">
-    <div className="grid gap-1.5 sm:grid-cols-5"><Metric label="Transactions" value={preview.totalRows} /><Metric label="Ready" value={preview.readyRows} /><Metric label="Warnings" value={preview.warningRows} /><Metric label="Errors" value={preview.errorRows} /><Metric label="Blank ignored" value={preview.skippedRows} /></div>
-    {preview.payinRows.length ? <ValidationTable title="Pay-In validation" rows={preview.payinRows.map(row => [row.rowNumber, row.policyNumber, row.insurer, inr(row.projectedPayin), row.billNumber, inr(row.billAmount), row.billDate || "—", inr(row.difference), inr(row.projectedTds), <Validation key="v" status={row.status} message={row.message} />])} headers={["Row","Policy","Insurer","Total Pay-in","Bill Number","Bill Amount","Bill Date","Difference","TDS","Validation"]} minWidth="1160px" /> : null}
-    {preview.payoutRows.length ? <ValidationTable title="Pay-Out validation" rows={preview.payoutRows.map(row => [row.rowNumber, row.policyNumber, row.intermediaryCode, inr(row.projectedGrossPayout), inr(row.projectedRetention), inr(row.paidAmount), row.paidDate || "—", row.reference || "—", <Validation key="v" status={row.status} message={row.message} />])} headers={["Row","Policy","Intermediary","Gross Payout","Retention","Paid Amount","Paid Date","UTR Details","Validation"]} minWidth="1080px" /> : null}
+    <div className="grid grid-cols-5 gap-1"><Metric label="Txn" value={preview.totalRows} /><Metric label="Ready" value={preview.readyRows} /><Metric label="Warn" value={preview.warningRows} /><Metric label="Errors" value={preview.errorRows} /><Metric label="Ignored" value={preview.skippedRows} /></div>
+    {preview.payinRows.length ? <ValidationTable title="Pay-In" rows={preview.payinRows.map(row => [row.rowNumber, row.policyNumber, inr(row.projectedPayin), row.billNumber, inr(row.billAmount), row.billDate || "—", inr(row.difference), <Validation key="v" status={row.status} message={row.message} />])} headers={["Row","Policy","Total Pay-in","Bill No.","Bill Amount","Bill Date","Difference","Status"]} minWidth="760px" /> : null}
+    {preview.payoutRows.length ? <ValidationTable title="Pay-Out" rows={preview.payoutRows.map(row => [row.rowNumber, row.policyNumber, row.intermediaryCode, inr(row.paidAmount), row.paidDate || "—", row.reference || "—", <Validation key="v" status={row.status} message={row.message} />])} headers={["Row","Policy","Intermediary","Paid Amount","Paid Date","UTR","Status"]} minWidth="690px" /> : null}
     <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-[#cfd9e6] bg-[#f8fafc] px-2.5 py-1.5">
       <span className="text-[8px] font-semibold text-[#667085]">{preview.errorRows ? "Resolve validation errors before import." : "Validated workbook ready to import."}</span>
       <button type="button" title={preview.errorRows ? "Resolve errors first" : "Confirm Import"} aria-label={preview.errorRows ? "Resolve errors first" : "Confirm Import"} disabled={!canImport || isImportPending} onClick={onConfirm} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#17365D] text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-40">{isImportPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}</button>
@@ -131,7 +131,7 @@ function PreviewPanel({ preview, isImportPending, onConfirm }: { preview: Reconc
 }
 
 function ValidationTable({ title, headers, rows, minWidth }: { title: string; headers: string[]; rows: React.ReactNode[][]; minWidth: string }) {
-  return <div className="mt-2"><p className="mb-1 text-[8.5px] font-bold text-[#17365D]">{title}</p><div className="max-h-[240px] overflow-auto rounded-lg border"><table className="w-full text-left text-[8px]" style={{ minWidth }}><thead className="sticky top-0 bg-[#f8fafc]"><tr>{headers.map(header => <th key={header} className="p-1.5">{header}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="border-t">{row.map((cell, cellIndex) => <td key={cellIndex} className="p-1.5">{cell}</td>)}</tr>)}</tbody></table></div></div>;
+  return <div className="mt-1.5"><div className="mb-1 flex items-center justify-between"><p className="text-[8px] font-bold text-[#17365D]">{title}</p><span className="text-[7px] font-semibold text-[#98a2b3]">{rows.length} row{rows.length === 1 ? "" : "s"}</span></div><div className="max-h-[170px] overflow-auto rounded-lg border border-[#e3e9f1]"><table className="w-full table-fixed text-left text-[7.5px]" style={{ minWidth }}><thead className="sticky top-0 z-10 bg-[#f8fafc]"><tr>{headers.map(header => <th key={header} className="whitespace-nowrap px-1.5 py-1.5 font-bold text-[#667085]">{header}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex} className="border-t border-[#edf1f5] align-top">{row.map((cell, cellIndex) => <td key={cellIndex} className="px-1.5 py-1.5 leading-3.5 text-[#475467]">{cell}</td>)}</tr>)}</tbody></table></div></div>;
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
@@ -146,6 +146,6 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: s
   }
 }
 
-function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-lg border bg-[#fbfcfe] px-2.5 py-1.5"><p className="text-[7px] font-black uppercase tracking-[.06em] text-[#98a2b3]">{label}</p><p className="mt-0.5 text-[13px] font-semibold leading-4 text-[#17365D]">{value}</p></div>; }
-function Validation({ status, message }: { status: PreviewStatus; message: string }) { return <div className="flex items-start gap-1.5"><StatusPill status={status} /><span className="max-w-[280px] leading-4 text-[#667085]">{message}</span></div>; }
+function Metric({ label, value }: { label: string; value: number }) { return <div className="rounded-lg border bg-[#fbfcfe] px-2 py-1"><p className="text-[6.5px] font-black uppercase tracking-[.05em] text-[#98a2b3]">{label}</p><p className="text-[12px] font-semibold leading-4 text-[#17365D]">{value}</p></div>; }
+function Validation({ status, message }: { status: PreviewStatus; message: string }) { return <div className="flex max-w-[190px] items-start gap-1"><StatusPill status={status} /><span title={message} className="line-clamp-2 leading-3.5 text-[#667085]">{message}</span></div>; }
 function StatusPill({ status }: { status: PreviewStatus }) { const cls = status === "Ready" ? "bg-[#e8f5f3] text-[#0f766e]" : status === "Warning" ? "bg-[#fff7e6] text-[#9a6700]" : "bg-[#fff0f0] text-[#b42318]"; return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[7px] font-black ${cls}`}>{status}</span>; }
