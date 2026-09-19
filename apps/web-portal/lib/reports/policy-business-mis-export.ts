@@ -33,17 +33,24 @@ type PremiumRow = {
 };
 type PayinRow = {
   payout_basis: string | null;
+  commercial_basis: string | null;
   projected_od_percent: number | string | null;
   projected_od_amount: number | string | null;
   projected_tp_percent: number | string | null;
   projected_tp_amount: number | string | null;
+  projected_commission_percent: number | string | null;
+  projected_commission_amount: number | string | null;
+  insurer_scheme_amount: number | string | null;
   total_projected_payin: number | string | null;
   tds_amount: number | string | null;
   payin_after_tds: number | string | null;
 };
 type PayoutRow = {
+  payout_basis: string | null;
   od_payout_percent: number | string | null;
   tp_payout_percent: number | string | null;
+  partner_payout_percent: number | string | null;
+  partner_payout_amount: number | string | null;
   gross_payout: number | string | null;
   retention_amount: number | string | null;
 };
@@ -54,6 +61,7 @@ type PolicyRow = {
   intermediary_type: string | null;
   lead_source: string | null;
   intermediary_code: string | null;
+  business_line: string | null;
   policy_type: string | null;
   insured_declared_value: number | string | null;
   policy_no: string | null;
@@ -106,10 +114,13 @@ export type PolicyBusinessMisRow = {
   payinOdPercent: number;
   payinOdAmount: number;
   payinTpPercent: number;
+  payinBase: number;
+  insurerScheme: number;
   payinTpAmount: number;
   totalPayin: number;
   tds: number;
   payinAfterTds: number;
+  payoutBasis: string;
   payoutOdPercent: number;
   payoutTpPercent: number;
   grossPayout: number;
@@ -119,13 +130,13 @@ export type PolicyBusinessMisRow = {
 const PAGE_SIZE = 1000;
 const MAX_EXPORT_ROWS = 10_000;
 const SELECT = `
-  id,issuance_date,rm_name,intermediary_type,lead_source,intermediary_code,policy_type,insured_declared_value,policy_no,start_date,end_date,status,
+  id,issuance_date,rm_name,intermediary_type,lead_source,intermediary_code,business_line,policy_type,insured_declared_value,policy_no,start_date,end_date,status,
   customers!policies_customer_id_fkey(contact_name,phone,customer_code),
   vehicles!policies_vehicle_id_fkey(vehicle_no,vehicle_class_code,vehicle_class_description,make,model,fuel_type,gvw_kg,engine_capacity_cc,seating_capacity,year,chassis_no,engine_no,rto_state,rto_name),
   insurance_companies!policies_insurance_company_id_fkey(name),
   policy_premium_details(od_premium,tp_premium,cpa_amount,net_premium,gst_amount,gross_premium),
-  policy_payin_details(payout_basis,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,total_projected_payin,tds_amount,payin_after_tds),
-  policy_intermediary_payouts(od_payout_percent,tp_payout_percent,gross_payout,retention_amount)
+  policy_payin_details(payout_basis,commercial_basis,projected_od_percent,projected_od_amount,projected_tp_percent,projected_tp_amount,projected_commission_percent,projected_commission_amount,insurer_scheme_amount,total_projected_payin,tds_amount,payin_after_tds),
+  policy_intermediary_payouts(payout_basis,od_payout_percent,tp_payout_percent,partner_payout_percent,partner_payout_amount,gross_payout,retention_amount)
 `;
 
 export async function loadPolicyBusinessMisExport(profile: ViewerProfile, query: PolicyBusinessQuery) {
@@ -173,6 +184,13 @@ function normalizeRow(row: PolicyRow): PolicyBusinessMisRow {
   const vehicleClass = text(vehicle?.vehicle_class_code).toUpperCase();
   const capacityMeta = capacityFor(vehicleClass, vehicle);
   const vehicleNo = text(vehicle?.vehicle_no);
+  const nonMotor = text(row.business_line).toLowerCase() === "non motor";
+  const motorPayinBasis = text(payin?.payout_basis);
+  const nonMotorPayinBasis = text(payin?.commercial_basis);
+  const payinOdAmount = nonMotor ? number(payin?.projected_commission_amount) : number(payin?.projected_od_amount);
+  const payinTpAmount = nonMotor ? 0 : number(payin?.projected_tp_amount);
+  const payinBase = payinOdAmount + payinTpAmount;
+  const payoutBasisRaw = text(payout?.payout_basis) || (!nonMotor ? motorPayinBasis : "");
 
   return {
     policyId: row.id,
@@ -208,17 +226,20 @@ function normalizeRow(row: PolicyRow): PolicyBusinessMisRow {
     validUpto: text(row.end_date),
     rtoState: text(vehicle?.rto_state),
     rtoName: text(vehicle?.rto_name),
-    payinBasis: text(payin?.payout_basis),
-    payinOdPercent: number(payin?.projected_od_percent),
-    payinOdAmount: number(payin?.projected_od_amount),
-    payinTpPercent: number(payin?.projected_tp_percent),
-    payinTpAmount: number(payin?.projected_tp_amount),
+    payinBasis: basisLabel(nonMotor ? nonMotorPayinBasis : motorPayinBasis),
+    payinOdPercent: nonMotor ? number(payin?.projected_commission_percent) : number(payin?.projected_od_percent),
+    payinOdAmount,
+    payinTpPercent: nonMotor ? 0 : number(payin?.projected_tp_percent),
+    payinBase,
+    insurerScheme: number(payin?.insurer_scheme_amount),
+    payinTpAmount,
     totalPayin: number(payin?.total_projected_payin),
     tds: number(payin?.tds_amount),
     payinAfterTds: number(payin?.payin_after_tds),
-    payoutOdPercent: number(payout?.od_payout_percent),
-    payoutTpPercent: number(payout?.tp_payout_percent),
-    grossPayout: number(payout?.gross_payout),
+    payoutBasis: basisLabel(payoutBasisRaw),
+    payoutOdPercent: nonMotor ? number(payout?.partner_payout_percent) : number(payout?.od_payout_percent),
+    payoutTpPercent: nonMotor ? 0 : number(payout?.tp_payout_percent),
+    grossPayout: nonMotor ? number(payout?.partner_payout_amount ?? payout?.gross_payout) : number(payout?.gross_payout),
     retention: number(payout?.retention_amount),
   };
 }
@@ -239,6 +260,14 @@ function classDescription(vehicleClass: string) {
   if (vehicleClass === "CPM") return "Contractor Plant & Machinery";
   if (vehicleClass === "MISD") return "Miscellaneous Vehicle";
   return "";
+}
+
+function basisLabel(value: string) {
+  const normalized = value.trim().toUpperCase();
+  if (normalized === "NET" || normalized === "NET_PREMIUM_PERCENT") return "Net Premium %";
+  if (normalized === "OD") return "OD Premium %";
+  if (normalized === "FIXED_AMOUNT") return "Fixed Amount";
+  return value;
 }
 
 function one<T>(value: Related<T>): T | null {
