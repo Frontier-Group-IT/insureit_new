@@ -1,0 +1,134 @@
+name: Build Partner 0.1.0 shield-icon preview APK once
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-partner-0-1-shield-icon-apk-once.yml'
+      - 'scripts/partner/native-assets/partner-shield-app-icon-256.jpg.b64'
+      - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
+      - 'scripts/partner/patch-0-1-home-refinements.mjs'
+      - 'scripts/partner/patch-0-1-business-date-filter.mjs'
+      - 'scripts/partner/compat/partner-business-date-filter.tsx'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN_PARTNER }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://ilzhsfqqjyppzzvfscmh.supabase.co' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_78HNnIK6q-eBQuoRMGJlkA_oJYe9Ynj' }}
+      EXPO_PUBLIC_PORTAL_URL: https://portal.insureit.in
+      COMPAT_SHA: 74039199991888777911deb30cf248e8f36cf8a8
+
+    steps:
+      - name: Check out current main tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: tooling
+          fetch-depth: 0
+
+      - name: Check out approved Partner 0.1.0 compatibility source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMPAT_SHA }}
+          path: compat
+          fetch-depth: 0
+
+      - name: Verify compatibility source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd compat
+          test "$(git rev-parse HEAD)" = "$COMPAT_SHA"
+          node <<'NODE'
+          const app = require('./apps/partner-app/app.json');
+          const expo = app.expo || {};
+          if (expo.version !== '0.1.0') throw new Error('Expected Partner version/runtime 0.1.0');
+          if (expo?.runtimeVersion?.policy !== 'appVersion') throw new Error('Expected appVersion runtime policy');
+          if (expo?.extra?.eas?.projectId !== '8ade82c1-4c96-4f09-b90b-802270fb406d') throw new Error('Unexpected Partner EAS project');
+          NODE
+
+      - name: Apply accepted Partner 0.1.0 refinements
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/scripts/partner/patch-0-1-home-hero-reference.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          node tooling/scripts/partner/patch-0-1-home-refinements.mjs 'compat/apps/partner-app/app/(tabs)/index.tsx'
+          cp tooling/scripts/partner/compat/partner-business-date-filter.tsx compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
+          node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
+
+      - name: Install shield-only native app icon
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode tooling/scripts/partner/native-assets/partner-shield-app-icon-256.jpg.b64 > compat/apps/partner-app/assets/partner-shield-app-icon.jpg
+          test -s compat/apps/partner-app/assets/partner-shield-app-icon.jpg
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'compat/apps/partner-app/app.json';
+          const app = JSON.parse(fs.readFileSync(path, 'utf8'));
+          app.expo.icon = './assets/partner-shield-app-icon.jpg';
+          app.expo.android = app.expo.android || {};
+          app.expo.android.icon = './assets/partner-shield-app-icon.jpg';
+          app.expo.ios = app.expo.ios || {};
+          app.expo.ios.icon = './assets/partner-shield-app-icon.jpg';
+          fs.writeFileSync(path, JSON.stringify(app, null, 2) + '\n');
+          NODE
+          grep -q 'partner-shield-app-icon.jpg' compat/apps/partner-app/app.json
+
+      - name: Require Expo token
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${EXPO_TOKEN:-}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: compat/package-lock.json
+
+      - name: Install dependencies
+        working-directory: compat
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify Partner app typecheck
+        working-directory: compat/apps/partner-app
+        run: npx tsc --noEmit
+
+      - name: Verify Expo project
+        working-directory: compat/apps/partner-app
+        run: |
+          npx eas-cli whoami
+          npx eas-cli project:info --non-interactive
+
+      - name: Build Android preview APK with shield icon
+        working-directory: compat/apps/partner-app
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx eas-cli build --platform android --profile preview --non-interactive --wait --json > partner-shield-preview-build.json
+          cat partner-shield-preview-build.json
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Partner shield-icon preview APK"
+            echo
+            echo "- Compatibility source: $COMPAT_SHA"
+            echo "- Runtime: 0.1.0"
+            echo "- Profile/channel: preview"
+            echo "- Native change: shield-only Partner launcher icon"
+            echo "- Existing accepted Home and Business Report compatibility patches are embedded"
+          } >> "$GITHUB_STEP_SUMMARY"
