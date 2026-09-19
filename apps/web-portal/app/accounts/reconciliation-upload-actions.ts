@@ -135,8 +135,8 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
   }
 
   const declaredRowCount = metadata.rowCount;
-  const usedRange = XLSX.utils.decode_range(sheet["!ref"] || "A1:A1");
-  if (usedRange.e.c !== PAYOUT_ID_INDEX || usedRange.e.r !== declaredRowCount + 1) {
+  const usedRange = populatedWorksheetBounds(sheet);
+  if (!usedRange || usedRange.maxCol !== PAYOUT_ID_INDEX || usedRange.maxRow !== declaredRowCount + 1) {
     return emptyPreview("Business MIS rows or columns were inserted, removed or shifted. Upload the workbook exactly as exported.");
   }
   const dataRows = grid.slice(2).filter((row) => text(row?.[POLICY_ID_INDEX]) !== "" || row.slice(0, BUSINESS_MIS_HEADERS.length).some((value) => text(value) !== ""));
@@ -464,6 +464,24 @@ function normalizeTemplateMetadata(value: Partial<Record<keyof ReconciliationTem
     || !metadata.systemHash
   ) return null;
   return metadata;
+}
+
+function populatedWorksheetBounds(sheet: XLSX.WorkSheet): { maxRow: number; maxCol: number } | null {
+  let maxRow = -1;
+  let maxCol = -1;
+
+  for (const address of Object.keys(sheet)) {
+    if (address.startsWith("!")) continue;
+    if (!/^[A-Z]+\d+$/.test(address)) continue;
+    const cell = sheet[address];
+    if (!cell || cell.v === undefined || cell.v === null || text(cell.v) === "") continue;
+
+    const decoded = XLSX.utils.decode_cell(address);
+    if (decoded.r > maxRow) maxRow = decoded.r;
+    if (decoded.c > maxCol) maxCol = decoded.c;
+  }
+
+  return maxRow >= 0 && maxCol >= 0 ? { maxRow, maxCol } : null;
 }
 
 function hasEditableInput(row: unknown[]) {
