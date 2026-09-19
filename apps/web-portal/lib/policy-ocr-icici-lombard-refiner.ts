@@ -486,31 +486,22 @@ function pageOneFlattenedIdentifiers(pageOne: string): {
   const registrationMatch = bounded.match(/\b[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}\b/i);
   if (!registrationMatch || registrationMatch.index == null) return null;
 
-  const tail = bounded.slice(registrationMatch.index + registrationMatch[0].length, registrationMatch.index + registrationMatch[0].length + 700);
+  const tail = bounded
+    .slice(registrationMatch.index + registrationMatch[0].length, registrationMatch.index + registrationMatch[0].length + 700)
+    .replace(/(?:[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}|\d{1,2}[-/]\d{1,2}[-/]\d{4})/g, " ");
   const rawTokens = tail.match(/[A-Z0-9]+/gi) ?? [];
   const tokens = rawTokens
     .map((raw) => ({ raw, compact: compactId(raw) }))
     .filter((entry) =>
       entry.compact
       && !/^(?:SEP|OCT|NOV|DEC|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|CONSTRUCTION|GOODS|TRANSPORTATION|CURRENT|YEAR|NCB|VEHICLE|USAGE|ENGINE|CHASSIS|NO)$/i.test(entry.compact)
-      && !/^\d{1,4}$/.test(entry.compact)
+      && !/^(?:19|20)\d{2}$/.test(entry.compact)
+      && !/^\d{1,2}$/.test(entry.compact)
     );
 
   // Page-1 Risk Assumption order is registration date -> engine -> chassis -> NCB -> usage.
-  // Prefer complete identifiers first.
-  const complete = tokens.filter((entry) => validVehicleId(entry.compact));
-  if (complete.length >= 2) {
-    const engine = complete[0].compact;
-    const chassis = complete[1].compact;
-    if (chassis.length >= 16) {
-      return {
-        engine: { value: engine, page: 1, evidence: "ICICI flattened page-1 identifier sequence: " + complete[0].raw },
-        chassis: { value: chassis, page: 1, evidence: "ICICI flattened page-1 identifier sequence: " + complete[1].raw },
-      };
-    }
-  }
-
-  // If OCR split identifiers, reconstruct an engine followed by a 17-char chassis.
+  // Reconstruct first so a numeric OCR fragment such as the trailing "7890" of an
+  // engine number is not discarded or mistaken for a separate field.
   for (let split = 1; split < tokens.length; split += 1) {
     const engine = tokens.slice(0, split).map((entry) => entry.compact).join("");
     if (!validVehicleId(engine) || engine.length < 10 || engine.length > 16) continue;
@@ -522,8 +513,20 @@ function pageOneFlattenedIdentifiers(pageOne: string): {
       if (chassis.length > 18) break;
       if (!validVehicleId(chassis)) continue;
       return {
-        engine: { value: engine, page: 1, evidence: "ICICI flattened page-1 wrapped engine fragments" },
-        chassis: { value: chassis, page: 1, evidence: "ICICI flattened page-1 wrapped chassis fragments" },
+        engine: { value: engine, page: 1, evidence: "ICICI flattened page-1 engine token sequence" },
+        chassis: { value: chassis, page: 1, evidence: "ICICI flattened page-1 chassis token sequence" },
+      };
+    }
+  }
+
+  const complete = tokens.filter((entry) => validVehicleId(entry.compact));
+  if (complete.length >= 2) {
+    const engine = complete[0].compact;
+    const chassis = complete[1].compact;
+    if (chassis.length >= 16) {
+      return {
+        engine: { value: engine, page: 1, evidence: "ICICI flattened page-1 identifier sequence: " + complete[0].raw },
+        chassis: { value: chassis, page: 1, evidence: "ICICI flattened page-1 identifier sequence: " + complete[1].raw },
       };
     }
   }
