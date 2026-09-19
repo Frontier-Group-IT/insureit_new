@@ -295,9 +295,9 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
         <Section number="04" title="Cover, premium & validity">
           <Field label={form.category === "Liability" ? "Liability limit" : "Sum insured / limit"} value={form.sumInsured} onChange={(e) => update("sumInsured", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
           <Field label="Deductible / excess" value={form.deductible} onChange={(e) => update("deductible", numeric(e.target.value))} placeholder="Optional" inputMode="decimal" />
-          <Field label="Net premium" value={form.netPremium} onChange={(e) => { const net = numeric(e.target.value); setForm((current) => ({ ...current, netPremium: net, odPremium: "0", tpPremium: "0", ...(current.gstAmount && net ? { grossPremium: String(Number(net) + Number(current.gstAmount)) } : {}) })); }} placeholder="₹ 0.00" inputMode="decimal" />
-          <Field label="GST" value={form.gstAmount} onChange={(e) => { const gst = numeric(e.target.value); update("gstAmount", gst); if (form.netPremium) update("grossPremium", String(Number(form.netPremium) + Number(gst || 0))); }} placeholder="₹ 0.00" inputMode="decimal" />
-          <Field label="Gross premium" value={form.grossPremium} onChange={(e) => update("grossPremium", numeric(e.target.value))} placeholder="₹ 0.00" inputMode="decimal" required />
+          <Field label="Net premium" value={form.netPremium} onChange={(e) => { const net = numeric(e.target.value); setForm((current) => ({ ...current, netPremium: net, odPremium: "0", tpPremium: "0", grossPremium: String(Number(net || 0) + Number(current.gstAmount || 0)) })); }} placeholder="₹ 0.00" inputMode="decimal" />
+          <Field label="GST" value={form.gstAmount} onChange={(e) => { const gst = numeric(e.target.value); setForm((current) => ({ ...current, gstAmount: gst, grossPremium: String(Number(current.netPremium || 0) + Number(gst || 0)) })); }} placeholder="₹ 0.00" inputMode="decimal" />
+          <Field label="Gross premium" value={form.grossPremium} disabled readOnly placeholder="₹ 0.00" inputMode="decimal" />
           <Field label="Policy start" type="date" value={form.startDate} onChange={(e) => update("startDate", e.target.value)} required />
           <Field label="Policy expiry" type="date" value={form.endDate} onChange={(e) => update("endDate", e.target.value)} required />
         </Section>

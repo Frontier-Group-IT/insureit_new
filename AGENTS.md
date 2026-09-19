@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Unified Non-Motor Gross Premium derived/locked:** branch `fix/non-motor-gross-premium-derived`; Gross Premium in unified `/policies/new` Non-Motor Section 04 is now read-only and recalculates from Net Premium + GST whenever either input changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-19 — Unified Non-Motor premium controls repair:** branch `fix/non-motor-unified-premium-fields`; removes OD Premium and TP Premium from the unified `/policies/new` Non-Motor Section 04, makes Net Premium directly editable, preserves GST/Gross Premium behavior, and forces OD/TP to zero in the Non-Motor payload so Motor behavior is untouched. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-19 — Associate Accounts single Save action:** branch `ui/associate-single-save-button`; removes the redundant first-row Save button so the form has one Save button on the Address/City/State/PIN row. Because both rows remain inside the same form, the single Save action submits all mandatory and optional associate fields together. **IMPLEMENTED; PR/CI/merge/deployment pending.**
