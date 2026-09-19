@@ -114,16 +114,16 @@ export function refineIciciLombardMotorPolicy(
   if (idv) setMoney(fields, "idv", money(idv.value), .999, idv.page, idv.evidence);
   else fields.delete("idv");
 
-  const od = explicitMoney(firstTwo, /Total\s+Own\s+Damage\s+Premium\s*\(A\)/i)
-    ?? structuredMoney(tables, /Total\s+Own\s+Damage\s+Premium\s*\(A\)/i);
-  const tp = explicitMoney(firstTwo, /Total\s+Liability\s+Premium\s*\(B\)/i)
-    ?? structuredMoney(tables, /Total\s+Liability\s+Premium\s*\(B\)/i);
-  const net = explicitMoney(firstTwo, /Total\s+Package\s+Premium\s*\(A\s*\+\s*B\)/i)
-    ?? structuredMoney(tables, /Total\s+Package\s+Premium\s*\(A\s*\+\s*B\)/i);
-  const tax = explicitMoney(firstTwo, /Total\s+Tax\s+Payable(?:\s+in)?/i)
-    ?? structuredMoney(tables, /Total\s+Tax\s+Payable/i);
-  const gross = explicitMoney(firstTwo, /Total\s+Premium\s+Payable(?:\s+in)?/i)
-    ?? structuredMoney(tables, /Total\s+Premium\s+Payable/i);
+  const od = structuredMoney(tables, /Total\s+Own\s+Damage\s+Premium\s*\(A\)/i)
+    ?? explicitMoney(firstTwo, /Total\s+Own\s+Damage\s+Premium\s*\(A\)/i);
+  const tp = structuredMoney(tables, /Total\s+Liability\s+Premium\s*\(B\)/i)
+    ?? explicitMoney(firstTwo, /Total\s+Liability\s+Premium\s*\(B\)/i);
+  const net = structuredMoney(tables, /Total\s+Package\s+Premium\s*\(A\s*\+\s*B\)/i)
+    ?? explicitMoney(firstTwo, /Total\s+Package\s+Premium\s*\(A\s*\+\s*B\)/i);
+  const tax = structuredMoney(tables, /Total\s+Tax\s+Payable/i)
+    ?? explicitMoney(firstTwo, /Total\s+Tax\s+Payable(?:\s+in)?/i);
+  const gross = structuredMoney(tables, /Total\s+Premium\s+Payable/i)
+    ?? explicitMoney(firstTwo, /Total\s+Premium\s+Payable(?:\s+in)?/i);
 
   const explicitCpaZero =
     /Compulsory\s+Personal\s+Accident\s+cover\s+has\s+not\s+been\s+opted/i.test(firstTwo)
