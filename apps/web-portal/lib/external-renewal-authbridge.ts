@@ -32,6 +32,7 @@ type OpportunityRow = {
   id: string;
   registration_no: string | null;
   is_active: boolean;
+  ai_profile_overrides: Record<string, unknown> | null;
 };
 
 type CacheRow = {
@@ -190,13 +191,17 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
   const admin = createSupabaseAdminClient();
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,registration_no,is_active")
+    .select("id,registration_no,is_active,ai_profile_overrides")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
   if (opportunityError || !opportunity || !opportunity.is_active) throw new Error("External renewal opportunity is unavailable.");
 
-  const registrationNumber = normalizeVehicleRegistrationNumber(opportunity.registration_no ?? "");
+  const overrideRegistration =
+    opportunity.ai_profile_overrides && typeof opportunity.ai_profile_overrides.registrationNumber === "string"
+      ? opportunity.ai_profile_overrides.registrationNumber
+      : null;
+  const registrationNumber = normalizeVehicleRegistrationNumber(overrideRegistration ?? opportunity.registration_no ?? "");
   if (!registrationNumber) {
     await persistOpportunityResult(opportunity.id, "failed", null, null, "missing_registration");
     throw new Error("RC number is required before fetching vehicle details.");
