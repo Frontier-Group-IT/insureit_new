@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Desktop sidebar login collapse fix:** branch `fix/sidebar-login-submenus-collapsed`; removes persisted open-section/open-group restoration from desktop navigation so a fresh login/dashboard load starts with workspace submenus collapsed. Manual expand/collapse and active-route expansion during the current session remain intact. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-19 — Unified Non-Motor Gross Premium derived/locked:** branch `fix/non-motor-gross-premium-derived`; Gross Premium in unified `/policies/new` Non-Motor Section 04 is now read-only and recalculates from Net Premium + GST whenever either input changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-19 — Unified Non-Motor premium controls repair:** branch `fix/non-motor-unified-premium-fields`; removes OD Premium and TP Premium from the unified `/policies/new` Non-Motor Section 04, makes Net Premium directly editable, preserves GST/Gross Premium behavior, and forces OD/TP to zero in the Non-Motor payload so Motor behavior is untouched. **IMPLEMENTED; PR/CI/merge/deployment pending.**
