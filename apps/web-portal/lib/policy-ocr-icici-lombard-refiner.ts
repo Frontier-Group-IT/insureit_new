@@ -716,7 +716,7 @@ function explicitRtoFromText(text: string, page: number): VehicleEvidence | null
     const same = lines[i].match(/RTO\s+(?:City|Location)\s*[:#-]\s*(.+)$/i);
     if (same) {
       const value = clean(same[1]).replace(/\s{2,}.*/, "").trim();
-      if (isSafeRto(value)) {
+      if (isSafeRto(value) && looksLikeRtoLocation(value)) {
         return { value, page, evidence: "ICICI explicit RTO label: " + lines[i] };
       }
     }
@@ -725,7 +725,7 @@ function explicitRtoFromText(text: string, page: number): VehicleEvidence | null
       for (let j = i + 1; j <= Math.min(i + 10, lines.length - 1); j += 1) {
         const next = clean(lines[j] ?? "");
         if (!next || looksLikeRiskLabel(next) || looksLikeIdentifierLabel(next)) continue;
-        if (isSafeRto(next)) {
+        if (isSafeRto(next) && looksLikeRtoLocation(next)) {
           return { value: next, page, evidence: "ICICI RTO nearby value: " + next };
         }
       }
