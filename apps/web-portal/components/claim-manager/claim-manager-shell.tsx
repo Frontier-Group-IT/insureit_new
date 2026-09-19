@@ -72,41 +72,7 @@ export async function ClaimManagerShell({ title, backHref = internalLaunchHome, 
             </div>
           </main>
 
-          <style>{`
-            @media (min-width: 1024px) {
-              .desktop-sidebar-collapsed aside > div:last-child {
-                margin-top: auto !important;
-                flex-shrink: 0 !important;
-              }
 
-              .desktop-sidebar-collapsed aside > div:last-child > a > span:last-child {
-                position: absolute !important;
-                left: 56px !important;
-                top: 50% !important;
-                z-index: 90 !important;
-                width: max-content !important;
-                transform: translateY(-50%) translateX(-4px) !important;
-                border-radius: 9px !important;
-                background: #111111 !important;
-                padding: 7px 10px !important;
-                color: #ffffff !important;
-                font-size: 12px !important;
-                font-weight: 600 !important;
-                line-height: 1 !important;
-                white-space: nowrap !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-                box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28) !important;
-                transition: opacity 120ms ease-out, transform 120ms ease-out !important;
-              }
-
-              .desktop-sidebar-collapsed aside > div:last-child > a:hover > span:last-child,
-              .desktop-sidebar-collapsed aside > div:last-child > a:focus-visible > span:last-child {
-                opacity: 1 !important;
-                transform: translateY(-50%) translateX(0) !important;
-              }
-            }
-          `}</style>
         </DesktopSidebarFrame>
       </Suspense>
 
