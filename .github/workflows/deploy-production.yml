@@ -160,6 +160,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260919110000_voice_prospect_editable_profile.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-voice-prospect-editable-profile.yml"
             echo "Voice prospect editable profile migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260919114500_voice_quick_add_queue_source.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-voice-quick-add-queue-source.yml"
+            echo "Voice Quick Add queue-source migration detected. Waiting for its schema workflow..."
           elif grep -qxE 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql|supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql' <<<"$changed_migrations"; then
             unexpected_migrations=$(grep -vxE 'supabase/migrations/20260913220500_external_renewal_voice_attempts.sql|supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then

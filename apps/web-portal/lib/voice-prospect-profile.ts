@@ -59,6 +59,8 @@ export type ExternalRenewalSourceProfile = {
   ai_profile_overrides: Record<string, unknown> | null;
   ai_profile_updated_at: string | null;
   ai_profile_updated_by: string | null;
+  voice_queue_source: "import" | "it_quick_add" | null;
+  quick_added_at: string | null;
 };
 
 export type VoiceAttemptDetail = {
@@ -129,7 +131,7 @@ export function baselineExternalRenewalAiProfile(row: ExternalRenewalSourceProfi
     chassisNumber: text(rc.chassisNumber) ?? text(row.chassis_no),
     insuranceCompany: text(rc.insuranceCompany) ?? text(row.current_insurer),
     policyNumber: text(rc.policyNumber) ?? text(row.current_policy_no),
-    policyExpiryDate: text(rc.policyExpiryDate) ?? text(row.policy_end_date),
+    policyExpiryDate: text(rc.policyExpiryDate) ?? (row.voice_queue_source === "it_quick_add" ? null : text(row.policy_end_date)),
     previousIdv: null,
     previousPremium: null,
     registrationDate: text(rc.registrationDate),
@@ -176,7 +178,7 @@ export async function getVoiceProspectDetail(opportunityId: string) {
   const admin = createSupabaseAdminClient();
   const { data: opportunity, error } = await admin
     .from("external_renewal_opportunities")
-    .select("id,batch_id,partner_id,account_name,customer_name,contact_name,mobile,address,city,state,postal_code,chassis_no,registration_no,vehicle_make,vehicle_model,vehicle_lob,invoice_date,policy_start_date,policy_end_date,current_insurer,current_policy_no,opportunity_status,rc_enrichment_status,rc_enrichment_source,rc_enrichment_details,rc_enriched_at,rc_enrichment_error_code,ai_profile_overrides,ai_profile_updated_at,ai_profile_updated_by")
+    .select("id,batch_id,partner_id,account_name,customer_name,contact_name,mobile,address,city,state,postal_code,chassis_no,registration_no,vehicle_make,vehicle_model,vehicle_lob,invoice_date,policy_start_date,policy_end_date,current_insurer,current_policy_no,opportunity_status,rc_enrichment_status,rc_enrichment_source,rc_enrichment_details,rc_enriched_at,rc_enrichment_error_code,ai_profile_overrides,ai_profile_updated_at,ai_profile_updated_by,voice_queue_source,quick_added_at")
     .eq("id", opportunityId)
     .maybeSingle<ExternalRenewalSourceProfile>();
   if (error || !opportunity) throw new Error("Voice prospect not found.");
@@ -221,7 +223,7 @@ export async function saveVoiceProspectAiProfile({
   const admin = createSupabaseAdminClient();
   const { data: row, error } = await admin
     .from("external_renewal_opportunities")
-    .select("id,batch_id,partner_id,account_name,customer_name,contact_name,mobile,address,city,state,postal_code,chassis_no,registration_no,vehicle_make,vehicle_model,vehicle_lob,invoice_date,policy_start_date,policy_end_date,current_insurer,current_policy_no,opportunity_status,rc_enrichment_status,rc_enrichment_source,rc_enrichment_details,rc_enriched_at,rc_enrichment_error_code,ai_profile_overrides,ai_profile_updated_at,ai_profile_updated_by")
+    .select("id,batch_id,partner_id,account_name,customer_name,contact_name,mobile,address,city,state,postal_code,chassis_no,registration_no,vehicle_make,vehicle_model,vehicle_lob,invoice_date,policy_start_date,policy_end_date,current_insurer,current_policy_no,opportunity_status,rc_enrichment_status,rc_enrichment_source,rc_enrichment_details,rc_enriched_at,rc_enrichment_error_code,ai_profile_overrides,ai_profile_updated_at,ai_profile_updated_by,voice_queue_source,quick_added_at")
     .eq("id", opportunityId)
     .maybeSingle<ExternalRenewalSourceProfile>();
   if (error || !row) throw new Error("Voice prospect not found.");

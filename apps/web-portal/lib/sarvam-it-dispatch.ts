@@ -36,6 +36,7 @@ type OpportunityRow = {
   rc_enrichment_status: string | null;
   rc_enrichment_details: RcEnrichmentDetails | null;
   ai_profile_overrides: Record<string, unknown> | null;
+  voice_queue_source: "import" | "it_quick_add" | null;
 };
 
 function overrideText(overrides: Record<string, unknown>, key: string, fallback: string | null | undefined) {
@@ -57,7 +58,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,current_policy_no,policy_end_date,rc_enrichment_status,rc_enrichment_details,ai_profile_overrides")
+    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,current_policy_no,policy_end_date,rc_enrichment_status,rc_enrichment_details,ai_profile_overrides,voice_queue_source")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
@@ -71,7 +72,11 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     .eq("id", opportunity.batch_id)
     .maybeSingle<{ status: string }>();
 
-  if (batchError || !batch || batch.status !== "published" || !opportunity.is_active) {
+  const batchAllowed =
+    batch?.status === "published" ||
+    (opportunity.voice_queue_source === "it_quick_add" && batch?.status === "validated");
+
+  if (batchError || !batch || !batchAllowed || !opportunity.is_active) {
     throw new Error("This opportunity is not available for AI calling.");
   }
 
@@ -98,7 +103,11 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
   const chassisNumber = overrideText(overrides, "chassisNumber", enrichment.chassisNumber ?? opportunity.chassis_no);
   const currentInsurer = overrideText(overrides, "insuranceCompany", enrichment.insuranceCompany ?? opportunity.current_insurer);
   const policyNumber = overrideText(overrides, "policyNumber", enrichment.policyNumber ?? opportunity.current_policy_no);
-  const policyExpiryDate = overrideText(overrides, "policyExpiryDate", enrichment.policyExpiryDate ?? opportunity.policy_end_date);
+  const policyExpiryDate = overrideText(
+    overrides,
+    "policyExpiryDate",
+    enrichment.policyExpiryDate ?? (opportunity.voice_queue_source === "it_quick_add" ? null : opportunity.policy_end_date),
+  );
   const previousIdv = overrideText(overrides, "previousIdv", null);
   const previousPremium = overrideText(overrides, "previousPremium", null);
   const vehicleMakeModel = [vehicleMake, vehicleModel].filter(Boolean).join(" ").trim() || null;

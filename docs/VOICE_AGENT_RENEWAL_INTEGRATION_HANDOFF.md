@@ -531,3 +531,10 @@ IT edits are stored as a separate AI calling-profile override layer over the imp
 Changing the registration number invalidates the current RC enrichment so the corrected RC must be fetched before calling.
 
 Detailed record: `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
+
+
+## IT Voice Quick Add RC — IMPLEMENTED / PENDING CI
+
+Branch `feat/voice-quick-add-rc` adds a compact RC + mobile Quick Add action in the IT Calling Queue. It reuses an existing active RC where possible, otherwise creates an isolated validated-source External Renewal opportunity, auto-runs the existing cache-first AuthBridge enrichment path, and redirects IT to the full prospect detail before any Call action. Quick Add is not allowed to call Sarvam automatically or touch verified Customer/Vehicle/Policy masters.
+
+See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
