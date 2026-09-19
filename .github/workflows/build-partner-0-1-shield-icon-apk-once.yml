@@ -166,6 +166,6 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Profile/channel: preview"
             echo "- Native change: shield-only Partner launcher icon rendered to a 1024x1024 PNG"
-            echo "- Existing accepted Home refinements and the reference-style Business Report compatibility layout are embedded
-            echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions""
+            echo "- Existing accepted Home refinements and the reference-style Business Report compatibility layout are embedded"
+            echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions"
           } >> "$GITHUB_STEP_SUMMARY"
