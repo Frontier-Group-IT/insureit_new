@@ -25,6 +25,6 @@ Read `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md`, `../../docs/PARTNER_APP_HOM
 
 Use separate states: IMPLEMENTED, MERGED, DEPLOYED, VERIFIED. OTA publish success is not installed-device verification. After Partner OTA publication, require a cold launch (often twice) and device verification.
 
-Latest Home icon-size milestone: **PR #1777 merged as `d3df6b77a6eb8c607d72ff7984a13e3e0b7c842a`; Partner 0.1.0 preview OTA DEPLOYED successfully; installed-device visual verification remains pending.**
+Native app-icon milestone: user explicitly authorized one new Android preview APK using the shield-only purple Partner icon. Build only through `.github/workflows/build-partner-0-1-shield-icon-apk-once.yml`, which embeds the approved 0.1.0 compatibility source plus current accepted patches. This authorization is limited to this icon build; future native builds still require explicit approval.\n\nLatest Home icon-size milestone: **PR #1777 merged as `d3df6b77a6eb8c607d72ff7984a13e3e0b7c842a`; Partner 0.1.0 preview OTA DEPLOYED successfully; installed-device visual verification remains pending.**
 
 Update `../../docs/PARTNER_APP_HANDOFF_2026_09_13.md` or the current Partner refinement handoff after any material Partner runtime, compatibility-source, native-build, OTA, or user-visible milestone.
