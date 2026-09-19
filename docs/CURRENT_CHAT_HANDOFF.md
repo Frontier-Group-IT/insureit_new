@@ -1581,3 +1581,14 @@ Migration `20260907170000_policy_ocr_training_orchestrator.sql` adds durable ite
 Automated non-exact comparisons create/reuse Anju tasks with field-level questions; notification text remains metadata-only and BCCs `it@insureit.in`. Reviewer answers are sanitized before feedback persistence. Candidate proposal and IT Super User approval actions are explicit and separate from training approval. The workflow remains **BLOCKED** until the migration is applied, a running orchestrator UUID is created, `POLICY_OCR_WORKER_SECRET`, `POLICY_OCR_ORCHESTRATOR_ID`, `POLICY_OCR_ORCHESTRATOR_ENABLED=true`, Google OIDC/WIF configuration and Resend configuration are intentionally configured. No production deployment or real email was performed.
 
 **FOLLOW-UP IMPLEMENTED / NOT APPLIED / NOT DEPLOYED:** IT Super Users can create planned iterations and explicitly start/stop them from the protected OCR workspace. Completed structured reviewer feedback generates a sanitized proposal; optional GitHub Actions dispatch uses only explicitly configured `POLICY_OCR_GITHUB_APP_TOKEN` and repository values, otherwise the proposal remains portal-visible for approval. Satisfaction tasks render with a dedicated form only after server-side acceptance gates. Migration application is wired into the controlled OCR schema workflow and production provenance gate.
+
+---
+
+## 2026-09-19 — External Claim Proceed takeover trigger fix
+
+- Production symptom: External Claim `Proceed` can fail with `Managed claim not found.` for self-managed External Claims that already contain later customer milestones.
+- Root cause: `begin_external_claim_operations_workflow(...)` preserves customer milestones into `claim_stage_details` before switching `claim_service_mode` to `broker_managed`; the managed-stage trigger treats those preservation inserts as live Operations writes and requires `broker_managed`, causing transaction rollback.
+- Fix branch: `fix/external-claim-takeover-snapshot-trigger`.
+- Migration `20260919103000_fix_external_claim_takeover_snapshot_trigger.sql` makes `persist_managed_claim_stage_transition_from_details()` return early for authenticated/authorized preservation rows with `external_customer_snapshot=true`, before the broker-managed lookup. Normal Operations stage writes remain unchanged.
+- Dedicated External Claim schema workflow, production deploy gate, and canonical regression were updated for the new migration.
+- State: **IMPLEMENTED only**. Migration is **NOT APPLIED**, PR/merge/deployment/live Proceed verification pending.
