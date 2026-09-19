@@ -205,7 +205,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.9.0+gcv-live-replay-v10",
+    parserVersion: "icici_lombard_motor_v1.10.0+engine-chassis-production-route-v11",
     fields: [...fields.values()],
     warnings,
   };
