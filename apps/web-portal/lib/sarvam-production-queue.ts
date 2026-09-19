@@ -136,7 +136,7 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
       : stringValue(enrichment, "registrationNumber") ?? row.registration_no;
     const effectivePolicyExpiry = Object.prototype.hasOwnProperty.call(overrides, "policyExpiryDate")
       ? (typeof overrides.policyExpiryDate === "string" ? overrides.policyExpiryDate : null)
-      : stringValue(enrichment, "policyExpiryDate") ?? row.policy_end_date;
+      : stringValue(enrichment, "policyExpiryDate") ?? (row.voice_queue_source === "it_quick_add" ? null : row.policy_end_date);
 
     const hasRegistration = Boolean(effectiveRegistration?.trim());
     const otherwiseFetchable =
