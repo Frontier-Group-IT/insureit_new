@@ -520,3 +520,14 @@ Sarvam dispatch now requires `rc_enrichment_status=ready` and uses the enriched 
 No verified Customer/Vehicle/Policy master is created or modified. Bulk enrichment is deferred until the single-record production path is verified.
 
 Detailed evidence: `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.
+
+
+## Voice prospect detail + editable cohort profile — IMPLEMENTED / PENDING CI
+
+Branch `feat/voice-prospect-detail-controls` adds responsive action states, clickable Calling Queue / Recent Voice Attempt rows, and an IT-only prospect detail workspace.
+
+IT edits are stored as a separate AI calling-profile override layer over the imported/AuthBridge baseline. New attempts snapshot the exact effective cohort context before Sarvam submission. The page exposes approved normalized AuthBridge fields and normalized Sarvam results/history, while keeping raw provider payloads and transcripts out of the UI/persistence path.
+
+Changing the registration number invalidates the current RC enrichment so the corrected RC must be fetched before calling.
+
+Detailed record: `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
