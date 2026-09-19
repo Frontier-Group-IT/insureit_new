@@ -288,22 +288,22 @@ type RiskVehicleDetails = {
 
 function riskAssumptionVehicleDetails(pageOne: string): RiskVehicleDetails | null {
   const lines = rawLines(pageOne);
-  const start = lines.findIndex((line) => /^Insured\\s*&\\s*Vehicle\\s+Details$/i.test(line));
-  const previous = lines.findIndex((line, index) => index > start && /^Previous\\s+Policy\\s+Details$/i.test(line));
+  const start = lines.findIndex((line) => /^Insured\s*&\s*Vehicle\s+Details$/i.test(line));
+  const previous = lines.findIndex((line, index) => index > start && /^Previous\s+Policy\s+Details$/i.test(line));
   if (start < 0 || previous < 0) return null;
 
   const section = lines.slice(start + 1, previous);
   const labels = [
-    /^Name\\s+of\\s+the\\s+Insured$/i,
-    /^Period\\s+of\\s+Insurance$/i,
-    /^Vehicle\\s+Make\\s*\\/\\s*Model$/i,
-    /^RTO\\s+City$/i,
-    /^Vehicle\\s+Registration\\s+No\\.?$/i,
-    /^Vehicle\\s+Registration\\s+Date$/i,
-    /^Engine\\s+No\\.?$/i,
-    /^Chassis\\s+No\\.?$/i,
-    /^Current\\s+Year\\s+NCB(?:\\(%\\))?$/i,
-    /^Vehicle\\s+Usage$/i,
+    /^Name\s+of\s+the\s+Insured$/i,
+    /^Period\s+of\s+Insurance$/i,
+    /^Vehicle\s+Make\s*\/\s*Model$/i,
+    /^RTO\s+City$/i,
+    /^Vehicle\s+Registration\s+No\.?$/i,
+    /^Vehicle\s+Registration\s+Date$/i,
+    /^Engine\s+No\.?$/i,
+    /^Chassis\s+No\.?$/i,
+    /^Current\s+Year\s+NCB(?:\(%\))?$/i,
+    /^Vehicle\s+Usage$/i,
   ];
 
   const labelPositions = labels.map((pattern) => section.findIndex((line) => pattern.test(line)));
@@ -320,7 +320,7 @@ function riskAssumptionVehicleDetails(pageOne: string): RiskVehicleDetails | nul
 
   const makeModel = values[2].split("/").map(clean).filter(Boolean);
   const registrationValue = compactId(values[4]);
-  const yearHit = values[5].match(/\\b(?:19|20)\\d{2}\\b/)?.[0] ?? null;
+  const yearHit = values[5].match(/\b(?:19|20)\d{2}\b/)?.[0] ?? null;
   const engineValue = compactId(values[6]);
   const chassisValue = compactId(values[7]);
 
@@ -361,12 +361,12 @@ function structuredMoney(tables: StructuredPolicyTable[], label: RegExp): number
 function findIciciTotalIdv(pages: string[]): VehicleEvidence | null {
   for (let page = 0; page < Math.min(2, pages.length); page += 1) {
     const text = pages[page] ?? "";
-    const start = text.search(/Total\\s+IDV/i);
+    const start = text.search(/Total\s+IDV/i);
     if (start < 0) continue;
     const rest = text.slice(start);
-    const end = rest.search(/Premium\\s+Details/i);
+    const end = rest.search(/Premium\s+Details/i);
     const bounded = end >= 0 ? rest.slice(0, end) : rest.slice(0, 900);
-    const matches = bounded.match(/\\d[\\d,]*(?:\\.\\d{1,2})?/g) ?? [];
+    const matches = bounded.match(/\d[\d,]*(?:\.\d{1,2})?/g) ?? [];
     const values = matches
       .map((raw) => ({ raw, value: Number(raw.replace(/,/g, "")) }))
       .filter((entry) => Number.isFinite(entry.value) && entry.value >= 10000);
@@ -390,20 +390,20 @@ function safeRtoValue(hit: VehicleEvidence | null) {
 function isSafeRto(value: string) {
   const cleaned = clean(value);
   return Boolean(cleaned)
-    && !/^(?:Hypothecated\\s+To|Category|City|RTO\\s+(?:City|Location)|Vehicle\\s+Class)$/i.test(cleaned)
+    && !/^(?:Hypothecated\s+To|Category|City|RTO\s+(?:City|Location)|Vehicle\s+Class)$/i.test(cleaned)
     && /[A-Z]/i.test(cleaned);
 }
 
 function validVehicleId(value: string) {
   const compact = compactId(value);
   if (compact.length < 10 || compact.length > 24) return false;
-  if (!/[A-Z]/.test(compact) || !/\\d/.test(compact)) return false;
+  if (!/[A-Z]/.test(compact) || !/\d/.test(compact)) return false;
   return !/^(?:CHASSISNO|ENGINENO|CURRENTYEARNCB|VEHICLEUSAGE|HYPOTHECATEDTO)$/i.test(compact);
 }
 
 function normalizeVehicleMake(value: string) {
   const cleaned = cleanVehicle(value).toUpperCase();
-  const parts = cleaned.split(/\\s+/);
+  const parts = cleaned.split(/\s+/);
   if (parts.length === 2 && parts[0].length >= 6 && parts[1].length <= 2 && /^[A-Z]+$/.test(parts[0] + parts[1])) {
     return parts.join("");
   }
@@ -412,9 +412,9 @@ function normalizeVehicleMake(value: string) {
 
 function normalizeVehicleModel(value: string) {
   return cleanVehicle(value)
-    .replace(/(\\d)([A-Z])/g, "$1 $2")
-    .replace(/([A-Z])(\\d)/g, "$1 $2")
-    .replace(/\\s+/g, " ")
+    .replace(/(\d)([A-Z])/g, "$1 $2")
+    .replace(/([A-Z])(\d)/g, "$1 $2")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
