@@ -27,7 +27,6 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
-import { usePartnerNetwork } from '@/providers/partner-network-provider';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
 const PAGE_SIZE = 25;
@@ -45,7 +44,6 @@ let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 export default function PoliciesScreen() {
   const router = useRouter();
   const { cacheScopeKey } = usePartnerSession();
-  const { isOffline } = usePartnerNetwork();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [filtersVisible, setFiltersVisible] = useState(true);
@@ -202,12 +200,12 @@ export default function PoliciesScreen() {
         </Pressable>
       </View>
 
-      {isOffline || collection.stale || summary.stale ? (
+      {collection.stale || summary.stale ? (
         <View style={styles.feedback}>
           <PartnerBanner
             tone="warning"
-            title={isOffline ? "You're offline" : 'Showing cached information'}
-            message={isOffline
+            title={collection.offline || summary.offline ? "You're offline" : 'Showing cached information'}
+            message={collection.offline || summary.offline
               ? 'Available cached information remains visible. Reconnect to refresh.'
               : `Last refreshed ${formatUpdatedAt(collection.updatedAt || summary.updatedAt)}. Pull down to try again.`}
           />

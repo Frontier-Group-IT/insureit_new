@@ -76,7 +76,8 @@ requireText(business, 'getPartnerPayoutSummary()', 'Business must continue loadi
 
 requireText(customers, 'PartnerAssets.emptyStates.noCustomers', 'Customers empty state must use the prepared no-customers artwork.');
 requireText(policies, 'PartnerAssets.emptyStates.noPolicies', 'Policies empty state must use the prepared no-policies artwork.');
-for (const product of ['motorInsurance', 'healthInsurance', 'familyInsurance', 'commercialInsurance']) requireText(policies, `PartnerAssets.products.${product}`, `Policies must map ${product} artwork into policy rows.`);
+requireText(policies, 'name="document-text-outline"', 'Policies reference cards must use the compact document-style policy icon.');
+requireText(policies, 'function policyStatus(', 'Policies reference cards must preserve lifecycle status styling.');
 requireText(claims, 'PartnerAssets.navigation.claims', 'Claims rows/empty state must use Partner claim artwork.');
 requireText(claims, 'PartnerAssets.status.verified', 'Completed claims must use verified artwork.');
 requireText(renewals, 'PartnerAssets.emptyStates.noRenewals', 'Renewal empty states must use the prepared no-renewals artwork.');

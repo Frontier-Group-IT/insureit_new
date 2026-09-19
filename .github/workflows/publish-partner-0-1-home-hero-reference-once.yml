@@ -11,6 +11,7 @@ on:
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
       - 'scripts/partner/compat/partner-business-date-filter.tsx'
       - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
+      - 'scripts/partner/compat/partner-policies-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
 
@@ -135,6 +136,18 @@ jobs:
           grep -q 'Quick Actions' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
+      - name: Install reference-style Policies layout for runtime 0.1.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx \
+            'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'Manage. Track. Grow.' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'Expiring Soon' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q 'Lapsed' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+
       - name: Require Expo token
         shell: bash
         run: |
@@ -172,7 +185,7 @@ jobs:
           npx eas-cli update \
             --channel preview \
             --environment preview \
-            --message "Partner 0.1.0 Business reference layout" \
+            --message "Partner 0.1.0 Business + Policies reference layouts" \
             --non-interactive \
             --json > partner-0-1-home-refinements-update.json
           cat partner-0-1-home-refinements-update.json
@@ -189,5 +202,6 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Home: Policy Intake quick-action visible icon scaled to match the other Quick Action icons; prior hero/compact-home refinements preserved"
             echo "- Business Report: reference-style compact dashboard layout + JS-only date range preserved"
+            echo "- Policies: reference-style hero, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards"
             echo "- No native build or dependency change"
           } >> "$GITHUB_STEP_SUMMARY"

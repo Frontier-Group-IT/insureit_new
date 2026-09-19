@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Partner Policies reference-layout redesign:** branch `ui/partner-policies-reference-layout`; UI-only reversible redesign of `apps/partner-app/app/(tabs)/policies.tsx` to match the supplied reference hierarchy (blue hero, search/filter row, four KPI cards, full-width Policy Intake CTA, compact lifecycle tabs, dense rounded policy cards, Load More control). Existing Partner policy RPCs, lifecycle values, permissions, detail routes, search and pagination are preserved. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending.**
+
 - **2026-09-19 — IT Voice Quick Add RC:** branch `feat/voice-quick-add-rc`; IT Super User can add a prospect to the Calling Queue with RC + mobile only, auto-enrich through the existing AuthBridge/cache path, reuse an existing active RC without duplication, and review the prospect before Call. Verified masters remain untouched and Sarvam is never called automatically. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
 
 
