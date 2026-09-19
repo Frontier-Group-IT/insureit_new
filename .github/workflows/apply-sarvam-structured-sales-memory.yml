@@ -1,0 +1,67 @@
+name: Apply Sarvam structured sales memory
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260919123000_sarvam_structured_sales_memory.sql'
+      - '.github/workflows/apply-sarvam-structured-sales-memory.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Sarvam structured sales memory
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply structured sales memory migration
+        run: |
+          set -euo pipefail
+          supabase db query --linked --file supabase/migrations/20260919123000_sarvam_structured_sales_memory.sql
+          supabase migration repair --linked --status applied 20260919123000
+
+      - name: Verify schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              exists (
+                select 1 from information_schema.columns
+                where table_schema='public'
+                  and table_name='external_renewal_voice_attempts'
+                  and column_name='sales_memory'
+              ) as sales_memory_ready,
+              not has_table_privilege('authenticated','public.external_renewal_voice_attempts','UPDATE') as no_authenticated_attempt_update
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"sales_memory_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"no_authenticated_attempt_update"[[:space:]]*:[[:space:]]*true'
