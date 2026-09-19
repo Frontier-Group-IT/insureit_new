@@ -1,3 +1,16 @@
+## 2026-09-19 — Business MIS commercial export columns
+
+- Branch: `fix/business-mis-commercial-columns`.
+- User requested the Business report Excel export to match the supplied reference commercial block.
+- Added/exported columns in order: Base, Insurance Scheme / Incentive, Pay-in after TDS, Payout Basis; renamed Pay-in OD and Payout OD headers to explicitly carry Non-Motor net % semantics.
+- Export now reads existing Motor and Non-Motor commercial fields: Motor pay-in basis/OD/TP splits; Non-Motor `commercial_basis`, `projected_commission_percent`, `projected_commission_amount`, `payout_basis`, `partner_payout_percent`, and `partner_payout_amount`.
+- Basis codes are display-mapped only in the Excel output: `NET` / `NET_PREMIUM_PERCENT` -> `Net Premium %`, `OD` -> `OD Premium %`, `FIXED_AMOUNT` -> `Fixed Amount`.
+- Motor Payout Basis falls back to the stored Motor pay-in basis where the payout row has no dedicated basis, matching the current shared Motor commercial-basis UI behavior.
+- Workbook ranges/styles/totals were expanded from AR to AV. Existing report filters, row limit and access scope remain unchanged.
+- **IMPLEMENTED; REVERSIBLE APP-ONLY CHANGE. NOT MERGED, NOT DEPLOYED, NO DATABASE CHANGE.**
+
+---
+
 # Active continuation — Partner claim source parity (2026-09-19)
 
 - Branch: `fix/partner-claim-source-classification`.
