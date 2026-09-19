@@ -119,6 +119,21 @@ function pick(values: Map<string, string>, keys: string[]) {
   return null;
 }
 
+function exactProviderValue(raw: unknown, path: string[]) {
+  let current: unknown = raw;
+  for (const segment of path) {
+    if (!current || typeof current !== "object" || Array.isArray(current)) return null;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return primitive(current);
+}
+
+function providerValue(raw: unknown, values: Map<string, string>, path: string[], aliases: string[]) {
+  const exact = exactProviderValue(raw, path)?.trim();
+  if (exact && !/^(null|undefined|na|n\/a)$/i.test(exact)) return exact;
+  return pick(values, aliases);
+}
+
 function cleanText(value: unknown, max = 120) {
   const v = primitive(value)?.replace(/\s+/g, " ").trim() ?? "";
   return v && v.length <= max ? v : null;
@@ -218,68 +233,87 @@ function fromNormalized(raw: unknown, registrationNumber: string): ExternalRenew
 }
 function fromRaw(raw: unknown, registrationNumber: string): ExternalRenewalRcDetails {
   const values = flatten(raw);
+  const p = (section: string, key: string, aliases: string[]) =>
+    providerValue(raw, values, ["msg", section, key], aliases);
+
   return {
     registrationNumber,
-    registrationDate: toIsoDate(pick(values, ["registrationdate","regdate","dateofregistration"])),
-    rto: cleanText(pick(values, ["rto","rtoname"])),
-    rcStatus: cleanText(pick(values, ["status","rcstatus"]), 40),
-    rcStatusAsOn: toIsoDate(pick(values, ["statusason","rcstatusason"])),
-    ownerName: cleanText(pick(values, ["ownersname","ownername"])),
-    ownerSerialNumber: cleanText(pick(values, ["ownersnumber","ownerserialnumber","ownerserialno"]), 20),
-    fatherHusbandName: cleanText(pick(values, ["fathernamehusbandname","fatherhusbandname"])),
-    permanentAddress: cleanText(pick(values, ["permanentaddress","splitpermanantaddress","permanantaddress"]), 300),
-    permanentAddressCity: cleanText(pick(values, ["permanantaddresscity","permanentaddresscity"]), 80),
-    permanentAddressDistrict: cleanText(pick(values, ["permanantaddressdistrict","permanentaddressdistrict"]), 80),
-    permanentAddressState: cleanText(pick(values, ["permanantaddressstate","permanentaddressstate"]), 80),
-    permanentAddressPincode: cleanText(pick(values, ["permanantaddresspincode","permanentaddresspincode"]), 20),
-    permanentAddressCountry: cleanText(pick(values, ["permanantaddresscountry","permanentaddresscountry"]), 80),
-    presentAddress: cleanText(pick(values, ["presentaddress","splitpresentaddress"]), 300),
-    presentAddressCity: cleanText(pick(values, ["presentaddresscity"]), 80),
-    presentAddressDistrict: cleanText(pick(values, ["presentaddressdistrict"]), 80),
-    presentAddressState: cleanText(pick(values, ["presentaddressstate"]), 80),
-    presentAddressPincode: cleanText(pick(values, ["presentaddresspincode"]), 20),
-    presentAddressCountry: cleanText(pick(values, ["presentaddresscountry"]), 80),
-    manufacturer: cleanText(pick(values, ["makermanufacturer","manufacturer","maker","vehiclemanufacturer","vehiclemaker"])),
-    model: cleanText(pick(values, ["modelmakersclass","model","modelname","vehiclemodel","variant"])),
-    manufactureDate: cleanText(pick(values, ["manufacturedate","manufacturingdate"]), 20),
-    manufacturingYear: cleanText(pick(values, ["manufacturingyear","manufactureyear","mfgyear","yearofmanufacture"]), 4),
-    vehicleClass: cleanText(pick(values, ["vehicleclass","vehicleclassdesc","classofvehicle","vehicletype"]), 80),
-    vehicleCategory: cleanText(pick(values, ["vehiclecategory"]), 40),
-    bodyType: cleanText(pick(values, ["bodytype"]), 80),
-    color: cleanText(pick(values, ["color","colour"]), 40),
-    fuelType: cleanText(pick(values, ["fueltype","fuel","fueldescription"]), 40),
-    normsType: cleanText(pick(values, ["normstype","emissionnorms","bharatstage"]), 80),
-    engineNumber: cleanCode(pick(values, ["enginenumber","engineno"])),
-    engineCapacityCc: cleanText(pick(values, ["enginecapacity","enginecapacitycc","cubiccapacity","cubiccapacitycc","enginecc","cc"]), 40),
-    cylinderCount: cleanText(pick(values, ["noofcylinder","numberofcylinders","cylindercount"]), 20),
-    seatingCapacity: cleanText(pick(values, ["seatingcapacity","seatcapacity","numberofseats","totalseats"]), 20),
-    standingCapacity: cleanText(pick(values, ["vehiclestandingcapacity","standingcapacity"]), 20),
-    sleeperCapacity: cleanText(pick(values, ["sleepercapacity"]), 20),
-    wheelBaseMm: cleanText(pick(values, ["wheelbase"]), 40),
-    gvwKg: cleanText(pick(values, ["grossweight","gvw","gvwkg","grossvehicleweight"]), 40),
-    unladenWeightKg: cleanText(pick(values, ["unloadingweight","unladenweight","kerbweight"]), 40),
-    commercial: cleanText(pick(values, ["iscommercial","commercial"]), 20),
-    chassisNumber: cleanCode(pick(values, ["chassisnumber","chassisno","chassis"])),
-    fitnessExpiryDate: toIsoDate(pick(values, ["fitnessdatercexpirydate","fitnessexpirydate","fitnessupto","fitnessvalidupto"])),
-    roadTaxExpiryDate: toIsoDate(pick(values, ["taxupto","roadtaxexpirydate","taxvalidupto","roadtaxupto"])),
-    vehicleTaxUptoDate: toIsoDate(pick(values, ["vehicletaxupto"])),
-    pucNumber: cleanText(pick(values, ["puccno","pucnumber"]), 80),
-    pucExpiryDate: toIsoDate(pick(values, ["puccupto","pucexpirydate","pucupto","pucvalidupto","pollutionupto"])),
-    permitNumber: cleanText(pick(values, ["permitnumber"]), 80),
-    permitType: cleanText(pick(values, ["permittype"]), 80),
-    permitIssueDate: toIsoDate(pick(values, ["permitissuedate"])),
-    permitValidFrom: toIsoDate(pick(values, ["permitvaldfrom","permitvalidfrom"])),
-    localPermitExpiryDate: toIsoDate(pick(values, ["permitvalidupto","localpermitexpirydate","localpermitupto","localpermitvalidupto"])),
-    nationalPermitNumber: cleanText(pick(values, ["nationalpermitnumber"]), 80),
-    nationalPermitIssuedBy: cleanText(pick(values, ["nationalpermitissuedby"]), 80),
-    nationalPermitExpiryDate: toIsoDate(pick(values, ["nationalpermitupto","nationalpermitexpirydate","nationalpermitvalidupto"])),
-    financed: cleanText(pick(values, ["financed"]), 20),
-    financerName: cleanText(pick(values, ["financername","financiername"])),
-    insuranceCompany: cleanText(pick(values, ["insurancecompany","insurer","insurername"])),
-    policyNumber: cleanPolicyNumber(pick(values, ["policynumber","policyno","insurancepolicynumber"])),
-    policyExpiryDate: toIsoDate(pick(values, ["insurancetodateinsuranceupto","insurancetodate","insuranceupto","policyexpirydate","insuranceexpirydate"])),
-    blacklistStatus: cleanText(pick(values, ["blackliststatus"]), 80),
-    nocDetails: cleanText(pick(values, ["nocdetails"]), 80),
+    registrationDate: toIsoDate(p("Registration Details", "Registration Date", ["registrationdate","regdate","dateofregistration"])),
+    rto: cleanText(p("Registration Details", "RTO", ["rto","rtoname"])),
+    rcStatus: cleanText(p("Registration Details", "Status", ["rcstatus","registrationstatus"]), 40),
+    rcStatusAsOn: toIsoDate(p("Registration Details", "Status As On", ["statusason","rcstatusason"])),
+    ownerName: cleanText(p("Owners Details", "Owners Name", ["ownersname","ownername"])),
+    ownerSerialNumber: cleanText(
+      p("Owners Details", "Owners Number", ["ownersnumber","ownerserialnumber","ownerserialno"]) ??
+      p("Vehicle Details", "Owner Serial Number", ["ownerserialnumber","ownerserialno"]),
+      20,
+    ),
+    fatherHusbandName: cleanText(p("Owners Details", "Father Name/Husband Name", ["fathernamehusbandname","fatherhusbandname"])),
+    permanentAddress: cleanText(
+      p("Owners Details", "Permanent Address", ["permanentaddress","permanantaddress"]) ??
+      p("Owners Details", "Split Permanant Address", ["splitpermanantaddress"]),
+      300,
+    ),
+    permanentAddressCity: cleanText(p("Owners Details", "Permanant Address City", ["permanantaddresscity","permanentaddresscity"]), 80),
+    permanentAddressDistrict: cleanText(p("Owners Details", "Permanant Address District", ["permanantaddressdistrict","permanentaddressdistrict"]), 80),
+    permanentAddressState: cleanText(p("Owners Details", "Permanant Address State", ["permanantaddressstate","permanentaddressstate"]), 80),
+    permanentAddressPincode: cleanText(p("Owners Details", "Permanant Address Pincode", ["permanantaddresspincode","permanentaddresspincode"]), 20),
+    permanentAddressCountry: cleanText(p("Owners Details", "Permanant Address Country", ["permanantaddresscountry","permanentaddresscountry"]), 80),
+    presentAddress: cleanText(
+      p("Owners Details", "Present Address", ["presentaddress"]) ??
+      p("Owners Details", "Split Present Address", ["splitpresentaddress"]),
+      300,
+    ),
+    presentAddressCity: cleanText(p("Owners Details", "Present Address City", ["presentaddresscity"]), 80),
+    presentAddressDistrict: cleanText(p("Owners Details", "Present Address District", ["presentaddressdistrict"]), 80),
+    presentAddressState: cleanText(p("Owners Details", "Present Address State", ["presentaddressstate"]), 80),
+    presentAddressPincode: cleanText(p("Owners Details", "Present Address Pincode", ["presentaddresspincode"]), 20),
+    presentAddressCountry: cleanText(p("Owners Details", "Present Address Country", ["presentaddresscountry"]), 80),
+    manufacturer: cleanText(p("Vehicle Details", "Maker/Manufacturer", ["makermanufacturer","manufacturer","maker","vehiclemanufacturer","vehiclemaker"])),
+    model: cleanText(p("Vehicle Details", "Model / Makers Class", ["modelmakersclass","model","modelname","vehiclemodel","variant"])),
+    manufactureDate: cleanText(p("Vehicle Details", "Manufacture Date", ["manufacturedate","manufacturingdate"]), 20),
+    manufacturingYear: cleanText(
+      p("Vehicle Details", "Manufacturing Year", ["manufacturingyear","manufactureyear","mfgyear","yearofmanufacture"]) ??
+      (p("Vehicle Details", "Manufacture Date", ["manufacturedate"])?.match(/(\d{4})/)?.[1] ?? null),
+      4,
+    ),
+    vehicleClass: cleanText(p("Vehicle Details", "Vehicle Class", ["vehicleclass","vehicleclassdesc","classofvehicle","vehicletype"]), 80),
+    vehicleCategory: cleanText(p("Vehicle Details", "Vehicle Category", ["vehiclecategory"]), 40),
+    bodyType: cleanText(p("Vehicle Details", "Body Type", ["bodytype"]), 80),
+    color: cleanText(p("Vehicle Details", "Color", ["color","colour"]), 40),
+    fuelType: cleanText(p("Vehicle Details", "Fuel Type", ["fueltype","fuel","fueldescription"]), 40),
+    normsType: cleanText(p("Vehicle Details", "Norms Type", ["normstype","emissionnorms","bharatstage"]), 80),
+    engineNumber: cleanCode(p("Vehicle Details", "Engine Number", ["enginenumber","engineno"])),
+    engineCapacityCc: cleanText(p("Vehicle Details", "Engine Capacity", ["enginecapacity","enginecapacitycc","cubiccapacity","cubiccapacitycc","enginecc","cc"]), 40),
+    cylinderCount: cleanText(p("Vehicle Details", "No of cylinder", ["noofcylinder","numberofcylinders","cylindercount"]), 20),
+    seatingCapacity: cleanText(p("Vehicle Details", "Seating Capacity", ["seatingcapacity","seatcapacity","numberofseats","totalseats"]), 20),
+    standingCapacity: cleanText(p("Vehicle Details", "Vehicle Standing Capacity", ["vehiclestandingcapacity","standingcapacity"]), 20),
+    sleeperCapacity: cleanText(p("Vehicle Details", "sleeper Capacity", ["sleepercapacity"]), 20),
+    wheelBaseMm: cleanText(p("Vehicle Details", "Wheel Base", ["wheelbase"]), 40),
+    gvwKg: cleanText(p("Vehicle Details", "Gross Weight", ["grossweight","gvw","gvwkg","grossvehicleweight"]), 40),
+    unladenWeightKg: cleanText(p("Vehicle Details", "Unloading Weight", ["unloadingweight","unladenweight","kerbweight"]), 40),
+    commercial: cleanText(p("Vehicle Details", "Is Commercial", ["iscommercial","commercial"]), 20),
+    chassisNumber: cleanCode(p("Vehicle Details", "Chassis Number", ["chassisnumber","chassisno","chassis"])),
+    fitnessExpiryDate: toIsoDate(p("Registration Details", "Fitness Date/RC Expiry Date", ["fitnessdatercexpirydate","fitnessexpirydate","fitnessupto","fitnessvalidupto"])),
+    roadTaxExpiryDate: toIsoDate(p("Registration Details", "Tax Upto", ["taxupto","roadtaxexpirydate","taxvalidupto","roadtaxupto"])),
+    vehicleTaxUptoDate: toIsoDate(p("Registration Details", "Vehicle Tax Up to", ["vehicletaxupto"])),
+    pucNumber: cleanText(p("RC Status", "PUCC NO", ["puccno","pucnumber"]), 80),
+    pucExpiryDate: toIsoDate(p("RC Status", "PUCC Upto", ["puccupto","pucexpirydate","pucupto","pucvalidupto","pollutionupto"])),
+    permitNumber: cleanText(p("RC Status", "Permit Number", ["permitnumber"]), 80),
+    permitType: cleanText(p("RC Status", "Permit Type", ["permittype"]), 80),
+    permitIssueDate: toIsoDate(p("RC Status", "Permit Issue Date", ["permitissuedate"])),
+    permitValidFrom: toIsoDate(p("RC Status", "Permit Vald From", ["permitvaldfrom","permitvalidfrom"])),
+    localPermitExpiryDate: toIsoDate(p("RC Status", "Permit Valid Upto", ["permitvalidupto","localpermitexpirydate","localpermitupto","localpermitvalidupto"])),
+    nationalPermitNumber: cleanText(p("RC Status", "National Permit Number", ["nationalpermitnumber"]), 80),
+    nationalPermitIssuedBy: cleanText(p("RC Status", "National Permit Issued By", ["nationalpermitissuedby"]), 80),
+    nationalPermitExpiryDate: toIsoDate(p("RC Status", "National Permit Upto", ["nationalpermitupto","nationalpermitexpirydate","nationalpermitvalidupto"])),
+    financed: cleanText(p("Hypothecation Details", "Financed", ["financed"]), 20),
+    financerName: cleanText(p("Hypothecation Details", "Financer Name", ["financername","financiername"])),
+    insuranceCompany: cleanText(p("Insurance Details", "Insurance Company", ["insurancecompany","insurer","insurername"])),
+    policyNumber: cleanPolicyNumber(p("Insurance Details", "Policy Number", ["policynumber","policyno","insurancepolicynumber"])),
+    policyExpiryDate: toIsoDate(p("Insurance Details", "Insurance To Date/Insurance Upto", ["insurancetodateinsuranceupto","insurancetodate","insuranceupto","policyexpirydate","insuranceexpirydate"])),
+    blacklistStatus: cleanText(p("Vehicle Details", "Blacklist Status", ["blackliststatus"]), 80),
+    nocDetails: cleanText(p("Vehicle Details", "Noc Details", ["nocdetails"]), 80),
   };
 }
 function mergeDetails(
