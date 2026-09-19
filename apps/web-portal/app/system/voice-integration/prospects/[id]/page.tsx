@@ -279,7 +279,7 @@ export default async function VoiceProspectDetailPage({ params, searchParams }: 
               </div>
               <div className="mt-3 flex items-start gap-2 rounded-lg bg-[#F4F7FB] px-3 py-2 text-[8px] text-[#64748B]">
                 <ShieldCheck className="mt-0.5 h-3 w-3 shrink-0 text-[#3156B8]" />
-                Normalized provider fields are shown with their real meaning. “RC Owner Name” is not treated as insurer-confirmed insured name; raw provider payloads remain outside this page.
+                Normalized provider fields are shown with their real meaning. “RC Owner Name” is not treated as insurer-confirmed insured name; Raw provider payloads remain outside this page.
               </div>
             </section>
 
