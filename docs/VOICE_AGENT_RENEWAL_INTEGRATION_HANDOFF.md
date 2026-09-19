@@ -538,3 +538,21 @@ Detailed record: `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
 Branch `feat/voice-quick-add-rc` adds a compact RC + mobile Quick Add action in the IT Calling Queue. It reuses an existing active RC where possible, otherwise creates an isolated validated-source External Renewal opportunity, auto-runs the existing cache-first AuthBridge enrichment path, and redirects IT to the full prospect detail before any Call action. Quick Add is not allowed to call Sarvam automatically or touch verified Customer/Vehicle/Policy masters.
 
 See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
+
+
+## Sarvam refinement Phase 3 — natural production sales behavior
+
+Branch `feat/sarvam-natural-sales-behavior` adds the production conversation policy to be pasted into the Sarvam agent after Phase 1 repeat-call memory and Phase 2 structured sales memory are configured.
+
+The policy explicitly:
+- limits normal turns to one or two short sentences and one question;
+- suppresses repeated customer-name use;
+- suppresses repetitive "I am noting this" narration;
+- forbids "relevant team will call you" as a generic answer;
+- requires ordinary renewal/add-on questions to be answered from approved knowledge before escalation;
+- uses real transfer/callback only when genuinely needed;
+- uses selective empathy and light humour only in safe contexts;
+- keeps AuthBridge identity semantics accurate;
+- stops calls cleanly after a terminal outcome or agreed next action.
+
+See `docs/SARVAM_AGENT_REFINEMENT_PHASE_3_PRODUCTION_CONVERSATION_POLICY_2026_09_19.md`.

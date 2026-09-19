@@ -48,6 +48,10 @@ const diagnosticsPage = fs.readFileSync(path.join(root, "app/system/voice-integr
 const localAgents = fs.readFileSync(path.join(root, "app/partner/renewals/external/AGENTS.md"), "utf8");
 const adminAgents = fs.readFileSync(path.join(root, "app/system/voice-integration/AGENTS.md"), "utf8");
 const currentVoiceState = fs.readFileSync(path.join(repoRoot, "docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md"), "utf8");
+const productionConversationPolicy = fs.readFileSync(
+  path.join(repoRoot, "docs/SARVAM_AGENT_REFINEMENT_PHASE_3_PRODUCTION_CONVERSATION_POLICY_2026_09_19.md"),
+  "utf8",
+);
 
 function assert(condition, message) {
   if (!condition) {
@@ -55,6 +59,17 @@ function assert(condition, message) {
     process.exitCode = 1;
   }
 }
+
+assert(productionConversationPolicy.includes("Never use \"relevant team\""), "production prompt forbids generic relevant-team handoff language");
+assert(productionConversationPolicy.includes("Store information silently"), "production prompt forbids repetitive note-taking narration");
+assert(productionConversationPolicy.includes("Ask at most one question per turn"), "production prompt keeps sales turns short");
+assert(productionConversationPolicy.includes("SELF-SUFFICIENT RENEWAL ADVISOR"), "production prompt makes ordinary renewal answers self-sufficient");
+assert(productionConversationPolicy.includes("Do not re-ask a known value"), "production prompt enforces anti-repetition across calls");
+assert(productionConversationPolicy.includes("If the customer asks for a human and call transfer is available"), "production prompt uses real transfer instead of empty callback promises");
+assert(productionConversationPolicy.includes("RC Owner Name is not automatically the insured name"), "production prompt preserves RC-owner versus insured identity meaning");
+assert(productionConversationPolicy.includes("Never use humour for:"), "production prompt blocks humour in sensitive situations");
+assert(productionConversationPolicy.includes("Once the final next action is clear, close the call"), "production prompt prevents repeated closing/reopening");
+assert(productionConversationPolicy.includes("A successful call does not require immediate sale closure"), "production prompt does not stretch calls to force interest");
 
 assert(migration.includes("external_renewal_voice_attempts"), "voice attempts table is defined");
 assert(migration.includes("references public.external_renewal_opportunities(id, partner_id)"), "attempt ownership remains tied to isolated external opportunity + Partner");
