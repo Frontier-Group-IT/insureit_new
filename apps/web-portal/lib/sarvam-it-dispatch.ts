@@ -21,6 +21,7 @@ type PreviousConnectedAttemptRow = {
   customer_interest: string | null;
   customer_objection: string | null;
   call_summary: string | null;
+  sales_memory: Record<string, unknown> | null;
   follow_up_at: string | null;
   ended_at: string | null;
   created_at: string;
@@ -109,8 +110,19 @@ function buildPreviousConversationContext(previous: PreviousConnectedAttemptRow[
   if (!previous.length) return null;
 
   return previous.slice(0, 3).map((attempt, index) => {
+    const memory = attempt.sales_memory && typeof attempt.sales_memory === "object" ? attempt.sales_memory : {};
+    const addons = Array.isArray(memory.requested_addons) ? memory.requested_addons.filter((x) => typeof x === "string").join(", ") : "";
+    const topics = Array.isArray(memory.discussed_topics) ? memory.discussed_topics.filter((x) => typeof x === "string").join(", ") : "";
     const parts = [
       attempt.call_summary?.trim() || null,
+      typeof memory.insurer_preference === "string" && memory.insurer_preference !== "unknown" ? `Insurer preference: ${memory.insurer_preference}` : null,
+      typeof memory.preferred_insurer === "string" && memory.preferred_insurer.trim() ? `Preferred insurer: ${memory.preferred_insurer.trim()}` : null,
+      typeof memory.claim_status === "string" && memory.claim_status !== "unknown" ? `Claim status: ${memory.claim_status}` : null,
+      typeof memory.renewal_priority === "string" && memory.renewal_priority !== "unknown" ? `Renewal priority: ${memory.renewal_priority}` : null,
+      addons ? `Requested add-ons: ${addons}` : null,
+      topics ? `Already discussed: ${topics}` : null,
+      memory.human_requested === true ? "Human assistance requested" : null,
+      typeof memory.next_step_agreed === "string" && memory.next_step_agreed !== "no_action" ? `Agreed next step: ${memory.next_step_agreed}` : null,
       attempt.customer_objection?.trim() ? `Objection/concern: ${attempt.customer_objection.trim()}` : null,
       attempt.follow_up_at ? `Follow-up requested: ${dateForSpeech(attempt.follow_up_at) ?? attempt.follow_up_at}` : null,
       attempt.call_disposition ? `Outcome: ${attempt.call_disposition}` : null,
@@ -216,7 +228,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   const { data: previousConnectedAttempts, error: previousAttemptError } = await admin
     .from("external_renewal_voice_attempts")
-    .select("call_disposition,customer_interest,customer_objection,call_summary,follow_up_at,ended_at,created_at")
+    .select("call_disposition,customer_interest,customer_objection,call_summary,sales_memory,follow_up_at,ended_at,created_at")
     .eq("opportunity_id", opportunity.id)
     .eq("connectivity_status", "connected")
     .order("created_at", { ascending: false })
