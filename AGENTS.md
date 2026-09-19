@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Associate duplicate-email professional modal:** branch `ui/associate-email-in-use-modal`; duplicate associate email conflicts now show a compact centered `Email Already in Use` acknowledgement dialog with a clear Group/Branch/Partner/Operations message and OK button, while existing backend uniqueness checks remain unchanged and all other notifications keep their existing behavior. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-19 — Non-Motor onboarding Net Premium restoration:** branch `fix/non-motor-net-premium-entry`; Section 04 removes OD Premium and TP Premium inputs, restores editable Net Premium, and persists Non-Motor premiums with OD/TP at zero while using the entered Net Premium as the canonical premium basis for GST/commercial calculations. **IMPLEMENTED; REVERSIBLE APP-ONLY CHANGE, NOT MERGED, NOT DEPLOYED, NO DB MIGRATION.**
 
 - **2026-09-19 — Associate Accounts second-row Save button:** branch `ui/associate-address-row-save-button`; adds a second Save action at the far right of the optional Address/City/State/PIN row using the same submit behavior and styling as the first-row Save button. **IMPLEMENTED; PR/CI/merge/deployment pending.**
