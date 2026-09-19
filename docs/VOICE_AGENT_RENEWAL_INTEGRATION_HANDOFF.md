@@ -509,3 +509,14 @@ The production Voice Integration `Window` card now has an IT-only Edit action fo
 Migration: `20260918233000_sarvam_voice_operational_settings.sql`.
 Branch: `feat/voice-calling-window-editor`.
 Current state: **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.**
+
+
+## External Renewal AuthBridge enrichment — IMPLEMENTED / PENDING CI
+
+Branch `feat/external-renewal-authbridge-enrichment` adds the missing pre-call RC enrichment gate. IT Super User can fetch details for one otherwise-callable External Renewal opportunity from the Voice Integration queue. The server reuses `vehicle_rc_lookup_cache` first, otherwise calls the existing protected AuthBridge Detailed RC client, and stores only a privacy-minimized snapshot in the isolated External Renewal row.
+
+Sarvam dispatch now requires `rc_enrichment_status=ready` and uses the enriched make/model, vehicle number, insurer and policy-expiry context under the existing approved agent-variable contract. IDV and previous premium remain unknown/null.
+
+No verified Customer/Vehicle/Policy master is created or modified. Bulk enrichment is deferred until the single-record production path is verified.
+
+Detailed evidence: `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.

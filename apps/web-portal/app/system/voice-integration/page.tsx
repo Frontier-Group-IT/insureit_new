@@ -88,6 +88,9 @@ function queueReasonLabel(reason: string) {
     future_follow_up: "Follow-up scheduled",
     active_attempt: "Call active",
     crm_stage: "CRM stage held",
+    missing_registration: "RC missing",
+    needs_rc_enrichment: "Fetch RC details",
+    rc_enrichment_failed: "RC details unavailable",
   };
   return labels[reason] ?? reason.replaceAll("_", " ");
 }
@@ -113,6 +116,8 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const windowUpdate = queryValue(query.window_update);
   const windowError = queryValue(query.window_error);
   const editWindow = queryValue(query.edit_window) === "1";
+  const rcEnrichment = queryValue(query.rc_enrichment);
+  const rcEnrichmentError = queryValue(query.rc_enrichment_error);
 
   const readiness = getSarvamRenewalReadiness();
   const [operationalPolicy, campaignLifecycle, queuePreview] = await Promise.all([
@@ -155,7 +160,17 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const latestWebhookEvent = attemptEvents?.[0] ?? null;
 
   const actionNotice =
-    windowUpdate
+    rcEnrichment
+      ? {
+          ok: rcEnrichment === "ready",
+          text:
+            rcEnrichment === "ready"
+              ? "RC details fetched. This opportunity is now AI-ready."
+              : rcEnrichment === "no_data"
+                ? "AuthBridge responded, but no usable AI context was available."
+                : rcEnrichmentError || "RC details could not be fetched.",
+        }
+      : windowUpdate
       ? {
           ok: windowUpdate === "saved",
           text: windowUpdate === "saved" ? "Calling window updated." : windowError || "Calling window could not be saved.",
@@ -291,13 +306,14 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
               </div>
             </div>
             <div className="mt-2 overflow-x-auto">
-              <table className="w-full min-w-[700px] text-left text-[9px]">
+              <table className="w-full min-w-[780px] text-left text-[9px]">
                 <thead>
                   <tr className="border-y border-[#E7EDF4] bg-[#F8FAFC] text-[7.5px] font-black uppercase tracking-[.05em] text-[#7890AC]">
                     <th className="px-2.5 py-2">Ref</th>
                     <th className="px-2.5 py-2">Expiry</th>
                     <th className="px-2.5 py-2">CRM</th>
                     <th className="px-2.5 py-2">State</th>
+                    <th className="px-2.5 py-2">RC data</th>
                     <th className="px-2.5 py-2 text-right">Action</th>
                   </tr>
                 </thead>
@@ -314,28 +330,46 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                             {queueReasonLabel(row.reason)}
                           </span>
                         </td>
+                        <td className="px-2.5 py-2">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[7.5px] font-bold ${row.rcEnrichmentStatus === "ready" ? "bg-[#EEF8F2] text-emerald-700" : row.rcEnrichmentStatus === "failed" || row.rcEnrichmentStatus === "no_data" ? "bg-amber-50 text-amber-700" : "bg-[#F1F4F8] text-[#6B7E98]"}`}>
+                            {row.rcEnrichmentStatus === "ready" ? (row.rcEnrichmentSource === "local_cache" ? "Ready · cache" : row.rcEnrichmentSource === "stale_cache" ? "Ready · cached" : "Ready · AuthBridge") : row.rcEnrichmentStatus === "failed" ? "Fetch failed" : row.rcEnrichmentStatus === "no_data" ? "No usable data" : "Not fetched"}
+                          </span>
+                        </td>
                         <td className="px-2.5 py-2 text-right">
-                          {row.reason === "eligible" ? (
-                            <form action="/api/system/voice-integration/dispatch" method="post">
-                              <input type="hidden" name="opportunity_id" value={row.opportunityId} />
-                              <button
-                                type="submit"
-                                disabled={!callable}
-                                className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#102A56] px-2.5 text-[8px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#D9E1EC]"
-                                title={callable ? "Queue AI call" : "Calling controls are not currently ready"}
-                              >
-                                <PhoneCall className="h-3 w-3" /> Call
-                              </button>
-                            </form>
-                          ) : (
-                            <span className="text-[8px] text-[#A0ADBC]">—</span>
-                          )}
+                          <div className="inline-flex items-center gap-1.5">
+                            {row.canFetchDetails ? (
+                              <form action="/api/system/voice-integration/rc-enrichment" method="post">
+                                <input type="hidden" name="opportunity_id" value={row.opportunityId} />
+                                <button
+                                  type="submit"
+                                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[#D6E0EC] bg-white px-2.5 text-[8px] font-bold text-[#3156B8] hover:bg-[#F8FAFC]"
+                                  title="Fetch vehicle and insurer context from AuthBridge"
+                                >
+                                  <Database className="h-3 w-3" /> Fetch details
+                                </button>
+                              </form>
+                            ) : null}
+                            {row.reason === "eligible" ? (
+                              <form action="/api/system/voice-integration/dispatch" method="post">
+                                <input type="hidden" name="opportunity_id" value={row.opportunityId} />
+                                <button
+                                  type="submit"
+                                  disabled={!callable}
+                                  className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#102A56] px-2.5 text-[8px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#D9E1EC]"
+                                  title={callable ? "Queue AI call" : "Calling controls are not currently ready"}
+                                >
+                                  <PhoneCall className="h-3 w-3" /> Call
+                                </button>
+                              </form>
+                            ) : null}
+                            {!row.canFetchDetails && row.reason !== "eligible" ? <span className="text-[8px] text-[#A0ADBC]">—</span> : null}
+                          </div>
                         </td>
                       </tr>
                     );
                   })}
                   {!queuePreview.rows.length ? (
-                    <tr><td colSpan={5} className="px-3 py-6 text-center text-[9px] text-[#94A3B8]">No opportunities due in the next 30 days.</td></tr>
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-[9px] text-[#94A3B8]">No opportunities due in the next 30 days.</td></tr>
                   ) : null}
                 </tbody>
               </table>
