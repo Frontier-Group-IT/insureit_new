@@ -58,7 +58,8 @@ assert.match(accountsUpload, /readHiddenMetadataSheet\(metadataSheet\)/, "Upload
 assert.match(accountsUpload, /workbook\.SheetNames\.some\(\(name\) => !allowedSheets\.has\(name\)\)/, "Upload validation must reject unexpected extra sheets while allowing the hidden metadata sheet.");
 assert.match(accountsUpload, /Business MIS rows were added or removed/, "Upload validation must reject added or removed Business MIS rows.");
 assert.match(accountsUpload, /System-controlled Business MIS values were edited/, "Upload validation must reject edits to system-controlled MIS values.");
-assert.match(accountsUpload, /uploaded Difference will not be updated/, "Difference mismatches must warn that INSUREIT keeps the internally calculated value.");
+assert.doesNotMatch(accountsUpload, /uploaded Difference will not be updated/, "Uploaded Difference must be ignored rather than surfaced as a mismatch warning.");
+assert.match(accountsUpload, /Difference is always calculated internally from Total Pay-in - Bill Amount/, "Difference must remain internally calculated and non-authoritative from Excel.");
 assert.match(accountsUpload, /Template validated successfully\. No new Pay-In or Pay-Out changes were detected\./, "An unchanged valid workbook must report successful validation instead of an error-like state.");
 assert.match(accountsUpload, /messageKind: "success"/, "Unchanged valid workbooks must be explicitly marked as successful validation.");
 assert.match(accountsWorkbook, /Enter values only in highlighted Accounts fields/, "Business MIS export must tell Accounts where data entry is allowed.");
@@ -72,6 +73,8 @@ assert.match(accountsUpload, /populatedWorksheetBounds\(sheet\)/, "Reconciliatio
 assert.doesNotMatch(accountsUpload, /decode_range\(sheet\["!ref"\] \|\| "A1:A1"\)/, "Google Sheets compatibility must not depend on the optional worksheet !ref dimension.");
 assert.match(accountsUpload, /decode_cell\(address\)/, "Worksheet bounds must be derived from actual populated cell addresses.");
 assert.match(accountsUpload, /if \(!candidateRows\.length\)/, "A structurally valid workbook with no Accounts input should return before live policy queries.");
+assert.match(accountsUpload, /const dmy = raw\.match\(\/\^\\d\{1,2\}.*\\d\{2\}\|\\d\{4\}/s, "Reconciliation dates must accept DD/MM/YY as exported by Google Sheets.");
+assert.doesNotMatch(accountsUpload, /Gross Payout must be greater than zero before Accounts can record a payment\./, "Zero projected gross payout must not block recording an actual payout.");
 assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
 assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
 assert.doesNotMatch(accountsUpload, /\.from\([^\n]+\)\.(?:insert|update|delete)\(|\.rpc\(/, "Accounts workbook preview must remain read-only; cryptographic hash updates are allowed but database writes are not.");
