@@ -65,3 +65,8 @@ Before an IT-controlled External Renewal AI call, require the isolated opportuni
 ## IT voice prospect detail/edit boundary
 
 The Voice Integration queue and recent attempts may open the IT-only prospect detail workspace. Keep imported source evidence and AuthBridge evidence immutable: operator corrections belong in the dedicated AI-profile override layer, not by overwriting source columns or raw provider cache data. Every new voice attempt must snapshot its effective cohort context before provider submission so later edits cannot rewrite call history. Responsive server-form actions must expose pending/disabled state. Never expose raw AuthBridge payloads, owner/address provider fields, raw Sarvam webhook payloads or transcripts. See `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
+
+
+## Quick Add RC boundary
+
+IT Super User may add an ad-hoc calling prospect by RC + mobile only. The action must remain server-only, validate both values, reuse an existing active RC instead of duplicating it, auto-run the protected AuthBridge enrichment path, and never call Sarvam automatically. Quick Add source rows remain isolated External Renewal opportunities and must never create/update verified Customer, Vehicle or Policy masters. Terminal/DNC records must not be revived. See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
