@@ -119,6 +119,23 @@ function normalizeNumber(value: unknown) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+const SALES_ADDONS = new Set(["zero_dep","consumables","engine_protect","gearbox_cover","key_cover","tyre_cover","rti","rsa","ncb_protection"]);
+const SALES_TOPICS = new Set(["zero_dep","consumables","engine_protect","gearbox_cover","key_cover","tyre_cover","rti","rsa","ncb","insurer_comparison","premium","idv","claim_process"]);
+
+function normalizeEnum(value: unknown, allowed: Set<string>, fallback: string) {
+  const token = normalizeToken(value);
+  return token && allowed.has(token) ? token : fallback;
+}
+
+function normalizeList(value: unknown, allowed: Set<string>) {
+  const items = Array.isArray(value)
+    ? value
+    : typeof value === "string"
+      ? value.split(/[,|]/)
+      : [];
+  return [...new Set(items.map((item) => normalizeToken(item)).filter((item): item is string => Boolean(item && allowed.has(item))))].slice(0, 12);
+}
+
 function normalizeInteger(value: unknown) {
   const number = normalizeNumber(value);
   return number === null ? 0 : Math.floor(number);
@@ -196,6 +213,32 @@ export async function POST(request: NextRequest) {
       followUpAt: normalizeTimestamp(variable("follow_up_time")),
       customerObjection: optionalText(variable("customer_objection"), 1000),
       callSummary: optionalText(variable("call_summary"), 2000),
+      salesMemory: {
+        insurer_preference: normalizeEnum(
+          variable("insurer_preference"),
+          new Set(["same_insurer","compare_options","open_to_any","unknown"]),
+          "unknown",
+        ) as "same_insurer" | "compare_options" | "open_to_any" | "unknown",
+        preferred_insurer: optionalText(variable("preferred_insurer"), 160),
+        claim_status: normalizeEnum(
+          variable("claim_status"),
+          new Set(["no_claim","claim_reported","unknown"]),
+          "unknown",
+        ) as "no_claim" | "claim_reported" | "unknown",
+        renewal_priority: normalizeEnum(
+          variable("renewal_priority"),
+          new Set(["premium","coverage","balanced","unknown"]),
+          "unknown",
+        ) as "premium" | "coverage" | "balanced" | "unknown",
+        requested_addons: normalizeList(variable("requested_addons"), SALES_ADDONS),
+        discussed_topics: normalizeList(variable("discussed_topics"), SALES_TOPICS),
+        human_requested: normalizeBoolean(variable("human_requested")) ?? false,
+        next_step_agreed: normalizeEnum(
+          variable("next_step_agreed"),
+          new Set(["quote","callback","human_transfer","no_action","closed"]),
+          "no_action",
+        ) as "quote" | "callback" | "human_transfer" | "no_action" | "closed",
+      },
     });
 
     return NextResponse.json({ ok: true, result });
