@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Associate Accounts single Save action:** branch `ui/associate-single-save-button`; removes the redundant first-row Save button so the form has one Save button on the Address/City/State/PIN row. Because both rows remain inside the same form, the single Save action submits all mandatory and optional associate fields together. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-19 — Associate duplicate-email professional modal:** branch `ui/associate-email-in-use-modal`; duplicate associate email conflicts now show a compact centered `Email Already in Use` acknowledgement dialog with a clear Group/Branch/Partner/Operations message and OK button, while existing backend uniqueness checks remain unchanged and all other notifications keep their existing behavior. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-19 — Non-Motor onboarding Net Premium restoration:** branch `fix/non-motor-net-premium-entry`; Section 04 removes OD Premium and TP Premium inputs, restores editable Net Premium, and persists Non-Motor premiums with OD/TP at zero while using the entered Net Premium as the canonical premium basis for GST/commercial calculations. **IMPLEMENTED; REVERSIBLE APP-ONLY CHANGE, NOT MERGED, NOT DEPLOYED, NO DB MIGRATION.**

@@ -173,7 +173,7 @@ export default async function PartnerAssociateAccountsPage({
             <input type="hidden" name="application_id" value={id} />
             <input type="hidden" name="intermediary_id" value={intermediary.id} />
             <input type="hidden" name="return_path" value={returnPath} />
-            <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1.4fr_1.2fr_1.15fr_auto] xl:items-end">
+            <div className="grid gap-3 xl:grid-cols-[1.2fr_1fr_1.4fr_1.2fr_1.15fr] xl:items-end">
               <Field label="Name" required><input name="name" required className={inputClass} placeholder="Associate name" /></Field>
               <Field label="Phone Number" required><input name="phone_number" required className={inputClass} placeholder="+91..." inputMode="tel" /></Field>
               <Field label="Email" required><input name="email" type="email" required className={inputClass} placeholder="user@company.com" /></Field>
@@ -187,7 +187,6 @@ export default async function PartnerAssociateAccountsPage({
                   <option value="bodyshop_manager">Bodyshop Manager</option>
                 </select>
               </Field>
-              <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" />
             </div>
             <div className="mt-4 grid gap-3 xl:grid-cols-[2fr_1fr_1fr_1fr_auto] xl:items-end">
               <Field label="Address"><input name="address" className={inputClass} placeholder="Address" /></Field>
