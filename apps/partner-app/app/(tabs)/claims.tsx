@@ -140,8 +140,7 @@ export default function ClaimsScreen() {
 
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>Claims</Text>
-          <Text style={styles.heroSubtitle}>Support. Settle. Keep{'
-'}Your Business Moving.</Text>
+          <Text style={styles.heroSubtitle}>Support. Settle. Keep{'\\n'}Your Business Moving.</Text>
         </View>
 
         <View pointerEvents="none" style={styles.heroArtworkWrap}>
@@ -149,10 +148,7 @@ export default function ClaimsScreen() {
         </View>
 
         <View pointerEvents="none" style={styles.heroPromise}>
-          <Text style={styles.heroPromiseText}>FASTER{'
-'}CLAIMS{'
-'}STRONGER{'
-'}RELATIONSHIPS</Text>
+          <Text style={styles.heroPromiseText}>FASTER{'\\n'}CLAIMS{'\\n'}STRONGER{'\\n'}RELATIONSHIPS</Text>
           <View style={styles.heroPromiseLine} />
         </View>
       </View>
