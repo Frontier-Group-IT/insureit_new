@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
 import { refineIciciLombardMotorPolicy } from "../lib/policy-ocr-icici-lombard-refiner.ts";
 // @ts-expect-error -- regression runs directly under Node with stripped TypeScript types.
@@ -101,7 +102,7 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.9.0+gcv-live-replay-v10");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.10.0+engine-chassis-production-route-v11");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
 assert.equal(field(result, "insured_name"), "SYNTHETIC TRANSPORT COMPANY");
 assert.equal(field(result, "policy_product"), "Package");
@@ -260,5 +261,28 @@ assert.deepEqual(
   refineIciciLombardMotorPolicy(["SOME OTHER INSURER\nGoods Carrying Vehicles Package Policy"], [], unrelated),
   unrelated,
 );
+
+// Production-route guard: the ICICI-specific refiner must run in the real upload action
+// after structured layout tables are available and before the generic approved-layout pass.
+const productionAction = readFileSync("app/policies/policy-ocr-actions.ts", "utf8");
+assert.match(productionAction, /refineIciciLombardMotorPolicy/);
+const iciciRouteIndex = productionAction.indexOf('if (baseParsed.parserId === "icici_lombard_motor_v1")');
+const approvedLayoutIndex = productionAction.indexOf("parsed = refineApprovedMotorPolicyLayout");
+assert.ok(iciciRouteIndex >= 0, "production upload route must invoke the ICICI Lombard refiner");
+assert.ok(approvedLayoutIndex > iciciRouteIndex, "ICICI refiner must run before approved-layout cleanup");
+
+// Live-layout sibling: ICICI can split both identifiers across OCR lines in the page-2 schedule.
+// Page 1 is deliberately deprived of identifiers so the schedule reconstruction is exercised.
+const liveFragmentedSchedule = pages[1].replace(
+  "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2 MA1TESTCHASSIS123 EN12AB34567890 0",
+  "MP20AB1234 ALPHAMO TORS TRAILERS 7000HAULER PARTIALLY BUILT Open 55000 2024 2\nMA1TESTCH\nASSIS123\nEN12AB345\n67890\n0",
+);
+const productionRouteSibling = refineIciciLombardMotorPolicy(
+  [pageOneWithoutVehicleIds, liveFragmentedSchedule],
+  [],
+  contaminated,
+);
+assert.equal(field(productionRouteSibling, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
+assert.equal(field(productionRouteSibling, "vehicle_engine_number"), "EN12AB34567890");
 
 console.log("ICICI Lombard GCV OCR regression passed.");

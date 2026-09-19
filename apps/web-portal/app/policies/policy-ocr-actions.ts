@@ -10,6 +10,7 @@ import {
 import { parsePolicyDocument, type ParsedPolicyField } from "@/lib/policy-ocr-parsers";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { refineAdditionalMotorPolicy } from "@/lib/policy-ocr-additional-motor-refiner";
+import { refineIciciLombardMotorPolicy } from "@/lib/policy-ocr-icici-lombard-refiner";
 import { refineDigitCommercialPolicyV2 } from "@/lib/policy-ocr-digit-refiner-v2";
 import { refineIffcoCommercialPolicyV2 } from "@/lib/policy-ocr-iffco-refiner-v2";
 import {
@@ -186,6 +187,9 @@ async function extractPolicyFile(
     }
     if (baseParsed.parserId === "new_india_motor_v1") {
       parsed = refineNewIndiaStructuredPolicy(tables, parsed);
+    }
+    if (baseParsed.parserId === "icici_lombard_motor_v1") {
+      parsed = refineIciciLombardMotorPolicy(pages, tables, parsed);
     }
     parsed = refineApprovedMotorPolicyLayout(pages, tables, parsed);
 
