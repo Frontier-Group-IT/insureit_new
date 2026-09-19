@@ -153,6 +153,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cp tooling/apps/partner-app/assets/partner-login-logo.png \
+            compat/apps/partner-app/assets/partner-login-logo.png
           cp tooling/scripts/partner/compat/partner-more-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/more.tsx'
           grep -q 'GROW & LEARN' 'compat/apps/partner-app/app/(tabs)/more.tsx'
