@@ -101,7 +101,7 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.8.0+gcv-live-replay-v9");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.9.0+gcv-live-replay-v10");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
 assert.equal(field(result, "insured_name"), "SYNTHETIC TRANSPORT COMPANY");
 assert.equal(field(result, "policy_product"), "Package");
@@ -205,6 +205,20 @@ assert.equal(field(wrappedIdentifiers, "vehicle_chassis_number"), "MA1TESTCHASSI
 assert.equal(field(wrappedIdentifiers, "vehicle_engine_number"), "EN12AB34567890");
 assert.equal(field(wrappedIdentifiers, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
 assert.equal(field(wrappedIdentifiers, "vehicle_rto_state"), "Madhya Pradesh");
+
+const flattenedPageOne = pages[0]
+  .replace("Engine No.\nChassis No.\nCurrent Year NCB(%)\nVehicle Usage", "Engine No. Chassis No. Current Year NCB(%) Vehicle Usage")
+  .replace("EN12AB34567890\nMA1TESTCHASSIS123", "EN12AB3456 7890 MA1TESTCHA SSIS123");
+const flattenedIdentifiers = refineIciciLombardMotorPolicy(
+  [flattenedPageOne, pages[1]],
+  tables.map((table) => ({
+    ...table,
+    rows: table.rows.map((row) => row.map((cell) => cell === "CURRENTYEARNCB" || cell === "CHASSISNO" ? "" : cell)),
+  })),
+  contaminated,
+);
+assert.equal(field(flattenedIdentifiers, "vehicle_engine_number"), "EN12AB34567890");
+assert.equal(field(flattenedIdentifiers, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
 
 const registrationNeighborhoodPage = pages[0]
   .replace("Insured & Vehicle Details\n", "")
