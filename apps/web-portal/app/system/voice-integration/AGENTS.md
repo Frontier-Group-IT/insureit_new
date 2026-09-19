@@ -60,3 +60,8 @@ AI voice calling actions are IT-Super-User-only. Partner users may view normaliz
 ## External Renewal RC enrichment rule
 
 Before an IT-controlled External Renewal AI call, require the isolated opportunity's `rc_enrichment_status` to be `ready`. Fetch details may use the existing server-only AuthBridge Detailed RC client and RC cache, but it must persist only privacy-minimized approved context into `external_renewal_opportunities`. Never copy owner identity/address/raw provider payloads into the opportunity, never write verified Customer/Vehicle/Policy masters, and never allow the enrichment route itself to reach Sarvam. See `docs/SARVAM_EXTERNAL_RENEWAL_AUTHBRIDGE_ENRICHMENT_2026_09_18.md`.
+
+
+## IT voice prospect detail/edit boundary
+
+The Voice Integration queue and recent attempts may open the IT-only prospect detail workspace. Keep imported source evidence and AuthBridge evidence immutable: operator corrections belong in the dedicated AI-profile override layer, not by overwriting source columns or raw provider cache data. Every new voice attempt must snapshot its effective cohort context before provider submission so later edits cannot rewrite call history. Responsive server-form actions must expose pending/disabled state. Never expose raw AuthBridge payloads, owner/address provider fields, raw Sarvam webhook payloads or transcripts. See `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
