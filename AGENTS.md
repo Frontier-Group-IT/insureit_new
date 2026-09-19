@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — Voice prospect detail + editable cohort profile:** branch `feat/voice-prospect-detail-controls-v3`; responsive pending-state controls, clickable Voice Integration queue/attempt rows, IT-only full prospect detail, approved normalized AuthBridge details, editable AI-profile overrides, normalized Sarvam result history, and per-attempt cohort-context snapshots. Source evidence and verified Customer/Vehicle/Policy masters remain untouched. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
+
+
 - **2026-09-19 — Desktop sidebar nested-menu reset:** branch `fix/sidebar-submenu-expand-state`; expanding the collapsed desktop sidebar now clears nested submenu expansion state instead of restoring previously open groups, while retaining top-level section state, permissions, and active-route highlighting. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 
