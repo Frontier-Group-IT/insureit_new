@@ -80,7 +80,7 @@ export function AssociateAccountResultToast({
 
   return (
     <div
-      role={success ? "status" : "alert"
+      role={success ? "status" : "alert"}
       aria-live={success ? "polite" : "assertive"}
       className="fixed right-4 top-4 z-[120] w-[min(92vw,390px)] animate-[associate-toast-in_180ms_ease-out] sm:right-6 sm:top-6"
     >
