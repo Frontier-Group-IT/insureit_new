@@ -46,6 +46,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 **Critical state rule:** merge is not deployment; deployment is not runtime application; an OTA publish is not installed-device verification; a migration commit is not an applied migration. Record these states separately.
 
 ### Latest implementation ledger
+- **2026-09-19 — Voice prospect detail + editable cohort profile:** branch `feat/voice-prospect-detail-controls-v2`; responsive pending-state controls, clickable Voice Integration queue/attempt rows, IT-only full prospect detail, approved normalized AuthBridge details, editable AI-profile overrides, normalized Sarvam result history, and per-attempt cohort-context snapshots. Source evidence and verified Customer/Vehicle/Policy masters remain untouched. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
+
 
 - **2026-09-19 — Partner claim internal/external source parity:** branch `fix/partner-claim-source-classification`; Partner Claims now consumes the canonical `claims.policy_service_source` through `partner_app_list_claims` and defaults only explicit `external` rows to External, preventing internal claims from being misclassified when the source field is absent. Includes migration + rollback + regression guard. **IMPLEMENTED; PR/CI/schema application/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
