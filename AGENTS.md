@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-19 — IT Voice Quick Add RC:** branch `feat/voice-quick-add-rc`; IT Super User can add a prospect to the Calling Queue with RC + mobile only, auto-enrich through the existing AuthBridge/cache path, reuse an existing active RC without duplication, and review the prospect before Call. Verified masters remain untouched and Sarvam is never called automatically. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
+
+
 - **2026-09-19 — Partner app screenshot restriction disabled for development:** branch `fix/partner-disable-screenshot-restriction`; Partner sensitive-route privacy provider now explicitly releases screen-capture/app-switcher protection instead of blocking screenshots, while preserving biometric/session/native-security structure for future re-enable. **IMPLEMENTED; PR/CI/merge/OTA/device verification pending.**
 
 - **2026-09-19 — Voice prospect detail + editable cohort profile:** branch `feat/voice-prospect-detail-controls-v3`; responsive pending-state controls, clickable Voice Integration queue/attempt rows, IT-only full prospect detail, approved normalized AuthBridge details, editable AI-profile overrides, normalized Sarvam result history, and per-attempt cohort-context snapshots. Source evidence and verified Customer/Vehicle/Policy masters remain untouched. **IMPLEMENTED; PR/CI/schema application/merge/deployment/live verification pending.** See `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
