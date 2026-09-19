@@ -195,7 +195,9 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     row: unknown[];
     rowNumber: number;
     live: BusinessMisRecord;
-    errors: string[];
+    sharedErrors: string[];
+    payinErrors: string[];
+    payoutErrors: string[];
     warnings: string[];
     hasNewPayin: boolean;
     hasNewPayout: boolean;
@@ -206,15 +208,17 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     const policyId = text(row[POLICY_ID_INDEX]);
     const payoutId = text(row[PAYOUT_ID_INDEX]);
     const live = liveByPolicy.get(policyId)!;
-    const errors: string[] = [];
+    const sharedErrors: string[] = [];
+    const payinErrors: string[] = [];
+    const payoutErrors: string[] = [];
     const warnings: string[] = [];
 
-    if (payoutId !== live.payoutId) errors.push("The hidden payout reference no longer matches live INSUREIT data.");
+    if (payoutId !== live.payoutId) payoutErrors.push("Payout reference changed. Download a fresh export.");
 
     for (let columnIndex = 0; columnIndex < BUSINESS_MIS_HEADERS.length; columnIndex++) {
       if (BUSINESS_MIS_EDITABLE_COLUMNS.has(columnIndex)) continue;
       if (canonicalCell(row[columnIndex], columnIndex) !== canonicalCell(live.row[columnIndex], columnIndex)) {
-        errors.push(`${BUSINESS_MIS_HEADERS[columnIndex]} changed since this workbook was downloaded. Download a fresh Export before posting.`);
+        sharedErrors.push(`${BUSINESS_MIS_HEADERS[columnIndex]} changed. Download a fresh export.`);
         break;
       }
     }
@@ -227,15 +231,15 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
 
     if (liveHasPayin) {
       if (uploadedPayinValues.some((value, i) => canonicalEditable(value, [BILL_NUMBER_INDEX, BILL_AMOUNT_INDEX, BILL_DATE_INDEX, DIFFERENCE_INDEX][i]) !== canonicalEditable(livePayinValues[i], [BILL_NUMBER_INDEX, BILL_AMOUNT_INDEX, BILL_DATE_INDEX, DIFFERENCE_INDEX][i]))) {
-        errors.push("Existing posted Pay-In values cannot be edited through the upload workbook.");
+        payinErrors.push("Posted Pay-In cannot be edited here.");
       }
     } else if (uploadedHasPayin) {
       hasNewPayin = true;
       const billNumber = text(row[BILL_NUMBER_INDEX]);
       const billAmount = optionalMoney(row[BILL_AMOUNT_INDEX]);
       const billDate = normalizedDate(row[BILL_DATE_INDEX]);
-      if (!billNumber || billAmount === null || !billDate) errors.push("Bill Number, Bill Amount and Bill Date are required together for Pay-In.");
-      if (billAmount !== null && billAmount <= 0) errors.push("Bill Amount must be greater than zero.");
+      if (!billNumber || billAmount === null || !billDate) payinErrors.push("Bill No., amount and date are required.");
+      if (billAmount !== null && billAmount <= 0) payinErrors.push("Bill Amount must be above zero.");
       // Difference is always calculated internally from Total Pay-in - Bill Amount.
       // Any uploaded Difference value is ignored and is never persisted.
     }
@@ -248,21 +252,21 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
 
     if (liveHasPayout) {
       if (uploadedPayoutValues.some((value, i) => canonicalEditable(value, [PAID_AMOUNT_INDEX, PAID_DATE_INDEX, UTR_INDEX][i]) !== canonicalEditable(livePayoutValues[i], [PAID_AMOUNT_INDEX, PAID_DATE_INDEX, UTR_INDEX][i]))) {
-        errors.push("Existing posted Pay-Out values cannot be edited through the upload workbook.");
+        payoutErrors.push("Posted Pay-Out cannot be edited here.");
       }
     } else if (uploadedHasPayout) {
       hasNewPayout = true;
       const paidAmount = optionalMoney(row[PAID_AMOUNT_INDEX]);
       const paidDate = normalizedDate(row[PAID_DATE_INDEX]);
       const reference = text(row[UTR_INDEX]);
-      if (!validUuid(payoutId) || !payoutRefById.has(payoutId)) errors.push("This row has no valid live payout reference.");
+      if (!validUuid(payoutId) || !payoutRefById.has(payoutId)) payoutErrors.push("Valid payout reference is missing.");
       const payoutRef = payoutRefById.get(payoutId);
-      if (payoutRef && !["entered", "reviewed"].includes(text(payoutRef.commercial_status).toLowerCase())) errors.push("Commercial payout terms are not finalized. Complete Commercial Review first.");
-      if (paidAmount === null || paidAmount <= 0) errors.push("Paid Amount must be greater than zero.");
-      if (!paidDate || !reference) errors.push("Paid Date and UTR Details are required together for Pay-Out.");
+      if (payoutRef && !["entered", "reviewed"].includes(text(payoutRef.commercial_status).toLowerCase())) payoutErrors.push("Complete Commercial Review first.");
+      if (paidAmount === null || paidAmount <= 0) payoutErrors.push("Paid Amount must be above zero.");
+      if (!paidDate || !reference) payoutErrors.push("Paid Date and UTR are required.");
     }
 
-    rowChecks.push({ row, rowNumber, live, errors, warnings, hasNewPayin, hasNewPayout });
+    rowChecks.push({ row, rowNumber, live, sharedErrors, payinErrors, payoutErrors, warnings, hasNewPayin, hasNewPayout });
   }
 
   const payinRefs = rowChecks.filter((item) => item.hasNewPayin).map((item) => text(item.row[BILL_NUMBER_INDEX])).filter(Boolean);
@@ -299,14 +303,14 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
       const projectedPayin = money(live.row[19]);
       const projectedTds = money(live.row[TDS_INDEX]);
       const calculatedDifference = billAmount === null ? null : money(projectedPayin - billAmount);
-      const issues = [...item.errors.map(error), ...item.warnings.map(warning)];
+      const issues = [...item.sharedErrors.map(error), ...item.payinErrors.map(error), ...item.warnings.map(warning)];
 
-      if (!insurerId) issues.push(error("Insurance Company is missing for this policy."));
+      if (!insurerId) issues.push(error("Insurance Company is missing."));
       if (insurerId && billNumber) {
         const key = `${insurerId}|${normalizeRef(billNumber)}`;
-        if (existingReceiptKeys.has(key)) issues.push(error("This insurer Bill Number / reference already exists in INSUREIT."));
+        if (existingReceiptKeys.has(key)) issues.push(error("Bill Number already exists."));
         const priorDate = payinUploadGroups.get(key);
-        if (priorDate && priorDate !== billDate) issues.push(error("The same insurer Bill Number is used with different Bill Dates in this workbook."));
+        if (priorDate && priorDate !== billDate) issues.push(error("Same Bill Number has different dates."));
         else if (!priorDate) payinUploadGroups.set(key, billDate);
       }
 
@@ -336,13 +340,13 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
       const paidAmount = optionalMoney(row[PAID_AMOUNT_INDEX]);
       const paidDate = normalizedDate(row[PAID_DATE_INDEX]);
       const reference = text(row[UTR_INDEX]);
-      const issues = [...item.errors.map(error), ...item.warnings.map(warning)];
+      const issues = [...item.sharedErrors.map(error), ...item.payoutErrors.map(error), ...item.warnings.map(warning)];
 
       if (reference && intermediaryCode) {
         const key = `${normalizeRef(intermediaryCode)}|${normalizeRef(reference)}`;
-        if (existingPayoutKeys.has(key)) issues.push(error("This intermediary UTR Details reference already exists in INSUREIT."));
+        if (existingPayoutKeys.has(key)) issues.push(error("UTR already exists."));
         const priorDate = payoutUploadGroups.get(key);
-        if (priorDate && priorDate !== paidDate) issues.push(error("The same intermediary UTR Details reference is used with different Paid Dates in this workbook."));
+        if (priorDate && priorDate !== paidDate) issues.push(error("Same UTR has different Paid Dates."));
         else if (!priorDate) payoutUploadGroups.set(key, paidDate);
       }
 
@@ -365,10 +369,10 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     }
   }
 
-  const rowLevelBlockingErrors = rowChecks.filter((item) => item.errors.length && !item.hasNewPayin && !item.hasNewPayout);
+  const rowLevelBlockingErrors = rowChecks.filter((item) => item.sharedErrors.length && !item.hasNewPayin && !item.hasNewPayout);
   if (rowLevelBlockingErrors.length) {
     const first = rowLevelBlockingErrors[0];
-    return emptyPreview(`Row ${first.rowNumber}: ${first.errors.join(" ")}`);
+    return emptyPreview(`Row ${first.rowNumber}: ${first.sharedErrors.join(" ")}`);
   }
 
   const all = [...payinRows, ...payoutRows];
