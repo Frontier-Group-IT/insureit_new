@@ -95,8 +95,8 @@ export default function BusinessScreen() {
 
   return (
     <PartnerScreen
-      eyebrow={undefined}
-      title={undefined}
+      title=""
+      hideTopBar
       scrollProps={{
         refreshControl: (
           <RefreshControl
