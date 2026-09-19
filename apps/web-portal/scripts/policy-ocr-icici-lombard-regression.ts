@@ -101,7 +101,7 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.6.0+gcv-live-replay-v7");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.7.0+gcv-live-replay-v8");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
 assert.equal(field(result, "insured_name"), "SYNTHETIC TRANSPORT COMPANY");
 assert.equal(field(result, "policy_product"), "Package");
@@ -181,6 +181,24 @@ assert.equal(field(multilineSchedule, "vehicle_chassis_number"), "MA1TESTCHASSIS
 assert.equal(field(multilineSchedule, "vehicle_engine_number"), "EN12AB34567890");
 assert.equal(field(multilineSchedule, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
 assert.equal(field(multilineSchedule, "vehicle_rto_state"), "Madhya Pradesh");
+
+const registrationNeighborhoodPage = pages[0]
+  .replace("Insured & Vehicle Details\n", "")
+  .replace(
+    "RTO City\nVehicle Registration No.\nVehicle Registration Date\nEngine No.\nChassis No.\nCurrent Year NCB(%)\nVehicle Usage\n",
+    "RTO City\nVehicle Registration No.\nVehicle Registration Date\nEngine No.\nChassis No.\nCurrent Year NCB(%)\nVehicle Usage\n",
+  );
+const registrationNeighborhood = refineIciciLombardMotorPolicy(
+  [registrationNeighborhoodPage, multilineSchedulePage],
+  tables,
+  contaminated,
+);
+assert.equal(field(registrationNeighborhood, "vehicle_registration_status"), "registered");
+assert.equal(field(registrationNeighborhood, "vehicle_engine_number"), "EN12AB34567890");
+assert.equal(field(registrationNeighborhood, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
+assert.equal(field(registrationNeighborhood, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
+assert.equal(field(registrationNeighborhood, "vehicle_rto_state"), "Madhya Pradesh");
+assert.notEqual(field(registrationNeighborhood, "vehicle_rto_name"), "Vehicle Registration No.");
 
 const unsafe = refineIciciLombardMotorPolicy(
   [pages[0], pages[1].replace("40,000.00", "35,000.00")],
