@@ -64,8 +64,10 @@ export function refineIciciLombardMotorPolicy(
   }
 
   const riskVehicle = riskAssumptionVehicleDetails(pages[0] ?? "");
+  const localVehicle = registrationNeighborhoodDetails(pages[0] ?? "");
 
   const registration = riskVehicle?.registration
+    ?? localVehicle?.registration
     ?? registrationNumber(pages, tables)
     ?? existingValidRegistration(fields);
   if (registration) {
@@ -91,8 +93,10 @@ export function refineIciciLombardMotorPolicy(
   );
 
   const make = riskVehicle?.make
+    ?? localVehicle?.make
     ?? structuredColumn(tables, [/^Make$/i]);
   const model = riskVehicle?.model
+    ?? localVehicle?.model
     ?? structuredColumn(tables, [/^Model$/i]);
   const makeModel = labelPair(pages, /Vehicle\s+Make\s*\/\s*Model/i);
   if (make) set(fields, "vehicle_make", normalizeVehicleMake(make.value), .999, make.page, make.evidence);
@@ -116,9 +120,11 @@ export function refineIciciLombardMotorPolicy(
   const structuredChassis = structuredColumn(tables, [/^Chassis\s+No\.?$/i]);
   const structuredEngine = structuredColumn(tables, [/^Engine\s+No\.?$/i]);
   const chassis = riskVehicle?.chassis
+    ?? localVehicle?.chassis
     ?? scheduleVehicle?.chassis
     ?? (structuredChassis && validVehicleId(structuredChassis.value) ? structuredChassis : null);
   const engine = riskVehicle?.engine
+    ?? localVehicle?.engine
     ?? scheduleVehicle?.engine
     ?? (structuredEngine && validVehicleId(structuredEngine.value) ? structuredEngine : null);
   if (chassis && validVehicleId(chassis.value)) {
@@ -133,6 +139,7 @@ export function refineIciciLombardMotorPolicy(
   }
 
   const rto = riskVehicle?.rto
+    ?? localVehicle?.rto
     ?? scheduleVehicle?.rto
     ?? explicitRtoValue(pages)
     ?? safeRtoValue(labelValue(pages, /RTO\s+(?:City|Location)/i, 2));
@@ -194,7 +201,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.6.0+gcv-live-replay-v7",
+    parserVersion: "icici_lombard_motor_v1.7.0+gcv-live-replay-v8",
     fields: [...fields.values()],
     warnings,
   };
@@ -460,6 +467,59 @@ function existingValidRegistration(fields: Fields): VehicleEvidence | null {
 }
 
 
+
+function registrationNeighborhoodDetails(pageOne: string): RiskVehicleDetails | null {
+  const lines = rawLines(pageOne);
+  const previous = lines.findIndex((line) => /Previous\s+Policy\s+Details/i.test(line));
+  const bounded = previous >= 0 ? lines.slice(0, previous) : lines.slice(0, 220);
+
+  const regIndex = bounded.findIndex((line) => validRegistration(compactId(line)));
+  if (regIndex < 0) return null;
+
+  const registrationValue = compactId(bounded[regIndex]);
+  const before = bounded.slice(Math.max(0, regIndex - 8), regIndex);
+  const after = bounded.slice(regIndex + 1, Math.min(bounded.length, regIndex + 10));
+
+  const makeModelRaw = [...before].reverse().find((line) =>
+    line.includes("/")
+    && /[A-Z]/i.test(line)
+    && !looksLikeRiskLabel(line)
+    && !/\b(?:19|20)\d{2}\b/.test(line)
+  ) ?? null;
+  const makeModel = makeModelRaw ? makeModelRaw.split("/").map(clean).filter(Boolean) : [];
+
+  const rtoRaw = [...before].reverse().find((line) =>
+    line !== makeModelRaw
+    && isSafeRto(line)
+    && !/\b(?:19|20)\d{2}\b/.test(line)
+    && !/\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(line)
+  ) ?? "";
+
+  const dateIndex = after.findIndex((line) =>
+    /^(?:[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}|\d{1,2}[-/]\d{1,2}[-/]\d{4})$/i.test(line)
+  );
+  const idSearch = after.slice(dateIndex >= 0 ? dateIndex + 1 : 0);
+  const ids = idSearch
+    .map((raw) => ({ raw, compact: compactId(raw) }))
+    .filter((entry) => validVehicleId(entry.compact) && !looksLikeIdentifierLabel(entry.raw));
+
+  const evidence = (value: string) => "ICICI page-1 registration neighborhood: " + value;
+
+  return {
+    registration: { value: registrationValue, page: 1, evidence: evidence(bounded[regIndex]) },
+    make: makeModel[0] ? { value: makeModel[0], page: 1, evidence: evidence(makeModelRaw ?? "") } : null,
+    model: makeModel[1] ? { value: makeModel.slice(1).join(" / "), page: 1, evidence: evidence(makeModelRaw ?? "") } : null,
+    rto: rtoRaw ? { value: rtoRaw, page: 1, evidence: evidence(rtoRaw) } : null,
+    year: null,
+    engine: ids[0] ? { value: ids[0].compact, page: 1, evidence: evidence(ids[0].raw) } : null,
+    chassis: ids[1] ? { value: ids[1].compact, page: 1, evidence: evidence(ids[1].raw) } : null,
+  };
+}
+
+function looksLikeIdentifierLabel(value: string) {
+  return /(?:ENGINE\s+NO|CHASSIS\s+NO|CURRENT\s+YEAR\s+NCB|VEHICLE\s+USAGE|REGISTRATION\s+DATE|HYPOTHECATED\s+TO)/i.test(value);
+}
+
 function scheduleVehicleDetails(pageTwo: string, registration: string): {
   chassis: VehicleEvidence | null;
   engine: VehicleEvidence | null;
@@ -661,9 +721,12 @@ function explicitRtoFromText(text: string, page: number): VehicleEvidence | null
     }
 
     if (/^RTO\s+(?:City|Location)\s*:?$/i.test(lines[i])) {
-      const next = clean(lines[i + 1] ?? "");
-      if (isSafeRto(next)) {
-        return { value: next, page, evidence: "ICICI RTO next-line value: " + next };
+      for (let j = i + 1; j <= Math.min(i + 10, lines.length - 1); j += 1) {
+        const next = clean(lines[j] ?? "");
+        if (!next || looksLikeRiskLabel(next) || looksLikeIdentifierLabel(next)) continue;
+        if (isSafeRto(next)) {
+          return { value: next, page, evidence: "ICICI RTO nearby value: " + next };
+        }
       }
     }
   }
@@ -725,7 +788,9 @@ function safeRtoValue(hit: VehicleEvidence | null) {
 function isSafeRto(value: string) {
   const cleaned = clean(value);
   return Boolean(cleaned)
-    && !/^(?:Hypothecated\s+To|Category|City|RTO\s+(?:City|Location)|Vehicle\s+Class)$/i.test(cleaned)
+    && cleaned.length <= 100
+    && !/^(?:Hypothecated\s+To|Category|City|RTO\s+(?:City|Location)|Vehicle\s+Class|Vehicle\s+Registration(?:\s+No\.?|\s+Date)?|Engine\s+No\.?|Chassis\s+No\.?|Current\s+Year\s+NCB(?:\(%\))?|Vehicle\s+Usage)$/i.test(cleaned)
+    && !/^(?:REGISTRATION|ENGINE|CHASSIS|CURRENTYEARNCB|VEHICLEUSAGE)$/i.test(compactId(cleaned))
     && /[A-Z]/i.test(cleaned);
 }
 
