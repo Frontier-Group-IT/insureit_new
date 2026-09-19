@@ -311,7 +311,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             <div className="flex items-center justify-between gap-3">
               <SectionTitle icon={PhoneCall} title="Calling queue" />
               <div className="flex items-center gap-1.5 text-[8px] font-bold">
-                <MetricPill label="Due" value={queuePreview.totalDueWindow} />
+                <MetricPill label="Queue" value={queuePreview.totalDueWindow} />
                 <MetricPill label="Ready" value={queuePreview.eligibleCount} good />
                 <MetricPill label="Held" value={queuePreview.heldCount} />
               </div>
@@ -390,7 +390,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                     );
                   })}
                   {!queuePreview.rows.length ? (
-                    <tr><td colSpan={6} className="px-3 py-6 text-center text-[9px] text-[#94A3B8]">No opportunities due in the next 30 days.</td></tr>
+                    <tr><td colSpan={6} className="px-3 py-6 text-center text-[9px] text-[#94A3B8]">No opportunities in the calling queue.</td></tr>
                   ) : null}
                 </tbody>
               </table>
