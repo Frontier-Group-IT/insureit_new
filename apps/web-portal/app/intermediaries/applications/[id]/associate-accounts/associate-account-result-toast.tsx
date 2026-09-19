@@ -19,6 +19,8 @@ export function AssociateAccountResultToast({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    if (acknowledge) return;
+
     const params = new URLSearchParams(searchParams.toString());
     params.delete("success");
     params.delete("error");
@@ -27,11 +29,20 @@ export function AssociateAccountResultToast({
     const cleanUrl = params.size ? `${pathname}?${params.toString()}` : pathname;
     router.replace(cleanUrl, { scroll: false });
 
-    if (acknowledge) return;
-
     const timer = window.setTimeout(() => setVisible(false), 3500);
     return () => window.clearTimeout(timer);
   }, [acknowledge, pathname, router, searchParams]);
+
+  function dismissAcknowledgement() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("success");
+    params.delete("error");
+    params.delete("associate_error");
+    params.delete("retry_after");
+    const cleanUrl = params.size ? `${pathname}?${params.toString()}` : pathname;
+    setVisible(false);
+    router.replace(cleanUrl, { scroll: false });
+  }
 
   if (!visible) return null;
 
@@ -67,7 +78,7 @@ export function AssociateAccountResultToast({
             <button
               type="button"
               autoFocus
-              onClick={() => setVisible(false)}
+              onClick={dismissAcknowledgement}
               className="h-9 min-w-[76px] rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white transition hover:bg-[#102A4C] focus:outline-none focus:ring-2 focus:ring-[#C9D8EE]"
             >
               OK
