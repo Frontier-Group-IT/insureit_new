@@ -138,7 +138,8 @@ export function refineIciciLombardMotorPolicy(
     fields.delete("vehicle_engine_number");
   }
 
-  const rto = explicitRtoValue(pages)
+  const rto = boundedRtoValue(pages)
+    ?? explicitRtoValue(pages)
     ?? riskVehicle?.rto
     ?? localVehicle?.rto
     ?? scheduleVehicle?.rto
@@ -201,7 +202,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.7.0+gcv-live-replay-v8",
+    parserVersion: "icici_lombard_motor_v1.8.0+gcv-live-replay-v9",
     fields: [...fields.values()],
     warnings,
   };
@@ -581,15 +582,29 @@ function vehicleIdsFromScheduleText(text: string, normalizedRegistration: string
   );
   if (yearIndex < 0) return { chassis: null, engine: null };
 
-  const candidates = tokens
+  const afterYear = tokens
     .slice(yearIndex + 1)
     .map((token) => ({ raw: token, compact: compactId(token) }))
+    .filter((entry) => entry.compact && entry.compact !== normalizedRegistration);
+
+  // ICICI GCV schedule places carrying capacity immediately after Mfg Yr,
+  // then Chassis No., Engine No., and Trailer Chassis No. Google Layout can
+  // split chassis/engine values over multiple OCR lines. Remove the small
+  // carrying-capacity/trailer sentinels, then reconstruct the identifier pair.
+  while (afterYear.length && /^\d{1,3}$/.test(afterYear[0].compact)) afterYear.shift();
+  while (afterYear.length && /^(?:0|NA|NIL)$/.test(afterYear[afterYear.length - 1].compact)) afterYear.pop();
+
+  const fragments = afterYear
     .filter((entry) =>
-      entry.compact !== normalizedRegistration
-      && validVehicleId(entry.compact)
-      && !/^(?:TRAILER|MODEL|CARRIER|PUBLICCARRIER|PARTIALLYBUILT|OPEN|BHARAT|BENZ|BHARATBENZ)$/i.test(entry.compact)
+      !/^(?:TRAILER|MODEL|CARRIER|PUBLICCARRIER|PARTIALLYBUILT|OPEN|BHARAT|BENZ|BHARATBENZ)$/i.test(entry.compact)
+      && !looksLikeIdentifierLabel(entry.raw)
+      && /^[A-Z0-9]+$/.test(entry.compact)
     );
 
+  const reconstructed = reconstructIciciScheduleIdentifiers(fragments);
+  if (reconstructed) return reconstructed;
+
+  const candidates = fragments.filter((entry) => validVehicleId(entry.compact));
   const first = candidates[0] ?? null;
   const second = candidates[1] ?? null;
   return {
@@ -606,6 +621,39 @@ function vehicleIdsFromScheduleText(text: string, normalizedRegistration: string
   };
 }
 
+function reconstructIciciScheduleIdentifiers(
+  fragments: Array<{ raw: string; compact: string }>,
+): { chassis: VehicleEvidence | null; engine: VehicleEvidence | null } | null {
+  if (fragments.length < 2) return null;
+
+  // A chassis/VIN in this layout is normally 17 characters. Find the earliest
+  // fragment boundary that reconstructs a plausible 17-character chassis,
+  // then join the remaining fragments as the engine number.
+  let chassis = "";
+  for (let i = 0; i < fragments.length - 1; i += 1) {
+    chassis += fragments[i].compact;
+    if (chassis.length < 17) continue;
+    if (chassis.length > 18) break;
+    if (!validVehicleId(chassis)) continue;
+
+    const engine = fragments.slice(i + 1).map((entry) => entry.compact).join("");
+    if (!validVehicleId(engine)) continue;
+
+    return {
+      chassis: {
+        value: chassis,
+        page: 2,
+        evidence: "ICICI wrapped schedule chassis fragments: " + fragments.slice(0, i + 1).map((entry) => entry.raw).join(" | "),
+      },
+      engine: {
+        value: engine,
+        page: 2,
+        evidence: "ICICI wrapped schedule engine fragments: " + fragments.slice(i + 1).map((entry) => entry.raw).join(" | "),
+      },
+    };
+  }
+  return null;
+}
 
 function scheduleVehicleCapacity(pageTwo: string, registration: string): VehicleEvidence | null {
   const normalizedRegistration = compactId(registration);
@@ -700,6 +748,33 @@ function isSafeVehicleClass(value: string) {
   return Boolean(cleaned)
     && cleaned.length <= 80
     && !/^(?:Category|Make|Model|RTO\s+(?:City|Location)|Vehicle\s+Registration)/i.test(cleaned);
+}
+
+function boundedRtoValue(pages: string[]): VehicleEvidence | null {
+  for (let page = 0; page < Math.min(2, pages.length); page += 1) {
+    const text = pages[page] ?? "";
+    const label = /RTO\s+(?:City|Location)/i.exec(text);
+    if (!label) continue;
+
+    const window = text.slice(label.index, Math.min(text.length, label.index + 260));
+    const stateLocation = window.match(
+      /\b(RAJASTHAN|MADHYA\s+PRADESH|MAHARASHTRA|GUJARAT|UTTAR\s+PRADESH|DELHI|HARYANA|PUNJAB|CHHATTISGARH|UTTARAKHAND|BIHAR|JHARKHAND|WEST\s+BENGAL|ODISHA|KARNATAKA|TAMIL\s+NADU|TELANGANA|ANDHRA\s+PRADESH|KERALA|ASSAM)\s*-\s*([A-Z][A-Z .'-]{2,60})/i,
+    );
+    if (!stateLocation) continue;
+
+    const value = clean(stateLocation[1] + "-" + stateLocation[2])
+      .replace(/\s{2,}.*/, "")
+      .replace(/[,:;]+$/, "")
+      .trim();
+    if (!isSafeRto(value) || !looksLikeRtoLocation(value)) continue;
+
+    return {
+      value,
+      page: page + 1,
+      evidence: "ICICI bounded RTO label window",
+    };
+  }
+  return null;
 }
 
 function explicitRtoValue(pages: string[]): VehicleEvidence | null {
