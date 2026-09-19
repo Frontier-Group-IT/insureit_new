@@ -240,9 +240,8 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
 
       if (!billNumber || billAmount === null || !billDate) errors.push("Bill Number, Bill Amount and Bill Date are required together for Pay-In.");
       if (billAmount !== null && billAmount <= 0) errors.push("Bill Amount must be greater than zero.");
-      if (uploadedDifference !== null && billAmount !== null && Math.abs(uploadedDifference - calculatedDifference) > 0.01) {
-        warnings.push(`Uploaded Difference ${formatAmount(uploadedDifference)} does not match INSUREIT Difference ${formatAmount(calculatedDifference)}. The uploaded Difference will not be updated; INSUREIT will always use the internally calculated value.`);
-      }
+      // Difference is always calculated internally from Total Pay-in - Bill Amount.
+      // Any uploaded Difference value is ignored and is never persisted.
     }
 
     const livePayoutValues = [live.row[PAID_AMOUNT_INDEX], live.row[PAID_DATE_INDEX], live.row[UTR_INDEX]];
@@ -263,7 +262,6 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
       if (!validUuid(payoutId) || !payoutRefById.has(payoutId)) errors.push("This row has no valid live payout reference.");
       const payoutRef = payoutRefById.get(payoutId);
       if (payoutRef && !["entered", "reviewed"].includes(text(payoutRef.commercial_status).toLowerCase())) errors.push("Commercial payout terms are not finalized. Complete Commercial Review first.");
-      if (money(live.row[27]) <= 0) errors.push("Gross Payout must be greater than zero before Accounts can record a payment.");
       if (paidAmount === null || paidAmount <= 0) errors.push("Paid Amount must be greater than zero.");
       if (!paidDate || !reference) errors.push("Paid Date and UTR Details are required together for Pay-Out.");
     }
@@ -523,8 +521,11 @@ function normalizedDate(value: unknown) {
   const raw = text(value);
   if (!raw) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  const dmy = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-  if (dmy) return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  const dmy = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2}|\d{4})$/);
+  if (dmy) {
+    const year = dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3];
+    return `${year}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  }
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? "" : new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: "Asia/Kolkata" }).format(parsed);
 }
