@@ -256,12 +256,7 @@ export default function BusinessScreen() {
               meta={`${claims?.active_claims ?? 0} active`}
               onPress={() => router.push('/(tabs)/claims')}
             />
-            <QuickAction
-              asset={PartnerAssets.actions.payoutGrowth}
-              label="Payout"
-              meta={payout?.available ? `${payout.pending_count} pending` : 'Restricted'}
-              onPress={() => router.push('/(tabs)/more')}
-            />
+            <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} />
             <QuickAction
               asset={PartnerAssets.actions.addCustomer}
               label="Add Customer"
@@ -357,6 +352,25 @@ function ProductTile({ asset, label, share }: { asset: ImageSourcePropType; labe
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
       <Text style={styles.productShare}>{share}%</Text>
     </View>
+  );
+}
+
+function PayoutQuickAction({ payout, onPress }: { payout: PartnerPayoutSummary | null; onPress: () => void }) {
+  if (!payout) {
+    return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta="Unavailable" onPress={onPress} />;
+  }
+
+  if (!payout.available) {
+    return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta="Restricted" onPress={onPress} />;
+  }
+
+  return (
+    <QuickAction
+      asset={PartnerAssets.actions.payoutGrowth}
+      label="Payout"
+      meta={`${payout.pending_count} pending`}
+      onPress={onPress}
+    />
   );
 }
 
