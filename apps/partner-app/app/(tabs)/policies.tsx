@@ -24,7 +24,6 @@ import {
   type PartnerPolicySummary,
 } from '@/lib/policies';
 import { PartnerAssets } from '@/lib/partner-assets';
-import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { usePartnerPagedQuery } from '@/lib/use-partner-paged-query';
 import { usePartnerQuery } from '@/lib/use-partner-query';
