@@ -19,6 +19,7 @@ const enumCastFixMigration = fs.readFileSync(path.join(root, '../../supabase/mig
 const customerProcessingMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'), 'utf8');
 const customerMilestoneRpcMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'), 'utf8');
 const sharedStageMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql'), 'utf8');
+const takeoverSnapshotFixMigration = fs.readFileSync(path.join(root, '../../supabase/migrations/20260919103000_fix_external_claim_takeover_snapshot_trigger.sql'), 'utf8');
 const schemaWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/apply-external-claim-canonical-operations.yml'), 'utf8');
 const deployWorkflow = fs.readFileSync(path.join(root, '../../.github/workflows/deploy-production.yml'), 'utf8');
 
@@ -83,6 +84,9 @@ assert(sharedStageMigration.includes('create trigger trg_sync_external_customer_
 assert(sharedStageMigration.includes('create trigger trg_sync_external_operations_stage_to_customer'), 'Operations status advancement must mirror prior milestones to the Customer journey.');
 assert(sharedStageMigration.includes("'sankalp'::public.claim_milestone_actor"), 'Operations-mirrored Customer milestones must be actor-tagged to prevent sync recursion.');
 assert(sharedStageMigration.includes("and not (new.details ? 'completed_at')"), 'External Save Details writes must not advance the database stage.');
+assert(takeoverSnapshotFixMigration.includes("external_customer_snapshot"), 'External takeover snapshot rows must be recognized explicitly.');
+assert(takeoverSnapshotFixMigration.includes("return new;"), 'External takeover snapshot rows must bypass managed stage persistence.');
+assert(takeoverSnapshotFixMigration.indexOf("external_customer_snapshot") < takeoverSnapshotFixMigration.indexOf("claim_service_mode = 'broker_managed'"), 'Snapshot bypass must run before broker-managed claim lookup.');
 assert(sharedStageMigration.includes('perform public.sync_external_customer_stage_to_operations(v_claim_id, null);'), 'Existing External Claims must be aligned during migration backfill.');
 assert(sharedStageMigration.includes("where c.policy_service_source::text = 'external'"), 'Shared-stage backfill must be scoped only to External Claims.');
 
@@ -105,12 +109,14 @@ assert(finalDocumentsActions.includes('detailText(details, "claim_intimation_dat
 
 // Schema/deploy workflow must apply and verify the shared-stage migration before Vercel.
 assert(schemaWorkflow.includes('20260909180000_external_claim_shared_stage_sync.sql'), 'External Claim schema workflow must apply the shared-stage migration.');
+assert(schemaWorkflow.includes('20260919103000_fix_external_claim_takeover_snapshot_trigger.sql'), 'External Claim schema workflow must apply the takeover snapshot trigger fix.');
 assert(schemaWorkflow.includes('supabase migration repair --linked --status applied 20260909180000'), 'External Claim schema workflow must record the shared-stage migration.');
 assert(schemaWorkflow.includes('shared_customer_to_operations_ready'), 'Schema workflow must verify Customer -> Operations shared-stage synchronization.');
 assert(schemaWorkflow.includes('shared_operations_to_customer_ready'), 'Schema workflow must verify Operations -> Customer synchronization.');
 assert(schemaWorkflow.includes('shared_customer_trigger_ready'), 'Schema workflow must verify the Customer milestone sync trigger.');
 assert(schemaWorkflow.includes('shared_operations_trigger_ready'), 'Schema workflow must verify the Operations status sync trigger.');
 assert(deployWorkflow.includes('20260909180000_external_claim_shared_stage_sync.sql'), 'Production deploy gate must recognize the shared-stage migration.');
+assert(deployWorkflow.includes('20260919103000_fix_external_claim_takeover_snapshot_trigger.sql'), 'Production deploy gate must recognize the takeover snapshot trigger fix.');
 assert(deployWorkflow.includes('apply-external-claim-canonical-operations.yml'), 'Production deploy must wait for the External Claim schema workflow.');
 
 // Customer app remains on the External milestone UI and therefore receives mirrored Operations progress without a native build.

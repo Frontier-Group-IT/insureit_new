@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql'
       - 'supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql'
       - 'supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql'
+      - 'supabase/migrations/20260919103000_fix_external_claim_takeover_snapshot_trigger.sql'
       - '.github/workflows/apply-external-claim-canonical-operations.yml'
 
 permissions:
@@ -39,6 +40,7 @@ jobs:
           test -f supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
           test -f supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
           test -f supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql
+          test -f supabase/migrations/20260919103000_fix_external_claim_takeover_snapshot_trigger.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -54,6 +56,7 @@ jobs:
           supabase db query --linked --file supabase/migrations/20260909150000_preserve_external_customer_claim_milestones.sql
           supabase db query --linked --file supabase/migrations/20260909160000_preserve_external_customer_milestone_rpc.sql
           supabase db query --linked --file supabase/migrations/20260909180000_external_claim_shared_stage_sync.sql
+          supabase db query --linked --file supabase/migrations/20260919103000_fix_external_claim_takeover_snapshot_trigger.sql
 
       - name: Record migrations as applied
         run: |
@@ -61,6 +64,7 @@ jobs:
           supabase migration repair --linked --status applied 20260909150000
           supabase migration repair --linked --status applied 20260909160000
           supabase migration repair --linked --status applied 20260909180000
+          supabase migration repair --linked --status applied 20260919103000
 
       - name: Verify External Claim Operations and Customer contracts
         shell: bash
@@ -118,6 +122,10 @@ jobs:
                 'new.details ? ''completed_at'''
                 in pg_get_functiondef('public.persist_managed_claim_stage_transition_from_details()'::regprocedure)
               ) > 0 as shared_operations_explicit_completion_ready,
+              position(
+                'external_customer_snapshot'
+                in pg_get_functiondef('public.persist_managed_claim_stage_transition_from_details()'::regprocedure)
+              ) > 0 as takeover_snapshot_bypass_ready,
               to_regprocedure('public.sync_external_operations_stage_to_customer_from_claim()') is not null as shared_operations_to_customer_ready,
               position(
                 '''sankalp''::public.claim_milestone_actor'
@@ -151,7 +159,12 @@ jobs:
                 select 1
                 from supabase_migrations.schema_migrations
                 where version = '20260909180000'
-              ) as shared_stage_migration_recorded
+              ) as shared_stage_migration_recorded,
+              exists (
+                select 1
+                from supabase_migrations.schema_migrations
+                where version = '20260919103000'
+              ) as takeover_snapshot_fix_migration_recorded
           ")
           echo "$result"
           echo "$result" | grep -Eq '"takeover_ready"[[:space:]]*:[[:space:]]*true'
@@ -163,6 +176,7 @@ jobs:
           echo "$result" | grep -Eq '"shared_customer_to_operations_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_customer_actor_guard_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_operations_explicit_completion_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"takeover_snapshot_bypass_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_operations_to_customer_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_operations_actor_ready"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_customer_trigger_ready"[[:space:]]*:[[:space:]]*true'
@@ -170,3 +184,4 @@ jobs:
           echo "$result" | grep -Eq '"milestone_rls_migration_recorded"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"milestone_rpc_migration_recorded"[[:space:]]*:[[:space:]]*true'
           echo "$result" | grep -Eq '"shared_stage_migration_recorded"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"takeover_snapshot_fix_migration_recorded"[[:space:]]*:[[:space:]]*true'
