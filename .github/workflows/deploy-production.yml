@@ -214,6 +214,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260919103000_partner_claim_source_classification.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-claim-source-classification.yml"
             echo "Partner claim source classification migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260919112000_partner_claim_workflow_actor.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-partner-claim-workflow-actor.yml"
+            echo "Partner claim workflow actor migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260912121000_partner_schemes.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-schemes.yml"
             echo "Partner schemes migration detected. Waiting for its schema workflow..."
