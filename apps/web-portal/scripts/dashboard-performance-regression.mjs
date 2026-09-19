@@ -10,6 +10,7 @@ const accountsSnapshotActions = await readFile(new URL("../app/accounts/accounts
 const accountsPage = await readFile(new URL("../app/accounts/page.tsx", import.meta.url), "utf8");
 const accountsWorkbook = await readFile(new URL("../app/accounts/business-mis-export/route.ts", import.meta.url), "utf8");
 const accountsUpload = await readFile(new URL("../app/accounts/reconciliation-upload-actions.ts", import.meta.url), "utf8");
+const accountsReconciliationUi = await readFile(new URL("../app/accounts/reconciliation-tools.tsx", import.meta.url), "utf8");
 const dashboardMigration = await readFile(new URL("../../../supabase/migrations/20260831174500_optimize_operations_dashboard_single_pass.sql", import.meta.url), "utf8");
 
 assert.match(dashboardPage, /getEffectivePermissionAccessMap\(profile\)/, "Dashboard should resolve effective permissions in one bulk read.");
@@ -77,6 +78,17 @@ assert.ok(accountsUpload.includes("(\\d{2}|\\d{4})") && accountsUpload.includes(
 assert.doesNotMatch(accountsUpload, /Gross Payout must be greater than zero before Accounts can record a payment\./, "Zero projected gross payout must not block recording an actual payout.");
 assert.match(accountsUpload, /payinUploadGroups/, "Pay-In preview must retain duplicate-reference grouping checks.");
 assert.match(accountsUpload, /payoutUploadGroups/, "Pay-Out preview must retain duplicate-reference grouping checks.");
+assert.match(accountsUpload, /payinErrors: string\[\]/, "Pay-In validation must keep Pay-In errors separate from Pay-Out errors.");
+assert.match(accountsUpload, /payoutErrors: string\[\]/, "Pay-Out validation must keep Pay-Out errors separate from Pay-In errors.");
+assert.match(accountsUpload, /item\.payinErrors\.map\(error\)/, "Pay-In rows must render only Pay-In-specific validation errors plus shared errors.");
+assert.match(accountsUpload, /item\.payoutErrors\.map\(error\)/, "Pay-Out rows must render only Pay-Out-specific validation errors plus shared errors.");
+assert.match(accountsUpload, /Complete Commercial Review first\./, "Commercial Review error text should remain short and informative.");
+assert.match(accountsUpload, /Paid Date and UTR are required\./, "Missing payout date/reference message should be compact.");
+assert.match(accountsReconciliationUi, /w-\[min\(780px,calc\(100vw-24px\)\)\]/, "Reconciliation preview should use a compact modal width.");
+assert.match(accountsReconciliationUi, /title="Pay-In"/, "Compact preview must keep a dedicated Pay-In section.");
+assert.match(accountsReconciliationUi, /title="Pay-Out"/, "Compact preview must keep a dedicated Pay-Out section.");
+assert.match(accountsReconciliationUi, /max-h-\[170px\]/, "Validation tables should stay compact with bounded height.");
+
 assert.doesNotMatch(accountsUpload, /\.from\([^\n]+\)\.(?:insert|update|delete)\(|\.rpc\(/, "Accounts workbook preview must remain read-only; cryptographic hash updates are allowed but database writes are not.");
 
 for (const aggregate of ["customer_stats", "vehicle_stats", "policy_stats", "claim_stats", "onboarding_stats", "task_stats", "document_stats", "activity_stats"]) {
