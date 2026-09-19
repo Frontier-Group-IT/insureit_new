@@ -116,7 +116,7 @@ assert(sarvamProductionQueue.includes('INITIAL_OUTREACH_STATUSES = new Set(["new
 assert(sarvamProductionQueue.includes('ACTIVE_ATTEMPT_STATUSES'), "production queue excludes active AI attempts");
 assert(sarvamProductionQueue.includes('next_follow_up_at'), "production queue respects scheduled follow-up state");
 assert(sarvamProductionQueue.includes('.gte("policy_end_date", start)'), "production queue begins at current date");
-assert(sarvamProductionQueue.includes('.lte("policy_end_date", dateOnly(end))'), "production queue is capped to the next 30 days");
+assert(sarvamProductionQueue.includes('.lte("policy_end_date", endDate)'), "imported production queue is capped to the next 30 days");
 assert(!sarvamProductionQueue.includes("streamExternalRenewalToSarvam"), "production queue preview cannot place calls");
 assert(!sarvamProductionQueue.includes("SARVAM_API_KEY"), "production queue preview contains no provider credential logic");
 assert(sarvamCampaignLifecycle.includes('import "server-only"'), "campaign lifecycle client is server-only");
