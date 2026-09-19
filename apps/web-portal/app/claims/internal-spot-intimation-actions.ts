@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { isClaimStatus, managerTransitions, type ClaimStatus } from "@/lib/claim-workflow";
-import { requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
+import { insertAuthorizedClaimStageDetail, requireClaimWorkflowAccess } from "@/lib/claim-workflow-access";
 import { validateInternalSpotIntimation } from "@/lib/internal-spot-intimation";
 
 type ClaimRow = {
@@ -81,7 +81,8 @@ function normalizedDetails(claim: ClaimRow, formData: FormData) {
 export async function advanceInternalSpotIntimation(claimId: string, formData: FormData) {
   normalizeSpotIntimationDateTimes(formData);
   requireInternalSpotIntimationDriverDetails(formData);
-  const { profile, supabase } = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
+  const access = await requireClaimWorkflowAccess(claimId, "You do not have permission to update claim workflow stages.");
+  const { profile, supabase } = access;
   const claim = await loadManagedClaim(claimId, supabase);
   const requestedStatus = textValue(formData, "next_status");
   const nextStatus = isClaimStatus(requestedStatus) ? requestedStatus : null;
@@ -91,8 +92,7 @@ export async function advanceInternalSpotIntimation(claimId: string, formData: F
   const { normalized, location, accidentDescription, details } = normalizedDetails(claim, formData);
   const { error: updateError } = await supabase.from("claims").update({ current_status: nextStatus, accident_at: normalized.incidentAt, spot_intimation_at: normalized.spotIntimationAt, accident_location: location, accident_description: accidentDescription }).eq("id", claimId);
   if (updateError) throw new Error(updateError.message);
-  const { error: detailError } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: nextStatus, details, created_by: profile.id });
-  if (detailError) throw new Error(detailError.message);
+  await insertAuthorizedClaimStageDetail(access, { claim_id: claimId, stage: nextStatus, details, created_by: profile.id });
   const { error: historyError } = await supabase.from("claim_status_history").insert({ claim_id: claimId, from_status: claim.current_status, to_status: nextStatus, notes: textValue(formData, "notes") ?? `Claim moved to ${nextStatus}.`, changed_by: profile.id });
   if (historyError) throw new Error(historyError.message);
   revalidateClaimPaths(claimId);
@@ -107,8 +107,7 @@ export async function saveInternalSpotIntimationDetails(claimId: string, formDat
   const { data: persistedClaim, error: claimError } = await supabase.from("claims").update({ accident_at: normalized.incidentAt, spot_intimation_at: normalized.spotIntimationAt, accident_location: location, accident_description: accidentDescription }).eq("id", claimId).select("id").maybeSingle<{ id: string }>();
   if (claimError) throw new Error(claimError.message);
   if (!persistedClaim) throw new Error("The Spot Intimation changes could not be persisted. Refresh the claim and try again.");
-  const { error: detailError } = await supabase.from("claim_stage_details").insert({ claim_id: claimId, stage: claim.current_status, details, created_by: profile.id });
-  if (detailError) throw new Error(detailError.message);
+  await insertAuthorizedClaimStageDetail(access, { claim_id: claimId, stage: claim.current_status, details, created_by: profile.id });
   revalidateClaimPaths(claimId);
 }
 
