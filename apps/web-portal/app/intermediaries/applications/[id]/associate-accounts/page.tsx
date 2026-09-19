@@ -114,7 +114,13 @@ export default async function PartnerAssociateAccountsPage({
         {query.success ? (
           <AssociateAccountResultToast tone="success" message={successMessage(query.success)} />
         ) : null}
-        {query.associate_error || query.error ? <AssociateAccountResultToast tone="error" message={errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)} /> : null}
+        {query.associate_error || query.error ? (
+          <AssociateAccountResultToast
+            tone="error"
+            message={errorMessage(query.associate_error ?? query.error ?? "", query.retry_after)}
+            acknowledge={isAssociateEmailInUse(query.associate_error ?? query.error ?? "")}
+          />
+        ) : null}
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
           <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
@@ -312,7 +318,7 @@ function errorMessage(value: string, retryAfter?: string) {
   if (decoded === "associate_email_invalid") return "Enter a valid email address.";
   if (decoded === "associate_phone_invalid") return "Enter a valid phone number.";
   if (decoded === "associate_role_blocked") return "Admin access is blocked by default. Select another role.";
-  if (decoded === "associate_email_in_use") return "That email is already used by another portal account.";
+  if (decoded === "associate_email_in_use") return "This email address is already linked to another Group, Branch, Partner, or Operations account. Please use a different email address.";
   if (decoded === "associate_not_authorized") return "You do not have permission to manage this Partner.";
   if (decoded === "associate_partner_not_available") return "Associate accounts are available only for an active Partner.";
   if (decoded === "associate_not_found") return "That associate account is no longer available.";
@@ -329,5 +335,8 @@ function errorMessage(value: string, retryAfter?: string) {
   const rateLimit = decoded.match(/after\s+(\d+)\s+seconds?/i);
   if (rateLimit?.[1]) return `An authentication email was sent recently. Please wait ${rateLimit[1]} seconds before trying again.`;
   return "The associate account action could not be completed.";
+}
+function isAssociateEmailInUse(value: string) {
+  return safeDecode(value) === "associate_email_in_use";
 }
 function safeDecode(value: string) { try { return decodeURIComponent(value); } catch { return value; } }
