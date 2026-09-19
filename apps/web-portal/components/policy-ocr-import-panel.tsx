@@ -188,7 +188,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
       setWarnings(filterPolicyOcrUserWarnings(result.warnings));
       const safeKeys = result.fields
         .filter((field) => APPLY_FIELDS.has(field.key) && (field.confidence ?? 0) >= .9)
-        .filter((field) => !IDENTITY_FIELDS.has(field.key))
+        .filter((field) => field.key !== INSURED_PHONE_FIELD)
         .filter((field) => {
           if ((context.mode === "edit" && SECTION_02_FIELDS.has(field.key)) || protectedKeys.has(field.key)) return false;
           const current = currentValueForReview(field.key, context);
