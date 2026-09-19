@@ -131,7 +131,7 @@ export function baselineExternalRenewalAiProfile(row: ExternalRenewalSourceProfi
     chassisNumber: text(rc.chassisNumber) ?? text(row.chassis_no),
     insuranceCompany: text(rc.insuranceCompany) ?? text(row.current_insurer),
     policyNumber: text(rc.policyNumber) ?? text(row.current_policy_no),
-    policyExpiryDate: text(rc.policyExpiryDate) ?? text(row.policy_end_date),
+    policyExpiryDate: text(rc.policyExpiryDate) ?? (row.voice_queue_source === "it_quick_add" ? null : text(row.policy_end_date)),
     previousIdv: null,
     previousPremium: null,
     registrationDate: text(rc.registrationDate),
