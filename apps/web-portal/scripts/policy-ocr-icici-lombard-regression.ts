@@ -101,8 +101,9 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.5.0+gcv-live-replay-v6");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.6.0+gcv-live-replay-v7");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
+assert.equal(field(result, "insured_name"), "SYNTHETIC TRANSPORT COMPANY");
 assert.equal(field(result, "policy_product"), "Package");
 assert.equal(field(result, "policy_start_date"), "2026-10-01");
 assert.equal(field(result, "policy_end_date"), "2027-09-30");
