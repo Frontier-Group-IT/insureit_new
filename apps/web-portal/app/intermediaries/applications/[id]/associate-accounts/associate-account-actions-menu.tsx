@@ -20,6 +20,10 @@ type AssociateForMenu = {
   phone_number: string;
   email: string;
   designation: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
   role: Role;
   status: Status;
   invited_at: string | null;
@@ -198,13 +202,13 @@ export function AssociateAccountActionsMenu({
             {commonHidden}
             <div className="space-y-4 p-5">
               <div className="grid gap-3 lg:grid-cols-3">
-                <Field label="Name">
+                <Field label="Name" required>
                   <input name="name" required defaultValue={associate.name} className={inputClass} />
                 </Field>
-                <Field label="Phone Number">
+                <Field label="Phone Number" required>
                   <input name="phone_number" required defaultValue={associate.phone_number} inputMode="tel" className={inputClass} />
                 </Field>
-                <Field label="Email">
+                <Field label="Email" required>
                   <input
                     value={associate.email}
                     readOnly
@@ -215,16 +219,30 @@ export function AssociateAccountActionsMenu({
                 </Field>
               </div>
               <div className="grid gap-3 lg:grid-cols-2">
-                <Field label="Designation">
+                <Field label="Designation" required>
                   <input name="designation" required defaultValue={associate.designation} className={inputClass} />
                 </Field>
-                <Field label="Role">
+                <Field label="Role" required>
                   <select name="role" required defaultValue={associate.role} className={inputClass}>
                     <option value="admin" disabled>Admin</option>
                     <option value="claim_head">Claim Head</option>
                     <option value="insurance_head">Insurance Head</option>
                     <option value="bodyshop_manager">Bodyshop Manager</option>
                   </select>
+                </Field>
+              </div>
+              <div className="grid gap-3 lg:grid-cols-[2fr_1fr_1fr_1fr]">
+                <Field label="Address">
+                  <input name="address" defaultValue={associate.address ?? ""} className={inputClass} placeholder="Address" />
+                </Field>
+                <Field label="City">
+                  <input name="city" defaultValue={associate.city ?? ""} className={inputClass} placeholder="City" />
+                </Field>
+                <Field label="State">
+                  <input name="state" defaultValue={associate.state ?? ""} className={inputClass} placeholder="State" />
+                </Field>
+                <Field label="PIN Code">
+                  <input name="postal_code" defaultValue={associate.postal_code ?? ""} className={inputClass} placeholder="PIN Code" inputMode="numeric" />
                 </Field>
               </div>
             </div>
@@ -405,6 +423,6 @@ function Modal({
 
 const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3 text-[11px] text-[#17203A] outline-none focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}</span>{children}</label>;
+function Field({ label, children, required = false }: { label: string; children: React.ReactNode; required?: boolean }) {
+  return <label><span className="mb-1.5 block text-[8.5px] font-bold uppercase tracking-wide text-[#64748B]">{label}{required ? <span className="text-red-600"> *</span> : null}</span>{children}</label>;
 }
