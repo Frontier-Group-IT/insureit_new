@@ -4,7 +4,7 @@ import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/au
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const EXTERNAL_MAPPER_VERSION = "external-renewal-2026-09-18-v1";
+const EXTERNAL_MAPPER_VERSION = "external-renewal-2026-09-19-v2";
 
 export type ExternalRenewalRcDetails = {
   registrationNumber: string;
@@ -158,6 +158,33 @@ function fromRaw(raw: unknown, registrationNumber: string): ExternalRenewalRcDet
   };
 }
 
+function mergeDetails(
+  preferred: ExternalRenewalRcDetails,
+  fallback: ExternalRenewalRcDetails,
+): ExternalRenewalRcDetails {
+  return {
+    registrationNumber: preferred.registrationNumber || fallback.registrationNumber,
+    registrationDate: preferred.registrationDate ?? fallback.registrationDate,
+    manufacturer: preferred.manufacturer ?? fallback.manufacturer,
+    model: preferred.model ?? fallback.model,
+    manufacturingYear: preferred.manufacturingYear ?? fallback.manufacturingYear,
+    vehicleClass: preferred.vehicleClass ?? fallback.vehicleClass,
+    fuelType: preferred.fuelType ?? fallback.fuelType,
+    engineCapacityCc: preferred.engineCapacityCc ?? fallback.engineCapacityCc,
+    seatingCapacity: preferred.seatingCapacity ?? fallback.seatingCapacity,
+    gvwKg: preferred.gvwKg ?? fallback.gvwKg,
+    chassisNumber: preferred.chassisNumber ?? fallback.chassisNumber,
+    fitnessExpiryDate: preferred.fitnessExpiryDate ?? fallback.fitnessExpiryDate,
+    pucExpiryDate: preferred.pucExpiryDate ?? fallback.pucExpiryDate,
+    roadTaxExpiryDate: preferred.roadTaxExpiryDate ?? fallback.roadTaxExpiryDate,
+    nationalPermitExpiryDate: preferred.nationalPermitExpiryDate ?? fallback.nationalPermitExpiryDate,
+    localPermitExpiryDate: preferred.localPermitExpiryDate ?? fallback.localPermitExpiryDate,
+    insuranceCompany: preferred.insuranceCompany ?? fallback.insuranceCompany,
+    policyNumber: preferred.policyNumber ?? fallback.policyNumber,
+    policyExpiryDate: preferred.policyExpiryDate ?? fallback.policyExpiryDate,
+  };
+}
+
 function usefulFieldCount(details: ExternalRenewalRcDetails) {
   return [
     details.manufacturer, details.model, details.chassisNumber, details.insuranceCompany, details.policyNumber,
@@ -218,7 +245,19 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
   const now = Date.now();
   if (cached && Date.parse(cached.expires_at) > now) {
     const normalized = fromNormalized(cached.normalized_details, registrationNumber);
-    const details = usefulFieldCount(normalized) > 0 ? normalized : fromRaw(cached.raw_response, registrationNumber);
+    const rawDetails = fromRaw(cached.raw_response, registrationNumber);
+    const details = mergeDetails(normalized, rawDetails);
+
+    await admin
+      .from("vehicle_rc_lookup_cache")
+      .update({
+        normalized_details: details,
+        mapper_version: EXTERNAL_MAPPER_VERSION,
+        last_served_at: new Date(now).toISOString(),
+        updated_at: new Date(now).toISOString(),
+      })
+      .eq("registration_number_normalized", registrationNumber);
+
     if (usefulFieldCount(details) > 0) {
       await persistOpportunityResult(opportunity.id, "ready", details, "local_cache", null);
       return { status: "ready" as const, source: "local_cache" as const, details };
@@ -257,7 +296,8 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
   } catch {
     if (cached) {
       const normalized = fromNormalized(cached.normalized_details, registrationNumber);
-      const details = usefulFieldCount(normalized) > 0 ? normalized : fromRaw(cached.raw_response, registrationNumber);
+      const rawDetails = fromRaw(cached.raw_response, registrationNumber);
+      const details = mergeDetails(normalized, rawDetails);
       if (usefulFieldCount(details) > 0) {
         await persistOpportunityResult(opportunity.id, "ready", details, "stale_cache", null);
         return { status: "ready" as const, source: "stale_cache" as const, details };
