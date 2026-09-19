@@ -234,10 +234,6 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
       const billNumber = text(row[BILL_NUMBER_INDEX]);
       const billAmount = optionalMoney(row[BILL_AMOUNT_INDEX]);
       const billDate = normalizedDate(row[BILL_DATE_INDEX]);
-      const uploadedDifference = optionalMoney(row[DIFFERENCE_INDEX]);
-      const totalPayin = money(live.row[19]);
-      const calculatedDifference = money(totalPayin - (billAmount ?? 0));
-
       if (!billNumber || billAmount === null || !billDate) errors.push("Bill Number, Bill Amount and Bill Date are required together for Pay-In.");
       if (billAmount !== null && billAmount <= 0) errors.push("Bill Amount must be greater than zero.");
       // Difference is always calculated internally from Total Pay-in - Bill Amount.
