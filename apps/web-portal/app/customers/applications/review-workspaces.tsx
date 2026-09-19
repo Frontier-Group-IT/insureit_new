@@ -31,7 +31,22 @@ export function DealershipReviewWorkspace({applicationId,draft,canReview,status}
   </form>;
 }
 
-export function SummaryReviewWorkspace({fields}:{fields:Array<[string,unknown]>}){return <div className="grid gap-px bg-[#E8EEF5] sm:grid-cols-2">{fields.map(([label,value])=><div key={label} className="bg-white px-4 py-3"><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#64748B]">{label}</p><p className="mt-1 text-[11.5px] font-medium text-[#0F172A]">{display(value)}</p></div>)}</div>}
+export function SummaryReviewWorkspace({fields}:{fields:Array<[string,unknown]>}){
+  return <section className="rounded-2xl border border-[#DCE5EF] bg-white p-5 shadow-sm">
+    <div className="mb-4 flex items-center gap-3">
+      <span className="grid h-9 w-9 place-items-center rounded-xl border border-[#DDE8F7] bg-[#F2F7FD] text-[#17365D]">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4.5 w-4.5" aria-hidden="true"><circle cx="12" cy="8" r="3"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>
+      </span>
+      <div>
+        <h2 className="text-[13px] font-semibold text-[#17203A]">Customer details</h2>
+        <p className="mt-0.5 text-[9.5px] text-[#64748B]">Verified application information at a glance.</p>
+      </div>
+    </div>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {fields.map(([label,value])=><div key={label} className="rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] px-4 py-3.5"><p className="text-[8.5px] font-bold uppercase tracking-[.07em] text-[#64748B]">{label}</p><p className="mt-1.5 break-words text-[11px] font-semibold leading-5 text-[#24324A]">{display(value)}</p></div>)}
+    </div>
+  </section>;
+}
 
 function FileSection({number,title,subtitle,children}:{number:string;title:string;subtitle:string;children:React.ReactNode}){return <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><FileHeader number={number} title={title} subtitle={subtitle}/><div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-4">{children}</div></section>}
 function FileHeader({number,title,subtitle}:{number:string;title:string;subtitle:string}){return <div className="flex items-start gap-3 border-b border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3"><span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071D49] text-[9px] font-bold text-white">{number}</span><div><h3 className="text-[12.5px] font-semibold text-[#0F172A]">{title}</h3><p className="mt-0.5 text-[9.5px] text-[#64748B]">{subtitle}</p></div></div>}
