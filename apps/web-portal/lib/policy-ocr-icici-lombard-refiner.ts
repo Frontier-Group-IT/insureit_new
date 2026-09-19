@@ -138,10 +138,10 @@ export function refineIciciLombardMotorPolicy(
     fields.delete("vehicle_engine_number");
   }
 
-  const rto = riskVehicle?.rto
+  const rto = explicitRtoValue(pages)
+    ?? riskVehicle?.rto
     ?? localVehicle?.rto
     ?? scheduleVehicle?.rto
-    ?? explicitRtoValue(pages)
     ?? safeRtoValue(labelValue(pages, /RTO\s+(?:City|Location)/i, 2));
   if (rto) {
     const rtoName = cleanVehicle(rto.value);
@@ -491,6 +491,7 @@ function registrationNeighborhoodDetails(pageOne: string): RiskVehicleDetails | 
   const rtoRaw = [...before].reverse().find((line) =>
     line !== makeModelRaw
     && isSafeRto(line)
+    && looksLikeRtoLocation(line)
     && !/\b(?:19|20)\d{2}\b/.test(line)
     && !/\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(line)
   ) ?? "";
@@ -783,6 +784,12 @@ function findIciciTotalIdv(pages: string[]): VehicleEvidence | null {
 function safeRtoValue(hit: VehicleEvidence | null) {
   if (!hit || !isSafeRto(hit.value)) return null;
   return hit;
+}
+
+function looksLikeRtoLocation(value: string) {
+  const cleaned = clean(value).toUpperCase();
+  return /-/.test(cleaned)
+    || /^(?:RAJASTHAN|MADHYA\s+PRADESH|MAHARASHTRA|GUJARAT|UTTAR\s+PRADESH|DELHI|HARYANA|PUNJAB|CHHATTISGARH|UTTARAKHAND|BIHAR|JHARKHAND|WEST\s+BENGAL|ODISHA|KARNATAKA|TAMIL\s+NADU|TELANGANA|ANDHRA\s+PRADESH|KERALA|ASSAM)\b/.test(cleaned);
 }
 
 function isSafeRto(value: string) {
