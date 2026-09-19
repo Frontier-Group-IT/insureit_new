@@ -27,6 +27,7 @@ export function PartnerScreen({
   backDisabled,
   artwork,
   action,
+  hideTopBar,
   children,
   scrollProps,
 }: PropsWithChildren<{
@@ -37,6 +38,7 @@ export function PartnerScreen({
   backDisabled?: boolean;
   artwork?: ImageSourcePropType;
   action?: ReactNode;
+  hideTopBar?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
 }>) {
   const { isOffline } = usePartnerNetwork();
@@ -61,7 +63,7 @@ export function PartnerScreen({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps={scrollProps?.keyboardShouldPersistTaps ?? 'handled'}
       >
-        {isHomeHero ? (
+        {hideTopBar ? null : isHomeHero ? (
           <View style={styles.homeHeroWrap}>
             <View style={styles.homeHero}>
               <Image

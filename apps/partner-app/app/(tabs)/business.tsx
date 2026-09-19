@@ -6,10 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { PartnerBusinessRangeSummaryCard } from '@/components/partner-business-range-summary';
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerListSummaryStrip } from '@/components/ui/partner-list-summary-strip';
-import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
-import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
 import { getPartnerBusinessPerformance, type PartnerBusinessPerformance } from '@/lib/business';
 import { getPartnerClaimSummary, type PartnerClaimSummary } from '@/lib/claims';
 import { formatIndianCurrency } from '@/lib/format';
@@ -21,9 +18,17 @@ import { partnerTheme } from '@/lib/theme';
 import { usePartnerQuery } from '@/lib/use-partner-query';
 import { usePartnerSession } from '@/providers/partner-session-provider';
 
+type OverviewCardProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  value: string;
+  label: string;
+  changeLabel?: string;
+};
+
 export default function BusinessScreen() {
   const router = useRouter();
   const { cacheScopeKey } = usePartnerSession();
+  const [showRange, setShowRange] = useState(false);
 
   const fetchBusinessWorkspace = useCallback(async (): Promise<{
     performance: PartnerBusinessPerformance;
@@ -73,17 +78,25 @@ export default function BusinessScreen() {
   const claims = workspace.data?.claims ?? null;
   const payout = workspace.data?.payout ?? null;
 
-  const topPartners = useMemo(() => {
-    if (!network) return [];
-    return [...network.partners]
-      .sort((a, b) => Number(b.metrics.premium_this_month || 0) - Number(a.metrics.premium_this_month || 0))
-      .slice(0, 3);
-  }, [network]);
+  const policiesChange = useMemo(() => {
+    if (!performance || !performance.policies_last_month) return null;
+    return ((performance.policies_this_month - performance.policies_last_month) / performance.policies_last_month) * 100;
+  }, [performance]);
+
+  const productMix = useMemo(() => {
+    if (!performance) return [];
+    const total = Math.max(1, Number(performance.premium_this_month || 0));
+    return performance.business_mix.slice(0, 6).map((item, index) => ({
+      ...item,
+      share: Math.max(0, Math.round((Number(item.premium || 0) / total) * 100)),
+      asset: productAsset(item.label, index),
+    }));
+  }, [performance]);
 
   return (
     <PartnerScreen
-      eyebrow="MY BUSINESS"
-      title="Performance & network"
+      title=""
+      hideTopBar
       scrollProps={{
         refreshControl: (
           <RefreshControl
@@ -107,9 +120,33 @@ export default function BusinessScreen() {
         />
       ) : (
         <>
-          <View style={styles.freshnessRow}>
-            <Text style={styles.scope}>{humanize(performance.scope_mode)} scope</Text>
-            <Text style={styles.updated}>{formatUpdatedAt(performance.generated_at)}</Text>
+          <View style={styles.heroBanner}>
+            <View style={styles.heroCopy}>
+              <Text style={styles.heroTitle}>Business</Text>
+              <Text style={styles.heroSubtitle}>Track, Analyse, Grow.</Text>
+              <Text style={styles.heroSubtitle}>Good Morning,</Text>
+              <Text style={styles.heroName}>Partner</Text>
+            </View>
+            <Image source={PartnerAssets.banners.businessGrowth01} style={styles.heroImage} resizeMode="cover" />
+            <View style={styles.heroWords}>
+              <Text style={styles.heroWord}>MORE</Text>
+              <Text style={styles.heroWord}>POLICIES</Text>
+              <Text style={styles.heroWord}>STRONGER</Text>
+              <Text style={styles.heroWord}>RELATIONSHIPS</Text>
+              <Text style={styles.heroWord}>BRIGHTER</Text>
+              <Text style={styles.heroWord}>TOMORROW</Text>
+            </View>
+          </View>
+
+          <View style={styles.searchRow}>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
+              <Ionicons name="search-outline" size={15} color="#4966B6" />
+              <Text numberOfLines={1} style={styles.searchText}>Search customer, vehicle number or policy number...</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setShowRange((value) => !value)} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
+              <Ionicons name="filter-outline" size={15} color="#3156B8" />
+              <Text style={styles.filterText}>Filter</Text>
+            </Pressable>
           </View>
 
           {workspace.stale || workspace.error || workspace.data?.secondaryWarning ? (
@@ -124,236 +161,159 @@ export default function BusinessScreen() {
             </View>
           ) : null}
 
-          <View style={styles.hero}>
-            <View style={styles.heroHeader}>
-              <View>
-                <Text style={styles.heroEyebrow}>{monthLabel(performance.current_month).toUpperCase()}</Text>
-                <Text style={styles.heroValue}>{formatIndianCurrency(performance.premium_this_month)}</Text>
-                <Text style={styles.heroLabel}>gross premium</Text>
+          <SectionHeader
+            title="Business Overview"
+            action={(
+              <Pressable accessibilityRole="button" onPress={() => setShowRange((value) => !value)} style={styles.periodButton}>
+                <Text style={styles.periodText}>{showRange ? 'Custom' : 'This Month'}</Text>
+                <Ionicons name="chevron-down" size={12} color="#3156B8" />
+              </Pressable>
+            )}
+          />
+
+          {showRange ? (
+            <View style={styles.rangeWrap}>
+              <PartnerBusinessRangeSummaryCard />
+            </View>
+          ) : null}
+
+          <View style={styles.overviewGrid}>
+            <OverviewCard
+              icon="cash-outline"
+              value={formatCompactCurrency(performance.premium_this_month)}
+              label="Premium Generated"
+              changeLabel={changeText(Number(performance.premium_change_percent || 0), Number(performance.premium_last_month || 0) > 0)}
+            />
+            <OverviewCard
+              icon="document-text-outline"
+              value={String(performance.policies_this_month)}
+              label="Policies Sold"
+              changeLabel={policiesChange === null ? 'Current month' : changeText(policiesChange, true)}
+            />
+            <OverviewCard
+              icon="wallet-outline"
+              value={payout?.available ? formatCompactCurrency(payout.paid_amount) : '—'}
+              label="Commission Earned"
+              changeLabel={payout?.available ? `${payout.paid_count} paid` : 'Restricted'}
+            />
+            <OverviewCard
+              icon="people-outline"
+              value={String(performance.total_customers)}
+              label="Customers"
+              changeLabel="Current portfolio"
+            />
+          </View>
+
+          <SectionHeader
+            title="Month-wise Trend"
+            action={(
+              <View style={styles.sectionActions}>
+                <View style={styles.smallSelect}>
+                  <Text style={styles.smallSelectText}>Last 6 Months</Text>
+                  <Ionicons name="chevron-down" size={10} color="#3156B8" />
+                </View>
+                <Text style={styles.viewAll}>View Report</Text>
+                <Ionicons name="chevron-forward" size={10} color="#3156B8" />
               </View>
-              <TrendBadge
-                value={Number(performance.premium_change_percent || 0)}
-                hasPrevious={Number(performance.premium_last_month || 0) > 0}
-              />
-            </View>
-            <View style={styles.heroStats}>
-              <HeroStat value={performance.policies_this_month} label="Policies" />
-              <HeroStat value={performance.total_customers} label="Customers" />
-              <HeroStat value={network.total_partners} label={network.total_partners === 1 ? 'Partner family' : 'Partner families'} />
-            </View>
-          </View>
-
-          <PartnerSectionHeader title="Custom range" meta="Up to 366 days" />
-          <PartnerBusinessRangeSummaryCard />
-
-          <PartnerSectionHeader title="Today" />
-          <View style={styles.actionGrid}>
-            <ActionStat
-              asset={PartnerAssets.actions.renewals}
-              value={renewals?.due_30_count ?? 0}
-              label="Renewals in 30d"
-              meta={formatIndianCurrency(renewals?.due_30_premium ?? 0)}
-              onPress={() => router.push('/renewals')}
-            />
-            <ActionStat
-              asset={PartnerAssets.navigation.claims}
-              value={claims?.active_claims ?? 0}
-              label="Active claims"
-              meta={claims?.assistance_requested ? `${claims.assistance_requested} assistance open` : 'Service queue'}
-              onPress={() => router.push('/(tabs)/claims')}
-            />
-          </View>
-
-          <PartnerSectionHeader title="Business trend" meta="Last 6 months" />
+            )}
+          />
           <TrendChart data={performance.trend} />
 
-          <PartnerSectionHeader title="Business mix" meta="Current month" />
-          <View style={styles.mixCard}>
-            {performance.business_mix.length ? (
-              performance.business_mix.slice(0, 5).map((item) => (
-                <MixRow
-                  key={item.label}
-                  label={item.label}
-                  premium={Number(item.premium || 0)}
-                  policies={item.policies}
-                  totalPremium={Number(performance.premium_this_month || 0)}
-                />
-              ))
-            ) : (
-              <Text style={styles.noData}>No policy mix has been recorded this month.</Text>
+          <SectionHeader
+            title="Business by Product"
+            action={<Text style={styles.viewAll}>View All ›</Text>}
+          />
+          <View style={styles.productGrid}>
+            {productMix.length ? productMix.map((item) => (
+              <ProductTile key={item.label} asset={item.asset} label={humanize(item.label)} share={item.share} />
+            )) : (
+              <View style={styles.emptyCompact}><Text style={styles.emptyCompactText}>No product mix recorded this month.</Text></View>
             )}
           </View>
 
-          <PartnerSectionHeader title="Payout" meta={payout?.available ? undefined : 'Restricted'} />
-          <PayoutSection payout={payout} />
-
-          <PartnerSectionHeader
-            title="My network"
-            action={
-              <Pressable accessibilityRole="button" onPress={() => router.push('/network')} hitSlop={8}>
-                <Text style={styles.sectionAction}>Explore network</Text>
-              </Pressable>
-            }
-          />
-
-          <Pressable accessibilityRole="button" onPress={() => router.push('/network')} style={({ pressed }) => [styles.networkCard, pressed && styles.pressed]}>
-            <View style={styles.networkArtworkWrap}>
-              <Image source={PartnerAssets.actions.businessPerformance} style={styles.networkArtwork} resizeMode="contain" />
+          <SectionHeader title="Top Insurers" action={<Text style={styles.viewAll}>View All ›</Text>} />
+          <View style={styles.insurerCard}>
+            <View style={styles.insurerEmptyIcon}>
+              <Ionicons name="business-outline" size={18} color="#3156B8" />
             </View>
-            <View style={styles.networkCopy}>
-              <Text style={styles.networkTitle}>{network.total_partners} Partner {network.total_partners === 1 ? 'family' : 'families'}</Text>
-              <Text style={styles.networkText}>
-                {network.total_groups > 0
-                  ? `${network.total_groups} active Group${network.total_groups === 1 ? '' : 's'}`
-                  : 'Partner network'}
-              </Text>
+            <View style={styles.insurerEmptyBody}>
+              <Text style={styles.insurerEmptyTitle}>Insurer mix</Text>
+              <Text style={styles.insurerEmptyText}>Insurer-wise totals are not included in the current Business data.</Text>
             </View>
-            <Ionicons name="chevron-forward" size={17} color="#9AA3B2" />
-          </Pressable>
+          </View>
 
-          {topPartners.length ? (
-            <>
-              <PartnerSectionHeader
-                title={performance.scope_mode === 'partner_family' ? 'Partner family' : 'Top contribution'}
-                meta="This month"
-              />
-              <View style={styles.contributionList}>
-                {topPartners.map((row, index) => (
-                  <View key={row.partner_id} style={styles.contributionRow}>
-                    <View style={styles.rank}><Text style={styles.rankText}>{index + 1}</Text></View>
-                    <View style={styles.contributionBody}>
-                      <Text style={styles.contributionName}>{row.partner_name}</Text>
-                      <Text style={styles.contributionMeta}>
-                        {row.metrics.policies_this_month} policies · {row.metrics.total_customers} customers
-                        {row.child_count ? ` · ${row.child_count} POSP/MISP` : ' · standalone'}
-                      </Text>
-                    </View>
-                    <Text style={styles.contributionValue}>{formatIndianCurrency(row.metrics.premium_this_month)}</Text>
-                  </View>
-                ))}
+          <SectionHeader title="Quick Actions" />
+          <View style={styles.quickGrid}>
+            <QuickAction
+              asset={PartnerAssets.actions.renewals}
+              label="Renewals"
+              meta={`${renewals?.due_30_count ?? 0} due`}
+              onPress={() => router.push('/renewals')}
+            />
+            <QuickAction
+              asset={PartnerAssets.navigation.claims}
+              label="Claims"
+              meta={`${claims?.active_claims ?? 0} active`}
+              onPress={() => router.push('/(tabs)/claims')}
+            />
+            <PayoutQuickAction payout={payout} onPress={() => router.push('/(tabs)/more')} />
+            <QuickAction
+              asset={PartnerAssets.actions.addCustomer}
+              label="Add Customer"
+              meta="Create new"
+              onPress={() => router.push('/customers')}
+            />
+          </View>
+
+          <SectionHeader title="My Network" action={<Pressable onPress={() => router.push('/network')}><Text style={styles.viewAll}>View All ›</Text></Pressable>} />
+          <View style={styles.networkGrid}>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/network')} style={({ pressed }) => [styles.networkTile, pressed && styles.pressed]}>
+              <Image source={PartnerAssets.actions.businessPerformance} style={styles.networkIcon} resizeMode="contain" />
+              <View style={styles.networkBody}>
+                <Text style={styles.networkValue}>{network.total_partners}</Text>
+                <Text style={styles.networkLabel}>Partner Family</Text>
+                <Text style={styles.networkMeta}>{network.total_groups} active group{network.total_groups === 1 ? '' : 's'}</Text>
               </View>
-            </>
-          ) : null}
+              <Ionicons name="chevron-forward" size={14} color="#3156B8" />
+            </Pressable>
+
+            <Pressable accessibilityRole="button" onPress={() => router.push('/customers')} style={({ pressed }) => [styles.networkTile, pressed && styles.pressed]}>
+              <Image source={PartnerAssets.navigation.customers} style={styles.networkIcon} resizeMode="contain" />
+              <View style={styles.networkBody}>
+                <Text style={styles.networkValue}>{performance.total_customers}</Text>
+                <Text style={styles.networkLabel}>Customers</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color="#3156B8" />
+            </Pressable>
+          </View>
         </>
       )}
     </PartnerScreen>
   );
 }
 
-function PayoutSection({ payout }: { payout: PartnerPayoutSummary | null }) {
-  const [showRecent, setShowRecent] = useState(false);
-
-  if (!payout) {
-    return <PartnerBanner tone="info" message="Payout information is not available right now." />;
-  }
-
-  if (!payout.available) {
-    return (
-      <View style={styles.restrictedCard}>
-        <View style={styles.restrictedIcon}><Ionicons name="lock-closed-outline" size={21} color={partnerTheme.colors.brand} /></View>
-        <View style={styles.restrictedBody}>
-          <Text style={styles.restrictedTitle}>Commercial payout details are restricted</Text>
-          <Text style={styles.restrictedText}>{payout.reason}</Text>
-        </View>
-      </View>
-    );
-  }
-
+function SectionHeader({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
-    <View>
-      <PartnerListSummaryStrip
-        items={[
-          { key: 'eligible', label: 'Eligible', value: formatIndianCurrency(payout.eligible_amount) },
-          { key: 'paid', label: 'Paid', value: formatIndianCurrency(payout.paid_amount), tone: 'success' },
-          { key: 'review', label: 'Need review', value: payout.needs_review_count, tone: payout.needs_review_count ? 'warning' : 'default' },
-        ]}
-      />
-      <Text style={styles.payoutMeta}>{payout.pending_count} pending · {payout.paid_count} paid records</Text>
-
-      {payout.needs_review_count > 0 ? (
-        <View style={styles.payoutWarning}>
-          <PartnerBanner
-            tone="warning"
-            message={`${payout.needs_review_count} payout record${payout.needs_review_count === 1 ? '' : 's'} need commercial review before they should be treated as final.`}
-          />
-        </View>
-      ) : null}
-
-      {payout.recent.length ? (
-        <>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityState={{ expanded: showRecent }}
-            accessibilityLabel={`${showRecent ? 'Hide' : 'Show'} recent payout records`}
-            onPress={() => setShowRecent((value) => !value)}
-            style={({ pressed }) => [styles.payoutDisclosure, pressed && styles.pressed]}
-          >
-            <View style={styles.payoutDisclosureBody}>
-              <Text style={styles.payoutDisclosureTitle}>Recent payout records</Text>
-              <Text style={styles.payoutDisclosureMeta}>{payout.recent.length} recorded</Text>
-            </View>
-            <Ionicons name={showRecent ? 'chevron-up' : 'chevron-down'} size={17} color={partnerTheme.colors.brand} />
-          </Pressable>
-          {showRecent ? (
-            <View style={styles.payoutRecent}>
-              {payout.recent.map((row) => (
-                <View key={row.id} style={styles.payoutRow}>
-                  <View style={styles.payoutBody}>
-                    <Text style={styles.payoutPolicy}>{row.policy_no}</Text>
-                    <Text style={styles.payoutCustomer}>{row.customer_name}</Text>
-                  </View>
-                  <View style={styles.payoutRight}>
-                    <Text style={styles.payoutAmount}>{formatIndianCurrency(row.amount)}</Text>
-                    <PartnerStatusBadge
-                      label={humanize(row.status || row.commercial_status || 'Recorded')}
-                      tone={String(row.status).toLowerCase() === 'paid' ? 'success' : String(row.commercial_status).toLowerCase() === 'needs_review' ? 'warning' : 'info'}
-                    />
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : (
-        <View style={styles.payoutEmpty}><Text style={styles.payoutEmptyText}>No payout records are currently recorded.</Text></View>
-      )}
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {action ? <View>{action}</View> : null}
     </View>
   );
 }
 
-function ActionStat({ asset, value, label, meta, onPress }: {
-  asset: ImageSourcePropType;
-  value: number;
-  label: string;
-  meta: string;
-  onPress: () => void;
-}) {
+function OverviewCard({ icon, value, label, changeLabel }: OverviewCardProps) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.actionStat, pressed && styles.pressed]}>
-      <View style={styles.actionArtworkWrap}><Image source={asset} style={styles.actionArtwork} resizeMode="contain" /></View>
-      <View style={styles.actionBody}>
-        <Text style={styles.actionValue}>{value}</Text>
-        <Text style={styles.actionLabel}>{label}</Text>
-        <Text style={styles.actionMeta}>{meta}</Text>
+    <View style={styles.overviewCard}>
+      <View style={styles.overviewIcon}>
+        <Ionicons name={icon} size={17} color="#1951AE" />
       </View>
-      <Ionicons name="chevron-forward" size={17} color="#9AA3B2" />
-    </Pressable>
-  );
-}
-
-function HeroStat({ value, label }: { value: number; label: string }) {
-  return <View style={styles.heroStat}><Text style={styles.heroStatValue}>{value}</Text><Text style={styles.heroStatLabel}>{label}</Text></View>;
-}
-
-function TrendBadge({ value, hasPrevious }: { value: number; hasPrevious: boolean }) {
-  if (!hasPrevious) return <View style={styles.trendBadgeNeutral}><Text style={styles.trendBadgeNeutralText}>New baseline</Text></View>;
-  const positive = value >= 0;
-  return (
-    <View style={[styles.trendBadge, positive ? styles.trendBadgeGood : styles.trendBadgeWarn]}>
-      <Ionicons name={positive ? 'trending-up' : 'trending-down'} size={13} color={positive ? partnerTheme.colors.success : partnerTheme.colors.warning} />
-      <Text style={[styles.trendBadgeText, { color: positive ? partnerTheme.colors.success : partnerTheme.colors.warning }]}>
-        {Math.abs(value).toFixed(1)}%
-      </Text>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} style={styles.overviewValue}>{value}</Text>
+      <Text numberOfLines={2} style={styles.overviewLabel}>{label}</Text>
+      <View style={styles.growthRow}>
+        <Ionicons name="trending-up" size={9} color="#16A34A" />
+        <Text numberOfLines={1} style={styles.growthText}>{changeLabel}</Text>
+      </View>
+      <Text style={styles.vsText}>vs last month</Text>
     </View>
   );
 }
@@ -362,13 +322,19 @@ function TrendChart({ data }: { data: PartnerBusinessPerformance['trend'] }) {
   const max = Math.max(1, ...data.map((item) => Number(item.premium || 0)));
   return (
     <View style={styles.chartCard}>
+      <View style={styles.chartYAxis}>
+        <Text style={styles.axisText}>3L</Text>
+        <Text style={styles.axisText}>2L</Text>
+        <Text style={styles.axisText}>1L</Text>
+        <Text style={styles.axisText}>0</Text>
+      </View>
       <View style={styles.chart}>
-        {data.map((item) => {
+        {data.slice(-6).map((item) => {
           const premium = Number(item.premium || 0);
-          const height = Math.max(5, Math.round((premium / max) * 76));
+          const height = Math.max(4, Math.round((premium / max) * 68));
           return (
             <View key={item.month} style={styles.barColumn}>
-              <Text style={styles.barValue}>{formatIndianCurrency(premium)}</Text>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={styles.barValue}>{formatCompactCurrency(premium)}</Text>
               <View style={styles.barTrack}><View style={[styles.bar, { height }]} /></View>
               <Text style={styles.barMonth}>{shortMonth(item.month)}</Text>
             </View>
@@ -379,22 +345,73 @@ function TrendChart({ data }: { data: PartnerBusinessPerformance['trend'] }) {
   );
 }
 
-function MixRow({ label, premium, policies, totalPremium }: { label: string; premium: number; policies: number; totalPremium: number }) {
-  const percent = totalPremium > 0 ? Math.min(100, (premium / totalPremium) * 100) : 0;
+function ProductTile({ asset, label, share }: { asset: ImageSourcePropType; label: string; share: number }) {
   return (
-    <View style={styles.mixRow}>
-      <View style={styles.mixTop}>
-        <Text style={styles.mixLabel}>{humanize(label)}</Text>
-        <Text style={styles.mixValue}>{formatIndianCurrency(premium)} · {policies} policies</Text>
-      </View>
-      <View style={styles.mixTrack}><View style={[styles.mixFill, { width: `${percent}%` }]} /></View>
+    <View style={styles.productTile}>
+      <View style={styles.productIconWrap}><Image source={asset} style={styles.productIcon} resizeMode="contain" /></View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={styles.productLabel}>{label}</Text>
+      <Text style={styles.productShare}>{share}%</Text>
     </View>
   );
 }
 
-function monthLabel(value: string) {
-  const [year, month] = value.split('-').map(Number);
-  return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1, 1));
+function PayoutQuickAction({ payout, onPress }: { payout: PartnerPayoutSummary | null; onPress: () => void }) {
+  if (!payout) {
+    return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta="Unavailable" onPress={onPress} />;
+  }
+
+  if (!payout.available) {
+    return <QuickAction asset={PartnerAssets.actions.payoutGrowth} label="Payout" meta="Restricted" onPress={onPress} />;
+  }
+
+  return (
+    <QuickAction
+      asset={PartnerAssets.actions.payoutGrowth}
+      label="Payout"
+      meta={`${payout.pending_count} pending`}
+      onPress={onPress}
+    />
+  );
+}
+
+function QuickAction({ asset, label, meta, onPress }: { asset: ImageSourcePropType; label: string; meta: string; onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed]}>
+      <View style={styles.quickIconWrap}><Image source={asset} style={styles.quickIcon} resizeMode="contain" /></View>
+      <Text numberOfLines={1} style={styles.quickLabel}>{label}</Text>
+      <Text numberOfLines={1} style={styles.quickMeta}>{meta}</Text>
+    </Pressable>
+  );
+}
+
+function productAsset(label: string, index: number): ImageSourcePropType {
+  const value = label.toLowerCase();
+  if (value.includes('motor') || value.includes('package') || value.includes('third')) return PartnerAssets.products.motorInsurance;
+  if (value.includes('health')) return PartnerAssets.products.healthInsurance;
+  if (value.includes('life') || value.includes('family')) return PartnerAssets.products.familyInsurance;
+  if (value.includes('travel') || value.includes('home') || value.includes('property')) return PartnerAssets.products.propertyTravelInsurance;
+  return [
+    PartnerAssets.products.commercialInsurance,
+    PartnerAssets.products.motorInsurance,
+    PartnerAssets.products.healthInsurance,
+    PartnerAssets.products.familyInsurance,
+    PartnerAssets.products.propertyTravelInsurance,
+  ][index % 5];
+}
+
+function changeText(value: number, hasPrevious: boolean) {
+  if (!hasPrevious) return 'New baseline';
+  const sign = value >= 0 ? '+' : '-';
+  return `${sign}${Math.abs(value).toFixed(0)}%`;
+}
+
+function formatCompactCurrency(value: number | string) {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return '₹0';
+  if (Math.abs(amount) >= 10_000_000) return `₹${(amount / 10_000_000).toFixed(amount % 10_000_000 === 0 ? 0 : 1)}Cr`;
+  if (Math.abs(amount) >= 100_000) return `₹${(amount / 100_000).toFixed(amount % 100_000 === 0 ? 0 : 1)}L`;
+  if (Math.abs(amount) >= 1_000) return `₹${(amount / 1_000).toFixed(amount % 1_000 === 0 ? 0 : 1)}k`;
+  return formatIndianCurrency(amount);
 }
 
 function shortMonth(value: string) {
@@ -411,89 +428,78 @@ function formatCacheTime(value: number | null) {
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
-function formatUpdatedAt(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Pull down to refresh';
-  return `Updated ${new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
-}
-
 const styles = StyleSheet.create({
-  freshnessRow: { minHeight: 26, marginTop: -8, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  scope: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  updated: { color: '#8A94A6', ...partnerTheme.typography.meta },
-  feedback: { marginBottom: 10 },
-  hero: { borderRadius: partnerTheme.radius.xl, padding: 15, backgroundColor: partnerTheme.colors.nav },
-  heroHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
-  heroEyebrow: { color: '#AAA5FF', letterSpacing: 1.1, ...partnerTheme.typography.meta },
-  heroValue: { marginTop: 5, color: '#FFFFFF', fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  heroLabel: { marginTop: 2, color: '#AEB7C5', ...partnerTheme.typography.meta },
-  trendBadge: { minHeight: 31, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 9 },
-  trendBadgeGood: { backgroundColor: '#18382D' },
-  trendBadgeWarn: { backgroundColor: '#44341E' },
-  trendBadgeText: { ...partnerTheme.typography.meta },
-  trendBadgeNeutral: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 8, backgroundColor: '#303A4D' },
-  trendBadgeNeutralText: { color: '#C7CFDC', ...partnerTheme.typography.meta },
-  heroStats: { marginTop: 13, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#3A4558', paddingTop: 10 },
-  heroStat: { flex: 1 },
-  heroStatValue: { color: '#FFFFFF', fontSize: 15, lineHeight: 20, fontWeight: '800' },
-  heroStatLabel: { marginTop: 3, color: '#9EA9BA', ...partnerTheme.typography.meta },
-  actionGrid: { flexDirection: 'row', gap: 9 },
-  actionStat: { flex: 1, minHeight: 82, flexDirection: 'row', alignItems: 'center', gap: 9, borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  actionArtworkWrap: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
-  actionArtwork: { width: 40, height: 40 },
-  actionBody: { flex: 1 },
-  actionValue: { color: partnerTheme.colors.ink, fontSize: 18, lineHeight: 23, fontWeight: '800' },
-  actionLabel: { marginTop: 2, color: partnerTheme.colors.ink, ...partnerTheme.typography.meta },
-  actionMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  chartCard: { borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  chart: { height: 126, flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  heroBanner: {
+    minHeight: 114,
+    marginHorizontal: -16,
+    marginTop: -14,
+    overflow: 'hidden',
+    backgroundColor: '#0B4A9E',
+  },
+  heroCopy: { position: 'absolute', zIndex: 3, left: 16, top: 10 },
+  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 23, fontWeight: '800' },
+  heroSubtitle: { marginTop: 1, color: '#D8E8FF', fontSize: 9, lineHeight: 12, fontWeight: '500' },
+  heroName: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '800' },
+  heroImage: { position: 'absolute', right: 39, bottom: 0, width: 174, height: 114, opacity: 0.96 },
+  heroWords: { position: 'absolute', zIndex: 3, right: 8, top: 15, width: 38 },
+  heroWord: { color: '#EAF3FF', fontSize: 6.2, lineHeight: 8.5, fontWeight: '800' },
+  searchRow: { marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  searchBox: { flex: 1, minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 7, paddingHorizontal: 9, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E4F3' },
+  searchText: { flex: 1, color: '#8190A5', fontSize: 8.5, lineHeight: 12, fontWeight: '500' },
+  filterButton: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 7, paddingHorizontal: 9, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E4F3' },
+  filterText: { color: '#3156B8', fontSize: 9, fontWeight: '700' },
+  feedback: { marginTop: 7 },
+  sectionHeader: { minHeight: 29, marginTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  sectionTitle: { color: '#14367B', fontSize: 10.5, lineHeight: 14, fontWeight: '800' },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  periodButton: { minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 5 },
+  periodText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '700' },
+  smallSelect: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 3, backgroundColor: '#F6F8FC' },
+  smallSelectText: { color: '#3156B8', fontSize: 6.8, lineHeight: 9, fontWeight: '700' },
+  viewAll: { color: '#3156B8', fontSize: 7.2, lineHeight: 10, fontWeight: '700' },
+  rangeWrap: { marginBottom: 5 },
+  overviewGrid: { flexDirection: 'row', gap: 4 },
+  overviewCard: { flex: 1, minHeight: 94, alignItems: 'center', borderRadius: 8, paddingHorizontal: 3, paddingVertical: 7, backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: '#E2EAF5' },
+  overviewIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: '#E7F0FF' },
+  overviewValue: { width: '100%', marginTop: 4, color: '#112C69', textAlign: 'center', fontSize: 12.5, lineHeight: 15, fontWeight: '800' },
+  overviewLabel: { minHeight: 18, marginTop: 2, color: '#53647C', textAlign: 'center', fontSize: 6.9, lineHeight: 9, fontWeight: '600' },
+  growthRow: { marginTop: 2, flexDirection: 'row', alignItems: 'center', gap: 1 },
+  growthText: { maxWidth: 58, color: '#16A34A', fontSize: 6.5, lineHeight: 8, fontWeight: '800' },
+  vsText: { marginTop: 1, color: '#9AA7B8', fontSize: 5.7, lineHeight: 7 },
+  chartCard: { minHeight: 128, flexDirection: 'row', borderRadius: 9, padding: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
+  chartYAxis: { width: 15, height: 96, justifyContent: 'space-between', paddingVertical: 4 },
+  axisText: { color: '#8795A9', fontSize: 5.8, lineHeight: 7 },
+  chart: { flex: 1, height: 108, flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   barColumn: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  barValue: { height: 14, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  barTrack: { height: 80, width: '74%', justifyContent: 'flex-end', overflow: 'hidden', borderRadius: 7, backgroundColor: '#F0F2F7' },
-  bar: { width: '100%', borderRadius: 7, backgroundColor: partnerTheme.colors.brand },
-  barMonth: { marginTop: 5, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  mixCard: { borderRadius: partnerTheme.radius.lg, padding: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  mixRow: { marginBottom: 13 },
-  mixTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  mixLabel: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  mixValue: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  mixTrack: { height: 6, marginTop: 6, overflow: 'hidden', borderRadius: 999, backgroundColor: '#ECEFF4' },
-  mixFill: { height: '100%', borderRadius: 999, backgroundColor: partnerTheme.colors.accent },
-  noData: { color: partnerTheme.colors.inkMuted, textAlign: 'center', ...partnerTheme.typography.caption },
-  payoutMeta: { marginTop: 6, color: partnerTheme.colors.inkMuted, textAlign: 'right', ...partnerTheme.typography.meta },
-  payoutWarning: { marginTop: 8 },
-  payoutDisclosure: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: partnerTheme.radius.lg, paddingHorizontal: 12, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  payoutDisclosureBody: { flex: 1 },
-  payoutDisclosureTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  payoutDisclosureMeta: { marginTop: 2, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  payoutEmpty: { minHeight: partnerTheme.control.minTouchTarget, marginTop: 8, alignItems: 'center', justifyContent: 'center', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface },
-  payoutEmptyText: { color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  payoutRecent: { marginTop: 9, overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  payoutRow: { minHeight: 68, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  payoutBody: { flex: 1 },
-  payoutPolicy: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  payoutCustomer: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  payoutRight: { alignItems: 'flex-end', gap: 4 },
-  payoutAmount: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  restrictedCard: { minHeight: 74, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  restrictedIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  restrictedBody: { flex: 1 },
-  restrictedTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  restrictedText: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  sectionAction: { color: partnerTheme.colors.brand, ...partnerTheme.typography.caption },
-  networkCard: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: partnerTheme.radius.lg, padding: 14, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  networkArtworkWrap: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  networkArtwork: { width: 46, height: 46 },
-  networkCopy: { flex: 1 },
-  networkTitle: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  networkText: { marginTop: 4, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.caption },
-  contributionList: { overflow: 'hidden', borderRadius: partnerTheme.radius.lg, backgroundColor: partnerTheme.colors.surface, borderWidth: 1, borderColor: partnerTheme.colors.line },
-  contributionRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 13, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: partnerTheme.colors.line },
-  rank: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: partnerTheme.colors.brandSoft },
-  rankText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.meta },
-  contributionBody: { flex: 1 },
-  contributionName: { color: partnerTheme.colors.ink, ...partnerTheme.typography.bodyStrong },
-  contributionMeta: { marginTop: 3, color: partnerTheme.colors.inkMuted, ...partnerTheme.typography.meta },
-  contributionValue: { color: partnerTheme.colors.ink, ...partnerTheme.typography.caption },
-  pressed: { opacity: 0.8 },
+  barValue: { width: '100%', height: 12, color: '#3156B8', textAlign: 'center', fontSize: 6, lineHeight: 8, fontWeight: '700' },
+  barTrack: { height: 74, width: '72%', justifyContent: 'flex-end', overflow: 'hidden', borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: '#EEF3FA' },
+  bar: { width: '100%', borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: '#2298E8' },
+  barMonth: { marginTop: 4, color: '#53647C', fontSize: 6.6, lineHeight: 9, fontWeight: '600' },
+  productGrid: { flexDirection: 'row', gap: 4, borderRadius: 9, padding: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
+  productTile: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 7, paddingVertical: 6, backgroundColor: '#F7FAFF' },
+  productIconWrap: { width: 27, height: 27, alignItems: 'center', justifyContent: 'center' },
+  productIcon: { width: 26, height: 26 },
+  productLabel: { width: '94%', marginTop: 2, color: '#14367B', textAlign: 'center', fontSize: 6.2, lineHeight: 8, fontWeight: '700' },
+  productShare: { marginTop: 1, color: '#3156B8', fontSize: 6.1, lineHeight: 8, fontWeight: '800' },
+  emptyCompact: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  emptyCompactText: { color: '#8795A9', fontSize: 8, lineHeight: 11 },
+  insurerCard: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 9, padding: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
+  insurerEmptyIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#F1F6FF' },
+  insurerEmptyBody: { flex: 1 },
+  insurerEmptyTitle: { color: '#14367B', fontSize: 8.5, lineHeight: 11, fontWeight: '800' },
+  insurerEmptyText: { marginTop: 2, color: '#8795A9', fontSize: 6.6, lineHeight: 9 },
+  quickGrid: { flexDirection: 'row', gap: 4, borderRadius: 9, padding: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
+  quickTile: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 7, paddingVertical: 6, backgroundColor: '#F7FAFF' },
+  quickIconWrap: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  quickIcon: { width: 27, height: 27 },
+  quickLabel: { marginTop: 2, color: '#14367B', textAlign: 'center', fontSize: 6.6, lineHeight: 9, fontWeight: '800' },
+  quickMeta: { marginTop: 1, color: '#718198', textAlign: 'center', fontSize: 5.8, lineHeight: 8 },
+  networkGrid: { flexDirection: 'row', gap: 5, marginBottom: 8 },
+  networkTile: { flex: 1, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 9, paddingHorizontal: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
+  networkIcon: { width: 30, height: 30 },
+  networkBody: { flex: 1, minWidth: 0 },
+  networkValue: { color: '#14367B', fontSize: 13, lineHeight: 15, fontWeight: '800' },
+  networkLabel: { marginTop: 1, color: '#53647C', fontSize: 6.7, lineHeight: 9, fontWeight: '700' },
+  networkMeta: { marginTop: 1, color: '#8795A9', fontSize: 5.6, lineHeight: 7 },
+  pressed: { opacity: 0.75 },
 });
