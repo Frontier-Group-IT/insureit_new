@@ -242,6 +242,19 @@ for (const file of visualSurface) {
   }
 }
 
+const workflowAccess = read("lib/claim-workflow-access.ts");
+assert(workflowAccess.includes("partner_app_insert_claim_stage_detail"), "Partner workflow mutations must use the scoped stage-detail RPC");
+assert(workflowAccess.includes("if (access.isPartner)"), "Partner workflow stage writes must stay isolated from employee writes");
+
+const partnerWorkflowMigrationPath = path.resolve(root, "../../supabase/migrations/20260919112000_partner_claim_workflow_actor.sql");
+assert(fs.existsSync(partnerWorkflowMigrationPath), "Partner claim workflow actor migration is missing");
+if (fs.existsSync(partnerWorkflowMigrationPath)) {
+  const migration = fs.readFileSync(partnerWorkflowMigrationPath, "utf8");
+  assert(migration.includes("partner_app_insert_claim_stage_detail"), "Partner claim workflow insert RPC is missing");
+  assert(migration.includes("partner_app_claim_in_scope"), "Partner claim workflow writes must remain claim-scope checked");
+  assert(migration.includes("new.created_by is distinct from auth.uid()"), "Claim workflow actor identity check must remain enforced");
+}
+
 if (!process.exitCode) {
   console.log("Partner web core regression passed.");
 }

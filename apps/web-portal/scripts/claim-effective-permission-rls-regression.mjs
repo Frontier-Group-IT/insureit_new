@@ -69,7 +69,9 @@ assert.match(workflowAccess, /hasEffectiveCapability\(profile, "manage_claims", 
 assert.match(workflowAccess, /canAccessCustomer\(profile\.id, profile\.role, claim\.customer_id, "manage_claims"\)/);
 assert.match(workflowAccess, /profile\.role === "intermediary"/);
 assert.match(workflowAccess, /rpc\("partner_app_claim_detail", \{ p_claim_id: claimId \}\)/);
-assert.match(stageActions, /from\("claim_stage_details"\)\.insert/);
+assert.match(stageActions, /insertAuthorizedClaimStageDetail\(access/);
+assert.match(workflowAccess, /from\("claim_stage_details"\)\.insert/);
+assert.match(workflowAccess, /rpc\("partner_app_insert_claim_stage_detail"/);
 assert.match(stageActions, /from\("claim_status_history"\)\.insert/);
 assert.match(verificationActions, /hasEffectiveCapability\(profile, "manage_claims", "edit"\)/);
 assert.match(verificationActions, /from\("claim_documents"\)\.update/);
