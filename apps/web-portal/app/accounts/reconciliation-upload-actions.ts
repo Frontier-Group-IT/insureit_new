@@ -159,16 +159,30 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     return emptyPreview("Business MIS hidden policy IDs are invalid or duplicated. Download a fresh Export.");
   }
 
-  const liveRecords = await loadBusinessMisRecordsByPolicyIds(profile, policyIds);
-  const liveByPolicy = new Map(liveRecords.map((record) => [record.policyId, record]));
-  if (liveRecords.length !== policyIds.length) {
-    return emptyPreview("One or more Business MIS rows are no longer available in your Accounts scope. Download a fresh Export.");
+  const candidateRows = dataRows
+    .map((row, index) => ({ row, rowNumber: index + 3 }))
+    .filter(({ row }) => hasEditableInput(row));
+
+  if (!candidateRows.length) {
+    return {
+      ...emptyPreview("Template validated successfully. No new Pay-In or Pay-Out changes were detected.", "success"),
+      skippedRows: dataRows.length,
+      validatedWorkbookRows: dataRows.length,
+    };
   }
 
+  const candidatePolicyIds = [...new Set(candidateRows.map(({ row }) => text(row[POLICY_ID_INDEX])))];
+  const liveRecords = await loadBusinessMisRecordsByPolicyIds(profile, candidatePolicyIds);
+  const liveByPolicy = new Map(liveRecords.map((record) => [record.policyId, record]));
+  if (liveRecords.length !== candidatePolicyIds.length) {
+    return emptyPreview("One or more edited Business MIS rows are no longer available in your Accounts scope. Download a fresh Export.");
+  }
+
+  const candidatePayoutIds = [...new Set(candidateRows.map(({ row }) => text(row[PAYOUT_ID_INDEX])).filter(validUuid))];
   const db = createSupabaseAdminClient();
   const [policyResults, payoutResults] = await Promise.all([
-    Promise.all(chunk(policyIds, 120).map((ids) => db.from("policies").select("id,insurance_company_id").in("id", ids))),
-    Promise.all(chunk(dataRows.map((row) => text(row[PAYOUT_ID_INDEX])).filter(validUuid), 120).map((ids) => db.from("policy_intermediary_payouts").select("id,commercial_status,status").in("id", ids))),
+    Promise.all(chunk(candidatePolicyIds, 120).map((ids) => db.from("policies").select("id,insurance_company_id").in("id", ids))),
+    Promise.all(chunk(candidatePayoutIds, 120).map((ids) => db.from("policy_intermediary_payouts").select("id,commercial_status,status").in("id", ids))),
   ]);
   const firstLiveError = [...policyResults, ...payoutResults].find((result) => result.error)?.error;
   if (firstLiveError) throw new Error(firstLiveError.message || "Unable to validate live Accounts data.");
@@ -187,9 +201,8 @@ export async function previewAccountsReconciliationUpload(formData: FormData): P
     hasNewPayout: boolean;
   }> = [];
 
-  for (let index = 0; index < dataRows.length; index++) {
-    const row = dataRows[index];
-    const rowNumber = index + 3;
+  for (const candidate of candidateRows) {
+    const { row, rowNumber } = candidate;
     const policyId = text(row[POLICY_ID_INDEX]);
     const payoutId = text(row[PAYOUT_ID_INDEX]);
     const live = liveByPolicy.get(policyId)!;
@@ -451,6 +464,13 @@ function normalizeTemplateMetadata(value: Partial<Record<keyof ReconciliationTem
     || !metadata.systemHash
   ) return null;
   return metadata;
+}
+
+function hasEditableInput(row: unknown[]) {
+  for (const index of BUSINESS_MIS_EDITABLE_COLUMNS) {
+    if (nonBlank(row[index])) return true;
+  }
+  return false;
 }
 
 function uploadedStructureHash(rows: unknown[][]) {
