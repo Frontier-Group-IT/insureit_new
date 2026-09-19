@@ -8,9 +8,21 @@ const EXTERNAL_MAPPER_VERSION = "external-renewal-2026-09-18-v1";
 
 export type ExternalRenewalRcDetails = {
   registrationNumber: string;
+  registrationDate: string | null;
   manufacturer: string | null;
   model: string | null;
+  manufacturingYear: string | null;
+  vehicleClass: string | null;
+  fuelType: string | null;
+  engineCapacityCc: string | null;
+  seatingCapacity: string | null;
+  gvwKg: string | null;
   chassisNumber: string | null;
+  fitnessExpiryDate: string | null;
+  pucExpiryDate: string | null;
+  roadTaxExpiryDate: string | null;
+  nationalPermitExpiryDate: string | null;
+  localPermitExpiryDate: string | null;
   insuranceCompany: string | null;
   policyNumber: string | null;
   policyExpiryDate: string | null;
@@ -20,6 +32,7 @@ type OpportunityRow = {
   id: string;
   registration_no: string | null;
   is_active: boolean;
+  ai_profile_overrides: Record<string, unknown> | null;
 };
 
 type CacheRow = {
@@ -99,9 +112,21 @@ function fromNormalized(raw: unknown, registrationNumber: string): ExternalRenew
   const value = raw && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
   return {
     registrationNumber,
+    registrationDate: toIsoDate(value.registrationDate),
     manufacturer: cleanText(value.manufacturer),
     model: cleanText(value.model),
+    manufacturingYear: cleanText(value.manufacturingYear, 4),
+    vehicleClass: cleanText(value.vehicleClass, 40),
+    fuelType: cleanText(value.fuelType, 40),
+    engineCapacityCc: cleanText(value.engineCapacityCc, 40),
+    seatingCapacity: cleanText(value.seatingCapacity, 20),
+    gvwKg: cleanText(value.gvwKg, 40),
     chassisNumber: cleanCode(value.chassisNumber),
+    fitnessExpiryDate: toIsoDate(value.fitnessExpiryDate),
+    pucExpiryDate: toIsoDate(value.pucExpiryDate),
+    roadTaxExpiryDate: toIsoDate(value.roadTaxExpiryDate),
+    nationalPermitExpiryDate: toIsoDate(value.nationalPermitExpiryDate),
+    localPermitExpiryDate: toIsoDate(value.localPermitExpiryDate),
     insuranceCompany: cleanText(value.insuranceCompany),
     policyNumber: cleanPolicyNumber(value.policyNumber),
     policyExpiryDate: toIsoDate(value.policyExpiryDate),
@@ -112,9 +137,21 @@ function fromRaw(raw: unknown, registrationNumber: string): ExternalRenewalRcDet
   const values = flatten(raw);
   return {
     registrationNumber,
+    registrationDate: toIsoDate(pick(values, ["registrationdate","regdate","dateofregistration"])),
     manufacturer: cleanText(pick(values, ["makermanufacturer","manufacturer","maker","vehiclemanufacturer","vehiclemaker"])),
     model: cleanText(pick(values, ["modelmakersclass","model","modelname","vehiclemodel","variant"])),
+    manufacturingYear: cleanText(pick(values, ["manufacturingyear","manufactureyear","mfgyear","yearofmanufacture"]), 4),
+    vehicleClass: cleanText(pick(values, ["vehicleclass","vehicleclassdesc","classofvehicle","vehiclecategory","vehicletype","bodytype"]), 40),
+    fuelType: cleanText(pick(values, ["fueltype","fuel","fueldescription"]), 40),
+    engineCapacityCc: cleanText(pick(values, ["cubiccapacity","cubiccapacitycc","enginecapacity","enginecapacitycc","enginecc","cc"]), 40),
+    seatingCapacity: cleanText(pick(values, ["seatingcapacity","seatcapacity","numberofseats","totalseats"]), 20),
+    gvwKg: cleanText(pick(values, ["gvw","gvwkg","grossvehicleweight","grossweight"]), 40),
     chassisNumber: cleanCode(pick(values, ["chassisnumber","chassisno","chassis"])),
+    fitnessExpiryDate: toIsoDate(pick(values, ["fitnessexpirydate","fitnessupto","fitnessvalidupto"])),
+    pucExpiryDate: toIsoDate(pick(values, ["pucexpirydate","puccupto","pucupto","pucvalidupto","pollutionupto"])),
+    roadTaxExpiryDate: toIsoDate(pick(values, ["roadtaxexpirydate","taxupto","taxvalidupto","roadtaxupto"])),
+    nationalPermitExpiryDate: toIsoDate(pick(values, ["nationalpermitexpirydate","nationalpermitupto","nationalpermitvalidupto"])),
+    localPermitExpiryDate: toIsoDate(pick(values, ["localpermitexpirydate","localpermitupto","localpermitvalidupto","permitupto","permitvalidupto"])),
     insuranceCompany: cleanText(pick(values, ["insurancecompany","insurer","insurername"])),
     policyNumber: cleanPolicyNumber(pick(values, ["policynumber","policyno","insurancepolicynumber"])),
     policyExpiryDate: toIsoDate(pick(values, ["insurancetodateinsuranceupto","insurancetodate","insuranceupto","policyexpirydate","insuranceexpirydate"])),
@@ -122,7 +159,10 @@ function fromRaw(raw: unknown, registrationNumber: string): ExternalRenewalRcDet
 }
 
 function usefulFieldCount(details: ExternalRenewalRcDetails) {
-  return [details.manufacturer, details.model, details.chassisNumber, details.insuranceCompany, details.policyNumber, details.policyExpiryDate].filter(Boolean).length;
+  return [
+    details.manufacturer, details.model, details.chassisNumber, details.insuranceCompany, details.policyNumber,
+    details.policyExpiryDate, details.registrationDate, details.manufacturingYear, details.vehicleClass, details.fuelType,
+  ].filter(Boolean).length;
 }
 
 async function persistOpportunityResult(
@@ -151,13 +191,17 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
   const admin = createSupabaseAdminClient();
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,registration_no,is_active")
+    .select("id,registration_no,is_active,ai_profile_overrides")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
   if (opportunityError || !opportunity || !opportunity.is_active) throw new Error("External renewal opportunity is unavailable.");
 
-  const registrationNumber = normalizeVehicleRegistrationNumber(opportunity.registration_no ?? "");
+  const overrideRegistration =
+    opportunity.ai_profile_overrides && typeof opportunity.ai_profile_overrides.registrationNumber === "string"
+      ? opportunity.ai_profile_overrides.registrationNumber
+      : null;
+  const registrationNumber = normalizeVehicleRegistrationNumber(overrideRegistration ?? opportunity.registration_no ?? "");
   if (!registrationNumber) {
     await persistOpportunityResult(opportunity.id, "failed", null, null, "missing_registration");
     throw new Error("RC number is required before fetching vehicle details.");

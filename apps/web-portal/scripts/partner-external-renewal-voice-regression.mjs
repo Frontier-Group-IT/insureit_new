@@ -9,6 +9,7 @@ const migration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260
 const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260913221500_external_renewal_voice_result_projection.sql"), "utf8");
 const operationalSettingsMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql"), "utf8");
 const rcEnrichmentMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918235000_external_renewal_rc_enrichment.sql"), "utf8");
+const editableProfileMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919110000_voice_prospect_editable_profile.sql"), "utf8");
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
@@ -23,9 +24,11 @@ const voiceAdapter = fs.readFileSync(path.join(root, "lib/partner-external-renew
 const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-renewals/[id]/voice-call/route.ts"), "utf8");
 const itDispatchModel = fs.readFileSync(path.join(root, "lib/sarvam-it-dispatch.ts"), "utf8");
 const rcEnrichmentModel = fs.readFileSync(path.join(root, "lib/external-renewal-authbridge.ts"), "utf8");
+const voiceProspectProfile = fs.readFileSync(path.join(root, "lib/voice-prospect-profile.ts"), "utf8");
 const itDispatchRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/dispatch/route.ts"), "utf8");
 const callingWindowRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/calling-window/route.ts"), "utf8");
 const rcEnrichmentRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/rc-enrichment/route.ts"), "utf8");
+const prospectProfileRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/prospect-profile/route.ts"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
 const campaignStatusRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-campaign-status/route.ts"), "utf8");
@@ -34,6 +37,9 @@ const webhook = fs.readFileSync(path.join(root, "app/api/integrations/sarvam/voi
 const detailPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/[id]/page.tsx"), "utf8");
 const worklistPage = fs.readFileSync(path.join(root, "app/partner/renewals/external/page.tsx"), "utf8");
 const readinessPage = fs.readFileSync(path.join(root, "app/system/voice-integration/page.tsx"), "utf8");
+const prospectDetailPage = fs.readFileSync(path.join(root, "app/system/voice-integration/prospects/[id]/page.tsx"), "utf8");
+const pendingButton = fs.readFileSync(path.join(root, "components/voice/pending-button.tsx"), "utf8");
+const clickableRow = fs.readFileSync(path.join(root, "components/voice/clickable-table-row.tsx"), "utf8");
 const diagnosticsPage = fs.readFileSync(path.join(root, "app/system/voice-integration/diagnostics/page.tsx"), "utf8");
 const localAgents = fs.readFileSync(path.join(root, "app/partner/renewals/external/AGENTS.md"), "utf8");
 const adminAgents = fs.readFileSync(path.join(root, "app/system/voice-integration/AGENTS.md"), "utf8");
@@ -198,6 +204,30 @@ assert(readinessPage.includes('action="/api/system/voice-integration/rc-enrichme
 assert(readinessPage.includes("Fetch details"), "Voice Integration queue labels the RC enrichment action clearly");
 assert(deployWorkflow.includes("20260918235000_external_renewal_rc_enrichment.sql"), "production deploy gate recognizes External Renewal RC enrichment schema");
 assert(deployWorkflow.includes("apply-external-renewal-rc-enrichment.yml"), "production deploy waits for External Renewal RC enrichment schema workflow");
+
+assert(editableProfileMigration.includes("ai_profile_overrides jsonb"), "editable profile migration preserves IT corrections separately from source evidence");
+assert(editableProfileMigration.includes("cohort_context jsonb"), "voice attempts capture the cohort context used for each call");
+assert(voiceProspectProfile.includes("baselineExternalRenewalAiProfile"), "editable AI profile keeps a provider/source baseline");
+assert(voiceProspectProfile.includes("compactAiProfileOverrides"), "only differences from source/provider evidence are stored as overrides");
+assert(voiceProspectProfile.includes('from("external_renewal_voice_attempt_events")'), "prospect detail loads normalized provider attempt history");
+assert(prospectProfileRoute.includes('viewer.role !== "it_super_user"'), "prospect profile edits require exact IT Super User role");
+assert(prospectProfileRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "prospect profile edits require critical system approval access");
+assert(!prospectProfileRoute.includes("streamExternalRenewalToSarvam"), "editing prospect details cannot place a call");
+assert(itDispatchModel.includes("ai_profile_overrides"), "IT dispatch uses approved operator corrections");
+assert(itDispatchModel.includes("cohort_context: cohortContext"), "IT dispatch snapshots effective values before provider submission");
+assert(prospectDetailPage.includes("AI calling profile"), "prospect detail exposes the editable calling profile");
+assert(prospectDetailPage.includes("AuthBridge normalized details"), "prospect detail exposes approved normalized AuthBridge fields");
+assert(prospectDetailPage.includes("Sarvam call history"), "prospect detail exposes normalized call outcomes");
+assert(prospectDetailPage.includes("Raw provider payloads"), "prospect detail states the raw-provider privacy boundary");
+assert(pendingButton.includes("useFormStatus"), "voice action buttons react to server-form pending state");
+assert(pendingButton.includes("aria-busy"), "voice action buttons expose processing state accessibly");
+assert(clickableRow.includes("router.push"), "voice queue and recent-attempt rows navigate to prospect details");
+assert(readinessPage.includes("ClickableTableRow"), "voice tables use clickable rows");
+assert(readinessPage.includes('pendingLabel="Creating cohort…"'), "Call button shows cohort creation progress");
+assert(readinessPage.includes('pendingLabel="Retrying…"'), "webhook recovery button shows retry progress");
+assert(deployWorkflow.includes("20260919110000_voice_prospect_editable_profile.sql"), "production deploy gate recognizes editable voice prospect schema");
+assert(deployWorkflow.includes("apply-voice-prospect-editable-profile.yml"), "production deploy waits for editable voice prospect schema workflow");
+assert(!/from\(["'](customers|vehicles|policies)["']\)/i.test(voiceProspectProfile + prospectProfileRoute), "voice prospect editing never writes verified Customer/Vehicle/Policy masters");
 
 assert(connectionTestRoute.includes('viewer.role !== "it_super_user"'), "Sarvam connection test requires exact IT Super User role");
 assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam connection test requires critical system approval access");

@@ -13,7 +13,11 @@ export async function POST(request: NextRequest) {
 
   const form = await request.formData();
   const opportunityId = String(form.get("opportunity_id") ?? "").trim();
-  const target = new URL("/system/voice-integration", request.url);
+  const returnTo = String(form.get("return_to") ?? "").trim();
+  const target = new URL(
+    returnTo.startsWith("/system/voice-integration") ? returnTo : "/system/voice-integration",
+    request.url,
+  );
 
   if (!opportunityId) {
     target.searchParams.set("rc_enrichment", "failed");
