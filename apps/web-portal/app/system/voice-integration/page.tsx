@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/shell";
+import { ClickableTableRow } from "@/components/voice/clickable-table-row";
+import { PendingButton } from "@/components/voice/pending-button";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getSarvamRenewalCampaignState } from "@/lib/sarvam-campaign-lifecycle";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -38,6 +40,7 @@ const ACTIVE_ATTEMPT_STATUSES = new Set(["created", "submitted", "queued", "call
 
 type AttemptRow = {
   id: string;
+  opportunity_id: string;
   provider_attempt_id: string | null;
   submission_status: string;
   connectivity_status: string | null;
@@ -134,7 +137,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const [{ data: attempts, error: attemptsError }, { data: attemptEvents, error: eventsError }] = await Promise.all([
     admin
       .from("external_renewal_voice_attempts")
-      .select("id,provider_attempt_id,submission_status,connectivity_status,call_disposition,created_at,updated_at")
+      .select("id,opportunity_id,provider_attempt_id,submission_status,connectivity_status,call_disposition,created_at,updated_at")
       .order("created_at", { ascending: false })
       .limit(10)
       .returns<AttemptRow[]>(),
@@ -321,7 +324,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                   {queuePreview.rows.slice(0, 12).map((row) => {
                     const callable = row.reason === "eligible" && dispatchReady;
                     return (
-                      <tr key={row.opportunityId}>
+                      <ClickableTableRow key={row.opportunityId} href={`/system/voice-integration/prospects/${row.opportunityId}`}>
                         <td className="px-2.5 py-2 font-mono text-[8px] text-[#536984]">{row.opportunityId.slice(0, 8)}</td>
                         <td className="px-2.5 py-2 font-semibold text-[#334B6B]">{row.policyEndDate ?? "—"}</td>
                         <td className="px-2.5 py-2 text-[#61758F]">{labelize(row.opportunityStatus)}</td>
@@ -340,32 +343,32 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                             {row.canFetchDetails ? (
                               <form action="/api/system/voice-integration/rc-enrichment" method="post">
                                 <input type="hidden" name="opportunity_id" value={row.opportunityId} />
-                                <button
-                                  type="submit"
-                                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[#D6E0EC] bg-white px-2.5 text-[8px] font-bold text-[#3156B8] hover:bg-[#F8FAFC]"
+                                <PendingButton
+                                  pendingLabel={row.rcEnrichmentStatus === "ready" ? "Refreshing…" : "Fetching…"}
+                                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[#D6E0EC] bg-white px-2.5 text-[8px] font-bold text-[#3156B8] hover:bg-[#F8FAFC] disabled:cursor-wait disabled:opacity-60"
                                   title="Fetch vehicle and insurer context from AuthBridge"
                                 >
-                                  <Database className="h-3 w-3" /> Fetch details
-                                </button>
+                                  <Database className="h-3 w-3" /> {row.rcEnrichmentStatus === "ready" ? "Refresh details" : "Fetch details"}
+                                </PendingButton>
                               </form>
                             ) : null}
                             {row.reason === "eligible" ? (
                               <form action="/api/system/voice-integration/dispatch" method="post">
                                 <input type="hidden" name="opportunity_id" value={row.opportunityId} />
-                                <button
-                                  type="submit"
+                                <PendingButton
+                                  pendingLabel="Creating cohort…"
                                   disabled={!callable}
                                   className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-[#102A56] px-2.5 text-[8px] font-bold text-white disabled:cursor-not-allowed disabled:bg-[#D9E1EC]"
                                   title={callable ? "Queue AI call" : "Calling controls are not currently ready"}
                                 >
                                   <PhoneCall className="h-3 w-3" /> Call
-                                </button>
+                                </PendingButton>
                               </form>
                             ) : null}
                             {!row.canFetchDetails && row.reason !== "eligible" ? <span className="text-[8px] text-[#A0ADBC]">—</span> : null}
                           </div>
                         </td>
-                      </tr>
+                      </ClickableTableRow>
                     );
                   })}
                   {!queuePreview.rows.length ? (
@@ -420,7 +423,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                 {(attempts ?? []).map((attempt) => {
                   const stale = isStaleActiveAttempt(attempt, Date.now());
                   return (
-                    <tr key={attempt.id}>
+                    <ClickableTableRow key={attempt.id} href={`/system/voice-integration/prospects/${attempt.opportunity_id}#attempt-${attempt.id}`}>
                       <td className="px-2.5 py-2 font-semibold text-[#334B6B]">{labelize(attempt.submission_status)}</td>
                       <td className="px-2.5 py-2 text-[#61758F]">{labelize(attempt.connectivity_status)}</td>
                       <td className="px-2.5 py-2 text-[#61758F]">{labelize(attempt.call_disposition)}</td>
@@ -434,15 +437,15 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                         {attempt.provider_attempt_id && attempt.submission_status === "completed" ? (
                           <form action="/api/system/voice-integration/sarvam-webhook-retry" method="post">
                             <input type="hidden" name="provider_attempt_id" value={attempt.provider_attempt_id} />
-                            <button type="submit" className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#D6E0EC] px-2.5 text-[8px] font-bold text-[#3156B8] hover:bg-[#F8FAFC]">
+                            <PendingButton pendingLabel="Retrying…" className="inline-flex h-7 items-center gap-1 rounded-lg border border-[#D6E0EC] px-2.5 text-[8px] font-bold text-[#3156B8] hover:bg-[#F8FAFC] disabled:cursor-wait disabled:opacity-60">
                               <RotateCcw className="h-3 w-3" /> Retry
-                            </button>
+                            </PendingButton>
                           </form>
                         ) : (
                           <span className="text-[#A0ADBC]">—</span>
                         )}
                       </td>
-                    </tr>
+                    </ClickableTableRow>
                   );
                 })}
                 {!attempts?.length ? <tr><td colSpan={6} className="px-3 py-6 text-center text-[9px] text-[#94A3B8]">No voice attempts yet.</td></tr> : null}
@@ -495,13 +498,13 @@ function SectionTitle({ icon: Icon, title, children }: { icon: typeof ServerCog;
 
 function ControlButton({ icon: Icon, label, disabled = false, primary = false }: { icon: typeof Wifi; label: string; disabled?: boolean; primary?: boolean }) {
   return (
-    <button
-      type="submit"
+    <PendingButton
       disabled={disabled}
+      pendingLabel={`${label}…`}
       className={`flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-[9px] font-bold transition disabled:cursor-not-allowed disabled:opacity-45 ${primary ? "border-[#102A56] bg-[#102A56] text-white" : "border-[#D6E0EC] bg-white text-[#263D5E] hover:bg-[#F8FAFC]"}`}
     >
       <Icon className="h-3.5 w-3.5" /> {label}
-    </button>
+    </PendingButton>
   );
 }
 
@@ -545,7 +548,7 @@ function CallingWindowPolicyTile({
         </div>
         <div className="mt-1.5 flex items-center justify-end gap-1.5">
           <Link href="/system/voice-integration" className="inline-flex h-6 items-center rounded-md px-2 text-[7.5px] font-bold text-[#6B7E98]">Cancel</Link>
-          <button type="submit" className="inline-flex h-6 items-center rounded-md bg-[#102A56] px-2.5 text-[7.5px] font-bold text-white">Save</button>
+          <PendingButton pendingLabel="Saving…" className="inline-flex h-6 items-center gap-1 rounded-md bg-[#102A56] px-2.5 text-[7.5px] font-bold text-white">Save</PendingButton>
         </div>
       </form>
     );
