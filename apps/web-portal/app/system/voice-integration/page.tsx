@@ -24,6 +24,7 @@ import {
 import { AppShell } from "@/components/shell";
 import { ClickableTableRow } from "@/components/voice/clickable-table-row";
 import { PendingButton } from "@/components/voice/pending-button";
+import { VoiceQuickAddCard } from "@/components/voice/voice-quick-add-card";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getSarvamRenewalCampaignState } from "@/lib/sarvam-campaign-lifecycle";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -121,6 +122,8 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const editWindow = queryValue(query.edit_window) === "1";
   const rcEnrichment = queryValue(query.rc_enrichment);
   const rcEnrichmentError = queryValue(query.rc_enrichment_error);
+  const quickAdd = queryValue(query.quick_add);
+  const quickAddError = queryValue(query.quick_add_error);
 
   const readiness = getSarvamRenewalReadiness();
   const [operationalPolicy, campaignLifecycle, queuePreview] = await Promise.all([
@@ -163,7 +166,12 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const latestWebhookEvent = attemptEvents?.[0] ?? null;
 
   const actionNotice =
-    rcEnrichment
+    quickAdd === "failed"
+      ? {
+          ok: false,
+          text: quickAddError || "Could not add this RC to the calling queue.",
+        }
+      : rcEnrichment
       ? {
           ok: rcEnrichment === "ready",
           text:
@@ -308,6 +316,9 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                 <MetricPill label="Held" value={queuePreview.heldCount} />
               </div>
             </div>
+            <div className="mt-2">
+              <VoiceQuickAddCard />
+            </div>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full min-w-[780px] text-left text-[9px]">
                 <thead>
@@ -325,7 +336,14 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                     const callable = row.reason === "eligible" && dispatchReady;
                     return (
                       <ClickableTableRow key={row.opportunityId} href={`/system/voice-integration/prospects/${row.opportunityId}`}>
-                        <td className="px-2.5 py-2 font-mono text-[8px] text-[#536984]">{row.opportunityId.slice(0, 8)}</td>
+                        <td className="px-2.5 py-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[8px] text-[#536984]">{row.opportunityId.slice(0, 8)}</span>
+                            {row.voiceQueueSource === "it_quick_add" ? (
+                              <span className="rounded-full bg-[#EEF3FF] px-1.5 py-0.5 text-[6.5px] font-black uppercase tracking-[.04em] text-[#3156B8]">Quick</span>
+                            ) : null}
+                          </div>
+                        </td>
                         <td className="px-2.5 py-2 font-semibold text-[#334B6B]">{row.policyEndDate ?? "—"}</td>
                         <td className="px-2.5 py-2 text-[#61758F]">{labelize(row.opportunityStatus)}</td>
                         <td className="px-2.5 py-2">
