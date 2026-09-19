@@ -67,7 +67,7 @@ export function refineIciciLombardMotorPolicy(
   }
 
   const vehicleClass = structuredColumn(tables, [/^Vehicle\s+Class$/i])
-    ?? labelValue(pages, /Vehicle\s+Class/i, 1);
+    ?? labelValue(pages, /Vehicle\s+Class/i, 2);
   if (vehicleClass) set(fields, "vehicle_class", cleanVehicle(vehicleClass.value), .995, vehicleClass.page, vehicleClass.evidence);
 
   const make = riskVehicle?.make
