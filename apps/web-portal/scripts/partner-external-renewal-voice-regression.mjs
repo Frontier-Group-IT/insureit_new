@@ -10,6 +10,7 @@ const projection = fs.readFileSync(path.join(repoRoot, "supabase/migrations/2026
 const operationalSettingsMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918233000_sarvam_voice_operational_settings.sql"), "utf8");
 const rcEnrichmentMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918235000_external_renewal_rc_enrichment.sql"), "utf8");
 const editableProfileMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919110000_voice_prospect_editable_profile.sql"), "utf8");
+const quickAddMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919114500_voice_quick_add_queue_source.sql"), "utf8");
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
@@ -25,10 +26,13 @@ const callRoute = fs.readFileSync(path.join(root, "app/api/partner/external-rene
 const itDispatchModel = fs.readFileSync(path.join(root, "lib/sarvam-it-dispatch.ts"), "utf8");
 const rcEnrichmentModel = fs.readFileSync(path.join(root, "lib/external-renewal-authbridge.ts"), "utf8");
 const voiceProspectProfile = fs.readFileSync(path.join(root, "lib/voice-prospect-profile.ts"), "utf8");
+const quickAddModel = fs.readFileSync(path.join(root, "lib/voice-quick-add.ts"), "utf8");
 const itDispatchRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/dispatch/route.ts"), "utf8");
 const callingWindowRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/calling-window/route.ts"), "utf8");
 const rcEnrichmentRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/rc-enrichment/route.ts"), "utf8");
 const prospectProfileRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/prospect-profile/route.ts"), "utf8");
+const quickAddRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/quick-add/route.ts"), "utf8");
+const quickAddCard = fs.readFileSync(path.join(root, "components/voice/voice-quick-add-card.tsx"), "utf8");
 const connectionTestRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-connection-test/route.ts"), "utf8");
 const webhookRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-webhook-retry/route.ts"), "utf8");
 const campaignStatusRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/sarvam-campaign-status/route.ts"), "utf8");
@@ -228,6 +232,25 @@ assert(readinessPage.includes('pendingLabel="Retrying…"'), "webhook recovery b
 assert(deployWorkflow.includes("20260919110000_voice_prospect_editable_profile.sql"), "production deploy gate recognizes editable voice prospect schema");
 assert(deployWorkflow.includes("apply-voice-prospect-editable-profile.yml"), "production deploy waits for editable voice prospect schema workflow");
 assert(!/from\(["'](customers|vehicles|policies)["']\)/i.test(voiceProspectProfile + prospectProfileRoute), "voice prospect editing never writes verified Customer/Vehicle/Policy masters");
+
+assert(quickAddMigration.includes("voice_queue_source"), "Quick Add migration records explicit IT queue source");
+assert(quickAddMigration.includes("it_quick_add"), "Quick Add migration defines the IT-only queue source");
+assert(quickAddModel.includes('import "server-only"'), "Quick Add service stays server-only");
+assert(quickAddModel.includes("normalizeVehicleRegistrationNumber"), "Quick Add normalizes RC before lookup");
+assert(quickAddModel.includes("enrichExternalRenewalOpportunity"), "Quick Add automatically runs AuthBridge enrichment");
+assert(quickAddModel.includes('source_name: QUICK_ADD_SOURCE_NAME'), "Quick Add uses a dedicated isolated source batch");
+assert(quickAddModel.includes('status: "validated"'), "Quick Add source batch remains outside published Partner imports");
+assert(quickAddRoute.includes('viewer.role !== "it_super_user"'), "Quick Add route requires exact IT Super User role");
+assert(quickAddRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Quick Add route requires critical system approval access");
+assert(!quickAddRoute.includes("streamExternalRenewalToSarvam"), "Quick Add cannot place a phone call");
+assert(quickAddCard.includes("Quick add to calling queue"), "Voice page exposes a clean Quick Add entry");
+assert(quickAddCard.includes("Add & fetch"), "Quick Add combines creation and RC enrichment in one action");
+assert(sarvamProductionQueue.includes('voice_queue_source === "it_quick_add"'), "Quick Add rows are included in the IT calling queue outside the 30-day import window");
+assert(itDispatchModel.includes('opportunity.voice_queue_source === "it_quick_add"'), "IT dispatch recognizes the isolated Quick Add batch");
+assert(itDispatchModel.includes('opportunity.voice_queue_source === "it_quick_add" ? null : opportunity.policy_end_date'), "Quick Add cannot leak the synthetic placeholder expiry into Sarvam context");
+assert(deployWorkflow.includes("20260919114500_voice_quick_add_queue_source.sql"), "production deploy gate recognizes Quick Add schema");
+assert(deployWorkflow.includes("apply-voice-quick-add-queue-source.yml"), "production deploy waits for Quick Add schema workflow");
+assert(!/from\(["'](customers|vehicles|policies)["']\)/i.test(quickAddModel + quickAddRoute), "Quick Add never writes verified Customer/Vehicle/Policy masters");
 
 assert(connectionTestRoute.includes('viewer.role !== "it_super_user"'), "Sarvam connection test requires exact IT Super User role");
 assert(connectionTestRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "Sarvam connection test requires critical system approval access");
