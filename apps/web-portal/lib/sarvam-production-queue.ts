@@ -44,6 +44,7 @@ type OpportunityRow = {
   next_follow_up_at: string | null;
   rc_enrichment_status: string | null;
   rc_enrichment_source: string | null;
+  ai_profile_overrides: Record<string, unknown> | null;
 };
 
 type AttemptRow = {
@@ -63,7 +64,7 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
 
   const { data: opportunities, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,mobile,registration_no,policy_end_date,opportunity_status,next_follow_up_at,rc_enrichment_status,rc_enrichment_source")
+    .select("id,mobile,registration_no,policy_end_date,opportunity_status,next_follow_up_at,rc_enrichment_status,rc_enrichment_source,ai_profile_overrides")
     .eq("is_active", true)
     .gte("policy_end_date", start)
     .lte("policy_end_date", dateOnly(end))
@@ -95,9 +96,13 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
 
   const rows = (opportunities ?? []).map<SarvamQueuePreviewRow>((row) => {
     const enrichmentStatus = row.rc_enrichment_status ?? "not_fetched";
-    const hasRegistration = Boolean(row.registration_no?.trim());
+    const overrides = row.ai_profile_overrides && typeof row.ai_profile_overrides === "object" ? row.ai_profile_overrides : {};
+    const effectiveMobile = typeof overrides.mobile === "string" ? overrides.mobile : row.mobile;
+    const effectiveRegistration = typeof overrides.registrationNumber === "string" ? overrides.registrationNumber : row.registration_no;
+    const effectivePolicyExpiry = typeof overrides.policyExpiryDate === "string" ? overrides.policyExpiryDate : row.policy_end_date;
+    const hasRegistration = Boolean(effectiveRegistration?.trim());
     const otherwiseFetchable =
-      Boolean(row.mobile?.trim()) &&
+      Boolean(effectiveMobile?.trim()) &&
       !TERMINAL_STATUSES.has(row.opportunity_status) &&
       !activeAttemptIds.has(row.id) &&
       !(row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() > now.getTime()) &&
@@ -105,7 +110,7 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
 
     let reason: SarvamQueueReason = "eligible";
 
-    if (!row.mobile?.trim()) reason = "missing_mobile";
+    if (!effectiveMobile?.trim()) reason = "missing_mobile";
     else if (TERMINAL_STATUSES.has(row.opportunity_status)) reason = "terminal";
     else if (activeAttemptIds.has(row.id)) reason = "active_attempt";
     else if (row.next_follow_up_at && new Date(row.next_follow_up_at).getTime() > now.getTime()) reason = "future_follow_up";
@@ -117,11 +122,11 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
     return {
       opportunityId: row.id,
       opportunityStatus: row.opportunity_status,
-      policyEndDate: row.policy_end_date,
+      policyEndDate: effectivePolicyExpiry,
       nextFollowUpAt: row.next_follow_up_at,
       rcEnrichmentStatus: enrichmentStatus,
       rcEnrichmentSource: row.rc_enrichment_source,
-      canFetchDetails: hasRegistration && otherwiseFetchable && enrichmentStatus !== "ready",
+      canFetchDetails: hasRegistration && otherwiseFetchable,
       reason,
     };
   });
