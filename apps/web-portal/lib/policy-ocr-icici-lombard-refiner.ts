@@ -65,6 +65,7 @@ export function refineIciciLombardMotorPolicy(
 
   const riskVehicle = riskAssumptionVehicleDetails(pages[0] ?? "");
   const localVehicle = registrationNeighborhoodDetails(pages[0] ?? "");
+  const flattenedPageOneVehicle = pageOneFlattenedIdentifiers(pages[0] ?? "");
 
   const registration = riskVehicle?.registration
     ?? localVehicle?.registration
@@ -121,10 +122,12 @@ export function refineIciciLombardMotorPolicy(
   const structuredEngine = structuredColumn(tables, [/^Engine\s+No\.?$/i]);
   const chassis = riskVehicle?.chassis
     ?? localVehicle?.chassis
+    ?? flattenedPageOneVehicle?.chassis
     ?? scheduleVehicle?.chassis
     ?? (structuredChassis && validVehicleId(structuredChassis.value) ? structuredChassis : null);
   const engine = riskVehicle?.engine
     ?? localVehicle?.engine
+    ?? flattenedPageOneVehicle?.engine
     ?? scheduleVehicle?.engine
     ?? (structuredEngine && validVehicleId(structuredEngine.value) ? structuredEngine : null);
   if (chassis && validVehicleId(chassis.value)) {
@@ -202,7 +205,7 @@ export function refineIciciLombardMotorPolicy(
 
   return {
     parserId: "icici_lombard_motor_v1",
-    parserVersion: "icici_lombard_motor_v1.8.0+gcv-live-replay-v9",
+    parserVersion: "icici_lombard_motor_v1.9.0+gcv-live-replay-v10",
     fields: [...fields.values()],
     warnings,
   };
@@ -468,6 +471,65 @@ function existingValidRegistration(fields: Fields): VehicleEvidence | null {
 }
 
 
+
+
+function pageOneFlattenedIdentifiers(pageOne: string): {
+  engine: VehicleEvidence | null;
+  chassis: VehicleEvidence | null;
+} | null {
+  if (!pageOne.trim()) return null;
+
+  const upper = pageOne.toUpperCase();
+  const previousIndex = upper.indexOf("PREVIOUS POLICY DETAILS");
+  const bounded = previousIndex >= 0 ? pageOne.slice(0, previousIndex) : pageOne.slice(0, 8000);
+
+  const registrationMatch = bounded.match(/\b[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{4}\b/i);
+  if (!registrationMatch || registrationMatch.index == null) return null;
+
+  const tail = bounded.slice(registrationMatch.index + registrationMatch[0].length, registrationMatch.index + registrationMatch[0].length + 700);
+  const rawTokens = tail.match(/[A-Z0-9]+/gi) ?? [];
+  const tokens = rawTokens
+    .map((raw) => ({ raw, compact: compactId(raw) }))
+    .filter((entry) =>
+      entry.compact
+      && !/^(?:SEP|OCT|NOV|DEC|JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|CONSTRUCTION|GOODS|TRANSPORTATION|CURRENT|YEAR|NCB|VEHICLE|USAGE|ENGINE|CHASSIS|NO)$/i.test(entry.compact)
+      && !/^\d{1,4}$/.test(entry.compact)
+    );
+
+  // Page-1 Risk Assumption order is registration date -> engine -> chassis -> NCB -> usage.
+  // Prefer complete identifiers first.
+  const complete = tokens.filter((entry) => validVehicleId(entry.compact));
+  if (complete.length >= 2) {
+    const engine = complete[0].compact;
+    const chassis = complete[1].compact;
+    if (chassis.length >= 16) {
+      return {
+        engine: { value: engine, page: 1, evidence: "ICICI flattened page-1 identifier sequence: " + complete[0].raw },
+        chassis: { value: chassis, page: 1, evidence: "ICICI flattened page-1 identifier sequence: " + complete[1].raw },
+      };
+    }
+  }
+
+  // If OCR split identifiers, reconstruct an engine followed by a 17-char chassis.
+  for (let split = 1; split < tokens.length; split += 1) {
+    const engine = tokens.slice(0, split).map((entry) => entry.compact).join("");
+    if (!validVehicleId(engine) || engine.length < 10 || engine.length > 16) continue;
+
+    let chassis = "";
+    for (let j = split; j < tokens.length; j += 1) {
+      chassis += tokens[j].compact;
+      if (chassis.length < 17) continue;
+      if (chassis.length > 18) break;
+      if (!validVehicleId(chassis)) continue;
+      return {
+        engine: { value: engine, page: 1, evidence: "ICICI flattened page-1 wrapped engine fragments" },
+        chassis: { value: chassis, page: 1, evidence: "ICICI flattened page-1 wrapped chassis fragments" },
+      };
+    }
+  }
+
+  return null;
+}
 
 function registrationNeighborhoodDetails(pageOne: string): RiskVehicleDetails | null {
   const lines = rawLines(pageOne);
