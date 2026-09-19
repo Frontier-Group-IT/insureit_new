@@ -1,4 +1,4 @@
-begin;
+-- Production schema gate: apply before Partner claims UI deployment.\nbegin;
 
 drop function if exists public.partner_app_list_claims(integer,integer,text,text);
 
