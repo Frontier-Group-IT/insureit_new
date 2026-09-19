@@ -266,35 +266,36 @@ export function DesktopSidebarFrame({ navigation, children }: { navigation: Reac
           .desktop-sidebar-collapsed > aside nav > a > .flex-1,
           .desktop-sidebar-collapsed > aside nav > div > div > button > .flex-1,
           .desktop-sidebar-collapsed > aside > div:last-child > a > .flex-1 {
-            position: absolute !important;
-            left: 56px !important;
-            top: 50% !important;
-            z-index: 90 !important;
-            width: max-content !important;
-            max-width: 220px !important;
-            transform: translateY(-50%) translateX(-4px) !important;
-            border-radius: 9px !important;
-            background: #111111 !important;
-            padding: 7px 10px !important;
-            color: white !important;
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            line-height: 1 !important;
-            white-space: nowrap !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28) !important;
-            transition: opacity 120ms ease-out, transform 120ms ease-out !important;
+            display: none !important;
           }
 
-          .desktop-sidebar-collapsed > aside nav > a:hover > .flex-1,
-          .desktop-sidebar-collapsed > aside nav > a:focus-visible > .flex-1,
-          .desktop-sidebar-collapsed > aside nav > div > div > button:hover > .flex-1,
-          .desktop-sidebar-collapsed > aside nav > div > div > button:focus-visible > .flex-1,
-          .desktop-sidebar-collapsed > aside > div:last-child > a:hover > .flex-1,
-          .desktop-sidebar-collapsed > aside > div:last-child > a:focus-visible > .flex-1 {
-            opacity: 1 !important;
-            transform: translateY(-50%) translateX(0) !important;
+          .desktop-sidebar-collapsed [data-sidebar-label]::after {
+            content: attr(data-sidebar-label);
+            position: absolute;
+            left: 56px;
+            top: 50%;
+            z-index: 120;
+            width: max-content;
+            max-width: 220px;
+            transform: translateY(-50%) translateX(-4px);
+            border-radius: 9px;
+            background: #111111;
+            padding: 7px 10px;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+            transition: opacity 120ms ease-out, transform 120ms ease-out;
+          }
+
+          .desktop-sidebar-collapsed [data-sidebar-label]:hover::after,
+          .desktop-sidebar-collapsed [data-sidebar-label]:focus-visible::after {
+            opacity: 1;
+            transform: translateY(-50%) translateX(0);
           }
 
           .desktop-sidebar-collapsed > aside nav > a > svg:last-child,
