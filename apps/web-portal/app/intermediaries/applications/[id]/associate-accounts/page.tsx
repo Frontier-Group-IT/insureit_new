@@ -317,7 +317,11 @@ function errorMessage(value: string, retryAfter?: string) {
   if (decoded === "associate_email_invalid") return "Enter a valid email address.";
   if (decoded === "associate_phone_invalid") return "Enter a valid phone number.";
   if (decoded === "associate_role_blocked") return "Admin access is blocked by default. Select another role.";
-  if (decoded === "associate_email_in_use") return "This email address is already linked to another Group, Branch, Partner, or Operations account. Please use a different email address.";
+  if (decoded === "associate_email_in_use_branch") return "This email address is already linked to another Branch. Please use a different email address.";
+  if (decoded === "associate_email_in_use_group") return "This email address is already linked to another Group. Please use a different email address.";
+  if (decoded === "associate_email_in_use_partner") return "This email address is already linked to another Partner. Please use a different email address.";
+  if (decoded === "associate_email_in_use_operations") return "This email address is already linked to another Operations account. Please use a different email address.";
+  if (decoded === "associate_email_in_use") return "This email address is already linked to another account. Please use a different email address.";
   if (decoded === "associate_not_authorized") return "You do not have permission to manage this Partner.";
   if (decoded === "associate_partner_not_available") return "Associate accounts are available only for an active Partner.";
   if (decoded === "associate_not_found") return "That associate account is no longer available.";
@@ -336,6 +340,6 @@ function errorMessage(value: string, retryAfter?: string) {
   return "The associate account action could not be completed.";
 }
 function isAssociateEmailInUse(value: string) {
-  return safeDecode(value) === "associate_email_in_use";
+  return safeDecode(value).startsWith("associate_email_in_use");
 }
 function safeDecode(value: string) { try { return decodeURIComponent(value); } catch { return value; } }
