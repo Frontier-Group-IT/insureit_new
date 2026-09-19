@@ -31,10 +31,20 @@ type OpportunityRow = {
   registration_no: string | null;
   chassis_no: string | null;
   current_insurer: string | null;
+  current_policy_no: string | null;
   policy_end_date: string | null;
   rc_enrichment_status: string | null;
   rc_enrichment_details: RcEnrichmentDetails | null;
+  ai_profile_overrides: Record<string, unknown> | null;
 };
+
+function overrideText(overrides: Record<string, unknown>, key: string, fallback: string | null | undefined) {
+  if (!Object.prototype.hasOwnProperty.call(overrides, key)) return fallback?.trim() || null;
+  const value = overrides[key];
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const next = String(value).replace(/\s+/g, " ").trim();
+  return next || null;
+}
 
 export async function startItSuperUserExternalRenewalVoiceAttempt({
   opportunityId,
@@ -47,7 +57,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,policy_end_date,rc_enrichment_status,rc_enrichment_details")
+    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,current_policy_no,policy_end_date,rc_enrichment_status,rc_enrichment_details,ai_profile_overrides")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
@@ -69,12 +79,34 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("This opportunity is already closed or suppressed.");
   }
 
-  if (!opportunity.mobile?.replace(/\D/g, "")) {
-    throw new Error("A valid mobile number is required before starting an AI call.");
-  }
-
   if (opportunity.rc_enrichment_status !== "ready") {
     throw new Error("Fetch RC details before starting the AI call.");
+  }
+
+  const enrichment = opportunity.rc_enrichment_details ?? {};
+  const overrides = opportunity.ai_profile_overrides ?? {};
+
+  const customerName = overrideText(
+    overrides,
+    "customerName",
+    opportunity.customer_name?.trim() || opportunity.contact_name?.trim() || opportunity.account_name?.trim() || null,
+  );
+  const mobile = overrideText(overrides, "mobile", opportunity.mobile);
+  const vehicleMake = overrideText(overrides, "manufacturer", enrichment.manufacturer ?? opportunity.vehicle_make);
+  const vehicleModel = overrideText(overrides, "model", enrichment.model ?? opportunity.vehicle_model);
+  const registrationNumber = overrideText(overrides, "registrationNumber", enrichment.registrationNumber ?? opportunity.registration_no);
+  const chassisNumber = overrideText(overrides, "chassisNumber", enrichment.chassisNumber ?? opportunity.chassis_no);
+  const currentInsurer = overrideText(overrides, "insuranceCompany", enrichment.insuranceCompany ?? opportunity.current_insurer);
+  const policyNumber = overrideText(overrides, "policyNumber", enrichment.policyNumber ?? opportunity.current_policy_no);
+  const policyExpiryDate = overrideText(overrides, "policyExpiryDate", enrichment.policyExpiryDate ?? opportunity.policy_end_date);
+  const previousIdv = overrideText(overrides, "previousIdv", null);
+  const previousPremium = overrideText(overrides, "previousPremium", null);
+  const vehicleMakeModel = [vehicleMake, vehicleModel].filter(Boolean).join(" ").trim() || null;
+  const vehicleNumber = registrationNumber || chassisNumber || null;
+
+  const digits = mobile?.replace(/\D/g, "") ?? "";
+  if (!/^(?:91)?[6-9][0-9]{9}$/.test(digits)) {
+    throw new Error("A valid mobile number is required before starting an AI call.");
   }
 
   const { data: activeAttempt, error: activeAttemptError } = await admin
@@ -92,12 +124,25 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("An AI call is already active for this opportunity.");
   }
 
+  const cohortContext = {
+    customer_name: customerName,
+    mobile,
+    vehicle_make_model: vehicleMakeModel,
+    vehicle_number: vehicleNumber,
+    current_insurer: currentInsurer,
+    policy_number: policyNumber,
+    policy_expiry_date: policyExpiryDate,
+    previous_idv: previousIdv,
+    previous_premium: previousPremium,
+  };
+
   const { data: attempt, error: attemptError } = await admin
     .from("external_renewal_voice_attempts")
     .insert({
       opportunity_id: opportunity.id,
       partner_id: opportunity.partner_id,
       requested_by_auth_user_id: requestedByAuthUserId,
+      cohort_context: cohortContext,
     })
     .select("id")
     .single<{ id: string }>();
@@ -109,34 +154,16 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("Could not create the AI call attempt.");
   }
 
-  const enrichment = opportunity.rc_enrichment_details ?? {};
-  const customerName =
-    opportunity.customer_name?.trim() ||
-    opportunity.contact_name?.trim() ||
-    opportunity.account_name?.trim() ||
-    null;
-  const vehicleMake = enrichment.manufacturer?.trim() || opportunity.vehicle_make?.trim() || null;
-  const vehicleModel = enrichment.model?.trim() || opportunity.vehicle_model?.trim() || null;
-  const vehicleMakeModel = [vehicleMake, vehicleModel].filter(Boolean).join(" ").trim() || null;
-  const vehicleNumber =
-    enrichment.registrationNumber?.trim() ||
-    opportunity.registration_no?.trim() ||
-    enrichment.chassisNumber?.trim() ||
-    opportunity.chassis_no?.trim() ||
-    null;
-  const currentInsurer = enrichment.insuranceCompany?.trim() || opportunity.current_insurer?.trim() || null;
-  const policyExpiryDate = enrichment.policyExpiryDate?.trim() || opportunity.policy_end_date;
-
   return {
     attempt_id: attempt.id,
     opportunity_id: opportunity.id,
-    mobile: opportunity.mobile,
+    mobile: mobile!,
     customer_name: customerName,
     vehicle_make_model: vehicleMakeModel,
     vehicle_number: vehicleNumber,
     current_insurer: currentInsurer,
     policy_expiry_date: policyExpiryDate,
-    previous_idv: null,
-    previous_premium: null,
+    previous_idv: previousIdv,
+    previous_premium: previousPremium,
   };
 }
