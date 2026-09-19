@@ -24,6 +24,7 @@ export type SarvamQueuePreviewRow = {
   nextFollowUpAt: string | null;
   rcEnrichmentStatus: string;
   rcEnrichmentSource: string | null;
+  voiceQueueSource: "import" | "it_quick_add";
   canFetchDetails: boolean;
   reason: SarvamQueueReason;
 };
@@ -44,7 +45,10 @@ type OpportunityRow = {
   next_follow_up_at: string | null;
   rc_enrichment_status: string | null;
   rc_enrichment_source: string | null;
+  rc_enrichment_details: Record<string, unknown> | null;
   ai_profile_overrides: Record<string, unknown> | null;
+  voice_queue_source: "import" | "it_quick_add" | null;
+  quick_added_at: string | null;
 };
 
 type AttemptRow = {
@@ -56,27 +60,51 @@ function dateOnly(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+function stringValue(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
 export async function getSarvamProductionQueuePreview(now = new Date()): Promise<SarvamQueuePreview> {
   const admin = createSupabaseAdminClient();
   const start = dateOnly(now);
   const end = new Date(now);
   end.setUTCDate(end.getUTCDate() + 30);
+  const endDate = dateOnly(end);
+  const select =
+    "id,mobile,registration_no,policy_end_date,opportunity_status,next_follow_up_at,rc_enrichment_status,rc_enrichment_source,rc_enrichment_details,ai_profile_overrides,voice_queue_source,quick_added_at";
 
-  const { data: opportunities, error: opportunityError } = await admin
-    .from("external_renewal_opportunities")
-    .select("id,mobile,registration_no,policy_end_date,opportunity_status,next_follow_up_at,rc_enrichment_status,rc_enrichment_source,ai_profile_overrides")
-    .eq("is_active", true)
-    .gte("policy_end_date", start)
-    .lte("policy_end_date", dateOnly(end))
-    .order("policy_end_date", { ascending: true })
-    .limit(200)
-    .returns<OpportunityRow[]>();
+  const [{ data: dueRows, error: dueError }, { data: quickRows, error: quickError }] = await Promise.all([
+    admin
+      .from("external_renewal_opportunities")
+      .select(select)
+      .eq("is_active", true)
+      .neq("voice_queue_source", "it_quick_add")
+      .gte("policy_end_date", start)
+      .lte("policy_end_date", endDate)
+      .order("policy_end_date", { ascending: true })
+      .limit(200)
+      .returns<OpportunityRow[]>(),
+    admin
+      .from("external_renewal_opportunities")
+      .select(select)
+      .eq("is_active", true)
+      .eq("voice_queue_source", "it_quick_add")
+      .order("quick_added_at", { ascending: false })
+      .limit(100)
+      .returns<OpportunityRow[]>(),
+  ]);
 
-  if (opportunityError) {
+  if (dueError || quickError) {
     throw new Error("Production voice queue preview is unavailable.");
   }
 
-  const opportunityIds = (opportunities ?? []).map((row) => row.id);
+  const merged = new Map<string, OpportunityRow>();
+  for (const row of quickRows ?? []) merged.set(row.id, row);
+  for (const row of dueRows ?? []) if (!merged.has(row.id)) merged.set(row.id, row);
+  const opportunities = [...merged.values()];
+
+  const opportunityIds = opportunities.map((row) => row.id);
   const activeAttemptIds = new Set<string>();
 
   if (opportunityIds.length) {
@@ -94,18 +122,22 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
     for (const attempt of attempts ?? []) activeAttemptIds.add(attempt.opportunity_id);
   }
 
-  const rows = (opportunities ?? []).map<SarvamQueuePreviewRow>((row) => {
+  const rows = opportunities.map<SarvamQueuePreviewRow>((row) => {
     const enrichmentStatus = row.rc_enrichment_status ?? "not_fetched";
     const overrides = row.ai_profile_overrides && typeof row.ai_profile_overrides === "object" ? row.ai_profile_overrides : {};
+    const enrichment =
+      row.rc_enrichment_details && typeof row.rc_enrichment_details === "object" ? row.rc_enrichment_details : {};
+
     const effectiveMobile = Object.prototype.hasOwnProperty.call(overrides, "mobile")
       ? (typeof overrides.mobile === "string" ? overrides.mobile : null)
       : row.mobile;
     const effectiveRegistration = Object.prototype.hasOwnProperty.call(overrides, "registrationNumber")
       ? (typeof overrides.registrationNumber === "string" ? overrides.registrationNumber : null)
-      : row.registration_no;
+      : stringValue(enrichment, "registrationNumber") ?? row.registration_no;
     const effectivePolicyExpiry = Object.prototype.hasOwnProperty.call(overrides, "policyExpiryDate")
       ? (typeof overrides.policyExpiryDate === "string" ? overrides.policyExpiryDate : null)
-      : row.policy_end_date;
+      : stringValue(enrichment, "policyExpiryDate") ?? row.policy_end_date;
+
     const hasRegistration = Boolean(effectiveRegistration?.trim());
     const otherwiseFetchable =
       Boolean(effectiveMobile?.trim()) &&
@@ -132,9 +164,15 @@ export async function getSarvamProductionQueuePreview(now = new Date()): Promise
       nextFollowUpAt: row.next_follow_up_at,
       rcEnrichmentStatus: enrichmentStatus,
       rcEnrichmentSource: row.rc_enrichment_source,
+      voiceQueueSource: row.voice_queue_source === "it_quick_add" ? "it_quick_add" : "import",
       canFetchDetails: hasRegistration && otherwiseFetchable,
       reason,
     };
+  });
+
+  rows.sort((a, b) => {
+    if (a.voiceQueueSource !== b.voiceQueueSource) return a.voiceQueueSource === "it_quick_add" ? -1 : 1;
+    return (a.policyEndDate ?? "9999-12-31").localeCompare(b.policyEndDate ?? "9999-12-31");
   });
 
   const eligibleCount = rows.filter((row) => row.reason === "eligible").length;
