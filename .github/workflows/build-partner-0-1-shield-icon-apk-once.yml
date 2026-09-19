@@ -69,20 +69,28 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode tooling/scripts/partner/native-assets/partner-shield-app-icon-256.jpg.b64 > compat/apps/partner-app/assets/partner-shield-app-icon.jpg
-          test -s compat/apps/partner-app/assets/partner-shield-app-icon.jpg
+          base64 --decode tooling/scripts/partner/native-assets/partner-shield-app-icon-256.jpg.b64 > /tmp/partner-shield-seed.jpg
+          test -s /tmp/partner-shield-seed.jpg
+          python3 -m pip install --quiet pillow
+          python3 <<'PY'
+          from PIL import Image
+          src = Image.open('/tmp/partner-shield-seed.jpg').convert('RGB')
+          icon = src.resize((1024, 1024), Image.Resampling.LANCZOS)
+          icon.save('compat/apps/partner-app/assets/partner-shield-app-icon.png', optimize=True)
+          PY
+          test -s compat/apps/partner-app/assets/partner-shield-app-icon.png
           node <<'NODE'
           const fs = require('fs');
           const path = 'compat/apps/partner-app/app.json';
           const app = JSON.parse(fs.readFileSync(path, 'utf8'));
-          app.expo.icon = './assets/partner-shield-app-icon.jpg';
+          app.expo.icon = './assets/partner-shield-app-icon.png';
           app.expo.android = app.expo.android || {};
-          app.expo.android.icon = './assets/partner-shield-app-icon.jpg';
+          app.expo.android.icon = './assets/partner-shield-app-icon.png';
           app.expo.ios = app.expo.ios || {};
-          app.expo.ios.icon = './assets/partner-shield-app-icon.jpg';
+          app.expo.ios.icon = './assets/partner-shield-app-icon.png';
           fs.writeFileSync(path, JSON.stringify(app, null, 2) + '\n');
           NODE
-          grep -q 'partner-shield-app-icon.jpg' compat/apps/partner-app/app.json
+          grep -q 'partner-shield-app-icon.png' compat/apps/partner-app/app.json
 
       - name: Require Expo token
         shell: bash
@@ -129,6 +137,6 @@ jobs:
             echo "- Compatibility source: $COMPAT_SHA"
             echo "- Runtime: 0.1.0"
             echo "- Profile/channel: preview"
-            echo "- Native change: shield-only Partner launcher icon"
+            echo "- Native change: shield-only Partner launcher icon rendered to a 1024x1024 PNG"
             echo "- Existing accepted Home and Business Report compatibility patches are embedded"
           } >> "$GITHUB_STEP_SUMMARY"
