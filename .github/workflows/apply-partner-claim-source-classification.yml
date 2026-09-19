@@ -1,0 +1,86 @@
+name: Apply Partner claim source classification migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260919103000_partner_claim_source_classification.sql'
+      - '.github/workflows/apply-partner-claim-source-classification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply Partner claim source classification migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260919103000_partner_claim_source_classification.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Apply Partner claim source classification migration
+        run: supabase db query --linked --file supabase/migrations/20260919103000_partner_claim_source_classification.sql
+
+      - name: Record migration as applied
+        run: supabase migration repair --linked --status applied 20260919103000
+
+      - name: Verify Partner claim source RPC contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regprocedure('public.partner_app_list_claims(integer,integer,text,text)') is not null as function_ready,
+              has_function_privilege(
+                'authenticated',
+                'public.partner_app_list_claims(integer,integer,text,text)',
+                'EXECUTE'
+              ) as authenticated_execute,
+              exists (
+                select 1
+                from information_schema.routine_columns
+                where specific_schema = 'public'
+                  and routine_name = 'partner_app_list_claims'
+                  and column_name = 'policy_service_source'
+              ) as source_column_ready
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"function_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"authenticated_execute"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"source_column_ready"[[:space:]]*:[[:space:]]*true'
