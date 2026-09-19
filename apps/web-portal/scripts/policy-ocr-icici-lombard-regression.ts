@@ -101,7 +101,7 @@ assert.equal(field(baseRoute, "insurer_name"), "ICICI Lombard General Insurance 
 const result = refineIciciLombardMotorPolicy(pages, tables, contaminated);
 
 assert.equal(result.parserId, "icici_lombard_motor_v1");
-assert.equal(result.parserVersion, "icici_lombard_motor_v1.1.0+gcv-live-replay-v2");
+assert.equal(result.parserVersion, "icici_lombard_motor_v1.2.0+gcv-live-replay-v3");
 assert.equal(field(result, "policy_number"), "3003/999999999/00/000");
 assert.equal(field(result, "policy_product"), "Package");
 assert.equal(field(result, "policy_start_date"), "2026-10-01");
@@ -123,6 +123,20 @@ assert.equal(field(result, "tax_amount"), "15000");
 assert.equal(field(result, "gross_premium"), "105000");
 assert.equal(field(result, "cpa_premium"), "0");
 assert.equal(field(result, "cpa_opted"), "No");
+
+const loosePageOne = pages[0]
+  .replace("Insured & Vehicle Details", "INSURED & VEHICLE DETAILS :")
+  .replace("Engine No.\nChassis No.\nCurrent Year NCB(%)\nVehicle Usage", "Engine No. / Chassis No. / Current Year NCB(%) / Vehicle Usage");
+const loose = refineIciciLombardMotorPolicy(
+  [loosePageOne, pages[1]],
+  tables,
+  contaminated,
+);
+assert.equal(field(loose, "vehicle_registration_status"), "registered");
+assert.equal(field(loose, "vehicle_registration_number"), "MP20AB1234");
+assert.equal(field(loose, "vehicle_engine_number"), "EN12AB34567890");
+assert.equal(field(loose, "vehicle_chassis_number"), "MA1TESTCHASSIS123");
+assert.equal(field(loose, "vehicle_rto_name"), "MADHYA PRADESH-INDORE");
 
 const unsafe = refineIciciLombardMotorPolicy(
   [pages[0], pages[1].replace("40,000.00", "35,000.00")],
