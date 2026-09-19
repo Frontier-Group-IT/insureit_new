@@ -218,8 +218,8 @@ export default function PoliciesScreen() {
         </View>
       ) : (
         <View style={styles.summaryGrid}>
-          {summaryItems.map((item) => (
-            <SummaryCard key={item.key} {...item} />
+          {summaryItems.map(({ key, ...item }) => (
+            <SummaryCard key={key} {...item} />
           ))}
         </View>
       )}
