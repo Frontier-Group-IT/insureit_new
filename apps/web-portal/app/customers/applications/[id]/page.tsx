@@ -54,8 +54,30 @@ export default async function ApplicationReviewPage({params,searchParams}:PagePr
   const backHref=isPospMisp?"/customers/posp-misp":"/customer-kyc";
   const shellTitle=isPospMisp?"Review Intermediary Application":"Review Customer KYC";
 
-  return <AppShell title={shellTitle}><div className="mx-auto max-w-[1280px] space-y-4 pb-8">
-    <section className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm"><div className="flex flex-wrap items-center justify-between gap-4 bg-gradient-to-r from-[#071D49] via-[#0F2A55] to-[#163B70] px-4 py-4 text-white"><div><Link href={backHref} className="text-[9.5px] font-semibold text-white/70">← Back to applications</Link><h1 className="mt-2 text-xl font-semibold">{title}</h1><p className="mt-1 text-[10px] text-white/70">Reference {id.slice(0,8).toUpperCase()} · Updated {new Date(application.updated_at).toLocaleDateString("en-IN")}</p></div><div className="flex flex-wrap items-center gap-2"><Pill>{partnerLabel(application.partner_type)}</Pill><Pill tone="gold">{application.status.replaceAll("_"," ")}</Pill><Pill>{previews.length} documents</Pill><Pill>{canReview?"Editable":"Read only"}</Pill></div></div></section>
+  const updatedLabel=new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(application.updated_at));
+  return <AppShell title={shellTitle}><div className="mx-auto max-w-[1480px] space-y-4 pb-8">
+    <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
+      <div className="flex flex-col gap-5 px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-white text-[#315FEA] shadow-md"><CustomerIcon /></span>
+          <div className="min-w-0">
+            <p className="text-[9px] font-bold uppercase tracking-[.12em] text-white/60">Customer application review</p>
+            <h1 className="mt-1 truncate text-xl font-semibold">{title}</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-white/70">
+              <span>Reference {id.slice(0,8).toUpperCase()}</span><span className="h-1 w-1 rounded-full bg-white/35"/><span>Updated {updatedLabel}</span>
+            </div>
+          </div>
+        </div>
+        <Link href={backHref} className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 text-[9.5px] font-semibold text-white transition hover:bg-white/15">Back to applications</Link>
+      </div>
+      <div className="grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-5">
+        <HeaderMetric label="Customer type" value={partnerLabel(application.partner_type)} />
+        <HeaderMetric label="Application status" value={application.status.replaceAll("_"," ")} />
+        <HeaderMetric label="Documents" value={previews.length+" "+(previews.length===1?"file":"files")} />
+        <HeaderMetric label="Review mode" value={canReview?"Editable":"Read only"} />
+        <HeaderMetric label="Customer record" value={application.customer_id?"Created":"Not created"} />
+      </div>
+    </section>
     {pageError?<div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10.5px] font-medium text-red-700">{errors[pageError]??"The action could not be completed."}</div>:null}
     {query.success?<div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10.5px] font-medium text-emerald-700">{successes[query.success]??"Saved successfully."}</div>:null}
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]"><main className="overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">{isCorporate?<CorporateReviewWorkspace applicationId={id} draft={draft} canReview={canReview} status={application.status} contacts={contacts??[]} applicantPhone={application.applicant_phone} applicantEmail={application.applicant_email}/>:isDealership?<DealershipReviewWorkspace applicationId={id} draft={draft} canReview={canReview} status={application.status}/>:isPospMisp&&pospMispEditProfile?<PospMispApplicationEditor applicationId={id} profile={pospMispEditProfile} editable={canReview} salesManagers={salesManagerOptions} banks={bankOptions} oems={oemOptions} documents={(documents??[]).map(document=>({document_type:document.document_type,file_name:document.file_name}))}/>:<SummaryReviewWorkspace fields={summaryFields}/>}</main>
