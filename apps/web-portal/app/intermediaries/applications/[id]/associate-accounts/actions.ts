@@ -21,6 +21,10 @@ type ManagedAssociate = {
   phone_number: string;
   email: string;
   designation: string;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
   role: AssociateRole | "admin";
   status: AssociateStatus;
   activated_at: string | null;
@@ -35,6 +39,10 @@ export async function createPartnerAssociateAccount(formData: FormData) {
   const phone = normalizePhone(value(formData, "phone_number"));
   const email = (value(formData, "email") ?? "").toLowerCase();
   const designation = value(formData, "designation");
+  const address = value(formData, "address");
+  const city = value(formData, "city");
+  const state = value(formData, "state");
+  const postalCode = value(formData, "postal_code");
   const role = value(formData, "role");
   const returnPath = safeReturnPath(value(formData, "return_path"), applicationId);
 
@@ -89,6 +97,10 @@ export async function createPartnerAssociateAccount(formData: FormData) {
       phone_number: phone,
       email,
       designation,
+      address,
+      city,
+      state,
+      postal_code: postalCode,
       role,
       status: "invited",
       invited_at: now,
@@ -111,7 +123,7 @@ export async function createPartnerAssociateAccount(formData: FormData) {
     auth_user_id: authUserId,
     event_type: "invited",
     actor_profile_id: reviewer.id,
-    details: { email, role, designation, phone_number: phone },
+    details: { email, role, designation, phone_number: phone, address, city, state, postal_code: postalCode },
   });
 
   finish(returnPath, applicationId, "associate_account_invited");
@@ -122,6 +134,10 @@ export async function updatePartnerAssociateAccount(formData: FormData) {
   const name = value(formData, "name");
   const phone = normalizePhone(value(formData, "phone_number"));
   const designation = value(formData, "designation");
+  const address = value(formData, "address");
+  const city = value(formData, "city");
+  const state = value(formData, "state");
+  const postalCode = value(formData, "postal_code");
   const role = value(formData, "role");
 
   if (!name || !phone || !designation || !role) redirect(`${context.returnPath}?error=associate_account_invalid`);
@@ -140,6 +156,10 @@ export async function updatePartnerAssociateAccount(formData: FormData) {
     name,
     phone_number: phone,
     designation,
+    address,
+    city,
+    state,
+    postal_code: postalCode,
     role,
     updated_by: context.reviewerId,
     updated_at: now,
@@ -166,6 +186,10 @@ export async function updatePartnerAssociateAccount(formData: FormData) {
       name: context.associate.name,
       phone_number: context.associate.phone_number,
       designation: context.associate.designation,
+      address: context.associate.address,
+      city: context.associate.city,
+      state: context.associate.state,
+      postal_code: context.associate.postal_code,
       role: context.associate.role,
       updated_at: now,
     }).eq("id", context.associate.id);
@@ -296,7 +320,7 @@ async function loadManagedAssociate(formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const { data: associate } = await admin.from("partner_portal_associate_accounts")
-    .select("id,intermediary_id,application_id,auth_user_id,name,phone_number,email,designation,role,status,activated_at,invited_at")
+    .select("id,intermediary_id,application_id,auth_user_id,name,phone_number,email,designation,address,city,state,postal_code,role,status,activated_at,invited_at")
     .eq("id", associateId)
     .eq("intermediary_id", intermediaryId)
     .eq("application_id", applicationId)

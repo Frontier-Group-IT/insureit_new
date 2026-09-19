@@ -173,3 +173,9 @@ No hierarchy, database, permission or mutation-rule change is included.
 - The previous global selection bar above the entire employee list is removed.
 
 No database, hierarchy, permission, or server mutation changes are included.
+
+## Partner associate account address fields — 2026-09-19
+
+**IMPLEMENTED IN FEATURE BRANCH, NOT YET MERGED/APPLIED:** `feat/associate-account-address-fields` extends Partner associate accounts with optional `address`, `city`, `state`, and `postal_code` fields. The Associate Accounts form keeps Name, Phone Number, Email, Designation, and Role mandatory and marks those labels with a red asterisk; address fields remain optional. The Associate Accounts Register adds an Address column composed from non-empty address/city/state/PIN parts. Existing invite, login, role, status, permission and Partner-scope behavior is unchanged.
+
+Schema is reversible via `supabase/migrations/20260919123000_partner_associate_address_fields.sql` and matching rollback. Migration is **COMMITTED ONLY** until separately applied and verified.
