@@ -62,7 +62,7 @@ export async function createPartnerAssociateAccount(formData: FormData) {
     admin.from("portal_access_identities").select("id").ilike("login_email", email).maybeSingle(),
     admin.from("profiles").select("id").ilike("email", email).maybeSingle(),
   ]);
-  if (primary || associate || groupBranch || profile) redirect(`${returnPath}?error=associate_email_in_use`);
+  if (primary || associate || groupBranch || profile) redirect(`${returnPath}?associate_error=associate_email_in_use`);
 
   const inviteOptions = associateInviteOptions(name, role as AssociateRole);
   const { data: invite, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, inviteOptions);
