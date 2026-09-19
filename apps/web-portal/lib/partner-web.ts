@@ -528,6 +528,7 @@ export type PartnerClaimRow = {
   claim_state: Exclude<PartnerClaimState, "all">;
   claim_service_mode: string | null;
   assistance_status: string | null;
+  policy_service_source: string | null;
   customer_id: string;
   customer_name: string;
   vehicle_id: string | null;
