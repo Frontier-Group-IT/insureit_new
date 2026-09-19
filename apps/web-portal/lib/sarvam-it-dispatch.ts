@@ -66,37 +66,45 @@ function dateForSpeech(value: string | null) {
   }).format(parsed);
 }
 
-function repeatCallOpening({
+function callOpening({
   customerName,
+}: {
+  customerName: string | null;
+}) {
+  const shortName = firstName(customerName);
+  return shortName
+    ? `Namaste ${shortName} ji, main INSUREIT se bol raha hoon.`
+    : "Namaste ji, main INSUREIT se bol raha hoon.";
+}
+
+function openingFollowUp({
   vehicleMakeModel,
   previous,
 }: {
-  customerName: string | null;
   vehicleMakeModel: string | null;
   previous: PreviousConnectedAttemptRow[];
 }) {
-  const shortName = firstName(customerName);
-  const address = shortName ? `${shortName} ji` : "ji";
   if (!previous.length) {
-    const vehicle = vehicleMakeModel ? ` aapki ${vehicleMakeModel} ki policy renewal ke regarding` : " aapki policy renewal ke regarding";
-    return `Namaste ${address}, main INSUREIT ka automated renewal assistant bol raha hoon,${vehicle}. Kya do minute convenient hain?`;
+    return vehicleMakeModel
+      ? `Aapki ${vehicleMakeModel} ki renewal aa rahi hai—abhi ek minute hai?`
+      : "Policy renewal ke regarding call hai—abhi ek minute hai?";
   }
 
   const last = previous[0];
-  const continuation =
-    last.call_disposition === "follow_up"
-      ? "Pichli baar aapne baad mein baat karne ko kaha tha"
-      : last.call_disposition === "quote_requested"
-        ? "Pichli baar hum renewal quotation aur options ko lekar baat kar rahe the"
-        : last.call_disposition === "interested"
-          ? "Pichli baar hum aapki renewal requirements par baat kar rahe the"
-          : last.call_disposition === "human_assistance"
-            ? "Pichli baar renewal discussion mein aapne human assistance prefer ki thi"
-            : "Pichli baar hum aapki policy renewal par baat kar chuke hain";
-
-  return `Namaste ${address}, main INSUREIT ka automated renewal assistant bol raha hoon. ${continuation}. Main wahi discussion continue karne ke liye call kar raha hoon—abhi do minute convenient hain?`;
+  if (last.call_disposition === "follow_up") {
+    return "Pichli baar aapne baad mein baat karne ko kaha tha—abhi convenient hai?";
+  }
+  if (last.call_disposition === "quote_requested") {
+    return "Pichli baar quotation options ki baat hui thi—usi ko continue karein?";
+  }
+  if (last.call_disposition === "interested") {
+    return "Pichli baar renewal requirements discuss hui thi—usi ko continue karein?";
+  }
+  if (last.call_disposition === "human_assistance") {
+    return "Pichli baar aapne human assistance prefer ki thi—usi discussion ko continue karein?";
+  }
+  return "Pichli baar renewal par baat hui thi—usi ko continue karein?";
 }
-
 function buildPreviousConversationContext(previous: PreviousConnectedAttemptRow[]) {
   if (!previous.length) return null;
 
@@ -224,8 +232,8 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
   const last = previous[0] ?? null;
   const lastCallDate = dateForSpeech(last?.ended_at ?? last?.created_at ?? null);
   const previousConversationContext = buildPreviousConversationContext(previous);
-  const openingLine = repeatCallOpening({
-    customerName,
+  const openingLine = callOpening({ customerName });
+  const openingFollowUp = openingFollowUp({
     vehicleMakeModel,
     previous,
   });
@@ -250,6 +258,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     last_call_summary: last?.call_summary ?? null,
     previous_conversation_context: previousConversationContext,
     opening_line: openingLine,
+    opening_follow_up: openingFollowUp,
   };
 
   const { data: attempt, error: attemptError } = await admin
@@ -291,5 +300,6 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     last_call_summary: last?.call_summary ?? null,
     previous_conversation_context: previousConversationContext,
     opening_line: openingLine,
+    opening_follow_up: openingFollowUp,
   };
 }
