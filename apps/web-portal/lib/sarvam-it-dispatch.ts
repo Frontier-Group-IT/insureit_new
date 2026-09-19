@@ -103,7 +103,11 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
   const chassisNumber = overrideText(overrides, "chassisNumber", enrichment.chassisNumber ?? opportunity.chassis_no);
   const currentInsurer = overrideText(overrides, "insuranceCompany", enrichment.insuranceCompany ?? opportunity.current_insurer);
   const policyNumber = overrideText(overrides, "policyNumber", enrichment.policyNumber ?? opportunity.current_policy_no);
-  const policyExpiryDate = overrideText(overrides, "policyExpiryDate", enrichment.policyExpiryDate ?? opportunity.policy_end_date);
+  const policyExpiryDate = overrideText(
+    overrides,
+    "policyExpiryDate",
+    enrichment.policyExpiryDate ?? (opportunity.voice_queue_source === "it_quick_add" ? null : opportunity.policy_end_date),
+  );
   const previousIdv = overrideText(overrides, "previousIdv", null);
   const previousPremium = overrideText(overrides, "previousPremium", null);
   const vehicleMakeModel = [vehicleMake, vehicleModel].filter(Boolean).join(" ").trim() || null;
