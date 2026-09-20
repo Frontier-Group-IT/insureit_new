@@ -12,6 +12,7 @@ import {
 } from "@/app/policies/policy-edit-document-actions";
 
 const acceptedPolicyCopyTypes = ".pdf,.jpg,.jpeg,.png,.webp";
+const maxPolicyCopyBytes = 15 * 1024 * 1024;
 
 type Notice = { tone: "success" | "error"; message: string } | null;
 
@@ -35,6 +36,7 @@ export function PolicyEditCopyFooterActions() {
   const [isOpening, setIsOpening] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  const [sizeLimitFileName, setSizeLimitFileName] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
 
   useEffect(() => {
@@ -111,6 +113,11 @@ export function PolicyEditCopyFooterActions() {
 
   async function uploadPolicyCopy(file: File) {
     if (!policyId || isUploading || isRemoving) return;
+    if (file.size > maxPolicyCopyBytes) {
+      setNotice(null);
+      setSizeLimitFileName(file.name);
+      return;
+    }
     setIsUploading(true);
     setNotice(null);
 
@@ -239,6 +246,22 @@ export function PolicyEditCopyFooterActions() {
         </div>,
         footer,
       )}
+
+      {sizeLimitFileName ? createPortal(
+        <div className="fixed inset-0 z-[190] grid place-items-center bg-[#0F2544]/35 px-4 backdrop-blur-[2px]" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="edit-policy-copy-size-title" className="w-full max-w-[390px] overflow-hidden rounded-2xl border border-[#F0D3AE] bg-white shadow-[0_24px_70px_rgba(15,37,68,.24)]">
+            <div className="px-5 py-4">
+              <h3 id="edit-policy-copy-size-title" className="text-[14px] font-bold text-[#7A4310]">Policy copy is too large</h3>
+              <p className="mt-1.5 text-[10px] leading-4 text-[#667085]">Maximum allowed size is <span className="font-bold text-[#7A4310]">15 MB</span>. Please choose a smaller PDF or image.</p>
+              <p className="mt-2 truncate rounded-lg bg-[#FFF8ED] px-2.5 py-1.5 text-[9px] font-semibold text-[#8A5A13]" title={sizeLimitFileName}>{sizeLimitFileName}</p>
+            </div>
+            <div className="flex justify-end border-t border-[#F3E5D2] bg-[#FFFBF5] px-5 py-3">
+              <button type="button" onClick={() => setSizeLimitFileName(null)} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">OK</button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      ) : null}
 
       {removeConfirmOpen && policyCopy ? createPortal(
         <div className="fixed inset-0 z-[170] grid place-items-center bg-[#0F2544]/35 px-4 backdrop-blur-[2px]" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isRemoving) setRemoveConfirmOpen(false); }}>
