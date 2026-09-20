@@ -6,7 +6,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { POLICY_ACTIVITY_ACTIONS, recordPolicyActivity } from "@/lib/policy-activity";
 
 const POLICY_DOCUMENT_BUCKET = "policy-documents";
-const MAX_POLICY_COPY_BYTES = 50 * 1024 * 1024;
+const MAX_POLICY_COPY_BYTES = 15 * 1024 * 1024;
 const ALLOWED_POLICY_COPY_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
@@ -78,7 +78,7 @@ export async function savePolicyCopyForEdit(policyId: string, formData: FormData
 
   if (!isUuid(normalizedPolicyId)) return { ok: false, error: "Invalid policy reference." };
   if (!(file instanceof File) || file.size <= 0) return { ok: false, error: "Select a policy copy to upload." };
-  if (file.size > MAX_POLICY_COPY_BYTES) return { ok: false, error: "Policy copy must be 50 MB or smaller." };
+  if (file.size > MAX_POLICY_COPY_BYTES) return { ok: false, error: "Policy copy must be 15 MB or smaller." };
   if (!ALLOWED_POLICY_COPY_TYPES.has(file.type)) {
     return { ok: false, error: "Upload a PDF, JPG, PNG or WEBP policy copy." };
   }
