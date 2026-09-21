@@ -182,11 +182,11 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
 
 function buildAttention(data: DashboardCurrentData, access: DashboardAccess, business: DashboardBusinessData): AttentionSignal[] {
   const rows: AttentionSignal[] = [];
-  if (data.policyIntakes?.ready) {
+  if (data.policyIntakes?.workload) {
     rows.push({
-      label: "Policy Intakes ready",
-      value: data.policyIntakes.ready,
-      detail: data.policyIntakes.ocrFailed ? `${data.policyIntakes.ocrFailed} OCR failed` : undefined,
+      label: "Policy Intakes pending",
+      value: data.policyIntakes.workload,
+      detail: `${data.policyIntakes.actionRequired} action · ${data.policyIntakes.inReview} review · ${data.policyIntakes.processing} processing`,
       href: "/policy-intakes",
       icon: DASHBOARD_ICON_ASSETS.policyIntakeReview,
       tone: "violet",
