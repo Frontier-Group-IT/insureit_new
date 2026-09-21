@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CarFront, ChevronLeft, ChevronRight, Search, ShieldAlert, Wrench } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebVehicles } from "@/lib/partner-vehicles";
+import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 import { VehicleFilters } from "./vehicle-filters";
 import { parseVehicleStatusFilter, parseVehicleTypeFilter, type VehicleStatusFilter, type VehicleTypeFilter } from "./vehicle-filter-types";
 
@@ -74,7 +75,10 @@ export default async function PartnerVehiclesPage({
             <tbody className="divide-y divide-[#E7ECF2]">
               {rows.map((vehicle) => {
                 const pending = isRegistrationPending(vehicle.registration_status);
-                const vehicleLabel = pending ? "Registration pending" : vehicle.vehicle_no || "—";
+                const vehicleLabel = displayVehicleRegistrationNumber({
+                  vehicle_no: vehicle.vehicle_no,
+                  registration_status: vehicle.registration_status,
+                });
                 const makeModel = [vehicle.make, vehicle.model].filter(Boolean).join(" ") || "—";
                 const detailHref = `/partner/vehicles/${encodeURIComponent(vehicle.vehicle_id)}`;
                 return (
