@@ -154,12 +154,25 @@ jobs:
             'compat/apps/partner-app/app/(tabs)/policies.tsx'
           mkdir -p compat/apps/partner-app/assets/partner/banners
 
-          # The repository asset was stored as base64 text. Decode it back to the
-          # original JPEG bytes before the legacy Expo/Metro bundler sees it.
-          base64 --decode \
-            tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
-            > compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
+            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
 
+          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          file compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg | grep -q 'JPEG image data'
+
+          # The supplied banner is a progressive JPEG. The legacy Expo 0.1 asset
+          # pipeline cannot read it reliably, so normalize the copied compatibility
+          # asset to a baseline JPEG before Metro exports the OTA bundle.
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -hide_banner -loglevel error -y \
+            -i compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
+            -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p \
+            /tmp/policies-header-reference.jpg
+          mv /tmp/policies-header-reference.jpg \
+            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
           test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
           file compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg | grep -q 'JPEG image data'
           grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
