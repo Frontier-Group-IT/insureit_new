@@ -468,12 +468,11 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     position: 'absolute',
-    left: '-6%',
-    top: -8,
-    width: '112%',
-    height: 182,
-    opacity: 0.70,
-    transform: [{ scale: 0.92 }],
+    left: 0,
+    top: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.96,
   },
   heroTopRow: {
     position: 'absolute',
