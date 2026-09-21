@@ -114,6 +114,14 @@ assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner
 assert(partnerWeb.includes("policy_service_source: string | null"), "Partner claim rows must expose the canonical claim source");
 
 const insurerLogoResolver = read("lib/insurer-logo.ts");
+const sharedClaimHeader = read("components/spot-survey/spot-survey-workspace-v2.tsx");
+assert(sharedClaimHeader.includes('from "@/lib/vehicle-brand-logo"'), "Shared Claim Detail header must use the shared vehicle brand logo resolver");
+assert(sharedClaimHeader.includes('from "@/lib/insurer-logo"'), "Shared Claim Detail header must use the shared insurer logo resolver");
+assert(sharedClaimHeader.includes('label="Vehicle No."') && sharedClaimHeader.includes('logo={<ManufacturerLogo name={make} />}'), "Claim Detail Vehicle No. must show manufacturer logo");
+assert(sharedClaimHeader.includes('label="Make & Model"') && sharedClaimHeader.includes('logo={<ManufacturerLogo name={make} />}'), "Claim Detail Make & Model must show manufacturer logo");
+assert(sharedClaimHeader.includes('label="Insurer"') && sharedClaimHeader.includes('logo={<InsurerLogo name={insurer} />}'), "Claim Detail Insurer must show insurer logo");
+assert(!sharedClaimHeader.includes("const vehicleBrandLogos:"), "Shared Claim Detail header must not keep a duplicate vehicle brand logo map");
+assert(!sharedClaimHeader.includes("const insurerBrandLogos:"), "Shared Claim Detail header must not keep a duplicate insurer logo map");
 const partnerPolicyDetailPage = read("app/partner/policies/[id]/page.tsx");
 assert(partnerPolicyDetailPage.includes("data.activity_history.map"), "Partner Policy detail must render canonical activity_history");
 assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy detail must not render synthetic Policy status activity");
