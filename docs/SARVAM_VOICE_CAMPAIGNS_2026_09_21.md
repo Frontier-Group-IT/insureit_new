@@ -81,3 +81,19 @@ Rules:
 ## Schema-readiness resilience
 
 After the initial campaign release, the dedicated schema workflow was repaired and production migration workflow run 35587127672 completed successfully. The control-center hotfix additionally makes campaign-list loading fail soft: if campaign tables are unavailable in a future rollout or temporary schema mismatch, existing Voice Integration controls still render, Add Campaign is disabled, and a scoped readiness warning is shown instead of crashing the whole page.
+
+
+## Detailed campaign report export
+
+The IT Super User campaign detail page exposes **Download Detailed Report**. The export is an XLSX workbook generated server-side from normalized INSUREIT campaign, opportunity, call-attempt, and retry-event data.
+
+The primary **Campaign Report** sheet contains the approved 33 operational/conversation columns: Campaign Name, Campaign Status, Customer Name, Mobile Number, RC / Registration No., Manufacturer, Current Insurer, Current Policy No., Policy Expiry Date, Call Attempt No., Customer Availability, Call Duration (Sec), Connectivity Status, Completion Status, Submission Status, Call Disposition, Customer Interest, Customer Objection, Follow-up Required, Follow-up Date & Time, Follow-up Time Confidence, Quote Requested, Human Assistance Required, Do Not Contact, Wrong Person, Already Renewed, Add-on Interest, Main Conversation Outcome, Call Summary, Next Recommended Action, Failure Reason, Last Updated At, and Conversation Quality Flag.
+
+A secondary **Summary** sheet contains campaign-level counts and timestamps.
+
+Privacy and evidence rules:
+- the export remains restricted to exact `it_super_user` plus `manage_system=approve`;
+- mobile remains masked, matching the Voice Integration privacy boundary;
+- raw transcripts are not stored or exported;
+- Add-on Interest is emitted as `Not captured` because the current normalized webhook contract does not persist a dedicated add-on field;
+- conversation outcome, next action, availability, follow-up confidence, and quality flags are deterministic projections of persisted normalized fields, not transcript inference.

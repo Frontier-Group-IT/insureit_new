@@ -76,6 +76,84 @@ type VoiceCampaignAttemptRow = {
   created_at: string;
 };
 
+type VoiceCampaignReportOpportunityRow = {
+  id: string;
+  registration_no: string | null;
+  mobile: string | null;
+  customer_name: string | null;
+  contact_name: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  current_insurer: string | null;
+  current_policy_no: string | null;
+  policy_end_date: string | null;
+  opportunity_status: string;
+  rc_enrichment_details: Record<string, unknown> | null;
+  ai_profile_overrides: Record<string, unknown> | null;
+};
+
+type VoiceCampaignReportAttemptRow = {
+  id: string;
+  opportunity_id: string;
+  submission_status: string;
+  connectivity_status: string | null;
+  completion_status: string | null;
+  retry_attempt: number;
+  duration_seconds: number | null;
+  started_at: string | null;
+  ended_at: string | null;
+  call_disposition: string | null;
+  customer_interest: string | null;
+  follow_up_required: boolean | null;
+  follow_up_at: string | null;
+  customer_objection: string | null;
+  call_summary: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type VoiceCampaignReportAttemptEventRow = {
+  voice_attempt_id: string;
+  failure_reason: string | null;
+  created_at: string;
+};
+
+export type VoiceCampaignReportRow = {
+  campaignName: string;
+  campaignStatus: string;
+  customerName: string | null;
+  mobileNumber: string | null;
+  registrationNumber: string | null;
+  manufacturer: string | null;
+  currentInsurer: string | null;
+  currentPolicyNumber: string | null;
+  policyExpiryDate: string | null;
+  callAttemptNumber: number | null;
+  customerAvailability: string;
+  callDurationSeconds: number | null;
+  connectivityStatus: string | null;
+  completionStatus: string | null;
+  submissionStatus: string;
+  callDisposition: string | null;
+  customerInterest: string | null;
+  customerObjection: string | null;
+  followUpRequired: string;
+  followUpDateTime: string | null;
+  followUpTimeConfidence: string;
+  quoteRequested: string;
+  humanAssistanceRequired: string;
+  doNotContact: string;
+  wrongPerson: string;
+  alreadyRenewed: string;
+  addOnInterest: string;
+  mainConversationOutcome: string;
+  callSummary: string | null;
+  nextRecommendedAction: string;
+  failureReason: string | null;
+  lastUpdatedAt: string;
+  conversationQualityFlag: string;
+};
+
 export type VoiceCampaignMemberView = VoiceCampaignMemberRow & {
   opportunityId: string;
   registrationNumber: string | null;
@@ -577,4 +655,274 @@ export async function getVoiceCampaignDetail(campaignId: string) {
       ).length,
     },
   };
+}
+
+
+function yesNo(value: boolean) {
+  return value ? "Yes" : "No";
+}
+
+function reportText(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function deriveCustomerAvailability(attempt: VoiceCampaignReportAttemptRow | null) {
+  if (!attempt) return "Not Called";
+  if (attempt.connectivity_status === "connected") {
+    const objection = (attempt.customer_objection ?? "").toLowerCase();
+    if (/\bbusy\b|not free|call later|later/i.test(objection)) return "Busy";
+    return "Available";
+  }
+  if (attempt.connectivity_status === "busy") return "Busy";
+  if (attempt.connectivity_status === "no_answer") return "Unavailable";
+  if (attempt.connectivity_status === "failed") return "Unavailable";
+  return "Unknown";
+}
+
+function deriveFollowUpConfidence(attempt: VoiceCampaignReportAttemptRow | null) {
+  if (!attempt?.follow_up_required) return "Not Required";
+  if (attempt.follow_up_at) return "Exact";
+  return "Broad / Unscheduled";
+}
+
+function deriveMainOutcome(attempt: VoiceCampaignReportAttemptRow | null) {
+  if (!attempt) return "Not Called";
+  if (attempt.connectivity_status === "busy") return "Busy - Follow-up Needed";
+  if (attempt.connectivity_status === "no_answer") return "No Answer";
+  if (attempt.connectivity_status === "failed" || attempt.submission_status === "failed") return "Call Failed";
+
+  switch (attempt.call_disposition) {
+    case "quote_requested":
+      return "Interested - Quote Required";
+    case "follow_up":
+      return "Interested - Callback Required";
+    case "interested":
+      return "Interested - No Immediate Action";
+    case "not_interested":
+      return "Not Interested";
+    case "already_renewed":
+      return "Already Renewed";
+    case "do_not_contact":
+      return "Do Not Contact";
+    case "wrong_person":
+      return "Wrong Person";
+    case "human_assistance":
+      return "Human Assistance Required";
+    case "no_decision":
+      return "Connected - No Decision";
+    default:
+      return attempt.connectivity_status === "connected" ? "Connected - Outcome Pending" : "Pending";
+  }
+}
+
+function deriveNextAction(attempt: VoiceCampaignReportAttemptRow | null) {
+  if (!attempt) return "Await call";
+  if (attempt.submission_status === "failed" || attempt.connectivity_status === "failed") return "Review call failure";
+  if (attempt.connectivity_status === "busy" || attempt.connectivity_status === "no_answer") return "Retry / follow up";
+  switch (attempt.call_disposition) {
+    case "quote_requested":
+      return "Prepare quotation";
+    case "follow_up":
+      return attempt.follow_up_at ? "Call back at agreed time" : "Schedule callback";
+    case "interested":
+      return "Renewal team follow-up";
+    case "human_assistance":
+      return "Human review";
+    case "wrong_person":
+      return "Verify contact";
+    case "do_not_contact":
+      return "No further contact";
+    case "already_renewed":
+    case "not_interested":
+      return "Close / no action";
+    default:
+      return attempt.connectivity_status === "connected" ? "Review outcome" : "Await result";
+  }
+}
+
+function deriveQualityFlag(attempt: VoiceCampaignReportAttemptRow | null) {
+  if (!attempt) return "Not Called";
+  if (attempt.submission_status === "failed" || attempt.connectivity_status === "failed") return "Call Failure";
+  if (attempt.completion_status === "partial") return "Incomplete Call";
+  if (attempt.follow_up_required && !attempt.follow_up_at) return "Follow-up Time Missing";
+  if (["wrong_person", "human_assistance", "no_decision"].includes(attempt.call_disposition ?? "")) {
+    return "Review Required";
+  }
+  if (attempt.connectivity_status === "busy" || attempt.connectivity_status === "no_answer") return "Not Connected";
+  if (attempt.connectivity_status === "connected" && attempt.completion_status === "completed") return "Completed";
+  return "Review Required";
+}
+
+export async function getVoiceCampaignReportRows(campaignId: string): Promise<{
+  campaign: VoiceCampaignDetailRow;
+  rows: VoiceCampaignReportRow[];
+} | null> {
+  const admin = createSupabaseAdminClient();
+
+  const { data: campaign, error: campaignError } = await admin
+    .from("voice_campaigns")
+    .select("*")
+    .eq("id", campaignId)
+    .maybeSingle<VoiceCampaignDetailRow>();
+
+  if (campaignError || !campaign) return null;
+
+  const { data: members, error: membersError } = await admin
+    .from("voice_campaign_members")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("source_row_number", { ascending: true })
+    .limit(100)
+    .returns<VoiceCampaignMemberRow[]>();
+
+  if (membersError) throw new Error("Could not load campaign members for export.");
+
+  const memberRows = members ?? [];
+  const opportunityIds = memberRows.map((row) => row.opportunity_id);
+  const opportunityMap = new Map<string, VoiceCampaignReportOpportunityRow>();
+  const attemptsByOpportunity = new Map<string, VoiceCampaignReportAttemptRow[]>();
+  const failureByAttempt = new Map<string, string>();
+
+  if (opportunityIds.length) {
+    const [{ data: opportunities, error: opportunitiesError }, { data: attempts, error: attemptsError }] =
+      await Promise.all([
+        admin
+          .from("external_renewal_opportunities")
+          .select(
+            "id,registration_no,mobile,customer_name,contact_name,vehicle_make,vehicle_model,current_insurer,current_policy_no,policy_end_date,opportunity_status,rc_enrichment_details,ai_profile_overrides",
+          )
+          .in("id", opportunityIds)
+          .returns<VoiceCampaignReportOpportunityRow[]>(),
+        admin
+          .from("external_renewal_voice_attempts")
+          .select(
+            "id,opportunity_id,submission_status,connectivity_status,completion_status,retry_attempt,duration_seconds,started_at,ended_at,call_disposition,customer_interest,follow_up_required,follow_up_at,customer_objection,call_summary,created_at,updated_at",
+          )
+          .eq("voice_campaign_id", campaignId)
+          .order("created_at", { ascending: true })
+          .returns<VoiceCampaignReportAttemptRow[]>(),
+      ]);
+
+    if (opportunitiesError || attemptsError) {
+      throw new Error("Could not load campaign call data for export.");
+    }
+
+    for (const opportunity of opportunities ?? []) opportunityMap.set(opportunity.id, opportunity);
+
+    for (const attempt of attempts ?? []) {
+      const current = attemptsByOpportunity.get(attempt.opportunity_id) ?? [];
+      current.push(attempt);
+      attemptsByOpportunity.set(attempt.opportunity_id, current);
+    }
+
+    const attemptIds = (attempts ?? []).map((attempt) => attempt.id);
+    if (attemptIds.length) {
+      const { data: events, error: eventsError } = await admin
+        .from("external_renewal_voice_attempt_events")
+        .select("voice_attempt_id,failure_reason,created_at")
+        .in("voice_attempt_id", attemptIds)
+        .order("created_at", { ascending: false })
+        .returns<VoiceCampaignReportAttemptEventRow[]>();
+
+      if (eventsError) throw new Error("Could not load campaign call failures for export.");
+
+      for (const event of events ?? []) {
+        if (!failureByAttempt.has(event.voice_attempt_id) && event.failure_reason) {
+          failureByAttempt.set(event.voice_attempt_id, event.failure_reason);
+        }
+      }
+    }
+  }
+
+  const rows: VoiceCampaignReportRow[] = [];
+
+  for (const member of memberRows) {
+    const opportunity = opportunityMap.get(member.opportunity_id);
+    const enrichment = opportunity?.rc_enrichment_details ?? {};
+    const overrides = opportunity?.ai_profile_overrides ?? {};
+
+    const customerName =
+      reportText(overrides, "customerName") ??
+      opportunity?.customer_name ??
+      opportunity?.contact_name ??
+      null;
+    const mobileNumber = reportText(overrides, "mobile") ?? opportunity?.mobile ?? null;
+    const registrationNumber =
+      reportText(overrides, "registrationNumber") ??
+      reportText(enrichment, "registrationNumber") ??
+      opportunity?.registration_no ??
+      null;
+    const manufacturer =
+      reportText(overrides, "manufacturer") ??
+      reportText(enrichment, "manufacturer") ??
+      opportunity?.vehicle_make ??
+      null;
+    const currentInsurer =
+      reportText(overrides, "insuranceCompany") ??
+      reportText(enrichment, "insuranceCompany") ??
+      opportunity?.current_insurer ??
+      null;
+    const currentPolicyNumber =
+      reportText(overrides, "policyNumber") ??
+      reportText(enrichment, "policyNumber") ??
+      opportunity?.current_policy_no ??
+      null;
+    const policyExpiryDate =
+      reportText(overrides, "policyExpiryDate") ??
+      reportText(enrichment, "policyExpiryDate") ??
+      opportunity?.policy_end_date ??
+      null;
+
+    const attempts = attemptsByOpportunity.get(member.opportunity_id) ?? [];
+    const reportAttempts: Array<VoiceCampaignReportAttemptRow | null> = attempts.length ? attempts : [null];
+
+    reportAttempts.forEach((attempt, index) => {
+      const disposition = attempt?.call_disposition ?? null;
+      const memberFailure =
+        member.dispatch_error ??
+        member.enrichment_error ??
+        member.hold_reason ??
+        null;
+      const failureReason = attempt ? failureByAttempt.get(attempt.id) ?? memberFailure : memberFailure;
+
+      rows.push({
+        campaignName: campaign.name,
+        campaignStatus: campaign.status,
+        customerName,
+        mobileNumber,
+        registrationNumber,
+        manufacturer,
+        currentInsurer,
+        currentPolicyNumber,
+        policyExpiryDate,
+        callAttemptNumber: attempt ? index + 1 : null,
+        customerAvailability: deriveCustomerAvailability(attempt),
+        callDurationSeconds: attempt?.duration_seconds ?? null,
+        connectivityStatus: attempt?.connectivity_status ?? null,
+        completionStatus: attempt?.completion_status ?? null,
+        submissionStatus: attempt?.submission_status ?? member.dispatch_status,
+        callDisposition: disposition,
+        customerInterest: attempt?.customer_interest ?? null,
+        customerObjection: attempt?.customer_objection ?? null,
+        followUpRequired: yesNo(Boolean(attempt?.follow_up_required)),
+        followUpDateTime: attempt?.follow_up_at ?? null,
+        followUpTimeConfidence: deriveFollowUpConfidence(attempt),
+        quoteRequested: yesNo(disposition === "quote_requested"),
+        humanAssistanceRequired: yesNo(disposition === "human_assistance"),
+        doNotContact: yesNo(disposition === "do_not_contact" || opportunity?.opportunity_status === "do_not_contact"),
+        wrongPerson: yesNo(disposition === "wrong_person"),
+        alreadyRenewed: yesNo(disposition === "already_renewed" || opportunity?.opportunity_status === "renewed_elsewhere"),
+        addOnInterest: "Not captured",
+        mainConversationOutcome: deriveMainOutcome(attempt),
+        callSummary: attempt?.call_summary ?? null,
+        nextRecommendedAction: deriveNextAction(attempt),
+        failureReason: failureReason ?? null,
+        lastUpdatedAt: attempt?.updated_at ?? member.updated_at,
+        conversationQualityFlag: deriveQualityFlag(attempt),
+      });
+    });
+  }
+
+  return { campaign, rows };
 }
