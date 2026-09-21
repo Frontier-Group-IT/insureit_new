@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Motor FLAT legacy-draft crash fix:** branch `fix/motor-flat-old-draft-crash`; `/policies/new` now hydrates pre-FLAT session drafts into the current form shape and treats missing `flatPayoutAmount` as an empty string in FLAT calculations/payloads, preventing the page error boundary when FLAT is selected after an older saved draft is restored. Policy Intake regression now guards this compatibility path. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-21 — Motor Partner Payout FLAT basis:** branch `feat/motor-flat-partner-payout`; adds `FLAT` to Motor Partner Payout, disables OD/TP percentage entry in FLAT mode, makes Total Agreed Payout directly editable, persists FLAT through existing fixed-amount payout columns, preserves NET/OD formulas, Policy Intake draft/finalize, edit mode, and restricted-commercial preservation. Includes reversible migration `20260921103000_motor_flat_partner_payout.sql`, verification SQL, dedicated schema workflow, and production deploy gate. **IMPLEMENTED; PR/CI/schema application/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 - **2026-09-19 — Compact Customer Application Review UI:** branch `ui/compact-customer-application-review`; tightens the Customer Application Review hero, five-metric status strip, page spacing, summary detail tiles, verification documents panel, shared Corporate/Dealership review sections, fields and save bars. Data queries, approval logic, routes, permissions and schema remain unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
