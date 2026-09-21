@@ -146,13 +146,35 @@ jobs:
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
           grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
-      - name: Install last verified Policies layout for runtime 0.1.0
+      - name: Install current Policies layout for runtime 0.1.0
         shell: bash
         run: |
           set -euo pipefail
-          git -C tooling show 9c2379b1bafc3189b6027f536e113f0b1f9ec46b:scripts/partner/compat/partner-policies-reference-0-1.tsx \
-            > 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "hero-banner.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx \
+            'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          mkdir -p compat/apps/partner-app/assets/partner/banners
+
+          command -v ffmpeg >/dev/null 2>&1 || {
+            echo "ffmpeg is required to normalize the Policies banner for the legacy Expo bundler." >&2
+            exit 1
+          }
+
+          ffmpeg -hide_banner -loglevel error -y \
+            -i tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
+            -vf "scale=900:-2:flags=lanczos" \
+            -q:v 3 \
+            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+
+          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          file compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg | grep -q 'JPEG image data'
+          grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "height: 158" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "left: '-6%'" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "width: '112%'" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "height: 182" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "opacity: 0.70" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -Fq "transform: [{ scale: 0.92 }]" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "marginTop: -10" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Manage. Track. Grow.' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
