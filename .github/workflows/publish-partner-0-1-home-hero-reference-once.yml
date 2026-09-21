@@ -154,10 +154,10 @@ jobs:
             'compat/apps/partner-app/app/(tabs)/policies.tsx'
           mkdir -p compat/apps/partner-app/assets/partner/banners
 
-          command -v ffmpeg >/dev/null 2>&1 || {
-            echo "ffmpeg is required to normalize the Policies banner for the legacy Expo bundler." >&2
-            exit 1
-          }
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y ffmpeg
+          fi
 
           ffmpeg -hide_banner -loglevel error -y \
             -i tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
