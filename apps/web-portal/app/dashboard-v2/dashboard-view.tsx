@@ -35,6 +35,11 @@ type RailMetric = {
   label: string;
   value: string;
   meta?: string;
+  secondary?: {
+    label: string;
+    value: string;
+    meta?: string;
+  };
   href: string;
   icon: string;
 };
@@ -141,7 +146,12 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
     metrics.push({
       label: "Open claims",
       value: data.claims.open.toLocaleString("en-IN"),
-      meta: data.claims.estimateExposure > 0 ? `${formatMoney(data.claims.estimateExposure)} estimate exposure` : `${data.claims.mtd} MTD`,
+      meta: `${formatMoney(data.claims.openAmount)} open amount`,
+      secondary: {
+        label: "Settled claims",
+        value: data.claims.settled.toLocaleString("en-IN"),
+        meta: `${formatMoney(data.claims.settledAmount)} settled amount`,
+      },
       href: "/claims",
       icon: DASHBOARD_ICON_ASSETS.claims,
     });
@@ -745,11 +755,28 @@ function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
     <Link prefetch={false} href={item.href} className={`${divided ? "border-t md:border-l md:border-t-0" : ""} group flex min-h-[94px] items-center gap-3 border-[#E3E9F0] px-4 py-3.5 transition hover:bg-[#FAFBFD]`}>
       <Icon src={item.icon} size={35} />
       <div className="min-w-0 flex-1">
-        <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="whitespace-normal break-words text-[7.5px] font-black uppercase leading-relaxed tracking-[.085em] text-[#5D6C83]">{item.label}</span>
-          {item.meta ? <span className="whitespace-normal break-words text-[7px] font-semibold leading-relaxed text-[#8B97A8]">{item.meta}</span> : null}
-        </div>
+        {item.secondary ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
+              <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.label}</p>
+              {item.meta ? <p className="mt-0.5 whitespace-normal break-words text-[6.5px] font-semibold leading-relaxed text-[#8B97A8]">{item.meta}</p> : null}
+            </div>
+            <div className="min-w-0 border-l border-[#E7ECF2] pl-3">
+              <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.secondary.value}</p>
+              <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.secondary.label}</p>
+              {item.secondary.meta ? <p className="mt-0.5 whitespace-normal break-words text-[6.5px] font-semibold leading-relaxed text-[#8B97A8]">{item.secondary.meta}</p> : null}
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="portal-display whitespace-normal break-words text-[25px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="whitespace-normal break-words text-[7.5px] font-black uppercase leading-relaxed tracking-[.085em] text-[#5D6C83]">{item.label}</span>
+              {item.meta ? <span className="whitespace-normal break-words text-[7px] font-semibold leading-relaxed text-[#8B97A8]">{item.meta}</span> : null}
+            </div>
+          </>
+        )}
       </div>
       <ArrowUpRight className="h-3.5 w-3.5 text-[#A3ADBC] group-hover:text-[#203A63]" />
     </Link>
