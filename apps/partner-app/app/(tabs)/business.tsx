@@ -129,11 +129,17 @@ export default function BusinessScreen() {
             <View style={styles.heroShade} />
 
             <View style={styles.heroTopRow}>
-              <Image
-                source={require('../../assets/insureit-partner-official.png')}
-                style={styles.heroLogo}
-                resizeMode="contain"
-              />
+              <View style={styles.heroBrand}>
+                <Image
+                  source={require('../../assets/partner-app-icon.jpg')}
+                  style={styles.heroBrandIcon}
+                  resizeMode="cover"
+                />
+                <View style={styles.heroBrandText}>
+                  <Text style={styles.heroBrandName}>insureit</Text>
+                  <Text style={styles.heroBrandPartner}>PARTNER</Text>
+                </View>
+              </View>
               <View style={styles.heroActions}>
                 <Pressable
                   accessibilityRole="button"
@@ -142,6 +148,7 @@ export default function BusinessScreen() {
                   style={({ pressed }) => [styles.heroActionButton, pressed && styles.pressed]}
                 >
                   <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+                  <View style={styles.notificationDot} />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
@@ -463,7 +470,7 @@ function formatCacheTime(value: number | null) {
 
 const styles = StyleSheet.create({
   heroBanner: {
-    height: 204,
+    height: 188,
     marginHorizontal: -16,
     marginTop: -14,
     overflow: 'hidden',
@@ -476,22 +483,47 @@ const styles = StyleSheet.create({
   },
   heroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.10)',
+    backgroundColor: 'rgba(3, 45, 96, 0.04)',
   },
   heroTopRow: {
     position: 'absolute',
     zIndex: 3,
-    top: 8,
-    left: 18,
-    right: 16,
-    minHeight: 54,
+    top: 6,
+    left: 16,
+    right: 14,
+    minHeight: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  heroLogo: {
-    width: 136,
-    height: 50,
+  heroBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  heroBrandIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 7,
+  },
+  heroBrandText: {
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  heroBrandName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: '800',
+    letterSpacing: -0.25,
+  },
+  heroBrandPartner: {
+    marginTop: 1,
+    color: '#FFFFFF',
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: '700',
+    letterSpacing: 2.2,
   },
   heroActions: {
     minHeight: 48,
@@ -500,15 +532,27 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   heroActionButton: {
-    width: 44,
-    height: 44,
+    position: 'relative',
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  notificationDot: {
+    position: 'absolute',
+    top: 6,
+    right: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#F04438',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
   heroProfileButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(124, 184, 255, 0.92)',
@@ -516,58 +560,63 @@ const styles = StyleSheet.create({
   heroCopy: {
     position: 'absolute',
     zIndex: 3,
-    left: 20,
-    bottom: 22,
-    maxWidth: '55%',
+    left: 18,
+    bottom: 30,
+    maxWidth: '57%',
   },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 21,
+    lineHeight: 24,
     fontWeight: '800',
     letterSpacing: -0.2,
   },
   heroSubtitle: {
-    marginTop: 2,
+    marginTop: 1,
     color: '#FFFFFF',
-    ...partnerTheme.typography.caption,
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: '500',
   },
   heroGreeting: {
-    marginTop: 6,
+    marginTop: 3,
     color: '#FFFFFF',
-    ...partnerTheme.typography.caption,
+    fontSize: 9.5,
+    lineHeight: 12,
+    fontWeight: '500',
   },
   heroName: {
     color: '#FFFFFF',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 14,
+    lineHeight: 17,
     fontWeight: '800',
   },
   heroWords: {
     position: 'absolute',
     zIndex: 3,
-    right: 15,
-    bottom: 22,
-    width: 76,
-    paddingLeft: 9,
-    borderLeftWidth: 2,
+    right: 13,
+    bottom: 28,
+    width: 72,
+    paddingLeft: 8,
+    borderLeftWidth: 1.5,
     borderLeftColor: 'rgba(255,255,255,0.78)',
   },
   heroWord: {
     color: '#F5F9FF',
-    ...partnerTheme.typography.meta,
+    fontSize: 7.2,
+    lineHeight: 9.5,
     fontWeight: '800',
   },
 
   searchRow: {
     zIndex: 5,
-    marginTop: -28,
+    marginTop: -24,
     marginHorizontal: 0,
     marginBottom: 10,
-    minHeight: 58,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderRadius: 17,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D9DFEA',
@@ -580,7 +629,7 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     flex: 1,
-    minHeight: 58,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -590,13 +639,13 @@ const styles = StyleSheet.create({
   searchText: {
     flex: 1,
     color: '#8B95A8',
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 11.5,
+    lineHeight: 16,
     fontWeight: '500',
   },
   filterButton: {
-    minHeight: 58,
-    minWidth: 84,
+    minHeight: 52,
+    minWidth: 76,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
