@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Image, Pressable, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { PartnerScreen } from '@/components/partner-screen';
 import { PartnerBanner } from '@/components/ui/partner-banner';
+import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerOperationalRow } from '@/components/ui/partner-operational-row';
-import { PartnerSearchField } from '@/components/ui/partner-search-field';
 import { PartnerSectionHeader } from '@/components/ui/partner-section-header';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import { PartnerStatusBadge } from '@/components/ui/partner-status-badge';
@@ -15,6 +15,7 @@ import { PartnerAssets } from '@/lib/partner-assets';
 import { listPartnerPolicies, type PartnerPolicyRow } from '@/lib/policies';
 import { partnerTheme } from '@/lib/theme';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
+import { usePartnerSession } from '@/providers/partner-session-provider';
 
 let savedUniversalQuery = '';
 
@@ -28,7 +29,10 @@ const EMPTY_RESULTS: SearchResults = { customers: [], policies: [], claims: [] }
 
 export default function SearchScreen() {
   const router = useRouter();
-  const [query, setQuery] = useState(savedUniversalQuery);
+  const params = useLocalSearchParams<{ q?: string | string[] }>();
+  const { context } = usePartnerSession();
+  const incomingQuery = searchParam(params.q);
+  const [query, setQuery] = useState(incomingQuery || savedUniversalQuery);
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
   const [results, setResults] = useState<SearchResults>(EMPTY_RESULTS);
   const [loading, setLoading] = useState(false);
@@ -38,6 +42,10 @@ export default function SearchScreen() {
   useEffect(() => {
     savedUniversalQuery = query;
   }, [query]);
+
+  useEffect(() => {
+    if (incomingQuery) setQuery(incomingQuery);
+  }, [incomingQuery]);
 
   useEffect(() => {
     const search = debouncedQuery.trim();
@@ -73,20 +81,40 @@ export default function SearchScreen() {
 
   const hasResults = results.customers.length + results.policies.length + results.claims.length > 0;
   const ready = debouncedQuery.trim().length >= 2;
+  if (!context) return null;
+
+  const displayName = context.identity.display_name;
 
   return (
     <PartnerScreen
-      eyebrow="SEARCH"
-      title="Search"
-      subtitle="Customers, policies and claims"
-      onBack={() => router.back()}
+      eyebrow="INSUREIT PARTNER"
+      title={greeting(displayName)}
+      action={
+        <View style={styles.headerActions}>
+          <PartnerIconButton
+            icon="time-outline"
+            label="View recent activity"
+            onPress={() => router.push('/activity')}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open profile"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials(displayName)}</Text>
+            </View>
+          </Pressable>
+        </View>
+      }
+      heroSearch={{
+        value: query,
+        onChangeText: setQuery,
+        onClear: () => setQuery(''),
+        placeholder: 'Search customer, vehicle number or policy no.',
+      }}
     >
-      <PartnerSearchField
-        value={query}
-        onChangeText={setQuery}
-        onClear={() => setQuery('')}
-        placeholder="Customer, policy, claim, vehicle or insurer"
-      />
 
       {partialError ? (
         <View style={styles.feedback}>
@@ -197,6 +225,22 @@ function ResultRow({
   );
 }
 
+function searchParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0]?.trim() ?? '';
+  return value?.trim() ?? '';
+}
+
+function greeting(name: string) {
+  const firstName = name.trim().split(/\s+/)[0] || 'Partner';
+  const hour = new Date().getHours();
+  const prefix = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  return `${prefix}, ${firstName}`;
+}
+
+function initials(value: string) {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
+}
+
 function policyTone(value: PartnerPolicyRow['lifecycle_status']): 'success' | 'warning' | 'danger' | 'info' {
   if (value === 'expired') return 'danger';
   if (value === 'expiring') return 'warning';
@@ -209,6 +253,23 @@ function humanize(value: string) {
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  avatarTouch: {
+    width: partnerTheme.control.minTouchTarget,
+    height: partnerTheme.control.minTouchTarget,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: partnerTheme.colors.brandSoft,
+  },
+  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
+  pressed: { opacity: 0.76 },
   feedback: { marginTop: 8 },
   artwork: {
     width: 34,
