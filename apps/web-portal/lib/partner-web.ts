@@ -431,6 +431,12 @@ export type PartnerPolicyDetail = {
     group_code: string | null;
     group_name: string | null;
   };
+  activity_history: {
+    id: string;
+    action: string;
+    actor_name: string;
+    at: string;
+  }[];
 };
 
 export async function getPartnerWebPolicySummary(): Promise<PartnerPolicySummary> {
