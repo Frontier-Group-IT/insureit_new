@@ -128,6 +128,11 @@ assert(insurerNameIndex > policyProductIndex, "Partner Policy Register Insurer c
 assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Partner Fleet Summary must use the shared insurer resolver");
 
 const partnerClaimsPage = read("app/partner/claims/page.tsx");
+const partnerClaimsPortfolio = read("app/partner/claims/claims-portfolio.tsx");
+assert(!partnerClaimsPortfolio.includes("Sr. No."), "Partner Claims must not show the Sr. No. column");
+assert(partnerClaimsPortfolio.includes('from "@/lib/insurer-logo"'), "Partner Claims must use the shared insurer logo resolver");
+assert(partnerClaimsPortfolio.includes("getInsurerLogo(claim.insurerName)"), "Partner Claims Customer / Mobile column must resolve insurer logos from insurerName");
+assert(partnerClaimsPortfolio.includes("Insurance company"), "Partner Claims insurer logo must keep an accessible fallback alt");
 assert(partnerClaimsPage.includes('row.policy_service_source === "external" ? "external" : "internal"'), "Partner claims must classify only explicit external sources as external");
 assert(!partnerClaimsPage.includes('row.policy_service_source === "internal" ? "internal" : "external"'), "Partner claims must not default missing claim source to external");
 

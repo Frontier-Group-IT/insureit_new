@@ -1,10 +1,12 @@
 "use client";
 
 import { INTERNAL_JOURNEY_STAGES, projectInternalClaim } from "@insureit/claim-journey";
-import { FileText } from "lucide-react";
+import Image from "next/image";
+import { FileText, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { claimStatuses, operationsQueueForStatus, type ClaimStatus } from "@/lib/claim-workflow";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 export type PartnerClaimPortfolioRow = {
   id: string;
@@ -133,17 +135,37 @@ export function PartnerClaimsPortfolio({ rows }: { rows: PartnerClaimPortfolioRo
               <table className="w-full min-w-[1120px] border-separate border-spacing-y-0 text-left text-[11px] leading-tight text-[#071D49]">
                 <thead>
                   <tr className="bg-[#003A83] text-center text-[10.5px] font-medium tracking-[0.01em] text-white">
-                    <th className="rounded-tl-lg px-2 py-2">Sr. No.</th><th className="px-2 py-2">Customer / Mobile</th><th className="px-2 py-2">Vehicle No.</th><th className="px-2 py-2">Vehicle</th><th className="px-2 py-2">Loss Date</th><th className="px-2 py-2">Insurer</th><th className="px-2 py-2">Policy</th><th className="px-2 py-2">Control No.</th><th className="px-2 py-2">Claim No.</th><th className="px-2 py-2">Process</th><th className="rounded-tr-lg px-2 py-2">Action</th>
+                    <th className="rounded-tl-lg px-2 py-2">Customer / Mobile</th><th className="px-2 py-2">Vehicle No.</th><th className="px-2 py-2">Vehicle</th><th className="px-2 py-2">Loss Date</th><th className="px-2 py-2">Insurer</th><th className="px-2 py-2">Policy</th><th className="px-2 py-2">Control No.</th><th className="px-2 py-2">Claim No.</th><th className="px-2 py-2">Process</th><th className="rounded-tr-lg px-2 py-2">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleRows.length ? visibleRows.map((claim, index) => {
+                  {visibleRows.length ? visibleRows.map((claim) => {
                     const projection = projectionFor(claim.currentStatus);
                     const process = claim.currentStatus ? operationsQueueForStatus(claim.currentStatus as ClaimStatus) : null;
+                    const insurerLogo = getInsurerLogo(claim.insurerName);
                     return (
                       <tr key={claim.id} className="group bg-white align-middle shadow-[0_1px_0_rgba(226,232,240,0.86)] transition hover:bg-[#F8FBFF]">
-                        <td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{start + index + 1}</td>
-                        <td className="border-r border-[#E7ECF3] px-2 py-2"><span className="block font-medium">{claim.customerName || "-"}</span><span className="text-[10px] text-[#344256]">{claim.customerPhone || "-"}</span></td>
+                        <td className="border-r border-[#E7ECF3] px-2 py-2">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <span className="flex h-8 w-9 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                              {insurerLogo ? (
+                                <Image
+                                  src={insurerLogo}
+                                  alt={claim.insurerName ? `${claim.insurerName} logo` : "Insurance company"}
+                                  width={32}
+                                  height={32}
+                                  className="max-h-7 max-w-[34px] w-auto object-contain"
+                                />
+                              ) : (
+                                <ShieldCheck className="h-4 w-4 text-[#7E91A8]" />
+                              )}
+                            </span>
+                            <div className="min-w-0">
+                              <span className="block truncate font-medium">{claim.customerName || "-"}</span>
+                              <span className="block truncate text-[10px] text-[#344256]">{claim.customerPhone || "-"}</span>
+                            </div>
+                          </div>
+                        </td>
                         <td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{claim.vehicleNo || "-"}</td>
                         <td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{[claim.vehicleMake, claim.vehicleModel].filter(Boolean).join(" ") || "-"}</td>
                         <td className="border-r border-[#E7ECF3] px-2 py-2 text-center">{formatDate(claim.accidentAt || claim.createdAt)}</td>
@@ -155,7 +177,7 @@ export function PartnerClaimsPortfolio({ rows }: { rows: PartnerClaimPortfolioRo
                         <td className="px-2 py-2 text-center"><Link prefetch={false} href={`/partner/claims/${claim.id}`} className="inline-flex h-7 items-center justify-center rounded-md bg-[#003A83] px-3 text-[10.5px] font-medium text-white">Proceed</Link></td>
                       </tr>
                     );
-                  }) : <tr><td className="px-3 py-8 text-center text-sm text-slate-500" colSpan={11}>No matching claims found.</td></tr>}
+                  }) : <tr><td className="px-3 py-8 text-center text-sm text-slate-500" colSpan={10}>No matching claims found.</td></tr>}
                 </tbody>
               </table>
             </div>
