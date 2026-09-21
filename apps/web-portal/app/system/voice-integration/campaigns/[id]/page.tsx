@@ -5,6 +5,7 @@ import {
   CalendarClock,
   CheckCircle2,
   CircleAlert,
+  Download,
   FileSpreadsheet,
   PhoneCall,
   ShieldCheck,
@@ -59,9 +60,18 @@ export default async function VoiceCampaignDetailPage({
             <ArrowLeft className="h-3.5 w-3.5" />
             Voice Integration
           </Link>
-          <span className="rounded-full bg-[#EEF4FF] px-3 py-1 text-[8px] font-black text-[#3156B8]">
-            {label(detail.campaign.status)}
-          </span>
+          <div className="flex items-center gap-2">
+            <a
+              href={"/api/system/voice-integration/campaigns/" + encodeURIComponent(id) + "/export"}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D4E3F6] bg-white px-3 text-[8.5px] font-black text-[#3156B8] hover:bg-[#F7FAFF]"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Download Detailed Report
+            </a>
+            <span className="rounded-full bg-[#EEF4FF] px-3 py-1 text-[8px] font-black text-[#3156B8]">
+              {label(detail.campaign.status)}
+            </span>
+          </div>
         </div>
 
         <section className="rounded-2xl border border-[#DDE6F0] bg-white p-4 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">

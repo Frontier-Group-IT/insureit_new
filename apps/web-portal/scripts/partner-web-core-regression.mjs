@@ -122,6 +122,13 @@ assert(sharedClaimHeader.includes('label="Make & Model"') && sharedClaimHeader.i
 assert(sharedClaimHeader.includes('label="Insurer"') && sharedClaimHeader.includes('logo={<InsurerLogo name={insurer} />}'), "Claim Detail Insurer must show insurer logo");
 assert(!sharedClaimHeader.includes("const vehicleBrandLogos:"), "Shared Claim Detail header must not keep a duplicate vehicle brand logo map");
 assert(!sharedClaimHeader.includes("const insurerBrandLogos:"), "Shared Claim Detail header must not keep a duplicate insurer logo map");
+assert(sharedClaimHeader.includes('bg-white shadow-[0_8px_22px_rgba(15,23,42,0.06)]'), "Shared Claim Detail summary must use the light background treatment");
+assert(!sharedClaimHeader.includes('bg-[#071D49]'), "Shared Claim Detail summary must not use the old navy background");
+
+const partnerClaimDetailPage = read("app/partner/claims/[id]/page.tsx");
+const operationsClaimDetailPage = read("app/claims/[id]/page.tsx");
+assert(!partnerClaimDetailPage.includes("mix-blend-screen"), "Partner Claim Detail must not force manufacturer logos through dark-header filters");
+assert(!operationsClaimDetailPage.includes("mix-blend-screen"), "Operations Claim Detail must not force manufacturer logos through dark-header filters");
 const partnerPolicyDetailPage = read("app/partner/policies/[id]/page.tsx");
 assert(partnerPolicyDetailPage.includes("data.activity_history.map"), "Partner Policy detail must render canonical activity_history");
 assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy detail must not render synthetic Policy status activity");
@@ -168,6 +175,13 @@ assert(partnerPayoutPage.includes("getInsurerLogo(insurerName)"), "Partner Payou
 assert(partnerPayoutPage.includes("Insurance company"), "Partner Payout insurer logo must keep accessible fallback alt text");
 
 const partnerClaimsPage = read("app/partner/claims/page.tsx");
+const operationsClaimsWorkspace = read("app/claims/claims-workspace.tsx");
+assert(operationsClaimsWorkspace.includes('from "@/lib/insurer-logo"'), "Operations Claims must use the shared insurer logo resolver");
+assert(!operationsClaimsWorkspace.includes(">Sr. No.</th>"), "Operations Claims must not render the serial-number column");
+assert(operationsClaimsWorkspace.includes("getInsurerLogo(insurerName)"), "Operations Claims Customer / Mobile column must resolve insurer logos");
+assert(operationsClaimsWorkspace.includes("Insurance company"), "Operations Claims insurer logo must keep accessible fallback alt text");
+assert(operationsClaimsWorkspace.includes("colSpan={10}"), "Operations Claims empty state must match the 10-column table");
+
 const partnerClaimsPortfolio = read("app/partner/claims/claims-portfolio.tsx");
 assert(!partnerClaimsPortfolio.includes("Sr. No."), "Partner Claims must not show the Sr. No. column");
 assert(partnerClaimsPortfolio.includes('from "@/lib/insurer-logo"'), "Partner Claims must use the shared insurer logo resolver");
@@ -193,6 +207,12 @@ const operationsVehicleWorkspace = read("app/vehicles/vehicle-workspace.tsx");
 assert(operationsVehicleWorkspace.includes('from "@/lib/vehicle-brand-logo"'), "Operations Vehicle Portfolio must use the shared vehicle brand logo resolver");
 assert(operationsVehicleWorkspace.includes("getVehicleBrandLogo(vehicle.make)"), "Operations Vehicle column must resolve manufacturer logo from vehicle.make");
 assert(operationsVehicleWorkspace.includes("Vehicle manufacturer"), "Operations Vehicle manufacturer logo must keep accessible fallback alt text");
+assert(operationsVehicleWorkspace.includes('max-h-[22px] max-w-[26px]'), "Operations Vehicle manufacturer logos must use the compact Tata-sized footprint");
+assert(operationsVehicleWorkspace.includes('>Vehicle</th>') && operationsVehicleWorkspace.includes('py-2 text-center">Vehicle</th>'), "Operations Vehicle table Vehicle header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Customer</th>'), "Operations Vehicle table Customer header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Make / model</th>'), "Operations Vehicle table Make / model header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Registration</th>'), "Operations Vehicle table Registration header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Next action</th>'), "Operations Vehicle table Next action header must be centered");
 
 const operationsFleetSummary = read("app/customers/[id]/fleet/fleet-summary-client.tsx");
 assert(operationsFleetSummary.includes('from "@/lib/vehicle-brand-logo"'), "Operations Customer Fleet Summary must use the shared vehicle brand logo resolver");
