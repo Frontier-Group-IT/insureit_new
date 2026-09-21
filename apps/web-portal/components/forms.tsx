@@ -53,7 +53,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
             </Link>
           ) : null}
         />
-        <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date}>
+        <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date} initialChassisNo={values?.chassis_no}>
           <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
           <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
           <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />
