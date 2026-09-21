@@ -81,6 +81,16 @@ for (const role of roleMatrixV2) {
   }
 }
 
+const salesExecutiveRole = roleMatrixV2.find((role) => role.code === "sales_executive");
+if (!salesExecutiveRole || !salesExecutiveRole.assignable || salesExecutiveRole.status !== "active") {
+  fail("Sales Executive must be an active assignable application role");
+}
+const salesExecutiveGrants = new Set(salesExecutiveRole.grants.map((grant) => `${grant.permission}|${grant.access}|${grant.scope ?? ""}`));
+for (const expected of ["policies.view|view|self", "policy_intakes.view|view|self", "policy_intakes.create|edit|self"]) {
+  if (!salesExecutiveGrants.has(expected)) fail(`Sales Executive is missing ${expected}`);
+}
+if (salesExecutiveRole.grants.length !== 3) fail("Sales Executive must remain limited to own-policy visibility and Policy Intake creation/view");
+
 const accountsRole = roleMatrixV2.find((role) => role.code === "accounts");
 if (!accountsRole || !accountsRole.assignable || accountsRole.status !== "active") {
   fail("Accounts must be an active assignable application role");
@@ -127,7 +137,7 @@ const applicationOnlyPermissionKeys = new Set([
   "policies.ocr_training.review",
   "policies.ocr_training.approve",
 ]);
-const applicationOnlyRoleCodes = new Set(["accounts"]);
+const applicationOnlyRoleCodes = new Set(["accounts", "sales_executive"]);
 if (/access_(permissions|roles|role_permissions)_v2/.test(ocrQueueMigrationSql)) {
   fail("OCR queue migration must remain independent from the optional Access Control V2 database schema");
 }
