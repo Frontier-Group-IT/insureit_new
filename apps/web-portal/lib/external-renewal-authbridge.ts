@@ -74,6 +74,9 @@ type OpportunityRow = {
   id: string;
   registration_no: string | null;
   is_active: boolean;
+  customer_name: string | null;
+  contact_name: string | null;
+  account_name: string | null;
   ai_profile_overrides: Record<string, unknown> | null;
 };
 
@@ -353,11 +356,68 @@ async function persistOpportunityResult(
   if (error) throw new Error("Could not save RC enrichment state.");
 }
 
+function nonBlank(value: unknown) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+async function applyRcOwnerNameFallback(
+  opportunityId: string,
+  details: ExternalRenewalRcDetails,
+) {
+  const ownerName = cleanText(details.ownerName);
+  if (!ownerName) return false;
+
+  const admin = createSupabaseAdminClient();
+  const { data: current, error: currentError } = await admin
+    .from("external_renewal_opportunities")
+    .select("customer_name,contact_name,account_name,ai_profile_overrides")
+    .eq("id", opportunityId)
+    .maybeSingle<{
+      customer_name: string | null;
+      contact_name: string | null;
+      account_name: string | null;
+      ai_profile_overrides: Record<string, unknown> | null;
+    }>();
+
+  if (currentError || !current) {
+    throw new Error("Could not verify the current customer name before applying RC owner fallback.");
+  }
+
+  const overrideName =
+    current.ai_profile_overrides &&
+    typeof current.ai_profile_overrides.customerName === "string"
+      ? current.ai_profile_overrides.customerName
+      : null;
+
+  if (
+    nonBlank(overrideName) ||
+    nonBlank(current.customer_name) ||
+    nonBlank(current.contact_name) ||
+    nonBlank(current.account_name)
+  ) {
+    return false;
+  }
+
+  const { error: updateError } = await admin
+    .from("external_renewal_opportunities")
+    .update({
+      customer_name: ownerName,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", opportunityId);
+
+  if (updateError) {
+    throw new Error("Could not apply RC owner name as the customer / insured name.");
+  }
+
+  return true;
+}
+
 export async function enrichExternalRenewalOpportunity(opportunityId: string) {
   const admin = createSupabaseAdminClient();
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,registration_no,is_active,ai_profile_overrides")
+    .select("id,registration_no,is_active,customer_name,contact_name,account_name,ai_profile_overrides")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
@@ -399,7 +459,8 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
 
     if (usefulFieldCount(details) > 0) {
       await persistOpportunityResult(opportunity.id, "ready", details, "local_cache", null);
-      return { status: "ready" as const, source: "local_cache" as const, details };
+      const ownerNameApplied = await applyRcOwnerNameFallback(opportunity.id, details);
+      return { status: "ready" as const, source: "local_cache" as const, details, ownerNameApplied };
     }
 
     await persistOpportunityResult(opportunity.id, "no_data", details, "local_cache", "no_usable_fields");
@@ -431,7 +492,8 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
     }
 
     await persistOpportunityResult(opportunity.id, "ready", details, "authbridge", null);
-    return { status: "ready" as const, source: "authbridge" as const, details };
+    const ownerNameApplied = await applyRcOwnerNameFallback(opportunity.id, details);
+    return { status: "ready" as const, source: "authbridge" as const, details, ownerNameApplied };
   } catch {
     if (cached) {
       const normalized = fromNormalized(cached.normalized_details, registrationNumber);
@@ -439,7 +501,8 @@ export async function enrichExternalRenewalOpportunity(opportunityId: string) {
       const details = mergeDetails(normalized, rawDetails);
       if (usefulFieldCount(details) > 0) {
         await persistOpportunityResult(opportunity.id, "ready", details, "stale_cache", null);
-        return { status: "ready" as const, source: "stale_cache" as const, details };
+        const ownerNameApplied = await applyRcOwnerNameFallback(opportunity.id, details);
+        return { status: "ready" as const, source: "stale_cache" as const, details, ownerNameApplied };
       }
     }
 

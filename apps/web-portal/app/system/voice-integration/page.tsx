@@ -8,6 +8,8 @@ import {
   Clock3,
   Database,
   LockKeyhole,
+  Plus,
+  FileSpreadsheet,
   Pause,
   Pencil,
   PhoneCall,
@@ -31,6 +33,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getConfiguredSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
 import { getSarvamRenewalReadiness } from "@/lib/sarvam-renewal-readiness";
 import { getSarvamProductionQueuePreview } from "@/lib/sarvam-production-queue";
+import { getVoiceCampaigns } from "@/lib/voice-campaigns";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -126,10 +129,11 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const quickAddError = queryValue(query.quick_add_error);
 
   const readiness = getSarvamRenewalReadiness();
-  const [operationalPolicy, campaignLifecycle, queuePreview] = await Promise.all([
+  const [operationalPolicy, campaignLifecycle, queuePreview, voiceCampaigns] = await Promise.all([
     getConfiguredSarvamRenewalOperationalPolicy(),
     getSarvamRenewalCampaignState(),
     getSarvamProductionQueuePreview(),
+    getVoiceCampaigns(),
   ]);
 
   const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
@@ -239,6 +243,73 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             ) : null}
           </div>
         ) : null}
+
+        <section className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
+          <div className="flex items-center justify-between gap-3">
+            <SectionTitle icon={FileSpreadsheet} title="Voice campaigns" />
+            <Link
+              href="/system/voice-integration/campaigns/new"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#102A56] px-3 text-[8.5px] font-bold text-white"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Campaign
+            </Link>
+          </div>
+          <p className="mt-1 text-[8.5px] text-[#71839A]">
+            Create a campaign from Excel using RC No. and Mobile No. only. Maximum 100 customers.
+          </p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left text-[8.5px]">
+              <thead>
+                <tr className="border-y border-[#E7EDF4] bg-[#F8FAFC] text-[7px] font-black uppercase tracking-[.05em] text-[#7890AC]">
+                  <th className="px-2.5 py-2">Campaign</th>
+                  <th className="px-2.5 py-2">Customers</th>
+                  <th className="px-2.5 py-2">API ready</th>
+                  <th className="px-2.5 py-2">Exceptions</th>
+                  <th className="px-2.5 py-2">Status</th>
+                  <th className="px-2.5 py-2 text-right">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#EEF2F7]">
+                {voiceCampaigns.map((campaign) => (
+                  <tr key={campaign.id} className="hover:bg-[#FAFCFF]">
+                    <td className="px-2.5 py-2">
+                      <Link
+                        href={"/system/voice-integration/campaigns/" + campaign.id}
+                        className="font-bold text-[#29415F] hover:underline"
+                      >
+                        {campaign.name}
+                      </Link>
+                    </td>
+                    <td className="px-2.5 py-2 text-[#61758F]">
+                      {campaign.accepted_rows}/{campaign.total_rows}
+                    </td>
+                    <td className="px-2.5 py-2 font-bold text-emerald-700">
+                      {campaign.enriched_rows}
+                    </td>
+                    <td className="px-2.5 py-2 text-[#61758F]">
+                      {campaign.rejected_rows + campaign.duplicate_rows}
+                    </td>
+                    <td className="px-2.5 py-2">
+                      <span className="inline-flex rounded-full bg-[#EEF4FF] px-2 py-0.5 text-[7px] font-bold text-[#3156B8]">
+                        {labelize(campaign.status)}
+                      </span>
+                    </td>
+                    <td className="px-2.5 py-2 text-right text-[#71839A]">
+                      {formatDateTime(campaign.created_at)}
+                    </td>
+                  </tr>
+                ))}
+                {!voiceCampaigns.length ? (
+                  <tr>
+                    <td colSpan={6} className="px-3 py-6 text-center text-[9px] text-[#94A3B8]">
+                      No voice campaign yet. Add a campaign to start a batch test.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
           <StatusTile icon={Wifi} label="Provider" value={providerReady ? "Ready" : "Attention"} ready={providerReady} />

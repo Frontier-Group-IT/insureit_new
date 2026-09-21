@@ -36,7 +36,7 @@ type OpportunityRow = {
   rc_enrichment_status: string | null;
   rc_enrichment_details: RcEnrichmentDetails | null;
   ai_profile_overrides: Record<string, unknown> | null;
-  voice_queue_source: "import" | "it_quick_add" | null;
+  voice_queue_source: "import" | "it_quick_add" | "it_campaign" | null;
 };
 
 function overrideText(overrides: Record<string, unknown>, key: string, fallback: string | null | undefined) {
@@ -50,9 +50,11 @@ function overrideText(overrides: Record<string, unknown>, key: string, fallback:
 export async function startItSuperUserExternalRenewalVoiceAttempt({
   opportunityId,
   requestedByAuthUserId,
+  voiceCampaignId = null,
 }: {
   opportunityId: string;
   requestedByAuthUserId: string;
+  voiceCampaignId?: string | null;
 }): Promise<ExternalRenewalVoiceStartContext> {
   const admin = createSupabaseAdminClient();
 
@@ -74,7 +76,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   const batchAllowed =
     batch?.status === "published" ||
-    (opportunity.voice_queue_source === "it_quick_add" && batch?.status === "validated");
+    ((opportunity.voice_queue_source === "it_quick_add" || opportunity.voice_queue_source === "it_campaign") && batch?.status === "validated");
 
   if (batchError || !batch || !batchAllowed || !opportunity.is_active) {
     throw new Error("This opportunity is not available for AI calling.");
@@ -103,10 +105,14 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
   const chassisNumber = overrideText(overrides, "chassisNumber", enrichment.chassisNumber ?? opportunity.chassis_no);
   const currentInsurer = overrideText(overrides, "insuranceCompany", enrichment.insuranceCompany ?? opportunity.current_insurer);
   const policyNumber = overrideText(overrides, "policyNumber", enrichment.policyNumber ?? opportunity.current_policy_no);
+  const sourcePolicyExpiryDate =
+    opportunity.voice_queue_source === "it_quick_add" ? null : opportunity.policy_end_date;
+  const campaignSafePolicyExpiryDate =
+    opportunity.voice_queue_source === "it_campaign" ? null : sourcePolicyExpiryDate;
   const policyExpiryDate = overrideText(
     overrides,
     "policyExpiryDate",
-    enrichment.policyExpiryDate ?? (opportunity.voice_queue_source === "it_quick_add" ? null : opportunity.policy_end_date),
+    enrichment.policyExpiryDate ?? campaignSafePolicyExpiryDate,
   );
   const previousIdv = overrideText(overrides, "previousIdv", null);
   const previousPremium = overrideText(overrides, "previousPremium", null);
@@ -151,6 +157,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
       opportunity_id: opportunity.id,
       partner_id: opportunity.partner_id,
       requested_by_auth_user_id: requestedByAuthUserId,
+      voice_campaign_id: voiceCampaignId,
       cohort_context: cohortContext,
     })
     .select("id")
