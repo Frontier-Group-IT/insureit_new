@@ -523,3 +523,12 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - The Policies baseline-JPEG repair merged, but the shared runtime-0.1 compatibility workflow then stopped earlier in the Business install step because ffmpeg could not decode the newer `business-header-reference.jpg` bytes.
 - To avoid changing Business layout or semantics while unblocking the requested Policies OTA, the Business header asset is restored to blob `6b5346c0669beaf94e4e4c64b4714ae51f4445dd`, from commit `475128f9cb620d995caf80cbd86c8a462b22e2a6`, where the Partner verification workflow (including Expo web review build) completed successfully.
 - No native/runtime configuration, APK/AAB, schema, database, policy logic, or Business layout change.
+
+## 2026-09-21 — Partner 0.1 Business ffmpeg blocker removal
+
+**IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
+- Branch: `hotfix/partner-0-1-skip-business-ffmpeg`.
+- After restoring the last Partner-verify-passing Business banner bytes, the shared runtime-0.1 workflow still failed because it unnecessarily re-decoded that JPEG with ffmpeg, which exited 69 before the Policies step.
+- The Business compatibility step now copies and validates the JPEG directly. The asset itself previously passed the Partner Expo web review build, so this removes the failing transcoder without changing Business layout or behavior.
+- No native/runtime configuration, APK/AAB, database/schema, Business logic, or Policies logic change.
