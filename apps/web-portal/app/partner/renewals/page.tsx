@@ -4,6 +4,7 @@ import { ArrowRight, CalendarClock, RefreshCw, Search } from "lucide-react";
 import { PartnerPagination } from "@/components/partner-portal/partner-pagination";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebRenewals, type PartnerRenewalMode, type PartnerRenewalWindow } from "@/lib/partner-web";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -105,10 +106,26 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
 
           {rows.length ? (
             <div className="divide-y divide-[#E8EDF4]">
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const insurerLogo = getInsurerLogo(row.insurer_name);
+                return (
                 <Link key={row.policy_id} href={"/partner/policies/" + encodeURIComponent(row.policy_id)} prefetch={false} className="group grid gap-3 px-4 py-3.5 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:py-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(140px,.65fr)_minmax(110px,.55fr)_auto] xl:items-center">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><RefreshCw className="h-4 w-4" /></span>
+                    <span className="flex h-10 w-11 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                      {insurerLogo ? (
+                        <Image
+                          src={insurerLogo}
+                          alt={row.insurer_name ? `${row.insurer_name} logo` : "Insurance company"}
+                          width={36}
+                          height={36}
+                          className="max-h-8 max-w-[40px] w-auto object-contain"
+                        />
+                      ) : (
+                        <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]">
+                          <RefreshCw className="h-4 w-4" />
+                        </span>
+                      )}
+                    </span>
                     <div className="min-w-0">
                       <p className="break-words text-[11.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.customer_name}</p>
                       <p className="mt-0.5 break-words text-[10px] font-medium leading-4 text-[#74839A]">{row.policy_no || row.policy_code || "Policy"}</p>
@@ -125,7 +142,8 @@ export default async function PartnerRenewalsPage({ searchParams }: { searchPara
                   <span className="inline-flex w-fit rounded-lg bg-[#EEF3F8] px-2 py-1 text-[9px] font-bold text-[#425672]">{renewalLabel(row.end_date)}</span>
                   <ArrowRight className="hidden h-4 w-4 text-[#8090A8] transition group-hover:translate-x-0.5 xl:block" />
                 </Link>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="relative grid min-h-[300px] place-items-center overflow-hidden px-4 py-8 text-center">
