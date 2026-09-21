@@ -500,3 +500,8 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - The workflow now copies the binary banner directly, verifies it as JPEG, then uses ffmpeg to normalize only the temporary compatibility copy to a baseline JPEG before Expo export.
 - The committed user-supplied banner is not replaced; only the OTA staging copy is normalized for legacy bundler compatibility.
 - No APK/AAB, runtime-version, native-config, schema, RLS, or policy business-logic change.
+
+
+## 2026-09-21 — Partner Business banner Android decode fix
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/partner-business-banner-baseline-jpeg` addresses the live Business hero showing only its blue fallback despite correct layout metrics. The root cause is the shipped `business-header-reference.jpg` being a progressive JPEG; the runtime-0.1.0 Expo/Android path can fail to render it reliably. The 0.1 OTA workflow, 0.1 APK workflow, and current Partner preview OTA now transcode the Business banner to a baseline 1664x936 JPEG before export and assert baseline JPEG + exact output dimensions. Business geometry remains unchanged: hero 158; image -6%/-8/112%/182/0.70/0.92; search -10/49.

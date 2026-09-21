@@ -79,6 +79,25 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Normalize Business banner for Expo Android
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s apps/partner-app/assets/business-header-reference.jpg
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -hide_banner -loglevel error -y \
+            -i apps/partner-app/assets/business-header-reference.jpg \
+            -vf "scale=1664:936:flags=lanczos" \
+            -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p \
+            /tmp/business-header-reference.jpg
+          mv /tmp/business-header-reference.jpg apps/partner-app/assets/business-header-reference.jpg
+          file apps/partner-app/assets/business-header-reference.jpg | grep -q 'baseline'
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 apps/partner-app/assets/business-header-reference.jpg)" = "1664"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 apps/partner-app/assets/business-header-reference.jpg)" = "936"
+
       - name: Verify Expo token can access the linked Partner project
         working-directory: apps/partner-app
         shell: bash
