@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Business Groups integrated metric row:** branch `fix/business-groups-integrated-metrics`; removes the nested rounded metric container so Groups/Root Partners/Branches/Ungrouped Partners become the full-width lower row of the same navy Business Groups header, separated only by the header divider and vertical column dividers, matching the Partner Application Review reference. **IMPLEMENTED; PR #2210 open; CI/merge/deployment pending.**
+
+
 - **2026-09-21 — IT Voice Campaign Excel workflow:** branch `feat/voice-campaign-excel-workflow`; adds IT-Super-User campaign creation from Excel/CSV with only RC No. + Mobile No., hard max-100 validation, DNC/terminal/duplicate holding, batched AuthBridge enrichment, RC-owner → Customer/Insured fallback only when all customer-name sources are blank, campaign review, explicit Start/Pause/Resume queueing, and campaign provenance on voice attempts. Existing kill-switch/calling-window/Sarvam-state gates remain authoritative; verified Customer/Vehicle/Policy masters remain untouched. Includes migration `20260921145500_voice_campaigns.sql` and protected schema workflow. **IMPLEMENTED; PR #2201 open; CI/schema application/merge/deployment/live 100-customer verification pending.** See `docs/SARVAM_VOICE_CAMPAIGNS_2026_09_21.md`.
 
 - **2026-09-21 — Business Group row click target:** branch `ui/business-group-row-clickable`; the full Business Group header row now toggles expand/collapse, with keyboard support and interactive child controls (Edit / Convert safely / form controls) excluded from row navigation. **IMPLEMENTED; PR/CI/merge/deployment pending.**
