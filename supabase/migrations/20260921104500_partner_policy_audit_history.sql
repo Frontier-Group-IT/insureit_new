@@ -1,3 +1,4 @@
+-- Protected schema rollout: Partner policy/vehicle canonical audit history.
 begin;
 
 create or replace function public.partner_app_policy_detail(p_policy_id uuid)
