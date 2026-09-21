@@ -12,6 +12,7 @@ on:
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
       - 'scripts/partner/compat/partner-business-date-filter.tsx'
       - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
+      - 'apps/partner-app/assets/business-header-reference.jpg'
       - 'scripts/partner/compat/partner-more-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
@@ -74,6 +75,8 @@ jobs:
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs \
             'compat/apps/partner-app/components/partner-screen.tsx'
+          cp tooling/apps/partner-app/assets/business-header-reference.jpg \
+            compat/apps/partner-app/assets/business-header-reference.jpg
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'hideTopBar' 'compat/apps/partner-app/components/partner-screen.tsx'
@@ -82,6 +85,8 @@ jobs:
           grep -q 'Business by Product' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'Quick Actions' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          test -s compat/apps/partner-app/assets/business-header-reference.jpg
+          grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
       - name: Install reference-style More layout for runtime 0.1.0
         shell: bash
