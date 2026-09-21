@@ -4,12 +4,13 @@ import { getAuthenticatedProfile } from "@/lib/auth";
 import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { normalizeFetchedVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";
 import { isValidVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-09-16-v4";
+const RC_MAPPER_VERSION = "2026-09-21-v5";
 const MAX_DISPLAY_FIELDS = 160;
 
 type RcMappedDetails = {
@@ -234,7 +235,7 @@ function mapVehicleDetails(raw: unknown, registrationNumber: string): RcMappedDe
   return {
     registrationNumber,
     registrationDate: toIsoDate(findValue(values, ["Registration Date", "registrationdate", "regdate", "dateofregistration"])),
-    manufacturer: cleanText(findValue(values, ["Maker/Manufacturer", "Manufacturer", "Maker", "manufacturername", "makername"])),
+    manufacturer: normalizeFetchedVehicleManufacturer(cleanText(findValue(values, ["Maker/Manufacturer", "Manufacturer", "Maker", "manufacturername", "makername"]))),
     model: cleanText(findValue(values, ["Model / Makers Class", "Model/Makers Class", "Model", "Makers Class", "vehiclemodel", "variant"])),
     manufacturingYear: toYear(findValue(values, ["Manufacturing Date", "Manufacturing Year", "Month/Year of Manufacture", "mfgyear", "yearofmanufacture"])),
     vehicleClass: mapVehicleClass(cleanText(findValue(values, ["Vehicle Class", "Class of Vehicle", "Vehicle Category", "Vehicle Type", "Body Type"]))),
@@ -279,7 +280,7 @@ function buildDisplaySections(raw: unknown): DisplaySection[] {
       continue;
     }
 
-    const primitive = cleanDisplayValue(value);
+    const primitive = normalizeDisplayFieldValue(key, cleanDisplayValue(value));
     if (primitive) {
       general.push({ label: humanizeLabel(key), value: primitive });
       totalFields += 1;
@@ -312,7 +313,7 @@ function flattenDisplayFields(record: Record<string, unknown>, prefix: string, r
       continue;
     }
 
-    const primitive = cleanDisplayValue(value);
+    const primitive = normalizeDisplayFieldValue(key, cleanDisplayValue(value));
     if (primitive) fields.push({ label: nextLabel, value: primitive });
   }
 
@@ -376,6 +377,15 @@ function humanizeLabel(value: string) {
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeDisplayFieldValue(key: string, value: string | null) {
+  if (!value) return null;
+  const normalizedKey = normalizeKey(key);
+  if (["makermanufacturer", "manufacturer", "manufacturername", "maker", "makername"].includes(normalizedKey)) {
+    return normalizeFetchedVehicleManufacturer(value);
+  }
+  return value;
 }
 
 function cleanDisplayValue(value: unknown) {
