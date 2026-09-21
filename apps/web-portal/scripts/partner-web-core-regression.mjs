@@ -120,6 +120,12 @@ assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy
 assert(!partnerPolicyDetailPage.includes('id: "policy-period"'), "Partner Policy detail must not render synthetic Policy period activity");
 assert(partnerPolicyDetailPage.includes("Created By:"), "Partner Policy detail must show canonical audit actor details");
 
+const partnerVehicleDetailPage = read("app/partner/vehicles/[id]/page.tsx");
+assert(partnerVehicleDetailPage.includes("data.activity_history.map"), "Partner Vehicle detail must render canonical activity_history");
+assert(!partnerVehicleDetailPage.includes('id: "vehicle-registration"'), "Partner Vehicle detail must not render synthetic Vehicle registration activity");
+assert(!partnerVehicleDetailPage.includes('id: "vehicle-linked-business"'), "Partner Vehicle detail must not render synthetic linked business activity");
+assert(partnerVehicleDetailPage.includes("Created By:"), "Partner Vehicle detail must show canonical audit actor details");
+
 const partnerPolicyPage = read("app/partner/policies/page.tsx");
 const partnerFleetSummary = read("app/partner/customers/[id]/partner-customer-fleet-summary.tsx");
 assert(insurerLogoResolver.includes('/assets/insurers/national-insurance.png'), "shared insurer resolver must expose National Insurance PNG");
