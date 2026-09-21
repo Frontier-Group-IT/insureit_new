@@ -69,6 +69,7 @@ export type DashboardClaimRow = {
 
 type ClaimRow = {
   id: string;
+  vehicle_id: string | null;
   claim_no: string;
   current_status: string;
   created_at: string;
@@ -208,6 +209,7 @@ export type DashboardCurrentData = {
     mtd: number;
     assistanceRequested: number;
     pendingDocuments: number;
+    actionPendingVehicles: number;
     estimateExposure: number;
     approvedExposure: number;
     billExposure: number;
@@ -222,9 +224,10 @@ export type DashboardCurrentData = {
   } | null;
   policyIntakes: {
     active: number;
-    ready: number;
+    actionRequired: number;
     inReview: number;
     processing: number;
+    workload: number;
     needsAttention: number;
     ocrFailed: number;
     recent: DashboardIntakeRow[];
@@ -321,7 +324,7 @@ export async function getDashboardCurrentData(
     ? (() => {
         let query = admin
           .from("claims")
-          .select("id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
+          .select("id,vehicle_id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
           .order("updated_at", { ascending: false })
           .limit(10000);
         if (claimCustomerIds !== null) query = query.in("customer_id", claimCustomerIds);
@@ -560,6 +563,9 @@ export async function getDashboardCurrentData(
     }
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
+    const actionPendingVehicles = new Set(
+      openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
+    ).size;
     const estimateExposure = sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss");
     claimHealth = {
       open: openClaims.length,
@@ -569,6 +575,7 @@ export async function getDashboardCurrentData(
       mtd: claims.filter((row) => row.created_at.slice(0, 10) >= monthStartKey).length,
       assistanceRequested: openClaims.filter((row) => row.assistance_status === "requested").length,
       pendingDocuments,
+      actionPendingVehicles,
       estimateExposure,
       approvedExposure: sumClaimFinancial(openClaims, financialByClaim, "approved_amount", "approved_amount"),
       billExposure: sumClaimFinancial(openClaims, financialByClaim, "bill_amount"),
@@ -620,15 +627,25 @@ export async function getDashboardCurrentData(
   }
 
   const policyIntakes = access.viewPolicyIntakes && !intakeResult.error
-    ? {
-        active: intakes.filter((row) => ["ready_for_review", "in_review", "processing", "needs_attention"].includes(row.status)).length,
-        ready: intakes.filter((row) => row.status === "ready_for_review").length,
-        inReview: intakes.filter((row) => row.status === "in_review").length,
-        processing: intakes.filter((row) => row.status === "processing").length,
-        needsAttention: intakes.filter((row) => row.status === "needs_attention").length,
-        ocrFailed: intakes.filter((row) => row.status === "processing" && row.ocr_status === "failed").length,
-        recent: intakes.filter((row) => !["completed", "rejected"].includes(row.status)).slice(0, 5),
-      }
+    ? (() => {
+        const actionRequired = intakes.filter(
+          (row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed"),
+        ).length;
+        const inReview = intakes.filter((row) => row.status === "in_review").length;
+        const processing = intakes.filter(
+          (row) => row.status === "processing" && row.ocr_status !== "failed",
+        ).length;
+        return {
+          active: intakes.filter((row) => ["ready_for_review", "in_review", "processing", "needs_attention"].includes(row.status)).length,
+          actionRequired,
+          inReview,
+          processing,
+          workload: actionRequired + inReview + processing,
+          needsAttention: intakes.filter((row) => row.status === "needs_attention").length,
+          ocrFailed: intakes.filter((row) => row.status === "processing" && row.ocr_status === "failed").length,
+          recent: intakes.filter((row) => !["completed", "rejected"].includes(row.status)).slice(0, 5),
+        };
+      })()
     : null;
 
   let pendingApplications = 0;
