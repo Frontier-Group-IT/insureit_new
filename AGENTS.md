@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Voice campaign schema workflow secret interpolation fix:** branch `fix/voice-campaign-schema-workflow-secrets`; removes accidental backslashes before GitHub Actions secret/variable expressions in `apply-voice-campaigns.yml`, which caused `SUPABASE_*` values to reach the Supabase CLI with a leading `\\` and blocked migration `20260921145500`. **IMPLEMENTED; PR/CI/merge/schema/deployment pending.** See `docs/SARVAM_VOICE_CAMPAIGNS_2026_09_21.md`.
+
 - **2026-09-21 — Business Groups integrated metric row:** branch `fix/business-groups-integrated-metrics`; removes the nested rounded metric container so Groups/Root Partners/Branches/Ungrouped Partners become the full-width lower row of the same navy Business Groups header, separated only by the header divider and vertical column dividers, matching the Partner Application Review reference. **IMPLEMENTED; PR #2210 open; CI/merge/deployment pending.**
 
 
