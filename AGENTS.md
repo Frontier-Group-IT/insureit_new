@@ -47,7 +47,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
-- **2026-09-21 — Motor FLAT legacy-draft crash fix (rebased on current main):** branch `fix/motor-flat-old-draft-crash-current-main`; `/policies/new` now hydrates pre-FLAT session drafts into the current form shape and treats missing `flatPayoutAmount` as an empty string in FLAT calculations/payloads, preventing the page error boundary when FLAT is selected after an older saved draft is restored. Policy Intake regression guards this compatibility path. **IMPLEMENTED; canonical CI/merge/deployment pending.**
+- **2026-09-21 — Motor FLAT legacy-draft crash fix (rebased on current main):** branch `fix/motor-flat-old-draft-crash-current-main`; `/policies/new` now hydrates pre-FLAT session drafts into the current form shape and treats missing `flatPayoutAmount` as an empty string in FLAT calculations/payloads, preventing the page error boundary when FLAT is selected after an older saved draft is restored. Policy Intake regression guards this compatibility path. **IMPLEMENTED; replacement PR #2165 open; canonical CI/merge/deployment pending.**
 
 - **2026-09-21 — Partner Business reference-layout redesign:** branch `ui/partner-business-reference-layout-v3`; Business now uses the approved full-width Home-style hero/background treatment and Home typography scale, plus the reference-style floating search/filter and enlarged rounded KPI/trend/product/quick-action/network surfaces, while preserving existing Business data, routes, permissions, payout restrictions and product semantics. **IMPLEMENTED; merge/deployment verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
 
