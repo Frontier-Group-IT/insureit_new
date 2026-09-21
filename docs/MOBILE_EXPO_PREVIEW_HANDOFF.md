@@ -483,3 +483,8 @@ The My Work section is removed. INSUREIT Stories is the final Home section, has 
 - Root cause of the prior installed-app mismatch: `.github/workflows/publish-partner-0-1-home-hero-reference-once.yml` was still installing the Policies screen from pinned commit `9c2379b1bafc3189b6027f536e113f0b1f9ec46b`, so later Policies banner changes in current tooling were not included in runtime 0.1.0 OTA bundles.
 - The workflow now copies the current `scripts/partner/compat/partner-policies-reference-0-1.tsx` and the current Policies banner into the approved 0.1 compatibility checkout, with guards for the banner path and Home geometry.
 - No native/runtime configuration change and no APK/AAB is required. After merge, publish through the existing runtime `0.1.0` preview OTA workflow and perform two cold launches before claiming installed-device verification.
+
+
+### 2026-09-21 — Policies banner binary repair follow-up
+
+The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling because `policies-header-reference.jpg` was not a valid JPEG blob even though the path/extension were correct. Branch `fix/partner-policies-banner-valid-jpeg` replaces only that asset with a valid JPEG derived from the user-supplied banner. **IMPLEMENTED; PR #2198; CI/merge/OTA verification pending.**
