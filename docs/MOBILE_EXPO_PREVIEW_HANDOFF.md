@@ -532,3 +532,16 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - After restoring the last Partner-verify-passing Business banner bytes, the shared runtime-0.1 workflow still failed because it unnecessarily re-decoded that JPEG with ffmpeg, which exited 69 before the Policies step.
 - The Business compatibility step now copies and validates the JPEG directly. The asset itself previously passed the Partner Expo web review build, so this removes the failing transcoder without changing Business layout or behavior.
 - No native/runtime configuration, APK/AAB, database/schema, Business logic, or Policies logic change.
+
+
+## 2026-09-21 — Partner 0.1 Policies Home-header parity
+
+**IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
+- Branch: `ui/partner-policies-home-header-parity`.
+- Policies keeps the approved Policies banner and locked Home geometry, but reduces banner opacity from `0.70` to `0.55` for a slightly more faded background.
+- The left brand area now uses the exact Home treatment: `insureit-partner-official.png` plus the `insureit / Partner` brand text, with the same Home sizes.
+- The right-side activity control now uses Home's `Feather clock` icon/button treatment, and the profile avatar uses the exact Home dimensions, white fill, border and shadow.
+- Policies title font size is reduced from `20` to Home's `14` scale; subtitle is reduced proportionally.
+- The runtime-0.1 OTA workflow now guards the `0.55` opacity, Home logo asset, Home clock icon and 14px Policies title before publishing.
+- No APK/AAB, native/runtime configuration, schema/database, or policy business-logic change.
