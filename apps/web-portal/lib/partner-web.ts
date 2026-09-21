@@ -722,6 +722,7 @@ export type PartnerActivityData = {
     title: string;
     subtitle: string;
     meta: string;
+    insurer_name?: string | null;
     route: string;
     tone: "business" | "service" | "attention" | "operations" | "learn";
   }[];
