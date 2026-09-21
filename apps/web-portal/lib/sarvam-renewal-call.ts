@@ -51,10 +51,58 @@ function stringVariable(value: string | null | undefined) {
   return normalized ? normalized : undefined;
 }
 
+function customerGreetingIdentity(value: string | null | undefined) {
+  const normalized = value?.replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return { firstName: undefined, salutation: undefined };
+  }
+
+  const explicitHonorifics: Array<{ pattern: RegExp; salutation: "Sir" | "Madam" }> = [
+    { pattern: /^(?:mr\.?|shri|shree|sri)\s+/i, salutation: "Sir" },
+    { pattern: /^(?:mrs\.?|ms\.?|miss|smt\.?)\s+/i, salutation: "Madam" },
+  ];
+
+  let nameWithoutHonorific = normalized;
+  let salutation: "Sir" | "Madam" | undefined;
+
+  for (const entry of explicitHonorifics) {
+    if (entry.pattern.test(nameWithoutHonorific)) {
+      salutation = entry.salutation;
+      nameWithoutHonorific = nameWithoutHonorific.replace(entry.pattern, "").trim();
+      break;
+    }
+  }
+
+  const rawFirstName = nameWithoutHonorific.split(/\s+/)[0]?.trim();
+  if (!rawFirstName) {
+    return { firstName: undefined, salutation };
+  }
+
+  const firstName =
+    /^[A-Z]+$/.test(rawFirstName) && rawFirstName.length > 1
+      ? rawFirstName.charAt(0) + rawFirstName.slice(1).toLowerCase()
+      : rawFirstName;
+
+  return { firstName, salutation };
+}
+
+function buildOpeningLine(context: ExternalRenewalVoiceStartContext) {
+  const { firstName, salutation } = customerGreetingIdentity(context.customer_name);
+  const addressee = [firstName, salutation].filter(Boolean).join(" ");
+
+  return addressee
+    ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ फ्रंटियर जेसीबी से। आपकी पॉलिसी रिन्यूअल के बारे में कॉल किया था—दो मिनट बात कर सकते हैं क्या?`
+    : "नमस्ते, मैं अंजना बोल रही हूँ फ्रंटियर जेसीबी से। आपकी पॉलिसी रिन्यूअल के बारे में कॉल किया था—दो मिनट बात कर सकते हैं क्या?";
+}
+
 function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
   const variables: Record<string, string> = {};
+  const greetingIdentity = customerGreetingIdentity(context.customer_name);
   const candidates: Record<string, string | undefined> = {
     customer_name: stringVariable(context.customer_name),
+    customer_first_name: greetingIdentity.firstName,
+    customer_salutation: greetingIdentity.salutation,
+    opening_line: buildOpeningLine(context),
     vehicle_make_model: stringVariable(context.vehicle_make_model),
     vehicle_number: stringVariable(context.vehicle_number),
     current_insurer: stringVariable(context.current_insurer),
