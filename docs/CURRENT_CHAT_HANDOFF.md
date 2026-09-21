@@ -1,3 +1,16 @@
+## 2026-09-21 — Sales Executive Policy Intake role
+
+- Branch: `feat/sales-executive-policy-intake`; PR #2189.
+- Adds new internal portal role `sales_executive` / **Sales Executive**.
+- Sidebar is intentionally restricted to **Fleet & Policies** only, containing **Policy Register**, **Policy Intakes**, and **New Policy Intake**. Direct **Add Policy**, External Policies, Vehicles and unrelated workspaces are not exposed.
+- Role permissions are limited to `view_policies`, `view_policy_intakes`, and `create_policy_intakes`; Policy Intake review/finalize permissions are not granted.
+- Policy Intake list/detail remain owner-scoped for non-reviewers. Eligible lead-source lookup uses the Policy Intake creation scope so Sales Executive can use assigned Partner/POSP/MISP sources without receiving Intermediaries workspace access.
+- Sales Executive Policy Register uses Policy Intake lineage: `policy_intake_requests.submitted_by_profile_id = current profile` + `status='completed'` + `final_policy_id`. The register uses the existing read-only policy view and detail authorization enforces the same lineage.
+- Migration: `supabase/migrations/20260921131500_add_sales_executive_app_role.sql`; rollback guard and dedicated schema/deploy workflow included. PostgreSQL enum rollback intentionally leaves the unused enum label dormant rather than destructively rebuilding the enum.
+- **IMPLEMENTED; REVERSIBLE APPLICATION/ACCESS ROLLOUT. NOT APPLIED, NOT MERGED, NOT DEPLOYED.**
+
+---
+
 ## 2026-09-21 — Motor Partner Payout FLAT basis
 
 - Branch: `feat/motor-flat-partner-payout`.
