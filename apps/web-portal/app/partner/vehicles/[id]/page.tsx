@@ -228,20 +228,13 @@ export default async function PartnerVehicleDetailPage({
         </StepSection>
 
         <StandardActivityStatusCard
-          items={[
-            {
-              id: "vehicle-registration",
-              title: "Vehicle registration",
-              meta: registrationPending ? "Registration pending" : "Registered",
-              at: vehicle.registration_date,
-            },
-            {
-              id: "vehicle-linked-business",
-              title: "Linked business activity",
-              meta: `${data.activity.policies} policies · ${data.activity.claims} claims`,
-              at: null,
-            },
-          ]}
+          items={data.activity_history.map((activity) => ({
+            id: activity.id,
+            title: activity.action,
+            meta: activity.actor_name ? `Created By: ${activity.actor_name}` : null,
+            at: activity.at,
+          }))}
+          emptyText="Activity not recorded"
         />
       </div>
     </PartnerPortalShell>
