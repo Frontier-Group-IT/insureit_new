@@ -26,7 +26,7 @@ export type PolicyEditPayload = {
   };
   premium: { od: string; tp: string; cpaOpted: boolean; cpa: string };
   payin: { basis: string; odPercent: string; tpPercent: string; scheme: string; provided: boolean };
-  payout: { retention: string; odPercent: string; tpPercent: string; status: string; date: string; voucherNumber: string; provided: boolean };
+  payout: { retention: string; odPercent: string; tpPercent: string; flatAmount: string; status: string; date: string; voucherNumber: string; provided: boolean };
 };
 
 export type PolicyEditResult =
@@ -84,7 +84,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     return { ok: false, error: "CPA amount is mandatory for GCV policies and must be greater than 0." };
   }
 
-  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.payin.scheme];
+  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.payin.scheme, payload.payout.flatAmount];
   if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium and scheme values." };
 
   const percentageValues = [payload.payin.odPercent, payload.payin.tpPercent, payload.payout.odPercent, payload.payout.tpPercent];
@@ -120,6 +120,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
         status: payout?.status ?? "Pending",
         date: payout?.payout_date ?? "",
         voucherNumber: payout?.voucher_number ?? "",
+        flatAmount: "",
         provided: false,
       };
     }
