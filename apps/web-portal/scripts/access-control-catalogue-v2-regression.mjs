@@ -191,9 +191,11 @@ const sqlGrants = new Set(
 );
 const matrixGrants = new Set(
   roleMatrixV2.flatMap((role) =>
-    role.grants
-      .filter((entry) => !applicationOnlyPermissionKeys.has(entry.permission))
-      .map((entry) => `${role.code}|${entry.permission}|${entry.access}|${entry.scope ?? ""}`),
+    applicationOnlyRoleCodes.has(role.code)
+      ? []
+      : role.grants
+          .filter((entry) => !applicationOnlyPermissionKeys.has(entry.permission))
+          .map((entry) => `${role.code}|${entry.permission}|${entry.access}|${entry.scope ?? ""}`),
   ),
 );
 
