@@ -10,6 +10,7 @@ import {
   togglePartnerAssociateAccountStatus,
   updatePartnerAssociateAccount,
 } from "./actions";
+import { AssociateCityFields } from "./associate-city-fields";
 
 type Role = "admin" | "claim_head" | "insurance_head" | "bodyshop_manager";
 type Status = "invited" | "active" | "disabled";
@@ -235,15 +236,11 @@ export function AssociateAccountActionsMenu({
                 <Field label="Address">
                   <input name="address" defaultValue={associate.address ?? ""} className={inputClass} placeholder="Address" />
                 </Field>
-                <Field label="City">
-                  <input name="city" defaultValue={associate.city ?? ""} className={inputClass} placeholder="City" />
-                </Field>
-                <Field label="State">
-                  <input name="state" defaultValue={associate.state ?? ""} className={inputClass} placeholder="State" />
-                </Field>
-                <Field label="PIN Code">
-                  <input name="postal_code" defaultValue={associate.postal_code ?? ""} className={inputClass} placeholder="PIN Code" inputMode="numeric" />
-                </Field>
+                <AssociateCityFields
+                  defaultCity={associate.city ?? ""}
+                  defaultState={associate.state ?? ""}
+                  defaultPostalCode={associate.postal_code ?? ""}
+                />
               </div>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-[#E7ECF3] bg-[#FBFCFE] px-5 py-3">
