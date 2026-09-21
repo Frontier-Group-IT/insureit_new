@@ -137,24 +137,18 @@ jobs:
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
           grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
-      - name: Install reference-style Policies layout for runtime 0.1.0
+      - name: Install last verified Policies layout for runtime 0.1.0
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p compat/apps/partner-app/assets/partner/banners
-          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
-            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx \
-            'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-          grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          git -C tooling show 9c2379b1bafc3189b6027f536e113f0b1f9ec46b:scripts/partner/compat/partner-policies-reference-0-1.tsx \
+            > 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "hero-banner.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Manage. Track. Grow.' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Expiring Soon' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Lapsed' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
-          grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
 
       - name: Install reference-style More layout for runtime 0.1.0
         shell: bash
