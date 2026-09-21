@@ -208,7 +208,7 @@ assert(prospectDetailPage.includes("Normalized provider fields are shown with th
 assert(rcEnrichmentModel.includes("function mergeDetails("), "External Renewal enrichment merges legacy normalized cache with raw provider fields");
 assert(rcEnrichmentModel.includes("rawDetails = fromRaw(cached.raw_response"), "fresh/stale cache repair re-reads raw provider evidence");
 assert(rcEnrichmentModel.includes("normalized_details: details"), "fresh cache repair persists upgraded normalized details for reuse");
-assert(rcEnrichmentModel.includes('external-renewal-2026-09-19-v2'), "External Renewal AuthBridge mapper version records the insurance/policy repair");
+assert(rcEnrichmentModel.includes('external-renewal-2026-09-21-v3'), "External Renewal AuthBridge mapper version records the latest mapped-field repair");
 assert(rcEnrichmentModel.includes("vehicle_rc_lookup_cache"), "External Renewal enrichment reuses the paid RC cache");
 assert(rcEnrichmentModel.includes("lookupAuthbridgeRc"), "External Renewal enrichment can call the protected AuthBridge client");
 assert(rcEnrichmentModel.includes("rc_enrichment_details"), "External Renewal enrichment persists only the safe normalized snapshot");
