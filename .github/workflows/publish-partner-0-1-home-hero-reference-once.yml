@@ -116,16 +116,6 @@ jobs:
           grep -q 'export function PartnerBusinessDateFilterCompat' \
             compat/apps/partner-app/components/partner-business-date-filter-compat.tsx
 
-      - name: Apply Business Report date-filter patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "partner_app_business_range" 'compat/apps/partner-app/lib/home.ts'
-          grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q 'rangeSelection' 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q 'rangeSelection?.summary.premium' 'compat/apps/partner-app/app/(tabs)/business.tsx'
-
       - name: Install reference-style Business layout for runtime 0.1.0
         shell: bash
         run: |
