@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Image, type ImageSourcePropType, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { PartnerBusinessDateFilterCompat } from '@/components/partner-business-date-filter-compat';
@@ -28,7 +28,7 @@ type OverviewCardProps = {
 
 export default function BusinessScreen() {
   const router = useRouter();
-  const { cacheScopeKey } = usePartnerSession();
+  const { context, cacheScopeKey } = usePartnerSession();
   const [showRange, setShowRange] = useState(false);
   const [rangeSelection, setRangeSelection] = useState<{ summary: PartnerBusinessRangeSummary; label: string } | null>(null);
 
@@ -79,6 +79,7 @@ export default function BusinessScreen() {
   const renewals = workspace.data?.renewals ?? null;
   const claims = workspace.data?.claims ?? null;
   const payout = workspace.data?.payout ?? null;
+  const profileInitials = initials(context?.identity.display_name ?? 'Partner');
 
   const policiesChange = useMemo(() => {
     if (!performance || !performance.policies_last_month) return null;
@@ -124,41 +125,34 @@ export default function BusinessScreen() {
         <>
           <View style={styles.heroBanner}>
             <Image
-              source={require('../../assets/figma-dashboard/hero-banner.jpg')}
+              source={require('../../assets/business-header-reference.jpg')}
               style={styles.heroImage}
               resizeMode="cover"
             />
             <View style={styles.heroShade} />
 
             <View style={styles.heroTopRow}>
-              <View style={styles.heroBrand}>
-                <Image
-                  source={require('../../assets/partner-app-icon.jpg')}
-                  style={styles.heroBrandIcon}
-                  resizeMode="cover"
-                />
-                <View style={styles.heroBrandText}>
-                  <Text style={styles.heroBrandName}>insureit</Text>
-                  <Text style={styles.heroBrandPartner}>PARTNER</Text>
-                </View>
-              </View>
+              <Image
+                source={require('../../assets/insureit-partner-official.png')}
+                style={styles.heroLogo}
+                resizeMode="contain"
+              />
               <View style={styles.heroActions}>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Notifications"
                   onPress={() => router.push('/(tabs)/more')}
-                  style={({ pressed }) => [styles.heroActionButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
                 >
-                  <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
-                  <View style={styles.notificationDot} />
+                  <Feather name="bell" size={20} color="#FFFFFF" />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Profile"
                   onPress={() => router.push('/profile')}
-                  style={({ pressed }) => [styles.heroProfileButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
                 >
-                  <Ionicons name="person" size={18} color="#FFFFFF" />
+                  <Text style={styles.heroAvatarText}>{profileInitials}</Text>
                 </Pressable>
               </View>
             </View>
@@ -453,6 +447,10 @@ function humanize(value: string) {
   return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function initials(value: string) {
+  return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'IP';
+}
+
 function formatCacheTime(value: number | null) {
   if (!value) return 'earlier';
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -460,7 +458,7 @@ function formatCacheTime(value: number | null) {
 
 const styles = StyleSheet.create({
   heroBanner: {
-    height: 150,
+    height: 188,
     marginHorizontal: -16,
     marginTop: -14,
     overflow: 'hidden',
@@ -470,7 +468,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    transform: [{ scale: 1.02 }],
   },
   heroShade: {
     ...StyleSheet.absoluteFillObject,
@@ -479,80 +476,65 @@ const styles = StyleSheet.create({
   heroTopRow: {
     position: 'absolute',
     zIndex: 3,
-    top: 6,
-    left: 16,
-    right: 14,
-    minHeight: 50,
+    top: 10,
+    left: 18,
+    right: 16,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  heroBrand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  heroBrandIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 7,
-  },
-  heroBrandText: {
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  heroBrandName: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    lineHeight: 18,
-    fontWeight: '800',
-    letterSpacing: -0.25,
-  },
-  heroBrandPartner: {
-    marginTop: 1,
-    color: '#FFFFFF',
-    fontSize: 8,
-    lineHeight: 10,
-    fontWeight: '700',
-    letterSpacing: 2.2,
+  heroLogo: {
+    width: 142,
+    height: 54,
   },
   heroActions: {
     minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 7,
   },
-  heroActionButton: {
-    position: 'relative',
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 6,
-    right: 5,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#F04438',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  heroProfileButton: {
-    width: 34,
-    height: 34,
+  heroIconButton: {
+    width: 33,
+    height: 33,
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(124, 184, 255, 0.92)',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  heroAvatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  heroAvatarText: {
+    color: '#144E98',
+    fontSize: 11.5,
+    lineHeight: 15,
+    fontWeight: '800',
   },
   heroCopy: {
     position: 'absolute',
     zIndex: 3,
     left: 18,
-    top: 56,
+    bottom: 34,
   },
   heroTitle: {
     color: '#FFFFFF',
@@ -564,7 +546,7 @@ const styles = StyleSheet.create({
 
   searchRow: {
     zIndex: 5,
-    marginTop: -18,
+    marginTop: -22,
     marginHorizontal: 0,
     marginBottom: 10,
     minHeight: 52,
