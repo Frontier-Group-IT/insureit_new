@@ -181,6 +181,16 @@ assert(internalRenewalPage.includes('from "@/lib/insurer-logo"'), "Internal Rene
 assert(internalRenewalPage.includes("getInsurerLogo(row.insurer_name)"), "Internal Renewal first column must resolve insurer logo from insurer_name");
 assert(internalRenewalPage.includes("Insurance company"), "Internal Renewal insurer logo must keep accessible fallback alt text");
 
+const operationsVehicleWorkspace = read("app/vehicles/vehicle-workspace.tsx");
+assert(operationsVehicleWorkspace.includes('from "@/lib/vehicle-brand-logo"'), "Operations Vehicle Portfolio must use the shared vehicle brand logo resolver");
+assert(operationsVehicleWorkspace.includes("getVehicleBrandLogo(vehicle.make)"), "Operations Vehicle column must resolve manufacturer logo from vehicle.make");
+assert(operationsVehicleWorkspace.includes("Vehicle manufacturer"), "Operations Vehicle manufacturer logo must keep accessible fallback alt text");
+
+const operationsFleetSummary = read("app/customers/[id]/fleet/fleet-summary-client.tsx");
+assert(operationsFleetSummary.includes('from "@/lib/vehicle-brand-logo"'), "Operations Customer Fleet Summary must use the shared vehicle brand logo resolver");
+assert(operationsFleetSummary.includes("getVehicleBrandLogo(vehicle.make)"), "Operations Customer Fleet Summary must resolve manufacturer logo from vehicle.make");
+assert(operationsFleetSummary.includes("Vehicle manufacturer"), "Operations Customer Fleet Summary manufacturer logo must keep accessible fallback alt text");
+
 const externalRenewalPage = read("app/partner/renewals/external/page.tsx");
 assert(externalRenewalPage.includes('from "@/lib/vehicle-brand-logo"'), "External Renewal must use the shared vehicle brand logo resolver");
 assert(externalRenewalPage.includes("getVehicleBrandLogo(row.vehicle_make)"), "External Renewal Customer / Business column must resolve manufacturer logos from vehicle_make");

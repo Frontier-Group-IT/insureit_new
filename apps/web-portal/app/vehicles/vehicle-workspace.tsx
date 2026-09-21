@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { CarFront, FileText, Plus, ShieldAlert, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
 import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -125,8 +127,25 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
             {pageRows.map((vehicle) => (
               <tr key={vehicle.id} className="h-12 transition hover:bg-[#FAFCFF]">
                 <td className="px-3">
-                  <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleRegistrationNumber(vehicle)}</Link>
-                  <p className="truncate text-[9px] leading-4 text-[#64748B]">{vehicle.vehicle_type || "Type not set"}</p>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                      {getVehicleBrandLogo(vehicle.make) ? (
+                        <Image
+                          src={getVehicleBrandLogo(vehicle.make)!}
+                          alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
+                          width={34}
+                          height={34}
+                          className="max-h-8 max-w-[38px] w-auto object-contain"
+                        />
+                      ) : (
+                        <CarFront className="h-4.5 w-4.5 text-[#6F8197]" />
+                      )}
+                    </span>
+                    <div className="min-w-0">
+                      <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleRegistrationNumber(vehicle)}</Link>
+                      <p className="truncate text-[9px] leading-4 text-[#64748B]">{vehicle.vehicle_type || "Type not set"}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{vehicle.customers?.contact_name ?? "-"}</p></td>
                 <td className="px-2.5"><p className="truncate font-semibold">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || "-"}</p></td>
@@ -148,9 +167,24 @@ function VehicleMobileCard({ vehicle }: { vehicle: VehicleRow }) {
   return (
     <article className="mobile-record-card">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[15px] font-extrabold text-[#12203B]">{displayVehicleRegistrationNumber(vehicle)}</Link>
-          <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.vehicle_type}</p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+            {getVehicleBrandLogo(vehicle.make) ? (
+              <Image
+                src={getVehicleBrandLogo(vehicle.make)!}
+                alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
+                width={34}
+                height={34}
+                className="max-h-8 max-w-[38px] w-auto object-contain"
+              />
+            ) : (
+              <CarFront className="h-4.5 w-4.5 text-[#6F8197]" />
+            )}
+          </span>
+          <div className="min-w-0">
+            <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[15px] font-extrabold text-[#12203B]">{displayVehicleRegistrationNumber(vehicle)}</Link>
+            <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.vehicle_type}</p>
+          </div>
         </div>
         <RegistrationPill vehicle={vehicle} />
       </div>
