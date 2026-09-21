@@ -160,39 +160,39 @@ export function BusinessGroupWorkspace({
 
   return (
     <div className="mx-auto max-w-[1540px] space-y-4 pb-24">
-      <section className="rounded-[20px] border border-[#DCE5F1] bg-white px-4 py-3 shadow-[0_14px_36px_rgba(24,59,102,.07)]">
+      <section className="rounded-[20px] border border-[#173B6C] bg-[linear-gradient(135deg,#0F3B72_0%,#0B2F5F_55%,#08274F_100%)] px-4 py-3 shadow-[0_16px_40px_rgba(7,29,73,.20)]">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[#EEF3FF] text-[#315FEA] ring-1 ring-[#D9E4FF]">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/10 text-white ring-1 ring-white/20">
               <Layers3 className="h-5 w-5" />
             </span>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h1 className="text-[18px] font-bold tracking-[-0.025em] text-[#142B4A]">Business Groups</h1>
-              <span className="rounded-full bg-[#EAF0FF] px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.06em] text-[#315FEA]">Group → Partner → Branch</span>
+              <h1 className="text-[18px] font-bold tracking-[-0.025em] text-white">Business Groups</h1>
+              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[7px] font-bold uppercase tracking-[0.06em] text-[#DCE9FF]">Group → Partner → Branch</span>
             </div>
           </div>
           {canManage ? (
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <Link href="/intermediaries/groups/branches" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]">
+              <Link href="/intermediaries/groups/branches" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15">
                 <Store className="h-3.5 w-3.5" /> Branch Register
               </Link>
-              <Link href="/intermediaries/groups/branches/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}>
+              <Link href="/intermediaries/groups/branches/new" aria-disabled={!hierarchyReady} className={`inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15 ${!hierarchyReady ? "pointer-events-none opacity-45" : ""}`}>
                 <Plus className="h-3.5 w-3.5" /> Add Branch
               </Link>
-              <button type="button" onClick={() => setBranchOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF] disabled:cursor-not-allowed disabled:opacity-45">
+              <button type="button" onClick={() => setBranchOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-45">
                 <GitBranch className="h-3.5 w-3.5" /> Assign Branch
               </button>
-              <Link href="/intermediaries/groups/login-access" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#D7E0EA] bg-white px-3 text-[8px] font-bold text-[#3156B8] shadow-sm transition hover:bg-[#F5F8FF]">
+              <Link href="/intermediaries/groups/login-access" className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 text-[8px] font-bold text-white shadow-sm transition hover:bg-white/15">
                 <UsersRound className="h-3.5 w-3.5" /> Login Access
               </Link>
-              <button type="button" onClick={() => setCreateOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#315FEA] px-3.5 text-[8px] font-bold text-white shadow-[0_6px_16px_rgba(49,95,234,.20)] transition hover:bg-[#254DD0] disabled:cursor-not-allowed disabled:opacity-45">
+              <button type="button" onClick={() => setCreateOpen(true)} disabled={!hierarchyReady} className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-[#5B8BFF] bg-[#315FEA] px-3.5 text-[8px] font-bold text-white shadow-[0_8px_18px_rgba(0,0,0,.18)] transition hover:bg-[#3B6CF4] disabled:cursor-not-allowed disabled:opacity-45">
                 <Plus className="h-3.5 w-3.5" /> Create Group
               </button>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-3 grid overflow-hidden rounded-2xl border border-[#E1E8F1] bg-[#FBFCFE] sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-[#E3E9F1]">
+        <div className="mt-3 grid overflow-hidden rounded-2xl border border-white/15 bg-white/8 sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-white/10">
           <Metric label="Groups" value={groups.length} icon={<Layers3 className="h-4 w-4" />} />
           <Metric label="Root Partners" value={rootPartners.length} icon={<Building2 className="h-4 w-4" />} />
           <Metric label="Branches" value={partners.filter((partner) => partner.is_branch_profile).length} icon={<Store className="h-4 w-4" />} />
@@ -367,7 +367,7 @@ function PartnerTreeRow({ partner, branches, group, canManage }: { partner: Busi
 }
 
 function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return <div className="flex min-h-[58px] items-center gap-3 px-4 py-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#315FEA] shadow-sm ring-1 ring-[#E3E9F1]">{icon}</span><div><p className="text-[14px] font-bold leading-none text-[#203A59]">{value}</p><p className="mt-1 text-[7.5px] font-semibold text-[#8794A4]">{label}</p></div></div>;
+  return <div className="flex min-h-[58px] items-center gap-3 px-4 py-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-[#CFE0FF] ring-1 ring-white/15">{icon}</span><div><p className="text-[14px] font-bold leading-none text-white">{value}</p><p className="mt-1 text-[7.5px] font-semibold text-[#B9CBE2]">{label}</p></div></div>;
 }
 
 function SuccessToast({ text }: { text: string }) {
