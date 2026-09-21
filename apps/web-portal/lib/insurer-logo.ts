@@ -46,7 +46,7 @@ const INSURER_ALIASES: Record<string, keyof typeof INSURER_LOGOS> = {
   iffcotokiogeneralinsurancecompanylimited: "iffcotokio",
   sbigeneralinsurancecompanylimited: "sbigeneral",
   shriramgeneralinsurancecompanylimited: "shriramgeneral",
-  tat aageneralinsurancecompanylimited: "tataaig",
+  tataaiggeneralinsurancecompanylimited: "tataaig",
 };
 
 export function normalizeInsurerLogoKey(value: string | null | undefined) {
