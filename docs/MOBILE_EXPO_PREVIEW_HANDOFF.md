@@ -561,3 +561,8 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - The compatibility screen already references this asset path, so no Business data or layout logic changes are required.
 - The uploaded artwork was normalized to a baseline JPEG for the legacy runtime-0.1 Expo/Metro pipeline; the OTA workflow now verifies the new asset dimensions before publish.
 - No APK/AAB, native/runtime configuration, database/schema, or Business reporting logic change.
+
+
+## 2026-09-21 — Customer OTP login bounce fix
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/customer-otp-post-login-routing` changes only the post-OTP customer routing guard in `apps/mobile-app/lib/auth.ts`. A freshly authenticated customer with an **active** profile is no longer signed out and redirected to `/login` solely because both `getCustomerForUser()` and `getOnboardingApplicationForUser()` return null. The session is preserved and routing continues to Customer Home, which already supports a missing customer record and can route the user into onboarding. Explicitly inactive customer profiles still revoke the local session and return to Login exactly as before. No database/schema/RLS/RPC/native/runtime-version changes.
