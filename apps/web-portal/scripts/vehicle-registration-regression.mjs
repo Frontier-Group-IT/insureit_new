@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  displayVehicleRegistrationNumber,
   isValidVehicleRegistrationNumber,
   normalizeVehicleRegistrationNumber,
 } from "../lib/vehicle-registration.ts";
@@ -23,6 +24,31 @@ for (const value of valid) {
 }
 
 assert.equal(normalizeVehicleRegistrationNumber(" 24 bh-3275 h "), "24BH3275H");
+
+assert.equal(
+  displayVehicleRegistrationNumber({
+    vehicle_no: "PENDING-OLDVALUE",
+    registration_status: "registration_pending",
+    chassis_no: " mat-123 abc ",
+  }),
+  "New-MAT123ABC",
+);
+assert.equal(
+  displayVehicleRegistrationNumber({
+    vehicle_no: "NEW-MAT999",
+    registration_status: "registration_pending",
+    chassis_no: null,
+  }),
+  "New-MAT999",
+);
+assert.equal(
+  displayVehicleRegistrationNumber({
+    vehicle_no: "MP20AB1234",
+    registration_status: "ACTIVE",
+    chassis_no: "MAT123ABC",
+  }),
+  "MP20AB1234",
+);
 
 const invalid = [
   "24BH327H",
@@ -63,7 +89,15 @@ assert.match(vehicleMasterActions, /!accessibleCustomerIds\.includes\(payload\.c
 
 const vehicleForm = fs.readFileSync(path.join(portalRoot, "components/forms.tsx"), "utf8");
 assert.match(vehicleForm, /VehicleRegistrationFields/);
+assert.match(vehicleForm, /initialChassisNo=\{values\?\.chassis_no\}/);
 assert.match(vehicleForm, /registration_status === "registration_pending"/);
+
+const vehicleWorkspace = fs.readFileSync(path.join(portalRoot, "app/vehicles/vehicle-workspace.tsx"), "utf8");
+assert.match(vehicleWorkspace, /displayVehicleRegistrationNumber\(vehicle\)/);
+
+const vehicleRegistrationFields = fs.readFileSync(path.join(portalRoot, "components/vehicle-registration-fields.tsx"), "utf8");
+assert.match(vehicleRegistrationFields, /label="Registration Number"/);
+assert.match(vehicleRegistrationFields, /label="Registration Date"/);
 
 const vehicleEditPage = fs.readFileSync(path.join(portalRoot, "app/vehicles/[id]/edit/page.tsx"), "utf8");
 assert.match(vehicleEditPage, /requireCapability\("view_vehicles"\)/);
