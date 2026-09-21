@@ -235,9 +235,8 @@ jobs:
             --channel preview \
             --environment preview \
             --message "Partner 0.1.0 Business + Policies + Claims + More reference layouts" \
-            --non-interactive \
-            --json > partner-0-1-home-refinements-update.json
-          cat partner-0-1-home-refinements-update.json
+            --clear-cache \
+            --non-interactive
 
       - name: Summary
         if: always()
