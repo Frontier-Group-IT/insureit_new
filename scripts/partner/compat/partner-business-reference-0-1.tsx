@@ -165,18 +165,6 @@ export default function BusinessScreen() {
 
             <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>Business</Text>
-              <Text style={styles.heroSubtitle}>Track, Analyse, Grow.</Text>
-              <Text style={styles.heroGreeting}>Good Morning,</Text>
-              <Text style={styles.heroName}>Partner</Text>
-            </View>
-
-            <View style={styles.heroWords}>
-              <Text style={styles.heroWord}>MORE</Text>
-              <Text style={styles.heroWord}>POLICIES</Text>
-              <Text style={styles.heroWord}>STRONGER</Text>
-              <Text style={styles.heroWord}>RELATIONSHIPS</Text>
-              <Text style={styles.heroWord}>BRIGHTER</Text>
-              <Text style={styles.heroWord}>TOMORROW</Text>
             </View>
           </View>
 
@@ -472,7 +460,7 @@ function formatCacheTime(value: number | null) {
 
 const styles = StyleSheet.create({
   heroBanner: {
-    height: 188,
+    height: 150,
     marginHorizontal: -16,
     marginTop: -14,
     overflow: 'hidden',
@@ -482,10 +470,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
+    transform: [{ scale: 1.02 }],
   },
   heroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.04)',
+    backgroundColor: 'rgba(3, 45, 96, 0.02)',
   },
   heroTopRow: {
     position: 'absolute',
@@ -563,56 +552,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 3,
     left: 18,
-    bottom: 30,
-    maxWidth: '57%',
+    top: 56,
   },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 21,
-    lineHeight: 24,
+    fontSize: 20,
+    lineHeight: 23,
     fontWeight: '800',
     letterSpacing: -0.2,
-  },
-  heroSubtitle: {
-    marginTop: 1,
-    color: '#FFFFFF',
-    fontSize: 9.5,
-    lineHeight: 12,
-    fontWeight: '500',
-  },
-  heroGreeting: {
-    marginTop: 3,
-    color: '#FFFFFF',
-    fontSize: 9.5,
-    lineHeight: 12,
-    fontWeight: '500',
-  },
-  heroName: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 17,
-    fontWeight: '800',
-  },
-  heroWords: {
-    position: 'absolute',
-    zIndex: 3,
-    right: 13,
-    bottom: 28,
-    width: 72,
-    paddingLeft: 8,
-    borderLeftWidth: 1.5,
-    borderLeftColor: 'rgba(255,255,255,0.78)',
-  },
-  heroWord: {
-    color: '#F5F9FF',
-    fontSize: 7.2,
-    lineHeight: 9.5,
-    fontWeight: '800',
   },
 
   searchRow: {
     zIndex: 5,
-    marginTop: -24,
+    marginTop: -18,
     marginHorizontal: 0,
     marginBottom: 10,
     minHeight: 52,
