@@ -1,10 +1,10 @@
 {
-  "purpose": "Force a production web deployment so the merged Add New Customer icon highlight and all newer main changes are actually published to Vercel.",
-  "deploy_requested_at": "2026-08-31T16:32:00+05:30",
+  "purpose": "Re-verify and deploy current main after PR #2155 because the original merge had no successful Verify web portal pull_request run attached to its head.",
+  "deploy_requested_at": "2026-09-21T10:31:00+05:30",
   "requested_by": "explicit user deploy request",
   "source": "Re-deploy current main using the protected GitHub Actions production deployment workflow.",
-  "source_commit": "82c9b12b69583f781561ae6c36925e7517a12b55",
-  "release_scope": "Deploy current main, including PR #895 (bold green Add New Customer icon with unchanged size and no background), plus all newer merged changes already contained in main.",
-  "verification": "PR #895 Verify web portal run 33384866001 (#2425) passed successfully on head dee700d827da63ab5759d9a6e7678d25c5b47e34. This trigger intentionally changes a repository-global deployment marker so Vercel cannot skip the web project as unaffected.",
+  "source_commit": "e7a35a6e413a5480aebcbbedad865665792e22dc",
+  "release_scope": "Deploy current main, including PR #2155 Partner Search page Home-hero alignment, plus all changes already contained in main.",
+  "verification": "This deployment marker is intentionally updated on a fresh PR from current main so the required Verify web portal pull_request workflow can validate the exact current codebase before the production deployment gate runs again.",
   "instructions": "Update this file only after explicit deployment approval."
 }
