@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { CarFront, FileText, Plus, ShieldAlert, Wrench } from "lucide-react";
 import { useMemo, useState } from "react";
+import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -124,7 +125,7 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
             {pageRows.map((vehicle) => (
               <tr key={vehicle.id} className="h-12 transition hover:bg-[#FAFCFF]">
                 <td className="px-3">
-                  <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleNo(vehicle)}</Link>
+                  <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[12px] font-bold text-[#0F172A] hover:text-[#17365D]">{displayVehicleRegistrationNumber(vehicle)}</Link>
                   <p className="truncate text-[9px] leading-4 text-[#64748B]">{vehicle.vehicle_type || "Type not set"}</p>
                 </td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{vehicle.customers?.contact_name ?? "-"}</p></td>
@@ -148,7 +149,7 @@ function VehicleMobileCard({ vehicle }: { vehicle: VehicleRow }) {
     <article className="mobile-record-card">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[15px] font-extrabold text-[#12203B]">{displayVehicleNo(vehicle)}</Link>
+          <Link prefetch={false} href={`/vehicles/${vehicle.id}/edit`} className="block truncate font-mono text-[15px] font-extrabold text-[#12203B]">{displayVehicleRegistrationNumber(vehicle)}</Link>
           <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{[vehicle.make, vehicle.model].filter(Boolean).join(" ") || vehicle.vehicle_type}</p>
         </div>
         <RegistrationPill vehicle={vehicle} />
@@ -182,10 +183,6 @@ function NextAction({ vehicle }: { vehicle: VehicleRow }) {
 
 function policyHandoffHref(vehicle: VehicleRow) {
   return `/policies/new?customer_id=${encodeURIComponent(vehicle.customer_id)}&vehicle_id=${encodeURIComponent(vehicle.id)}`;
-}
-function displayVehicleNo(vehicle: VehicleRow) {
-  const vehicleNo = vehicle.vehicle_no.toUpperCase();
-  return /^(?:NEW|PENDING)-/.test(vehicleNo) ? "Registration pending" : vehicle.vehicle_no;
 }
 function isRegistrationPending(vehicle: VehicleRow) {
   const vehicleNo = vehicle.vehicle_no.toUpperCase();
