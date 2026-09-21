@@ -127,6 +127,13 @@ assert(policyLogoIndex >= 0 && policyProductIndex >= 0 && policyLogoIndex < poli
 assert(insurerNameIndex > policyProductIndex, "Partner Policy Register Insurer column must remain text-only after the Policy / Product logo");
 assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Partner Fleet Summary must use the shared insurer resolver");
 
+const partnerActivityPage = read("app/partner/activity/page.tsx");
+const partnerActivityTimeline = read("app/partner/activity/activity-timeline-client.tsx");
+assert(partnerActivityPage.includes("getPartnerWebClaimDetail"), "Partner Activity must enrich claim rows with insurer context");
+assert(partnerActivityTimeline.includes('from "@/lib/insurer-logo"'), "Partner Activity must use the shared insurer logo resolver");
+assert(partnerActivityTimeline.includes("getInsurerLogo(insurerName)"), "Partner Activity Type column must resolve insurer logos");
+assert(partnerActivityTimeline.includes("Insurance company"), "Partner Activity insurer logo must keep accessible fallback alt text");
+
 const partnerPayoutPage = read("app/partner/payout/page.tsx");
 assert(partnerPayoutPage.includes('from "@/lib/insurer-logo"'), "Partner Payout must use the shared insurer logo resolver");
 assert(partnerPayoutPage.includes("getPartnerWebPolicyDetail"), "Partner Payout must resolve insurer context from policy detail");

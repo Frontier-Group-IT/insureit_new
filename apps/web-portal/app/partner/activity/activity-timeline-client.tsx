@@ -1,9 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight, BriefcaseBusiness, ClipboardList, FileInput, GraduationCap, Search, ShieldCheck } from "lucide-react";
 import type { PartnerActivityData } from "@/lib/partner-web";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 function dateLabel(value: string) {
   const d = new Date(value);
@@ -31,6 +33,13 @@ function labelFor(kind: PartnerActivityData["items"][number]["kind"]) {
   if (kind === "claim") return "CLAIM";
   if (kind === "intake") return "OPERATIONS";
   return "LEARN";
+}
+
+function insurerNameFor(item: PartnerActivityData["items"][number]) {
+  if (item.insurer_name) return item.insurer_name;
+  if (item.kind !== "policy") return null;
+  const [candidate] = item.meta.split(" · ");
+  return getInsurerLogo(candidate) ? candidate : null;
 }
 
 function searchableText(item: PartnerActivityData["items"][number]) {
@@ -82,10 +91,26 @@ export function ActivityTimelineClient({ data }: { data: PartnerActivityData }) 
             {filteredItems.map((item) => {
               const Icon = iconFor(item.kind);
               const href = activityHref(item);
+              const insurerName = insurerNameFor(item);
+              const insurerLogo = getInsurerLogo(insurerName);
               const row = (
                 <>
                   <div className="flex items-center gap-2">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]"><Icon className="h-4 w-4" /></span>
+                    <span className="flex h-8 w-9 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                      {insurerLogo ? (
+                        <Image
+                          src={insurerLogo}
+                          alt={insurerName ? `${insurerName} logo` : "Insurance company"}
+                          width={32}
+                          height={32}
+                          className="max-h-7 max-w-[34px] w-auto object-contain"
+                        />
+                      ) : (
+                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#EEF4FF] text-[#3156B8]">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                      )}
+                    </span>
                     <span className="text-[10px] font-semibold text-[#213654]">{labelFor(item.kind)}</span>
                   </div>
                   <span className="self-center text-[10px] font-medium text-[#72829A]">{dateLabel(item.event_at)}</span>
