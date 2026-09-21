@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -47,6 +48,62 @@ function vehicleKey(value: string | null | undefined) {
     .replace(/[^A-Z0-9]/g, "");
 }
 
+function normalizeLogoKey(value: string | null | undefined) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function vehicleManufacturerLogo(make: string | null | undefined) {
+  const key = normalizeLogoKey(make);
+  if (!key) return null;
+  if (key.includes("tata")) return "/assets/vehicle-brands/tata.svg";
+  if (key.includes("ashok leyland")) return "/assets/vehicle-brands/ashok-leyland.svg";
+  if (key.includes("mahindra")) return "/assets/vehicle-brands/mahindra.svg";
+  if (key.includes("maruti") || key.includes("suzuki")) return "/assets/vehicle-brands/maruti-suzuki.svg";
+  if (key.includes("hyundai")) return "/assets/vehicle-brands/hyundai.svg";
+  if (key.includes("honda")) return "/assets/vehicle-brands/honda.svg";
+  if (key.includes("toyota")) return "/assets/vehicle-brands/toyota.svg";
+  if (key.includes("kia")) return "/assets/vehicle-brands/kia.svg";
+  return null;
+}
+
+function insurerLogo(insurerName: string | null | undefined) {
+  const key = normalizeLogoKey(insurerName);
+  if (!key) return null;
+  if (key.includes("united india")) return "/assets/insurers/united-india-insurance.svg";
+  if (key.includes("bajaj")) return "/assets/insurers/bajaj-allianz.png";
+  if (key.includes("hdfc ergo")) return "/assets/insurers/hdfc-ergo.png";
+  if (key.includes("icici lombard")) return "/assets/insurers/icici-lombard.png";
+  if (key.includes("iffco") && key.includes("tokio")) return "/assets/insurers/iffco-tokio.png";
+  if (key.includes("new india")) return "/assets/insurers/new-india-assurance.png";
+  if (key.includes("oriental")) return "/assets/insurers/oriental-insurance.png";
+  if (key.includes("tata aig")) return "/assets/insurers/tata-aig.png";
+  return null;
+}
+
+function BrandLogo({
+  src,
+  alt,
+  fallback,
+  size = 28,
+}: {
+  src: string | null;
+  alt: string;
+  fallback: React.ReactNode;
+  size?: number;
+}) {
+  return (
+    <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#DDE6F1] bg-white p-1 shadow-[0_2px_6px_rgba(15,23,42,0.04)]">
+      {src ? <Image src={src} alt={alt} width={size} height={size} className="max-h-7 w-auto object-contain" /> : fallback}
+    </span>
+  );
+}
+
 export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDetail }) {
   const customer = data.customer;
 
@@ -86,9 +143,11 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
               >
                 <summary className="grid cursor-pointer list-none gap-3 px-4 py-3 transition hover:bg-[#FBFCFE] xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(110px,.75fr))_minmax(125px,.75fr)_24px] xl:items-center [&::-webkit-details-marker]:hidden">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF4FF] text-[#176AF0]">
-                      <Car className="h-4 w-4" />
-                    </span>
+                    <BrandLogo
+                      src={vehicleManufacturerLogo(vehicle.make)}
+                      alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
+                      fallback={<Car className="h-4 w-4 text-[#176AF0]" />}
+                    />
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-[11px] font-extrabold text-[#174A91]">{vehicle.vehicle_no || "Vehicle"}</p>
@@ -145,9 +204,12 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                                 className="group/policy grid gap-2 rounded-xl border border-[#E3EAF2] bg-[#FBFCFE] px-3 py-2.5 transition hover:border-[#C9D9ED] hover:bg-white sm:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(100px,.65fr))_auto] sm:items-center"
                               >
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EAF8F1] text-[#1B9A63]">
-                                    <ShieldCheck className="h-4 w-4" />
-                                  </span>
+                                  <BrandLogo
+                                    src={insurerLogo(policy.insurer_name)}
+                                    alt={policy.insurer_name ? `${policy.insurer_name} logo` : "Insurance company"}
+                                    fallback={<ShieldCheck className="h-4 w-4 text-[#1B9A63]" />}
+                                    size={26}
+                                  />
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5">
                                       <p className="truncate text-[9.5px] font-extrabold text-[#173A69]">{policy.policy_no || policy.policy_code || "Policy"}</p>
