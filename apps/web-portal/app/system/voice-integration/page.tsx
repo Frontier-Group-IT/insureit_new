@@ -33,7 +33,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getConfiguredSarvamRenewalOperationalPolicy } from "@/lib/sarvam-renewal-operational-policy";
 import { getSarvamRenewalReadiness } from "@/lib/sarvam-renewal-readiness";
 import { getSarvamProductionQueuePreview } from "@/lib/sarvam-production-queue";
-import { getVoiceCampaigns } from "@/lib/voice-campaigns";
+import { getVoiceCampaignListState } from "@/lib/voice-campaigns";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -129,12 +129,13 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   const quickAddError = queryValue(query.quick_add_error);
 
   const readiness = getSarvamRenewalReadiness();
-  const [operationalPolicy, campaignLifecycle, queuePreview, voiceCampaigns] = await Promise.all([
+  const [operationalPolicy, campaignLifecycle, queuePreview, voiceCampaignState] = await Promise.all([
     getConfiguredSarvamRenewalOperationalPolicy(),
     getSarvamRenewalCampaignState(),
     getSarvamProductionQueuePreview(),
-    getVoiceCampaigns(),
+    getVoiceCampaignListState(),
   ]);
+  const voiceCampaigns = voiceCampaignState.campaigns;
 
   const connectionConfigReady = ["api_key", "org_id", "workspace_id", "campaign_id"].every(
     (key) => readiness.items.find((item) => item.key === key)?.configured,
@@ -247,16 +248,30 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
         <section className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
           <div className="flex items-center justify-between gap-3">
             <SectionTitle icon={FileSpreadsheet} title="Voice campaigns" />
-            <Link
-              href="/system/voice-integration/campaigns/new"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#102A56] px-3 text-[8.5px] font-bold text-white"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Campaign
-            </Link>
+            {voiceCampaignState.schemaReady ? (
+              <Link
+                href="/system/voice-integration/campaigns/new"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#102A56] px-3 text-[8.5px] font-bold text-white"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Campaign
+              </Link>
+            ) : (
+              <span
+                className="inline-flex h-8 cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-200 px-3 text-[8.5px] font-bold text-slate-500"
+                title="Voice campaign schema is not ready yet."
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Campaign
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[8.5px] text-[#71839A]">
             Create a campaign from Excel using RC No. and Mobile No. only. Maximum 100 customers.
           </p>
+          {!voiceCampaignState.schemaReady ? (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[8.5px] font-semibold text-amber-800">
+              Campaign setup is temporarily unavailable while the database schema is being prepared. Existing Voice Integration controls remain available.
+            </div>
+          ) : null}
           <div className="mt-2 overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-[8.5px]">
               <thead>

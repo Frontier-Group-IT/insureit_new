@@ -166,7 +166,13 @@ function parseWorkbook(buffer: ArrayBuffer) {
   }));
 }
 
-export async function getVoiceCampaigns(limit = 12) {
+export type VoiceCampaignListState = {
+  campaigns: VoiceCampaignListRow[];
+  schemaReady: boolean;
+  error: string | null;
+};
+
+export async function getVoiceCampaignListState(limit = 12): Promise<VoiceCampaignListState> {
   const admin = createSupabaseAdminClient();
   const { data, error } = await admin
     .from("voice_campaigns")
@@ -175,8 +181,25 @@ export async function getVoiceCampaigns(limit = 12) {
     .limit(Math.min(Math.max(limit, 1), 50))
     .returns<VoiceCampaignListRow[]>();
 
-  if (error) throw new Error("Voice campaigns are unavailable.");
-  return data ?? [];
+  if (error) {
+    return {
+      campaigns: [],
+      schemaReady: false,
+      error: "Voice campaign schema is not ready.",
+    };
+  }
+
+  return {
+    campaigns: data ?? [],
+    schemaReady: true,
+    error: null,
+  };
+}
+
+export async function getVoiceCampaigns(limit = 12) {
+  const state = await getVoiceCampaignListState(limit);
+  if (!state.schemaReady) throw new Error(state.error || "Voice campaigns are unavailable.");
+  return state.campaigns;
 }
 
 export async function createVoiceCampaignFromWorkbook(input: {

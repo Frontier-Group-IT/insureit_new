@@ -79,3 +79,8 @@ IT Super User may create a controlled campaign from Excel/CSV containing only RC
 ## RC owner fallback rule — 2026-09-21
 
 For External Renewal / Voice Campaign RC enrichment, AuthBridge owner name may fill the isolated `customer_name` only when Customer/Insured Name is otherwise blank. Never overwrite an existing customer/contact/account name or explicit AI-profile customer-name override. This fallback applies to cache/live/stale-cache successful enrichment only and must not write verified Customer/Policy masters.
+
+
+## Schema-readiness resilience — 2026-09-21
+
+The Voice Integration control center must remain usable if the optional voice-campaign schema is temporarily unavailable. Campaign-list reads fail soft, Add Campaign remains disabled until the schema exists, and system-level controls continue rendering. The production campaign schema was successfully applied by workflow run 35587127672; this rule prevents a future schema timing/failure from taking down the control center.
