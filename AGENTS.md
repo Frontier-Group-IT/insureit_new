@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Associate Accounts review page title:** PR #2195 merged as `da98f309428575816d261ec743f4fe6c5507d4cd`; the Partner associate accounts page heading now reads `Associate Accounts Review` instead of `Partner Application Review`. **MERGED; production deployment pending verified follow-up PR.**
+
 - **2026-09-21 — Business Groups navy header:** branch `feat/business-groups-navy-header`; changed the Business Groups top header card to a navy gradient with contrast-adjusted title, badge, action buttons, and metric strip. Lower Business Groups content and behavior are unchanged. **IMPLEMENTED; PR #2194 open; CI/merge/deployment pending.**
 
 
