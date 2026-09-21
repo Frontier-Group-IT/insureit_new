@@ -8,6 +8,8 @@ import { FinalizeInitialDocumentVerificationButton } from "./finalize-initial-do
 import { classifySpotSurveyAttachmentForm } from "@/app/claims/[id]/spot-survey-actions";
 import { ClassifySubmitButton } from "./classify-submit-button";
 import type { InternalSpotIntimationDetails } from "@/lib/internal-spot-intimation";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 export type SpotSurveyClaim = {
   id: string;
@@ -59,8 +61,6 @@ export type SurveyorDetails = {
   deputedAt?: string | null;
 };
 
-type BrandLogo = { src: string; label: string };
-
 const aliases = {
   spot: ["spot photo", "spot image", "accident photo", "loss photo", "vehicle photo"],
   rc: ["rc copy", "registration certificate"],
@@ -69,27 +69,6 @@ const aliases = {
   gr: ["gr / load bill", "gr copy / load challan", "gr copy / road challan", "gr / load challan", "road challan", "load challan"],
   video: ["accident video", "loss video", "vehicle video"],
   audio: ["incident voice note", "voice note", "incident audio", "accident audio"]
-};
-
-const vehicleBrandLogos: Record<string, BrandLogo> = {
-  tata: { src: "/assets/vehicle-brands/tata.svg", label: "Tata Motors" },
-  mahindra: { src: "/assets/vehicle-brands/mahindra.svg", label: "Mahindra" },
-  hyundai: { src: "/assets/vehicle-brands/hyundai.svg", label: "Hyundai" },
-  honda: { src: "/assets/vehicle-brands/honda.svg", label: "Honda" },
-  toyota: { src: "/assets/vehicle-brands/toyota.svg", label: "Toyota" },
-  kia: { src: "/assets/vehicle-brands/kia.svg", label: "Kia" },
-  maruti: { src: "/assets/vehicle-brands/maruti-suzuki.svg", label: "Maruti Suzuki" },
-  suzuki: { src: "/assets/vehicle-brands/maruti-suzuki.svg", label: "Maruti Suzuki" },
-  leyland: { src: "/assets/vehicle-brands/ashok-leyland.svg", label: "Ashok Leyland" }
-};
-
-const insurerBrandLogos: Record<string, BrandLogo> = {
-  bajaj: { src: "/assets/insurers/bajaj-allianz.png", label: "Bajaj Allianz" },
-  icici: { src: "/assets/insurers/icici-lombard.png", label: "ICICI Lombard" },
-  hdfc: { src: "/assets/insurers/hdfc-ergo.png", label: "HDFC ERGO" },
-  tata: { src: "/assets/insurers/tata-aig.png", label: "TATA AIG" },
-  reliance: { src: "/assets/insurers/reliance-general.png", label: "Reliance General" },
-  sbi: { src: "/assets/insurers/sbi-general.png", label: "SBI General" }
 };
 
 const claimHeaderIcons = {
@@ -178,7 +157,7 @@ function InfoStrip({ claim }: { claim: SpotSurveyClaim }) {
   const makeModel = [make, model].filter((value) => value && value !== "-").join(" - ") || "-";
   const insurerDisplay = insurerRef && insurerRef !== "-" ? `${insurer} - ${insurerRef}` : insurer;
   const spotAt = claim.spotIntimationAt ?? claim.created_at;
-  return <section className="overflow-hidden rounded-2xl border border-[#17355E] bg-[#071D49] shadow-[0_8px_22px_rgba(7,29,73,0.16)]"><div className="grid md:grid-cols-3 xl:grid-cols-5"><Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} /><Info label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.vehicle} alt="Vehicle" />} /><Info label="Make & Model" title={makeModel} logo={<ManufacturerLogo name={make} />} /><Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} /><Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} last /></div><div className="grid border-t border-white/15 md:grid-cols-3 xl:grid-cols-5"><Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} /><Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} /><Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} /><Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} /><Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} last /></div><div className="grid gap-x-4 gap-y-1 border-t border-white/15 px-3 py-1 text-[9px] sm:grid-cols-2 lg:grid-cols-4"><PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} /><PolicyMeta label="Cover dates" value={`${formatDateShort(claim.policies?.start_date)} - ${formatDateShort(claim.policies?.end_date)}`} /><PolicyMeta label="Premium / IDV" value={`${formatAmount(claim.policies?.premium_amount)} / ${formatAmount(claim.policies?.insured_declared_value)}`} />{claim.policyCopy?.signedUrl ? <Link href={claim.policyCopy.signedUrl} target="_blank" className="min-w-0 truncate font-semibold text-[#C7D9F7]">Policy copy: {claim.policyCopy.fileName}</Link> : <PolicyMeta label="Policy copy" value="Not available" />}</div></section>;
+  return <section className="overflow-hidden rounded-2xl border border-[#17355E] bg-[#071D49] shadow-[0_8px_22px_rgba(7,29,73,0.16)]"><div className="grid md:grid-cols-3 xl:grid-cols-5"><Info label="Customer" title={customerName} subtitle={claim.customers?.phone ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.customer} alt="Customer" />} /><Info label="Vehicle No." title={claim.vehicles?.vehicle_no ?? "-"} logo={<ManufacturerLogo name={make} />} /><Info label="Make & Model" title={makeModel} logo={<ManufacturerLogo name={make} />} /><Info label="Insurer" title={insurerDisplay} logo={<InsurerLogo name={insurer} />} /><Info label="Loss Date" title={formatDateShort(claim.accident_at)} logo={<HeaderIcon src={claimHeaderIcons.lossDate} alt="Loss date" />} last /></div><div className="grid border-t border-white/15 md:grid-cols-3 xl:grid-cols-5"><Info label="Policy No." title={claim.policies?.policy_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.policy} alt="Policy" />} /><Info label="Control No." title={claim.claim_no} logo={<HeaderIcon src={claimHeaderIcons.control} alt="Control number" />} /><Info label="Claim No." title={claim.insurer_claim_no ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.claim} alt="Claim number" />} /><Info label="Claim Status" title={claim.current_status ?? "-"} logo={<HeaderIcon src={claimHeaderIcons.status} alt="Claim status" />} /><Info label="Spot Intimation Date & Time" title={`${formatIntimationDate(spotAt)} • ${formatIntimationTime(spotAt)}`} logo={<HeaderIcon src={claimHeaderIcons.intimation} alt="Spot intimation" />} last /></div><div className="grid gap-x-4 gap-y-1 border-t border-white/15 px-3 py-1 text-[9px] sm:grid-cols-2 lg:grid-cols-4"><PolicyMeta label="Policy source" value={claim.policySource === "external" ? "External policy" : "Sankalp policy"} /><PolicyMeta label="Cover dates" value={`${formatDateShort(claim.policies?.start_date)} - ${formatDateShort(claim.policies?.end_date)}`} /><PolicyMeta label="Premium / IDV" value={`${formatAmount(claim.policies?.premium_amount)} / ${formatAmount(claim.policies?.insured_declared_value)}`} />{claim.policyCopy?.signedUrl ? <Link href={claim.policyCopy.signedUrl} target="_blank" className="min-w-0 truncate font-semibold text-[#C7D9F7]">Policy copy: {claim.policyCopy.fileName}</Link> : <PolicyMeta label="Policy copy" value="Not available" />}</div></section>;
 }
 
 function PolicyMeta({ label, value }: { label: string; value: string }) {
@@ -261,20 +240,15 @@ function HeaderIcon({ src, alt }: { src: string; alt: string }) {
 }
 
 function ManufacturerLogo({ name }: { name: string }) {
-  const brand = findBrand(name, vehicleBrandLogos);
-  if (!brand) return <span className="text-[14px] font-bold text-[#003A83]">{name && name !== "-" ? name.charAt(0).toUpperCase() : "V"}</span>;
-  return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
+  const src = getVehicleBrandLogo(name);
+  if (!src) return <HeaderIcon src={claimHeaderIcons.vehicle} alt="Vehicle manufacturer" />;
+  return <Image src={src} alt={name && name !== "-" ? `${name} logo` : "Vehicle manufacturer"} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
 }
 
 function InsurerLogo({ name }: { name: string }) {
-  const brand = findBrand(name, insurerBrandLogos);
-  if (!brand) return <span className="text-[8px] font-bold uppercase text-[#003A83]">ins</span>;
-  return <Image src={brand.src} alt={brand.label} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
-}
-
-function findBrand(name: string, logos: Record<string, BrandLogo>) {
-  const normalized = name.toLowerCase();
-  return Object.entries(logos).find(([key]) => normalized.includes(key))?.[1] ?? null;
+  const src = getInsurerLogo(name);
+  if (!src) return <span className="text-[8px] font-bold uppercase text-[#DCE6F5]">ins</span>;
+  return <Image src={src} alt={name && name !== "-" ? `${name} logo` : "Insurance company"} width={36} height={24} className="max-h-6 max-w-9 object-contain" />;
 }
 
 function latestVerificationForDocument(document: SpotSurveyDocument, verifications: SpotSurveyVerification[]) {
