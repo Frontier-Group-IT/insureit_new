@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — AuthBridge Daimler → Bharat Benz manufacturer normalization:** branch `fix/normalize-daimler-to-bharatbenz`; shared fetched-manufacturer normalization now converts Daimler/DICV API manufacturer variants to `Bharat Benz` across internal Vehicle RC lookup, Customer RC lookup, Policy RC review and External Renewal RC enrichment while preserving raw provider payloads. Vehicle onboarding select matching now ignores spacing/punctuation so `Bharat Benz` safely matches the existing `BharatBenz` master option. **IMPLEMENTED; PR/CI/merge/deployment pending.** See `docs/AUTHBRIDGE_RC_HANDOFF.md`.
+
 - **2026-09-21 — Business Group row click target:** branch `ui/business-group-row-clickable`; the full Business Group header row now toggles expand/collapse, with keyboard support and interactive child controls (Edit / Convert safely / form controls) excluded from row navigation. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-21 — Business Groups summary strip restyle:** branch `feat/business-groups-summary-strip`; restyles the four Business Groups metrics into a compact navy segmented strip matching the provided reference: circular icons, small uppercase labels, bold values, equal-width segments, and thin separators. Data and page behavior are unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
