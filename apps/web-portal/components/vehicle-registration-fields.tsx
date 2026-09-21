@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/auth";
+import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 export type VehicleRegistrationMode = "registered" | "unregistered";
 
@@ -54,11 +55,13 @@ export function VehicleRegistrationFields({
   initialMode,
   initialVehicleNo,
   initialRegistrationDate,
+  initialChassisNo,
   children,
 }: {
   initialMode: VehicleRegistrationMode;
   initialVehicleNo?: string | null;
   initialRegistrationDate?: string | null;
+  initialChassisNo?: string | null;
   children?: ReactNode;
 }) {
   const [mode, setMode] = useState<VehicleRegistrationMode>(initialMode);
@@ -226,7 +229,21 @@ export function VehicleRegistrationFields({
           {children}
         </>
       ) : (
-        children
+        <>
+          <RegistrationReadOnlyField
+            label="Registration Number"
+            value={displayVehicleRegistrationNumber({
+              vehicle_no: initialVehicleNo,
+              registration_status: "registration_pending",
+              chassis_no: initialChassisNo,
+            })}
+          />
+          <RegistrationReadOnlyField
+            label="Registration Date"
+            value={formatRegistrationDisplayDate(initialRegistrationDate)}
+          />
+          {children}
+        </>
       )}
 
       {initialMode === "registered" && Boolean(initialVehicleNo) && mode === "unregistered" ? (
@@ -238,6 +255,23 @@ export function VehicleRegistrationFields({
       {lookupResult ? <RcDetailsDialog result={lookupResult} onConfirm={applyRcDetails} /> : null}
     </>
   );
+}
+
+function RegistrationReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <span className="mb-1 block text-[10.5px] font-semibold text-[#344054]">{label}</span>
+      <div className="flex h-10 w-full items-center rounded-xl border border-[#D7E1EE] bg-[#F8FAFC] px-3 text-[12px] font-semibold text-[#344054]">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function formatRegistrationDisplayDate(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-IN");
 }
 
 function RcDetailsDialog({ result, onConfirm }: { result: RcLookupSuccess; onConfirm: () => void }) {
