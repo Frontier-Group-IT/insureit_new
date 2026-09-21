@@ -446,3 +446,8 @@ Deployed Home composition:
 5. INSUREIT Stories.
 
 The My Work section is removed. INSUREIT Stories is the final Home section, has no See all action, and evenly distributes its visible story icons across the available width. Individual story icons remain tappable. No APK/AAB, native dependency/config, backend, schema, RLS or auth change was introduced.
+
+
+## 2026-09-21 — Partner Business reference-layout redesign
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `ui/partner-business-reference-layout-v2` restyles the Partner app Business tab to follow the approved reference composition while preserving the current business-data contracts. The screen reuses the Home hero background asset and Home typography scale, adds the full-width branded hero with logo/actions and floating search/filter treatment, and enlarges/refines the Business Overview, trend, product, insurer placeholder, Quick Actions and Network surfaces. No backend, RPC, schema, RLS, authorization, native dependency, runtime-version or APK/AAB change is included. Top Insurers remains evidence-safe: the UI does not invent insurer totals because the current Business payload does not supply them. Next state is PR verification, then merge/preview OTA only after explicit user authorization.
