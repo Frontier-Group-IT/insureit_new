@@ -157,6 +157,9 @@ assert(externalRenewalAdapter.includes('supabase.rpc("partner_app_external_renew
 assert(externalRenewalAdapter.includes('supabase.rpc("partner_app_list_external_renewals"'), "external renewal list must use its scoped RPC");
 
 const intakeListClient = read("components/partner-portal/partner-policy-intake-list-client.tsx");
+assert(intakeListClient.includes('from "@/lib/insurer-logo"'), "Policy Intake Register must use the shared insurer logo resolver");
+assert(intakeListClient.includes("getInsurerLogo(insurer)"), "Policy Intake Register must resolve insurer logo for the Intake column");
+assert(intakeListClient.includes("Policy intake"), "Policy Intake Register must retain the intake label beside the insurer logo");
 assert(intakeListClient.includes("PAGE_SIZE = 25"), "Policy Intake register must use bounded server pagination");
 assert(intakeListClient.includes("offset: (page - 1) * PAGE_SIZE"), "Policy Intake register must send page offset to the server");
 assert(!intakeListClient.includes("visibleRows"), "Policy Intake register filters must not be computed from one downloaded slice");
