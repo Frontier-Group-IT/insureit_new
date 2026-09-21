@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Operations Overview open + settled claims KPI:** branch `feat/dashboard-claims-open-settled-summary`; the top Claims KPI now shows both open and settled claim counts plus open estimated-loss amount and settled amount. Open claims are aligned with the Claims report definition by excluding `Settled`, `Claim Complete`, `Closed`, and `Rejected`; settled count includes `Settled` and `Claim Complete`. No schema change. **IMPLEMENTED; PR/CI/merge verification pending.**
+
 - **2026-09-21 — Dashboard pending intermediary count:** branch `fix/dashboard-pending-intermediary-count`; Home/Operations Overview “Intermediary onboarding” now counts only records meeting the Pending Applications queue conditions (open status, Partner context, IIB processing, documents pending, and at least one required document missing), excluding training-stage and active-partner records. **IMPLEMENTED; PR #2240 open; CI/merge/deployment pending.**
 
 
