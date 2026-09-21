@@ -193,6 +193,12 @@ const operationsVehicleWorkspace = read("app/vehicles/vehicle-workspace.tsx");
 assert(operationsVehicleWorkspace.includes('from "@/lib/vehicle-brand-logo"'), "Operations Vehicle Portfolio must use the shared vehicle brand logo resolver");
 assert(operationsVehicleWorkspace.includes("getVehicleBrandLogo(vehicle.make)"), "Operations Vehicle column must resolve manufacturer logo from vehicle.make");
 assert(operationsVehicleWorkspace.includes("Vehicle manufacturer"), "Operations Vehicle manufacturer logo must keep accessible fallback alt text");
+assert(operationsVehicleWorkspace.includes('max-h-[22px] max-w-[26px]'), "Operations Vehicle manufacturer logos must use the compact Tata-sized footprint");
+assert(operationsVehicleWorkspace.includes('>Vehicle</th>') && operationsVehicleWorkspace.includes('py-2 text-center">Vehicle</th>'), "Operations Vehicle table Vehicle header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Customer</th>'), "Operations Vehicle table Customer header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Make / model</th>'), "Operations Vehicle table Make / model header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Registration</th>'), "Operations Vehicle table Registration header must be centered");
+assert(operationsVehicleWorkspace.includes('py-2 text-center">Next action</th>'), "Operations Vehicle table Next action header must be centered");
 
 const operationsFleetSummary = read("app/customers/[id]/fleet/fleet-summary-client.tsx");
 assert(operationsFleetSummary.includes('from "@/lib/vehicle-brand-logo"'), "Operations Customer Fleet Summary must use the shared vehicle brand logo resolver");
