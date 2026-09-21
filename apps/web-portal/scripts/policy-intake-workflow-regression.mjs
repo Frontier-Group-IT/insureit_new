@@ -5,7 +5,7 @@ import { normalizePolicyNumber, policyNumberFromIntake } from "../lib/policy-int
 import { selectPolicyIntakeCustomerMatch } from "../lib/policy-intake-customer-match.ts";
 
 const read=(path)=>fs.readFileSync(new URL(`../${path}`,import.meta.url),"utf8");
-const salesCreators=["director","sales_head","zonal_head","asm","sales_manager","relationship_manager"];
+const salesCreators=["director","sales_head","zonal_head","asm","sales_manager","relationship_manager","sales_executive"];
 for(const role of salesCreators){assert(roleCapabilities[role].includes("view_policy_intakes"),`${role} must view policy intakes`);assert(roleCapabilities[role].includes("create_policy_intakes"),`${role} must initiate policy intakes`);assert(!roleCapabilities[role].includes("review_policy_intakes"),`${role} must not review policy intakes`);assert(!roleCapabilities[role].includes("finalize_policy_intakes"),`${role} must not finalize policy intakes`);}
 for(const role of ["sales_operations_head","backoffice_executive"]){assert(roleCapabilities[role].includes("view_policy_intakes"),`${role} must view policy intakes`);assert(roleCapabilities[role].includes("review_policy_intakes"),`${role} must review policy intakes`);assert(roleCapabilities[role].includes("finalize_policy_intakes"),`${role} must explicitly finalize policy intakes`);}
 assert(roleCapabilities.sales_operations_head.includes("create_policies"),"Operations Head needs governed policy-create authority to finalize reviewed intakes");assert(!roleCapabilities.backoffice_executive.includes("create_policy_intakes"),"Backoffice must remain Operations-side, not sales submitter");
@@ -20,7 +20,7 @@ assert(duplicateGuard.includes("firstIntakeByPolicyNumber"),"Duplicate detector 
 assert(duplicateGuard.includes('candidate.status === "completed"'),"Completed historical intakes must not be reclassified as duplicates");
 
 const actions=read("app/policy-intakes/actions.ts");
-assert(actions.includes('canAccessIntermediary(profile.id,profile.role,leadSourceId,"view_intermediaries")'),"Submission must re-check lead-source scope server-side");
+assert(actions.includes('canAccessIntermediary(profile.id,profile.role,leadSourceId,"create_policy_intakes")'),"Submission must re-check lead-source scope server-side using Policy Intake creation scope");
 assert(actions.includes('createSignedUploadUrl(storagePath,{upsert:false})'),"Large policy files must use direct signed storage upload instead of a Server Action request body");
 assert(actions.includes('.from("policy_intake_requests").insert('),"Submission must persist the intake before automatic extraction");
 assert(actions.includes('ocr_status:"pending"'),"New intake must be stored before OCR starts");
