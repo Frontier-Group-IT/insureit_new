@@ -550,3 +550,14 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 ## 2026-09-21 — Partner Business panoramic banner visibility fix
 
 **IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/business-banner-visible-panorama` addresses the live Business header still appearing flat blue. The approved skyline/growth-arrow artwork is now pre-cropped to a **1664x487 baseline JPEG panorama**, which puts the city/arrow inside the actual short mobile hero instead of leaving most of the visible crop as blue sky. The hero remains **158dp** high, but the image now fills it edge-to-edge (`left: 0`, `top: 0`, `width: 100%`, `height: 100%`, `opacity: 0.96`). Search remains `marginTop: -10` and `height: 49`. The 0.1 OTA/APK and current preview OTA workflows now verify and preserve the 1664x487 baseline JPEG instead of stretching it back to 1664x936.
+
+
+## 2026-09-21 — Partner 0.1 Business uploaded header banner
+
+**IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
+- Branch: `ui/partner-business-uploaded-header-banner`.
+- Replaces `apps/partner-app/assets/business-header-reference.jpg` with the user-supplied blue city / growth-chart / upward-arrow artwork for the Partner Business page hero.
+- The compatibility screen already references this asset path, so no Business data or layout logic changes are required.
+- The uploaded artwork was normalized to a baseline JPEG for the legacy runtime-0.1 Expo/Metro pipeline; the OTA workflow now verifies the new asset dimensions before publish.
+- No APK/AAB, native/runtime configuration, database/schema, or Business reporting logic change.
