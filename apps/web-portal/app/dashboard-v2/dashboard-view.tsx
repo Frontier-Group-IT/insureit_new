@@ -192,11 +192,12 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
       tone: "violet",
     });
   }
-  if (data.claims?.pendingDocuments) {
+  if (data.claims?.actionPendingVehicles) {
     rows.push({
-      label: "Claim documents pending",
-      value: data.claims.pendingDocuments,
-      href: "/claims",
+      label: "Claim action pending",
+      value: data.claims.actionPendingVehicles,
+      detail: "vehicles",
+      href: "/claims?queue=active",
       icon: DASHBOARD_ICON_ASSETS.documentsPending,
       tone: "slate",
     });
