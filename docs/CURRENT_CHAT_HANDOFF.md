@@ -1630,3 +1630,8 @@ Automated non-exact comparisons create/reuse Anju tasks with field-level questio
 - Migration `20260919103000_fix_external_claim_takeover_snapshot_trigger.sql` makes `persist_managed_claim_stage_transition_from_details()` return early for authenticated/authorized preservation rows with `external_customer_snapshot=true`, before the broker-managed lookup. Normal Operations stage writes remain unchanged.
 - Dedicated External Claim schema workflow, production deploy gate, and canonical regression were updated for the new migration.
 - State: **IMPLEMENTED only**. Migration is **NOT APPLIED**, PR/merge/deployment/live Proceed verification pending.
+
+
+## 2026-09-21 — Partner Business clean header deployment provenance
+
+PR #2170 merged as `ae609cfa573becf29ea1715096f595fb1c150047`. The first automatic production deploy run was blocked by the canonical provenance gate because PR #2170 had no completed `Verify web portal` pull-request run before merge. This follow-up PR exists only to establish canonical verification provenance on top of the already-merged Business header change; it does not alter runtime behavior. Canonical PR verification is required before the production deploy hook may run.
