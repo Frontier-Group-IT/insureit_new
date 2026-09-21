@@ -500,3 +500,12 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - The workflow now copies the binary banner directly, verifies it as JPEG, then uses ffmpeg to normalize only the temporary compatibility copy to a baseline JPEG before Expo export.
 - The committed user-supplied banner is not replaced; only the OTA staging copy is normalized for legacy bundler compatibility.
 - No APK/AAB, runtime-version, native-config, schema, RLS, or policy business-logic change.
+
+## 2026-09-21 — Partner 0.1.0 Policies baseline-JPEG repair
+
+**IMPLEMENTED; CI/merge/OTA verification pending.**
+
+- Branch: `hotfix/partner-0-1-policies-baseline-jpeg-final`.
+- Root cause after PR #2191 merge: the runtime-0.1.0 Expo/Metro export rejected `policies-header-reference.jpg` as an invalid JPEG despite repository-level file checks.
+- Replaced the asset with a validated baseline JFIF JPEG derived from the same user-supplied banner artwork (480×270, baseline JPEG) so the legacy Metro asset parser can read dimensions reliably.
+- No native/runtime configuration, APK/AAB, schema, or policy business logic change.
