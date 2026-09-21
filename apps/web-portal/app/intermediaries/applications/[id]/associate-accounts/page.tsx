@@ -7,6 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { createPartnerAssociateAccount } from "./actions";
 import { AssociateAccountResultToast } from "./associate-account-result-toast";
 import { AssociateAccountActionsMenu } from "./associate-account-actions-menu";
+import { AssociateCityFields } from "./associate-city-fields";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -190,9 +191,7 @@ export default async function PartnerAssociateAccountsPage({
             </div>
             <div className="mt-4 grid gap-3 xl:grid-cols-[2fr_1fr_1fr_1fr_auto] xl:items-end">
               <Field label="Address"><input name="address" className={inputClass} placeholder="Address" /></Field>
-              <Field label="City"><input name="city" className={inputClass} placeholder="City" /></Field>
-              <Field label="State"><input name="state" className={inputClass} placeholder="State" /></Field>
-              <Field label="PIN Code"><input name="postal_code" className={inputClass} placeholder="PIN Code" inputMode="numeric" /></Field>
+              <AssociateCityFields />
               <FormSubmitButton label="Save" pendingLabel="Saving..." className="h-10 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white hover:bg-[#102A4C]" />
             </div>
           </form>
