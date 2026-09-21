@@ -43,11 +43,12 @@ let savedPolicyLifecycle: PartnerPolicyLifecycle = 'all';
 
 export default function PoliciesScreen() {
   const router = useRouter();
-  const { cacheScopeKey } = usePartnerSession();
+  const { cacheScopeKey, context } = usePartnerSession();
   const [lifecycle, setLifecycle] = useState<PartnerPolicyLifecycle>(savedPolicyLifecycle);
   const [query, setQuery] = useState(savedPolicyQuery);
   const [filtersVisible, setFiltersVisible] = useState(true);
   const debouncedSearch = useDebouncedValue(query.trim(), 350);
+  const displayName = context?.identity.display_name || 'Partner';
 
   useEffect(() => {
     savedPolicyQuery = query;
@@ -131,31 +132,32 @@ export default function PoliciesScreen() {
           resizeMode="cover"
         />
         <View style={styles.heroBackdropShade} />
+        <View style={styles.heroBackdropVignette} />
+
         <View style={styles.heroTopRow}>
-          <View style={styles.brandRow}>
-            <Image
-              source={require('../../assets/insureit-partner-official.png')}
-              style={styles.brandLogo}
-              resizeMode="contain"
-            />
-          </View>
+          <Image
+            source={require('../../assets/partner-login-logo.png')}
+            style={styles.brandLogo}
+            resizeMode="contain"
+            accessibilityLabel="INSUREIT Partner"
+          />
           <View style={styles.heroActions}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open activity"
               onPress={() => router.push('/activity')}
-              style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroBellButton, pressed && styles.pressed]}
             >
-              <Ionicons name="notifications-outline" size={17} color="#FFFFFF" />
+              <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
               <View style={styles.notificationDot} />
             </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               onPress={() => router.push('/profile')}
-              style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
             >
-              <Ionicons name="person-circle-outline" size={19} color="#FFFFFF" />
+              <Text style={styles.heroAvatarText}>{initials(displayName)}</Text>
             </Pressable>
           </View>
         </View>
@@ -165,19 +167,25 @@ export default function PoliciesScreen() {
           <Text style={styles.heroSubtitle}>Manage. Track. Grow.</Text>
         </View>
 
-        <View style={styles.heroArtworkWrap}>
-          <Image source={PartnerAssets.navigation.policies} style={styles.heroArtwork} resizeMode="contain" />
-          <View style={styles.heroShield}>
-            <Ionicons name="shield-checkmark" size={26} color="#FFFFFF" />
-          </View>
+        <View pointerEvents="none" style={styles.heroVehicleLeft}>
+          <Image source={PartnerAssets.products.commercialInsurance} style={styles.heroVehicleImage} resizeMode="contain" />
+        </View>
+        <View pointerEvents="none" style={styles.heroVehicleRight}>
+          <Image source={PartnerAssets.products.motorInsurance} style={styles.heroVehicleImage} resizeMode="contain" />
         </View>
 
-        <View style={styles.heroWords}>
-          <Text style={styles.heroWord}>MOTOR</Text>
-          <Text style={styles.heroWord}>COMMERCIAL</Text>
-          <Text style={styles.heroWord}>HEALTH</Text>
-          <Text style={styles.heroWord}>LIFE</Text>
-          <Text style={styles.heroWord}>PROTECTION</Text>
+        <View pointerEvents="none" style={styles.heroArtworkWrap}>
+          <Image source={PartnerAssets.actions.policyRegister} style={styles.heroArtwork} resizeMode="contain" />
+          <Image source={PartnerAssets.navigation.policies} style={styles.heroShieldArtwork} resizeMode="contain" />
+        </View>
+
+        <View pointerEvents="none" style={styles.heroWords}>
+          <Text style={styles.heroWord}>MORE</Text>
+          <Text style={styles.heroWord}>COVERAGE</Text>
+          <Text style={styles.heroWord}>SAFER</Text>
+          <Text style={styles.heroWord}>VEHICLES</Text>
+          <Text style={styles.heroWord}>BRIGHTER</Text>
+          <Text style={styles.heroWord}>TOMORROW</Text>
         </View>
       </View>
 
@@ -470,6 +478,15 @@ function formatDate(value: string | null) {
   return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }).format(date);
 }
 
+function initials(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'IP';
+}
+
 function formatUpdatedAt(value: number | null) {
   if (!value) return 'earlier';
   return new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value));
@@ -480,80 +497,110 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 108 },
   contentEmpty: { flexGrow: 1 },
   hero: {
-    minHeight: 158,
+    minHeight: 174,
     overflow: 'hidden',
     paddingHorizontal: 16,
-    paddingTop: 30,
-    backgroundColor: '#0757AE',
+    paddingTop: 26,
+    backgroundColor: '#053F8F',
   },
   heroBackdrop: {
-    position: 'absolute',
-    left: '-6%',
-    top: -8,
-    width: '112%',
-    height: 182,
-    opacity: 0.70,
-    transform: [{ scale: 0.92 }],
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 0.92,
   },
   heroBackdropShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(2,42,93,0.14)',
+    backgroundColor: 'rgba(0,28,74,0.28)',
   },
-  heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 3 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', maxWidth: '60%' },
-  brandLogo: { width: 112, height: 34 },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  heroIconButton: {
-    width: 33,
-    height: 33,
+  heroBackdropVignette: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(1,29,72,0.08)',
+  },
+  heroTopRow: {
+    zIndex: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  brandLogo: { width: 122, height: 43 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroBellButton: {
+    width: 34,
+    height: 34,
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(7,58,120,0.34)',
+    backgroundColor: 'rgba(4,47,103,0.46)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.90)',
+    borderColor: 'rgba(255,255,255,0.84)',
   },
+  heroAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EAF2FF',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.88)',
+  },
+  heroAvatarText: { color: '#164F9C', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
   notificationDot: {
     position: 'absolute',
-    width: 5,
-    height: 5,
+    width: 6,
+    height: 6,
     borderRadius: 3,
-    right: 5,
-    top: 5,
-    backgroundColor: '#F04E55',
+    right: 4,
+    top: 4,
+    backgroundColor: '#EF3948',
     borderWidth: 1,
     borderColor: '#FFFFFF',
   },
-  heroCopy: { position: 'absolute', left: 16, bottom: 25, zIndex: 3 },
-  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontWeight: '700', letterSpacing: -0.15 },
-  heroSubtitle: { marginTop: 1, color: '#FFFFFF', fontSize: 11.5, lineHeight: 16, fontWeight: '500' },
+  heroCopy: { position: 'absolute', left: 18, bottom: 31, zIndex: 5 },
+  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontWeight: '700', letterSpacing: -0.18 },
+  heroSubtitle: { marginTop: 1, color: '#FFFFFF', fontSize: 11.5, lineHeight: 15, fontWeight: '500' },
+  heroVehicleLeft: {
+    position: 'absolute',
+    left: 124,
+    bottom: 3,
+    width: 82,
+    height: 62,
+    opacity: 0.82,
+    zIndex: 2,
+  },
+  heroVehicleRight: {
+    position: 'absolute',
+    right: 54,
+    bottom: 0,
+    width: 84,
+    height: 62,
+    opacity: 0.78,
+    zIndex: 2,
+  },
+  heroVehicleImage: { width: '100%', height: '100%' },
   heroArtworkWrap: {
     position: 'absolute',
-    right: 58,
+    right: 72,
     bottom: 2,
-    width: 118,
-    height: 100,
+    width: 126,
+    height: 118,
+    zIndex: 4,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  heroArtwork: { width: 94, height: 94, opacity: 0.98 },
-  heroShield: {
+  heroArtwork: { width: 104, height: 104 },
+  heroShieldArtwork: {
     position: 'absolute',
-    left: 8,
+    left: 1,
     bottom: 7,
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0B65C7',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.72)',
+    width: 55,
+    height: 55,
   },
-  heroWords: { position: 'absolute', zIndex: 3, right: 9, bottom: 16, width: 52 },
-  heroWord: { color: '#FFFFFF', fontSize: 5.5, lineHeight: 7.5, fontWeight: '800' },
+  heroWords: { position: 'absolute', zIndex: 5, right: 9, bottom: 22, width: 52 },
+  heroWord: { color: '#FFFFFF', fontSize: 5.4, lineHeight: 7.1, fontWeight: '800', letterSpacing: 0.06 },
   searchRow: {
-    marginTop: -15,
+    marginTop: -17,
     marginHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
