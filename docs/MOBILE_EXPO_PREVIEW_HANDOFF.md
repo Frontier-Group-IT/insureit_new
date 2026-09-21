@@ -488,3 +488,15 @@ The My Work section is removed. INSUREIT Stories is the final Home section, has 
 ### 2026-09-21 — Policies banner binary repair follow-up
 
 The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling because `policies-header-reference.jpg` was not a valid JPEG blob even though the path/extension were correct. Branch `fix/partner-policies-banner-valid-jpeg` replaces only that asset with a valid JPEG derived from the user-supplied banner. **IMPLEMENTED; PR #2198; CI/merge/OTA verification pending.**
+
+
+## 2026-09-21 — Partner 0.1.0 Policies JPEG normalization follow-up
+
+**IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
+- The Policies banner repository object is a real binary JPEG, not base64 text.
+- The earlier runtime-0.1 OTA repair incorrectly attempted `base64 --decode` on that binary file and failed with `base64: invalid input`.
+- The prior direct copy reached Expo/Metro but the supplied progressive JPEG produced `unsupported file type: undefined` in the legacy runtime-0.1 export path.
+- The workflow now copies the binary banner directly, verifies it as JPEG, then uses ffmpeg to normalize only the temporary compatibility copy to a baseline JPEG before Expo export.
+- The committed user-supplied banner is not replaced; only the OTA staging copy is normalized for legacy bundler compatibility.
+- No APK/AAB, runtime-version, native-config, schema, RLS, or policy business-logic change.
