@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Bike, BusFront, CarFront, ChevronDown, ChevronRight, Construction, FileText, ShieldCheck, Tractor, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 
 type Customer = {
   id: string;
@@ -124,8 +126,20 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
             return (
               <article key={vehicle.id} className="overflow-hidden rounded-2xl border border-[#DCE3EE] bg-white shadow-[0_6px_20px_rgba(15,23,42,0.045)]">
                 <button type="button" onClick={() => toggleVehicle(vehicle.id)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-[#F8FAFC]" aria-expanded={isExpanded}>
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#EEF3FF] text-[#315FEA]">
-                    <VehicleClassIcon vehicle={vehicle} />
+                  <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                    {getVehicleBrandLogo(vehicle.make) ? (
+                      <Image
+                        src={getVehicleBrandLogo(vehicle.make)!}
+                        alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
+                        width={34}
+                        height={34}
+                        className="max-h-8 max-w-[38px] w-auto object-contain"
+                      />
+                    ) : (
+                      <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#EEF3FF] text-[#315FEA]">
+                        <VehicleClassIcon vehicle={vehicle} />
+                      </span>
+                    )}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
