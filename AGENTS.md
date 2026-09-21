@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Dashboard Policy Intake workload count:** branch `fix/dashboard-policy-intake-workload-count`; the Needs attention Policy Intake card now uses the same queue logic as the Policy Intake workspace: Action Required (`ready_for_review` + failed OCR processing) + In Review + non-failed Processing, without double counting. The card label is `Policy Intakes pending` and shows the three-part breakdown. **IMPLEMENTED; PR/CI pending, not merged.**
+
 - **2026-09-21 — Dashboard pending intermediary count:** branch `fix/dashboard-pending-intermediary-count`; Home/Operations Overview “Intermediary onboarding” now counts only records meeting the Pending Applications queue conditions (open status, Partner context, IIB processing, documents pending, and at least one required document missing), excluding training-stage and active-partner records. **IMPLEMENTED; PR #2240 open; CI/merge/deployment pending.**
 
 
