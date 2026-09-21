@@ -1,3 +1,11 @@
+## 2026-09-21 — Schema workflow credential interpolation repair
+
+- The first production schema run for migration `20260921145500_voice_campaigns.sql` failed before applying SQL because `.github/workflows/apply-voice-campaigns.yml` accidentally escaped GitHub Actions expressions as `\${{ ... }}`.
+- This caused the Supabase CLI to receive credential/project values with a literal leading backslash and reject the access token format at `supabase link`.
+- Branch `fix/voice-campaign-schema-workflow-secrets` removes only those backslashes; no credentials, schema SQL, RLS, application code, or provider contract are changed.
+- After merge, the dedicated schema workflow must run successfully and migration `20260921145500` must be verified applied before the production Vercel deployment gate is rerun.
+- **IMPLEMENTED; PR/CI/merge/schema application/deployment pending.**
+
 # Voice Campaign Excel Workflow — 2026-09-21
 
 ## Goal
