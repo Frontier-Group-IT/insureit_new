@@ -120,6 +120,11 @@ assert(insurerLogoResolver.includes('/assets/insurers/national-insurance.png'), 
 assert(insurerLogoResolver.includes('nationalinsurancecompanylimited: "nationalinsurance"'), "National Insurance legal name alias must resolve");
 assert(insurerLogoResolver.includes('/assets/insurers/united-india-insurance.png'), "shared insurer resolver must use the new United India PNG asset");
 assert(partnerPolicyPage.includes("getInsurerLogo(row.insurer_name)"), "Partner Policy Register must use the shared insurer resolver");
+const policyLogoIndex = partnerPolicyPage.indexOf("getInsurerLogo(row.insurer_name)");
+const policyProductIndex = partnerPolicyPage.indexOf("{product.main}");
+const insurerNameIndex = partnerPolicyPage.indexOf('{row.insurer_name || "Insurer not recorded"}');
+assert(policyLogoIndex >= 0 && policyProductIndex >= 0 && policyLogoIndex < policyProductIndex, "Partner Policy Register insurer logo must render before Policy / Product text");
+assert(insurerNameIndex > policyProductIndex, "Partner Policy Register Insurer column must remain text-only after the Policy / Product logo");
 assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Partner Fleet Summary must use the shared insurer resolver");
 
 const partnerClaimsPage = read("app/partner/claims/page.tsx");
