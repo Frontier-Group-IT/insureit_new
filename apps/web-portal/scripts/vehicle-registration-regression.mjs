@@ -90,12 +90,15 @@ assert.match(vehicleMasterActions, /!accessibleCustomerIds\.includes\(payload\.c
 const vehicleForm = fs.readFileSync(path.join(portalRoot, "components/forms.tsx"), "utf8");
 assert.match(vehicleForm, /VehicleRegistrationFields/);
 assert.match(vehicleForm, /initialChassisNo=\{values\?\.chassis_no\}/);
+assert.match(vehicleForm, /showUnregisteredRegistrationIdentity=\{showUnregisteredRegistrationIdentity\}/);
+assert.match(vehicleForm, /showUnregisteredRegistrationIdentity = false/);
 assert.match(vehicleForm, /registration_status === "registration_pending"/);
 
 const vehicleWorkspace = fs.readFileSync(path.join(portalRoot, "app/vehicles/vehicle-workspace.tsx"), "utf8");
 assert.match(vehicleWorkspace, /displayVehicleRegistrationNumber\(vehicle\)/);
 
 const vehicleRegistrationFields = fs.readFileSync(path.join(portalRoot, "components/vehicle-registration-fields.tsx"), "utf8");
+assert.match(vehicleRegistrationFields, /showUnregisteredRegistrationIdentity \? \(/);
 assert.match(vehicleRegistrationFields, /label="Registration Number"/);
 assert.match(vehicleRegistrationFields, /label="Registration Date"/);
 
@@ -105,8 +108,12 @@ assert.doesNotMatch(vehicleEditPage, /requireCapability\("view_vehicles", "edit"
 assert.match(vehicleEditPage, /hasEffectiveCapability\(profile, "view_vehicles", "edit"\)/);
 assert.match(vehicleEditPage, /getAccessibleCustomerIds\(profile\.id, profile\.role, "view_vehicles"\)/);
 assert.match(vehicleEditPage, /vehicleRequest = vehicleRequest\.in\("customer_id", accessibleCustomerIds\)/);
+assert.match(vehicleEditPage, /showUnregisteredRegistrationIdentity/);
 assert.match(vehicleEditPage, /<fieldset disabled=\{!canEdit\}/);
 assert.match(vehicleEditPage, /View only — you can review this vehicle, but you do not have permission to edit it\./);
+
+const vehicleNewPage = fs.readFileSync(path.join(portalRoot, "app/vehicles/new/page.tsx"), "utf8");
+assert.doesNotMatch(vehicleNewPage, /showUnregisteredRegistrationIdentity/, "Add Vehicle must hide Registration Number and Registration Date when Unregistered is selected");
 
 const roles = fs.readFileSync(path.join(portalRoot, "lib/roles.ts"), "utf8");
 const rmRole = roles.match(/relationship_manager:\[([^\]]+)\]/)?.[1] ?? "";
