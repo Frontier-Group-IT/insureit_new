@@ -6,5 +6,6 @@
   "source_commit": "e7a35a6e413a5480aebcbbedad865665792e22dc",
   "release_scope": "Deploy current main, including PR #2155 Partner Search page Home-hero alignment, plus all changes already contained in main.",
   "verification": "This deployment marker is intentionally updated on a fresh PR from current main so the required Verify web portal pull_request workflow can validate the exact current codebase before the production deployment gate runs again.",
-  "instructions": "Update this file only after explicit deployment approval."
+  "instructions": "Update this file only after explicit deployment approval.",
+  "verification_retry": "second PR synchronization to start the normal pull-request verification workflows"
 }
