@@ -123,13 +123,46 @@ export default function BusinessScreen() {
       ) : (
         <>
           <View style={styles.heroBanner}>
+            <Image
+              source={require('../../assets/figma-dashboard/hero-banner.jpg')}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+            <View style={styles.heroShade} />
+
+            <View style={styles.heroTopRow}>
+              <Image
+                source={require('../../assets/insureit-partner-official.png')}
+                style={styles.heroLogo}
+                resizeMode="contain"
+              />
+              <View style={styles.heroActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Notifications"
+                  onPress={() => router.push('/(tabs)/more')}
+                  style={({ pressed }) => [styles.heroActionButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Profile"
+                  onPress={() => router.push('/profile')}
+                  style={({ pressed }) => [styles.heroProfileButton, pressed && styles.pressed]}
+                >
+                  <Ionicons name="person" size={18} color="#FFFFFF" />
+                </Pressable>
+              </View>
+            </View>
+
             <View style={styles.heroCopy}>
               <Text style={styles.heroTitle}>Business</Text>
               <Text style={styles.heroSubtitle}>Track, Analyse, Grow.</Text>
-              <Text style={styles.heroSubtitle}>Good Morning,</Text>
+              <Text style={styles.heroGreeting}>Good Morning,</Text>
               <Text style={styles.heroName}>Partner</Text>
             </View>
-            <Image source={PartnerAssets.banners.businessGrowth01} style={styles.heroImage} resizeMode="cover" />
+
             <View style={styles.heroWords}>
               <Text style={styles.heroWord}>MORE</Text>
               <Text style={styles.heroWord}>POLICIES</Text>
@@ -142,11 +175,11 @@ export default function BusinessScreen() {
 
           <View style={styles.searchRow}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
-              <Ionicons name="search-outline" size={15} color="#4966B6" />
+              <Ionicons name="search-outline" size={21} color="#3156B8" />
               <Text numberOfLines={1} style={styles.searchText}>Search customer, vehicle number or policy number...</Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={() => setShowRange((value) => !value)} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
-              <Ionicons name="filter-outline" size={15} color="#3156B8" />
+              <Ionicons name="filter-outline" size={18} color="#3156B8" />
               <Text style={styles.filterText}>Filter</Text>
             </Pressable>
           </View>
@@ -333,7 +366,7 @@ function TrendChart({ data }: { data: PartnerBusinessPerformance['trend'] }) {
       <View style={styles.chart}>
         {data.slice(-6).map((item) => {
           const premium = Number(item.premium || 0);
-          const height = Math.max(4, Math.round((premium / max) * 68));
+          const height = Math.max(4, Math.round((premium / max) * 96));
           return (
             <View key={item.month} style={styles.barColumn}>
               <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={styles.barValue}>{formatCompactCurrency(premium)}</Text>
@@ -432,76 +465,492 @@ function formatCacheTime(value: number | null) {
 
 const styles = StyleSheet.create({
   heroBanner: {
-    minHeight: 114,
+    height: 204,
     marginHorizontal: -16,
     marginTop: -14,
     overflow: 'hidden',
-    backgroundColor: '#0B4A9E',
+    backgroundColor: '#0755A8',
   },
-  heroCopy: { position: 'absolute', zIndex: 3, left: 16, top: 10 },
-  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 23, fontWeight: '800' },
-  heroSubtitle: { marginTop: 1, color: '#D8E8FF', fontSize: 9, lineHeight: 12, fontWeight: '500' },
-  heroName: { color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '800' },
-  heroImage: { position: 'absolute', right: 39, bottom: 0, width: 174, height: 114, opacity: 0.96 },
-  heroWords: { position: 'absolute', zIndex: 3, right: 8, top: 15, width: 38 },
-  heroWord: { color: '#EAF3FF', fontSize: 6.2, lineHeight: 8.5, fontWeight: '800' },
-  searchRow: { marginTop: 7, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  searchBox: { flex: 1, minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 7, paddingHorizontal: 9, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E4F3' },
-  searchText: { flex: 1, color: '#8190A5', fontSize: 8.5, lineHeight: 12, fontWeight: '500' },
-  filterButton: { minHeight: 32, flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 7, paddingHorizontal: 9, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E4F3' },
-  filterText: { color: '#3156B8', fontSize: 9, fontWeight: '700' },
-  feedback: { marginTop: 7 },
-  sectionHeader: { minHeight: 29, marginTop: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  sectionTitle: { color: '#14367B', fontSize: 10.5, lineHeight: 14, fontWeight: '800' },
-  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  periodButton: { minHeight: 24, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 5 },
-  periodText: { color: '#3156B8', fontSize: 8, lineHeight: 11, fontWeight: '700' },
-  smallSelect: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 5, paddingHorizontal: 5, paddingVertical: 3, backgroundColor: '#F6F8FC' },
-  smallSelectText: { color: '#3156B8', fontSize: 6.8, lineHeight: 9, fontWeight: '700' },
-  viewAll: { color: '#3156B8', fontSize: 7.2, lineHeight: 10, fontWeight: '700' },
-  rangeWrap: { marginBottom: 5 },
-  overviewGrid: { flexDirection: 'row', gap: 4 },
-  overviewCard: { flex: 1, minHeight: 94, alignItems: 'center', borderRadius: 8, paddingHorizontal: 3, paddingVertical: 7, backgroundColor: '#F7FAFF', borderWidth: 1, borderColor: '#E2EAF5' },
-  overviewIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: '#E7F0FF' },
-  overviewValue: { width: '100%', marginTop: 4, color: '#112C69', textAlign: 'center', fontSize: 12.5, lineHeight: 15, fontWeight: '800' },
-  overviewLabel: { minHeight: 18, marginTop: 2, color: '#53647C', textAlign: 'center', fontSize: 6.9, lineHeight: 9, fontWeight: '600' },
-  growthRow: { marginTop: 2, flexDirection: 'row', alignItems: 'center', gap: 1 },
-  growthText: { maxWidth: 58, color: '#16A34A', fontSize: 6.5, lineHeight: 8, fontWeight: '800' },
-  vsText: { marginTop: 1, color: '#9AA7B8', fontSize: 5.7, lineHeight: 7 },
-  chartCard: { minHeight: 128, flexDirection: 'row', borderRadius: 9, padding: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
-  chartYAxis: { width: 15, height: 96, justifyContent: 'space-between', paddingVertical: 4 },
-  axisText: { color: '#8795A9', fontSize: 5.8, lineHeight: 7 },
-  chart: { flex: 1, height: 108, flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
-  barColumn: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'flex-end' },
-  barValue: { width: '100%', height: 12, color: '#3156B8', textAlign: 'center', fontSize: 6, lineHeight: 8, fontWeight: '700' },
-  barTrack: { height: 74, width: '72%', justifyContent: 'flex-end', overflow: 'hidden', borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: '#EEF3FA' },
-  bar: { width: '100%', borderTopLeftRadius: 4, borderTopRightRadius: 4, backgroundColor: '#2298E8' },
-  barMonth: { marginTop: 4, color: '#53647C', fontSize: 6.6, lineHeight: 9, fontWeight: '600' },
-  productGrid: { flexDirection: 'row', gap: 4, borderRadius: 9, padding: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
-  productTile: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 7, paddingVertical: 6, backgroundColor: '#F7FAFF' },
-  productIconWrap: { width: 27, height: 27, alignItems: 'center', justifyContent: 'center' },
-  productIcon: { width: 26, height: 26 },
-  productLabel: { width: '94%', marginTop: 2, color: '#14367B', textAlign: 'center', fontSize: 6.2, lineHeight: 8, fontWeight: '700' },
-  productShare: { marginTop: 1, color: '#3156B8', fontSize: 6.1, lineHeight: 8, fontWeight: '800' },
-  emptyCompact: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
-  emptyCompactText: { color: '#8795A9', fontSize: 8, lineHeight: 11 },
-  insurerCard: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 9, padding: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
-  insurerEmptyIcon: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 8, backgroundColor: '#F1F6FF' },
+  heroImage: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  heroShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(3, 45, 96, 0.10)',
+  },
+  heroTopRow: {
+    position: 'absolute',
+    zIndex: 3,
+    top: 8,
+    left: 18,
+    right: 16,
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  heroLogo: {
+    width: 136,
+    height: 50,
+  },
+  heroActions: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  heroActionButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroProfileButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(124, 184, 255, 0.92)',
+  },
+  heroCopy: {
+    position: 'absolute',
+    zIndex: 3,
+    left: 20,
+    bottom: 22,
+    maxWidth: '55%',
+  },
+  heroTitle: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+  },
+  heroSubtitle: {
+    marginTop: 2,
+    color: '#FFFFFF',
+    ...partnerTheme.typography.caption,
+  },
+  heroGreeting: {
+    marginTop: 6,
+    color: '#FFFFFF',
+    ...partnerTheme.typography.caption,
+  },
+  heroName: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
+  },
+  heroWords: {
+    position: 'absolute',
+    zIndex: 3,
+    right: 15,
+    bottom: 22,
+    width: 76,
+    paddingLeft: 9,
+    borderLeftWidth: 2,
+    borderLeftColor: 'rgba(255,255,255,0.78)',
+  },
+  heroWord: {
+    color: '#F5F9FF',
+    ...partnerTheme.typography.meta,
+    fontWeight: '800',
+  },
+
+  searchRow: {
+    zIndex: 5,
+    marginTop: -28,
+    marginHorizontal: 0,
+    marginBottom: 10,
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    borderRadius: 17,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#D9DFEA',
+    shadowColor: '#102449',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  searchBox: {
+    flex: 1,
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#FFFFFF',
+  },
+  searchText: {
+    flex: 1,
+    color: '#8B95A8',
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  filterButton: {
+    minHeight: 58,
+    minWidth: 84,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: '#D9DFEA',
+  },
+  filterText: {
+    color: '#3156B8',
+    ...partnerTheme.typography.caption,
+    fontWeight: '700',
+  },
+
+  feedback: { marginBottom: 8 },
+  sectionHeader: {
+    minHeight: 32,
+    marginTop: 12,
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  sectionTitle: {
+    color: partnerTheme.colors.inkMuted,
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '600',
+    letterSpacing: 0.7,
+  },
+  sectionActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  periodButton: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+  },
+  periodText: {
+    color: '#3156B8',
+    ...partnerTheme.typography.caption,
+    fontWeight: '700',
+  },
+  smallSelect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: '#F6F8FC',
+  },
+  smallSelectText: {
+    color: '#3156B8',
+    ...partnerTheme.typography.meta,
+    fontWeight: '700',
+  },
+  viewAll: {
+    color: '#3156B8',
+    ...partnerTheme.typography.caption,
+    fontWeight: '700',
+  },
+  rangeWrap: { marginBottom: 8 },
+
+  overviewGrid: {
+    flexDirection: 'row',
+    gap: 5,
+    borderRadius: 16,
+    padding: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDE6F1',
+    ...partnerTheme.shadowSoft,
+  },
+  overviewCard: {
+    flex: 1,
+    minHeight: 126,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    backgroundColor: '#F5F9FF',
+  },
+  overviewIcon: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#E7F0FF',
+  },
+  overviewValue: {
+    width: '100%',
+    marginTop: 7,
+    color: '#112C69',
+    textAlign: 'center',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
+  },
+  overviewLabel: {
+    minHeight: 30,
+    marginTop: 2,
+    color: partnerTheme.colors.inkMuted,
+    textAlign: 'center',
+    ...partnerTheme.typography.caption,
+  },
+  growthRow: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  growthText: {
+    maxWidth: 72,
+    color: '#16A34A',
+    ...partnerTheme.typography.meta,
+    fontWeight: '800',
+  },
+  vsText: {
+    marginTop: 1,
+    color: '#9AA7B8',
+    ...partnerTheme.typography.meta,
+    fontWeight: '500',
+  },
+
+  chartCard: {
+    minHeight: 168,
+    flexDirection: 'row',
+    borderRadius: 16,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDE6F1',
+    ...partnerTheme.shadowSoft,
+  },
+  chartYAxis: {
+    width: 24,
+    height: 128,
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+  },
+  axisText: {
+    color: '#8795A9',
+    ...partnerTheme.typography.meta,
+  },
+  chart: {
+    flex: 1,
+    height: 142,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  barColumn: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  barValue: {
+    width: '100%',
+    minHeight: 16,
+    color: '#3156B8',
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+    fontWeight: '700',
+  },
+  barTrack: {
+    height: 102,
+    width: '78%',
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+    borderTopLeftRadius: 7,
+    borderTopRightRadius: 7,
+    backgroundColor: '#EEF3FA',
+  },
+  bar: {
+    width: '100%',
+    borderTopLeftRadius: 7,
+    borderTopRightRadius: 7,
+    backgroundColor: '#2298E8',
+  },
+  barMonth: {
+    marginTop: 5,
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.meta,
+  },
+
+  productGrid: {
+    flexDirection: 'row',
+    gap: 5,
+    borderRadius: 16,
+    padding: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDE6F1',
+    ...partnerTheme.shadowSoft,
+  },
+  productTile: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    paddingVertical: 8,
+    backgroundColor: '#F5F9FF',
+  },
+  productIconWrap: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productIcon: { width: 36, height: 36 },
+  productLabel: {
+    width: '94%',
+    marginTop: 3,
+    color: '#14367B',
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+    fontWeight: '700',
+  },
+  productShare: {
+    marginTop: 1,
+    color: '#3156B8',
+    ...partnerTheme.typography.meta,
+    fontWeight: '800',
+  },
+  emptyCompact: {
+    flex: 1,
+    minHeight: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCompactText: {
+    color: '#8795A9',
+    ...partnerTheme.typography.caption,
+  },
+
+  insurerCard: {
+    minHeight: 72,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 16,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDE6F1',
+    ...partnerTheme.shadowSoft,
+  },
+  insurerEmptyIcon: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: '#F1F6FF',
+  },
   insurerEmptyBody: { flex: 1 },
-  insurerEmptyTitle: { color: '#14367B', fontSize: 8.5, lineHeight: 11, fontWeight: '800' },
-  insurerEmptyText: { marginTop: 2, color: '#8795A9', fontSize: 6.6, lineHeight: 9 },
-  quickGrid: { flexDirection: 'row', gap: 4, borderRadius: 9, padding: 5, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
-  quickTile: { flex: 1, minWidth: 0, alignItems: 'center', borderRadius: 7, paddingVertical: 6, backgroundColor: '#F7FAFF' },
-  quickIconWrap: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  quickIcon: { width: 27, height: 27 },
-  quickLabel: { marginTop: 2, color: '#14367B', textAlign: 'center', fontSize: 6.6, lineHeight: 9, fontWeight: '800' },
-  quickMeta: { marginTop: 1, color: '#718198', textAlign: 'center', fontSize: 5.8, lineHeight: 8 },
-  networkGrid: { flexDirection: 'row', gap: 5, marginBottom: 8 },
-  networkTile: { flex: 1, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 9, paddingHorizontal: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6F1' },
-  networkIcon: { width: 30, height: 30 },
+  insurerEmptyTitle: {
+    color: '#14367B',
+    ...partnerTheme.typography.cardTitle,
+  },
+  insurerEmptyText: {
+    marginTop: 2,
+    color: '#8795A9',
+    ...partnerTheme.typography.caption,
+  },
+
+  quickGrid: {
+    flexDirection: 'row',
+    gap: 5,
+    borderRadius: 16,
+    padding: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDE6F1',
+    ...partnerTheme.shadowSoft,
+  },
+  quickTile: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 88,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    paddingVertical: 8,
+    backgroundColor: '#F5F9FF',
+  },
+  quickIconWrap: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickIcon: { width: 36, height: 36 },
+  quickLabel: {
+    marginTop: 3,
+    color: '#14367B',
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+    fontWeight: '800',
+  },
+  quickMeta: {
+    marginTop: 1,
+    color: '#718198',
+    textAlign: 'center',
+    ...partnerTheme.typography.meta,
+    fontWeight: '500',
+  },
+
+  networkGrid: {
+    flexDirection: 'row',
+    gap: 7,
+    marginBottom: 8,
+  },
+  networkTile: {
+    flex: 1,
+    minHeight: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#DDE6F1',
+    ...partnerTheme.shadowSoft,
+  },
+  networkIcon: { width: 38, height: 38 },
   networkBody: { flex: 1, minWidth: 0 },
-  networkValue: { color: '#14367B', fontSize: 13, lineHeight: 15, fontWeight: '800' },
-  networkLabel: { marginTop: 1, color: '#53647C', fontSize: 6.7, lineHeight: 9, fontWeight: '700' },
-  networkMeta: { marginTop: 1, color: '#8795A9', fontSize: 5.6, lineHeight: 7 },
+  networkValue: {
+    color: '#14367B',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
+  },
+  networkLabel: {
+    marginTop: 1,
+    color: partnerTheme.colors.inkMuted,
+    ...partnerTheme.typography.caption,
+    fontWeight: '700',
+  },
+  networkMeta: {
+    marginTop: 1,
+    color: '#8795A9',
+    ...partnerTheme.typography.meta,
+  },
   pressed: { opacity: 0.75 },
 });
