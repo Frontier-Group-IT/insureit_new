@@ -150,8 +150,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p compat/apps/partner-app/assets/partner/banners
+          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
+            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
           cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Manage. Track. Grow.' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
