@@ -1,3 +1,13 @@
+## 2026-09-21 — AuthBridge Daimler → Bharat Benz manufacturer normalization
+
+- Branch: `fix/normalize-daimler-to-bharatbenz`.
+- API-derived vehicle manufacturer values matching Daimler/DICV variants are normalized to the user-facing value **Bharat Benz**.
+- Applied consistently to internal Vehicle RC lookup, Customer RC lookup/cache repair, Policy RC review, and External Renewal AuthBridge enrichment.
+- Raw AuthBridge provider payloads remain unchanged in cache/audit storage; only normalized application/display fields are changed.
+- Vehicle Onboarding select matching now ignores punctuation/spacing so `Bharat Benz` matches the existing `BharatBenz` master option without a schema/master-data migration.
+- Mercedes-Benz values are explicitly not rewritten by the Daimler rule.
+- **IMPLEMENTED; APP-ONLY, NO DB MIGRATION. NOT MERGED, NOT DEPLOYED.**
+
 ## 2026-09-21 — Sales Executive Policy Intake role
 
 - Branch: `feat/sales-executive-policy-intake`; PR #2189.
