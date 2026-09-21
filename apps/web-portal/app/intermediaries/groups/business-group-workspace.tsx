@@ -192,7 +192,7 @@ export function BusinessGroupWorkspace({
           ) : null}
         </div>
 
-        <div className="mt-3 grid overflow-hidden rounded-2xl border border-white/15 bg-white/8 sm:grid-cols-2 xl:grid-cols-4 xl:divide-x xl:divide-white/10">
+        <div className="mt-3 grid overflow-hidden rounded-[18px] border border-[#8FB1DB]/60 bg-[#10396D]/70 sm:grid-cols-2 xl:grid-cols-4">
           <Metric label="Groups" value={groups.length} icon={<Layers3 className="h-4 w-4" />} />
           <Metric label="Root Partners" value={rootPartners.length} icon={<Building2 className="h-4 w-4" />} />
           <Metric label="Branches" value={partners.filter((partner) => partner.is_branch_profile).length} icon={<Store className="h-4 w-4" />} />
@@ -367,7 +367,7 @@ function PartnerTreeRow({ partner, branches, group, canManage }: { partner: Busi
 }
 
 function Metric({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
-  return <div className="flex min-h-[58px] items-center gap-3 px-4 py-2.5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/10 text-[#CFE0FF] ring-1 ring-white/15">{icon}</span><div><p className="text-[14px] font-bold leading-none text-white">{value}</p><p className="mt-1 text-[7.5px] font-semibold text-[#B9CBE2]">{label}</p></div></div>;
+  return <div className="flex min-h-[68px] items-center gap-3 border-b border-white/10 px-4 py-3 last:border-b-0 sm:[&:nth-child(odd)]:border-r sm:[&:nth-child(odd)]:border-r-white/10 xl:border-b-0 xl:border-r xl:border-r-white/10 xl:last:border-r-0"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-[#D7E6FA] ring-1 ring-white/15">{icon}</span><div className="min-w-0"><p className="text-[7px] font-bold uppercase tracking-[0.06em] text-[#BFD0E6]">{label}</p><p className="mt-1 text-[15px] font-bold leading-none text-white">{value}</p></div></div>;
 }
 
 function SuccessToast({ text }: { text: string }) {
