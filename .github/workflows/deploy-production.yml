@@ -274,6 +274,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260921103000_motor_flat_partner_payout.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-motor-flat-partner-payout.yml"
             echo "Motor FLAT partner payout migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260921131500_add_sales_executive_app_role.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-sales-executive-role.yml"
+            echo "Sales Executive role migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
