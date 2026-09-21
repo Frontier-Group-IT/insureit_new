@@ -137,13 +137,24 @@ jobs:
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
           grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
-      - name: Install last verified Policies layout for runtime 0.1.0
+      - name: Install current Policies reference layout for runtime 0.1.0
         shell: bash
         run: |
           set -euo pipefail
-          git -C tooling show 9c2379b1bafc3189b6027f536e113f0b1f9ec46b:scripts/partner/compat/partner-policies-reference-0-1.tsx \
-            > 'compat/apps/partner-app/app/(tabs)/policies.tsx'
-          grep -q "hero-banner.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          cp tooling/scripts/partner/compat/partner-policies-reference-0-1.tsx \
+            'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          mkdir -p compat/apps/partner-app/assets/partner/banners
+          cp tooling/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
+            compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "height: 158" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "left: '-6%'" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "width: '112%'" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "height: 182" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "opacity: 0.70" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "scale: 0.92" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          grep -q "marginTop: -10" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Manage. Track. Grow.' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Policy Intake' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
@@ -244,7 +255,7 @@ jobs:
             echo "- Runtime: 0.1.0"
             echo "- Home: Policy Intake quick-action visible icon scaled to match the other Quick Action icons; prior hero/compact-home refinements preserved"
             echo "- Business Report: reference-style compact dashboard layout + JS-only date range preserved"
-            echo "- Policies: reference-style hero, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards"
+            echo "- Policies: user-supplied banner with exact approved Home hero geometry, KPI cards, Policy Intake CTA, compact lifecycle tabs and dense policy cards"
             echo "- Claims: reference-style hero, official existing Partner logo, search/filter controls, KPI cards, lifecycle tabs, dense claim cards and manual Load More"
             echo "- More: reference-style branded header, grouped sections, Home-matched typography and account actions"
             echo "- Search: Home-matched hero, greeting, activity/profile actions and floating search field on runtime 0.1.0"
