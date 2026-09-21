@@ -21,6 +21,9 @@ const vehicleWorkspace = readFileSync("app/vehicles/vehicle-workspace.tsx", "utf
 const partnerVehicleRegister = readFileSync("app/partner/vehicles/page.tsx", "utf8");
 const partnerVehicleDetail = readFileSync("app/partner/vehicles/[id]/page.tsx", "utf8");
 assert.match(partnerVehicleRegister, /displayVehicleRegistrationNumber/);
+assert.match(partnerVehicleRegister, /vehicleManufacturerLogo\(vehicle\.make\)/);
+assert.match(partnerVehicleRegister, /\/assets\/vehicle-brands\/tata\.svg/);
+assert.match(partnerVehicleRegister, /alt=\{vehicle\.make \? `\$\{vehicle\.make\} logo` : "Vehicle manufacturer"\}/);
 assert.doesNotMatch(partnerVehicleRegister, /pending \? "Registration pending" : vehicle\.vehicle_no/);
 assert.match(partnerVehicleDetail, /displayVehicleRegistrationNumber/);
 const fleetSummary = readFileSync("app/customers/[id]/fleet/fleet-summary-client.tsx", "utf8");
