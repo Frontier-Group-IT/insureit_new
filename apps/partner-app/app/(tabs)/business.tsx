@@ -130,11 +130,17 @@ export default function BusinessScreen() {
             <View style={styles.heroShade} />
 
             <View style={styles.heroTopRow}>
-              <Image
-                source={require('../../assets/insureit-partner-official.png')}
-                style={styles.heroLogo}
-                resizeMode="contain"
-              />
+              <View style={styles.heroBrand}>
+                <Image
+                  source={require('../../assets/insureit-partner-official.png')}
+                  style={styles.heroLogo}
+                  resizeMode="contain"
+                />
+                <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
+                  <Text style={styles.heroBrandInsureit}>insureit</Text>
+                  <Text style={styles.heroBrandPartner}>Partner</Text>
+                </View>
+              </View>
               <View style={styles.heroActions}>
                 <Pressable
                   accessibilityRole="button"
@@ -456,35 +462,63 @@ function formatCacheTime(value: number | null) {
 
 const styles = StyleSheet.create({
   heroBanner: {
-    height: 188,
+    height: 158,
     marginHorizontal: -16,
     marginTop: -14,
     overflow: 'hidden',
     backgroundColor: '#0755A8',
   },
   heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: '100%',
-    height: '100%',
+    position: 'absolute',
+    left: '-6%',
+    top: -8,
+    width: '112%',
+    height: 182,
+    opacity: 0.70,
+    transform: [{ scale: 0.92 }],
   },
   heroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.02)',
+    backgroundColor: 'rgba(2, 42, 93, 0.03)',
   },
   heroTopRow: {
     position: 'absolute',
     zIndex: 3,
-    top: 10,
-    left: 18,
-    right: 16,
-    minHeight: 58,
+    top: 30,
+    left: 15,
+    right: 15,
+    minHeight: 35,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  heroBrand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: '60%',
+  },
   heroLogo: {
-    width: 142,
-    height: 54,
+    width: 30,
+    height: 35,
+    tintColor: '#FFFFFF',
+  },
+  heroBrandCopy: {
+    justifyContent: 'center',
+  },
+  heroBrandInsureit: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '800',
+    letterSpacing: -0.08,
+  },
+  heroBrandPartner: {
+    color: '#F5AB2E',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: '800',
+    letterSpacing: -0.08,
   },
   heroActions: {
     minHeight: 48,
@@ -532,7 +566,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 3,
     left: 18,
-    bottom: 34,
+    bottom: 24,
   },
   heroTitle: {
     color: '#FFFFFF',
@@ -544,26 +578,26 @@ const styles = StyleSheet.create({
 
   searchRow: {
     zIndex: 5,
-    marginTop: -22,
+    marginTop: -10,
     marginHorizontal: 0,
     marginBottom: 10,
-    minHeight: 52,
+    minHeight: 49,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D9DFEA',
     shadowColor: '#102449',
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
     overflow: 'hidden',
   },
   searchBox: {
     flex: 1,
-    minHeight: 52,
+    minHeight: 49,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -578,7 +612,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   filterButton: {
-    minHeight: 52,
+    minHeight: 49,
     minWidth: 76,
     flexDirection: 'row',
     alignItems: 'center',
