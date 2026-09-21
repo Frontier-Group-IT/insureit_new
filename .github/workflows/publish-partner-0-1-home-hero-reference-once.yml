@@ -14,6 +14,7 @@ on:
       - 'apps/partner-app/assets/business-header-reference.jpg'
       - 'scripts/partner/compat/partner-more-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-policies-reference-0-1.tsx'
+      - 'apps/partner-app/assets/partner/banners/policies-header-reference.jpg'
       - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-search-home-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
@@ -162,6 +163,8 @@ jobs:
           grep -q 'Load More Policies' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Expiring Soon' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
           grep -q 'Lapsed' 'compat/apps/partner-app/app/(tabs)/policies.tsx'
+          test -s compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg
+          grep -q "policies-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/policies.tsx'
 
       - name: Install reference-style More layout for runtime 0.1.0
         shell: bash
