@@ -408,6 +408,20 @@ export const roleMatrixV2: readonly RoleDefinitionV2[] = [
     ],
   },
   {
+    code: "sales_executive",
+    label: "Sales Executive",
+    purpose: "Front-line policy intake user who can submit Policy Intakes and view only policies created from their own submitted intakes.",
+    category: "business",
+    status: "active",
+    assignable: true,
+    defaultScope: "self",
+    grants: [
+      grant("policies.view", "view", "self"),
+      grant("policy_intakes.view", "view", "self"),
+      grant("policy_intakes.create", "edit", "self"),
+    ],
+  },
+  {
     code: "claims_head",
     label: "Claims Head",
     purpose: "Organisation-wide claims owner with final operational authority across claim verification, assignment and workflow progression.",

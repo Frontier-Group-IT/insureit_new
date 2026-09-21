@@ -22,12 +22,38 @@ export async function getAccessiblePolicyRmEmployeeIds(
   return Array.from(new Set(scope.employeeIds));
 }
 
+export async function getSalesExecutivePolicyIds(profileId: string) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("policy_intake_requests")
+    .select("final_policy_id")
+    .eq("submitted_by_profile_id", profileId)
+    .eq("status", "completed")
+    .not("final_policy_id", "is", null)
+    .returns<Array<{ final_policy_id: string | null }>>();
+  if (error) return [];
+  return Array.from(new Set((data ?? []).map((row) => row.final_policy_id).filter((id): id is string => Boolean(id))));
+}
+
 export async function canAccessPolicy(
   profileId: string,
   role: string | null | undefined,
   policyId: string,
   capability: Capability = "view_policies",
 ) {
+  if (role === "sales_executive") {
+    const admin = createSupabaseAdminClient();
+    const { data, error } = await admin
+      .from("policy_intake_requests")
+      .select("id")
+      .eq("submitted_by_profile_id", profileId)
+      .eq("status", "completed")
+      .eq("final_policy_id", policyId)
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    return !error && Boolean(data?.id);
+  }
+
   const rmEmployeeIds = await getAccessiblePolicyRmEmployeeIds(profileId, role, capability);
   if (rmEmployeeIds === null) return true;
   if (!rmEmployeeIds.length) return false;

@@ -4,7 +4,7 @@ import { BackofficePolicyRegister } from "@/components/backoffice-policy-registe
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { PolicyIntakePolicyRegisterLinksPortal } from "@/components/policy-intake-policy-register-links";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
-import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
+import { getAccessiblePolicyRmEmployeeIds, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -86,6 +86,38 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
   ]);
   const afterScope = performance.now();
   const admin = createSupabaseAdminClient();
+
+  if (profile.role === "sales_executive") {
+    const ownPolicyIds = await getSalesExecutivePolicyIds(profile.id);
+    if (!ownPolicyIds.length) {
+      const finishedAt = performance.now();
+      logPortalRoutePerformance("/policies", {
+        auth_ms: afterAuth - startedAt,
+        scope_ms: afterScope - afterAuth,
+        data_ms: finishedAt - afterScope,
+        total_ms: finishedAt - startedAt,
+      });
+      return <AppShell title="Policies"><BackofficePolicyRegister rows={[]} /></AppShell>;
+    }
+
+    const { data, error } = await admin
+      .from("policies")
+      .select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no,chassis_no,engine_no),insurance_companies(name)")
+      .in("id", ownPolicyIds)
+      .order("created_at", { ascending: false })
+      .returns<BackofficePolicyRow[]>();
+
+    const finishedAt = performance.now();
+    logPortalRoutePerformance("/policies", {
+      auth_ms: afterAuth - startedAt,
+      scope_ms: afterScope - afterAuth,
+      data_ms: finishedAt - afterScope,
+      total_ms: finishedAt - startedAt,
+    });
+
+    return <AppShell title="Policies">{error ? <RegisterError /> : <BackofficePolicyRegister rows={data ?? []} />}</AppShell>;
+  }
+
   const canTrackOwnPolicyIntakes = profile.role === "relationship_manager" && canViewPolicyIntakes;
   const policyIntakeSummaryPromise = canReviewPolicyIntakes
     ? loadPolicyIntakeReviewSummary(admin)

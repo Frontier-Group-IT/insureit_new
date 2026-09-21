@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Sales Executive policy-intake role:** branch `feat/sales-executive-policy-intake`; adds an assignable `sales_executive` staff role limited to Fleet & Policies → Policy Register plus Policy Intakes/New Policy Intake, with no direct Add Policy permission. Policy Register is read-only and restricted to final policies created from Policy Intakes submitted by that same profile. Includes enum migration `20260921131500_add_sales_executive_app_role.sql`, rollback guard, dedicated schema workflow and production deploy gate. **IMPLEMENTED; PR #2189 open; CI/schema application/merge/deployment pending.**
+
+
 - **2026-09-21 — Partner Business visible banner/Home-size fix:** branch `fix/business-header-home-size-visible-banner`; replaces the Business hero asset with the exact approved uploaded skyline/growth-arrow artwork, matches the runtime-0.1.0 Home hero geometry (`158` height, Home backdrop crop/opacity), restores the Home brand lockup treatment, and matches the Home search overlap/height so the banner is clearly visible. Applied to current Partner and 0.1 compatibility Business source. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
 
 - **2026-09-21 — Partner Associate Accounts city autofill:** branch `feat/associate-city-autofill`; Associate Accounts City now provides searchable suggestions, selected cities auto-fill State and a default PIN, State remains read-only, and PIN remains editable. The same behavior is used in Add and Edit Associate flows; no schema/RLS/business-workflow change. **IMPLEMENTED; PR/CI/merge/deployment pending.**

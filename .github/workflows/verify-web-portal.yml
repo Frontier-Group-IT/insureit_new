@@ -51,6 +51,8 @@ jobs:
         run: npm run access-control:backoffice-data-entry-regression
       - name: Policy intake workflow regression
         run: npm run policy-intake:workflow-regression
+      - name: Sales Executive policy access regression
+        run: node --experimental-strip-types scripts/sales-executive-policy-access-regression.mjs
       - name: Policy Intake Policy Register quick-link regression
         run: node scripts/policy-intake-policy-register-links-regression.mjs
       - name: Partner web core security regression
