@@ -122,6 +122,13 @@ assert(sharedClaimHeader.includes('label="Make & Model"') && sharedClaimHeader.i
 assert(sharedClaimHeader.includes('label="Insurer"') && sharedClaimHeader.includes('logo={<InsurerLogo name={insurer} />}'), "Claim Detail Insurer must show insurer logo");
 assert(!sharedClaimHeader.includes("const vehicleBrandLogos:"), "Shared Claim Detail header must not keep a duplicate vehicle brand logo map");
 assert(!sharedClaimHeader.includes("const insurerBrandLogos:"), "Shared Claim Detail header must not keep a duplicate insurer logo map");
+assert(sharedClaimHeader.includes('bg-white shadow-[0_8px_22px_rgba(15,23,42,0.06)]'), "Shared Claim Detail summary must use the light background treatment");
+assert(!sharedClaimHeader.includes('bg-[#071D49]'), "Shared Claim Detail summary must not use the old navy background");
+
+const partnerClaimDetailPage = read("app/partner/claims/[id]/page.tsx");
+const operationsClaimDetailPage = read("app/claims/[id]/page.tsx");
+assert(!partnerClaimDetailPage.includes("mix-blend-screen"), "Partner Claim Detail must not force manufacturer logos through dark-header filters");
+assert(!operationsClaimDetailPage.includes("mix-blend-screen"), "Operations Claim Detail must not force manufacturer logos through dark-header filters");
 const partnerPolicyDetailPage = read("app/partner/policies/[id]/page.tsx");
 assert(partnerPolicyDetailPage.includes("data.activity_history.map"), "Partner Policy detail must render canonical activity_history");
 assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy detail must not render synthetic Policy status activity");
