@@ -22,7 +22,7 @@ export default async function PartnerClaimDetailPage({
   return (
     <PartnerPortalShell title={title}>
       <div className="pb-4">
-        <div className="[&>section>div:first-child>div:nth-child(3)_img]:grayscale [&>section>div:first-child>div:nth-child(3)_img]:invert [&>section>div:first-child>div:nth-child(3)_img]:contrast-[4] [&>section>div:first-child>div:nth-child(3)_img]:mix-blend-screen">
+        <div>
           <SpotClaimHeader
             claim={{
               ...data.effectiveClaimWithSpotIntimation,
