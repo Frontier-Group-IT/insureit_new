@@ -186,6 +186,7 @@ function sanitizeFinancialNumbers(payload: PolicyOnboardingPayload) {
       retention: numberOrZero(payload.payout.retention),
       odPercent: numberOrZero(payload.payout.odPercent),
       tpPercent: numberOrZero(payload.payout.tpPercent),
+      flatAmount: numberOrZero(payload.payout.flatAmount),
     },
   };
 }
@@ -196,7 +197,7 @@ function operationalEntryPayload(payload: PolicyOnboardingPayload, role: string 
     ...payload,
     payin: { basis: "NET", odPercent: "0", tpPercent: "0", scheme: "0", provided: false },
     billing: { billNumber: "", billedAmount: "0", billDate: "", status: "Unbilled" },
-    payout: { retention: "0", odPercent: "0", tpPercent: "0", status: "Pending", date: "", voucherNumber: "", provided: false },
+    payout: { retention: "0", odPercent: "0", tpPercent: "0", flatAmount: "0", status: "Pending", date: "", voucherNumber: "", provided: false },
   };
 }
 

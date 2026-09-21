@@ -26,7 +26,7 @@ export type PolicyEditPayload = {
   };
   premium: { od: string; tp: string; cpaOpted: boolean; cpa: string };
   payin: { basis: string; odPercent: string; tpPercent: string; scheme: string; provided: boolean };
-  payout: { retention: string; odPercent: string; tpPercent: string; status: string; date: string; voucherNumber: string; provided: boolean };
+  payout: { retention: string; odPercent: string; tpPercent: string; flatAmount: string; status: string; date: string; voucherNumber: string; provided: boolean };
 };
 
 export type PolicyEditResult =
@@ -43,6 +43,8 @@ type ExistingPayout = {
   retention_amount: number | null;
   od_payout_percent: number | null;
   tp_payout_percent: number | null;
+  payout_basis: string | null;
+  partner_payout_amount: number | null;
   status: string | null;
   payout_date: string | null;
   voucher_number: string | null;
@@ -84,7 +86,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     return { ok: false, error: "CPA amount is mandatory for GCV policies and must be greater than 0." };
   }
 
-  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.payin.scheme];
+  const monetaryValues = [payload.policy.idv, payload.premium.od, payload.premium.tp, payload.premium.cpa, payload.payin.scheme, payload.payout.flatAmount];
   if (monetaryValues.some((value) => !validNumber(value))) return { ok: false, error: "Review the premium and scheme values." };
 
   const percentageValues = [payload.payin.odPercent, payload.payin.tpPercent, payload.payout.odPercent, payload.payout.tpPercent];
@@ -101,7 +103,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!canAccessPolicyCommercials(profile)) {
       const [payinResult, payoutResult] = await Promise.all([
         admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", policyId).maybeSingle<ExistingPayin>(),
-        admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),
+        admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,payout_basis,partner_payout_amount,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),
       ]);
       if (payinResult.error || payoutResult.error) return { ok: false, error: "We couldn't preserve the restricted commercial details. Please try again." };
       const payin = payinResult.data;
@@ -120,6 +122,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
         status: payout?.status ?? "Pending",
         date: payout?.payout_date ?? "",
         voucherNumber: payout?.voucher_number ?? "",
+        flatAmount: payout?.payout_basis === "FIXED_AMOUNT" ? textNumber(payout?.partner_payout_amount) : "",
         provided: false,
       };
     }

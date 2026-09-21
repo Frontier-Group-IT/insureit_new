@@ -1,3 +1,16 @@
+## 2026-09-21 — Motor Partner Payout FLAT basis
+
+- Branch: `feat/motor-flat-partner-payout`.
+- Motor Policy Partner Payout modal now offers `NET`, `OD`, and `FLAT` basis options.
+- In `FLAT` mode, Payout OD % and Payout TP/CPA % are disabled and ignored; Total Agreed Payout becomes a direct editable amount. Switching back to NET/OD restores the existing percentage-driven behavior without deleting the user's prior percentage inputs.
+- The form adds `flatPayoutAmount` to create/edit and Policy Intake draft state. Direct onboarding and Policy Intake finalization both continue through the existing Motor commercial wrapper path.
+- Persistence reuses existing `policy_intermediary_payouts.payout_basis='FIXED_AMOUNT'` and `partner_payout_amount`; no new columns are introduced. The wrapper migration overrides only FLAT payout rows after the legacy NET/OD calculation completes, leaving mature NET/OD formulas untouched.
+- Restricted-commercial edits preserve existing FLAT amounts rather than zeroing them.
+- Migration: `supabase/migrations/20260921103000_motor_flat_partner_payout.sql`; rollback and verification SQL included. Dedicated workflow: `.github/workflows/apply-motor-flat-partner-payout.yml`; production deploy schema gate mapped.
+- **IMPLEMENTED; NOT APPLIED, NOT MERGED, NOT DEPLOYED.**
+
+---
+
 ## 2026-09-19 — Non-Motor onboarding Net Premium restoration
 
 - Branch: `fix/non-motor-net-premium-entry`.
