@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Partner Policies 0.1 OTA JPEG normalization hotfix:** branch `fix/partner-policies-banner-baseline-jpeg-v2`; the user-supplied Policies banner is a real binary JPEG, so the erroneous base64-decode step is removed. Runtime-0.1 OTA now copies the banner directly and normalizes the temporary compatibility copy from progressive to baseline JPEG with ffmpeg before Expo/Metro export. **IMPLEMENTED; PR/CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
+
 - **2026-09-21 — Business Groups integrated metric row:** branch `fix/business-groups-integrated-metrics`; removes the nested rounded metric container so Groups/Root Partners/Branches/Ungrouped Partners become the full-width lower row of the same navy Business Groups header, separated only by the header divider and vertical column dividers, matching the Partner Application Review reference. **IMPLEMENTED; PR #2210 open; CI/merge/deployment pending.**
 
 
