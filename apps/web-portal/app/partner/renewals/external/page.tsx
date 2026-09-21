@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   Bell,
@@ -22,6 +23,7 @@ import {
   type PartnerExternalRenewalWindow,
 } from "@/lib/partner-external-renewals";
 import { getPartnerExternalRenewalVoiceStates } from "@/lib/partner-external-renewal-voice";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -313,7 +315,21 @@ export default async function PartnerExternalRenewalsPage({
                 return (
                   <Link key={row.opportunity_id} href={"/partner/renewals/external/" + encodeURIComponent(row.opportunity_id)} prefetch={false} className="group grid gap-3 px-4 py-3 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,.9fr)_minmax(125px,.55fr)_minmax(100px,.45fr)_minmax(125px,.55fr)_44px] xl:items-center xl:gap-4">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#EEF4FF] text-[#2F72DE]"><CalendarClock className="h-3.5 w-3.5" /></span>
+                      <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                        {getVehicleBrandLogo(row.vehicle_make) ? (
+                          <Image
+                            src={getVehicleBrandLogo(row.vehicle_make)!}
+                            alt={row.vehicle_make ? `${row.vehicle_make} logo` : "Vehicle manufacturer"}
+                            width={36}
+                            height={36}
+                            className="max-h-8 max-w-[40px] w-auto object-contain"
+                          />
+                        ) : (
+                          <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#2F72DE]">
+                            <CalendarClock className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </span>
                       <div className="min-w-0">
                         <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1A3154]">{row.account_name || row.customer_name || row.contact_name || "Customer"}</p>
                         <p className="mt-0.5 break-words text-[9px] leading-4 text-[#7184A0]">{row.contact_name || "Contact not recorded"}{row.mobile ? " · " + row.mobile : ""}</p>

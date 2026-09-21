@@ -140,6 +140,9 @@ if (fs.existsSync(partnerClaimSourceMigrationPath)) {
 }
 
 const externalRenewalPage = read("app/partner/renewals/external/page.tsx");
+assert(externalRenewalPage.includes('from "@/lib/vehicle-brand-logo"'), "External Renewal must use the shared vehicle brand logo resolver");
+assert(externalRenewalPage.includes("getVehicleBrandLogo(row.vehicle_make)"), "External Renewal Customer / Business column must resolve manufacturer logos from vehicle_make");
+assert(externalRenewalPage.includes("Vehicle manufacturer"), "External Renewal manufacturer logo must keep accessible fallback alt text");
 assert(externalRenewalPage.includes("listPartnerExternalRenewals"), "external renewal page must use the isolated external renewal adapter");
 assert(!externalRenewalPage.includes("listPartnerWebPolicies"), "external renewal page must not use verified INSUREIT policy rows");
 assert(!externalRenewalPage.includes("listPartnerWebCustomers"), "external renewal page must not use verified INSUREIT customer rows");
