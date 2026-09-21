@@ -2,9 +2,10 @@ import "server-only";
 
 import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { normalizeFetchedVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const EXTERNAL_MAPPER_VERSION = "external-renewal-2026-09-19-v2";
+const EXTERNAL_MAPPER_VERSION = "external-renewal-2026-09-21-v3";
 
 export type ExternalRenewalRcDetails = {
   registrationNumber: string;
@@ -191,7 +192,7 @@ function fromNormalized(raw: unknown, registrationNumber: string): ExternalRenew
     presentAddressState: cleanText(value.presentAddressState, 80),
     presentAddressPincode: cleanText(value.presentAddressPincode, 20),
     presentAddressCountry: cleanText(value.presentAddressCountry, 80),
-    manufacturer: cleanText(value.manufacturer),
+    manufacturer: normalizeFetchedVehicleManufacturer(cleanText(value.manufacturer)),
     model: cleanText(value.model),
     manufactureDate: cleanText(value.manufactureDate, 20),
     manufacturingYear: cleanText(value.manufacturingYear, 4),
@@ -272,7 +273,7 @@ function fromRaw(raw: unknown, registrationNumber: string): ExternalRenewalRcDet
     presentAddressState: cleanText(p("Owners Details", "Present Address State", ["presentaddressstate"]), 80),
     presentAddressPincode: cleanText(p("Owners Details", "Present Address Pincode", ["presentaddresspincode"]), 20),
     presentAddressCountry: cleanText(p("Owners Details", "Present Address Country", ["presentaddresscountry"]), 80),
-    manufacturer: cleanText(p("Vehicle Details", "Maker/Manufacturer", ["makermanufacturer","manufacturer","maker","vehiclemanufacturer","vehiclemaker"])),
+    manufacturer: normalizeFetchedVehicleManufacturer(cleanText(p("Vehicle Details", "Maker/Manufacturer", ["makermanufacturer","manufacturer","maker","vehiclemanufacturer","vehiclemaker"]))),
     model: cleanText(p("Vehicle Details", "Model / Makers Class", ["modelmakersclass","model","modelname","vehiclemodel","variant"])),
     manufactureDate: cleanText(p("Vehicle Details", "Manufacture Date", ["manufacturedate","manufacturingdate"]), 20),
     manufacturingYear: cleanText(
