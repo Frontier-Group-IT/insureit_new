@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Dashboard pending intermediary count:** branch `fix/dashboard-pending-intermediary-count`; Home/Operations Overview “Intermediary onboarding” now counts only records meeting the Pending Applications queue conditions (open status, Partner context, IIB processing, documents pending, and at least one required document missing), excluding training-stage and active-partner records. **IMPLEMENTED; PR #2240 open; CI/merge/deployment pending.**
+
+
 - **2026-09-21 — Customer OTP login bounce fix:** branch `fix/customer-otp-post-login-routing`; after successful OTP verification, an active customer profile is no longer locally signed out merely because both the linked customer row and onboarding application are temporarily unresolved. The existing inactive-customer protection remains unchanged. Customer Home already supports the unresolved state and can guide the user into onboarding. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
 
 - **2026-09-21 — Partner Business uploaded header banner:** branch `ui/partner-business-uploaded-header-banner`; replaces `apps/partner-app/assets/business-header-reference.jpg` with the newly supplied Business growth/city banner and updates the runtime-0.1 OTA asset guard for the new baseline JPEG. Business layout/data logic remain unchanged. **IMPLEMENTED; PR/CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
