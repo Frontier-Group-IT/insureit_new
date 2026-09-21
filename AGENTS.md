@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Partner Policies uploaded-banner/Home-size + 0.1 OTA source fix:** branch `fix/partner-policies-home-size-banner-0-1`; Policies now uses the user-supplied `policies-header-reference.jpg` with the exact approved Home hero geometry (`158` hero, `112%` backdrop crop, `182` backdrop height, `0.70` opacity, `0.92` scale, `-10` search overlap). The Partner 0.1 compatibility workflow now copies the current Policies compatibility source and banner instead of pinning the stale `9c2379b...` Policies file. **IMPLEMENTED; PR #2191; CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
+
 - **2026-09-21 — Sales Executive policy-intake role:** branch `feat/sales-executive-policy-intake`; adds an assignable `sales_executive` staff role limited to Fleet & Policies → Policy Register plus Policy Intakes/New Policy Intake, with no direct Add Policy permission. Policy Register is read-only and restricted to final policies created from Policy Intakes submitted by that same profile. Includes enum migration `20260921131500_add_sales_executive_app_role.sql`, rollback guard, dedicated schema workflow and production deploy gate. **IMPLEMENTED; PR #2189 open; CI/schema application/merge/deployment pending.**
 
 
