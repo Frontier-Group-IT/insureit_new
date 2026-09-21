@@ -91,7 +91,7 @@ function BrandLogo({
   src,
   alt,
   fallback,
-  size = 28,
+  size = 40,
 }: {
   src: string | null;
   alt: string;
@@ -99,8 +99,8 @@ function BrandLogo({
   size?: number;
 }) {
   return (
-    <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-[#DDE6F1] bg-white p-1 shadow-[0_2px_6px_rgba(15,23,42,0.04)]">
-      {src ? <Image src={src} alt={alt} width={size} height={size} className="max-h-7 w-auto object-contain" /> : fallback}
+    <span className="flex h-11 w-12 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+      {src ? <Image src={src} alt={alt} width={size} height={size} className="max-h-10 max-w-[48px] w-auto object-contain" /> : fallback}
     </span>
   );
 }
@@ -209,7 +209,7 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                                     src={insurerLogo(policy.insurer_name)}
                                     alt={policy.insurer_name ? `${policy.insurer_name} logo` : "Insurance company"}
                                     fallback={<ShieldCheck className="h-4 w-4 text-[#1B9A63]" />}
-                                    size={26}
+                                    size={42}
                                   />
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5">
