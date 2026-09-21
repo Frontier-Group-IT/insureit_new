@@ -370,19 +370,13 @@ function QuickActionDock({ renewalDue, claimTasks, onRenewals, onQuote, onChalla
         <Text style={styles.sectionEyebrow}>Quick actions</Text>
         <Text style={styles.sectionHint}>One tap services</Text>
       </View>
-      <ScrollView
-        horizontal
-        nestedScrollEnabled
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.quickGrid}
-        style={styles.quickScroller}
-      >
+      <View style={styles.quickGrid}>
         <QuickAction icon="calendar-month-outline" image={require('../../assets/brand/dashboard/dashboard-renewal.png')} label="Renewal" badge={renewalDue} animateBadge tone="#FFF6E8" color="#C98918" onPress={onRenewals} />
         <QuickAction icon="shield-plus-outline" image={require('../../assets/brand/dashboard/dashboard-start-claim.png')} label="Start claim" badge={claimTasks} tone="#E8F8F0" color="#10A66F" onPress={onClaim} />
         <QuickAction icon="swap-horizontal-bold" label="Exchange" tone="#EAF3FF" color="#174EA6" onPress={onExchange} />
         <QuickAction icon="file-document-edit-outline" image={require('../../assets/brand/dashboard/dashboard-get-quote.png')} label="Get Quote" tone="#EAF3FF" color="#174EA6" onPress={onQuote} />
         <QuickAction icon="ticket-confirmation-outline" image={require('../../assets/brand/dashboard/dashboard-echallan.png')} label="Pay Challan" tone="#E6FAFD" color="#0EAFC8" onPress={onChallan} />
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -647,12 +641,11 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   sectionTitle: { color: palette.navy, fontSize: 16, fontWeight: '900' },
   sectionHint: { color: '#607089', fontSize: 11, fontWeight: '800' },
-  quickScroller: { marginHorizontal: -2 },
-  quickGrid: { flexDirection: 'row', gap: 8, paddingHorizontal: 2 },
-  quickAction: { width: 78, flexShrink: 0, minHeight: 74, borderRadius: 15, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, position: 'relative' },
-  quickIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  quickIconArtwork: { width: 32, height: 32 },
-  quickLabel: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'center', marginTop: 5 },
+  quickGrid: { flexDirection: 'row', gap: 6 },
+  quickAction: { flex: 1, minWidth: 0, minHeight: 70, borderRadius: 14, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E0EAF5', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2, position: 'relative' },
+  quickIcon: { width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  quickIconArtwork: { width: 28, height: 28 },
+  quickLabel: { color: palette.navy, fontSize: 9.4, lineHeight: 11.5, fontWeight: '900', textAlign: 'center', marginTop: 4 },
   actionBadge: { position: 'absolute', right: 7, top: 7, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#E5484D', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, zIndex: 3 },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '900' },
   claimSummaryCard: { minHeight: 156, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8E7F7', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.08, shadowRadius: 10, elevation: 2 },
