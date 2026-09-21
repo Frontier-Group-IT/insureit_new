@@ -127,8 +127,6 @@ export default function BusinessScreen() {
               style={styles.heroImage}
               resizeMode="cover"
             />
-            <View style={styles.heroShade} />
-
             <View style={styles.heroTopRow}>
               <View style={styles.heroBrand}>
                 <Image
@@ -477,10 +475,6 @@ const styles = StyleSheet.create({
     opacity: 0.70,
     transform: [{ scale: 0.92 }],
   },
-  heroShade: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(2, 42, 93, 0.03)',
-  },
   heroTopRow: {
     position: 'absolute',
     zIndex: 3,
@@ -581,7 +575,7 @@ const styles = StyleSheet.create({
     marginTop: -10,
     marginHorizontal: 0,
     marginBottom: 10,
-    minHeight: 49,
+    height: 49,
     flexDirection: 'row',
     alignItems: 'stretch',
     borderRadius: 16,
@@ -597,7 +591,7 @@ const styles = StyleSheet.create({
   },
   searchBox: {
     flex: 1,
-    minHeight: 49,
+    height: 49,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
@@ -612,7 +606,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   filterButton: {
-    minHeight: 49,
+    height: 49,
     minWidth: 76,
     flexDirection: 'row',
     alignItems: 'center',
