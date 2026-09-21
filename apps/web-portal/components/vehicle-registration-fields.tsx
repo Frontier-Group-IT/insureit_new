@@ -385,9 +385,9 @@ function setFormControlValue(id: string, value: string | null, options: { select
 
   let nextValue = value;
   if (element instanceof HTMLSelectElement && options.selectMatchOnly) {
-    const normalized = value.trim().toLowerCase();
+    const normalized = normalizeSelectMatchValue(value);
     const match = Array.from(element.options).find((option) =>
-      option.value.trim().toLowerCase() === normalized || option.text.trim().toLowerCase() === normalized,
+      normalizeSelectMatchValue(option.value) === normalized || normalizeSelectMatchValue(option.text) === normalized,
     );
     if (!match) return;
     nextValue = match.value;
@@ -404,6 +404,10 @@ function setFormControlValue(id: string, value: string | null, options: { select
 
   element.dispatchEvent(new Event("input", { bubbles: true }));
   element.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function normalizeSelectMatchValue(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 function humanizeKey(value: string) {

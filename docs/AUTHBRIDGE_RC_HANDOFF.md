@@ -1,3 +1,13 @@
+## 2026-09-21 — Daimler manufacturer display normalization
+
+- AuthBridge/API manufacturer values matching `Daimler`, Daimler-prefixed variants, or `DICV` are normalized to **Bharat Benz** before application/display use.
+- Coverage includes internal Vehicle Onboarding RC lookup, customer RC lookup, Policy Onboarding RC review, and External Renewal RC enrichment.
+- Raw decrypted/provider responses are preserved unchanged in the RC cache; normalization applies only to mapped fields.
+- Mercedes-Benz strings are not converted.
+- Vehicle Onboarding normalized select matching allows the display value `Bharat Benz` to match the existing master option `BharatBenz`.
+- No schema, RLS, provider contract, gateway, or credential change.
+- **IMPLEMENTED on branch `fix/normalize-daimler-to-bharatbenz`; PR/CI/merge/deployment pending.**
+
 # AuthBridge Detailed RC Integration Handoff
 
 > **Consolidated:** 2026-09-13 IST

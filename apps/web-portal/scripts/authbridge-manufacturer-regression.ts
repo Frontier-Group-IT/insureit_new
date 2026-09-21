@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 // @ts-expect-error -- This regression runner executes TypeScript directly with Node --experimental-strip-types.
-import { resolveVehicleManufacturer } from "../lib/vehicle-manufacturer-resolution.ts";
+import { normalizeFetchedVehicleManufacturer, resolveVehicleManufacturer } from "../lib/vehicle-manufacturer-resolution.ts";
 
 const manufacturers = [
   "Ashok Leyland",
@@ -17,5 +17,11 @@ assert.equal(resolveVehicleManufacturer("MARUTI SUZUKI INDIA PRIVATE LIMITED", m
 assert.equal(resolveVehicleManufacturer("ASHOK LEYLAND LTD.", manufacturers)?.value, "Ashok Leyland");
 assert.equal(resolveVehicleManufacturer("VE COMMERCIAL VEHICLES LTD", manufacturers), null);
 assert.equal(resolveVehicleManufacturer("UNKNOWN VEHICLE WORKS", manufacturers), null);
+
+assert.equal(normalizeFetchedVehicleManufacturer("Daimler"), "Bharat Benz");
+assert.equal(normalizeFetchedVehicleManufacturer("DAIMLER INDIA COMMERCIAL VEHICLES PVT LTD"), "Bharat Benz");
+assert.equal(normalizeFetchedVehicleManufacturer("DICV"), "Bharat Benz");
+assert.equal(normalizeFetchedVehicleManufacturer("Mercedes-Benz India"), "Mercedes-Benz India");
+assert.equal(normalizeFetchedVehicleManufacturer("Tata Motors"), "Tata Motors");
 
 console.log("AuthBridge manufacturer regression: passed");

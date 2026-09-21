@@ -3,6 +3,22 @@ export type VehicleManufacturerResolution = {
   method: "exact" | "normalized" | "contained";
 };
 
+export function normalizeFetchedVehicleManufacturer(value: string | null | undefined) {
+  const raw = value?.replace(/\\s+/g, " ").trim();
+  if (!raw) return null;
+
+  const key = raw
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "");
+
+  if (key === "dicv" || (key.startsWith("daimler") && !key.includes("mercedes"))) {
+    return "Bharat Benz";
+  }
+
+  return raw;
+}
+
 const LEGAL_SUFFIXES = new Set([
   "CO",
   "COMPANY",

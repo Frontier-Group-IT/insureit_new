@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedProfile } from "@/lib/auth";
 import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { normalizeFetchedVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";
 
 export const dynamic = "force-dynamic";
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const RC_MAPPER_VERSION = "2026-09-16-v4";
+const RC_MAPPER_VERSION = "2026-09-21-v5";
 
 type SafeVehicleDetails = {
   registrationNumber: string;
@@ -215,10 +216,10 @@ function sanitizeVehicleResponse(raw: unknown, registrationNumber: string): Safe
   const vehicleDetails = getAuthbridgeSection(raw, "Vehicle Details");
   const insuranceDetails = getAuthbridgeSection(raw, "Insurance Details");
 
-  const manufacturer = cleanText(
+  const manufacturer = normalizeFetchedVehicleManufacturer(cleanText(
     findObjectValue(vehicleDetails, ["Maker/Manufacturer", "Maker Manufacturer", "Manufacturer", "Maker"])
       ?? findValue(values, ["makermanufacturer", "manufacturer", "manufacturername", "maker", "makername", "makerdescription", "makerdesc", "vehiclemanufacturer", "vehiclemaker"]),
-  );
+  ));
   const model = cleanText(
     findObjectValue(vehicleDetails, ["Model / Makers Class", "Model/Makers Class", "Model Makers Class", "Model", "Makers Class"])
       ?? findValue(values, ["modelmakersclass", "model", "modelname", "makermodel", "makermodelname", "vehiclename", "vehiclemodel", "vehiclemodelname", "modeldescription", "modeldesc", "variant", "variantname", "modelvariant", "modelvariantname"]),
@@ -298,7 +299,7 @@ function sanitizeCachedDetails(raw: unknown, registrationNumber: string): SafeVe
   return {
     registrationNumber,
     registrationDate: toIsoDate(toPrimitive(value.registrationDate)),
-    manufacturer: cleanText(toPrimitive(value.manufacturer)),
+    manufacturer: normalizeFetchedVehicleManufacturer(cleanText(toPrimitive(value.manufacturer))),
     model: cleanText(toPrimitive(value.model)),
     manufacturingYear: toYear(toPrimitive(value.manufacturingYear)),
     vehicleClass: mapStoredVehicleClass(toPrimitive(value.vehicleClass)),

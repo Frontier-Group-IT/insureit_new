@@ -5,6 +5,7 @@ import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/au
 import { classifyAuthbridgeResponse } from "@/lib/authbridge-rc-bulk";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { isValidVehicleRegistrationNumber } from "@/lib/vehicle-registration";
+import { normalizeFetchedVehicleManufacturer } from "@/lib/vehicle-manufacturer-resolution";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -16,7 +17,7 @@ type PolicyRcCacheRow = {
 };
 
 const RC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const POLICY_RC_CACHE_MAPPER_VERSION = "2026-09-13-policy-v1";
+const POLICY_RC_CACHE_MAPPER_VERSION = "2026-09-21-policy-v2";
 
 export type PolicyRcReview = {
   registrationNumber: string;
@@ -158,7 +159,7 @@ function buildPolicyRcReview(
     vehicleClass: text(vehicle, "Vehicle Class"),
     vehicleCategory: text(vehicle, "Vehicle Category"),
     bodyType: text(vehicle, "Body Type"),
-    make: text(vehicle, "Maker/Manufacturer"),
+    make: normalizeFetchedVehicleManufacturer(text(vehicle, "Maker/Manufacturer")),
     model: text(vehicle, "Model / Makers Class"),
     fuelType: text(vehicle, "Fuel Type"),
     manufactureDate,
