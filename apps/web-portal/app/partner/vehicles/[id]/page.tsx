@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { StandardActivityStatusCard } from "@/components/standard-activity-status-card";
 import { getPartnerWebVehicleDetail } from "@/lib/partner-vehicles";
+import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -185,7 +186,15 @@ export default async function PartnerVehicleDetailPage({
         >
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
             <ReadOnlyField label="Customer" value={data.customer.customer_name} required />
-            <ReadOnlyField label="RC / Registration number" value={vehicle.vehicle_no || "Registration pending"} required />
+            <ReadOnlyField
+              label="RC / Registration number"
+              value={displayVehicleRegistrationNumber({
+                vehicle_no: vehicle.vehicle_no,
+                registration_status: vehicle.registration_status,
+                chassis_no: vehicle.chassis_no,
+              })}
+              required
+            />
             <DateField label="Registration date" value={vehicle.registration_date} />
             <SelectLikeField label="Manufacturer" value={vehicle.make} required />
             <SelectLikeField label="MFG Year" value={vehicle.year} />
