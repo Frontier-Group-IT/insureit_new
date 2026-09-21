@@ -34,7 +34,7 @@ export type DashboardBusinessMixRow = {
   key: string;
   label: string;
   policies: number;
-  grossPremium: number | null;
+  netPremium: number | null;
 };
 
 export type DashboardBusinessRankRow = {
@@ -241,14 +241,16 @@ export async function getDashboardBusinessData(
   const groups = new Map<string, Accumulator & { detail: string | null }>();
 
   for (const policy of filteredPolicies) {
-    const grossPremium = premiumByPolicy.get(policy.id)?.gross ?? 0;
-    add(channel, clean(policy.intermediary_type) || "Direct", grossPremium);
+    const premium = premiumByPolicy.get(policy.id);
+    const netPremium = premium?.net ?? 0;
+    const grossPremium = premium?.gross ?? 0;
+    add(channel, clean(policy.intermediary_type) || "Direct", netPremium);
     const classLabel = policy.vehicle_id
       ? vehicleClassById.get(policy.vehicle_id) ?? "Incomplete"
       : policy.business_line === "Non Motor" ? "Non-Motor" : "Incomplete";
-    add(vehicleClass, classLabel, grossPremium);
-    add(coverage, clean(policy.policy_type) || "Incomplete", grossPremium);
-    add(businessLine, clean(policy.business_line) || "Incomplete", grossPremium);
+    add(vehicleClass, classLabel, netPremium);
+    add(coverage, clean(policy.policy_type) || "Incomplete", netPremium);
+    add(businessLine, clean(policy.business_line) || "Incomplete", netPremium);
 
     if (policy.insurance_company_id) add(insurers, policy.insurance_company_id, grossPremium);
 
@@ -478,10 +480,10 @@ function mix(map: Map<string, Accumulator>, commercial: boolean): DashboardBusin
       key,
       label: value.label,
       policies: value.policies,
-      grossPremium: commercial ? value.amount : null,
+      netPremium: commercial ? value.amount : null,
     }))
     .sort((a, b) => commercial
-      ? (b.grossPremium ?? 0) - (a.grossPremium ?? 0) || b.policies - a.policies
+      ? (b.netPremium ?? 0) - (a.netPremium ?? 0) || b.policies - a.policies
       : b.policies - a.policies)
     .slice(0, 6);
 }
