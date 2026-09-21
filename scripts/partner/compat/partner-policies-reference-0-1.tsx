@@ -125,17 +125,19 @@ export default function PoliciesScreen() {
   const header = (
     <View>
       <View style={styles.hero}>
-        <View style={styles.heroGlowOne} />
-        <View style={styles.heroGlowTwo} />
+        <Image
+          source={require('../../assets/figma-dashboard/hero-banner.jpg')}
+          style={styles.heroBackdrop}
+          resizeMode="cover"
+        />
+        <View style={styles.heroBackdropShade} />
         <View style={styles.heroTopRow}>
           <View style={styles.brandRow}>
-            <View style={styles.brandMark}>
-              <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={styles.brandName}>Insureit</Text>
-              <Text style={styles.brandSub}>PARTNER</Text>
-            </View>
+            <Image
+              source={require('../../assets/insureit-partner-official.png')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
           </View>
           <View style={styles.heroActions}>
             <Pressable
@@ -478,52 +480,38 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 108 },
   contentEmpty: { flexGrow: 1 },
   hero: {
-    minHeight: 148,
+    minHeight: 158,
     overflow: 'hidden',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    backgroundColor: '#063E8C',
+    paddingTop: 30,
+    backgroundColor: '#0757AE',
   },
-  heroGlowOne: {
+  heroBackdrop: {
     position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    right: 78,
-    top: -90,
-    backgroundColor: 'rgba(21,111,220,0.38)',
+    left: '-6%',
+    top: -8,
+    width: '112%',
+    height: 182,
+    opacity: 0.70,
+    transform: [{ scale: 0.92 }],
   },
-  heroGlowTwo: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    right: -78,
-    bottom: -100,
-    backgroundColor: 'rgba(0,181,226,0.18)',
+  heroBackdropShade: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(2,42,93,0.14)',
   },
   heroTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', zIndex: 3 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  brandMark: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  brandName: { color: '#FFFFFF', fontSize: 12, lineHeight: 14, fontWeight: '800' },
-  brandSub: { marginTop: 1, color: '#BFD8FF', fontSize: 5.8, lineHeight: 8, letterSpacing: 1.3, fontWeight: '800' },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', maxWidth: '60%' },
+  brandLogo: { width: 112, height: 34 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   heroIconButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 33,
+    height: 33,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    backgroundColor: 'rgba(7,58,120,0.34)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.90)',
   },
   notificationDot: {
     position: 'absolute',
@@ -536,19 +524,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFFFFF',
   },
-  heroCopy: { position: 'absolute', left: 16, bottom: 28, zIndex: 3 },
-  heroTitle: { color: '#FFFFFF', fontSize: 22, lineHeight: 25, fontWeight: '800' },
-  heroSubtitle: { marginTop: 2, color: '#D8E8FF', fontSize: 8.5, lineHeight: 11, fontWeight: '500' },
+  heroCopy: { position: 'absolute', left: 16, bottom: 25, zIndex: 3 },
+  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontWeight: '700', letterSpacing: -0.15 },
+  heroSubtitle: { marginTop: 1, color: '#FFFFFF', fontSize: 11.5, lineHeight: 16, fontWeight: '500' },
   heroArtworkWrap: {
     position: 'absolute',
-    right: 64,
-    bottom: 4,
-    width: 112,
-    height: 94,
+    right: 58,
+    bottom: 2,
+    width: 118,
+    height: 100,
     alignItems: 'center',
     justifyContent: 'flex-end',
   },
-  heroArtwork: { width: 88, height: 88, opacity: 0.96 },
+  heroArtwork: { width: 94, height: 94, opacity: 0.98 },
   heroShield: {
     position: 'absolute',
     left: 8,
@@ -562,10 +550,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.72)',
   },
-  heroWords: { position: 'absolute', zIndex: 3, right: 9, bottom: 14, width: 52 },
-  heroWord: { color: '#D9E9FF', fontSize: 5.6, lineHeight: 8, fontWeight: '800' },
+  heroWords: { position: 'absolute', zIndex: 3, right: 9, bottom: 16, width: 52 },
+  heroWord: { color: '#FFFFFF', fontSize: 5.5, lineHeight: 7.5, fontWeight: '800' },
   searchRow: {
-    marginTop: -14,
+    marginTop: -15,
     marginHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
