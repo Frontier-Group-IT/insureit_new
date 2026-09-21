@@ -30,6 +30,7 @@ export function PartnerScreen({
   hideTopBar,
   children,
   scrollProps,
+  heroSearch,
 }: PropsWithChildren<{
   title: string;
   eyebrow?: string;
@@ -40,19 +41,41 @@ export function PartnerScreen({
   action?: ReactNode;
   hideTopBar?: boolean;
   scrollProps?: Omit<ScrollViewProps, 'contentContainerStyle'>;
+  heroSearch?: {
+    value: string;
+    onChangeText: (value: string) => void;
+    onSubmit?: () => void;
+    onClear?: () => void;
+    placeholder?: string;
+  };
 }>) {
   const { isOffline } = usePartnerNetwork();
   const router = useRouter();
   const [homeSearch, setHomeSearch] = useState('');
   const isHomeHero = eyebrow === 'INSUREIT PARTNER' && !onBack;
+  const heroSearchValue = heroSearch?.value ?? homeSearch;
+  const setHeroSearchValue = heroSearch?.onChangeText ?? setHomeSearch;
 
   const submitHomeSearch = () => {
-    const query = homeSearch.trim();
+    if (heroSearch?.onSubmit) {
+      heroSearch.onSubmit();
+      return;
+    }
+
+    const query = heroSearchValue.trim();
     if (!query) {
       router.push('/search');
       return;
     }
     router.push(`/search?q=${encodeURIComponent(query)}` as never);
+  };
+
+  const clearHeroSearch = () => {
+    if (heroSearch?.onClear) {
+      heroSearch.onClear();
+      return;
+    }
+    setHeroSearchValue('');
   };
 
   return (
@@ -90,10 +113,10 @@ export function PartnerScreen({
             <View style={styles.homeSearchCard}>
               <Ionicons name="search-outline" size={21} color={partnerTheme.colors.brandStrong} />
               <TextInput
-                value={homeSearch}
-                onChangeText={setHomeSearch}
+                value={heroSearchValue}
+                onChangeText={setHeroSearchValue}
                 onSubmitEditing={submitHomeSearch}
-                placeholder="Search customer, vehicle number or policy no."
+                placeholder={heroSearch?.placeholder ?? "Search customer, vehicle number or policy no."}
                 placeholderTextColor="#8B95A8"
                 returnKeyType="search"
                 autoCapitalize="none"
@@ -101,6 +124,17 @@ export function PartnerScreen({
                 style={styles.homeSearchInput}
                 accessibilityLabel="Search customer, vehicle number or policy number"
               />
+              {heroSearchValue ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear search"
+                  hitSlop={8}
+                  onPress={clearHeroSearch}
+                  style={({ pressed }) => [styles.homeSearchClear, pressed && styles.homeSearchPressed]}
+                >
+                  <Ionicons name="close-circle-outline" size={18} color="#A3ABBA" />
+                </Pressable>
+              ) : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Search"
@@ -229,6 +263,12 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     color: partnerTheme.colors.ink,
     fontSize: 14,
+  },
+  homeSearchClear: {
+    width: 30,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   homeSearchAction: {
     minHeight: 44,
