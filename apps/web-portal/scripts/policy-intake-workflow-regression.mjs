@@ -92,6 +92,8 @@ assert(unifiedForm.includes('if(sourceIntakeId){router.push("/policy-intakes");}
 assert(!unifiedForm.includes('router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}?success=completed`)'),"Completed Policy Intake booking must not return to the individual Intake Review page");
 assert(unifiedForm.includes('router.push(`/policy-intakes/${encodeURIComponent(sourceIntakeId)}`)'),"Save & Return to Intake must keep returning to the individual Intake Review page");
 assert(unifiedForm.includes('router.push(`/policies?success=policy_created&policy=${encodeURIComponent(result.policyCode)}&policy_id=${encodeURIComponent(result.policyId)}`)'),"Direct Policy Onboarding must keep returning to the Policy Register");
+assert(unifiedForm.includes('flatPayoutAmount: saved.form.flatPayoutAmount ?? ""'),"Legacy saved Motor drafts must hydrate a missing FLAT payout amount safely.");
+assert(unifiedForm.includes('(form.flatPayoutAmount??"").trim()!==""'),"FLAT payout entered-state must tolerate legacy drafts without flatPayoutAmount.");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
