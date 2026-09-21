@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   Car,
@@ -94,7 +95,7 @@ function BrandLogo({
 }: {
   src: string | null;
   alt: string;
-  fallback: React.ReactNode;
+  fallback: ReactNode;
   size?: number;
 }) {
   return (
