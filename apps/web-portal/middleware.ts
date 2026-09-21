@@ -9,7 +9,17 @@ type SessionCheck = { status: SessionStatus; role: string | null };
 type RefreshedSession = { access_token: string; refresh_token: string; expires_in: number };
 const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", path: "/" };
 const accountsHome = "/accounts";
+const salesExecutiveHome = "/policies";
 const canonicalPortalHost = "portal.insureit.in";
+
+function isSalesExecutivePortalPath(pathname: string) {
+  if (pathname === "/policies") return true;
+  if (/^\/policies\/[^/]+$/.test(pathname)) return true;
+  if (/^\/policies\/[^/]+\/document$/.test(pathname)) return true;
+  if (pathname === "/policy-intakes" || pathname === "/policy-intakes/new") return true;
+  if (/^\/policy-intakes\/[^/]+$/.test(pathname)) return true;
+  return pathname === "/access-denied";
+}
 
 function canonicalPortalRedirect(request: NextRequest) {
   const hostname = request.nextUrl.hostname.toLowerCase();
@@ -144,12 +154,14 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/") {
     if (check.status === "authorized" && check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
+    if (check.status === "authorized" && check.role === "sales_executive") return redirect(request, salesExecutiveHome, refreshedSession, check.role);
     return continueRequest(request, refreshedSession, check.role);
   }
 
   if (pathname === "/login") {
     if (check.status === "authorized") {
       if (check.role === "accounts") return redirect(request, accountsHome, refreshedSession, check.role);
+      if (check.role === "sales_executive") return redirect(request, salesExecutiveHome, refreshedSession, check.role);
       return redirect(request, check.role === "intermediary" ? "/partner" : internalLaunchHome, refreshedSession, check.role);
     }
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
@@ -165,6 +177,9 @@ export async function middleware(request: NextRequest) {
     if (check.status === "forbidden") return redirect(request, "/access-denied", refreshedSession, check.role);
     if (check.role === "accounts" && !isAccountsRolePortalPath(pathname)) {
       return redirect(request, accountsHome, refreshedSession, check.role);
+    }
+    if (check.role === "sales_executive" && !isSalesExecutivePortalPath(pathname)) {
+      return redirect(request, salesExecutiveHome, refreshedSession, check.role);
     }
     if (check.role === "intermediary" && !pathname.startsWith("/partner") && !pathname.startsWith("/intermediary-portal")) {
       return redirect(request, "/partner", refreshedSession, check.role);
