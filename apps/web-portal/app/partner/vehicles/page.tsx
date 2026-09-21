@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { CarFront, ChevronLeft, ChevronRight, Search, ShieldAlert, Wrench } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
@@ -24,6 +25,30 @@ function buildHref(query: string, page: number, status: VehicleStatusFilter, veh
 function isRegistrationPending(status: string | null) {
   const normalized = (status ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return normalized === "registration_pending" || normalized === "pending" || normalized === "rc_pending";
+}
+
+function normalizeManufacturerKey(value: string | null | undefined) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function vehicleManufacturerLogo(make: string | null | undefined) {
+  const key = normalizeManufacturerKey(make);
+  if (!key) return null;
+  if (key.includes("tata")) return "/assets/vehicle-brands/tata.svg";
+  if (key.includes("ashok leyland")) return "/assets/vehicle-brands/ashok-leyland.svg";
+  if (key.includes("mahindra")) return "/assets/vehicle-brands/mahindra.svg";
+  if (key.includes("maruti") || key.includes("suzuki")) return "/assets/vehicle-brands/maruti-suzuki.svg";
+  if (key.includes("hyundai")) return "/assets/vehicle-brands/hyundai.svg";
+  if (key.includes("honda")) return "/assets/vehicle-brands/honda.svg";
+  if (key.includes("toyota")) return "/assets/vehicle-brands/toyota.svg";
+  if (key.includes("kia")) return "/assets/vehicle-brands/kia.svg";
+  return null;
 }
 
 export default async function PartnerVehiclesPage({
@@ -83,7 +108,27 @@ export default async function PartnerVehiclesPage({
                 const detailHref = `/partner/vehicles/${encodeURIComponent(vehicle.vehicle_id)}`;
                 return (
                   <tr key={vehicle.vehicle_id} className="text-[11px] text-[#273B56] transition hover:bg-[#FBFCFE]">
-                    <td className="p-0"><Link href={detailHref} prefetch={false} className="group block w-full px-4 py-3.5 sm:px-6"><div className="font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A] group-hover:text-[#1458A6] group-hover:underline">{vehicleLabel}</div><div className="mt-1 text-[9px] font-medium uppercase text-[#8190A5]">{vehicle.vehicle_type || "—"}</div></Link></td>
+                    <td className="p-0">
+                      <Link href={detailHref} prefetch={false} className="group flex w-full items-center gap-3 px-4 py-3.5 sm:px-6">
+                        <span className="flex h-10 w-11 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                          {vehicleManufacturerLogo(vehicle.make) ? (
+                            <Image
+                              src={vehicleManufacturerLogo(vehicle.make)!}
+                              alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
+                              width={40}
+                              height={40}
+                              className="max-h-9 max-w-[44px] w-auto object-contain"
+                            />
+                          ) : (
+                            <CarFront className="h-5 w-5 text-[#6E819B]" />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-mono text-[11px] font-extrabold tracking-[0.02em] text-[#17233A] group-hover:text-[#1458A6] group-hover:underline">{vehicleLabel}</span>
+                          <span className="mt-1 block text-[9px] font-medium uppercase text-[#8190A5]">{vehicle.vehicle_type || "—"}</span>
+                        </span>
+                      </Link>
+                    </td>
                     <td className="p-0 font-semibold text-[#31435B]"><Link href={detailHref} prefetch={false} className="block w-full px-4 py-[18px] transition hover:text-[#1458A6]">{vehicle.customer_name || "—"}</Link></td>
                     <td className="p-0 font-semibold text-[#2C3C55]"><Link href={detailHref} prefetch={false} className="block w-full px-4 py-[18px] transition hover:text-[#1458A6]">{makeModel}</Link></td>
                     <td className="p-0"><Link href={detailHref} prefetch={false} className="block w-full px-4 py-[14px]">{pending ? <span className="inline-flex items-center gap-1.5 rounded-full border border-[#F2C85C] bg-[#FFF9E9] px-2.5 py-1 text-[9.5px] font-extrabold text-[#A85A13]"><span className="h-1.5 w-1.5 rounded-full bg-[#B77B45]" />RC pending</span> : <span className="inline-flex items-center gap-1.5 rounded-full border border-[#98E7C3] bg-[#EDFFF5] px-2.5 py-1 text-[9.5px] font-extrabold text-[#16775D]"><span className="h-1.5 w-1.5 rounded-full bg-[#49AE8C]" />Registered</span>}</Link></td>
