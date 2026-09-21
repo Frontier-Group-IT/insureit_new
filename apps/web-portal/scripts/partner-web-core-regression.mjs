@@ -142,6 +142,8 @@ assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Par
 const partnerBusinessPage = read("app/partner/business/page.tsx");
 assert(partnerBusinessPage.includes('from "@/lib/insurer-logo"'), "My Business Top Insurer Contribution must use the shared insurer logo resolver");
 assert(partnerBusinessPage.includes("getInsurerLogo(item.label)"), "My Business insurer contribution rows must resolve logo from insurer label");
+assert(!partnerBusinessPage.includes("{index + 1}"), "My Business Top Insurer Contribution must not render ranking serial numbers");
+assert(!partnerBusinessPage.includes('shrink-0 text-[#6D7D96]'), "My Business KPI cards must not render right-side arrows");
 assert(partnerBusinessPage.includes('alt={`${item.label} logo`}'), "My Business insurer logos must keep accessible alt text");
 
 const partnerActivityPage = read("app/partner/activity/page.tsx");
