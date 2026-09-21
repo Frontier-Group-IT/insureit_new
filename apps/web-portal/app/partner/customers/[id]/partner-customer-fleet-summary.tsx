@@ -10,6 +10,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { PartnerCustomerDetail } from "@/lib/partner-web";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 
 function dateLabel(value: string | null) {
   if (!value) return "—";
@@ -57,20 +58,6 @@ function normalizeLogoKey(value: string | null | undefined) {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function vehicleManufacturerLogo(make: string | null | undefined) {
-  const key = normalizeLogoKey(make);
-  if (!key) return null;
-  if (key.includes("tata")) return "/assets/vehicle-brands/tata.svg";
-  if (key.includes("ashok leyland")) return "/assets/vehicle-brands/ashok-leyland.svg";
-  if (key.includes("mahindra")) return "/assets/vehicle-brands/mahindra.svg";
-  if (key.includes("maruti") || key.includes("suzuki")) return "/assets/vehicle-brands/maruti-suzuki.svg";
-  if (key.includes("hyundai")) return "/assets/vehicle-brands/hyundai.svg";
-  if (key.includes("honda")) return "/assets/vehicle-brands/honda.svg";
-  if (key.includes("toyota")) return "/assets/vehicle-brands/toyota.svg";
-  if (key.includes("kia")) return "/assets/vehicle-brands/kia.svg";
-  return null;
 }
 
 function insurerLogo(insurerName: string | null | undefined) {
@@ -145,7 +132,7 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                 <summary className="grid cursor-pointer list-none gap-3 px-4 py-3 transition hover:bg-[#FBFCFE] xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(110px,.75fr))_minmax(125px,.75fr)_24px] xl:items-center [&::-webkit-details-marker]:hidden">
                   <div className="flex min-w-0 items-center gap-3">
                     <BrandLogo
-                      src={vehicleManufacturerLogo(vehicle.make)}
+                      src={getVehicleBrandLogo(vehicle.make)}
                       alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
                       fallback={<Car className="h-4 w-4 text-[#176AF0]" />}
                     />
