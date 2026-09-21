@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Partner Policies OTA baseline-JPEG repair:** branch `hotfix/partner-0-1-policies-baseline-jpeg-final`; replaces the Policies banner asset with a validated baseline JPEG (480×270) generated from the same supplied artwork after runtime-0.1.0 Expo/Metro rejected the prior malformed JPEG bytes. **IMPLEMENTED; CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
+
 - **2026-09-21 — Partner Business banner Android decode fix:** branch `fix/partner-business-banner-baseline-jpeg`; root cause confirmed as the Business banner being shipped as a progressive JPEG. The Partner runtime-0.1.0 OTA/APK and current preview OTA pipelines now normalize that banner to a baseline 1664x936 JPEG before Metro/EAS export, while preserving the locked Business hero/search geometry (158 / -6% / -8 / 112% / 182 / 0.70 / 0.92 / -10 / 49). **IMPLEMENTED; PR/merge/OTA verification pending.**
 
 - **2026-09-21 — Voice campaign schema-readiness resilience:** branch `hotfix/voice-campaign-schema-readiness`; makes `/system/voice-integration` fail soft if campaign tables are unavailable, keeping existing system controls usable and disabling Add Campaign until schema readiness returns. The escaped-variable schema-workflow defect is already corrected and production migration run #35587127672 succeeded. **IMPLEMENTED; PR #2215 verification/merge/deploy pending.**
