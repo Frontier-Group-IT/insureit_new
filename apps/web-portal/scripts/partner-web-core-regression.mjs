@@ -114,6 +114,12 @@ assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner
 assert(partnerWeb.includes("policy_service_source: string | null"), "Partner claim rows must expose the canonical claim source");
 
 const insurerLogoResolver = read("lib/insurer-logo.ts");
+const partnerPolicyDetailPage = read("app/partner/policies/[id]/page.tsx");
+assert(partnerPolicyDetailPage.includes("data.activity_history.map"), "Partner Policy detail must render canonical activity_history");
+assert(!partnerPolicyDetailPage.includes('id: "policy-status"'), "Partner Policy detail must not render synthetic Policy status activity");
+assert(!partnerPolicyDetailPage.includes('id: "policy-period"'), "Partner Policy detail must not render synthetic Policy period activity");
+assert(partnerPolicyDetailPage.includes("Created By:"), "Partner Policy detail must show canonical audit actor details");
+
 const partnerPolicyPage = read("app/partner/policies/page.tsx");
 const partnerFleetSummary = read("app/partner/customers/[id]/partner-customer-fleet-summary.tsx");
 assert(insurerLogoResolver.includes('/assets/insurers/national-insurance.png'), "shared insurer resolver must expose National Insurance PNG");
