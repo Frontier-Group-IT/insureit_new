@@ -223,7 +223,23 @@ export function BusinessGroupWorkspace({
 
             return (
               <article key={group.id} className="overflow-hidden rounded-2xl border border-[#DCE5F1] bg-white">
-                <div className="flex flex-wrap items-center gap-3 bg-[linear-gradient(90deg,#F8FBFF,#F3F7FF_60%,#FCFDFF)] px-4 py-3">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={expanded}
+                  onClick={(event) => {
+                    if ((event.target as HTMLElement).closest("button, a, input, select, textarea, form")) return;
+                    toggleGroup(group.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.currentTarget !== event.target) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      toggleGroup(group.id);
+                    }
+                  }}
+                  className="flex cursor-pointer flex-wrap items-center gap-3 bg-[linear-gradient(90deg,#F8FBFF,#F3F7FF_60%,#FCFDFF)] px-4 py-3 transition hover:bg-[#F1F6FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7D94E6]"
+                >
                   <button type="button" onClick={() => toggleGroup(group.id)} className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#516A85] ring-1 ring-[#E1E7EF]">
                     {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </button>
