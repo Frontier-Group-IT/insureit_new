@@ -503,9 +503,13 @@ export async function routeSignedInUser(user: User, router: Router, knownProfile
       ]);
 
       if (!customer && !onboarding) {
-        await revokeLocalCustomerSession();
-        router.replace('/login');
-        throw new Error(deletedCustomerLoginMessage);
+        // OTP verification already established a valid Supabase session and the
+        // active customer profile is authoritative for access. A missing linked
+        // customer/onboarding row can be temporary (for example while legacy
+        // membership linkage is being claimed), so do not destroy the fresh
+        // session or bounce the user back to Login. Customer Home already
+        // supports this unresolved state and can guide the user into onboarding.
+        console.warn('Customer login resolved an active profile without a linked customer or onboarding application; preserving session.');
       }
     }
   }
