@@ -466,3 +466,8 @@ The My Work section is removed. INSUREIT Stories is the final Home section, has 
 ## 2026-09-21 — Partner Business uploaded-background + Home-header parity
 
 **IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `ui/business-header-home-parity-reference-bg` updates the Business hero to use the user-approved blue skyline + glowing growth bars + white upward-arrow artwork as `apps/partner-app/assets/business-header-reference.jpg`. The header now reuses the Home INSUREIT Partner logo asset, Home-style bell control, Home-style initials profile control, and positions the `Business` title directly above the overlapping Search/Filter shell. The same source is mirrored into `scripts/partner/compat/partner-business-reference-0-1.tsx`, and both 0.1 compatibility workflows copy the new background asset into the locked runtime-0.1.0 checkout before typecheck/publish/build. No backend, schema, RLS, auth, native dependency or runtime-version change is included.
+
+
+## 2026-09-21 — Partner Business visible banner/Home-size fix
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/business-header-home-size-visible-banner` replaces `apps/partner-app/assets/business-header-reference.jpg` with the exact user-approved uploaded blue skyline/growth-arrow artwork (mobile-optimized 600px derivative), changes the Business hero to the same runtime-0.1.0 Home hero size/framing (`height: 158`, backdrop `left: -6%`, `top: -8`, `width: 112%`, `height: 182`, `opacity: 0.70`, `scale: 0.92`), restores the Home brand lockup treatment, and matches the Home search overlap/height (`-10`, `49`). The same source is mirrored to the 0.1 compatibility Business file. No backend/schema/RLS/auth/native/runtime change.
