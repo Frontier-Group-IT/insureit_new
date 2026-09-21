@@ -4,6 +4,7 @@ import {
   getAccessibleIntermediaryApplicationIds,
   getAccessibleIntermediaryIds,
 } from "@/lib/employee-access-scope";
+import { buildIntermediaryDocumentSlots } from "@/lib/intermediary-document-slots";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -111,7 +112,16 @@ type IntermediaryRow = {
   account_status: string | null;
 };
 
-type OnboardingRow = { id: string; registration_status: string | null };
+type OnboardingRow = {
+  id: string;
+  status: string;
+  registration_status: string | null;
+  partner_status: string | null;
+  final_type: string | null;
+  draft_data: Record<string, unknown> | null;
+};
+type OnboardingProfileRow = { application_id: string; workflow_stage: string | null; gst_number: string | null };
+type OnboardingDocumentRow = { application_id: string; document_type: string; file_name: string; document_label: string | null };
 type InsurerRow = { id: string; name: string };
 
 type PayinRow = {
@@ -240,13 +250,7 @@ export type DashboardCurrentData = {
 };
 
 const closedClaimStatuses = new Set(["Claim Complete", "Settled", "Closed"]);
-const completedIntermediaryStatuses = new Set([
-  "iib_registered",
-  "partner_active",
-  "active",
-  "approved",
-  "completed",
-]);
+const openIntermediaryQueueStatuses = new Set(["submitted", "under_review", "changes_requested"]);
 
 export async function getDashboardCurrentData(
   profile: ProfileLike | null | undefined,
@@ -336,7 +340,7 @@ export async function getDashboardCurrentData(
     ? (() => {
         let query = admin
           .from("intermediary_onboarding_applications")
-          .select("id,registration_status")
+          .select("id,status,registration_status,partner_status,final_type,draft_data")
           .limit(5000);
         if (intermediaryApplicationIds !== null) query = query.in("id", intermediaryApplicationIds);
         return query.returns<OnboardingRow[]>();
@@ -618,10 +622,60 @@ export async function getDashboardCurrentData(
       }
     : null;
 
-  const pendingApplications = (onboardingResult.data ?? []).filter((row) => {
-    const status = (row.registration_status ?? "").trim().toLowerCase();
-    return !completedIntermediaryStatuses.has(status);
-  }).length;
+  let pendingApplications = 0;
+  let pendingApplicationLoadError = false;
+  if (access.viewIntermediaries && !onboardingResult.error) {
+    const pendingCandidates = (onboardingResult.data ?? []).filter((row) => {
+      if (!openIntermediaryQueueStatuses.has(row.status)) return false;
+      if (row.partner_status === "active_partner") return false;
+      if (accountContext(row.draft_data) !== "partner") return false;
+      if (row.final_type === "partner") return false;
+      return (row.registration_status ?? "").trim().toLowerCase() === "documents_pending";
+    });
+    const candidateIds = pendingCandidates.map((row) => row.id);
+
+    if (candidateIds.length) {
+      const [profileResult, documentResult] = await Promise.all([
+        admin
+          .from("posp_misp_onboarding_profiles")
+          .select("application_id,workflow_stage,gst_number")
+          .in("application_id", candidateIds)
+          .returns<OnboardingProfileRow[]>(),
+        admin
+          .from("intermediary_onboarding_documents")
+          .select("application_id,document_type,file_name,document_label")
+          .in("application_id", candidateIds)
+          .returns<OnboardingDocumentRow[]>(),
+      ]);
+
+      pendingApplicationLoadError = Boolean(profileResult.error || documentResult.error);
+      if (!pendingApplicationLoadError) {
+        const profileByApplicationId = new Map((profileResult.data ?? []).map((row) => [row.application_id, row]));
+        const documentsByApplicationId = new Map<string, OnboardingDocumentRow[]>();
+        for (const document of documentResult.data ?? []) {
+          const current = documentsByApplicationId.get(document.application_id) ?? [];
+          current.push(document);
+          documentsByApplicationId.set(document.application_id, current);
+        }
+
+        pendingApplications = pendingCandidates.filter((row) => {
+          const queueProfile = profileByApplicationId.get(row.id);
+          if (!queueProfile || queueProfile.workflow_stage !== "iib_processing") return false;
+          const queueDocuments = documentsByApplicationId.get(row.id) ?? [];
+          const slots = buildIntermediaryDocumentSlots({
+            legacy: false,
+            hasGst: Boolean(queueProfile.gst_number?.trim()),
+            documents: queueDocuments,
+          });
+          return slots
+            .filter((slot) => slot.required)
+            .some((slot) => !queueDocuments.some((document) => document.document_type === slot.key && Boolean(document.file_name?.trim())));
+        }).length;
+      }
+    }
+  }
+  if (pendingApplicationLoadError) warnings.push("Pending intermediary application count could not be refreshed.");
+
   const intermediarySummary = access.viewIntermediaries && !intermediaryResult.error && !onboardingResult.error
     ? {
         active: intermediaries.filter((row) => row.account_status === "active").length,
@@ -765,6 +819,11 @@ function addDaysKey(value: Date, days: number) {
   const result = new Date(value);
   result.setUTCDate(result.getUTCDate() + days);
   return result.toISOString().slice(0, 10);
+}
+
+function accountContext(draft: Record<string, unknown> | null | undefined) {
+  const context = draft?.account_context;
+  return context === "posp" || context === "misp" ? context : "partner";
 }
 
 function buildFleetReadiness(rows: VehicleRow[]) {
