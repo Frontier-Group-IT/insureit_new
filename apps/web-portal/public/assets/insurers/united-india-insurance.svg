@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 170" role="img" aria-labelledby="title">
+  <title id="title">United India Insurance</title>
+  <ellipse cx="110" cy="84" rx="102" ry="72" fill="#0B56A8"/>
+  <path d="M42 38h59L73 92H21l21-54Zm76 0h39l42 54h-48l-31-39-22 39H75l43-54Z" fill="#fff"/>
+  <text x="110" y="122" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#fff">UNITED INDIA</text>
+  <text x="110" y="143" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="600" fill="#fff">INSURANCE</text>
+</svg>
