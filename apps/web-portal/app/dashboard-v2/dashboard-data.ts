@@ -69,6 +69,7 @@ export type DashboardClaimRow = {
 
 type ClaimRow = {
   id: string;
+  vehicle_id: string | null;
   claim_no: string;
   current_status: string;
   created_at: string;
@@ -205,6 +206,7 @@ export type DashboardCurrentData = {
     mtd: number;
     assistanceRequested: number;
     pendingDocuments: number;
+    actionPendingVehicles: number;
     estimateExposure: number;
     approvedExposure: number;
     billExposure: number;
@@ -318,7 +320,7 @@ export async function getDashboardCurrentData(
     ? (() => {
         let query = admin
           .from("claims")
-          .select("id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
+          .select("id,vehicle_id,claim_no,current_status,created_at,updated_at,assistance_status,claim_service_mode,policy_service_source,estimated_loss,approved_amount,settlement_amount,customers(company_name,contact_name),vehicles(vehicle_no)")
           .order("updated_at", { ascending: false })
           .limit(10000);
         if (claimCustomerIds !== null) query = query.in("customer_id", claimCustomerIds);
@@ -556,11 +558,15 @@ export async function getDashboardCurrentData(
     }
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
+    const actionPendingVehicles = new Set(
+      openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
+    ).size;
     claimHealth = {
       open: openClaims.length,
       mtd: claims.filter((row) => row.created_at.slice(0, 10) >= monthStartKey).length,
       assistanceRequested: openClaims.filter((row) => row.assistance_status === "requested").length,
       pendingDocuments,
+      actionPendingVehicles,
       estimateExposure: sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss"),
       approvedExposure: sumClaimFinancial(openClaims, financialByClaim, "approved_amount", "approved_amount"),
       billExposure: sumClaimFinancial(openClaims, financialByClaim, "bill_amount"),
