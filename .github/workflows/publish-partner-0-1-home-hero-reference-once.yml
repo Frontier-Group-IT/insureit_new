@@ -11,6 +11,7 @@ on:
       - 'scripts/partner/patch-0-1-business-date-filter.mjs'
       - 'scripts/partner/compat/partner-business-date-filter.tsx'
       - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
+      - 'apps/partner-app/assets/business-header-reference.jpg'
       - 'scripts/partner/compat/partner-more-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-policies-reference-0-1.tsx'
       - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
@@ -121,6 +122,8 @@ jobs:
           node tooling/scripts/partner/patch-0-1-business-date-filter.mjs 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "partner_app_business_range" 'compat/apps/partner-app/lib/home.ts'
           grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          test -s compat/apps/partner-app/assets/business-header-reference.jpg
+          grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'rangeSelection' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'rangeSelection?.summary.premium' 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
@@ -130,6 +133,8 @@ jobs:
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs \
             'compat/apps/partner-app/components/partner-screen.tsx'
+          cp tooling/apps/partner-app/assets/business-header-reference.jpg \
+            compat/apps/partner-app/assets/business-header-reference.jpg
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'hideTopBar' 'compat/apps/partner-app/components/partner-screen.tsx'
