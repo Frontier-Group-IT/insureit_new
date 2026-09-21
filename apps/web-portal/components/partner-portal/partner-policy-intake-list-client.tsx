@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -13,6 +14,7 @@ import {
   Search,
 } from "lucide-react";
 import { getPartnerPolicyIntakesWeb, type PartnerPolicyIntake } from "@/lib/partner-policy-intakes-client";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 type IntakeFilter = "all" | "active" | "attention" | "in_review" | "processing" | "completed" | "duplicate" | "rejected";
 const PAGE_SIZE = 25;
@@ -444,6 +446,7 @@ export function PartnerPolicyIntakeListClient() {
                   const vehicleMeta = field(row, "vehicle_make_model", "make_model", "vehicle_model");
                   const policy = field(row, "policy_number") || "Policy pending";
                   const insurer = field(row, "insurer_name", "insurance_company", "insurer") || "Insurer pending";
+                  const insurerLogo = insurer !== "Insurer pending" ? getInsurerLogo(insurer) : null;
 
                   return (
                     <Link
@@ -451,9 +454,26 @@ export function PartnerPolicyIntakeListClient() {
                       href={`/partner/policy-intakes/${encodeURIComponent(row.id)}`}
                       className="group grid grid-cols-[minmax(150px,.78fr)_minmax(170px,.9fr)_minmax(150px,.8fr)_minmax(230px,1.2fr)_minmax(150px,.8fr)_minmax(110px,.58fr)_minmax(110px,.58fr)_34px] items-center gap-4 px-4 py-3 transition hover:bg-[#FAFCFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20"
                     >
-                      <div className="min-w-0">
-                        <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.intake_number}</p>
-                        <p className="mt-0.5 text-[8.5px] font-medium text-[#8B99AC]">Policy intake</p>
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                          {insurerLogo ? (
+                            <Image
+                              src={insurerLogo}
+                              alt={`${insurer} logo`}
+                              width={34}
+                              height={34}
+                              className="max-h-8 max-w-[38px] w-auto object-contain"
+                            />
+                          ) : (
+                            <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#58708F]">
+                              <FileText className="h-3.5 w-3.5" />
+                            </span>
+                          )}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#1B2F4E]">{row.intake_number}</p>
+                          <p className="mt-0.5 text-[8.5px] font-medium text-[#8B99AC]">Policy intake</p>
+                        </div>
                       </div>
                       <div className="min-w-0">
                         <p className="break-words text-[10px] font-semibold leading-4 text-[#304665]">{customerName || row.customer_mobile || "Customer pending"}</p>
