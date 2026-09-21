@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Partner Policies Home-header parity:** branch `ui/partner-policies-home-header-parity`; Policies runtime-0.1 header now uses the same INSUREIT Partner brand treatment, activity/profile controls and title scale as Home, while fading the existing Policies banner slightly to `0.55`. The 0.1 OTA workflow includes guards for the Home logo/icon/title treatment. **IMPLEMENTED; PR/CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
+
 - **2026-09-21 — Sarvam cohort dynamic greeting fix:** production cohort generation now sends `opening_line`, `customer_first_name`, and explicit-only `customer_salutation` in Sarvam `app_variables`. Greeting uses first name, removes repeated “जी”, ends with “दो मिनट बात कर सकते हैं क्या?”, and falls back to a neutral salutation when Sir/Madam is not reliably known. **MERGED to main; deployment/runtime verification pending.** See `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`.
 
 - **2026-09-21 — Partner policy/vehicle audit schema gate hotfix:** branch `fix/partner-policy-audit-schema-gate`; adds the missing automated schema workflow for migration `20260921104500_partner_policy_audit_history.sql`, wires it into `deploy-production.yml`, and forces the follow-up release through schema-first gating before Vercel. **IMPLEMENTED; PR/CI/merge/schema/deployment pending.**

@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -134,21 +134,25 @@ export default function PoliciesScreen() {
         <View style={styles.heroBackdropShade} />
 
         <View style={styles.heroTopRow}>
-          <Image
-            source={require('../../assets/partner-login-logo.png')}
-            style={styles.brandLogo}
-            resizeMode="contain"
-            accessibilityLabel="INSUREIT Partner"
-          />
+          <View style={styles.heroBrand}>
+            <Image
+              source={require('../../assets/insureit-partner-official.png')}
+              style={styles.heroLogo}
+              resizeMode="contain"
+            />
+            <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
+              <Text style={styles.heroBrandInsureit}>insureit</Text>
+              <Text style={styles.heroBrandPartner}>Partner</Text>
+            </View>
+          </View>
           <View style={styles.heroActions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open activity"
+              accessibilityLabel="View recent activity"
               onPress={() => router.push('/activity')}
-              style={({ pressed }) => [styles.heroBellButton, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
             >
-              <Ionicons name="notifications-outline" size={18} color="#FFFFFF" />
-              <View style={styles.notificationDot} />
+              <Feather name="clock" size={17} color="#FFFFFF" />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -487,7 +491,7 @@ const styles = StyleSheet.create({
     top: -8,
     width: '112%',
     height: 182,
-    opacity: 0.70,
+    opacity: 0.55,
     transform: [{ scale: 0.92 }],
   },
   heroBackdropShade: {
@@ -501,43 +505,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
   },
-  brandLogo: { width: 122, height: 43 },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  heroBellButton: {
-    width: 34,
-    height: 34,
+  heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
+  heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
+  heroBrandCopy: { paddingTop: 1 },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  heroIconButton: {
+    width: 33,
+    height: 33,
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(4,47,103,0.46)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.84)',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
   heroAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 35,
+    height: 35,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EAF2FF',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.88)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  heroAvatarText: { color: '#164F9C', fontSize: 10.5, lineHeight: 13, fontWeight: '800' },
-  notificationDot: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    right: 4,
-    top: 4,
-    backgroundColor: '#EF3948',
-    borderWidth: 1,
-    borderColor: '#FFFFFF',
-  },
+  heroAvatarText: { color: '#144E98', fontSize: 11.5, lineHeight: 15, fontWeight: '800' },
   heroCopy: { position: 'absolute', left: 16, bottom: 24, zIndex: 5 },
-  heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontWeight: '700', letterSpacing: -0.18 },
-  heroSubtitle: { marginTop: 1, color: '#FFFFFF', fontSize: 11.5, lineHeight: 15, fontWeight: '500' },
+  heroTitle: { color: '#FFFFFF', fontSize: 14, lineHeight: 18, fontWeight: '600', letterSpacing: -0.04, textShadowColor: 'rgba(0,0,0,0.52)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  heroSubtitle: { marginTop: 1, color: '#FFFFFF', fontSize: 10, lineHeight: 13, fontWeight: '500', textShadowColor: 'rgba(0,0,0,0.38)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
   searchRow: {
     marginTop: -10,
     marginHorizontal: 16,
