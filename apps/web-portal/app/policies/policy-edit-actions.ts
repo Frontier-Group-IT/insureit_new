@@ -43,6 +43,8 @@ type ExistingPayout = {
   retention_amount: number | null;
   od_payout_percent: number | null;
   tp_payout_percent: number | null;
+  payout_basis: string | null;
+  partner_payout_amount: number | null;
   status: string | null;
   payout_date: string | null;
   voucher_number: string | null;
@@ -101,7 +103,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
     if (!canAccessPolicyCommercials(profile)) {
       const [payinResult, payoutResult] = await Promise.all([
         admin.from("policy_payin_details").select("payout_basis,projected_od_percent,projected_tp_percent,insurer_scheme_amount").eq("policy_id", policyId).maybeSingle<ExistingPayin>(),
-        admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),
+        admin.from("policy_intermediary_payouts").select("retention_amount,od_payout_percent,tp_payout_percent,payout_basis,partner_payout_amount,status,payout_date,voucher_number").eq("policy_id", policyId).order("created_at", { ascending: false }).limit(1).maybeSingle<ExistingPayout>(),
       ]);
       if (payinResult.error || payoutResult.error) return { ok: false, error: "We couldn't preserve the restricted commercial details. Please try again." };
       const payin = payinResult.data;
@@ -120,7 +122,7 @@ export async function updatePolicyOnboarding(policyId: string, payload: PolicyEd
         status: payout?.status ?? "Pending",
         date: payout?.payout_date ?? "",
         voucherNumber: payout?.voucher_number ?? "",
-        flatAmount: "",
+        flatAmount: payout?.payout_basis === "FIXED_AMOUNT" ? textNumber(payout?.partner_payout_amount) : "",
         provided: false,
       };
     }
