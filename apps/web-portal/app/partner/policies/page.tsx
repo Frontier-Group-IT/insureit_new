@@ -200,12 +200,25 @@ export default async function PartnerPoliciesPage({
                   prefetch={false}
                   className="group grid gap-3 px-4 py-2.5 transition hover:bg-[#FBFDFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 xl:grid-cols-[1.05fr_1.05fr_.9fr_1.05fr_.85fr_.62fr_.7fr_.82fr_42px] xl:items-center xl:gap-4"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-[10.5px] font-extrabold text-[#182C43]">
-                      {product.main}
-                      {product.detail ? <span className="font-semibold text-[#5E7085]"> · {product.detail}</span> : null}
-                    </p>
-                    <p className="mt-0.5 truncate text-[8.5px] font-semibold text-[#6F8195]">{row.policy_no || row.policy_code || "Policy number pending"}</p>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    {getInsurerLogo(row.insurer_name) ? (
+                      <Image
+                        src={getInsurerLogo(row.insurer_name)!}
+                        alt={row.insurer_name ? `${row.insurer_name} logo` : "Insurance company"}
+                        width={34}
+                        height={34}
+                        className="max-h-8 max-w-[38px] shrink-0 object-contain"
+                      />
+                    ) : (
+                      <ShieldCheck className="h-4 w-4 shrink-0 text-[#7E91A8]" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-[10.5px] font-extrabold text-[#182C43]">
+                        {product.main}
+                        {product.detail ? <span className="font-semibold text-[#5E7085]"> · {product.detail}</span> : null}
+                      </p>
+                      <p className="mt-0.5 truncate text-[8.5px] font-semibold text-[#6F8195]">{row.policy_no || row.policy_code || "Policy number pending"}</p>
+                    </div>
                   </div>
 
                   <div className="min-w-0">
@@ -218,18 +231,7 @@ export default async function PartnerPoliciesPage({
                     <p className="mt-0.5 truncate text-[8px] font-medium text-[#8794A4]">{row.vehicle_no ? "Vehicle" : "Policy risk"}</p>
                   </div>
 
-                  <div className="flex min-w-0 items-center gap-2">
-                    {getInsurerLogo(row.insurer_name) ? (
-                      <Image
-                        src={getInsurerLogo(row.insurer_name)!}
-                        alt={row.insurer_name ? `${row.insurer_name} logo` : "Insurance company"}
-                        width={30}
-                        height={30}
-                        className="max-h-7 max-w-[34px] shrink-0 object-contain"
-                      />
-                    ) : (
-                      <ShieldCheck className="h-4 w-4 shrink-0 text-[#7E91A8]" />
-                    )}
+                  <div className="min-w-0">
                     <p className="truncate text-[9.5px] font-semibold text-[#52657A]">{row.insurer_name || "Insurer not recorded"}</p>
                   </div>
 
