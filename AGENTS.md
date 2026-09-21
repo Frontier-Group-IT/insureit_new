@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Business Groups summary strip restyle:** branch `feat/business-groups-summary-strip`; restyles the four Business Groups metrics into a compact navy segmented strip matching the provided reference: circular icons, small uppercase labels, bold values, equal-width segments, and thin separators. Data and page behavior are unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
+
 - **2026-09-21 — Partner Policies banner binary repair:** branch `fix/partner-policies-banner-valid-jpeg`; replaces the corrupted `policies-header-reference.jpg` blob with a valid JPEG derived from the user-supplied banner after Expo runtime-0.1.0 bundling failed with `unsupported file type`. No layout/business/native/schema change. **IMPLEMENTED; PR #2198; CI/merge/OTA verification pending.**
 
 - **2026-09-21 — Business Groups navy header:** branch `feat/business-groups-navy-header`; changed the Business Groups top header card to a navy gradient with contrast-adjusted title, badge, action buttons, and metric strip. Lower Business Groups content and behavior are unchanged. **IMPLEMENTED; PR #2194 open; CI/merge/deployment pending.**
