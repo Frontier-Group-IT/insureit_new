@@ -271,6 +271,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260919123000_partner_associate_address_fields.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-associate-address-fields.yml"
             echo "Partner associate address fields migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260921103000_motor_flat_partner_payout.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-motor-flat-partner-payout.yml"
+            echo "Motor FLAT partner payout migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
