@@ -130,7 +130,7 @@ export default async function PartnerAssociateAccountsPage({
                 <UserIcon />
               </span>
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-semibold">Partner Application Review</h1>
+                <h1 className="truncate text-xl font-semibold">Associate Accounts Review</h1>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <p className="truncate text-[13px] font-semibold text-white/90">{name}</p>
                   {partnerId ? <span className="inline-flex rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold">{partnerId}</span> : null}
