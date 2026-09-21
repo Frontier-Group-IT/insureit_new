@@ -116,11 +116,11 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
         <table className="w-full min-w-[820px] table-fixed text-left text-[11px] text-[#252944]">
           <thead className="sticky top-0 z-10 border-b border-[#E2E8F0] bg-[#F8FAFC] text-[9px] font-bold uppercase tracking-[0.06em] text-[#64748B]">
             <tr>
-              <th className="w-[180px] px-3 py-2">Vehicle</th>
-              <th className="w-[210px] px-2.5 py-2">Customer</th>
-              <th className="w-[190px] px-2.5 py-2">Make / model</th>
-              <th className="w-[140px] px-2.5 py-2">Registration</th>
-              <th className="w-[140px] px-2.5 py-2">Next action</th>
+              <th className="w-[180px] px-3 py-2 text-center">Vehicle</th>
+              <th className="w-[210px] px-2.5 py-2 text-center">Customer</th>
+              <th className="w-[190px] px-2.5 py-2 text-center">Make / model</th>
+              <th className="w-[140px] px-2.5 py-2 text-center">Registration</th>
+              <th className="w-[140px] px-2.5 py-2 text-center">Next action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EEF2F6]">
@@ -133,9 +133,9 @@ export function VehicleWorkspace({ rows }: { rows: VehicleRow[] }) {
                         <Image
                           src={getVehicleBrandLogo(vehicle.make)!}
                           alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
-                          width={34}
-                          height={34}
-                          className="max-h-8 max-w-[38px] w-auto object-contain"
+                          width={26}
+                          height={24}
+                          className="max-h-[22px] max-w-[26px] w-auto object-contain"
                         />
                       ) : (
                         <CarFront className="h-4.5 w-4.5 text-[#6F8197]" />
@@ -173,9 +173,9 @@ function VehicleMobileCard({ vehicle }: { vehicle: VehicleRow }) {
               <Image
                 src={getVehicleBrandLogo(vehicle.make)!}
                 alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
-                width={34}
-                height={34}
-                className="max-h-8 max-w-[38px] w-auto object-contain"
+                width={26}
+                height={24}
+                className="max-h-[22px] max-w-[26px] w-auto object-contain"
               />
             ) : (
               <CarFront className="h-4.5 w-4.5 text-[#6F8197]" />
