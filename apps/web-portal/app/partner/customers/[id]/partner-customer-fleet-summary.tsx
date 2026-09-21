@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { PartnerCustomerDetail } from "@/lib/partner-web";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 function dateLabel(value: string | null) {
   if (!value) return "—";
@@ -48,30 +49,6 @@ function vehicleKey(value: string | null | undefined) {
   return String(value || "")
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "");
-}
-
-function normalizeLogoKey(value: string | null | undefined) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function insurerLogo(insurerName: string | null | undefined) {
-  const key = normalizeLogoKey(insurerName);
-  if (!key) return null;
-  if (key.includes("united india")) return "/assets/insurers/united-india-insurance.svg";
-  if (key.includes("bajaj")) return "/assets/insurers/bajaj-allianz.png";
-  if (key.includes("hdfc ergo")) return "/assets/insurers/hdfc-ergo.png";
-  if (key.includes("icici lombard")) return "/assets/insurers/icici-lombard.png";
-  if (key.includes("iffco") && key.includes("tokio")) return "/assets/insurers/iffco-tokio.png";
-  if (key.includes("new india")) return "/assets/insurers/new-india-assurance.png";
-  if (key.includes("oriental")) return "/assets/insurers/oriental-insurance.png";
-  if (key.includes("tata aig")) return "/assets/insurers/tata-aig.png";
-  return null;
 }
 
 function BrandLogo({
@@ -193,7 +170,7 @@ export function PartnerCustomerFleetSummary({ data }: { data: PartnerCustomerDet
                               >
                                 <div className="flex min-w-0 items-center gap-2.5">
                                   <BrandLogo
-                                    src={insurerLogo(policy.insurer_name)}
+                                    src={getInsurerLogo(policy.insurer_name)}
                                     alt={policy.insurer_name ? `${policy.insurer_name} logo` : "Insurance company"}
                                     fallback={<ShieldCheck className="h-4 w-4 text-[#1B9A63]" />}
                                     size={42}
