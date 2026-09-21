@@ -514,3 +514,12 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - Root cause after PR #2191 merge: the runtime-0.1.0 Expo/Metro export rejected `policies-header-reference.jpg` as an invalid JPEG despite repository-level file checks.
 - Replaced the asset with a validated baseline JFIF JPEG derived from the same user-supplied banner artwork (480×270, baseline JPEG) so the legacy Metro asset parser can read dimensions reliably.
 - No native/runtime configuration, APK/AAB, schema, or policy business logic change.
+
+## 2026-09-21 — Partner 0.1 shared OTA Business-banner unblock
+
+**IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
+- Branch: `hotfix/partner-0-1-business-banner-ota-unblock`.
+- The Policies baseline-JPEG repair merged, but the shared runtime-0.1 compatibility workflow then stopped earlier in the Business install step because ffmpeg could not decode the newer `business-header-reference.jpg` bytes.
+- To avoid changing Business layout or semantics while unblocking the requested Policies OTA, the Business header asset is restored to blob `6b5346c0669beaf94e4e4c64b4714ae51f4445dd`, from commit `475128f9cb620d995caf80cbd86c8a462b22e2a6`, where the Partner verification workflow (including Expo web review build) completed successfully.
+- No native/runtime configuration, APK/AAB, schema, database, policy logic, or Business layout change.
