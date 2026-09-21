@@ -18,6 +18,11 @@ assert.match(workflow, /legacy_pending_prefix/);
 assert.match(workflow, /canonical_mismatch/);
 
 const vehicleWorkspace = readFileSync("app/vehicles/vehicle-workspace.tsx", "utf8");
+const partnerVehicleRegister = readFileSync("app/partner/vehicles/page.tsx", "utf8");
+const partnerVehicleDetail = readFileSync("app/partner/vehicles/[id]/page.tsx", "utf8");
+assert.match(partnerVehicleRegister, /displayVehicleRegistrationNumber/);
+assert.doesNotMatch(partnerVehicleRegister, /pending \? "Registration pending" : vehicle\.vehicle_no/);
+assert.match(partnerVehicleDetail, /displayVehicleRegistrationNumber/);
 const fleetSummary = readFileSync("app/customers/[id]/fleet/fleet-summary-client.tsx", "utf8");
 const onboardingActions = readFileSync("app/policies/policy-onboarding-actions.ts", "utf8");
 const misExport = readFileSync("lib/reports/policy-business-mis-export.ts", "utf8");
