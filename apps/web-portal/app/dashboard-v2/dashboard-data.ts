@@ -219,9 +219,10 @@ export type DashboardCurrentData = {
   } | null;
   policyIntakes: {
     active: number;
-    ready: number;
+    actionRequired: number;
     inReview: number;
     processing: number;
+    workload: number;
     needsAttention: number;
     ocrFailed: number;
     recent: DashboardIntakeRow[];
@@ -611,15 +612,25 @@ export async function getDashboardCurrentData(
   }
 
   const policyIntakes = access.viewPolicyIntakes && !intakeResult.error
-    ? {
-        active: intakes.filter((row) => ["ready_for_review", "in_review", "processing", "needs_attention"].includes(row.status)).length,
-        ready: intakes.filter((row) => row.status === "ready_for_review").length,
-        inReview: intakes.filter((row) => row.status === "in_review").length,
-        processing: intakes.filter((row) => row.status === "processing").length,
-        needsAttention: intakes.filter((row) => row.status === "needs_attention").length,
-        ocrFailed: intakes.filter((row) => row.status === "processing" && row.ocr_status === "failed").length,
-        recent: intakes.filter((row) => !["completed", "rejected"].includes(row.status)).slice(0, 5),
-      }
+    ? (() => {
+        const actionRequired = intakes.filter(
+          (row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed"),
+        ).length;
+        const inReview = intakes.filter((row) => row.status === "in_review").length;
+        const processing = intakes.filter(
+          (row) => row.status === "processing" && row.ocr_status !== "failed",
+        ).length;
+        return {
+          active: intakes.filter((row) => ["ready_for_review", "in_review", "processing", "needs_attention"].includes(row.status)).length,
+          actionRequired,
+          inReview,
+          processing,
+          workload: actionRequired + inReview + processing,
+          needsAttention: intakes.filter((row) => row.status === "needs_attention").length,
+          ocrFailed: intakes.filter((row) => row.status === "processing" && row.ocr_status === "failed").length,
+          recent: intakes.filter((row) => !["completed", "rejected"].includes(row.status)).slice(0, 5),
+        };
+      })()
     : null;
 
   let pendingApplications = 0;
