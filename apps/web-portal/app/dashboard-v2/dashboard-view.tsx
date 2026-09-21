@@ -618,18 +618,18 @@ function WorkMovement({ data, access }: { data: DashboardCurrentData; access: Da
 }
 
 function MixColumn({ title, rows, divided }: { title: string; rows: DashboardBusinessMixRow[]; divided: boolean }) {
-  const amountMode = rows.some((row) => row.grossPremium !== null);
-  const total = Math.max(rows.reduce((sum, row) => sum + (amountMode ? row.grossPremium ?? 0 : row.policies), 0), 1);
+  const amountMode = rows.some((row) => row.netPremium !== null);
+  const total = Math.max(rows.reduce((sum, row) => sum + (amountMode ? row.netPremium ?? 0 : row.policies), 0), 1);
 
   return (
     <div className={`${divided ? "border-t xl:border-l xl:border-t-0" : ""} border-[#E7ECF2] px-4 py-4 sm:px-5`}>
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="text-[8px] font-black uppercase tracking-[.11em] text-[#7B899D]">{title}</h3>
-        <span className="text-[7px] font-semibold text-[#99A3B2]">{amountMode ? "By gross premium" : "By policies"}</span>
+        <span className="text-[7px] font-semibold text-[#99A3B2]">{amountMode ? "By net premium" : "By policies"}</span>
       </div>
       <div className="mt-3 space-y-3">
         {rows.slice(0, 5).map((row) => {
-          const value = amountMode ? row.grossPremium ?? 0 : row.policies;
+          const value = amountMode ? row.netPremium ?? 0 : row.policies;
           const share = Math.round((value / total) * 100);
           return (
             <div key={row.key}>
