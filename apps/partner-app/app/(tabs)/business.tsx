@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
   heroShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(3, 45, 96, 0.10)',
+    backgroundColor: 'rgba(3, 45, 96, 0.04)',
   },
   heroTopRow: {
     position: 'absolute',
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
   heroProfileButton: {
     width: 34,
     height: 34,
-    borderRadius: 14,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(124, 184, 255, 0.92)',
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     flexDirection: 'row',
     alignItems: 'stretch',
-    borderRadius: 17,
+    borderRadius: 14,
     backgroundColor: '#FFFFFF',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#D9DFEA',
