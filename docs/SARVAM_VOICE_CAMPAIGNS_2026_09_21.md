@@ -76,3 +76,8 @@ Rules:
 - never overwrite an existing customer name, contact name, account name, or explicit AI-profile customer-name override;
 - the fallback stays inside the isolated External Renewal/voice workflow and does not create or modify verified Customer/Policy master records;
 - the resulting name is then available to campaign review and the existing Sarvam `customer_name` cohort variable.
+
+
+## Schema-readiness resilience
+
+After the initial campaign release, the dedicated schema workflow was repaired and production migration workflow run 35587127672 completed successfully. The control-center hotfix additionally makes campaign-list loading fail soft: if campaign tables are unavailable in a future rollout or temporary schema mismatch, existing Voice Integration controls still render, Add Campaign is disabled, and a scoped readiness warning is shown instead of crashing the whole page.
