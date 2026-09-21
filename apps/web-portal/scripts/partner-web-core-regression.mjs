@@ -113,6 +113,15 @@ const partnerWeb = read("lib/partner-web.ts");
 assert(partnerWeb.includes('supabase.rpc("partner_app_list_renewals"'), "Partner renewal adapter must use scoped renewal RPC");
 assert(partnerWeb.includes("policy_service_source: string | null"), "Partner claim rows must expose the canonical claim source");
 
+const insurerLogoResolver = read("lib/insurer-logo.ts");
+const partnerPolicyPage = read("app/partner/policies/page.tsx");
+const partnerFleetSummary = read("app/partner/customers/[id]/partner-customer-fleet-summary.tsx");
+assert(insurerLogoResolver.includes('/assets/insurers/national-insurance.png'), "shared insurer resolver must expose National Insurance PNG");
+assert(insurerLogoResolver.includes('nationalinsurancecompanylimited: "nationalinsurance"'), "National Insurance legal name alias must resolve");
+assert(insurerLogoResolver.includes('/assets/insurers/united-india-insurance.png'), "shared insurer resolver must use the new United India PNG asset");
+assert(partnerPolicyPage.includes("getInsurerLogo(row.insurer_name)"), "Partner Policy Register must use the shared insurer resolver");
+assert(partnerFleetSummary.includes("getInsurerLogo(policy.insurer_name)"), "Partner Fleet Summary must use the shared insurer resolver");
+
 const partnerClaimsPage = read("app/partner/claims/page.tsx");
 assert(partnerClaimsPage.includes('row.policy_service_source === "external" ? "external" : "internal"'), "Partner claims must classify only explicit external sources as external");
 assert(!partnerClaimsPage.includes('row.policy_service_source === "internal" ? "internal" : "external"'), "Partner claims must not default missing claim source to external");
