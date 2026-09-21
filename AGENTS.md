@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Partner Associate Accounts city autofill:** branch `feat/associate-city-autofill`; Associate Accounts City now provides searchable suggestions, selected cities auto-fill State and a default PIN, State remains read-only, and PIN remains editable. The same behavior is used in Add and Edit Associate flows; no schema/RLS/business-workflow change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-21 — Partner Business uploaded-background + Home-header parity:** branch `ui/business-header-home-parity-reference-bg`; Business hero now uses the user-approved skyline/growth-arrow artwork as a dedicated app asset, reuses the Home INSUREIT Partner logo treatment, Home-style bell/profile controls with partner initials, and keeps `Business` immediately above the overlapping Search/Filter shell. Applied to current Partner source and runtime-0.1.0 compatibility delivery workflows. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
 
 - **2026-09-21 — Partner Business clean reference header:** branch `ui/partner-business-clean-reference-header`; Business hero now uses the approved skyline/up-arrow `hero-banner.jpg` background with the compact reference crop, keeps only INSUREIT branding, Business title, notification/profile controls, and the overlapping search/filter shell, and removes the tagline/greeting and right-side promotional copy. Applied to current Partner source and runtime-0.1.0 compatibility source. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
