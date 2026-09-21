@@ -88,3 +88,8 @@ INSUREIT, not the Sarvam static Variables defaults, is the production source of 
 ## Schema-readiness resilience — 2026-09-21
 
 The Voice Integration control center must remain usable if the optional voice-campaign schema is temporarily unavailable. Campaign-list reads fail soft, Add Campaign remains disabled until the schema exists, and system-level controls continue rendering. The production campaign schema was successfully applied by workflow run 35587127672; this rule prevents a future schema timing/failure from taking down the control center.
+
+
+## Detailed campaign report export — 2026-09-21
+
+Campaign detail may export a server-generated XLSX operational report for IT Super User only. Preserve the exact approved 33 columns and the Voice Integration privacy boundary: mobile stays masked, raw transcripts remain excluded, and unsupported conversation facts such as Add-on Interest must be shown as not captured rather than inferred. Derived outcome/next-action/quality fields must come only from persisted normalized campaign, attempt, retry-event, and opportunity state. See `docs/SARVAM_VOICE_CAMPAIGNS_2026_09_21.md`.
