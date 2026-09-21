@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Dashboard mix basis switched to Net Premium:** branch `fix/dashboard-mix-net-premium-v2`; Channel Contribution, Vehicle Class, Coverage Mix and the shared Business Line mix now aggregate/sort by `net_premium` and display `By net premium`. Gross-premium rankings such as Top Insurers/Top Producers remain unchanged. **IMPLEMENTED; replacement PR/CI/merge/deployment pending after #2236 conflicted with newer main.**
+
 - **2026-09-21 — Partner Business uploaded header banner:** branch `ui/partner-business-uploaded-header-banner`; replaces `apps/partner-app/assets/business-header-reference.jpg` with the newly supplied Business growth/city banner and updates the runtime-0.1 OTA asset guard for the new baseline JPEG. Business layout/data logic remain unchanged. **IMPLEMENTED; PR/CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
 
 - **2026-09-21 — Partner Business panoramic banner visibility fix:** branch `fix/business-banner-visible-panorama`; replaces the Business hero asset with a baseline JPEG pre-cropped to a wide 1664x487 mobile-header panorama so the skyline/growth arrow sit inside the visible 158dp hero, then renders it edge-to-edge at 100% width/height with 0.96 opacity. Search remains -10 overlap / 49 height. Runtime-0.1.0/current OTA workflows now preserve and verify the panoramic asset instead of resizing it back to 1664x936. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
