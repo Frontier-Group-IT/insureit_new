@@ -135,6 +135,8 @@ jobs:
             compat/apps/partner-app/assets/business-header-reference.jpg
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
+          test -s compat/apps/partner-app/assets/business-header-reference.jpg
+          grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'hideTopBar' 'compat/apps/partner-app/components/partner-screen.tsx'
           grep -q 'Business Overview' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'Month-wise Trend' 'compat/apps/partner-app/app/(tabs)/business.tsx'
