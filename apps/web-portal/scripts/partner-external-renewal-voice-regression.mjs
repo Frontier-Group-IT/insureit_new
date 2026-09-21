@@ -48,6 +48,9 @@ const diagnosticsPage = fs.readFileSync(path.join(root, "app/system/voice-integr
 const localAgents = fs.readFileSync(path.join(root, "app/partner/renewals/external/AGENTS.md"), "utf8");
 const adminAgents = fs.readFileSync(path.join(root, "app/system/voice-integration/AGENTS.md"), "utf8");
 const currentVoiceState = fs.readFileSync(path.join(repoRoot, "docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md"), "utf8");
+const voiceCampaignModel = fs.readFileSync(path.join(root, "lib/voice-campaigns.ts"), "utf8");
+const voiceCampaignDetailPage = fs.readFileSync(path.join(root, "app/system/voice-integration/campaigns/[id]/page.tsx"), "utf8");
+const voiceCampaignExportRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/campaigns/[id]/export/route.ts"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -342,5 +345,17 @@ assert(adminAgents.includes("it_super_user"), "IT voice admin instructions prese
 assert(currentVoiceState.includes("INSUREIT-Re-e2468e47-50a8"), "current voice state records the approved controlled campaign binding");
 assert(currentVoiceState.includes("PAUSED"), "current voice state records the campaign safety state");
 assert(!/9329861634|7225842509/.test(currentVoiceState), "current voice state does not persist internal test phone numbers");
+
+assert(voiceCampaignModel.includes("getVoiceCampaignReportRows"), "voice campaign model exposes detailed report rows");
+assert(voiceCampaignModel.includes('addOnInterest: "Not captured"'), "report does not invent add-on interest that is not persisted");
+assert(voiceCampaignModel.includes("deriveMainOutcome"), "report derives a compact operational conversation outcome");
+assert(voiceCampaignModel.includes("deriveNextAction"), "report derives an operational next action without raw transcript storage");
+assert(voiceCampaignDetailPage.includes("Download Detailed Report"), "campaign detail exposes detailed report download");
+assert(voiceCampaignExportRoute.includes('viewer.role !== "it_super_user"'), "campaign report export requires exact IT Super User role");
+assert(voiceCampaignExportRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "campaign report export requires system approval access");
+assert(voiceCampaignExportRoute.includes('"Conversation Quality Flag"'), "campaign report includes the approved conversation quality column");
+assert(voiceCampaignExportRoute.includes("maskMobile(row.mobileNumber)"), "campaign report preserves the voice-area mobile masking boundary");
+assert(voiceCampaignExportRoute.includes("XLSX.utils.book_append_sheet"), "campaign report is generated as an Excel workbook");
+assert(!voiceCampaignExportRoute.includes("transcript"), "campaign report does not export raw transcripts");
 
 if (!process.exitCode) console.log("External renewal voice integration regression passed.");
