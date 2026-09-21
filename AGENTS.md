@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-21 — Partner Business panoramic banner visibility fix:** branch `fix/business-banner-visible-panorama`; replaces the Business hero asset with a baseline JPEG pre-cropped to a wide 1664x487 mobile-header panorama so the skyline/growth arrow sit inside the visible 158dp hero, then renders it edge-to-edge at 100% width/height with 0.96 opacity. Search remains -10 overlap / 49 height. Runtime-0.1.0/current OTA workflows now preserve and verify the panoramic asset instead of resizing it back to 1664x936. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
 - **2026-09-21 — Partner Policies Home-header parity:** branch `ui/partner-policies-home-header-parity`; Policies runtime-0.1 header now uses the same INSUREIT Partner brand treatment, activity/profile controls and title scale as Home, while fading the existing Policies banner slightly to `0.55`. The 0.1 OTA workflow includes guards for the Home logo/icon/title treatment. **IMPLEMENTED; PR/CI/merge/OTA verification pending.** See `docs/MOBILE_EXPO_PREVIEW_HANDOFF.md`.
 
 - **2026-09-21 — Sarvam cohort dynamic greeting fix:** production cohort generation now sends `opening_line`, `customer_first_name`, and explicit-only `customer_salutation` in Sarvam `app_variables`. Greeting uses first name, removes repeated “जी”, ends with “दो मिनट बात कर सकते हैं क्या?”, and falls back to a neutral salutation when Sir/Madam is not reliably known. **MERGED to main; deployment/runtime verification pending.** See `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`.

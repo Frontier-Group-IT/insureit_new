@@ -130,18 +130,19 @@ jobs:
           # with ffmpeg is both unnecessary and is what blocked the shared 0.1 OTA.
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
           file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'JPEG image data'
+          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'baseline'
+          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q '1664x487'
 
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
           grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "height: 158" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "left: '-6%'" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "top: -8" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "width: '112%'" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "height: 182" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -q "opacity: 0.70" 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          grep -Fq "transform: [{ scale: 0.92 }]" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "left: 0" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "top: 0" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "width: '100%'" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "height: '100%'" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "opacity: 0.96" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "marginTop: -10" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q "height: 49" 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'hideTopBar' 'compat/apps/partner-app/components/partner-screen.tsx'

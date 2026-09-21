@@ -545,3 +545,8 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 - Policies title font size is reduced from `20` to Home's `14` scale; subtitle is reduced proportionally.
 - The runtime-0.1 OTA workflow now guards the `0.55` opacity, Home logo asset, Home clock icon and 14px Policies title before publishing.
 - No APK/AAB, native/runtime configuration, schema/database, or policy business-logic change.
+
+
+## 2026-09-21 — Partner Business panoramic banner visibility fix
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/business-banner-visible-panorama` addresses the live Business header still appearing flat blue. The approved skyline/growth-arrow artwork is now pre-cropped to a **1664x487 baseline JPEG panorama**, which puts the city/arrow inside the actual short mobile hero instead of leaving most of the visible crop as blue sky. The hero remains **158dp** high, but the image now fills it edge-to-edge (`left: 0`, `top: 0`, `width: 100%`, `height: 100%`, `opacity: 0.96`). Search remains `marginTop: -10` and `height: 49`. The 0.1 OTA/APK and current preview OTA workflows now verify and preserve the 1664x487 baseline JPEG instead of stretching it back to 1664x936.
