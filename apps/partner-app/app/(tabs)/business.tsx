@@ -138,7 +138,7 @@ export default function BusinessScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Notifications"
-                  onPress={() => router.push('/notifications' as never)}
+                  onPress={() => router.push('/(tabs)/more')}
                   style={({ pressed }) => [styles.heroActionButton, pressed && styles.pressed]}
                 >
                   <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
@@ -173,11 +173,11 @@ export default function BusinessScreen() {
 
           <View style={styles.searchRow}>
             <Pressable accessibilityRole="button" onPress={() => router.push('/search')} style={({ pressed }) => [styles.searchBox, pressed && styles.pressed]}>
-              <Ionicons name="search-outline" size={15} color="#4966B6" />
+              <Ionicons name="search-outline" size={21} color="#3156B8" />
               <Text numberOfLines={1} style={styles.searchText}>Search customer, vehicle number or policy number...</Text>
             </Pressable>
             <Pressable accessibilityRole="button" onPress={() => setShowRange((value) => !value)} style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}>
-              <Ionicons name="filter-outline" size={15} color="#3156B8" />
+              <Ionicons name="filter-outline" size={18} color="#3156B8" />
               <Text style={styles.filterText}>Filter</Text>
             </Pressable>
           </View>
@@ -364,7 +364,7 @@ function TrendChart({ data }: { data: PartnerBusinessPerformance['trend'] }) {
       <View style={styles.chart}>
         {data.slice(-6).map((item) => {
           const premium = Number(item.premium || 0);
-          const height = Math.max(4, Math.round((premium / max) * 68));
+          const height = Math.max(4, Math.round((premium / max) * 96));
           return (
             <View key={item.month} style={styles.barColumn}>
               <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} style={styles.barValue}>{formatCompactCurrency(premium)}</Text>
