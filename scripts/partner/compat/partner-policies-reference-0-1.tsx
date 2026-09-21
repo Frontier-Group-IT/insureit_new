@@ -127,12 +127,11 @@ export default function PoliciesScreen() {
     <View>
       <View style={styles.hero}>
         <Image
-          source={require('../../assets/figma-dashboard/hero-banner.jpg')}
+          source={require('../../assets/partner/banners/policies-header-reference.jpg')}
           style={styles.heroBackdrop}
           resizeMode="cover"
         />
         <View style={styles.heroBackdropShade} />
-        <View style={styles.heroBackdropVignette} />
 
         <View style={styles.heroTopRow}>
           <Image
@@ -167,26 +166,6 @@ export default function PoliciesScreen() {
           <Text style={styles.heroSubtitle}>Manage. Track. Grow.</Text>
         </View>
 
-        <View pointerEvents="none" style={styles.heroVehicleLeft}>
-          <Image source={PartnerAssets.products.commercialInsurance} style={styles.heroVehicleImage} resizeMode="contain" />
-        </View>
-        <View pointerEvents="none" style={styles.heroVehicleRight}>
-          <Image source={PartnerAssets.products.motorInsurance} style={styles.heroVehicleImage} resizeMode="contain" />
-        </View>
-
-        <View pointerEvents="none" style={styles.heroArtworkWrap}>
-          <Image source={PartnerAssets.actions.policyRegister} style={styles.heroArtwork} resizeMode="contain" />
-          <Image source={PartnerAssets.navigation.policies} style={styles.heroShieldArtwork} resizeMode="contain" />
-        </View>
-
-        <View pointerEvents="none" style={styles.heroWords}>
-          <Text style={styles.heroWord}>MORE</Text>
-          <Text style={styles.heroWord}>COVERAGE</Text>
-          <Text style={styles.heroWord}>SAFER</Text>
-          <Text style={styles.heroWord}>VEHICLES</Text>
-          <Text style={styles.heroWord}>BRIGHTER</Text>
-          <Text style={styles.heroWord}>TOMORROW</Text>
-        </View>
       </View>
 
       <View style={styles.searchRow}>
@@ -497,25 +476,20 @@ const styles = StyleSheet.create({
   content: { paddingBottom: 108 },
   contentEmpty: { flexGrow: 1 },
   hero: {
-    minHeight: 174,
+    minHeight: 178,
     overflow: 'hidden',
     paddingHorizontal: 16,
     paddingTop: 26,
-    backgroundColor: '#053F8F',
+    backgroundColor: '#062F72',
   },
   heroBackdrop: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    opacity: 0.92,
   },
   heroBackdropShade: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,28,74,0.28)',
-  },
-  heroBackdropVignette: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(1,29,72,0.08)',
+    backgroundColor: 'rgba(0,22,62,0.10)',
   },
   heroTopRow: {
     zIndex: 5,
@@ -560,45 +534,6 @@ const styles = StyleSheet.create({
   heroCopy: { position: 'absolute', left: 18, bottom: 31, zIndex: 5 },
   heroTitle: { color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontWeight: '700', letterSpacing: -0.18 },
   heroSubtitle: { marginTop: 1, color: '#FFFFFF', fontSize: 11.5, lineHeight: 15, fontWeight: '500' },
-  heroVehicleLeft: {
-    position: 'absolute',
-    left: 124,
-    bottom: 3,
-    width: 82,
-    height: 62,
-    opacity: 0.82,
-    zIndex: 2,
-  },
-  heroVehicleRight: {
-    position: 'absolute',
-    right: 54,
-    bottom: 0,
-    width: 84,
-    height: 62,
-    opacity: 0.78,
-    zIndex: 2,
-  },
-  heroVehicleImage: { width: '100%', height: '100%' },
-  heroArtworkWrap: {
-    position: 'absolute',
-    right: 72,
-    bottom: 2,
-    width: 126,
-    height: 118,
-    zIndex: 4,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-  },
-  heroArtwork: { width: 104, height: 104 },
-  heroShieldArtwork: {
-    position: 'absolute',
-    left: 1,
-    bottom: 7,
-    width: 55,
-    height: 55,
-  },
-  heroWords: { position: 'absolute', zIndex: 5, right: 9, bottom: 22, width: 52 },
-  heroWord: { color: '#FFFFFF', fontSize: 5.4, lineHeight: 7.1, fontWeight: '800', letterSpacing: 0.06 },
   searchRow: {
     marginTop: -17,
     marginHorizontal: 12,
