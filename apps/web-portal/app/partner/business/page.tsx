@@ -351,7 +351,6 @@ function InsightMetricCard({ label, value, meta, tone, icon: Icon }: { label: st
         <p className="mt-1 truncate text-[17px] font-black leading-none tracking-[-0.025em] text-[#142A50]">{value}</p>
         <p className="mt-1.5 truncate text-[8px] font-medium text-[#7A899E]">{meta}</p>
       </div>
-      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#6D7D96]" />
     </div>
   );
 }
@@ -368,22 +367,21 @@ function ContributionPanel({ icon: Icon, title, subtitle, rows, totalPremium }: 
           const percent = totalPremium > 0 ? Math.min(100, (item.premium / totalPremium) * 100) : 0;
           const insurerLogo = getInsurerLogo(item.label);
           return (
-            <div key={`${item.label}-${index}`} className="grid grid-cols-[22px_minmax(0,1fr)_82px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
-              <span className="grid h-5 w-5 place-items-center rounded-md bg-[#EEF2F7] text-[8px] font-black text-[#526782]">{index + 1}</span>
+            <div key={`${item.label}-${index}`} className="grid grid-cols-[32px_minmax(0,1fr)_82px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
+              <span className="flex h-8 w-8 items-center justify-center">
+                {insurerLogo ? (
+                  <Image
+                    src={insurerLogo}
+                    alt={`${item.label} logo`}
+                    width={30}
+                    height={30}
+                    className="max-h-7 max-w-[32px] object-contain"
+                  />
+                ) : null}
+              </span>
               <div className="min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2">
-                    {insurerLogo ? (
-                      <Image
-                        src={insurerLogo}
-                        alt={`${item.label} logo`}
-                        width={28}
-                        height={28}
-                        className="max-h-6 max-w-[30px] shrink-0 object-contain"
-                      />
-                    ) : null}
-                    <p className="truncate text-[8.5px] font-extrabold text-[#263A58]">{item.label}</p>
-                  </div>
+                  <p className="truncate text-[8.5px] font-extrabold text-[#263A58]">{item.label}</p>
                   <p className="text-[7.5px] font-bold text-[#657792]">{percentage(percent)}</p>
                 </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]"><div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} /></div>
