@@ -4,6 +4,7 @@ import { CarFront, ChevronLeft, ChevronRight, Search, ShieldAlert, Wrench } from
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
 import { listPartnerWebVehicles } from "@/lib/partner-vehicles";
 import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { VehicleFilters } from "./vehicle-filters";
 import { parseVehicleStatusFilter, parseVehicleTypeFilter, type VehicleStatusFilter, type VehicleTypeFilter } from "./vehicle-filter-types";
 
@@ -25,30 +26,6 @@ function buildHref(query: string, page: number, status: VehicleStatusFilter, veh
 function isRegistrationPending(status: string | null) {
   const normalized = (status ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   return normalized === "registration_pending" || normalized === "pending" || normalized === "rc_pending";
-}
-
-function normalizeManufacturerKey(value: string | null | undefined) {
-  return String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function vehicleManufacturerLogo(make: string | null | undefined) {
-  const key = normalizeManufacturerKey(make);
-  if (!key) return null;
-  if (key.includes("tata")) return "/assets/vehicle-brands/tata.svg";
-  if (key.includes("ashok leyland")) return "/assets/vehicle-brands/ashok-leyland.svg";
-  if (key.includes("mahindra")) return "/assets/vehicle-brands/mahindra.svg";
-  if (key.includes("maruti") || key.includes("suzuki")) return "/assets/vehicle-brands/maruti-suzuki.svg";
-  if (key.includes("hyundai")) return "/assets/vehicle-brands/hyundai.svg";
-  if (key.includes("honda")) return "/assets/vehicle-brands/honda.svg";
-  if (key.includes("toyota")) return "/assets/vehicle-brands/toyota.svg";
-  if (key.includes("kia")) return "/assets/vehicle-brands/kia.svg";
-  return null;
 }
 
 export default async function PartnerVehiclesPage({
@@ -111,9 +88,9 @@ export default async function PartnerVehiclesPage({
                     <td className="p-0">
                       <Link href={detailHref} prefetch={false} className="group flex w-full items-center gap-3 px-4 py-3.5 sm:px-6">
                         <span className="flex h-10 w-11 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
-                          {vehicleManufacturerLogo(vehicle.make) ? (
+                          {getVehicleBrandLogo(vehicle.make) ? (
                             <Image
-                              src={vehicleManufacturerLogo(vehicle.make)!}
+                              src={getVehicleBrandLogo(vehicle.make)!}
                               alt={vehicle.make ? `${vehicle.make} logo` : "Vehicle manufacturer"}
                               width={40}
                               height={40}
