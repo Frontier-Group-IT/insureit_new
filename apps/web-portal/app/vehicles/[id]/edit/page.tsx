@@ -109,6 +109,7 @@ export default async function EditVehiclePage({ params, searchParams }: { params
           customers={customerOptions}
           manufacturers={manufacturerOptions}
           values={formVehicle}
+          showUnregisteredRegistrationIdentity
           submitLabel="Save changes"
           beforeActions={<VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />}
           footerContent={<VehiclePolicyFooterSummary policies={policiesResult.data ?? []} customerId={vehicle.customer_id} vehicleId={vehicle.id} />}

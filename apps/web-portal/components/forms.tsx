@@ -25,7 +25,7 @@ export function CustomerForm({ action, values, agents = [], submitLabel = "Save 
   </EnterpriseForm>;
 }
 
-export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions, footerContent, createCustomerHref, allowPolicyContinuation = false }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode; footerContent?: ReactNode; createCustomerHref?: string; allowPolicyContinuation?: boolean }) {
+export function VehicleForm({ action, customers, manufacturers = [], values, submitLabel = "Save record", beforeActions, footerContent, createCustomerHref, allowPolicyContinuation = false, showUnregisteredRegistrationIdentity = false }: { action: FormAction; customers: SelectOption[]; manufacturers?: SelectOption[]; values?: VehicleValues; submitLabel?: string; beforeActions?: ReactNode; footerContent?: ReactNode; createCustomerHref?: string; allowPolicyContinuation?: boolean; showUnregisteredRegistrationIdentity?: boolean }) {
   const defaultYear = values?.year?.toString() ?? "";
   const years = defaultYear && !vehicleYearOptions.includes(defaultYear) ? [defaultYear, ...vehicleYearOptions] : vehicleYearOptions;
   const yearOptions = years.map((year) => ({ value: year, label: year }));
@@ -53,7 +53,7 @@ export function VehicleForm({ action, customers, manufacturers = [], values, sub
             </Link>
           ) : null}
         />
-        <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date} initialChassisNo={values?.chassis_no}>
+        <VehicleRegistrationFields initialMode={registrationMode} initialVehicleNo={values?.vehicle_no} initialRegistrationDate={values?.registration_date} initialChassisNo={values?.chassis_no} showUnregisteredRegistrationIdentity={showUnregisteredRegistrationIdentity}>
           <SelectField variant="onboarding" label="Manufacturer" name="make" options={manufacturers} required defaultValue={values?.make ?? ""} emptyLabel="Select manufacturer" />
           <SelectField variant="onboarding" label="MFG Year" name="year" options={yearOptions} defaultValue={defaultYear} emptyLabel="Select year" />
           <Field variant="onboarding" label="Model" name="model" placeholder="Model name" defaultValue={values?.model ?? ""} />

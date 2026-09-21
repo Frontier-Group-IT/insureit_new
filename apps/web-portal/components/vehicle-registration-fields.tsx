@@ -56,12 +56,14 @@ export function VehicleRegistrationFields({
   initialVehicleNo,
   initialRegistrationDate,
   initialChassisNo,
+  showUnregisteredRegistrationIdentity = false,
   children,
 }: {
   initialMode: VehicleRegistrationMode;
   initialVehicleNo?: string | null;
   initialRegistrationDate?: string | null;
   initialChassisNo?: string | null;
+  showUnregisteredRegistrationIdentity?: boolean;
   children?: ReactNode;
 }) {
   const [mode, setMode] = useState<VehicleRegistrationMode>(initialMode);
@@ -230,18 +232,22 @@ export function VehicleRegistrationFields({
         </>
       ) : (
         <>
-          <RegistrationReadOnlyField
-            label="Registration Number"
-            value={displayVehicleRegistrationNumber({
-              vehicle_no: initialVehicleNo,
-              registration_status: "registration_pending",
-              chassis_no: initialChassisNo,
-            })}
-          />
-          <RegistrationReadOnlyField
-            label="Registration Date"
-            value={formatRegistrationDisplayDate(initialRegistrationDate)}
-          />
+          {showUnregisteredRegistrationIdentity ? (
+            <>
+              <RegistrationReadOnlyField
+                label="Registration Number"
+                value={displayVehicleRegistrationNumber({
+                  vehicle_no: initialVehicleNo,
+                  registration_status: "registration_pending",
+                  chassis_no: initialChassisNo,
+                })}
+              />
+              <RegistrationReadOnlyField
+                label="Registration Date"
+                value={formatRegistrationDisplayDate(initialRegistrationDate)}
+              />
+            </>
+          ) : null}
           {children}
         </>
       )}
