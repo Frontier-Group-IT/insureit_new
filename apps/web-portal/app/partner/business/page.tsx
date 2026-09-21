@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -18,6 +19,7 @@ import {
   listPartnerWebPolicies,
   type PartnerPolicyRow,
 } from "@/lib/partner-web";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -364,11 +366,26 @@ function ContributionPanel({ icon: Icon, title, subtitle, rows, totalPremium }: 
       <div className="mt-3 grid gap-1.5 xl:grid-cols-2">
         {rows.length ? rows.map((item, index) => {
           const percent = totalPremium > 0 ? Math.min(100, (item.premium / totalPremium) * 100) : 0;
+          const insurerLogo = getInsurerLogo(item.label);
           return (
             <div key={`${item.label}-${index}`} className="grid grid-cols-[22px_minmax(0,1fr)_82px] items-center gap-2 rounded-lg border border-[#E6EBF2] bg-[#FAFBFD] px-2.5 py-2">
               <span className="grid h-5 w-5 place-items-center rounded-md bg-[#EEF2F7] text-[8px] font-black text-[#526782]">{index + 1}</span>
               <div className="min-w-0">
-                <div className="flex items-center justify-between gap-2"><p className="truncate text-[8.5px] font-extrabold text-[#263A58]">{item.label}</p><p className="text-[7.5px] font-bold text-[#657792]">{percentage(percent)}</p></div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {insurerLogo ? (
+                      <Image
+                        src={insurerLogo}
+                        alt={`${item.label} logo`}
+                        width={28}
+                        height={28}
+                        className="max-h-6 max-w-[30px] shrink-0 object-contain"
+                      />
+                    ) : null}
+                    <p className="truncate text-[8.5px] font-extrabold text-[#263A58]">{item.label}</p>
+                  </div>
+                  <p className="text-[7.5px] font-bold text-[#657792]">{percentage(percent)}</p>
+                </div>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#E8EDF3]"><div className="h-full rounded-full bg-[#3D79E8]" style={{ width: `${percent}%` }} /></div>
               </div>
               <p className="text-right text-[8px] font-extrabold text-[#27405F]">{currency(item.premium)}</p>
