@@ -461,3 +461,8 @@ The My Work section is removed. INSUREIT Stories is the final Home section, has 
 ## 2026-09-21 — Partner Business clean reference header
 
 **IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `ui/partner-business-clean-reference-header` keeps the approved skyline/up-arrow `assets/figma-dashboard/hero-banner.jpg` background and tightens its crop/hero height to the latest reference. The Business hero now contains only INSUREIT branding, the Business title, notification/profile controls, and the overlapping search/filter shell. Removed from both current Partner and runtime-0.1.0 compatibility source: `Track, Analyse, Grow.`, the `Good Morning, Partner` greeting, and the `MORE / POLICIES / STRONGER / RELATIONSHIPS / BRIGHTER / TOMORROW` stack. No backend, schema, RLS, auth, native dependency or runtime-version change.
+
+
+## 2026-09-21 — Partner Business uploaded-background + Home-header parity
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `ui/business-header-home-parity-reference-bg` updates the Business hero to use the user-approved blue skyline + glowing growth bars + white upward-arrow artwork as `apps/partner-app/assets/business-header-reference.jpg`. The header now reuses the Home INSUREIT Partner logo asset, Home-style bell control, Home-style initials profile control, and positions the `Business` title directly above the overlapping Search/Filter shell. The same source is mirrored into `scripts/partner/compat/partner-business-reference-0-1.tsx`, and both 0.1 compatibility workflows copy the new background asset into the locked runtime-0.1.0 checkout before typecheck/publish/build. No backend, schema, RLS, auth, native dependency or runtime-version change is included.
