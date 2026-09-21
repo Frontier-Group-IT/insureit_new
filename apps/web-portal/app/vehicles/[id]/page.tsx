@@ -6,6 +6,7 @@ import { VehiclePolicyFooterSummary, type VehicleLinkedPolicy } from "@/componen
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 type VehicleDetail = {
   id: string;
@@ -58,14 +59,14 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
     <AppShell title="Vehicle details" backHref="/vehicles">
       <section className="mx-auto max-w-[1100px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-[#E5ECF5] bg-[#F8FAFC] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#17365D] text-white"><CarFront className="h-5 w-5" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Read-only vehicle record</p><h1 className="mt-1 font-mono text-[18px] font-semibold text-[#0F172A]">{displayVehicleNo(data)}</h1><p className="mt-1 text-[10px] text-[#64748B]">{data.vehicle_type} · {[data.make, data.model].filter(Boolean).join(" ") || "Vehicle details"}</p></div></div>
+          <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#17365D] text-white"><CarFront className="h-5 w-5" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Read-only vehicle record</p><h1 className="mt-1 font-mono text-[18px] font-semibold text-[#0F172A]">{displayVehicleRegistrationNumber(data)}</h1><p className="mt-1 text-[10px] text-[#64748B]">{data.vehicle_type} · {[data.make, data.model].filter(Boolean).join(" ") || "Vehicle details"}</p></div></div>
           <span className="inline-flex items-center gap-1.5 self-start rounded-full border border-[#CFE0F2] bg-[#EFF6FF] px-3 py-1.5 text-[9px] font-bold text-[#315B9A]"><Eye className="h-3.5 w-3.5" />View only</span>
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-2">
           <Info label="Customer" value={data.customers?.contact_name} />
           <Info label="Customer code" value={data.customers?.customer_code} />
           <Info label="Registration status" value={pretty(data.registration_status)} />
-          <Info label="Registration number" value={displayVehicleNo(data)} />
+          <Info label="Registration number" value={displayVehicleRegistrationNumber(data)} />
           <Info label="Class" value={data.vehicle_type} />
           <Info label="Make / model" value={[data.make, data.model].filter(Boolean).join(" ")} />
           <Info label="Manufacturing year" value={data.year ? String(data.year) : null} />
@@ -93,5 +94,4 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
 function Info({ label, value }: { label: string; value: string | null | undefined }) { return <div className="rounded-xl border border-[#E2E8F0] bg-[#FAFCFF] px-4 py-3"><p className="text-[8.5px] font-bold uppercase tracking-[.07em] text-[#64748B]">{label}</p><p className="mt-1.5 text-[11px] font-semibold text-[#24324A]">{value?.trim() || "—"}</p></div>; }
 function pretty(value: string | null) { return value ? value.replaceAll("_", " ").replace(/\b\w/g, (m) => m.toUpperCase()) : "—"; }
 function formatDate(value: string | null) { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("en-IN"); }
-function displayVehicleNo(vehicle: Pick<VehicleDetail, "vehicle_no" | "registration_status">) { const no = vehicle.vehicle_no?.toUpperCase() ?? ""; return vehicle.registration_status === "registration_pending" || no.startsWith("NEW-") || no.startsWith("PENDING-") ? "Registration pending" : vehicle.vehicle_no; }
 function capacity(vehicle: VehicleDetail) { if (vehicle.gvw_kg) return `${vehicle.gvw_kg} kg GVW`; if (vehicle.seating_capacity) return `${vehicle.seating_capacity} seats`; if (vehicle.engine_capacity_cc) return `${vehicle.engine_capacity_cc} cc`; return "—"; }
