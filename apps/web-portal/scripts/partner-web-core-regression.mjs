@@ -157,6 +157,11 @@ if (fs.existsSync(partnerClaimSourceMigrationPath)) {
   assert(migration.includes("f.policy_service_source"), "Partner claims RPC result must project policy_service_source");
 }
 
+const internalRenewalPage = read("app/partner/renewals/page.tsx");
+assert(internalRenewalPage.includes('from "@/lib/insurer-logo"'), "Internal Renewal must use the shared insurer logo resolver");
+assert(internalRenewalPage.includes("getInsurerLogo(row.insurer_name)"), "Internal Renewal first column must resolve insurer logo from insurer_name");
+assert(internalRenewalPage.includes("Insurance company"), "Internal Renewal insurer logo must keep accessible fallback alt text");
+
 const externalRenewalPage = read("app/partner/renewals/external/page.tsx");
 assert(externalRenewalPage.includes('from "@/lib/vehicle-brand-logo"'), "External Renewal must use the shared vehicle brand logo resolver");
 assert(externalRenewalPage.includes("getVehicleBrandLogo(row.vehicle_make)"), "External Renewal Customer / Business column must resolve manufacturer logos from vehicle_make");
