@@ -202,6 +202,9 @@ export type DashboardCurrentData = {
   } | null;
   claims: {
     open: number;
+    settled: number;
+    openAmount: number;
+    settledAmount: number;
     mtd: number;
     assistanceRequested: number;
     pendingDocuments: number;
@@ -249,7 +252,8 @@ export type DashboardCurrentData = {
   warnings: string[];
 };
 
-const closedClaimStatuses = new Set(["Claim Complete", "Settled", "Closed"]);
+const closedClaimStatuses = new Set(["Claim Complete", "Settled", "Closed", "Rejected"]);
+const settledClaimStatuses = new Set(["Settled", "Claim Complete"]);
 const openIntermediaryQueueStatuses = new Set(["submitted", "under_review", "changes_requested"]);
 
 export async function getDashboardCurrentData(
@@ -531,6 +535,7 @@ export async function getDashboardCurrentData(
   let claimHealth: DashboardCurrentData["claims"] = null;
   if (access.viewClaims && !claimResult.error) {
     const openClaims = claims.filter((row) => !closedClaimStatuses.has(row.current_status));
+    const settledClaims = claims.filter((row) => settledClaimStatuses.has(row.current_status));
     const openIds = openClaims.map((row) => row.id);
     let financialRows: ClaimFinancialRow[] = [];
     let pendingDocuments = 0;
@@ -555,12 +560,16 @@ export async function getDashboardCurrentData(
     }
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
+    const estimateExposure = sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss");
     claimHealth = {
       open: openClaims.length,
+      settled: settledClaims.length,
+      openAmount: estimateExposure,
+      settledAmount: settledClaims.reduce((sum, row) => sum + numberValue(row.settlement_amount), 0),
       mtd: claims.filter((row) => row.created_at.slice(0, 10) >= monthStartKey).length,
       assistanceRequested: openClaims.filter((row) => row.assistance_status === "requested").length,
       pendingDocuments,
-      estimateExposure: sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss"),
+      estimateExposure,
       approvedExposure: sumClaimFinancial(openClaims, financialByClaim, "approved_amount", "approved_amount"),
       billExposure: sumClaimFinancial(openClaims, financialByClaim, "bill_amount"),
       doExposure: sumClaimFinancial(openClaims, financialByClaim, "do_amount", "settlement_amount"),
