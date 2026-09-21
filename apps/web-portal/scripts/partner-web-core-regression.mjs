@@ -175,6 +175,13 @@ assert(partnerPayoutPage.includes("getInsurerLogo(insurerName)"), "Partner Payou
 assert(partnerPayoutPage.includes("Insurance company"), "Partner Payout insurer logo must keep accessible fallback alt text");
 
 const partnerClaimsPage = read("app/partner/claims/page.tsx");
+const operationsClaimsWorkspace = read("app/claims/claims-workspace.tsx");
+assert(operationsClaimsWorkspace.includes('from "@/lib/insurer-logo"'), "Operations Claims must use the shared insurer logo resolver");
+assert(!operationsClaimsWorkspace.includes(">Sr. No.</th>"), "Operations Claims must not render the serial-number column");
+assert(operationsClaimsWorkspace.includes("getInsurerLogo(insurerName)"), "Operations Claims Customer / Mobile column must resolve insurer logos");
+assert(operationsClaimsWorkspace.includes("Insurance company"), "Operations Claims insurer logo must keep accessible fallback alt text");
+assert(operationsClaimsWorkspace.includes("colSpan={10}"), "Operations Claims empty state must match the 10-column table");
+
 const partnerClaimsPortfolio = read("app/partner/claims/claims-portfolio.tsx");
 assert(!partnerClaimsPortfolio.includes("Sr. No."), "Partner Claims must not show the Sr. No. column");
 assert(partnerClaimsPortfolio.includes('from "@/lib/insurer-logo"'), "Partner Claims must use the shared insurer logo resolver");
