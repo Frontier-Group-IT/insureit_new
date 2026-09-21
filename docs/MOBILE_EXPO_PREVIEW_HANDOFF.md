@@ -471,3 +471,15 @@ The My Work section is removed. INSUREIT Stories is the final Home section, has 
 ## 2026-09-21 — Partner Business visible banner/Home-size fix
 
 **IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/business-header-home-size-visible-banner` replaces `apps/partner-app/assets/business-header-reference.jpg` with the exact user-approved uploaded blue skyline/growth-arrow artwork (mobile-optimized 600px derivative), changes the Business hero to the same runtime-0.1.0 Home hero size/framing (`height: 158`, backdrop `left: -6%`, `top: -8`, `width: 112%`, `height: 182`, `opacity: 0.70`, `scale: 0.92`), restores the Home brand lockup treatment, and matches the Home search overlap/height (`-10`, `49`). The same source is mirrored to the 0.1 compatibility Business file. No backend/schema/RLS/auth/native/runtime change.
+
+
+## 2026-09-21 — Partner 0.1.0 Policies banner delivery correction
+
+**IMPLEMENTED; PR #2191; CI/merge/OTA verification pending.**
+
+- Branch: `fix/partner-policies-home-size-banner-0-1`.
+- The Partner Policies compatibility screen uses `apps/partner-app/assets/partner/banners/policies-header-reference.jpg`, the user-supplied Policies banner.
+- Policies hero geometry now matches the approved Home hero: height `158`, backdrop `left: -6%`, `top: -8`, `width: 112%`, `height: 182`, opacity `0.70`, scale `0.92`, and search overlap `-10`.
+- Root cause of the prior installed-app mismatch: `.github/workflows/publish-partner-0-1-home-hero-reference-once.yml` was still installing the Policies screen from pinned commit `9c2379b1bafc3189b6027f536e113f0b1f9ec46b`, so later Policies banner changes in current tooling were not included in runtime 0.1.0 OTA bundles.
+- The workflow now copies the current `scripts/partner/compat/partner-policies-reference-0-1.tsx` and the current Policies banner into the approved 0.1 compatibility checkout, with guards for the banner path and Home geometry.
+- No native/runtime configuration change and no APK/AAB is required. After merge, publish through the existing runtime `0.1.0` preview OTA workflow and perform two cold launches before claiming installed-device verification.
