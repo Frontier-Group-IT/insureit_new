@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -7,7 +8,8 @@ import {
   ReceiptIndianRupee,
 } from "lucide-react";
 import { PartnerPortalShell } from "@/components/partner-portal/partner-portal-shell";
-import { getPartnerWebPayoutSummary } from "@/lib/partner-web";
+import { getPartnerWebPayoutSummary, getPartnerWebPolicyDetail } from "@/lib/partner-web";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import { PayoutSearch } from "./payout-search";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +69,21 @@ export default async function PartnerPayoutPage({ searchParams }: { searchParams
   const q = query.q?.trim() ?? "";
   const normalizedQuery = q.toLowerCase();
   const payout = await getPartnerWebPayoutSummary();
+
+  const insurerByPolicyId = new Map<string, string | null>();
+  if (payout.available && payout.recent.length) {
+    const policyDetails = await Promise.all(
+      payout.recent.map(async (row) => {
+        try {
+          const detail = await getPartnerWebPolicyDetail(row.policy_id);
+          return [row.policy_id, detail.insurer.name] as const;
+        } catch {
+          return [row.policy_id, null] as const;
+        }
+      }),
+    );
+    policyDetails.forEach(([policyId, insurerName]) => insurerByPolicyId.set(policyId, insurerName));
+  }
 
   const recent = payout.available && normalizedQuery
     ? payout.recent.filter((row) => {
@@ -147,15 +164,34 @@ export default async function PartnerPayoutPage({ searchParams }: { searchParams
                   </div>
                   {recent.map((row) => {
                     const status = row.status || row.commercial_status;
+                    const insurerName = insurerByPolicyId.get(row.policy_id) ?? null;
+                    const insurerLogo = getInsurerLogo(insurerName);
                     return (
                       <Link
                         key={row.id}
                         href={`/partner/policies/${encodeURIComponent(row.policy_id)}`}
                         className="group grid min-h-[54px] grid-cols-[minmax(300px,1.4fr)_minmax(140px,.55fr)_minmax(120px,.45fr)_64px] items-center border-b border-[#E7ECF3] px-4 py-2 transition last:border-b-0 hover:bg-[#F8FBFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#3156B8]/20 sm:px-5"
                       >
-                        <div className="min-w-0">
-                          <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#172D53]">{row.policy_no}</p>
-                          <p className="mt-0.5 break-words text-[9px] font-medium leading-4 text-[#61779A]">{row.customer_name}</p>
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span className="flex h-9 w-10 shrink-0 items-center justify-center overflow-visible bg-transparent p-0">
+                            {insurerLogo ? (
+                              <Image
+                                src={insurerLogo}
+                                alt={insurerName ? `${insurerName} logo` : "Insurance company"}
+                                width={34}
+                                height={34}
+                                className="max-h-8 max-w-[38px] w-auto object-contain"
+                              />
+                            ) : (
+                              <span className="grid h-8 w-8 place-items-center rounded-full bg-[#EEF4FF] text-[#5A7494]">
+                                <FileText className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="break-words text-[10.5px] font-extrabold leading-4 text-[#172D53]">{row.policy_no}</p>
+                            <p className="mt-0.5 break-words text-[9px] font-medium leading-4 text-[#61779A]">{row.customer_name}</p>
+                          </div>
                         </div>
                         <div>
                           <p className="text-[10.5px] font-extrabold text-[#182E52]">{currency(row.amount)}</p>
