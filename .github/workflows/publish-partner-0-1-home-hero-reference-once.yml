@@ -124,6 +124,29 @@ jobs:
             'compat/apps/partner-app/components/partner-screen.tsx'
           cp tooling/apps/partner-app/assets/business-header-reference.jpg \
             compat/apps/partner-app/assets/business-header-reference.jpg
+
+          # The Business banner currently stored in main is a progressive JPEG.
+          # Android/Expo runtime 0.1.0 can decode it unreliably, which leaves only
+          # the hero's blue fallback background visible. Normalize the copied
+          # compatibility asset to a baseline 1664x936 JPEG before Metro/EAS.
+          if ! command -v ffmpeg >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          ffmpeg -hide_banner -loglevel error -y \
+            -i compat/apps/partner-app/assets/business-header-reference.jpg \
+            -vf "scale=1664:936:flags=lanczos" \
+            -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p \
+            /tmp/business-header-reference.jpg
+          mv /tmp/business-header-reference.jpg \
+            compat/apps/partner-app/assets/business-header-reference.jpg
+
+          test -s compat/apps/partner-app/assets/business-header-reference.jpg
+          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'JPEG image data'
+          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'baseline'
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 compat/apps/partner-app/assets/business-header-reference.jpg)" = "1664"
+          test "$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 compat/apps/partner-app/assets/business-header-reference.jpg)" = "936"
+
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
