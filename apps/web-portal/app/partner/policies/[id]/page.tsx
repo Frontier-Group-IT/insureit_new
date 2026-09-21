@@ -177,20 +177,13 @@ export default async function PartnerPolicyDetailPage({ params }: { params: Prom
 
         <div className="mt-4">
           <StandardActivityStatusCard
-            items={[
-              {
-                id: "policy-status",
-                title: "Policy status",
-                meta: humanize(statusComplete),
-                at: data.policy.issuance_date,
-              },
-              {
-                id: "policy-period",
-                title: "Policy period",
-                meta: `${dateInput(data.policy.start_date)} → ${dateInput(data.policy.end_date)}`,
-                at: data.policy.start_date,
-              },
-            ]}
+            items={data.activity_history.map((activity) => ({
+              id: activity.id,
+              title: activity.action,
+              meta: activity.actor_name ? `Created By: ${activity.actor_name}` : null,
+              at: activity.at,
+            }))}
+            emptyText="Activity not recorded"
           />
         </div>
       </div>

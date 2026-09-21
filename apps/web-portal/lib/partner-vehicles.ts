@@ -106,6 +106,12 @@ export type PartnerVehicleDetail = {
     policies: number;
     claims: number;
   };
+  activity_history: {
+    id: string;
+    action: string;
+    actor_name: string;
+    at: string;
+  }[];
 };
 
 export async function getPartnerWebVehicleDetail(vehicleId: string): Promise<PartnerVehicleDetail> {
