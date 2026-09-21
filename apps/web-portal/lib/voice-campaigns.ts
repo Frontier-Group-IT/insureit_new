@@ -1,0 +1,557 @@
+import "server-only";
+
+import * as XLSX from "xlsx";
+
+import { normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
+import { enrichExternalRenewalOpportunity } from "@/lib/external-renewal-authbridge";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+
+const MAX_ROWS = 100;
+const TERMINAL = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost", "duplicate"]);
+const RC_HEADERS = new Set(["rcno", "rcnumber", "registrationno", "registrationnumber", "vehicleno", "vehiclenumber"]);
+const MOBILE_HEADERS = new Set(["mobileno", "mobilenumber", "mobile", "phone", "phonenumber"]);
+
+type ExistingOpportunity = {
+  id: string;
+  registration_no: string | null;
+  opportunity_status: string;
+  is_active: boolean;
+  ai_profile_overrides: Record<string, unknown> | null;
+};
+
+export type VoiceCampaignListRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  total_rows: number;
+  accepted_rows: number;
+  rejected_rows: number;
+  duplicate_rows: number;
+  enriched_rows: number;
+  started_at: string | null;
+  created_at: string;
+};
+
+type VoiceCampaignDetailRow = VoiceCampaignListRow & {
+  partner_id: string;
+  source_batch_id: string | null;
+  dispatch_completed_at: string | null;
+  completed_at: string | null;
+  updated_at: string;
+};
+
+type VoiceCampaignMemberRow = {
+  id: string;
+  campaign_id: string;
+  opportunity_id: string;
+  source_row_number: number;
+  import_status: string;
+  hold_reason: string | null;
+  enrichment_status: string;
+  enrichment_error: string | null;
+  dispatch_status: string;
+  dispatch_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type VoiceCampaignOpportunityRow = {
+  id: string;
+  registration_no: string | null;
+  mobile: string | null;
+  customer_name: string | null;
+  contact_name: string | null;
+  vehicle_make: string | null;
+  vehicle_model: string | null;
+  current_insurer: string | null;
+  rc_enrichment_details: Record<string, unknown> | null;
+  ai_profile_overrides: Record<string, unknown> | null;
+};
+
+type VoiceCampaignAttemptRow = {
+  opportunity_id: string;
+  submission_status: string;
+  call_disposition: string | null;
+  created_at: string;
+};
+
+export type VoiceCampaignMemberView = VoiceCampaignMemberRow & {
+  opportunityId: string;
+  registrationNumber: string | null;
+  mobile: string | null;
+  customerName: string | null;
+  vehicle: string | null;
+  insurer: string | null;
+  policyExpiryDate: string | null;
+  attemptStatus: string | null;
+  callDisposition: string | null;
+};
+
+function normalizeHeader(value: unknown) {
+  return String(value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeMobile(value: unknown) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  const ten = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  return /^[6-9][0-9]{9}$/.test(ten) ? ten : null;
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function maskMobile(value: string | null) {
+  if (!value) return null;
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 4 ? "••••••" + digits.slice(-4) : "••••";
+}
+
+async function resolvePartnerId() {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("external_renewal_import_batches")
+    .select("partner_id")
+    .eq("status", "published")
+    .limit(200)
+    .returns<Array<{ partner_id: string }>>();
+
+  if (error) throw new Error("Could not resolve the External Renewal campaign scope.");
+
+  const ids = [...new Set((data ?? []).map((row) => row.partner_id).filter(Boolean))];
+  if (ids.length !== 1) {
+    throw new Error(
+      ids.length
+        ? "Voice campaigns require one External Renewal partner scope."
+        : "No published External Renewal partner scope is configured.",
+    );
+  }
+  return ids[0];
+}
+
+function parseWorkbook(buffer: ArrayBuffer) {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) throw new Error("The Excel file has no worksheet.");
+
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], {
+    header: 1,
+    raw: false,
+    defval: "",
+  });
+
+  if (!rows.length) throw new Error("The Excel file is empty.");
+
+  const headers = rows[0].map(normalizeHeader);
+  const rcIndex = headers.findIndex((value) => RC_HEADERS.has(value));
+  const mobileIndex = headers.findIndex((value) => MOBILE_HEADERS.has(value));
+
+  if (rcIndex < 0 || mobileIndex < 0) {
+    throw new Error('Excel must contain the required fields "RC No." and "Mobile No.".');
+  }
+
+  const dataRows = rows
+    .slice(1)
+    .map((row, index) => ({ row, sourceRowNumber: index + 2 }))
+    .filter(({ row }) => row.some((value) => String(value ?? "").trim()));
+
+  if (!dataRows.length) throw new Error("The Excel file has no customer rows.");
+  if (dataRows.length > MAX_ROWS) throw new Error("A campaign can contain a maximum of 100 customers.");
+
+  return dataRows.map(({ row, sourceRowNumber }) => ({
+    sourceRowNumber,
+    registrationNumber: normalizeVehicleRegistrationNumber(String(row[rcIndex] ?? "")),
+    mobile: normalizeMobile(row[mobileIndex]),
+  }));
+}
+
+export async function getVoiceCampaigns(limit = 12) {
+  const admin = createSupabaseAdminClient();
+  const { data, error } = await admin
+    .from("voice_campaigns")
+    .select("id,name,description,status,total_rows,accepted_rows,rejected_rows,duplicate_rows,enriched_rows,started_at,created_at")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 50))
+    .returns<VoiceCampaignListRow[]>();
+
+  if (error) throw new Error("Voice campaigns are unavailable.");
+  return data ?? [];
+}
+
+export async function createVoiceCampaignFromWorkbook(input: {
+  name: string;
+  description?: string | null;
+  fileName: string;
+  fileBuffer: ArrayBuffer;
+  requestedByAuthUserId: string;
+}) {
+  const name = input.name.replace(/\s+/g, " ").trim();
+  if (!name) throw new Error("Campaign name is required.");
+  if (name.length > 120) throw new Error("Campaign name is too long.");
+  if (!/\.(xlsx|xls|csv)$/i.test(input.fileName)) throw new Error("Upload an Excel (.xlsx/.xls) or CSV file.");
+  if (input.fileBuffer.byteLength > 2_500_000) throw new Error("Campaign file is too large.");
+
+  const rows = parseWorkbook(input.fileBuffer);
+  const partnerId = await resolvePartnerId();
+  const admin = createSupabaseAdminClient();
+
+  const { data: campaign, error: campaignError } = await admin
+    .from("voice_campaigns")
+    .insert({
+      partner_id: partnerId,
+      name,
+      description: input.description?.replace(/\s+/g, " ").trim().slice(0, 500) || null,
+      status: "draft",
+      total_rows: rows.length,
+      created_by_auth_user_id: input.requestedByAuthUserId,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (campaignError || !campaign) throw new Error("Could not create the voice campaign.");
+
+  const { data: batch, error: batchError } = await admin
+    .from("external_renewal_import_batches")
+    .insert({
+      partner_id: partnerId,
+      source_name: "IT Voice Campaign · " + name,
+      source_file_name: input.fileName.slice(0, 200),
+      source_period: "IT-controlled voice campaign",
+      status: "validated",
+      total_rows: rows.length,
+      imported_by: input.requestedByAuthUserId,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (batchError || !batch) throw new Error("Could not create the campaign source batch.");
+
+  await admin.from("voice_campaigns").update({ source_batch_id: batch.id }).eq("id", campaign.id);
+
+  const { data: existingRows, error: existingError } = await admin
+    .from("external_renewal_opportunities")
+    .select("id,registration_no,opportunity_status,is_active,ai_profile_overrides")
+    .eq("partner_id", partnerId)
+    .not("registration_no", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(10000)
+    .returns<ExistingOpportunity[]>();
+
+  if (existingError) throw new Error("Could not check existing renewal prospects.");
+
+  const existingByRc = new Map<string, ExistingOpportunity>();
+  for (const existing of existingRows ?? []) {
+    const rc = normalizeVehicleRegistrationNumber(existing.registration_no ?? "");
+    if (rc && !existingByRc.has(rc)) existingByRc.set(rc, existing);
+  }
+
+  const seen = new Set<string>();
+  let accepted = 0;
+  let rejected = 0;
+  let duplicates = 0;
+
+  for (const row of rows) {
+    if (!row.registrationNumber || !row.mobile) {
+      rejected += 1;
+      continue;
+    }
+
+    if (seen.has(row.registrationNumber)) {
+      duplicates += 1;
+      continue;
+    }
+    seen.add(row.registrationNumber);
+
+    const existing = existingByRc.get(row.registrationNumber);
+
+    if (existing && (TERMINAL.has(existing.opportunity_status) || !existing.is_active)) {
+      duplicates += 1;
+      await admin.from("voice_campaign_members").insert({
+        campaign_id: campaign.id,
+        opportunity_id: existing.id,
+        source_row_number: row.sourceRowNumber,
+        import_status: "held",
+        hold_reason: "Existing RC is closed or suppressed.",
+        enrichment_status: "held",
+        dispatch_status: "held",
+      });
+      continue;
+    }
+
+    let opportunityId = existing?.id ?? null;
+
+    if (existing) {
+      const overrides =
+        existing.ai_profile_overrides && typeof existing.ai_profile_overrides === "object"
+          ? { ...existing.ai_profile_overrides }
+          : {};
+      overrides.mobile = row.mobile;
+
+      const { error } = await admin
+        .from("external_renewal_opportunities")
+        .update({
+          ai_profile_overrides: overrides,
+          ai_profile_updated_at: new Date().toISOString(),
+          ai_profile_updated_by: input.requestedByAuthUserId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+
+      if (error) throw new Error("Could not prepare an existing renewal prospect.");
+    } else {
+      const { data: inserted, error } = await admin
+        .from("external_renewal_opportunities")
+        .insert({
+          batch_id: batch.id,
+          partner_id: partnerId,
+          source_row_number: row.sourceRowNumber,
+          mobile: row.mobile,
+          registration_no: row.registrationNumber,
+          invoice_date: todayIso(),
+          opportunity_status: "new",
+          is_active: true,
+          source_payload: { entry_type: "it_voice_campaign", campaign_id: campaign.id },
+          voice_queue_source: "it_campaign",
+        })
+        .select("id")
+        .single<{ id: string }>();
+
+      if (error || !inserted) throw new Error("Could not create a campaign prospect.");
+      opportunityId = inserted.id;
+    }
+
+    const { error: memberError } = await admin.from("voice_campaign_members").insert({
+      campaign_id: campaign.id,
+      opportunity_id: opportunityId,
+      source_row_number: row.sourceRowNumber,
+      import_status: "accepted",
+      enrichment_status: "pending",
+      dispatch_status: "pending",
+    });
+
+    if (memberError) throw new Error("Could not add a campaign customer.");
+    accepted += 1;
+  }
+
+  const status = accepted ? "enriching" : "needs_review";
+
+  await Promise.all([
+    admin
+      .from("voice_campaigns")
+      .update({
+        status,
+        accepted_rows: accepted,
+        rejected_rows: rejected,
+        duplicate_rows: duplicates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", campaign.id),
+    admin
+      .from("external_renewal_import_batches")
+      .update({
+        accepted_rows: accepted,
+        rejected_rows: rejected,
+        duplicate_rows: duplicates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", batch.id),
+  ]);
+
+  return { campaignId: campaign.id };
+}
+
+export async function enrichVoiceCampaignBatch(campaignId: string) {
+  const admin = createSupabaseAdminClient();
+
+  const { data: campaign } = await admin
+    .from("voice_campaigns")
+    .select("status")
+    .eq("id", campaignId)
+    .maybeSingle<{ status: string }>();
+
+  if (!campaign || !["enriching", "needs_review", "ready"].includes(campaign.status)) {
+    throw new Error("Campaign cannot be enriched now.");
+  }
+
+  const { data: members, error } = await admin
+    .from("voice_campaign_members")
+    .select("id,opportunity_id")
+    .eq("campaign_id", campaignId)
+    .eq("import_status", "accepted")
+    .eq("enrichment_status", "pending")
+    .order("source_row_number", { ascending: true })
+    .limit(5)
+    .returns<Array<{ id: string; opportunity_id: string }>>();
+
+  if (error) throw new Error("Could not read the campaign enrichment queue.");
+
+  for (const member of members ?? []) {
+    try {
+      const result = await enrichExternalRenewalOpportunity(member.opportunity_id);
+      const ready = result.status === "ready";
+
+      await admin
+        .from("voice_campaign_members")
+        .update({
+          enrichment_status: ready ? "ready" : "failed",
+          enrichment_error: ready ? null : "No usable RC details.",
+          dispatch_status: ready ? "pending" : "held",
+          dispatch_error: ready ? null : "RC enrichment is not ready.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", member.id);
+    } catch (errorValue) {
+      await admin
+        .from("voice_campaign_members")
+        .update({
+          enrichment_status: "failed",
+          enrichment_error:
+            errorValue instanceof Error ? errorValue.message.slice(0, 180) : "RC enrichment failed.",
+          dispatch_status: "held",
+          dispatch_error: "RC enrichment failed.",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", member.id);
+    }
+  }
+
+  const { data: states } = await admin
+    .from("voice_campaign_members")
+    .select("enrichment_status")
+    .eq("campaign_id", campaignId)
+    .returns<Array<{ enrichment_status: string }>>();
+
+  const all = states ?? [];
+  const pending = all.filter((row) => row.enrichment_status === "pending").length;
+  const readyTotal = all.filter((row) => row.enrichment_status === "ready").length;
+  const exceptions = all.filter((row) => ["failed", "held"].includes(row.enrichment_status)).length;
+  const status = pending ? "enriching" : exceptions ? "needs_review" : "ready";
+
+  await admin
+    .from("voice_campaigns")
+    .update({ status, enriched_rows: readyTotal, updated_at: new Date().toISOString() })
+    .eq("id", campaignId);
+
+  return { remaining: pending, readyTotal, status, done: pending === 0 };
+}
+
+export async function setVoiceCampaignStatus(campaignId: string, action: "start" | "pause" | "resume") {
+  const admin = createSupabaseAdminClient();
+
+  const { data: campaign } = await admin
+    .from("voice_campaigns")
+    .select("status")
+    .eq("id", campaignId)
+    .maybeSingle<{ status: string }>();
+
+  if (!campaign) throw new Error("Campaign unavailable.");
+
+  let status: string;
+
+  if (action === "start") {
+    if (!["ready", "needs_review"].includes(campaign.status)) throw new Error("Finish enrichment first.");
+    status = "running";
+  } else if (action === "pause") {
+    if (campaign.status !== "running") throw new Error("Only running campaigns can pause.");
+    status = "paused";
+  } else {
+    if (campaign.status !== "paused") throw new Error("Only paused campaigns can resume.");
+    status = "running";
+  }
+
+  await admin
+    .from("voice_campaigns")
+    .update({
+      status,
+      ...(action === "start" ? { started_at: new Date().toISOString() } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", campaignId);
+
+  return { status };
+}
+
+export async function getVoiceCampaignDetail(campaignId: string) {
+  const admin = createSupabaseAdminClient();
+
+  const { data: campaign, error } = await admin
+    .from("voice_campaigns")
+    .select("*")
+    .eq("id", campaignId)
+    .maybeSingle<VoiceCampaignDetailRow>();
+
+  if (error || !campaign) return null;
+
+  const { data: members } = await admin
+    .from("voice_campaign_members")
+    .select("*")
+    .eq("campaign_id", campaignId)
+    .order("source_row_number", { ascending: true })
+    .limit(100)
+    .returns<VoiceCampaignMemberRow[]>();
+
+  const opportunityIds = (members ?? []).map((row) => row.opportunity_id);
+  const opportunityMap = new Map<string, VoiceCampaignOpportunityRow>();
+  const attemptMap = new Map<string, VoiceCampaignAttemptRow>();
+
+  if (opportunityIds.length) {
+    const { data: opportunities } = await admin
+      .from("external_renewal_opportunities")
+      .select("id,registration_no,mobile,customer_name,contact_name,vehicle_make,vehicle_model,current_insurer,rc_enrichment_details,ai_profile_overrides")
+      .in("id", opportunityIds)
+      .returns<VoiceCampaignOpportunityRow[]>();
+
+    for (const row of opportunities ?? []) opportunityMap.set(row.id, row);
+
+    const { data: attempts } = await admin
+      .from("external_renewal_voice_attempts")
+      .select("opportunity_id,submission_status,call_disposition,created_at")
+      .eq("voice_campaign_id", campaignId)
+      .order("created_at", { ascending: false })
+      .returns<VoiceCampaignAttemptRow[]>();
+
+    for (const row of attempts ?? []) {
+      if (!attemptMap.has(row.opportunity_id)) attemptMap.set(row.opportunity_id, row);
+    }
+  }
+
+  const views: VoiceCampaignMemberView[] = (members ?? []).map((row) => {
+    const opportunity = opportunityMap.get(row.opportunity_id);
+    const enrichment = opportunity?.rc_enrichment_details ?? {};
+    const overrides = opportunity?.ai_profile_overrides ?? {};
+    const text = (record: Record<string, unknown>, key: string) =>
+      typeof record[key] === "string" && String(record[key]).trim() ? String(record[key]).trim() : null;
+
+    const make = text(overrides, "manufacturer") ?? text(enrichment, "manufacturer") ?? opportunity?.vehicle_make ?? null;
+    const model = text(overrides, "model") ?? text(enrichment, "model") ?? opportunity?.vehicle_model ?? null;
+    const attempt = attemptMap.get(row.opportunity_id);
+
+    return {
+      ...row,
+      opportunityId: row.opportunity_id,
+      registrationNumber: opportunity?.registration_no ?? null,
+      mobile: maskMobile(text(overrides, "mobile") ?? opportunity?.mobile ?? null),
+      customerName: text(overrides, "customerName") ?? opportunity?.customer_name ?? opportunity?.contact_name ?? null,
+      vehicle: [make, model].filter(Boolean).join(" ") || null,
+      insurer:
+        text(overrides, "insuranceCompany") ?? text(enrichment, "insuranceCompany") ?? opportunity?.current_insurer ?? null,
+      policyExpiryDate: text(overrides, "policyExpiryDate") ?? text(enrichment, "policyExpiryDate") ?? null,
+      attemptStatus: attempt?.submission_status ?? null,
+      callDisposition: attempt?.call_disposition ?? null,
+    };
+  });
+
+  return {
+    campaign,
+    members: views,
+    counts: {
+      ready: views.filter((row) => row.enrichment_status === "ready").length,
+      held: views.filter((row) => row.import_status === "held" || row.enrichment_status === "failed").length,
+      queued: views.filter((row) => row.dispatch_status === "queued").length,
+      pendingDispatch: views.filter(
+        (row) => row.enrichment_status === "ready" && row.dispatch_status === "pending",
+      ).length,
+    },
+  };
+}

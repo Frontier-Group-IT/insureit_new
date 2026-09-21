@@ -538,3 +538,7 @@ Detailed record: `docs/SARVAM_VOICE_PROSPECT_DETAIL_CONTROLS_2026_09_19.md`.
 Branch `feat/voice-quick-add-rc` adds a compact RC + mobile Quick Add action in the IT Calling Queue. It reuses an existing active RC where possible, otherwise creates an isolated validated-source External Renewal opportunity, auto-runs the existing cache-first AuthBridge enrichment path, and redirects IT to the full prospect detail before any Call action. Quick Add is not allowed to call Sarvam automatically or touch verified Customer/Vehicle/Policy masters.
 
 See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
+
+
+## IT Voice Campaign Excel workflow — IMPLEMENTED / PENDING CI — 2026-09-21
+Branch `feat/voice-campaign-excel-workflow` adds the first INSUREIT-managed batch campaign layer for the V5 pilot: Excel/CSV input with only RC No. + Mobile No., hard max 100, existing External Renewal isolation, batched AuthBridge enrichment, review, and explicit batched dispatch through the existing approved Sarvam campaign. Migration `20260921145500_voice_campaigns.sql` is committed but **NOT APPLIED**. No merge, deployment or 100-customer live campaign has occurred. See `docs/SARVAM_VOICE_CAMPAIGNS_2026_09_21.md`.

@@ -70,3 +70,12 @@ The Voice Integration queue and recent attempts may open the IT-only prospect de
 ## Quick Add RC boundary
 
 IT Super User may add an ad-hoc calling prospect by RC + mobile only. The action must remain server-only, validate both values, reuse an existing active RC instead of duplicating it, auto-run the protected AuthBridge enrichment path, and never call Sarvam automatically. Quick Add source rows remain isolated External Renewal opportunities and must never create/update verified Customer, Vehicle or Policy masters. Terminal/DNC records must not be revived. See `docs/SARVAM_VOICE_QUICK_ADD_RC_2026_09_19.md`.
+
+
+## IT Voice Campaign boundary — 2026-09-21
+IT Super User may create a controlled campaign from Excel/CSV containing only RC No. + Mobile No., up to 100 rows. Upload/enrichment must never call Sarvam. Reuse isolated External Renewal data and protected AuthBridge/cache enrichment; DNC/terminal rows stay held and verified masters remain untouched. Campaign calling requires a separate Start action, small dispatch batches, and all existing kill-switch/calling-window/Sarvam-state/active-attempt safeguards. Pause stops future INSUREIT queueing only. See `docs/SARVAM_VOICE_CAMPAIGNS_2026_09_21.md`.
+
+
+## RC owner fallback rule — 2026-09-21
+
+For External Renewal / Voice Campaign RC enrichment, AuthBridge owner name may fill the isolated `customer_name` only when Customer/Insured Name is otherwise blank. Never overwrite an existing customer/contact/account name or explicit AI-profile customer-name override. This fallback applies to cache/live/stale-cache successful enrichment only and must not write verified Customer/Policy masters.
