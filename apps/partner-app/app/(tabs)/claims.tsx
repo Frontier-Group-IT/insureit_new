@@ -136,6 +136,7 @@ export default function ClaimsScreen() {
               </View>
             </Pressable>
           </View>
+        </View>
 
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>Claims</Text>
@@ -144,11 +145,12 @@ export default function ClaimsScreen() {
 
         <View pointerEvents="none" style={styles.heroArtworkWrap}>
           <Image source={PartnerAssets.navigation.claims} resizeMode="contain" style={styles.heroArtwork} />
-        </View>      </View>
+        </View>
+      </View>
 
       <View style={styles.body}>
         <View style={styles.searchShell}>
-          <Ionicons name="search-outline" size={22} color="#1738D5" />
+          <Ionicons name="search-outline" size={15} color="#1738D5" />
           <TextInput
             value={query}
             onChangeText={setQuery}
@@ -159,7 +161,7 @@ export default function ClaimsScreen() {
           />
           {query ? (
             <Pressable accessibilityLabel="Clear search" hitSlop={8} onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#A5B2C8" />
+              <Ionicons name="close-circle" size={14} color="#A5B2C8" />
             </Pressable>
           ) : null}
           <View style={styles.searchDivider} />
@@ -169,7 +171,7 @@ export default function ClaimsScreen() {
             onPress={() => setFilterOpen(true)}
             style={({ pressed }) => [styles.filterButton, pressed && styles.pressed]}
           >
-            <Ionicons name="filter-outline" size={21} color="#1738D5" />
+            <Ionicons name="filter-outline" size={14} color="#1738D5" />
             <Text style={styles.filterText}>Filter</Text>
           </Pressable>
         </View>
@@ -221,7 +223,7 @@ export default function ClaimsScreen() {
             style={({ pressed }) => [styles.sortButton, pressed && styles.pressed]}
           >
             <Text style={styles.sortText}>Sort By</Text>
-            <Ionicons name="chevron-down" size={17} color="#1E31D3" />
+            <Ionicons name="chevron-down" size={11} color="#1E31D3" />
           </Pressable>
         </View>
 
@@ -268,7 +270,7 @@ export default function ClaimsScreen() {
           style={({ pressed }) => [styles.loadMoreButton, pressed && styles.pressed]}
         >
           <Text style={styles.loadMoreText}>Load More Claims</Text>
-          <Ionicons name="chevron-down" size={18} color="#1738D5" />
+          <Ionicons name="chevron-down" size={12} color="#1738D5" />
         </Pressable>
       ) : (
         <Text style={styles.endText}>End of claim book</Text>
@@ -344,12 +346,12 @@ function MetricCard({ icon, value, label }: { icon: ComponentProps<typeof Ionico
   return (
     <View style={styles.kpiCard}>
       <View style={styles.kpiIconWrap}>
-        <Ionicons name={icon} size={24} color="#0D4185" />
+        <Ionicons name={icon} size={16} color="#0D4185" />
       </View>
       <Text style={styles.kpiValue}>{value}</Text>
       <Text numberOfLines={2} style={styles.kpiLabel}>{label}</Text>
       <View style={styles.scopeLine}>
-        <Ionicons name="analytics-outline" size={11} color="#19A56F" />
+        <Ionicons name="analytics-outline" size={8} color="#19A56F" />
         <Text style={styles.scopeText}>Current scope</Text>
       </View>
     </View>
@@ -359,6 +361,7 @@ function MetricCard({ icon, value, label }: { icon: ComponentProps<typeof Ionico
 function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void }) {
   const status = humanize(row.current_status || row.claim_state);
   const completed = row.claim_state === 'completed';
+  const rejected = /reject/i.test(row.current_status || '');
   const vehiclePolicy = [row.vehicle_no || 'Vehicle not linked', row.policy_no || 'External policy'].join('  |  ');
   return (
     <Pressable
@@ -383,14 +386,28 @@ function ClaimCard({ row, onPress }: { row: PartnerClaimRow; onPress: () => void
       </View>
 
       <View style={styles.claimRight}>
-        <View style={[styles.statusPill, completed ? styles.statusSuccess : styles.statusWarning]}>
-          <View style={[styles.statusDot, completed ? styles.statusDotSuccess : styles.statusDotWarning]} />
-          <Text numberOfLines={1} style={[styles.statusText, completed ? styles.statusTextSuccess : styles.statusTextWarning]}>{status}</Text>
+        <View style={[
+          styles.statusPill,
+          rejected ? styles.statusRejected : completed ? styles.statusSuccess : styles.statusWarning,
+        ]}>
+          <View style={[
+            styles.statusDot,
+            rejected ? styles.statusDotRejected : completed ? styles.statusDotSuccess : styles.statusDotWarning,
+          ]} />
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.statusText,
+              rejected ? styles.statusTextRejected : completed ? styles.statusTextSuccess : styles.statusTextWarning,
+            ]}
+          >
+            {status}
+          </Text>
         </View>
         <Text style={styles.claimDate}>Claimed on {formatDate(row.accident_at || row.created_at)}</Text>
       </View>
 
-      <Ionicons name="chevron-forward" size={23} color="#1738D5" />
+      <Ionicons name="chevron-forward" size={14} color="#1738D5" />
     </Pressable>
   );
 }
@@ -672,12 +689,15 @@ const styles = StyleSheet.create({
   },
   statusWarning: { backgroundColor: '#FFF2DD' },
   statusSuccess: { backgroundColor: '#E4F6EE' },
+  statusRejected: { backgroundColor: '#FDEBEC' },
   statusDot: { width: 5, height: 5, borderRadius: 3 },
   statusDotWarning: { backgroundColor: '#F39A1E' },
   statusDotSuccess: { backgroundColor: '#19A56F' },
+  statusDotRejected: { backgroundColor: '#E04F5F' },
   statusText: { flexShrink: 1, fontSize: 6.6, lineHeight: 9, fontWeight: '700' },
   statusTextWarning: { color: '#B66A14' },
   statusTextSuccess: { color: '#178157' },
+  statusTextRejected: { color: '#C43F50' },
   claimDate: { color: '#66789B', fontSize: 6.4, lineHeight: 8.5, fontWeight: '600', textAlign: 'right' },
 
   listFooter: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 12, alignItems: 'center' },
