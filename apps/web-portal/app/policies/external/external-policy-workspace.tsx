@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Funnel, Plus, RotateCcw, ShieldCheck } from "lucide-react";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import {
   BrokerRegisterShell,
   BrokerRegisterToolbar,
@@ -264,14 +266,27 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
             {pageRows.map((policy) => (
               <tr key={policy.id} className="h-11 transition hover:bg-[#FAFCFF]">
                 <td className="px-2.5">
-                  {canEdit ? (
-                    <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
-                      {policy.policy_no}
-                    </Link>
-                  ) : (
-                    <p className="truncate text-[12px] font-bold text-[#0F172A]" title={policy.policy_no}>{policy.policy_no}</p>
-                  )}
-                  <p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.policy_type}</p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    {getInsurerLogo(policy.insurance_companies?.name) ? (
+                      <Image
+                        src={getInsurerLogo(policy.insurance_companies?.name)!}
+                        alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
+                        width={26}
+                        height={26}
+                        className="max-h-6 max-w-[28px] shrink-0 object-contain"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      {canEdit ? (
+                        <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
+                          {policy.policy_no}
+                        </Link>
+                      ) : (
+                        <p className="truncate text-[12px] font-bold text-[#0F172A]" title={policy.policy_no}>{policy.policy_no}</p>
+                      )}
+                      <p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.policy_type}</p>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-2.5">
                   <p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p>
@@ -330,13 +345,24 @@ function ExternalPolicyMobileCard({ policy, canEdit }: { policy: ExternalPolicyV
   return (
     <article className="mobile-record-card">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {canEdit ? (
-            <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
-          ) : (
-            <p className="truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</p>
-          )}
-          <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{policy.insurance_companies?.name ?? "Insurer not set"}</p>
+        <div className="flex min-w-0 items-center gap-2.5">
+          {getInsurerLogo(policy.insurance_companies?.name) ? (
+            <Image
+              src={getInsurerLogo(policy.insurance_companies?.name)!}
+              alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
+              width={30}
+              height={30}
+              className="max-h-7 max-w-8 shrink-0 object-contain"
+            />
+          ) : null}
+          <div className="min-w-0">
+            {canEdit ? (
+              <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</Link>
+            ) : (
+              <p className="truncate text-[15px] font-extrabold text-[#12203B]">{policy.policy_no}</p>
+            )}
+            <p className="mt-0.5 truncate text-[12px] text-[#66748A]">{policy.insurance_companies?.name ?? "Insurer not set"}</p>
+          </div>
         </div>
         <PolicyStatus status={policy.status} />
       </div>

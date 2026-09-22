@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import {
   RegisterEmpty,
   RegisterPagination,
@@ -541,8 +543,18 @@ function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy:
   const category = policyCategory(policy);
   const product = policy.policy_product?.trim();
   const policyCopy = policy.policy_documents?.find((document) => document.document_type === "policy_copy") ?? null;
+  const insurerLogo = getInsurerLogo(policy.insurance_companies?.name);
   return (
-    <div className="flex min-w-0 items-center gap-1.5">
+    <div className="flex min-w-0 items-center gap-2">
+      {insurerLogo ? (
+        <Image
+          src={insurerLogo}
+          alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
+          width={26}
+          height={26}
+          className="max-h-6 max-w-[28px] shrink-0 object-contain"
+        />
+      ) : null}
       <Link prefetch={false} href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
         <span className="block truncate"><span className="font-bold">{businessLine}</span><span aria-hidden="true" className="mx-1 text-[11px] font-normal">•</span><span className="font-normal">{category || "-"}</span></span>
         {product && product.toLowerCase() !== category.toLowerCase() ? <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{product}</span> : null}
