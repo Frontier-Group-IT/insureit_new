@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink, Plus, Search, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 
 export type InsuranceCompanyRegisterRow = {
   id: string;
@@ -87,7 +89,29 @@ export function InsuranceCompanyRegister({ rows }: { rows: InsuranceCompanyRegis
             <tbody className="divide-y divide-[#EDF1F6]">
               {visible.map((row) => (
                 <tr key={row.id} className="bg-white text-[10.5px] text-[#334155] hover:bg-[#FBFCFE]">
-                  <td className="max-w-[360px] px-4 py-3"><div className="flex items-start gap-2.5"><span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><ShieldCheck className="h-3.5 w-3.5" /></span><div><Link href={`/master-data/insurance-companies/${row.id}`} className="font-bold leading-4 text-[#17203A] hover:text-[#315B9A]">{row.name}</Link><p className="mt-0.5 text-[8px] text-[#98A2B3]">Updated {new Date(row.updated_at).toLocaleDateString("en-IN")}</p></div></div></td>
+                  <td className="max-w-[360px] px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      {getInsurerLogo(row.name) ? (
+                        <span className="grid h-7 w-7 shrink-0 place-items-center">
+                          <Image
+                            src={getInsurerLogo(row.name)!}
+                            alt={`${row.name} logo`}
+                            width={28}
+                            height={28}
+                            className="max-h-7 max-w-7 object-contain"
+                          />
+                        </span>
+                      ) : (
+                        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]">
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <Link href={`/master-data/insurance-companies/${row.id}`} className="block truncate font-bold leading-4 text-[#17203A] hover:text-[#315B9A]">{row.name}</Link>
+                        <p className="mt-0.5 text-[8px] text-[#98A2B3]">Updated {new Date(row.updated_at).toLocaleDateString("en-IN")}</p>
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-4 py-3"><span className="rounded-full border border-[#DCE5F0] bg-[#F8FAFD] px-2.5 py-1 text-[8.5px] font-bold text-[#52647D]">{row.segment ? segmentLabel[row.segment] : "Legacy / unclassified"}</span></td>
                   <td className="px-4 py-3 font-semibold text-[#17203A]">{row.sibpl_code || "—"}</td>
                   <td className="px-4 py-3">{row.portal_status === "configured" && row.portal_url ? <a href={row.portal_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-[#315B9A] hover:underline">Open portal <ExternalLink className="h-3 w-3" /></a> : <span className={`text-[9px] font-semibold ${row.portal_status === "pending" ? "text-amber-700" : "text-[#98A2B3]"}`}>{row.portal_status === "pending" ? "Pending" : "Not provided"}</span>}</td>
