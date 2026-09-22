@@ -1,6 +1,7 @@
 const INSURER_LOGOS: Record<string, string> = {
   adityabirlasunlife: "/assets/insurers/aditya-birla-sun-life.png",
   axismaxlife: "/assets/insurers/axis-max-life.png",
+  bajajallianz: "/assets/insurers/bajaj-allianz.png",
   bajajlife: "/assets/insurers/bajaj-life.png",
   bandhanlife: "/assets/insurers/bandhan-life.png",
   carehealth: "/assets/insurers/care-health.png",
@@ -34,6 +35,8 @@ const INSURER_LOGOS: Record<string, string> = {
 };
 
 const INSURER_ALIASES: Record<string, keyof typeof INSURER_LOGOS> = {
+  bajajgeneralinsurancecompanylimited: "bajajallianz",
+  bajajallianzgeneralinsurancecompanylimited: "bajajallianz",
   nationalinsurancecompanylimited: "nationalinsurance",
   nationalinsurancecompany: "nationalinsurance",
   unitedindiainsurancecompanylimited: "unitedindiainsurance",
