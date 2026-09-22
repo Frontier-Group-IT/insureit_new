@@ -3,7 +3,6 @@ import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server
 import { UserMenu } from "@/components/user-menu";
 import { getPartnerWebSession } from "@/lib/partner-web";
 import { PartnerMobileNavigation } from "./partner-mobile-navigation";
-import { PartnerBottomNavigation } from "./partner-bottom-navigation";
 import { PartnerBreadcrumbs } from "./partner-breadcrumbs";
 import { PartnerBusinessTrendResponsiveFix } from "./partner-business-trend-responsive-fix";
 import { PartnerLiveSearchFilter } from "./partner-live-search-filter";
@@ -61,7 +60,6 @@ export async function PartnerPortalShell({ title, children, headerVariant = "def
       </div>
 
       <PartnerLiveSearchFilter />
-      <PartnerBottomNavigation hideAccount={hideAccount} />
       <PartnerBusinessTrendResponsiveFix />
     </div>
   );
