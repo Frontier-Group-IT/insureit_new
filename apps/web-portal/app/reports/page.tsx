@@ -1,8 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Archive, ArrowRight, CalendarRange, FileDown } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
 import { loadPolicyBusinessNetReport, reportScopeLabel } from "@/lib/reports/policy-business";
@@ -115,7 +117,30 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
                 <div className="r2-section-head"><h2>Insurer Business · YTD</h2><Link prefetch={false} href="/reports/business" className="r2-section-link">View business</Link></div>
                 {topInsurers.length ? (
                   <div className="r2-table-wrap"><table className="r2-table"><thead><tr><th>Insurer</th><th className="r2-num">Policies</th><th className="r2-num">Net premium</th><th className="r2-num">Share</th></tr></thead><tbody>
-                    {topInsurers.map((row) => <tr key={`${row.id}-${row.name}`}><td><strong>{row.name || "Unassigned"}</strong></td><td className="r2-num">{number(row.policy_count)}</td><td className="r2-num">{compactMoney(row.net_premium)}</td><td className="r2-num">{row.share_percent.toFixed(1)}%</td></tr>)}
+                    {topInsurers.map((row) => {
+                      const insurerLogo = getInsurerLogo(row.name);
+                      return (
+                        <tr key={`${row.id}-${row.name}`}>
+                          <td>
+                            <div className="flex min-w-0 items-center gap-2">
+                              {insurerLogo ? (
+                                <Image
+                                  src={insurerLogo}
+                                  alt={row.name ? `${row.name} logo` : "Insurance company"}
+                                  width={26}
+                                  height={26}
+                                  className="max-h-6 max-w-[28px] shrink-0 object-contain"
+                                />
+                              ) : null}
+                              <strong className="min-w-0 truncate">{row.name || "Unassigned"}</strong>
+                            </div>
+                          </td>
+                          <td className="r2-num">{number(row.policy_count)}</td>
+                          <td className="r2-num">{compactMoney(row.net_premium)}</td>
+                          <td className="r2-num">{row.share_percent.toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
                   </tbody></table></div>
                 ) : <div className="r2-empty">No insurer business available</div>}
               </article>
