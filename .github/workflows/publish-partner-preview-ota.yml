@@ -79,14 +79,13 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Verify panoramic Business banner
+      - name: Verify vivid Business banner
         shell: bash
         run: |
           set -euo pipefail
-          test -s apps/partner-app/assets/business-header-reference.jpg
-          file apps/partner-app/assets/business-header-reference.jpg | grep -q 'JPEG image data'
-          file apps/partner-app/assets/business-header-reference.jpg | grep -q 'baseline'
-          file apps/partner-app/assets/business-header-reference.jpg | grep -q '1664x487'
+          test -s apps/partner-app/assets/partner/banners/business-growth-11.png
+          file apps/partner-app/assets/partner/banners/business-growth-11.png | grep -q 'PNG image data'
+          file apps/partner-app/assets/partner/banners/business-growth-11.png | grep -q '1170 x 520'
 
       - name: Verify Expo token can access the linked Partner project
         working-directory: apps/partner-app
