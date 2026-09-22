@@ -131,7 +131,7 @@ jobs:
           test -s compat/apps/partner-app/assets/business-header-reference.jpg
           file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'JPEG image data'
           file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'baseline'
-          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q '480x270'
+          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q '1664x487'
 
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
