@@ -574,3 +574,42 @@ Continue from this point:
 8. Report PR number and CI state.
 9. **Do not merge.**
 10. **Do not create any APK.**
+
+
+---
+
+# 14. Implementation Update — 2026-09-22
+
+The approved Claims reference was implemented on a fresh continuation branch because the earlier v2 branch had already been merged for the handoff documentation.
+
+- Branch: `ui/partner-claims-reference-redesign-v3`
+- Claims implementation commits: `a0341b6526374821417a8a6aac30a973a92efe99`, `ec89c637687786a2934b0a24866fc6c8ce565492`
+- Main implementation file: `apps/partner-app/app/(tabs)/claims.tsx`
+
+Implemented UI changes:
+
+- switched Claims to the same official Partner logo asset used by Home
+- switched header activity/profile treatment to the Home components/styles
+- reduced Claims title/subtitle typography to Home-scale sizing
+- compacted hero, floating search/filter bar, KPI cards, lifecycle tabs, claim cards and load-more treatment to match the supplied reference proportions
+- changed visible supported-state wording from Active/Completed to In Progress/Settled
+- reordered supported KPI presentation to Total / Settled / In Progress / Assistance
+- added red rejected-row status styling when existing claim status data already reports a rejected state
+- kept existing search, sort, pagination, refresh, cache/offline handling, detail navigation, RPC calls and backend state contract unchanged
+
+Important semantic boundary:
+
+- the current backend still exposes summary fields `total_claims`, `active_claims`, `completed_claims`, and `assistance_requested`, and list filters `all | active | completed`
+- therefore the UI does **not** fake a Rejected Claims KPI or rejected list filter
+- exact rejected summary/filter behavior requires a separately approved backend contract change after inspecting production status vocabulary
+
+Release safety:
+
+- no APK created
+- no AAB created
+- no Expo/EAS native build triggered
+- no native dependency/config/runtime change
+- no merge yet
+- no OTA publish yet
+
+Next step: open the feature PR, let Partner verification run, inspect CI, and wait for explicit user approval before merge.
