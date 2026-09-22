@@ -35,6 +35,12 @@ const INSURER_LOGOS: Record<string, string> = {
 };
 
 const INSURER_ALIASES: Record<string, keyof typeof INSURER_LOGOS> = {
+  generalicentralinsurancecompany: "generalicentral",
+  generalicentralinsurancecompanylimited: "generalicentral",
+  cholamandalammsgeneralinsurancecompanylimited: "cholamandalamsgeneral",
+  cholamandalamsgeneralinsurancecompanylimited: "cholamandalamsgeneral",
+  lifeinsurancecorporationofindialimited: "lic",
+  lifeinsurancecorporationofindia: "lic",
   bajajgeneralinsurancecompanylimited: "bajajallianz",
   bajajallianzgeneralinsurancecompanylimited: "bajajallianz",
   nationalinsurancecompanylimited: "nationalinsurance",
