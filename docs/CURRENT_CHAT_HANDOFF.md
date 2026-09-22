@@ -1,3 +1,14 @@
+## 2026-09-22 — Partner Portal low-risk loading/prefetch Phase 1
+
+- Branch: `perf/partner-low-risk-loading-prefetch`; PR #2251.
+- Adds `apps/web-portal/app/partner/loading.tsx` so intra-Partner route transitions show an immediate shell/skeleton instead of appearing frozen while Server Components resolve.
+- Keeps the mobile bottom navigation in the persistent Partner layout (rather than the page shell), so users retain a navigation/cancellation path while a slow Partner page is loading.
+- Desktop sidebar, mobile drawer and bottom navigation keep `prefetch={false}` globally but call `router.prefetch(...)` only after user intent (hover, focus or pointer down) for common read-only Partner routes: Home, My Business, Customers, Vehicles, Policies, Internal/External Renewals, Claims, Payout, Network and Activity.
+- Policy Intake, Search, Account and Support intentionally remain non-prefetched in this phase.
+- No Partner RPC, Supabase table, RLS, migration, permission, auth rule, scope calculation, policy/claim/payout/business calculation, or database behavior was changed.
+- My Business sequential portfolio aggregation and Partner Home multi-RPC architecture are intentionally deferred to later measured phases.
+- **IMPLEMENTED; CI/merge/deployment pending.**
+
 ## 2026-09-21 — AuthBridge Daimler → Bharat Benz manufacturer normalization
 
 - Branch: `fix/normalize-daimler-to-bharatbenz`.
