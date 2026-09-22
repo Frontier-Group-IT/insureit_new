@@ -68,6 +68,7 @@ export default function AddVehicleScreen() {
   const [rcLookupMessage, setRcLookupMessage] = useState('');
   const [rcSuccessPopup, setRcSuccessPopup] = useState('');
   const [insurerFetchedLocked, setInsurerFetchedLocked] = useState(false);
+  const [policyNumberFetchedLocked, setPolicyNumberFetchedLocked] = useState(false);
 
   const normalizedRc = normalizeRc(vehicleNo);
   const rcReady = isValidIndianRegistrationNumber(normalizedRc);
@@ -140,6 +141,7 @@ export default function AddVehicleScreen() {
       setRcLookupMessage('');
       setRcSuccessPopup('');
       setInsurerFetchedLocked(false);
+      setPolicyNumberFetchedLocked(false);
     }
   }
 
@@ -149,6 +151,7 @@ export default function AddVehicleScreen() {
     setRcLookupMessage('');
     setRcSuccessPopup('');
     setInsurerFetchedLocked(false);
+    setPolicyNumberFetchedLocked(false);
 
     const normalized = normalizeRc(vehicleNo);
     if (!isValidIndianRegistrationNumber(normalized)) {
@@ -202,7 +205,10 @@ export default function AddVehicleScreen() {
           insurerNeedsConfirmation = true;
         }
       }
-      if (details.policyNumber) setPolicyNo(details.policyNumber.replace(/\s/g, '').toUpperCase());
+      if (details.policyNumber) {
+        setPolicyNo(details.policyNumber.replace(/\s/g, '').toUpperCase());
+        setPolicyNumberFetchedLocked(true);
+      }
       if (details.policyStartDate) setPolicyStartDate(details.policyStartDate);
       else if (details.policyExpiryDate) setPolicyStartDate(defaultPolicyStartDate(details.policyExpiryDate));
       if (details.policyExpiryDate) setPolicyEndDate(details.policyExpiryDate);
@@ -395,7 +401,7 @@ export default function AddVehicleScreen() {
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
         {message ? <Message type="error">{message}</Message> : null}
-        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setRcSuccessPopup(''); setInsurerFetchedLocked(false); setLastFetchedRc(''); }} /> : null}
+        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setRcSuccessPopup(''); setInsurerFetchedLocked(false); setPolicyNumberFetchedLocked(false); setLastFetchedRc(''); }} /> : null}
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
@@ -432,8 +438,8 @@ export default function AddVehicleScreen() {
         ) : null}
 
         <FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">
-          <SearchInsurer query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
-          <InputField icon="identifier" label="Policy no." value={policyNo} onChangeText={(value) => setPolicyNo(value.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" />
+          <SearchInsurer locked={insurerFetchedLocked} query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
+          <MaskedCodeField locked={policyNumberFetchedLocked} icon="identifier" label="Policy no." value={policyNo} onChangeText={setPolicyNo} />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
             <View style={styles.column}><ReadonlyDateField label="End date" value={policyEndDate} /></View>
@@ -481,9 +487,10 @@ function InputField({ label, icon, style, required = false, ...props }: React.Co
   return <View style={styles.field}><Text style={styles.fieldLabel}>{label}{required ? ' *' : ''}</Text><View style={styles.inputShell}><MaterialCommunityIcons name={icon} size={17} color="#6A7A90" /><TextInput {...props} placeholderTextColor="#9AA7B8" style={[styles.input, style]} /></View></View>;
 }
 
-function MaskedCodeField({ label, icon, value, onChangeText }: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; value: string; onChangeText: (value: string) => void }) {
+function MaskedCodeField({ label, icon, value, onChangeText, locked = false }: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; value: string; onChangeText: (value: string) => void; locked?: boolean }) {
   const [focused, setFocused] = useState(false);
-  return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><View style={styles.inputShell}><MaterialCommunityIcons name={icon} size={17} color="#6A7A90" /><TextInput value={focused ? value : maskAlternateCharacters(value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onChangeText={(next) => onChangeText(next.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" placeholder="Optional" placeholderTextColor="#9AA7B8" style={styles.input} /></View></View>;
+  const displayValue = !locked && focused ? value : maskAlternateCharacters(value);
+  return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><View style={[styles.inputShell, locked && styles.lockedCodeField]}><MaterialCommunityIcons name={icon} size={17} color="#6A7A90" /><TextInput editable={!locked} selectTextOnFocus={!locked} value={displayValue} onFocus={() => { if (!locked) setFocused(true); }} onBlur={() => setFocused(false)} onChangeText={locked ? undefined : (next) => onChangeText(next.replace(/\s/g, '').toUpperCase())} autoCapitalize="characters" placeholder="Optional" placeholderTextColor="#9AA7B8" style={styles.input} /></View></View>;
 }
 
 function VehicleTypeDropdown({ value, onSelect, required = false }: { value: string; onSelect: (value: string) => void; required?: boolean }) {
@@ -703,6 +710,7 @@ const styles = StyleSheet.create({
   policyHintBox: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F8FBFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
   policyHintText: { flex: 1, color: '#607089', fontSize: 10.3, lineHeight: 14, fontWeight: '700' },
   fetchedLockedField: { opacity: 0.1 },
+  lockedCodeField: { backgroundColor: '#EEF2F6', opacity: 0.72 },
   fetchPopupOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, backgroundColor: 'rgba(8,29,63,0.08)' },
   fetchPopupCard: { width: '100%', maxWidth: 360, minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 16, elevation: 8 },
   fetchPopupText: { flex: 1, color: '#314258', fontSize: 12, lineHeight: 18, fontWeight: '800' },
