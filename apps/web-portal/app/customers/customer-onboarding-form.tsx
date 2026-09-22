@@ -107,7 +107,7 @@ export function CustomerOnboardingForm({ action, partnerType, returnToVehicle = 
   }, [isDirty]);
 
   const supported = partnerType === "individual_proprietor";
-  const missingDocuments = (gstRegistered ? ["gst_copy"] : [] as DocumentField[]).filter((name) => !documentFiles[name]);
+  const missingDocuments = (gstRegistered ? (["gst_copy"] as DocumentField[]) : []).filter((name) => !documentFiles[name]);
 
   function captureForm(form: HTMLFormElement) {
     const snapshot: FormSnapshot = {};
