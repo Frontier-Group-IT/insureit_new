@@ -1,3 +1,14 @@
+## 2026-09-22 — Customer Add Vehicle fetched-policy lock correction v2
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-fetched-policy-lock-v2`.
+
+- Corrects the incomplete PR #2260 wiring: the fetched insurer lock is now actually passed into `SearchInsurer`, so a confidently matched RC insurer is read-only/non-editable and rendered at 10% opacity. Unresolved insurer values remain editable.
+- Policy No. now renders through the shared masked identifier field. A new fetched-policy lock keeps an API-provided Policy No. masked and non-editable; manually entered Policy No. remains editable and reveals the real value only while focused, matching chassis/engine behavior.
+- Lock state resets on RC/account changes and at the start of a new RC fetch.
+- No native/runtime/app configuration, API/RPC/schema/RLS, save contract, permission, or business-rule change.
+- User explicitly prohibited APK/AAB creation. Do not trigger any APK/AAB workflow. OTA publication is not authorized until separately requested.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-22 — Customer Add Vehicle fetched-policy UX
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-vehicle-fetched-policy-lock`.
