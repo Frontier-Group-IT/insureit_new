@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-22 — Reports Business insurer logos:** branch `ui/reports-business-insurer-logos`; Reports → Business now shows each insurer's shared catalog logo before the insurer name in Insurance company contribution and before the business date in Policy business register. Both use `getInsurerLogo`; unmapped insurers keep the existing text-only presentation. No report calculations, filters, database, schema, API, or RPC behavior changed. **IMPLEMENTED; PR #2256; CI/merge/deployment pending.**
+
 - **2026-09-22 — Customer Fleet policy insurer logos:** branch `ui/customer-fleet-policy-insurer-logo`; Customer Fleet Summary expanded policy cards now render the insurer shared catalog logo directly before the policy number using `getInsurerLogo(policy.insurance_companies?.name)`, while retaining the existing green shield as fallback for unmapped insurers. Policy data, policy metrics, navigation, database, schema, API, and RPC behavior are unchanged. **IMPLEMENTED; PR #2254 open; CI/merge/deployment pending.**
 
 
