@@ -90,7 +90,6 @@ export function CustomerProfileEditor({ customer, documents, vehicles, agents, i
       <form ref={formRef} action={action} encType="multipart/form-data" onSubmit={handleSubmit} data-server-error={errorMessage ? "true" : undefined} data-error-field={errorField ?? undefined} className="space-y-2 pb-5">
         <input type="hidden" name="partner_type" value={customer.partner_type ?? ""} />
         <input type="hidden" name="fleet_size_band" value={customer.fleet_size_band ?? ""} />
-        <input type="hidden" name="onboarding_status" value={customer.onboarding_status} />
         <input type="hidden" name="assigned_agent_id" value={customer.assigned_agent_id ?? ""} />
 
         <section className="overflow-hidden rounded-2xl border border-[#173E7B] bg-gradient-to-br from-[#071D49] via-[#0A2B65] to-[#0C4A9A] text-white shadow-[0_18px_45px_rgba(7,29,73,.18)]">
