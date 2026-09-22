@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-22 — Reports Finance insurer logos:** branch `ui/reports-finance-insurer-logos`; Reports → Business → Finance now renders the insurer's shared catalog logo before the insurer name in Insurance company commercials and before the business date in Policy commercial register. Both use `getInsurerLogo`; unmapped insurers keep the existing text-only presentation. No commercial calculations, filters, access control, database, schema, API, or RPC behavior changed. **IMPLEMENTED; no PR created; CI/merge/deployment pending.**
+
 - **2026-09-22 — Reports Operations vehicle manufacturer logos:** branch `ui/reports-operations-vehicle-logos`; Reports → Operations → Vehicle exception register now renders the shared manufacturer logo before the vehicle number using `getVehicleBrandLogo(x.make)`. Unmapped manufacturers keep the existing text-only presentation. No report calculations, filters, database, schema, API, or RPC behavior changed. **IMPLEMENTED; no PR created; CI/merge/deployment pending.**
 
 - **2026-09-22 — Reports Claims insurer logos:** same branch `ui/reports-renewals-insurer-logos`; Reports → Claims now renders the insurer's shared catalog logo before the insurer name in Insurance company claims and before the claim number in Claims register. Both use `getInsurerLogo`; unmapped insurers keep the existing text-only presentation. No claims calculations, filters, database, schema, API, or RPC behavior changed. **IMPLEMENTED; no PR created; CI/merge/deployment pending.**
