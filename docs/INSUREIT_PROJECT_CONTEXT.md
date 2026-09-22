@@ -553,3 +553,8 @@ Durable rules:
 - Database coverage-overlap protection remains in place as the final race-condition guard.
 
 Migration `20260901154500_policy_existing_vehicle_replacement.sql` adds policy supersession linkage/metadata and `policy_replacement_audit`. It must be reviewed/applied through the normal migration gate before the replacement action can work in production.
+
+
+## 2026-09-22 — Canonical vehicle with multi-customer associations
+
+**IMPLEMENTED / NOT APPLIED / NOT MERGED:** branch `feat/multi-customer-vehicle-links` introduces `vehicle_customer_links` as the customer↔vehicle association layer while retaining one canonical `vehicles` row per physical RC/chassis identity. Existing vehicle RC/chassis uniqueness and the single-active-policy-per-vehicle guard remain unchanged. Existing `vehicles.customer_id` is retained as the legacy/primary customer for compatibility; all existing rows are backfilled into the link table as primary links. Operations Add Vehicle and Customer Add Vehicle reuse an existing canonical vehicle and create an additional customer link instead of rejecting or duplicating the vehicle. Customer vehicle/home/detail/Add Policy reads use the link table, and Customer external-policy creation validates the customer↔vehicle link. Migration `20260922170000_multi_customer_vehicle_links.sql` is protected by `apply-multi-customer-vehicle-links.yml` and the production deployment gate. The migration has not been applied and no runtime/OTA deployment has occurred.

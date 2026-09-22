@@ -1,0 +1,101 @@
+name: Apply multi-customer vehicle links migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260922170000_multi_customer_vehicle_links.sql'
+      - '.github/workflows/apply-multi-customer-vehicle-links.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply multi-customer vehicle links migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260922170000_multi_customer_vehicle_links.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Ensure multi-customer vehicle migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20260922170000'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/20260922170000_multi_customer_vehicle_links.sql
+            supabase migration repair --linked --status applied 20260922170000
+          fi
+
+      - name: Verify multi-customer vehicle contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.vehicle_customer_links') is not null as link_table_ready,
+              to_regprocedure('public.can_access_linked_vehicle(uuid)') is not null as access_helper_ready,
+              to_regprocedure('public.create_customer_vehicle_v2(uuid,text,text,text,text,integer,text,text,text,numeric,date,date,date,date,date,date,text,numeric,integer)') is not null as vehicle_rpc_ready,
+              to_regprocedure('public.create_customer_external_policy(uuid,uuid,uuid,text,text,date,date,numeric,numeric)') is not null as policy_rpc_ready,
+              not exists (
+                select 1
+                from public.vehicles v
+                where v.customer_id is not null
+                  and not exists (
+                    select 1
+                    from public.vehicle_customer_links link
+                    where link.vehicle_id=v.id
+                      and link.customer_id=v.customer_id
+                  )
+              ) as legacy_links_backfilled;
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"link_table_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"access_helper_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"vehicle_rpc_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"policy_rpc_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"legacy_links_backfilled"[[:space:]]*:[[:space:]]*true'

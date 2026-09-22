@@ -7,6 +7,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, Text
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
+import { isVehicleLinkedToCustomer } from '@/lib/customer-vehicles';
 import { lookupCustomerRc } from '@/lib/customer-rc-lookup';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -160,13 +161,9 @@ export default function AddVehicleScreen() {
     }
     if (lastFetchedRc === normalized && rcLookupState === 'success') return;
 
-    if (selectedCustomerId) {
-      const { data: existingVehicles } = await supabase.from('vehicles').select('id,vehicle_no').eq('customer_id', selectedCustomerId).limit(250);
-      const duplicate = (existingVehicles ?? []).find((item) => normalizeRc(String(item.vehicle_no ?? '')) === normalized);
-      if (duplicate) {
-        setRcLookupState('error');
-        return setRcLookupMessage('This vehicle is already added to this account.');
-      }
+    if (selectedCustomerId && await isVehicleLinkedToCustomer(selectedCustomerId, normalized)) {
+      setRcLookupState('error');
+      return setRcLookupMessage('This vehicle is already added to this account.');
     }
 
     setRcLookupState('loading');

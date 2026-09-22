@@ -286,6 +286,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260921104500_partner_policy_audit_history.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-partner-policy-audit-history.yml"
             echo "Partner policy/vehicle audit history migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260922170000_multi_customer_vehicle_links.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-multi-customer-vehicle-links.yml"
+            echo "Multi-customer vehicle links migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
