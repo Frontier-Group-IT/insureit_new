@@ -1,21 +1,12 @@
 name: Build Partner 0.1.0 shield-icon preview APK once
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/build-partner-0-1-shield-icon-apk-once.yml'
-      - 'scripts/partner/native-assets/partner-shield-app-icon-256.jpg.b64'
-      - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
-      - 'scripts/partner/patch-0-1-home-refinements.mjs'
-      - 'scripts/partner/patch-0-1-business-date-filter.mjs'
-      - 'scripts/partner/compat/partner-business-date-filter.tsx'
-      - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
-      - 'apps/partner-app/assets/business-header-reference.jpg'
-      - 'scripts/partner/compat/partner-more-reference-0-1.tsx'
-      - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Type BUILD_PARTNER_0_1_0 only after explicit user approval for this exact APK build'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -32,6 +23,15 @@ jobs:
       COMPAT_SHA: 74039199991888777911deb30cf248e8f36cf8a8
 
     steps:
+      - name: Require explicit Partner 0.1.0 APK approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ inputs.approval }}" = "BUILD_PARTNER_0_1_0" ] || {
+            echo "Refusing Partner 0.1.0 APK build: explicit BUILD_PARTNER_0_1_0 approval token was not supplied." >&2
+            exit 1
+          }
+
       - name: Check out current main tooling
         uses: actions/checkout@v4
         with:
