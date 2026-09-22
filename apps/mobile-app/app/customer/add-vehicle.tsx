@@ -66,6 +66,8 @@ export default function AddVehicleScreen() {
   const [message, setMessage] = useState('');
   const [rcLookupState, setRcLookupState] = useState<RcLookupState>('idle');
   const [rcLookupMessage, setRcLookupMessage] = useState('');
+  const [rcSuccessPopup, setRcSuccessPopup] = useState('');
+  const [insurerFetchedLocked, setInsurerFetchedLocked] = useState(false);
 
   const normalizedRc = normalizeRc(vehicleNo);
   const rcReady = isValidIndianRegistrationNumber(normalizedRc);
@@ -124,12 +126,20 @@ export default function AddVehicleScreen() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!rcSuccessPopup) return;
+    const timeout = setTimeout(() => setRcSuccessPopup(''), 2500);
+    return () => clearTimeout(timeout);
+  }, [rcSuccessPopup]);
+
   function changeVehicleNo(value: string) {
     const next = value.replace(/[^A-Za-z0-9 -]/g, '').toUpperCase();
     setVehicleNo(next);
     if (normalizeRc(next) !== lastFetchedRc) {
       setRcLookupState('idle');
       setRcLookupMessage('');
+      setRcSuccessPopup('');
+      setInsurerFetchedLocked(false);
     }
   }
 
@@ -137,6 +147,8 @@ export default function AddVehicleScreen() {
     if (rcLookupState === 'loading') return;
     setMessage('');
     setRcLookupMessage('');
+    setRcSuccessPopup('');
+    setInsurerFetchedLocked(false);
 
     const normalized = normalizeRc(vehicleNo);
     if (!isValidIndianRegistrationNumber(normalized)) {
@@ -183,6 +195,7 @@ export default function AddVehicleScreen() {
         if (resolvedInsurer) {
           setSelectedCompanyId(resolvedInsurer.id);
           setInsurerQuery(resolvedInsurer.name);
+          setInsurerFetchedLocked(true);
         } else {
           setSelectedCompanyId('');
           setInsurerQuery(details.insuranceCompany);
@@ -220,7 +233,8 @@ export default function AddVehicleScreen() {
       } else if (insurerNeedsConfirmation) {
         setRcLookupMessage('Vehicle and policy details found. Please confirm the insurer before saving.');
       } else {
-        setRcLookupMessage('Vehicle and policy details found. Please review the filled information.');
+        setRcLookupMessage('');
+        setRcSuccessPopup('Vehicle and policy details found. Please review the filled information.');
       }
     } catch (error) {
       setRcLookupState('error');
@@ -381,7 +395,7 @@ export default function AddVehicleScreen() {
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
         {message ? <Message type="error">{message}</Message> : null}
-        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setLastFetchedRc(''); }} /> : null}
+        {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setRcSuccessPopup(''); setInsurerFetchedLocked(false); setLastFetchedRc(''); }} /> : null}
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
@@ -439,6 +453,14 @@ export default function AddVehicleScreen() {
         {saving ? <ActivityIndicator color={palette.navy} /> : null}
       </Card>
       <PremiumCalendarModal target={dateTarget} onClose={() => setDateTarget(null)} onSelect={(value) => { dateTarget?.onChange(value); setDateTarget(null); }} />
+      <Modal visible={Boolean(rcSuccessPopup)} transparent animationType="fade" statusBarTranslucent>
+        <View pointerEvents="none" style={styles.fetchPopupOverlay}>
+          <View style={styles.fetchPopupCard}>
+            <MaterialCommunityIcons name="check-circle" size={22} color="#12805C" />
+            <Text style={styles.fetchPopupText}>{rcSuccessPopup}</Text>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -482,8 +504,8 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
   return <View style={styles.field}><Text style={styles.fieldLabel}>Fuel type</Text><Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={styles.selectButton}><View style={styles.selectIcon}><MaterialCommunityIcons name="gas-station-outline" size={18} color="#0A43A3" /></View><Text style={[styles.selectValue, !value && styles.placeholder]}>{value || 'Select fuel (optional)'}</Text><MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} /></Pressable>{open ? <View style={styles.selectMenu}>{fuelOptions.map((item) => <Pressable key={item} onPress={() => { onSelect(item); setOpen(false); }} style={[styles.selectOption, value === item && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item && styles.selectOptionTextActive]}>{item}</Text>{value === item ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}</View>;
 }
 
-function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void }) {
-  return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={styles.inputShell}><MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" /><TextInput value={query} onChangeText={onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />{selectedInsurer ? <MaterialCommunityIcons name="check-circle" size={18} color="#12805C" /> : null}</View><View style={styles.selectMenu}>{!query.trim() ? <Text style={styles.emptyLookupText}>Type matching letters to search insurer.</Text> : selectedInsurer ? <Text style={styles.emptyLookupText}>Selected: {selectedInsurer.name}</Text> : companies.length ? companies.map((company) => <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={styles.selectOption}><Text style={styles.selectOptionText} numberOfLines={1}>{company.name}</Text></Pressable>) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}</View></View>;
+function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect, locked = false }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void; locked?: boolean }) {
+  return <View style={[styles.field, locked && styles.fetchedLockedField]}><Text style={styles.fieldLabel}>Insurer</Text><View style={styles.inputShell}><MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" /><TextInput editable={!locked} value={query} onChangeText={locked ? undefined : onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />{selectedInsurer ? <MaterialCommunityIcons name="check-circle" size={18} color="#12805C" /> : null}</View>{!locked && !selectedInsurer ? <View style={styles.selectMenu}>{!query.trim() ? <Text style={styles.emptyLookupText}>Type matching letters to search insurer.</Text> : companies.length ? companies.map((company) => <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={styles.selectOption}><Text style={styles.selectOptionText} numberOfLines={1}>{company.name}</Text></Pressable>) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}</View> : null}</View>;
 }
 
 function ReadonlyDateField({ label, value }: { label: string; value: string }) {
@@ -680,6 +702,10 @@ const styles = StyleSheet.create({
   policyCopyText: { color: '#607089', fontSize: 10, fontWeight: '700', marginTop: 2 },
   policyHintBox: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F8FBFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
   policyHintText: { flex: 1, color: '#607089', fontSize: 10.3, lineHeight: 14, fontWeight: '700' },
+  fetchedLockedField: { opacity: 0.1 },
+  fetchPopupOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, backgroundColor: 'rgba(8,29,63,0.08)' },
+  fetchPopupCard: { width: '100%', maxWidth: 360, minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 16, elevation: 8 },
+  fetchPopupText: { flex: 1, color: '#314258', fontSize: 12, lineHeight: 18, fontWeight: '800' },
   calendarScreen: { flex: 1, backgroundColor: '#EEF7FF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 18 },
   calendarAccent: { position: 'absolute', left: -70, right: -70, top: 118, height: 120, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.64)', transform: [{ rotate: '-7deg' }] },
   calendarTopBar: { minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 20 },

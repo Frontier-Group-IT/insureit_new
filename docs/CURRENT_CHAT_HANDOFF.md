@@ -1,3 +1,14 @@
+## 2026-09-22 — Customer Add Vehicle fetched-policy UX
+
+- Branch: `ui/customer-vehicle-fetched-policy-lock`.
+- Customer App → Add Vehicle RC success copy `Vehicle and policy details found. Please review the filled information.` is now presented as a compact modal popup and auto-dismisses after 2.5 seconds instead of remaining inline.
+- Confirmation/error/loading messages remain inline so unresolved manufacturer/insurer matches and actual failures are not hidden.
+- Policy No. now uses the existing alternate-character masking behavior used by Chassis Number / Engine Number when unfocused, revealing the real value while focused/editing.
+- The insurer search no longer renders the redundant `Selected: <insurer>` row.
+- When RC fetch confidently resolves an insurer, that insurer field becomes non-editable and renders at 10% opacity. If the provider insurer cannot be resolved confidently, the field remains editable for manual correction.
+- No mobile save payload, RC API, Supabase RPC/table/schema/RLS, business rule, native dependency/configuration, runtime version, or permission changed.
+- **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB BUILD AUTHORIZED.**
+
 ## 2026-09-22 — Partner Portal low-risk loading/prefetch Phase 1
 
 - Branch: `perf/partner-low-risk-loading-prefetch`; PR #2251.
