@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-22 — Customer Fleet policy insurer logos:** branch `ui/customer-fleet-policy-insurer-logo`; Customer Fleet Summary expanded policy cards now render the insurer shared catalog logo directly before the policy number using `getInsurerLogo(policy.insurance_companies?.name)`, while retaining the existing green shield as fallback for unmapped insurers. Policy data, policy metrics, navigation, database, schema, API, and RPC behavior are unchanged. **IMPLEMENTED; PR #2254 open; CI/merge/deployment pending.**
+
+
 - **2026-09-22 — Partner Business visible banner + no-auto-APK release:** branch `fix/business-banner-visible-no-auto-apk`; Business now uses the existing vivid `assets/partner/banners/business-growth-11.png` (1170x520 PNG) at full opacity in both current and runtime-0.1 compat screens, replacing the washed/gray JPEG reference. Runtime-0.1/current OTA verification now validates this PNG. The legacy Partner 0.1 APK workflow is changed to manual-only `workflow_dispatch` and requires explicit token `BUILD_PARTNER_0_1_0`, so merging UI/asset changes no longer starts an APK automatically. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
 
 - **2026-09-22 — LIC / Chola / Generali insurer logo aliases:** branch `fix/insurer-logo-aliases-lic-chola-generali`; the shared insurer-logo resolver now explicitly maps Life Insurance Corporation of India to `lic.png`, Cholamandalam MS General Insurance Company Limited to the existing `cholamandalam-ms-general.png` asset (imported from CholaFHL), and Generali Central Insurance Company Limited to `generali-central.png` (imported from Logo), with exact full-name aliases so master-data rendering does not depend on substring fallback. No database, schema, API, or master-data record changes. **IMPLEMENTED; no PR created; CI/merge/deployment pending.**
