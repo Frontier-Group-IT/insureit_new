@@ -50,7 +50,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
 
   const admin = createSupabaseAdminClient();
   const [{ data: existingCustomer }, { data: editorRecord }, { data: customerMemberships }] = await Promise.all([
-    admin.from("customers").select("id, customer_code, contact_name, company_name, phone, profile_id").eq("id", id).maybeSingle<{ id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; profile_id: string | null }>(),
+    admin.from("customers").select("id, customer_code, contact_name, company_name, phone, profile_id, onboarding_status, onboarding_completed_at, creation_channel").eq("id", id).maybeSingle<{ id: string; customer_code: string; contact_name: string; company_name: string | null; phone: string; profile_id: string | null; onboarding_status: string; onboarding_completed_at: string | null; creation_channel: string | null }>(),
     admin.from("profiles").select("id, full_name, email").eq("id", profile.id).maybeSingle<{ id: string; full_name: string; email: string | null }>(),
     admin.from("customer_memberships").select("id, profile_id, invited_phone, status").eq("customer_id", id).eq("status", "active").returns<Array<{ id: string; profile_id: string; invited_phone: string | null; status: string }>>(),
   ]);
@@ -79,6 +79,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
   }
 
   const changedAt = new Date();
+  const policyOriginNeedsActivation = existingCustomer.creation_channel === "policy_onboarding" && existingCustomer.onboarding_status !== "active";
   const { error } = await admin.from("customers").update({
     contact_name: contactName,
     company_name: legalTradeName,
@@ -95,7 +96,7 @@ export async function updateCustomerProfile(id: string, formData: FormData) {
     pan_number: panNumber,
     is_gst_registered: isGstRegistered,
     gst_number: isGstRegistered ? gstNumber : null,
-    onboarding_status: textValue(formData, "onboarding_status") ?? "active",
+    ...(policyOriginNeedsActivation ? { onboarding_status: "active", onboarding_completed_at: existingCustomer.onboarding_completed_at ?? changedAt.toISOString() } : {}),
     assigned_agent_id: assignedAgentId,
     updated_by: profile.id,
     updated_at: changedAt.toISOString()

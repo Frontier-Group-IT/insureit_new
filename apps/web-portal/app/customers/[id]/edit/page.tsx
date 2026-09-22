@@ -108,6 +108,9 @@ export default async function EditCustomerPage({ params, searchParams }: { param
     return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Dealership Profile">{content}</AppShell>;
   }
 
-  const content = <CustomerProfileEditor customer={customer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfileWithMobileVerification.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null} beforeActions={activityStatus}/>;
+  const editorCustomer = customer.creation_channel === "policy_onboarding" && customer.onboarding_status !== "active"
+    ? { ...customer, onboarding_status: "active" }
+    : customer;
+  const content = <CustomerProfileEditor customer={editorCustomer} documents={documentsWithUrls} vehicles={vehicles??[]} agents={agents??[]} internalOwnerName={internalOwnerName} leadSourceName={leadSourceName} action={updateCustomerProfileWithMobileVerification.bind(null,id)} errorMessage={query.error??null} errorField={query.field??null} beforeActions={activityStatus}/>;
   return embedded ? <EmbeddedEditor>{content}</EmbeddedEditor> : <AppShell title="Customer Profile">{content}</AppShell>;
 }

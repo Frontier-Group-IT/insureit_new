@@ -584,6 +584,17 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const result = data as { ok?: boolean; policyId?: string; policyCode?: string; customerId?: string; vehicleId?: string } | null;
     if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Please try again." };
 
+    if (createNewCustomer) {
+      const { error: customerActivationError } = await admin
+        .from("customers")
+        .update({ onboarding_status: "active", onboarding_completed_at: new Date().toISOString() })
+        .eq("id", result.customerId)
+        .eq("creation_channel", "policy_onboarding");
+      if (customerActivationError) {
+        console.error("policy_onboarding_customer_activation_failed", { customerId: result.customerId, error: customerActivationError.message });
+      }
+    }
+
     await recordVehicleActivity(
       admin,
       result.vehicleId,

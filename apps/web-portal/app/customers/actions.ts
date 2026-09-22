@@ -59,7 +59,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
     { field: "gst_copy", type: "gst_copy" }
   ];
   const labels: Record<DocumentInput["type"], string> = { pan_copy: "PAN copy", aadhaar_front: "Aadhaar front", aadhaar_back: "Aadhaar back", gst_copy: "GST copy" };
-  const requiredDocumentTypes = isGstRegistered ? new Set(["pan_copy", "aadhaar_front", "aadhaar_back", "gst_copy"]) : new Set(["pan_copy", "aadhaar_front", "aadhaar_back"]);
+  const requiredDocumentTypes = isGstRegistered ? new Set(["gst_copy"]) : new Set<string>();
   for (const input of documentInputs) { const validationError = validateDocument(fileValue(formData, input.field), labels[input.type], requiredDocumentTypes.has(input.type)); if (validationError) return failure(validationError, input.field); }
 
   const accessToken = await getServerAccessToken();
