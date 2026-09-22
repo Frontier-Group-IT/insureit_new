@@ -1,3 +1,14 @@
+## 2026-09-22 Partner Portal low-risk loading/prefetch Phase 1
+
+**IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `perf/partner-low-risk-loading-prefetch`, PR #2251, introduces only reversible front-end/request-loading changes for the Partner Portal.
+
+- Adds a route-level `app/partner/loading.tsx` skeleton so existing Partner layouts can surface immediate visual feedback during expensive page renders.
+- Moves the mobile Partner bottom navigation into the persistent `app/partner/layout.tsx` so it remains available while page content suspends; page-level shell no longer owns that duplicate navigation.
+- Keeps automatic Next.js prefetch disabled and uses **intent-only** `router.prefetch` on hover/focus/pointer-down for common read-only Partner routes. This avoids preloading every visible sidebar route while still warming the destination the user is actually about to open.
+- Keeps Policy Intake, Search, Account and Support outside the intent-prefetch allow-list for this first safety pass.
+- Does not modify Partner RPCs, Supabase schema/data/RLS, authorization, commercial scope, workflow state, accounting, policy/claim/payout calculations, or My Business aggregation logic.
+- The previously identified heavy paths (Partner Home multi-RPC assembly, 12-month range fan-out, and My Business sequential portfolio scan) remain unchanged and require separate measured phases with output-parity gates.
+
 # INSUREIT Performance Optimization Handoff
 
 > **Created:** 2026-08-09 (IST)
