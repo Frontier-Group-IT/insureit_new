@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Bike, BusFront, CarFront, ChevronDown, ChevronRight, Construction, FileText, ShieldCheck, Tractor, Truck } from "lucide-react";
 import { useMemo, useState } from "react";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 
 type Customer = {
@@ -204,7 +205,21 @@ export function FleetSummaryClient({ customer, vehicles, policies }: Props) {
                               <div key={policy.id} className="rounded-xl border border-[#DFE5EE] bg-white px-3 py-2.5">
                                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                                   <div className="flex min-w-0 items-center gap-2.5">
-                                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEF7F2] text-[#17824A]"><ShieldCheck className="h-4 w-4" strokeWidth={1.8} /></span>
+                                    {getInsurerLogo(policy.insurance_companies?.name) ? (
+                                      <span className="grid h-8 w-8 shrink-0 place-items-center">
+                                        <Image
+                                          src={getInsurerLogo(policy.insurance_companies?.name)!}
+                                          alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
+                                          width={32}
+                                          height={32}
+                                          className="max-h-7 max-w-8 object-contain"
+                                        />
+                                      </span>
+                                    ) : (
+                                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[#EEF7F2] text-[#17824A]">
+                                        <ShieldCheck className="h-4 w-4" strokeWidth={1.8} />
+                                      </span>
+                                    )}
                                     <div className="min-w-0">
                                       <div className="flex flex-wrap items-center gap-2">
                                         <p className="truncate text-[10.5px] font-semibold text-[#173E7B]">{policy.policy_no}</p>
