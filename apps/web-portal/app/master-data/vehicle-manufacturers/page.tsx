@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, PageHeader, AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { VEHICLE_MANUFACTURER_SEGMENTS } from "@/lib/vehicle-manufacturer-master";
 
 type ManufacturerRow = {
@@ -88,8 +89,9 @@ export default async function VehicleManufacturerMasterPage({ searchParams }: { 
             <tbody className="divide-y divide-[#EEF1F6]">
               {filtered.map((row) => {
                 const rowSegments = segmentMap.get(row.id) ?? [];
+                const manufacturerLogo = row.logo_path || getVehicleBrandLogo(row.display_name) || getVehicleBrandLogo(row.name);
                 return <tr key={row.id} className="bg-white/60 text-[11px] text-[#364158] hover:bg-[#FBFCFF]">
-                  <td className="px-4 py-3"><div className="flex items-center gap-3">{row.logo_path ? <div className="grid h-10 w-14 place-items-center rounded-xl border border-[#E6EAF1] bg-white p-1.5"><Image src={row.logo_path} alt="" width={48} height={28} className="max-h-7 w-auto object-contain" /></div> : <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#6759ff]/12 to-[#17c7c9]/12 text-[11px] font-black text-[#5548cf]">{initials(row.display_name)}</div>}<div><Link href={`/master-data/vehicle-manufacturers/${row.id}`} className="font-bold text-[#1D2741] hover:text-[#6759ff]">{row.display_name}</Link><p className="mt-0.5 max-w-[340px] text-[10px] text-[#7B8498]">{row.name}</p></div></div></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-3">{manufacturerLogo ? <div className="grid h-10 w-14 place-items-center rounded-xl border border-[#E6EAF1] bg-white p-1.5"><Image src={manufacturerLogo} alt={`${row.display_name} logo`} width={48} height={28} className="max-h-7 w-auto object-contain" /></div> : <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#6759ff]/12 to-[#17c7c9]/12 text-[11px] font-black text-[#5548cf]">{initials(row.display_name)}</div>}<div><Link href={`/master-data/vehicle-manufacturers/${row.id}`} className="font-bold text-[#1D2741] hover:text-[#6759ff]">{row.display_name}</Link><p className="mt-0.5 max-w-[340px] text-[10px] text-[#7B8498]">{row.name}</p></div></div></td>
                   <td className="px-3 py-3 font-mono text-[10px] text-[#59647B]">{row.manufacturer_code}</td>
                   <td className="px-3 py-3"><div className="flex max-w-[320px] flex-wrap gap-1">{rowSegments.slice(0, 3).map((segment) => <span key={segment} className="rounded-full border border-[#DDE4EF] bg-[#F8FAFD] px-2 py-1 text-[8.5px] font-bold text-[#566178]">{segmentLabel(segment)}</span>)}{rowSegments.length > 3 ? <span className="rounded-full bg-[#6759ff]/8 px-2 py-1 text-[8.5px] font-bold text-[#6759ff]">+{rowSegments.length - 3}</span> : null}</div></td>
                   <td className="px-3 py-3"><StatusPill value={row.market_status} /></td>
