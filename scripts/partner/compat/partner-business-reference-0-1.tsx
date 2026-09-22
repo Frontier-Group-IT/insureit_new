@@ -125,7 +125,7 @@ export default function BusinessScreen() {
         <>
           <View style={styles.heroBanner}>
             <Image
-              source={require('../../assets/business-header-reference.jpg')}
+              source={require('../../assets/partner/banners/business-growth-11.png')}
               style={styles.heroImage}
               resizeMode="cover"
             />
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     top: 0,
     width: '100%',
     height: '100%',
-    opacity: 0.96,
+    opacity: 1,
   },
   heroTopRow: {
     position: 'absolute',
