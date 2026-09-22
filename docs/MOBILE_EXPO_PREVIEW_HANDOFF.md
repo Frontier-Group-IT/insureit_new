@@ -1,3 +1,15 @@
+## 2026-09-22 — Customer Add Vehicle fetched-policy UX
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-vehicle-fetched-policy-lock`.
+
+- Successful normal RC fetch feedback is now a 2.5-second popup instead of a persistent inline success banner.
+- Policy No. adopts the existing chassis/engine alternate-character mask when unfocused.
+- The insurer selected-status line is removed.
+- A confidently fetched insurer is locked read-only and visually reduced to 10% opacity; unresolved insurer matches stay editable.
+- This is JavaScript/React Native UI behavior only. No `app.json`, native dependency, permission, package ID, runtime version, API/RPC/schema/RLS, or save-contract change is included.
+- User explicitly prohibited APK/AAB creation for this work. Do not trigger any APK workflow. OTA publication is also not authorized until separately requested.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 # Mobile Expo Preview Handoff
 
 > **Created:** 2026-08-17 (IST)
