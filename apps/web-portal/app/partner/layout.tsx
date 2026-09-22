@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { PartnerNavigation } from "@/components/partner-portal/partner-navigation";
+import { PartnerBottomNavigation } from "@/components/partner-portal/partner-bottom-navigation";
 import { getPartnerWebSession } from "@/lib/partner-web";
 
 export default async function PartnerLayout({ children }: { children: ReactNode }) {
@@ -22,6 +23,7 @@ export default async function PartnerLayout({ children }: { children: ReactNode 
       `}</style>
       <PartnerNavigation hideAccount={hideAccount} />
       {children}
+      <PartnerBottomNavigation hideAccount={hideAccount} />
     </>
   );
 }

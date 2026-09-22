@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ExternalLink, Menu, RefreshCw, X } from "lucide-react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { PartnerCustomIcon, type PartnerCustomIconName } from "./partner-custom-icon";
+import { canIntentPrefetchPartnerRoute } from "./partner-navigation";
 
 const items: Array<{ href: string; label: string; icon: PartnerCustomIconName }> = [
   { href: "/partner", label: "Home", icon: "home" },
@@ -33,6 +34,7 @@ export function PartnerMobileNavigation({ hideAccount = false }: { hideAccount?:
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const closeRef = useRef<HTMLButtonElement>(null);
   const visibleItems = hideAccount ? items.filter((item) => item.href !== "/partner/account") : items;
 
@@ -87,6 +89,9 @@ export function PartnerMobileNavigation({ hideAccount = false }: { hideAccount?:
                             <Link
                               href="/partner/renewals"
                               prefetch={false}
+                              onMouseEnter={() => router.prefetch("/partner/renewals")}
+                              onFocus={() => router.prefetch("/partner/renewals")}
+                              onPointerDown={() => router.prefetch("/partner/renewals")}
                               aria-current={internalActive ? "page" : undefined}
                               onClick={() => setOpen(false)}
                               className={childClass(internalActive)}
@@ -97,6 +102,9 @@ export function PartnerMobileNavigation({ hideAccount = false }: { hideAccount?:
                             <Link
                               href="/partner/renewals/external"
                               prefetch={false}
+                              onMouseEnter={() => router.prefetch("/partner/renewals/external")}
+                              onFocus={() => router.prefetch("/partner/renewals/external")}
+                              onPointerDown={() => router.prefetch("/partner/renewals/external")}
                               aria-current={externalActive ? "page" : undefined}
                               onClick={() => setOpen(false)}
                               className={childClass(externalActive)}
@@ -115,6 +123,9 @@ export function PartnerMobileNavigation({ hideAccount = false }: { hideAccount?:
                       key={item.href}
                       href={item.href}
                       prefetch={false}
+                      onMouseEnter={() => { if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href); }}
+                      onFocus={() => { if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href); }}
+                      onPointerDown={() => { if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href); }}
                       onClick={() => setOpen(false)}
                       className={`flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${
                         active ? "bg-white text-[#141d3b]" : "text-white/88 hover:bg-white/10"

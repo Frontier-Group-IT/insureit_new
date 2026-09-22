@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { PartnerCustomIcon } from "./partner-custom-icon";
-import { partnerMobileItems } from "./partner-navigation";
+import { canIntentPrefetchPartnerRoute, partnerMobileItems } from "./partner-navigation";
 
 export function PartnerBottomNavigation({ hideAccount = false }: { hideAccount?: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const items = hideAccount
     ? partnerMobileItems.map((item) => item.href === "/partner/account"
       ? { ...item, href: "/partner/support", label: "More", icon: "support" as const }
@@ -25,6 +26,9 @@ export function PartnerBottomNavigation({ hideAccount = false }: { hideAccount?:
             key={item.href}
             href={item.href}
             prefetch={false}
+            onMouseEnter={() => { if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href); }}
+            onFocus={() => { if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href); }}
+            onPointerDown={() => { if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href); }}
             aria-current={active ? "page" : undefined}
             className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
               active ? "bg-white text-[#17213e]" : "text-[#D7DDF0]"

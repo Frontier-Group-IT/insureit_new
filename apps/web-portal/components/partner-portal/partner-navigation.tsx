@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -81,11 +81,40 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+const intentPrefetchRoutes = new Set([
+  "/partner",
+  "/partner/business",
+  "/partner/customers",
+  "/partner/vehicles",
+  "/partner/policies",
+  "/partner/renewals",
+  "/partner/renewals/external",
+  "/partner/claims",
+  "/partner/payout",
+  "/partner/network",
+  "/partner/activity",
+]);
+
+export function canIntentPrefetchPartnerRoute(href: string) {
+  return intentPrefetchRoutes.has(href);
+}
+
 function NavLink({ item }: { item: PartnerNavItem }) {
   const pathname = usePathname();
+  const router = useRouter();
   const active = isActive(pathname, item.href);
+  const warm = () => {
+    if (canIntentPrefetchPartnerRoute(item.href)) router.prefetch(item.href);
+  };
   return (
-    <Link href={item.href} prefetch={false} className={`group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active ? "bg-white text-[#141d3b] shadow-[0_3px_12px_rgba(5,18,45,0.12)]" : "text-white/88 hover:bg-white/8 hover:text-white"}`}>
+    <Link
+      href={item.href}
+      prefetch={false}
+      onMouseEnter={warm}
+      onFocus={warm}
+      onPointerDown={warm}
+      className={`group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-[12px] font-bold transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 ${active ? "bg-white text-[#141d3b] shadow-[0_3px_12px_rgba(5,18,45,0.12)]" : "text-white/88 hover:bg-white/8 hover:text-white"}`}
+    >
       <SidebarIcon name={item.icon} />
       <span className="flex-1">{item.label}</span>
     </Link>
@@ -94,6 +123,7 @@ function NavLink({ item }: { item: PartnerNavItem }) {
 
 function RenewalsNav({ item }: { item: PartnerNavItem }) {
   const pathname = usePathname();
+  const router = useRouter();
   const renewalsActive = pathname === "/partner/renewals" || pathname.startsWith("/partner/renewals/");
   const [open, setOpen] = useState(renewalsActive);
   useEffect(() => { if (renewalsActive) setOpen(true); }, [renewalsActive]);
@@ -113,11 +143,11 @@ function RenewalsNav({ item }: { item: PartnerNavItem }) {
       {open ? (
         <div className="ml-[29px] mt-1.5 border-l border-white/35 pl-3.5">
           <div className="space-y-1">
-            <Link href="/partner/renewals" prefetch={false} aria-current={internalActive ? "page" : undefined} className={childClass(internalActive)}>
+            <Link href="/partner/renewals" prefetch={false} onMouseEnter={() => router.prefetch("/partner/renewals")} onFocus={() => router.prefetch("/partner/renewals")} onPointerDown={() => router.prefetch("/partner/renewals")} aria-current={internalActive ? "page" : undefined} className={childClass(internalActive)}>
               <span className={childIconClass(internalActive)}><RefreshCw className="h-3.5 w-3.5" /></span>
               <span>Internal Renewal</span>
             </Link>
-            <Link href="/partner/renewals/external" prefetch={false} aria-current={externalActive ? "page" : undefined} className={childClass(externalActive)}>
+            <Link href="/partner/renewals/external" prefetch={false} onMouseEnter={() => router.prefetch("/partner/renewals/external")} onFocus={() => router.prefetch("/partner/renewals/external")} onPointerDown={() => router.prefetch("/partner/renewals/external")} aria-current={externalActive ? "page" : undefined} className={childClass(externalActive)}>
               <span className={childIconClass(externalActive)}><ExternalLink className="h-3.5 w-3.5" /></span>
               <span>External Renewal</span>
             </Link>
