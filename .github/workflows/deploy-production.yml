@@ -163,6 +163,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260919114500_voice_quick_add_queue_source.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-voice-quick-add-queue-source.yml"
             echo "Voice Quick Add queue-source migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260920123000_policy_document_15mb_limit.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-policy-document-15mb-limit.yml"
+            echo "Policy document 15 MB limit migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260921145500_voice_campaigns.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-voice-campaigns.yml"
             echo "Voice campaign workflow migration detected. Waiting for its schema workflow..."
