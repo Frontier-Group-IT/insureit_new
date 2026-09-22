@@ -95,9 +95,14 @@ assert(unifiedForm.includes('router.push(`/policies?success=policy_created&polic
 assert(unifiedForm.includes('flatPayoutAmount: saved.form.flatPayoutAmount ?? ""'),"Legacy saved Motor drafts must hydrate a missing FLAT payout amount safely.");
 assert(unifiedForm.includes('(form.flatPayoutAmount??"").trim()!==""'),"FLAT payout entered-state must tolerate legacy drafts without flatPayoutAmount.");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
+const policyDocumentActions=read("app/policies/policy-document-actions.ts");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
 assert(saveConfirmation.includes("getPendingPolicyIntakeId() ? legacySaveButtonLabel : saveButtonLabel"),"Policy Intake onboarding must retain Book Active Policy wording instead of Upload Policy");
+assert(saveConfirmation.includes("const maxFileBytes = 15 * 1024 * 1024;"),"Direct Policy Onboarding must enforce the 15 MB policy-copy limit before upload.");
+assert(saveConfirmation.includes("Policy copy is too large")&&saveConfirmation.includes("Maximum allowed size is"),"Oversize policy copies must show a clear blocking popup in Policy Onboarding.");
+assert(policyDocumentActions.includes("const MAX_POLICY_COPY_BYTES = 15 * 1024 * 1024;"),"Policy-copy server action must enforce 15 MB as a backstop.");
+assert(policyDocumentActions.includes("Policy copy must be 15 MB or smaller."),"Policy-copy server rejection must state the 15 MB limit clearly.");
 const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");
 assert(copyState.includes('requirePolicyIntakeFinalizer()'),"Policy-copy reuse must require Finalize authority server-side");
 assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");

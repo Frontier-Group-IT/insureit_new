@@ -12,7 +12,7 @@ const pendingUploadStore = "pending";
 const pendingUploadKey = "policy-copy";
 
 const allowedTypes = ".pdf,.jpg,.jpeg,.png,.webp";
-const maxFileBytes = 50 * 1024 * 1024;
+const maxFileBytes = 15 * 1024 * 1024;
 const legacySaveButtonLabel = "Book Active Policy";
 const saveButtonLabel = "Upload Policy";
 const POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1";
@@ -92,6 +92,7 @@ export function PolicySaveConfirmation() {
   const [choice, setChoice] = useState<SaveChoice>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [sizeLimitFileName, setSizeLimitFileName] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<UploadNotice>(null);
   const pendingButton = useRef<HTMLButtonElement | null>(null);
   const bypassNextClick = useRef(false);
@@ -224,6 +225,7 @@ export function PolicySaveConfirmation() {
     setChoice(null);
     setFile(null);
     setFileError(null);
+    setSizeLimitFileName(null);
     pendingButton.current = null;
     pendingUploadFile.current = null;
     pendingPolicyId.current = null;
@@ -240,7 +242,8 @@ export function PolicySaveConfirmation() {
     }
     if (nextFile.size > maxFileBytes) {
       setFile(null);
-      setFileError("Policy copy must be 50 MB or smaller.");
+      setFileError("Policy copy must be 15 MB or smaller.");
+      setSizeLimitFileName(nextFile.name);
       return;
     }
     setFile(nextFile);
@@ -301,6 +304,21 @@ export function PolicySaveConfirmation() {
 
   return (
     <>
+      {sizeLimitFileName ? (
+        <div className="fixed inset-0 z-[190] grid place-items-center bg-[#0F172A]/45 px-4 backdrop-blur-[2px]" role="presentation">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="policy-copy-size-title" className="w-full max-w-[390px] overflow-hidden rounded-2xl border border-[#F0D3AE] bg-white shadow-[0_24px_70px_rgba(15,23,42,.24)]">
+            <div className="px-5 py-4">
+              <h3 id="policy-copy-size-title" className="text-[14px] font-bold text-[#7A4310]">Policy copy is too large</h3>
+              <p className="mt-1.5 text-[10px] leading-4 text-[#667085]">Maximum allowed size is <span className="font-bold text-[#7A4310]">15 MB</span>. Please choose a smaller PDF or image.</p>
+              <p className="mt-2 truncate rounded-lg bg-[#FFF8ED] px-2.5 py-1.5 text-[9px] font-semibold text-[#8A5A13]" title={sizeLimitFileName}>{sizeLimitFileName}</p>
+            </div>
+            <div className="flex justify-end border-t border-[#F3E5D2] bg-[#FFFBF5] px-5 py-3">
+              <button type="button" onClick={() => setSizeLimitFileName(null)} className="rounded-xl bg-[#17365D] px-4 py-2 text-[9.5px] font-bold text-white">OK</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {uploadNotice ? (
         <div className="fixed right-4 top-20 z-[140] w-[min(380px,calc(100vw-2rem))] rounded-xl border border-[#D9E2F0] bg-white p-3 shadow-[0_18px_45px_rgba(15,23,42,.18)]" role="status" aria-live="polite">
           <div className="flex items-start gap-3">
@@ -344,7 +362,7 @@ export function PolicySaveConfirmation() {
                     <span className="shrink-0 rounded-lg bg-[#EEF4FB] px-2.5 py-1.5">Browse</span>
                     <input type="file" accept={allowedTypes} className="sr-only" onChange={(event) => selectFile(event.target.files?.[0] ?? null)} />
                   </label>
-                  <p className="mt-2 text-[9px] leading-4 text-[#7A879A]">PDF, JPG, PNG or WEBP · maximum 50 MB.</p>
+                  <p className="mt-2 text-[9px] leading-4 text-[#7A879A]">PDF, JPG, PNG or WEBP · maximum 15 MB.</p>
                   {fileError ? <p className="mt-1 text-[9px] font-semibold leading-4 text-red-600">{fileError}</p> : null}
                   {file ? <p className="mt-1 truncate text-[9px] font-semibold leading-4 text-[#315B9A]">Ready to upload: {file.name}</p> : null}
                 </div>
