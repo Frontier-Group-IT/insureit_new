@@ -1,21 +1,12 @@
 name: Build Partner 0.1.0 shield-icon preview APK once
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/build-partner-0-1-shield-icon-apk-once.yml'
-      - 'scripts/partner/native-assets/partner-shield-app-icon-256.jpg.b64'
-      - 'scripts/partner/patch-0-1-home-hero-reference.mjs'
-      - 'scripts/partner/patch-0-1-home-refinements.mjs'
-      - 'scripts/partner/patch-0-1-business-date-filter.mjs'
-      - 'scripts/partner/compat/partner-business-date-filter.tsx'
-      - 'scripts/partner/compat/partner-business-reference-0-1.tsx'
-      - 'apps/partner-app/assets/business-header-reference.jpg'
-      - 'scripts/partner/compat/partner-more-reference-0-1.tsx'
-      - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
+    inputs:
+      approval:
+        description: 'Type BUILD_PARTNER_0_1_0 only after explicit user approval for this exact APK build'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -32,6 +23,15 @@ jobs:
       COMPAT_SHA: 74039199991888777911deb30cf248e8f36cf8a8
 
     steps:
+      - name: Require explicit Partner 0.1.0 APK approval
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ "${{ inputs.approval }}" = "BUILD_PARTNER_0_1_0" ] || {
+            echo "Refusing Partner 0.1.0 APK build: explicit BUILD_PARTNER_0_1_0 approval token was not supplied." >&2
+            exit 1
+          }
+
       - name: Check out current main tooling
         uses: actions/checkout@v4
         with:
@@ -75,15 +75,13 @@ jobs:
           set -euo pipefail
           node tooling/scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs \
             'compat/apps/partner-app/components/partner-screen.tsx'
-          cp tooling/apps/partner-app/assets/business-header-reference.jpg \
-            compat/apps/partner-app/assets/business-header-reference.jpg
+          mkdir -p compat/apps/partner-app/assets/partner/banners
+          cp tooling/apps/partner-app/assets/partner/banners/business-growth-11.png \
+            compat/apps/partner-app/assets/partner/banners/business-growth-11.png
 
-          # Keep the mobile-optimized panoramic banner bytes intact.
-          # The asset is already a baseline JPEG cropped for the 158dp Business hero.
-          test -s compat/apps/partner-app/assets/business-header-reference.jpg
-          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'JPEG image data'
-          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q 'baseline'
-          file compat/apps/partner-app/assets/business-header-reference.jpg | grep -q '1664x487'
+          test -s compat/apps/partner-app/assets/partner/banners/business-growth-11.png
+          file compat/apps/partner-app/assets/partner/banners/business-growth-11.png | grep -q 'PNG image data'
+          file compat/apps/partner-app/assets/partner/banners/business-growth-11.png | grep -q '1170 x 520'
 
           cp tooling/scripts/partner/compat/partner-business-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/business.tsx'
@@ -93,8 +91,7 @@ jobs:
           grep -q 'Business by Product' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'Quick Actions' 'compat/apps/partner-app/app/(tabs)/business.tsx'
           grep -q 'PartnerBusinessDateFilterCompat' 'compat/apps/partner-app/app/(tabs)/business.tsx'
-          test -s compat/apps/partner-app/assets/business-header-reference.jpg
-          grep -q "business-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/business.tsx'
+          grep -q "business-growth-11.png" 'compat/apps/partner-app/app/(tabs)/business.tsx'
 
       - name: Install reference-style More layout for runtime 0.1.0
         shell: bash
