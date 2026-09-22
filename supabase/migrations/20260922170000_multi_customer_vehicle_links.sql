@@ -322,7 +322,7 @@ returns public.external_policies
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
   result public.external_policies;
   cleaned_policy_no text := upper(nullif(btrim(coalesce(p_policy_no, '')), ''));
@@ -363,7 +363,7 @@ begin
 
   return result;
 end;
-$;
+$$;
 
 revoke all on function public.create_customer_external_policy(uuid,uuid,uuid,text,text,date,date,numeric,numeric) from public, anon;
 grant execute on function public.create_customer_external_policy(uuid,uuid,uuid,text,text,date,date,numeric,numeric) to authenticated, service_role;
