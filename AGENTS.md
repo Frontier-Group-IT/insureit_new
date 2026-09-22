@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-22 — Partner Business banner regression hardening:** branch `fix/partner-business-banner-regression-guard`; restores the approved **1664x487 baseline JPEG** Business hero asset after it was overwritten by a later 480x270 replacement, updates the runtime-0.1 OTA guard back to 1664x487, and adds a Partner PR verification gate that rejects wrong JPEG type/dimensions or unexpectedly tiny banner files. Existing 158dp hero / full-fill image / 0.96 opacity layout remains unchanged. **IMPLEMENTED; PR/CI/merge/OTA verification pending.**
+
 - **2026-09-21 — Operations Overview open + settled claims KPI:** branch `feat/dashboard-claims-open-settled-summary`; the top Claims KPI now shows both open and settled claim counts plus open estimated-loss amount and settled amount. Open claims are aligned with the Claims report definition by excluding `Settled`, `Claim Complete`, `Closed`, and `Rejected`; settled count includes `Settled` and `Claim Complete`. No schema change. **IMPLEMENTED; PR #2246; CI/merge/deployment pending.**
 
 - **2026-09-21 — Dashboard Claim action pending:** branch `feat/dashboard-claim-action-pending`; replaces the Home “Claim documents pending” attention card with “Claim action pending”, counting distinct vehicles that have at least one open/actionable claim and linking to the active-claims queue. Raw pending document counts remain available only in claim health. **IMPLEMENTED; PR #2244 open; CI/merge/deployment pending.**
