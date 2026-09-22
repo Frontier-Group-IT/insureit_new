@@ -1,3 +1,14 @@
+## 2026-09-22 — Customer Add Vehicle fetched-policy lock correction v2
+
+- Branch: `fix/customer-fetched-policy-lock-v2`.
+- Root cause after PR #2260: `insurerFetchedLocked` existed and was set on confident RC insurer match, but the rendered `SearchInsurer` call did not pass `locked={insurerFetchedLocked}`; therefore the component always defaulted to editable and its 10% opacity state never activated.
+- Policy No. also still rendered through normal `InputField`, so it was neither masked nor lockable.
+- Fix now passes the insurer lock into `SearchInsurer`.
+- Adds `policyNumberFetchedLocked`, set only when RC/API actually returns a policy number; fetched Policy No. is masked and non-editable, while manually entered Policy No. keeps the same alternate-character mask as chassis/engine when unfocused and remains editable on focus.
+- Both fetched locks reset when RC number/account changes or before a new fetch.
+- No API, RPC, Supabase table/schema/RLS, save payload, permission, native dependency/configuration, runtime version, or business rule changed.
+- **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB BUILD AUTHORIZED.**
+
 ## 2026-09-22 — Customer Add Vehicle fetched-policy UX
 
 - Branch: `ui/customer-vehicle-fetched-policy-lock`.
