@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Eye, FileText, Plus, RotateCcw, Search } from "lucide-react";
+import { getInsurerLogo } from "@/lib/insurer-logo";
 import { useMemo, useState } from "react";
 import { RegisterPagination, RegisterStatusPill, RegisterViewTabs } from "@/components/broker-register";
 
@@ -143,9 +145,20 @@ export function BackofficePolicyRegister({ rows }: { rows: Row[] }) {
         {pageRows.map((row) => (
           <article key={row.id} className="rounded-xl border border-[#E2E8F0] bg-white p-3">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-[14px] font-bold text-[#17203A]">{row.policy_no}</p>
-                <p className="mt-0.5 truncate text-[10px] text-[#64748B]">{pretty(row.policy_type)}</p>
+              <div className="flex min-w-0 items-center gap-2.5">
+                {getInsurerLogo(row.insurance_companies?.name) ? (
+                  <Image
+                    src={getInsurerLogo(row.insurance_companies?.name)!}
+                    alt={row.insurance_companies?.name ? `${row.insurance_companies.name} logo` : "Insurance company"}
+                    width={30}
+                    height={30}
+                    className="max-h-7 max-w-8 shrink-0 object-contain"
+                  />
+                ) : null}
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-bold text-[#17203A]">{row.policy_no}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-[#64748B]">{pretty(row.policy_type)}</p>
+                </div>
               </div>
               <PolicyStatus status={row.status} />
             </div>
@@ -183,10 +196,21 @@ export function BackofficePolicyRegister({ rows }: { rows: Row[] }) {
             {pageRows.map((row) => (
               <tr key={row.id} className="h-12 transition hover:bg-[#FAFCFF]">
                 <td className="px-3">
-                  <Link prefetch={false} href={`/policies/${row.id}`} className="block min-w-0 hover:text-[#17365D] hover:underline">
-                    <span className="block truncate font-bold text-[#0F172A]">{row.policy_no}</span>
-                    <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{pretty(row.policy_type)}</span>
-                  </Link>
+                  <div className="flex min-w-0 items-center gap-2">
+                    {getInsurerLogo(row.insurance_companies?.name) ? (
+                      <Image
+                        src={getInsurerLogo(row.insurance_companies?.name)!}
+                        alt={row.insurance_companies?.name ? `${row.insurance_companies.name} logo` : "Insurance company"}
+                        width={26}
+                        height={26}
+                        className="max-h-6 max-w-[28px] shrink-0 object-contain"
+                      />
+                    ) : null}
+                    <Link prefetch={false} href={`/policies/${row.id}`} className="block min-w-0 hover:text-[#17365D] hover:underline">
+                      <span className="block truncate font-bold text-[#0F172A]">{row.policy_no}</span>
+                      <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{pretty(row.policy_type)}</span>
+                    </Link>
+                  </div>
                 </td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{row.customers?.contact_name ?? "—"}</p></td>
                 <td className="px-2.5"><p className="truncate font-mono font-semibold text-[#334155]">{row.vehicles?.vehicle_no ?? "—"}</p></td>
