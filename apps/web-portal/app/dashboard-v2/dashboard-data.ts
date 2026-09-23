@@ -93,6 +93,12 @@ type ClaimFinancialRow = {
   payment_received_amount: number | string | null;
 };
 
+type ClaimStageDetailRow = {
+  claim_id: string;
+  details: Record<string, unknown> | null;
+  created_at: string;
+};
+
 export type DashboardIntakeRow = {
   id: string;
   intake_number: string;
@@ -540,6 +546,7 @@ export async function getDashboardCurrentData(
     const internalClaims = claims.filter((row) => row.policy_service_source !== "external");
     const internalOpenClaims = internalClaims.filter((row) => !closedClaimStatuses.has(row.current_status));
     const internalSettledClaims = internalClaims.filter((row) => settledClaimStatuses.has(row.current_status));
+    const internalOpenIds = internalOpenClaims.map((row) => row.id);
     const openClaims = claims.filter((row) => !closedClaimStatuses.has(row.current_status));
     const openIds = openClaims.map((row) => row.id);
     const financialClaimIds = Array.from(new Set([
@@ -549,7 +556,7 @@ export async function getDashboardCurrentData(
     let financialRows: ClaimFinancialRow[] = [];
     let pendingDocuments = 0;
 
-    const [financialResult, documentResult] = await Promise.all([
+    const [financialResult, stageDetailResult, documentResult] = await Promise.all([
       financialClaimIds.length
         ? admin
             .from("claim_financials")
@@ -557,6 +564,15 @@ export async function getDashboardCurrentData(
             .in("claim_id", financialClaimIds)
             .returns<ClaimFinancialRow[]>()
         : Promise.resolve({ data: [] as ClaimFinancialRow[], error: null }),
+      internalOpenIds.length
+        ? admin
+            .from("claim_stage_details")
+            .select("claim_id,details,created_at")
+            .in("claim_id", internalOpenIds)
+            .order("created_at", { ascending: false })
+            .limit(5000)
+            .returns<ClaimStageDetailRow[]>()
+        : Promise.resolve({ data: [] as ClaimStageDetailRow[], error: null }),
       openIds.length
         ? admin
             .from("claim_documents")
@@ -567,16 +583,18 @@ export async function getDashboardCurrentData(
     ]);
     if (financialResult.error) warnings.push("Claim financial exposure could not be refreshed.");
     else financialRows = financialResult.data ?? [];
+    if (stageDetailResult.error) warnings.push("Claim stage amounts could not be refreshed.");
     if (documentResult.error) warnings.push("Claim document review count could not be refreshed.");
     else pendingDocuments = documentResult.count ?? 0;
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
+    const stageAmountsByClaim = buildLatestClaimStageAmounts(stageDetailResult.data ?? []);
     const actionPendingVehicles = new Set(
       openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
     ).size;
     const estimateExposure = sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss");
     const internalOpenAmount = internalOpenClaims.reduce(
-      (sum, claim) => sum + currentOpenClaimAmount(claim, financialByClaim),
+      (sum, claim) => sum + currentOpenClaimAmount(claim, stageAmountsByClaim, financialByClaim),
       0,
     );
     const internalSettledAmountReceived = sumClaimFinancial(
@@ -909,13 +927,56 @@ function buildClaimAging(rows: ClaimRow[], now: Date) {
   }));
 }
 
+type OpenClaimStageAmounts = {
+  estimateAmount: unknown;
+  billAmount: unknown;
+  doAmount: unknown;
+};
+
+const billAmountStatuses = new Set(["Final Bill Submitted", "DO Status"]);
+const doAmountStatuses = new Set(["DO Submitted", "Payment Stage", "Claim Completion In Progress", "Settlement Under Process"]);
+
+function buildLatestClaimStageAmounts(rows: ClaimStageDetailRow[]) {
+  const byClaim = new Map<string, OpenClaimStageAmounts>();
+  for (const row of rows) {
+    const details = row.details;
+    const milestoneKey = typeof details?.milestone_key === "string" ? details.milestone_key : "";
+    if (!["claim_intimation", "billing", "delivery_order"].includes(milestoneKey)) continue;
+
+    const current = byClaim.get(row.claim_id) ?? { estimateAmount: null, billAmount: null, doAmount: null };
+    if (milestoneKey === "claim_intimation" && !hasRecordedFinancialValue(current.estimateAmount)) {
+      current.estimateAmount = details?.estimate_amount;
+    }
+    if (milestoneKey === "billing" && !hasRecordedFinancialValue(current.billAmount)) {
+      current.billAmount = details?.bill_amount;
+    }
+    if (milestoneKey === "delivery_order" && !hasRecordedFinancialValue(current.doAmount)) {
+      current.doAmount = details?.do_amount;
+    }
+    byClaim.set(row.claim_id, current);
+  }
+  return byClaim;
+}
+
 function currentOpenClaimAmount(
   claim: ClaimRow,
-  map: Map<string, ClaimFinancialRow>,
+  stageMap: Map<string, OpenClaimStageAmounts>,
+  financialMap: Map<string, ClaimFinancialRow>,
 ) {
-  const financial = map.get(claim.id);
-  if (hasRecordedFinancialValue(financial?.do_amount)) return numberValue(financial?.do_amount);
-  if (hasRecordedFinancialValue(financial?.bill_amount)) return numberValue(financial?.bill_amount);
+  const stageAmounts = stageMap.get(claim.id);
+  const financial = financialMap.get(claim.id);
+
+  if (doAmountStatuses.has(claim.current_status)) {
+    if (hasRecordedFinancialValue(stageAmounts?.doAmount)) return numberValue(stageAmounts?.doAmount);
+    if (hasRecordedFinancialValue(financial?.do_amount)) return numberValue(financial?.do_amount);
+  }
+
+  if (billAmountStatuses.has(claim.current_status)) {
+    if (hasRecordedFinancialValue(stageAmounts?.billAmount)) return numberValue(stageAmounts?.billAmount);
+    if (hasRecordedFinancialValue(financial?.bill_amount)) return numberValue(financial?.bill_amount);
+  }
+
+  if (hasRecordedFinancialValue(stageAmounts?.estimateAmount)) return numberValue(stageAmounts?.estimateAmount);
   if (hasRecordedFinancialValue(financial?.estimate_amount)) return numberValue(financial?.estimate_amount);
   return numberValue(claim.estimated_loss);
 }
