@@ -361,6 +361,14 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
             initialValues={initialValues}
             nonMotorInitialValues={nonMotorInitialValues}
             nonMotorExistingDocuments={existingDocuments}
+            nonMotorActivityStatus={
+              <PolicyActivityStatus
+              policyId={policy.id}
+              createdBy={creatorResult.data?.full_name ?? null}
+              createdAt={policy.created_at}
+              updatedAt={policy.updated_at}
+            />
+            }
             commercialAccess={commercialAccess}
           />
           <PolicyLinkedMasterActions
@@ -368,14 +376,6 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
             vehicleId={null}
             canEditCustomer={Boolean(customerManager)}
             canEditVehicle={false}
-          />
-        </div>
-        <div className="mx-auto mt-4 max-w-[1480px]">
-          <PolicyActivityStatus
-            policyId={policy.id}
-            createdBy={creatorResult.data?.full_name ?? null}
-            createdAt={policy.created_at}
-            updatedAt={policy.updated_at}
           />
         </div>
       </AppShell>
