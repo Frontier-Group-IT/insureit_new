@@ -132,6 +132,29 @@ function canTransferVehicle(role: string | null | undefined) { return role === "
 function canReplaceActivePolicy(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
 function validDate(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value); }
 
+function policyOnboardingErrorForServerLog(error: unknown) {
+  if (error instanceof Error) {
+    const errorWithCode = error as Error & { code?: unknown; hint?: unknown };
+    return {
+      name: error.name,
+      message: error.message,
+      code: typeof errorWithCode.code === "string" ? errorWithCode.code : undefined,
+      hint: typeof errorWithCode.hint === "string" ? errorWithCode.hint : undefined,
+      stack: error.stack,
+    };
+  }
+  if (error && typeof error === "object") {
+    const value = error as { name?: unknown; message?: unknown; code?: unknown; hint?: unknown };
+    return {
+      name: typeof value.name === "string" ? value.name : undefined,
+      message: typeof value.message === "string" ? value.message : String(error),
+      code: typeof value.code === "string" ? value.code : undefined,
+      hint: typeof value.hint === "string" ? value.hint : undefined,
+    };
+  }
+  return { message: String(error) };
+}
+
 function numericPayloadValue(value: unknown, integer = false, emptyValue = "") {
   if (value === null || value === undefined || value === "") return emptyValue;
   if (typeof value === "number") {
@@ -419,7 +442,12 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       const selectedVehicle = await findExistingVehicleById(selectedExistingVehicleId);
       if (!selectedVehicle) return { ok: false, kind: "database", error: "The selected existing vehicle is no longer available. Refresh and try again." };
       payload = applyCanonicalExistingVehicle(payload, selectedVehicle);
-    } catch {
+    } catch (error) {
+      console.error("policy_onboarding_server_error", {
+        stage: "selected_existing_vehicle_lookup",
+        sourceIntakeId: payload.sourceIntakeId ?? null,
+        error: policyOnboardingErrorForServerLog(error),
+      });
       return { ok: false, kind: "database", error: "We couldn't verify the selected existing vehicle. Your form has not been submitted." };
     }
   }
@@ -440,6 +468,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
   let selectedCustomerId = payload.resolution?.selectedCustomerId?.trim() || null;
   const createNewCustomer = payload.resolution?.createNewCustomer === true;
 
+  let diagnosticStage = "customer_resolution";
   try {
     if (selectedCustomerId) {
       const selectedCustomer = await findCustomerById(selectedCustomerId);
@@ -455,6 +484,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       }
     }
 
+    diagnosticStage = "customer_candidate_lookup";
     const customerCandidates = await findCustomerCandidates(name, phone);
     const phoneMatches = customerCandidates.filter((candidate) => candidate.phoneMatch);
     const exactNameMatches = customerCandidates.filter((candidate) => candidate.nameMatch);
@@ -474,6 +504,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       return { ok: false, kind: "customer_match", candidates: exactCustomerMatches };
     }
 
+    diagnosticStage = "vehicle_lookup";
     const vehicle = mode === "unregistered" ? await findVehicleOwnerByChassis(chassis) : await findVehicleOwner(registration);
     let effectiveCustomerId = selectedCustomerId;
     const ownershipDecision = payload.resolution?.ownershipDecision ?? null;
@@ -506,6 +537,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       if (replacementEffectiveDate !== String(payload.policy.validFrom ?? "")) return { ok: false, kind: "validation", error: "The replacement effective date must match the new policy Valid From date." };
     }
 
+    diagnosticStage = "business_conflict_check";
     const businessConflict = await findPolicyOnboardingBusinessConflict({
       payload,
       acceptCoverageGap: payload.resolution?.acceptCoverageGap === true,
@@ -534,6 +566,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     const admin = createSupabaseAdminClient();
     let rpcResult;
     if (replacementRequested && replacementPolicyId) {
+      diagnosticStage = "rpc:replace_active_motor_policy_v1";
       rpcResult = await admin.rpc("replace_active_motor_policy_v1", {
         p_existing_policy_id: replacementPolicyId,
         p_payload: rpcPayload,
@@ -541,14 +574,26 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
         p_effective_date: replacementEffectiveDate,
       });
     } else if (payload.sourceIntakeId) {
+      diagnosticStage = "policy_intake_finalizer_authorization";
       await requirePolicyIntakeFinalizer();
+      diagnosticStage = "rpc:finalize_policy_intake_motor_v1";
       if (!Number.isInteger(payload.draftRevision) || (payload.draftRevision ?? 0) < 1) return { ok:false, kind:"validation", error:"The Policy Intake draft version is missing. Reload the intake and try again." };
       rpcResult = await admin.rpc("finalize_policy_intake_motor_v1", { p_intake_id:payload.sourceIntakeId, p_payload:rpcPayload, p_expected_revision:payload.draftRevision });
     } else {
+      diagnosticStage = "rpc:onboard_motor_policy_commercial_status_v2";
       rpcResult = await admin.rpc("onboard_motor_policy_commercial_status_v2", { p_payload: rpcPayload });
     }
     const { data, error } = rpcResult;
     if (error) {
+      console.error("policy_onboarding_rpc_error", {
+        stage: diagnosticStage,
+        sourceIntakeId: payload.sourceIntakeId ?? null,
+        rpcError: {
+          code: error.code ?? null,
+          message: error.message ?? "",
+          hint: error.hint ?? null,
+        },
+      });
       const message = error.message ?? "";
       const lowerMessage = message.toLowerCase();
       if (message.includes("OWNERSHIP_CONFLICT")) {
@@ -585,6 +630,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     if (!result?.ok || !result.policyId || !result.policyCode || !result.customerId || !result.vehicleId) return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Please try again." };
 
     if (createNewCustomer) {
+      diagnosticStage = "post_booking_customer_activation";
       const { error: customerActivationError } = await admin
         .from("customers")
         .update({ onboarding_status: "active", onboarding_completed_at: new Date().toISOString() })
@@ -595,6 +641,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       }
     }
 
+    diagnosticStage = "post_booking_vehicle_activity";
     await recordVehicleActivity(
       admin,
       result.vehicleId,
@@ -604,7 +651,12 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
 
     revalidatePath("/policies"); revalidatePath("/customers"); revalidatePath("/vehicles"); revalidatePath(`/vehicles/${result.vehicleId}/edit`); if(payload.sourceIntakeId){revalidatePath("/policy-intakes");revalidatePath(`/policy-intakes/${payload.sourceIntakeId}`);}
     return { ok: true, policyId: result.policyId, policyCode: result.policyCode, customerId: result.customerId, vehicleId: result.vehicleId, status: "active" };
-  } catch {
+  } catch (error) {
+    console.error("policy_onboarding_server_error", {
+      stage: diagnosticStage,
+      sourceIntakeId: payload.sourceIntakeId ?? null,
+      error: policyOnboardingErrorForServerLog(error),
+    });
     return { ok: false, kind: "database", error: "We couldn't complete the policy booking. Your entered form details are still intact. Review the details and try again." };
   }
 }
