@@ -354,16 +354,17 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
 
         {activityStatus ? <div className="mt-1">{activityStatus}</div> : null}
 
-        <Section number="06" title="Documents">
-          <NonMotorDocumentPicker
-            files={documents}
-            existingDocuments={savedDocuments}
-            deletingType={deletingDocumentType}
-            onChange={setDocuments}
-            onDeleteExisting={isEdit ? deleteSavedDocument : undefined}
-            onError={setError}
-          />
-        </Section>
+        {!isEdit ? (
+          <Section number="06" title="Documents">
+            <NonMotorDocumentPicker
+              files={documents}
+              existingDocuments={savedDocuments}
+              deletingType={deletingDocumentType}
+              onChange={setDocuments}
+              onError={setError}
+            />
+          </Section>
+        ) : null}
       </div>
 
       <NonMotorLiveSummary completion={completion} category={form.category || "Non Motor"} sumInsured={Number(form.sumInsured || 0)} grossPremium={Number(form.grossPremium || 0)} riskReference={riskReference} insurer={selectedInsurer} expiry={form.endDate || "Not entered"} commercialAccess={commercialAccess} payinEntered={payinEntered} payoutEntered={payoutEntered} payinBasis={form.payinBasis} payoutBasis={form.payoutBasis} payinPercent={form.payinPercent} payoutPercent={form.payoutPercent} calculations={commercialCalculations} onOpen={setCommercialModal} />
@@ -373,9 +374,23 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     {commercialAccess && commercialModal === "payout" ? <PartnerPayoutModal form={form} update={update} calculations={commercialCalculations} onBasisChange={(basis) => changeCommercialBasis("payout", basis)} onClose={() => setCommercialModal(null)} /> : null}
     {error ? <ValidationErrorDialog message={error} onClose={() => setError(null)} /> : null}
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#D9E2F0] bg-white/95 px-4 py-3 shadow-[0_-8px_30px_rgba(15,23,42,.08)] backdrop-blur">
-      <div className="mx-auto flex max-w-[1480px] justify-end gap-2">
-        <Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>
-        <button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : isEdit ? "Save Policy Changes" : "Book Active Policy"}</button>
+      <div className="mx-auto flex max-w-[1480px] items-start gap-4">
+        {isEdit ? (
+          <div className="mr-auto min-w-0 flex-1">
+            <NonMotorDocumentPicker
+              files={documents}
+              existingDocuments={savedDocuments}
+              deletingType={deletingDocumentType}
+              onChange={setDocuments}
+              onDeleteExisting={deleteSavedDocument}
+              onError={setError}
+            />
+          </div>
+        ) : null}
+        <div className="ml-auto flex shrink-0 items-center gap-2 self-center">
+          <Link href="/policies" className="rounded-xl border border-[#CBD5E1] px-4 py-2.5 text-[10px] font-semibold">Cancel</Link>
+          <button type="button" onClick={submit} disabled={isPending} className="rounded-xl bg-[#17365D] px-5 py-2.5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Saving policy…" : savedPolicyCode ? "Open Policy Register" : isEdit ? "Save Policy Changes" : "Book Active Policy"}</button>
+        </div>
       </div>
     </div>
   </>;
