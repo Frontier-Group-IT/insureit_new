@@ -513,7 +513,7 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
 
 function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect, locked = false }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void; locked?: boolean }) {
   if (locked) {
-    return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell]}><Text style={styles.fetchedInsurerText} numberOfLines={1}>{maskAlternateCharacters(query || selectedInsurer?.name || '') || '-'}</Text></View></View>;
+    return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell]}><Text style={styles.fetchedInsurerText} numberOfLines={1}>{maskAllCharacters(query || selectedInsurer?.name || '') || '-'}</Text></View></View>;
   }
   return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={styles.inputShell}><MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" /><TextInput value={query} onChangeText={onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />{selectedInsurer ? <MaterialCommunityIcons name="check-circle" size={18} color="#12805C" /> : null}</View>{!selectedInsurer ? <View style={styles.selectMenu}>{!query.trim() ? <Text style={styles.emptyLookupText}>Type matching letters to search insurer.</Text> : companies.length ? companies.map((company) => <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={styles.selectOption}><Text style={styles.selectOptionText} numberOfLines={1}>{company.name}</Text></Pressable>) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}</View> : null}</View>;
 }
@@ -585,6 +585,7 @@ function cleanProviderModel(model: string, manufacturer: string | null) {
 }
 function escapeRegExp(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function maskAlternateCharacters(value: string) { return value.split('').map((char, index) => index % 2 === 1 ? '•' : char).join(''); }
+function maskAllCharacters(value: string) { return value.split('').map((char) => char === ' ' ? ' ' : '•').join(''); }
 function complianceKeysForVehicleType(vehicleType: string): ComplianceKey[] {
   if (vehicleType === 'TWP') return ['road_tax'];
   if (vehicleType === 'PCP') return ['puc', 'road_tax'];
@@ -714,7 +715,7 @@ const styles = StyleSheet.create({
   policyHintText: { flex: 1, color: '#607089', fontSize: 10.3, lineHeight: 14, fontWeight: '700' },
   fetchedLockedField: { opacity: 1 },
   fetchedInsurerShell: { backgroundColor: '#F7FAFD', borderColor: '#D7E0EA', paddingHorizontal: 12 },
-  fetchedInsurerText: { flex: 1, color: palette.navy, fontSize: 12.6, fontWeight: '600', letterSpacing: 0 },
+  fetchedInsurerText: { flex: 1, color: '#C7D0DC', fontSize: 12.6, fontWeight: '600', letterSpacing: 0.35 },
   lockedCodeField: { backgroundColor: '#EEF2F6', opacity: 0.72 },
   fetchPopupOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, backgroundColor: 'rgba(8,29,63,0.08)' },
   fetchPopupCard: { width: '100%', maxWidth: 360, minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 16, elevation: 8 },
