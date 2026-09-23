@@ -1,3 +1,21 @@
+## 2026-09-23 — Employee invite/reset auth reliability + shared auth layout
+
+- Branch: `fix/sales-executive-auth-invite-reset`.
+- Scope is employee portal authentication UX/session handling only; no Sales Executive role/capability, RLS, schema, employee/profile row, password hash/storage, or login authorization rule changed.
+- Login, employee Invite, Forgot Password and Reset Password use shared `components/auth-portal-shell.tsx` so branding/card dimensions/background treatment are consistent.
+- `/invite` now reads Supabase `error` / `error_description` query parameters server-side and immediately renders the expired/invalid invitation state. This avoids the previous case where an expired invite URL could remain visually stuck on “Opening invitation” when client hydration did not complete.
+- `/reset-password` now:
+  - surfaces redirect errors before showing the password form;
+  - listens for Supabase `PASSWORD_RECOVERY`;
+  - exchanges a PKCE `code` with `exchangeCodeForSession` when present;
+  - verifies an authenticated recovery session with `getSession()`;
+  - refuses `updateUser({ password })` until recovery state is ready;
+  - removes auth parameters from the visible URL after recovery is established;
+  - shows a completed state linking back to sign-in after password update.
+- Forgot Password continues to use Supabase `resetPasswordForEmail` and routes recovery links to `/reset-password`.
+- Added `portal-auth-email-flow-regression.mjs` and wired it into canonical `Verify web portal`.
+- **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 ## 2026-09-22 — Customer Add Vehicle fetched-policy lock correction v2
 
 - Branch: `fix/customer-fetched-policy-lock-v2`.

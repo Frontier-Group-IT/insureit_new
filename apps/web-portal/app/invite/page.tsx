@@ -1,27 +1,35 @@
 import { Suspense } from "react";
-import { BrandLockup } from "@/components/brand-lockup";
+import { AuthPortalShell } from "@/components/auth-portal-shell";
 import { InviteSetupForm } from "@/components/invite-setup-form";
 
-export default function InvitePage() {
+type InviteSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function InvitePage({ searchParams }: { searchParams: InviteSearchParams }) {
+  const params = await searchParams;
+  const inviteError = firstValue(params.error_description) ?? firstValue(params.error);
+
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F4F9FF] p-4 sm:p-6">
-      <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[#D8EBFF]" />
-      <div className="pointer-events-none absolute -bottom-28 -left-24 h-80 w-96 rotate-[-12deg] rounded-[45%] bg-[#DDF6EC]" />
-
-      <div className="relative w-full max-w-[470px] rounded-[28px] border border-[#D7E6F5] bg-white/95 px-6 py-7 shadow-[0_24px_70px_rgba(11,55,105,0.14)] backdrop-blur sm:px-9 sm:py-9">
-        <div className="mb-8 flex justify-center">
-          <BrandLockup size="hero" className="max-w-full" />
+    <AuthPortalShell
+      title="Activate portal access"
+      subtitle="Set your password to open the InsureIT operations workspace."
+    >
+      {inviteError ? (
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-700">
+          <p className="font-semibold">This invitation link cannot be used.</p>
+          <p className="mt-1 text-[12px] leading-5">{inviteError}</p>
+          <a className="mt-4 inline-flex rounded-xl bg-[#071D49] px-4 py-2 text-[12px] font-semibold text-white" href="/login">
+            Go to sign in
+          </a>
         </div>
-
-        <div className="mb-6 border-t border-[#E3ECF6] pt-6 text-center">
-          <h1 className="text-[24px] font-extrabold tracking-[-0.025em] text-[#071D49]">Activate portal access</h1>
-          <p className="mt-1.5 text-[12px] font-medium text-[#59687A]">Set your password to open the InsureIT operations workspace.</p>
-        </div>
-
+      ) : (
         <Suspense fallback={<p className="text-sm text-slate-500">Opening invitation...</p>}>
           <InviteSetupForm />
         </Suspense>
-      </div>
-    </main>
+      )}
+    </AuthPortalShell>
   );
 }
