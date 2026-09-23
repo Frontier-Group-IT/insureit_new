@@ -255,10 +255,8 @@ function pretty(value: string) {
 }
 
 function date(value: string) {
-  const parsed = new Date(`${value}T00:00:00`);
-  return Number.isNaN(parsed.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
+  const [year, month, day] = value.split("-");
+  return year && month && day ? day + "/" + month + "/" + year.slice(-2) : value;
 }
 
 function money(value: number | null) {
