@@ -1,3 +1,14 @@
+## 2026-09-23 — Policy Onboarding actual server-error diagnostics
+
+- Branch: `diag/policy-onboarding-actual-server-error`.
+- Scope is diagnostics only. `apps/web-portal/app/policies/policy-onboarding-actions.ts` now emits server-side `console.error` records for:
+  - Supabase/PostgREST RPC failures under event `policy_onboarding_rpc_error`;
+  - unexpected caught exceptions under event `policy_onboarding_server_error`.
+- Logs include the execution stage, whether the request originated from Policy Intake, backend error code, a redacted backend message, hint, and stack for ordinary thrown `Error` objects.
+- UUIDs and policy-number-like values are redacted from backend messages before logging. The code does not log source intake IDs, policy/customer/vehicle payloads, or the Supabase error `details` field.
+- The user-facing popup/error mapping is unchanged. No validation, payload sanitization, RPC, migration, schema, RLS, permission, policy calculation, booking rule, or recovery behavior was modified.
+- **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 ## 2026-09-22 — Customer Add Vehicle fetched-policy lock correction v2
 
 - Branch: `fix/customer-fetched-policy-lock-v2`.
