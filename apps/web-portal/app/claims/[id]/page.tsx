@@ -283,6 +283,7 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     spotIntimationAt: effectiveSpotDetails.spot_intimation_at,
     spotDetails: effectiveSpotDetails,
   };
+  const externalManagedClaim = claim.policy_service_source === "external" && claim.claim_service_mode === "broker_managed";
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
@@ -293,13 +294,14 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
         <OperationsClaimStages
           claimId={claim.id}
           currentStatus={claim.current_status}
+          externalManagedClaim={externalManagedClaim}
           insurerClaimNo={claim.insurer_claim_no}
           details={[...(stageRows ?? []), ...externalCustomerFallbackRows]}
           accidentAt={claim.accident_at}
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
           spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
-          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
+          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} currentStatus={claim.current_status} externalManagedClaim={externalManagedClaim} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
         />
