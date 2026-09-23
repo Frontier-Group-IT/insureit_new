@@ -16,6 +16,7 @@ on:
       - 'scripts/partner/compat/partner-policies-reference-0-1.tsx'
       - 'apps/partner-app/assets/partner/banners/policies-header-reference.jpg'
       - 'scripts/partner/compat/partner-claims-reference-0-1.tsx'
+      - 'apps/partner-app/assets/partner/banners/claims-header-reference.jpg'
       - 'scripts/partner/compat/partner-search-home-reference-0-1.tsx'
       - 'scripts/partner/patch-0-1-partner-screen-hide-topbar.mjs'
   workflow_dispatch:
@@ -214,10 +215,20 @@ jobs:
           set -euo pipefail
           cp tooling/scripts/partner/compat/partner-claims-reference-0-1.tsx \
             'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          mkdir -p compat/apps/partner-app/assets/partner/banners
+          cp tooling/apps/partner-app/assets/partner/banners/claims-header-reference.jpg \
+            compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
+          test -s compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
+          file compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg | grep -q 'JPEG image data'
           grep -q 'Support. Settle. Keep' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q 'Total Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q 'Load More Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
-          grep -q "partner-login-logo.png" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "claims-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "insureit-partner-official.png" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          if grep -q "heroArtworkWrap" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
+            echo "Legacy Claims foreground artwork overlay is still present." >&2
+            exit 1
+          fi
 
       - name: Install Home-style Search layout for runtime 0.1.0
         shell: bash
