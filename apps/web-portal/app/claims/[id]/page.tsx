@@ -283,6 +283,19 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     spotIntimationAt: effectiveSpotDetails.spot_intimation_at,
     spotDetails: effectiveSpotDetails,
   };
+  const externalManagedClaim = claim.policy_service_source === "external" && claim.claim_service_mode === "broker_managed";
+  const claimIntimationWorkflowStatuses: ClaimStatus[] = [
+    "Vehicle Inspected",
+    "Spot Survey Completed",
+    "Final Documents Awaited",
+    "Final Documents Verification Pending",
+    "Final Documents Submitted",
+    "Final Documents Verified",
+    "Claim Intimation",
+    "Final Surveyor Details",
+    "Survey Status",
+  ];
+  const claimIntimationSaveOnly = externalManagedClaim && !claimIntimationWorkflowStatuses.includes(claim.current_status);
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
@@ -299,8 +312,9 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
           spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
-          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
+          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} saveOnlyMode={claimIntimationSaveOnly} />}
           initialStageKey={requestedStage}
+          externalManagedClaim={externalManagedClaim}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
         />
       </div>
