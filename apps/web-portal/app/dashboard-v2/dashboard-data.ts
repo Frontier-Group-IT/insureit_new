@@ -629,7 +629,10 @@ export async function getDashboardCurrentData(
   const policyIntakes = access.viewPolicyIntakes && !intakeResult.error
     ? (() => {
         const actionRequired = intakes.filter(
-          (row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed"),
+          (row) =>
+            row.status === "ready_for_review" ||
+            row.status === "needs_attention" ||
+            (row.status === "processing" && row.ocr_status === "failed"),
         ).length;
         const inReview = intakes.filter((row) => row.status === "in_review").length;
         const processing = intakes.filter(
@@ -750,8 +753,8 @@ export async function getDashboardCurrentData(
         partnerPayoutMtd,
         retentionMtd,
         retentionRate: payinAfterTdsMtd > 0 ? (retentionMtd / payinAfterTdsMtd) * 100 : 0,
-        payinPoliciesMtd: payins.filter((row) => numberValue(row.total_projected_payin) !== 0).length,
-        payoutPoliciesMtd: payouts.filter((row) => payoutValue(row) !== 0).length,
+        payinPoliciesMtd: new Set(payins.map((row) => row.policy_id)).size,
+        payoutPoliciesMtd: new Set(payouts.map((row) => row.policy_id)).size,
         needsReviewMtd:
           payins.filter((row) => row.commercial_status === "needs_review").length +
           payouts.filter((row) => row.commercial_status === "needs_review").length,
