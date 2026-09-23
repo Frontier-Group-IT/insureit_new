@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Non-Motor document UI parity + activity placement:** branch `ui/non-motor-document-motor-parity-main`; rebased onto latest main after PR #2293 conflicted. Non-Motor Policy Edit document controls use the compact Motor-style grouped action pattern (View + re-upload/refresh + delete, filename below; missing slots show compact Add actions), and Activity Status sits immediately above Section 06 Documents. Single-document-per-type behavior is preserved; no schema or Motor behavior change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-23 — Claim stage financial sync:** branch `fix/claim-stage-financial-sync`; Operations claim stage saves now also upsert canonical `claim_financials` values: `claim_intimation` → `estimate_amount`, `billing` → `bill_amount`, and `delivery_order` → `do_amount`. Existing `claim_stage_details` history remains unchanged. This fixes future/current dashboard Open Amount calculation once those values are actually entered and saved. Existing claims with no historical amount cannot be backfilled automatically. No schema/RLS/mobile/APK change. **IMPLEMENTED; PR/CI/merge/deploy pending.**
 
 
