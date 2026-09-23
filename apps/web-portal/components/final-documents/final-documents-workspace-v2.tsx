@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
+import { type ClaimStatus } from "@/lib/claim-workflow";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, submitFinalDocumentsDraft } from "./final-documents-actions";
@@ -45,7 +46,19 @@ type DocumentVisual = {
   fallbackIcon: string;
 };
 
-export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null }) {
+const claimIntimationStageStatuses = new Set<ClaimStatus>([
+  "Vehicle Inspected",
+  "Spot Survey Completed",
+  "Final Documents Awaited",
+  "Final Documents Verification Pending",
+  "Final Documents Submitted",
+  "Final Documents Verified",
+  "Claim Intimation",
+  "Final Surveyor Details",
+  "Survey Status",
+]);
+
+export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, currentStatus, externalManagedClaim = false }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null; currentStatus: ClaimStatus; externalManagedClaim?: boolean }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -64,6 +77,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
     estimate_amount: ""
   });
   const visibleRows = rows.filter((row) => row.groupIndex === activeTab);
+  const externalSaveOnly = externalManagedClaim && !claimIntimationStageStatuses.has(currentStatus);
 
   const verifiedCount = useMemo(() => {
     if (!verificationData) return rows.filter((row) => row.status === "Verified").length;
@@ -169,7 +183,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
 
       const formData = new FormData();
       formData.set("milestone_key", "claim_intimation");
-      formData.set("save_only", "false");
+      formData.set("save_only", externalSaveOnly ? "true" : "false");
       formData.set("notes", "Operations completed Claim Intimation and opened Work Approval.");
       formData.set("claim_intimation_date", details.claim_intimation_date);
       formData.set("dealership_name", details.dealership_name);
@@ -182,7 +196,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
         setPendingAction(null);
         setResult(null);
         setSuccessNotice(response.advanced ? "Claim Intimation completed. Work Approval is now open." : "Stage details saved.");
-        router.replace(`/claims/${claimId}?stage=work_approval`);
+        if (response.advanced) router.replace(`/claims/${claimId}?stage=work_approval`);
         router.refresh();
       } catch (error) {
         setPendingAction(null);
