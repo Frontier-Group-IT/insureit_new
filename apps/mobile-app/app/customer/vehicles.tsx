@@ -1002,8 +1002,7 @@ function isPrivateVehicle(vehicle: Vehicle) {
 function maskPolicyNumber(value?: string | null) {
   const normalized = String(value ?? '').replace(/\s+/g, '').trim();
   if (!normalized) return '-';
-  if (normalized.length <= 8) return `${normalized.slice(0, 2)}${'•'.repeat(Math.max(2, normalized.length - 4))}${normalized.slice(-2)}`;
-  return `${normalized.slice(0, 4)}${'•'.repeat(Math.max(4, normalized.length - 8))}${normalized.slice(-4)}`;
+  return normalized.split('').map((char, index) => index % 2 === 1 ? '•' : char).join('');
 }
 
 function daysUntil(date: string) {
