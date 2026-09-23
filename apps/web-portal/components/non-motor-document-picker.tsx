@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, Trash2, Upload, X } from "lucide-react";
+import { FileText, Files, LoaderCircle, RefreshCw, Trash2, Upload, X } from "lucide-react";
 import { useRef } from "react";
 
 export type NonMotorDocumentType = "policy_copy" | "proposal_form" | "kyc" | "other_document";
@@ -33,27 +33,31 @@ export function NonMotorDocumentPicker({
   onDeleteExisting?: (type: NonMotorDocumentType) => void;
   onError: (message: string) => void;
 }) {
-  return <>{DOCUMENTS.map((document) => (
-    <DocumentPickerCard
-      key={document.type}
-      type={document.type}
-      label={document.label}
-      file={files[document.type]}
-      existingDocument={existingDocuments[document.type]}
-      deleting={deletingType === document.type}
-      onSelect={(file) => onChange({ ...files, [document.type]: file })}
-      onRemoveStaged={() => {
-        const next = { ...files };
-        delete next[document.type];
-        onChange(next);
-      }}
-      onDeleteExisting={onDeleteExisting ? () => onDeleteExisting(document.type) : undefined}
-      onError={onError}
-    />
-  ))}</>;
+  return (
+    <div className="md:col-span-2 xl:col-span-4 flex flex-wrap items-start gap-3">
+      {DOCUMENTS.map((document) => (
+        <DocumentPickerControl
+          key={document.type}
+          type={document.type}
+          label={document.label}
+          file={files[document.type]}
+          existingDocument={existingDocuments[document.type]}
+          deleting={deletingType === document.type}
+          onSelect={(file) => onChange({ ...files, [document.type]: file })}
+          onRemoveStaged={() => {
+            const next = { ...files };
+            delete next[document.type];
+            onChange(next);
+          }}
+          onDeleteExisting={onDeleteExisting ? () => onDeleteExisting(document.type) : undefined}
+          onError={onError}
+        />
+      ))}
+    </div>
+  );
 }
 
-function DocumentPickerCard({
+function DocumentPickerControl({
   type,
   label,
   file,
@@ -75,7 +79,6 @@ function DocumentPickerCard({
   onError: (message: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const hasDocument = Boolean(file || existingDocument);
   const shownName = file?.name ?? existingDocument?.fileName ?? "";
   const stagedReplacement = Boolean(file && existingDocument);
 
@@ -92,47 +95,120 @@ function DocumentPickerCard({
     onSelect(fileValue);
   }
 
+  function viewSavedDocument() {
+    if (!existingDocument) return;
+    window.open(
+      `/policies/documents/${encodeURIComponent(existingDocument.id)}/open`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
   return (
-    <div className={`flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2.5 ${hasDocument ? "border-[#A7D8C1] bg-[#F2FBF6]" : "border-dashed border-[#CDD6E3] bg-[#FAFBFD]"}`}>
-      <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${hasDocument ? "bg-[#DFF4E8] text-[#14845B]" : "bg-[#EEF4FF] text-[#315B9A]"}`}>
-        <FileText className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold text-[#344054]">{label}</p>
-        <p className={`mt-0.5 truncate text-[8.5px] ${hasDocument ? "font-medium text-[#14845B]" : "text-[#98A2B3]"}`} title={shownName}>
-          {file ? file.name : existingDocument ? existingDocument.fileName : "PDF, JPG, PNG or WebP · Max 50 MB"}
-        </p>
-        {stagedReplacement ? <p className="mt-0.5 text-[8px] font-medium text-[#667085]">Selected file will replace the saved document after Save.</p> : null}
-      </div>
+    <div className="min-w-0">
       <input
         ref={inputRef}
         id={`non-motor-document-${type}`}
         type="file"
         accept={ACCEPT}
-        className="hidden"
+        className="sr-only"
         onChange={(event) => {
           selectFile(event.target.files?.[0]);
           event.currentTarget.value = "";
         }}
       />
+
       {file ? (
-        <div className="flex shrink-0 items-center gap-1">
-          <button type="button" onClick={() => inputRef.current?.click()} className="rounded-lg border border-[#B8DCCA] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#14845B]">Replace</button>
-          <button type="button" onClick={onRemoveStaged} aria-label={`Remove selected ${label}`} className="grid h-7 w-7 place-items-center rounded-lg text-[#667085] hover:bg-white"><X className="h-3.5 w-3.5" /></button>
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <div
+            role="group"
+            aria-label={`${label} selected file actions`}
+            className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
+          >
+            <span className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              {stagedReplacement ? `Replace ${label}` : `Add ${label}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              aria-label={`Choose another ${label}`}
+              title={`Choose another ${label}`}
+              className="inline-flex w-9 items-center justify-center bg-[#DBEAFE] text-[#2563EB] transition hover:bg-[#BFDBFE]"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onRemoveStaged}
+              aria-label={`Remove selected ${label}`}
+              title="Remove selected file"
+              className="inline-flex w-9 items-center justify-center border-l border-[#E3E8EF] bg-white text-[#667085] transition hover:bg-[#F8FAFC]"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <span title={shownName} className="max-w-[220px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]">
+            {shownName}
+          </span>
+          {stagedReplacement ? <span className="pl-1 text-[8px] leading-3 text-[#667085]">Will replace the saved document after Save.</span> : null}
         </div>
       ) : existingDocument ? (
-        <div className="flex shrink-0 items-center gap-1">
-          <button type="button" onClick={() => inputRef.current?.click()} className="rounded-lg border border-[#B8DCCA] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#14845B]">Re-upload</button>
-          {onDeleteExisting ? (
-            <button type="button" disabled={deleting} onClick={onDeleteExisting} aria-label={`Delete ${label}`} className="grid h-7 w-7 place-items-center rounded-lg text-[#B42318] hover:bg-white disabled:cursor-not-allowed disabled:opacity-50">
-              <Trash2 className="h-3.5 w-3.5" />
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <div
+            role="group"
+            aria-label={`${label} actions`}
+            className="inline-flex h-9 items-stretch overflow-hidden rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] text-[#174EA6]"
+          >
+            <button
+              type="button"
+              onClick={viewSavedDocument}
+              aria-label={`View ${label}`}
+              title={existingDocument.fileName ? `View ${label}: ${existingDocument.fileName}` : `View ${label}`}
+              className="inline-flex min-w-0 items-center gap-2 px-3 text-[10px] font-semibold transition hover:bg-[#EEF5FF]"
+            >
+              <Files className="h-3.5 w-3.5 shrink-0" />
+              View {label}
             </button>
-          ) : null}
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={deleting}
+              aria-label={`Re-upload ${label}`}
+              title={`Re-upload ${label}`}
+              className="inline-flex w-9 items-center justify-center bg-[#DBEAFE] text-[#2563EB] transition hover:bg-[#BFDBFE] disabled:cursor-wait disabled:opacity-60"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+            {onDeleteExisting ? (
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={onDeleteExisting}
+                aria-label={`Delete ${label}`}
+                title={`Delete ${label}`}
+                className="inline-flex w-9 items-center justify-center border-l border-[#F2D5D1] bg-[#FFF5F3] text-[#B5534F] transition hover:bg-[#FDE9E6] hover:text-[#9E403C] disabled:cursor-wait disabled:opacity-60"
+              >
+                {deleting ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              </button>
+            ) : null}
+          </div>
+          <span title={existingDocument.fileName} className="max-w-[220px] truncate pl-1 text-[8px] font-medium leading-3 text-[#6B7A90]">
+            {existingDocument.fileName}
+          </span>
         </div>
       ) : (
-        <button type="button" onClick={() => inputRef.current?.click()} className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#17365D] px-3 py-1.5 text-[8.5px] font-bold text-white">
-          <Upload className="h-3.5 w-3.5" /> Upload
-        </button>
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#BFD3F7] bg-[#F7FAFF] px-3 text-[10px] font-semibold text-[#174EA6] transition hover:bg-[#EEF5FF]"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Add {label}
+          </button>
+          <span className="pl-1 text-[8px] font-medium leading-3 text-[#98A2B3]">PDF, JPG, PNG or WebP</span>
+        </div>
       )}
     </div>
   );
