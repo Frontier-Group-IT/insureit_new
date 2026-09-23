@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Customer Add Vehicle insurer three-dot-row mask:** branch `fix/customer-insurer-three-dot-rows`; fetched/locked insurer now renders as three stacked dotted rows inside the same read-only field to match the supplied reference. Actual insurer data/selection remains unchanged internally. No data, schema, API, validation, identity, APK, or native-build changes. **IMPLEMENTED; PR #2298 open; CI/merge/deployment pending.**
+
+
 - **2026-09-23 — Global web dropdown outside-click dismissal:** branch `ux/global-dropdown-outside-dismiss`; added a root-level client controller for the web portal so open custom dropdowns close when the user clicks outside them across all pages. It covers open `<details>` dropdowns and ARIA menu/listbox triggers while preserving clicks inside the active dropdown. Native selects and existing blur-driven comboboxes keep their native behavior. No database/schema/RLS/mobile/APK change. **IMPLEMENTED; PR/CI/merge/deploy pending.**
 
 
