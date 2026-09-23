@@ -4,7 +4,7 @@ import { getAccessiblePolicyRmEmployeeIds } from "@/lib/policy-access-scope";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ViewerProfile = { id: string; role: string | null };
-export type PolicyBusinessQuery = { period?: string; from?: string; to?: string; insurer?: string; rm?: string; intermediary?: string; business?: string; category?: string; page?: string };
+export type PolicyBusinessQuery = { period?: string; from?: string; to?: string; insurer?: string; rm?: string; intermediary?: string; business?: string; category?: string; page?: string; pageSize?: string };
 export type PolicyBusinessFilters = { period: "90d" | "mtd" | "ytd" | "all" | "custom"; fromDate: string | null; toDate: string | null; insurerId: string | null; rmEmployeeId: string | null; intermediaryCode: string | null; businessLine: "Motor" | "Non Motor" | null; category: string | null; page: number };
 export type PolicyBusinessReport = {
  summary:{policy_count:number;active_policy_count:number;gross_premium:number;net_premium:number;od_premium:number;tp_premium:number;cpa_amount:number;average_premium:number;insurer_count:number;intermediary_count:number;motor_policy_count:number;non_motor_policy_count:number;motor_gross_premium:number;non_motor_gross_premium:number};
@@ -31,7 +31,7 @@ export async function loadPolicyBusinessReport(profile:ViewerProfile,query:Polic
  const {filters,scopeRmEmployeeIds,scope}=await reportContext(profile,query);
  if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return{report:emptyPolicyBusinessReport(filters.page),filters,scopeMode:scope.mode};
  const admin=createSupabaseAdminClient();
- const reportResult=await admin.rpc("get_policy_business_report_v4",reportRpcArgs(scopeRmEmployeeIds,filters));
+ const reportResult=await admin.rpc("get_policy_business_report_v4",reportRpcArgs(scopeRmEmployeeIds,filters,positiveLimitedInteger(query.pageSize,25,5000)));
  if(reportResult.error)throw new Error(`Policy business report query failed: ${reportResult.error.message}`);
  return{report:normalizePolicyBusinessReport(reportResult.data,filters.page),filters,scopeMode:scope.mode};
 }
@@ -40,7 +40,7 @@ export async function loadPolicyBusinessNetReport(profile:ViewerProfile,query:Po
  const {filters,scopeRmEmployeeIds,scope}=await reportContext(profile,query);
  if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return{report:emptyPolicyBusinessNetReport(filters.page),filters,scopeMode:scope.mode};
  const admin=createSupabaseAdminClient();
- const reportResult=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,filters));
+ const reportResult=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,filters,positiveLimitedInteger(query.pageSize,25,5000)));
  if(reportResult.error)throw new Error(`Policy business net report query failed: ${reportResult.error.message}`);
  return{report:normalizePolicyBusinessNetReport(reportResult.data,filters.page),filters,scopeMode:scope.mode};
 }
@@ -50,7 +50,7 @@ async function reportContext(profile:ViewerProfile,query:PolicyBusinessQuery){
  const [scopeRmEmployeeIds,scope]=await Promise.all([getAccessiblePolicyRmEmployeeIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);
  return{filters,scopeRmEmployeeIds,scope};
 }
-function reportRpcArgs(scopeRmEmployeeIds:string[]|null,filters:PolicyBusinessFilters){return{p_scope_rm_employee_ids:scopeRmEmployeeIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_rm_employee_id:filters.rmEmployeeId,p_intermediary_code:filters.intermediaryCode,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:25}}
+function reportRpcArgs(scopeRmEmployeeIds:string[]|null,filters:PolicyBusinessFilters,pageSize:number){return{p_scope_rm_employee_ids:scopeRmEmployeeIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_rm_employee_id:filters.rmEmployeeId,p_intermediary_code:filters.intermediaryCode,p_business_line:filters.businessLine,p_category:filters.category,p_page:filters.page,p_page_size:pageSize}}
 
 export function resolvePolicyBusinessFilters(query:PolicyBusinessQuery):PolicyBusinessFilters{
  const period=isPeriod(query.period)?query.period:"mtd";const today=indiaDate(new Date());const todayDate=new Date(`${today}T00:00:00+05:30`);let fromDate:string|null=null;let toDate:string|null=today;
@@ -94,6 +94,7 @@ function validUuid(value:string|undefined){return value&&/^[0-9a-f]{8}-[0-9a-f]{
 function cleanText(value:string|undefined,max:number){const cleaned=value?.trim();return cleaned?cleaned.slice(0,max):null}
 function businessLine(value:string|undefined):PolicyBusinessFilters["businessLine"]{return value==="Motor"||value==="Non Motor"?value:null}
 function positiveInteger(value:string|undefined){const parsed=Number.parseInt(value??"1",10);return Number.isFinite(parsed)&&parsed>0?parsed:1}
+function positiveLimitedInteger(value:string|undefined,fallback:number,max:number){const parsed=Number.parseInt(value??String(fallback),10);return Number.isFinite(parsed)&&parsed>0?Math.min(parsed,max):fallback}
 function addDays(date:Date,days:number){const copy=new Date(date);copy.setDate(copy.getDate()+days);return copy}
 function indiaDate(date:Date){return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(date)}
 function arrayValue(value:unknown):unknown[]{return Array.isArray(value)?value:[]}
