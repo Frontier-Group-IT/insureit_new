@@ -691,8 +691,8 @@ function shortFilterDate(value: string) {
   return month && day ? `${day}/${month}` : value;
 }
 function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(date);
+  const [year, month, day] = value.split("-");
+  return year && month && day ? day + "/" + month + "/" + year.slice(-2) : value;
 }
 function formatCurrency(value: number | null) {
   if (!value) return "-";
