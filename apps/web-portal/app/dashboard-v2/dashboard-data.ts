@@ -542,39 +542,53 @@ export async function getDashboardCurrentData(
     const internalSettledClaims = internalClaims.filter((row) => settledClaimStatuses.has(row.current_status));
     const openClaims = claims.filter((row) => !closedClaimStatuses.has(row.current_status));
     const openIds = openClaims.map((row) => row.id);
+    const financialClaimIds = Array.from(new Set([
+      ...openIds,
+      ...internalSettledClaims.map((row) => row.id),
+    ]));
     let financialRows: ClaimFinancialRow[] = [];
     let pendingDocuments = 0;
 
-    if (openIds.length) {
-      const [financialResult, documentResult] = await Promise.all([
-        admin
-          .from("claim_financials")
-          .select("claim_id,estimate_amount,approved_amount,bill_amount,do_amount,payment_received_amount")
-          .in("claim_id", openIds)
-          .returns<ClaimFinancialRow[]>(),
-        admin
-          .from("claim_documents")
-          .select("id", { count: "exact", head: true })
-          .in("claim_id", openIds)
-          .in("verification_status", ["pending", "rejected"]),
-      ]);
-      if (financialResult.error) warnings.push("Claim financial exposure could not be refreshed.");
-      else financialRows = financialResult.data ?? [];
-      if (documentResult.error) warnings.push("Claim document review count could not be refreshed.");
-      else pendingDocuments = documentResult.count ?? 0;
-    }
+    const [financialResult, documentResult] = await Promise.all([
+      financialClaimIds.length
+        ? admin
+            .from("claim_financials")
+            .select("claim_id,estimate_amount,approved_amount,bill_amount,do_amount,payment_received_amount")
+            .in("claim_id", financialClaimIds)
+            .returns<ClaimFinancialRow[]>()
+        : Promise.resolve({ data: [] as ClaimFinancialRow[], error: null }),
+      openIds.length
+        ? admin
+            .from("claim_documents")
+            .select("id", { count: "exact", head: true })
+            .in("claim_id", openIds)
+            .in("verification_status", ["pending", "rejected"])
+        : Promise.resolve({ count: 0, error: null }),
+    ]);
+    if (financialResult.error) warnings.push("Claim financial exposure could not be refreshed.");
+    else financialRows = financialResult.data ?? [];
+    if (documentResult.error) warnings.push("Claim document review count could not be refreshed.");
+    else pendingDocuments = documentResult.count ?? 0;
 
     const financialByClaim = new Map(financialRows.map((row) => [row.claim_id, row]));
     const actionPendingVehicles = new Set(
       openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
     ).size;
     const estimateExposure = sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss");
-    const internalOpenAmount = sumClaimFinancial(internalOpenClaims, financialByClaim, "estimate_amount", "estimated_loss");
+    const internalOpenAmount = internalOpenClaims.reduce(
+      (sum, claim) => sum + currentOpenClaimAmount(claim, financialByClaim),
+      0,
+    );
+    const internalSettledAmountReceived = sumClaimFinancial(
+      internalSettledClaims,
+      financialByClaim,
+      "payment_received_amount",
+    );
     claimHealth = {
       open: internalOpenClaims.length,
       settled: internalSettledClaims.length,
       openAmount: internalOpenAmount,
-      settledAmount: internalSettledClaims.reduce((sum, row) => sum + numberValue(row.settlement_amount), 0),
+      settledAmount: internalSettledAmountReceived,
       mtd: claims.filter((row) => row.created_at.slice(0, 10) >= monthStartKey).length,
       assistanceRequested: openClaims.filter((row) => row.assistance_status === "requested").length,
       pendingDocuments,
@@ -893,6 +907,23 @@ function buildClaimAging(rows: ClaimRow[], now: Date) {
       return age >= bucket.min && age <= bucket.max;
     }).length,
   }));
+}
+
+function currentOpenClaimAmount(
+  claim: ClaimRow,
+  map: Map<string, ClaimFinancialRow>,
+) {
+  const financial = map.get(claim.id);
+  if (hasRecordedFinancialValue(financial?.do_amount)) return numberValue(financial?.do_amount);
+  if (hasRecordedFinancialValue(financial?.bill_amount)) return numberValue(financial?.bill_amount);
+  if (hasRecordedFinancialValue(financial?.estimate_amount)) return numberValue(financial?.estimate_amount);
+  return numberValue(claim.estimated_loss);
+}
+
+function hasRecordedFinancialValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return false;
+  const parsed = Number(value);
+  return Number.isFinite(parsed);
 }
 
 function sumClaimFinancial(
