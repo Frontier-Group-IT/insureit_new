@@ -226,6 +226,7 @@ export const config = {
     "/policy-intakes/:path*",
     "/reconciliation/:path*",
     "/reports/:path*",
+    "/rm-performance/:path*",
     "/service-enquiries/:path*",
     "/settings/:path*",
     "/system/:path*",
