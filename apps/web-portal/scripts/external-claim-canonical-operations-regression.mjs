@@ -49,7 +49,7 @@ assert(claimPage.includes('currentStatus={claim.current_status}'), 'The shared c
 // Stage UI must show one shared current stage, while Customer milestones still prove completed history.
 assert(operationsStages.includes('const hasExternalVisualProgress = externalCustomerMilestones !== undefined;'), 'External milestone projection must remain opt-in so Internal/SIBL is unchanged.');
 assert(operationsStages.includes('const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);'), 'Completed External milestones must remain reviewable.');
-assert(operationsStages.includes('const selectedAvailable = journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;'), 'Completed External milestones must remain selectable for review.');
+assert(operationsStages.includes('const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;'), 'Completed External milestones must remain selectable for review, with unrestricted editing honored when explicitly enabled.');
 assert(operationsStages.includes('const selectedSaveOnly = !selectedIsCurrent;'), 'Only the shared current stage may advance; all historical review saves must be save-only.');
 assert(!operationsStages.includes('externalVisualCurrentIndex'), 'External current-stage styling must not derive a second current stage from Customer milestones.');
 assert(operationsStages.includes('const isCurrent = !journeyComplete && stage.key === active?.key;'), 'Operations current-stage styling must use the shared claims.current_status stage.');
