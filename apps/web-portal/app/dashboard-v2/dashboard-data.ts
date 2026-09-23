@@ -537,8 +537,10 @@ export async function getDashboardCurrentData(
 
   let claimHealth: DashboardCurrentData["claims"] = null;
   if (access.viewClaims && !claimResult.error) {
+    const internalClaims = claims.filter((row) => row.policy_service_source !== "external");
+    const internalOpenClaims = internalClaims.filter((row) => !closedClaimStatuses.has(row.current_status));
+    const internalSettledClaims = internalClaims.filter((row) => settledClaimStatuses.has(row.current_status));
     const openClaims = claims.filter((row) => !closedClaimStatuses.has(row.current_status));
-    const settledClaims = claims.filter((row) => settledClaimStatuses.has(row.current_status));
     const openIds = openClaims.map((row) => row.id);
     let financialRows: ClaimFinancialRow[] = [];
     let pendingDocuments = 0;
@@ -567,11 +569,12 @@ export async function getDashboardCurrentData(
       openClaims.map((row) => row.vehicle_id).filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
     ).size;
     const estimateExposure = sumClaimFinancial(openClaims, financialByClaim, "estimate_amount", "estimated_loss");
+    const internalOpenAmount = sumClaimFinancial(internalOpenClaims, financialByClaim, "estimate_amount", "estimated_loss");
     claimHealth = {
-      open: openClaims.length,
-      settled: settledClaims.length,
-      openAmount: estimateExposure,
-      settledAmount: settledClaims.reduce((sum, row) => sum + numberValue(row.settlement_amount), 0),
+      open: internalOpenClaims.length,
+      settled: internalSettledClaims.length,
+      openAmount: internalOpenAmount,
+      settledAmount: internalSettledClaims.reduce((sum, row) => sum + numberValue(row.settlement_amount), 0),
       mtd: claims.filter((row) => row.created_at.slice(0, 10) >= monthStartKey).length,
       assistanceRequested: openClaims.filter((row) => row.assistance_status === "requested").length,
       pendingDocuments,
