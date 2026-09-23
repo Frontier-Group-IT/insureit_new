@@ -1,3 +1,16 @@
+## 2026-09-23 — External managed claims: unlocked Operations stages
+
+- Branch: `feat/external-claims-unlocked-editable-stages`.
+- Scope applies only when `policy_service_source='external'` and `claim_service_mode='broker_managed'`.
+- All nine Operations claim journey stages remain selectable regardless of the current claim status; future stages no longer render as locked for this scope.
+- Stage fields remain editable before/after their active workflow point and after Claim Complete / Settled / Closed.
+- Off-current-stage saves are correction-only: they persist stage details but do not advance, reopen or regress `claims.current_status`.
+- Claim Intimation has an explicit save-only mode when it is not the active workflow stage, preventing its existing Save Details action from routing/advancing to Work Approval after a historical/future correction.
+- Server validation no longer requires a completed customer milestone before an Operations user can save a future external managed stage. Sequential future-stage blocking remains unchanged for non-external claims.
+- Self-managed external claims remain customer-controlled until assistance acceptance; internal/SIBL claims keep the existing sequential lock behavior.
+- No database migration, RLS, permission, mobile runtime, APK/AAB or native change.
+- **IMPLEMENTED; no PR created; CI/merge/deployment pending.**
+
 ## 2026-09-23 — Employee invite/reset auth reliability + shared auth layout
 
 - Branch: `fix/sales-executive-auth-invite-reset`.
