@@ -70,7 +70,6 @@ const requiredFields: Record<OperationsStageKey, readonly string[]> = {
 };
 
 const internalSpotStatusSurveyorFields = ["surveyor_name", "surveyor_email", "surveyor_phone"] as const;
-const completedExternalMilestoneStatuses = new Set(["completed", "not_applicable"]);
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -136,15 +135,10 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   const activeKey = currentStageKey(claim.current_status);
   const targetIndex = orderedStageKeys.indexOf(stageKey);
   const activeIndex = activeKey ? orderedStageKeys.indexOf(activeKey) : orderedStageKeys.length - 1;
-  const externalActiveIndex = activeKey ? orderedStageKeys.indexOf(activeKey) : -1;
   const terminal = ["Claim Complete", "Settled", "Closed"].includes(claim.current_status);
+  const externalSaveOnlyEdit = claim.policy_service_source === "external" && saveOnly;
 
-  if (claim.policy_service_source === "external" && !terminal && targetIndex > externalActiveIndex) {
-    if (!saveOnly) throw new Error("Completed Customer External stages can be reviewed only in save-only mode until Operations reaches that stage.");
-    const { data: customerMilestone, error: customerMilestoneError } = await supabase.from("claim_milestones").select("milestone_status").eq("claim_id", claimId).eq("milestone_key", stageKey).maybeSingle<{ milestone_status: string }>();
-    if (customerMilestoneError) throw new Error(customerMilestoneError.message);
-    if (!completedExternalMilestoneStatuses.has(customerMilestone?.milestone_status ?? "")) throw new Error("This External Claim stage is not available yet. The Customer milestone is not completed.");
-  } else if (!terminal && targetIndex > activeIndex) {
+  if (!terminal && targetIndex > activeIndex && !externalSaveOnlyEdit) {
     throw new Error("This stage is not available yet. Complete the current stage first.");
   }
 
