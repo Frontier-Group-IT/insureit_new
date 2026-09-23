@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Non-Motor documents moved into save footer:** branch `ui/non-motor-documents-in-save-footer-main`; rebased onto latest main after PR #2300 diverged. On Non-Motor Policy Edit the standalone Section 06 Documents card is removed and the four document controls render on the left side of the bottom save/action bar, matching the Motor edit layout concept. Activity Status remains immediately above the footer. Create mode keeps its standalone Documents section so documents can still be staged before first save. Existing single-document-per-type, View/Re-upload/Delete, and Add behavior is unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-23 — Customer Add Vehicle insurer three-dot-row mask:** branch `fix/customer-insurer-three-dot-rows`; fetched/locked insurer now renders as three stacked dotted rows inside the same read-only field to match the supplied reference. Actual insurer data/selection remains unchanged internally. No data, schema, API, validation, identity, APK, or native-build changes. **IMPLEMENTED; PR #2298 open; CI/merge/deployment pending.**
 
 
