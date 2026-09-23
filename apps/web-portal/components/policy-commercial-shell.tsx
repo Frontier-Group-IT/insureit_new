@@ -3,6 +3,7 @@
 import type { NonMotorCustomerOption } from "@/components/non-motor-policy-form";
 import type { NonMotorUnifiedInitialValues } from "@/components/non-motor-unified-mode";
 import type { ExistingNonMotorDocuments } from "@/components/non-motor-document-picker";
+import type { ReactNode } from "react";
 import { PolicyCommercialAccessProvider } from "@/components/policy-commercial-access-context";
 import { PolicyIntakeOnboardingContextCard } from "@/components/policy-intake-onboarding-context";
 import {
@@ -22,6 +23,7 @@ export type PolicyCommercialShellProps = {
   initialValues?: PolicyUnifiedInitialValues;
   nonMotorInitialValues?: NonMotorUnifiedInitialValues;
   nonMotorExistingDocuments?: ExistingNonMotorDocuments;
+  nonMotorActivityStatus?: ReactNode;
   commercialAccess: boolean;
   preselectedCustomerId?: string | null;
   sourceIntakeId?: string | null;
@@ -42,6 +44,7 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         initialValues={props.initialValues}
         nonMotorInitialValues={props.nonMotorInitialValues}
         nonMotorExistingDocuments={props.nonMotorExistingDocuments}
+        nonMotorActivityStatus={props.nonMotorActivityStatus}
         commercialAccess={props.commercialAccess}
         preselectedCustomerId={props.preselectedCustomerId}
         sourceIntakeId={props.sourceIntakeId}
