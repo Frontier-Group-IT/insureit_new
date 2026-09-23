@@ -22,6 +22,7 @@
 
 - External claims remain customer-controlled in `claim_milestones` while `claim_service_mode = 'self_managed'`. Operations must not use internal processing controls until the customer requests assistance and Operations accepts it.
 - Assistance acceptance is the only conversion boundary to `broker_managed`; it must preserve `policy_service_source = 'external'` and must not rewrite customer milestones.
+- **IMPLEMENTED on branch `feat/external-claims-unlocked-stages`, not yet merged/deployed (2026-09-23):** once an External Claim is `broker_managed`, Operations may open and edit all nine Operations journey stages regardless of the current workflow status, including after Claim Complete/Settled/Closed. Editing a stage other than the actual current stage is save-only and must never advance, regress, reopen, settle or close the claim. Internal/SIBL claims retain sequential stage locking, and self-managed External Claims retain customer milestone ownership until assistance acceptance.
 - Internal customer journey presentation is a deterministic projection of authoritative claim status and document evidence. It is not a second writable milestone model.
 - Customers may upload requested internal-claim documents but must not update `claims.current_status`. Operational transitions remain server-authoritative.
 - `packages/claim-journey` is the shared web/mobile projection contract. Every supported internal status must map explicitly; unknown states default to Operations review rather than customer action.
