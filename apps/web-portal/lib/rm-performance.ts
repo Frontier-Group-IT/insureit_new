@@ -1,9 +1,23 @@
 import "server-only";
 
-import { loadPolicyBusinessNetReport, type PolicyBusinessNetReport } from "@/lib/reports/policy-business";
+import {
+  loadPolicyBusinessNetReport,
+  type PolicyBusinessNetReport,
+  type PolicyBusinessRow,
+} from "@/lib/reports/policy-business";
 
 type ViewerProfile = { id: string; role: string | null };
 export type RmPerformanceQuery = { rm?: string; from?: string; to?: string };
+
+export type RmSourcePerformance = {
+  key: string;
+  label: string;
+  type: string | null;
+  todayPolicies: number;
+  todayNetPremium: number;
+  mtdPolicies: number;
+  mtdNetPremium: number;
+};
 
 export type RmPerformanceRow = {
   employeeId: string | null;
@@ -14,6 +28,7 @@ export type RmPerformanceRow = {
   mtdNetPremium: number;
   averageNetPremium: number;
   contributionPercent: number;
+  sources: RmSourcePerformance[];
 };
 
 export type RmPerformanceData = {
@@ -26,13 +41,9 @@ export type RmPerformanceData = {
   today: PolicyBusinessNetReport["summary"];
   mtd: PolicyBusinessNetReport["summary"];
   ytdTrend: PolicyBusinessNetReport["trend"];
-  insurerMix: PolicyBusinessNetReport["insurers"];
   rows: RmPerformanceRow[];
   recentPolicies: PolicyBusinessNetReport["register"]["rows"];
-  segment: {
-    classified: boolean;
-    note: string;
-  };
+  sourceCoverageComplete: boolean;
 };
 
 export async function loadRmPerformance(profile: ViewerProfile, query: RmPerformanceQuery): Promise<RmPerformanceData> {
@@ -46,11 +57,13 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
       to: today,
       rm: selectedRmId ?? undefined,
       page: "1",
+      pageSize: "5000",
     }),
     loadPolicyBusinessNetReport(profile, {
       period: "mtd",
       rm: selectedRmId ?? undefined,
       page: "1",
+      pageSize: "5000",
     }),
     loadPolicyBusinessNetReport(profile, {
       period: "ytd",
@@ -67,18 +80,30 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
   );
   const totalMtdPremium = mtdPayload.report.rms.reduce((sum, row) => sum + row.net_premium, 0);
 
+  const intermediaryNames = new Map(
+    mtdPayload.report.filters.intermediaries.map((item) => [
+      item.code,
+      { name: item.name || item.code, type: item.type },
+    ]),
+  );
+
+  const todaySources = aggregateSources(todayPayload.report.register.rows, intermediaryNames);
+  const mtdSources = aggregateSources(mtdPayload.report.register.rows, intermediaryNames);
+
   const rows = mtdPayload.report.rms
     .map((row) => {
       const todayRow = todayByRm.get(row.employee_id ?? row.name);
+      const rmName = row.name || "Unassigned";
       return {
         employeeId: row.employee_id ?? null,
-        name: row.name,
+        name: rmName,
         todayPolicies: todayRow?.policies ?? 0,
         todayNetPremium: todayRow?.premium ?? 0,
         mtdPolicies: row.policy_count,
         mtdNetPremium: row.net_premium,
         averageNetPremium: row.average_net_premium,
         contributionPercent: totalMtdPremium > 0 ? (row.net_premium / totalMtdPremium) * 100 : 0,
+        sources: mergeSources(todaySources.get(rmName) ?? [], mtdSources.get(rmName) ?? []),
       };
     })
     .sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.name.localeCompare(b.name));
@@ -99,14 +124,72 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     today: todayPayload.report.summary,
     mtd: mtdPayload.report.summary,
     ytdTrend: ytdPayload.report.trend.slice(-6),
-    insurerMix: mtdPayload.report.insurers.slice(0, 6),
     rows,
-    recentPolicies: mtdPayload.report.register.rows.slice(0, 12),
-    segment: {
-      classified: false,
-      note: "Retail / Fleet classification is not yet populated in policy master data. Figures are intentionally not inferred.",
-    },
+    recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
+    sourceCoverageComplete:
+      todayPayload.report.register.total_count <= todayPayload.report.register.rows.length
+      && mtdPayload.report.register.total_count <= mtdPayload.report.register.rows.length,
   };
+}
+
+type SourceAggregate = {
+  key: string;
+  label: string;
+  type: string | null;
+  policies: number;
+  netPremium: number;
+};
+
+function aggregateSources(
+  rows: PolicyBusinessRow[],
+  intermediaryNames: Map<string, { name: string; type: string | null }>,
+) {
+  const byRm = new Map<string, Map<string, SourceAggregate>>();
+
+  for (const row of rows) {
+    const rmName = row.rm_name?.trim() || "Unassigned";
+    const code = row.intermediary_code?.trim() || "";
+    const type = row.intermediary_type?.trim() || null;
+    const key = code || type || "direct-unassigned";
+    const known = code ? intermediaryNames.get(code) : null;
+    const label = known?.name || code || type || "Direct / Unassigned";
+
+    const rmSources = byRm.get(rmName) ?? new Map<string, SourceAggregate>();
+    const source = rmSources.get(key) ?? {
+      key,
+      label,
+      type: known?.type ?? type,
+      policies: 0,
+      netPremium: 0,
+    };
+    source.policies += 1;
+    source.netPremium += row.net_premium;
+    rmSources.set(key, source);
+    byRm.set(rmName, rmSources);
+  }
+
+  return new Map(
+    [...byRm.entries()].map(([rmName, sources]) => [
+      rmName,
+      [...sources.values()].sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.label.localeCompare(b.label)),
+    ]),
+  );
+}
+
+function mergeSources(today: SourceAggregate[], mtd: SourceAggregate[]): RmSourcePerformance[] {
+  const todayMap = new Map(today.map((item) => [item.key, item]));
+  return mtd.map((item) => {
+    const current = todayMap.get(item.key);
+    return {
+      key: item.key,
+      label: item.label,
+      type: item.type,
+      todayPolicies: current?.policies ?? 0,
+      todayNetPremium: current?.netPremium ?? 0,
+      mtdPolicies: item.policies,
+      mtdNetPremium: item.netPremium,
+    };
+  });
 }
 
 function validUuid(value: string | undefined) {
