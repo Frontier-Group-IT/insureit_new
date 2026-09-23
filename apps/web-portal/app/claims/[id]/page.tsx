@@ -251,6 +251,8 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     );
   }
 
+  const externalManagedClaim = claim.policy_service_source === "external" && claim.claim_service_mode === "broker_managed";
+
   const externalCustomerMilestoneResult = claim.policy_service_source === "external"
     ? await admin
       .from("claim_milestones")
@@ -299,8 +301,9 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
           spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
-          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
+          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} currentStatus={claim.current_status} externalManagedClaim={externalManagedClaim} />}
           initialStageKey={requestedStage}
+          externalManagedClaim={externalManagedClaim}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
         />
       </div>
