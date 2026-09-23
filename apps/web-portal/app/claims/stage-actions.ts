@@ -90,6 +90,47 @@ function stageDetailsFromForm(formData: FormData, stageKey: OperationsStageKey) 
   return details;
 }
 
+function stageFinancialUpdate(stageKey: OperationsStageKey, details: Record<string, string | number>) {
+  const numeric = (key: string) => {
+    const value = details[key];
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  };
+
+  if (stageKey === "claim_intimation") {
+    const estimateAmount = numeric("estimate_amount");
+    return estimateAmount === null ? null : { estimate_amount: estimateAmount };
+  }
+  if (stageKey === "billing") {
+    const billAmount = numeric("bill_amount");
+    return billAmount === null ? null : { bill_amount: billAmount };
+  }
+  if (stageKey === "delivery_order") {
+    const doAmount = numeric("do_amount");
+    return doAmount === null ? null : { do_amount: doAmount };
+  }
+  return null;
+}
+
+async function syncClaimFinancialStageAmount(
+  supabase: Awaited<ReturnType<typeof requireClaimWorkflowAccess>>["supabase"],
+  claimId: string,
+  stageKey: OperationsStageKey,
+  details: Record<string, string | number>,
+) {
+  const financialUpdate = stageFinancialUpdate(stageKey, details);
+  if (!financialUpdate) return;
+
+  const { error } = await supabase.from("claim_financials").upsert(
+    {
+      claim_id: claimId,
+      ...financialUpdate,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "claim_id" },
+  );
+  if (error) throw new Error(`Claim financial amount could not be saved: ${error.message}`);
+}
+
 function stageHistoryNote(formData: FormData, stageKey: OperationsStageKey) {
   if (stageKey !== "spot_status") return textValue(formData, "notes") ?? `Operations completed ${stageKey.replaceAll("_", " ")} and opened the next journey stage.`;
   const surveyorName = textValue(formData, "surveyor_name") ?? "Not provided";
@@ -155,6 +196,7 @@ export async function completeClaimJourneyStage(claimId: string, formData: FormD
   }
 
   await insertAuthorizedClaimStageDetail(access, { claim_id: claimId, stage: detailStageStatus[stageKey], details: shouldAdvance ? { ...details, completed_at: new Date().toISOString() } : details, created_by: profile.id });
+  await syncClaimFinancialStageAmount(supabase, claimId, stageKey, details);
 
   if (!shouldAdvance) {
     if (notifySpotStatusEdit) {
