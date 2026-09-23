@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — External managed Claims unrestricted stage editing:** branch `feat/external-claims-unlocked-stages`; Operations now keeps all nine stages open for claims with `policy_service_source='external'` after they are `broker_managed`. Future/past-stage edits are save-only and cannot advance/regress `claims.current_status`; settled/closed external managed claims remain editable. Internal/SIBL sequential locking and self-managed external customer ownership are unchanged. No schema/RLS/migration change. **IMPLEMENTED; no PR created; CI/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
+
 - **2026-09-23 — Employee invite/reset auth reliability + shared auth layout:** branch `fix/sales-executive-auth-invite-reset`; Login, employee Invite, Forgot Password and Reset Password now share one auth shell; `/invite` renders query-string Supabase expiry errors server-side instead of remaining on the loading state; `/reset-password` validates a recovery session, supports PKCE `code` exchange and `PASSWORD_RECOVERY`, and blocks password update until recovery is ready. No role, permission, RLS, schema, employee/profile data or password-storage logic change. **IMPLEMENTED; PR/CI/merge/deployment pending.** See `docs/CURRENT_CHAT_HANDOFF.md`.
 
 - **2026-09-23 — Policy Register compact validity dates:** branch `ui/policy-validity-compact-date`; changes Policy Register validity display from long month names (for example `30 Sept 2026 - 29 Sept 2027`) to compact numeric dates (`30/09/26 - 29/09/27`) in both the main Policy Workspace and Backoffice/Sales Executive register variants. **IMPLEMENTED; PR/CI/merge/deployment pending.**
