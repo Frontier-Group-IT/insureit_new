@@ -132,12 +132,18 @@ function canTransferVehicle(role: string | null | undefined) { return role === "
 function canReplaceActivePolicy(role: string | null | undefined) { return role === "manager" || role === "admin" || role === "super_admin" || role === "it_super_user"; }
 function validDate(value: unknown) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value); }
 
+function redactPolicyOnboardingLogMessage(value: string) {
+  return value
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, "[redacted-id]")
+    .replace(/(policy(?:\s+number|\s+no\.?|_no)?\s*[:=]?\s*)["']?[A-Z0-9\/-]{5,}["']?/gi, "$1[redacted-policy]");
+}
+
 function policyOnboardingErrorForServerLog(error: unknown) {
   if (error instanceof Error) {
     const errorWithCode = error as Error & { code?: unknown; hint?: unknown };
     return {
       name: error.name,
-      message: error.message,
+      message: redactPolicyOnboardingLogMessage(error.message),
       code: typeof errorWithCode.code === "string" ? errorWithCode.code : undefined,
       hint: typeof errorWithCode.hint === "string" ? errorWithCode.hint : undefined,
       stack: error.stack,
@@ -147,7 +153,7 @@ function policyOnboardingErrorForServerLog(error: unknown) {
     const value = error as { name?: unknown; message?: unknown; code?: unknown; hint?: unknown };
     return {
       name: typeof value.name === "string" ? value.name : undefined,
-      message: typeof value.message === "string" ? value.message : String(error),
+      message: typeof value.message === "string" ? redactPolicyOnboardingLogMessage(value.message) : String(error),
       code: typeof value.code === "string" ? value.code : undefined,
       hint: typeof value.hint === "string" ? value.hint : undefined,
     };
@@ -445,7 +451,7 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     } catch (error) {
       console.error("policy_onboarding_server_error", {
         stage: "selected_existing_vehicle_lookup",
-        sourceIntakeId: payload.sourceIntakeId ?? null,
+        sourceIntake: Boolean(payload.sourceIntakeId),
         error: policyOnboardingErrorForServerLog(error),
       });
       return { ok: false, kind: "database", error: "We couldn't verify the selected existing vehicle. Your form has not been submitted." };
@@ -587,10 +593,10 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
     if (error) {
       console.error("policy_onboarding_rpc_error", {
         stage: diagnosticStage,
-        sourceIntakeId: payload.sourceIntakeId ?? null,
+        sourceIntake: Boolean(payload.sourceIntakeId),
         rpcError: {
           code: error.code ?? null,
-          message: error.message ?? "",
+          message: redactPolicyOnboardingLogMessage(error.message ?? ""),
           hint: error.hint ?? null,
         },
       });
