@@ -8,23 +8,6 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { recordVehicleActivity, VEHICLE_ACTIVITY_ACTIONS } from "@/lib/vehicle-activity";
 import { isValidVehicleRegistrationNumber, normalizeVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
-type VehicleCustomerLinkRow = {
-  vehicle_id: string;
-  customer_id: string;
-  relationship_type: "primary" | "associated";
-  is_primary: boolean;
-  created_by: string;
-};
-
-type VehicleCustomerLinkWriteClient = {
-  from: (table: "vehicle_customer_links") => {
-    upsert: (
-      values: VehicleCustomerLinkRow,
-      options: { onConflict: string; ignoreDuplicates?: boolean },
-    ) => PromiseLike<{ error: { message: string } | null }>;
-  };
-};
-
 function requiredText(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -157,50 +140,11 @@ export async function addVehicleMaster(formData: FormData) {
     redirect(errorUrl("/vehicles/new", `Unable to validate the registration number: ${error instanceof Error ? error.message : "Unknown error"}`));
   }
   if (registrationConflict) {
-    const linkClient = admin as unknown as VehicleCustomerLinkWriteClient;
-    const { error: linkError } = await linkClient
-      .from("vehicle_customer_links")
-      .upsert(
-        {
-          vehicle_id: registrationConflict.id,
-          customer_id: payload.customer_id,
-          relationship_type: "associated",
-          is_primary: false,
-          created_by: profile.id,
-        },
-        { onConflict: "vehicle_id,customer_id", ignoreDuplicates: true },
-      );
-    if (linkError) {
-      redirect(errorUrl("/vehicles/new", `Vehicle could not be linked to this customer: ${linkError.message}`));
-    }
-
-    revalidatePath("/vehicles");
-    const nextAction = requiredText(formData, "next_action");
-    if (nextAction === "post_save") {
-      redirect(`/vehicles/new?vehicle_saved=1&vehicle_linked=1&customer_id=${encodeURIComponent(payload.customer_id)}&saved_vehicle_id=${encodeURIComponent(registrationConflict.id)}`);
-    }
-    redirect("/vehicles?success=vehicle_linked");
+    redirect(errorUrl("/vehicles/new", `Registration number ${payload.vehicle_no} already belongs to another vehicle.`));
   }
 
   const { data: vehicle, error } = await admin.from("vehicles").insert(payload).select("id").single<{ id: string }>();
   if (error || !vehicle) redirect(errorUrl("/vehicles/new", `Vehicle could not be saved: ${error?.message ?? "Unknown error"}`));
-
-  const linkClient = admin as unknown as VehicleCustomerLinkWriteClient;
-  const { error: linkError } = await linkClient
-    .from("vehicle_customer_links")
-    .upsert(
-      {
-        vehicle_id: vehicle.id,
-        customer_id: payload.customer_id,
-        relationship_type: "primary",
-        is_primary: true,
-        created_by: profile.id,
-      },
-      { onConflict: "vehicle_id,customer_id" },
-    );
-  if (linkError) {
-    redirect(errorUrl("/vehicles/new", `Vehicle was created, but the customer link could not be saved: ${linkError.message}`));
-  }
 
   await recordVehicleActivity(admin, vehicle.id, profile.id, VEHICLE_ACTIVITY_ACTIONS.VEHICLE_CREATED);
   revalidatePath("/vehicles");
