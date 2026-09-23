@@ -56,6 +56,18 @@ type CustomerMilestoneRow = {
   details: Record<string, unknown> | null;
 };
 
+const claimIntimationStageStatuses: ClaimStatus[] = [
+  "Vehicle Inspected",
+  "Spot Survey Completed",
+  "Final Documents Awaited",
+  "Final Documents Verification Pending",
+  "Final Documents Submitted",
+  "Final Documents Verified",
+  "Claim Intimation",
+  "Final Surveyor Details",
+  "Survey Status",
+];
+
 export default async function ClaimDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams?: Promise<{ stage?: string }> }) {
   const { id } = await params;
   const requestedStage = (await searchParams)?.stage;
@@ -283,6 +295,8 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
     spotIntimationAt: effectiveSpotDetails.spot_intimation_at,
     spotDetails: effectiveSpotDetails,
   };
+  const isExternalManagedClaim = claim.policy_service_source === "external" && claim.claim_service_mode === "broker_managed";
+  const canAdvanceClaimIntimation = !isExternalManagedClaim || claimIntimationStageStatuses.includes(claim.current_status);
 
   return (
     <ClaimManagerShell title={title} backHref={backHref}>
@@ -299,9 +313,10 @@ export default async function ClaimDetailPage({ params, searchParams }: { params
           spotIntimationAt={effectiveClaimWithSpotIntimation.spotIntimationAt}
           spotDetails={effectiveSpotDetails}
           spotContent={<SpotSurveyWorkspace claim={{ ...effectiveClaimWithSpotIntimation, policySource: externalPolicy ? "external" : "sibl", policyCopy }} documents={signedDocs} verifications={mergedVerifications} surveyorDetails={surveyorDetails} showContext={false} showSpotDetails={false} />}
-          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} />}
+          claimIntimationContent={<FinalDocumentsWorkspaceV2 claimId={claim.id} rows={finalRows} dealershipDetails={dealershipDetails} allowStageAdvance={canAdvanceClaimIntimation} />}
           initialStageKey={requestedStage}
           externalCustomerMilestones={externalCustomerMilestones?.map((milestone) => ({ key: milestone.milestone_key, status: milestone.milestone_status }))}
+          unrestrictedStageEditing={isExternalManagedClaim}
         />
       </div>
     </ClaimManagerShell>
