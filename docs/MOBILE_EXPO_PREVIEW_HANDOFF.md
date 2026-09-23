@@ -589,3 +589,31 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 ## 2026-09-21 — Customer OTP login bounce fix
 
 **IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/customer-otp-post-login-routing` changes only the post-OTP customer routing guard in `apps/mobile-app/lib/auth.ts`. A freshly authenticated customer with an **active** profile is no longer signed out and redirected to `/login` solely because both `getCustomerForUser()` and `getOnboardingApplicationForUser()` return null. The session is preserved and routing continues to Customer Home, which already supports a missing customer record and can route the user into onboarding. Explicitly inactive customer profiles still revoke the local session and return to Login exactly as before. No database/schema/RLS/RPC/native/runtime-version changes.
+
+
+## 2026-09-23 — Partner Claims runtime 0.1.0 delivery correction
+
+**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/partner-0-1-claims-header-runtime`.
+
+The user confirmed that all Partner App changes must reach the latest installed Partner APK `0.1.0 (5)` through runtime OTA. The current-source Claims hero change had been published only to runtime `0.2.0`, so it could not reach that installed binary.
+
+This correction:
+- synchronizes `scripts/partner/compat/partner-claims-reference-0-1.tsx` with the current approved Claims screen;
+- uses `assets/partner/banners/claims-header-reference.jpg` as the Claims hero background;
+- removes the legacy extra Claims foreground artwork overlay;
+- preserves the current official Partner logo, Home-scale header treatment, compact KPI/tabs/cards, search/filter/sort/pagination and existing claims data/RPC semantics;
+- updates `.github/workflows/publish-partner-0-1-home-hero-reference-once.yml` to copy and validate the Claims header image into the approved runtime-0.1 compatibility checkout before Expo publish;
+- adds the Claims header asset to the workflow path trigger so later changes can reach runtime 0.1.0.
+
+Target delivery:
+- Installed APK: `0.1.0 (5)`
+- Runtime: `0.1.0`
+- Channel: `preview`
+- Delivery: existing runtime-0.1 OTA compatibility workflow
+
+Safety:
+- no APK/AAB build
+- no native EAS build
+- no runtime-version change
+- no native dependency/config change
+- no database/schema/RPC/RLS change
