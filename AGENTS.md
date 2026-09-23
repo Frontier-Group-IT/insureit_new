@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Operations Dashboard stage-aware Open Claims amount:** branch `fix/dashboard-stage-aware-open-claim-amount-v2`; Open Claims KPI now sums each open Internal claim using the amount appropriate to its actual workflow progress: before Billing uses latest Estimate Amount from `claim_stage_details` (`claim_intimation`), after Billing uses latest Bill Amount (`billing`), and after Delivery Order uses latest DO Amount (`delivery_order`). Existing `claim_financials` values remain fallback only. Settled/Closed/Rejected claims remain excluded. No schema, migration, RLS, claim-workflow write, mobile, APK/AAB or native-runtime change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
+
 - **2026-09-23 — Non-Motor single document slots:** branch `fix/non-motor-single-document-slots-main`; Non-Motor Policy Edit loads saved Policy Copy / Proposal Form / KYC / Other Document into their respective document cards, showing filename with Re-upload/Delete instead of Upload. Re-upload replaces the existing row/file for that policy + document type and cleans older duplicates; Delete removes all saved rows/files for that slot. New uploads remain limited to one logical active document per type without changing Motor behavior or schema. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-23 — Customer Add Vehicle fetched insurer visibility:** branch `fix/customer-insurer-locked-full-opacity`; changed the fetched/locked insurer field from 10% opacity to 100% opacity while keeping the field locked/read-only after RC fetch. No data, API, schema, identity, or APK build changes. **IMPLEMENTED; PR/merge/deployment pending.**
