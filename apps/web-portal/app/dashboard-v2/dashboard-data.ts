@@ -20,6 +20,7 @@ export type DashboardAccess = {
   viewTasks: boolean;
   viewKyc: boolean;
   viewAccounts: boolean;
+  viewReports: boolean;
   commercial: boolean;
 };
 
