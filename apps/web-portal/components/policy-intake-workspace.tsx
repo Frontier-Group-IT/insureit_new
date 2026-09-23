@@ -153,7 +153,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
 
   const stats = useMemo(() => ({
     all: baseFiltered.length,
-    action: baseFiltered.filter((row) => row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed")).length,
+    action: baseFiltered.filter((row) => row.status === "ready_for_review" || row.status === "needs_attention" || (row.status === "processing" && row.ocr_status === "failed")).length,
     inReview: baseFiltered.filter((row) => row.status === "in_review").length,
     myActiveWork: baseFiltered.filter((row) => row.status === "in_review" && row.assigned_to_profile_id === currentProfileId).length,
     processing: baseFiltered.filter((row) => row.status === "processing" && row.ocr_status !== "failed").length,
@@ -164,7 +164,7 @@ export function PolicyIntakeWorkspace({ rows, reviewer, creator, currentProfileI
 
   const filtered = useMemo(() => baseFiltered.filter((row) => {
     if (view === "all") return true;
-    if (view === "action") return row.status === "ready_for_review" || (row.status === "processing" && row.ocr_status === "failed");
+    if (view === "action") return row.status === "ready_for_review" || row.status === "needs_attention" || (row.status === "processing" && row.ocr_status === "failed");
     if (view === "in_review") return row.status === "in_review";
     if (view === "mine") return row.status === "in_review" && row.assigned_to_profile_id === currentProfileId;
     if (view === "processing") return row.status === "processing" && row.ocr_status !== "failed";
