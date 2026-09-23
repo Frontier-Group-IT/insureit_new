@@ -96,6 +96,7 @@ assert(unifiedForm.includes('flatPayoutAmount: saved.form.flatPayoutAmount ?? ""
 assert(unifiedForm.includes('(form.flatPayoutAmount??"").trim()!==""'),"FLAT payout entered-state must tolerate legacy drafts without flatPayoutAmount.");
 const saveConfirmation=read("components/policy-save-confirmation.tsx");
 const policyDocumentActions=read("app/policies/policy-document-actions.ts");
+const policyOnboardingActions=read("app/policies/policy-onboarding-actions.ts");
 assert(saveConfirmation.includes('POLICY_INTAKE_PENDING_KEY = "insureit:policy-intake:pending:v1"'),"Policy save confirmation must recognize Policy Intake onboarding context");
 assert(saveConfirmation.includes("if (getPendingPolicyIntakeId()) return;"),"Policy Intake onboarding must bypass the generic policy-copy upload choice modal");
 assert(saveConfirmation.includes("getPendingPolicyIntakeId() ? legacySaveButtonLabel : saveButtonLabel"),"Policy Intake onboarding must retain Book Active Policy wording instead of Upload Policy");
@@ -103,6 +104,9 @@ assert(saveConfirmation.includes("const maxFileBytes = 15 * 1024 * 1024;"),"Dire
 assert(saveConfirmation.includes("Policy copy is too large")&&saveConfirmation.includes("Maximum allowed size is"),"Oversize policy copies must show a clear blocking popup in Policy Onboarding.");
 assert(policyDocumentActions.includes("const MAX_POLICY_COPY_BYTES = 15 * 1024 * 1024;"),"Policy-copy server action must enforce 15 MB as a backstop.");
 assert(policyDocumentActions.includes("Policy copy must be 15 MB or smaller."),"Policy-copy server rejection must state the 15 MB limit clearly.");
+assert(policyOnboardingActions.includes("customers!vehicles_customer_id_fkey(contact_name, phone)"),"Policy Onboarding vehicle-owner lookup must explicitly use vehicles_customer_id_fkey.");
+assert(policyOnboardingActions.includes("customers!vehicles_customer_id_fkey(contact_name,phone,address,city,district,state,pincode,country,source)"),"Existing vehicle selection must explicitly use vehicles_customer_id_fkey.");
+assert(!/\.from\("vehicles"\)[\s\S]{0,260}customers\(/.test(policyOnboardingActions),"Policy Onboarding must not use an ambiguous bare vehicles -> customers embed.");
 const copyState=read("app/policy-intakes/policy-copy-state-actions.ts");
 assert(copyState.includes('requirePolicyIntakeFinalizer()'),"Policy-copy reuse must require Finalize authority server-side");
 assert(copyState.includes('.from("policy_intake_documents")')&&copyState.includes('.eq("is_current", true)'),"Policy-copy reuse must verify the current Intake document, including replacements");

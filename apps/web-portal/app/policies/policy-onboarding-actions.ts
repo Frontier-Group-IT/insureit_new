@@ -298,19 +298,19 @@ async function findCustomerById(id: string) {
 async function findVehicleOwner(registration: string) {
   if (!registration) return null;
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.from("vehicles").select("id, vehicle_no, vehicle_no_normalized, customer_id, customers(contact_name, phone)").eq("vehicle_no_normalized", registration).maybeSingle<VehicleOwnerRow>();
+  const { data, error } = await admin.from("vehicles").select("id, vehicle_no, vehicle_no_normalized, customer_id, customers!vehicles_customer_id_fkey(contact_name, phone)").eq("vehicle_no_normalized", registration).maybeSingle<VehicleOwnerRow>();
   if (error) throw new Error(error.message);
   return data;
 }
 async function findVehicleOwnerByChassis(chassis: string) {
   if (!chassis) return null;
   const admin = createSupabaseAdminClient();
-  const { data, error } = await admin.from("vehicles").select("id, vehicle_no, vehicle_no_normalized, customer_id, customers(contact_name, phone)").eq("chassis_no", chassis).maybeSingle<VehicleOwnerRow>();
+  const { data, error } = await admin.from("vehicles").select("id, vehicle_no, vehicle_no_normalized, customer_id, customers!vehicles_customer_id_fkey(contact_name, phone)").eq("chassis_no", chassis).maybeSingle<VehicleOwnerRow>();
   if (error) throw new Error(error.message);
   return data;
 }
 
-const EXISTING_VEHICLE_SELECT = "id,customer_id,vehicle_no,vehicle_no_normalized,vehicle_type,vehicle_class_code,vehicle_class_description,vehicle_category,body_type,is_commercial,make,model,fuel_type,color,manufacture_date,year,engine_capacity_cc,seating_capacity,standing_capacity,sleeper_capacity,gvw_kg,unladen_weight_kg,wheel_base_mm,cylinders,chassis_no,engine_no,emission_norm,registration_date,registration_status,registration_status_as_on,rto_name,rto_state,fitness_expiry_date,road_tax_expiry_date,puc_no,puc_expiry_date,permit_no,permit_type,permit_valid_from,local_permit_expiry_date,national_permit_no,national_permit_expiry_date,financed,financer_name,blacklist_status,customers(contact_name,phone,address,city,district,state,pincode,country,source)";
+const EXISTING_VEHICLE_SELECT = "id,customer_id,vehicle_no,vehicle_no_normalized,vehicle_type,vehicle_class_code,vehicle_class_description,vehicle_category,body_type,is_commercial,make,model,fuel_type,color,manufacture_date,year,engine_capacity_cc,seating_capacity,standing_capacity,sleeper_capacity,gvw_kg,unladen_weight_kg,wheel_base_mm,cylinders,chassis_no,engine_no,emission_norm,registration_date,registration_status,registration_status_as_on,rto_name,rto_state,fitness_expiry_date,road_tax_expiry_date,puc_no,puc_expiry_date,permit_no,permit_type,permit_valid_from,local_permit_expiry_date,national_permit_no,national_permit_expiry_date,financed,financer_name,blacklist_status,customers!vehicles_customer_id_fkey(contact_name,phone,address,city,district,state,pincode,country,source)";
 
 async function findExistingVehicleById(vehicleId: string) {
   const admin = createSupabaseAdminClient();
