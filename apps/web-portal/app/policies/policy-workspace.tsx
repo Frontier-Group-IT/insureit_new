@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search } from "lucide-react";
+import { CalendarDays, ChevronDown, Files, FileText, Plus, RotateCcw, Search, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import {
@@ -482,7 +482,7 @@ export function PolicyWorkspace({ rows, sourceOptions = [] }: { rows: PolicyRow[
                 <td className="px-3"><PolicyTypeLink policy={policy} openingDocumentId={openingDocumentId} onOpenDocument={openDocument} /></td>
                 <td className="px-2.5"><p className="truncate font-semibold text-[#334155]">{policy.customers?.contact_name ?? "-"}</p><p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers?.company_name ?? "Individual account"}</p></td>
                 <td className="px-2.5"><RiskAssetCell policy={policy} /></td>
-                <td className="px-2.5"><span className="block truncate">{policy.insurance_companies?.name ?? "-"}</span></td>
+                <td className="px-2.5"><InsurerLogoCell insurerName={policy.insurance_companies?.name} /></td>
                 <td className="px-2.5"><p className="font-semibold">{formatDate(policy.start_date)} - {formatDate(policy.end_date)}</p><p className="text-[9px] leading-4 text-[#64748B]">{validityHint(policy)}</p></td>
                 <td className="px-2.5"><PolicyStatus policy={policy} /></td>
                 <td className="px-2.5 text-right"><InsuredValueCell policy={policy} /></td>
@@ -543,18 +543,8 @@ function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy:
   const category = policyCategory(policy);
   const product = policy.policy_product?.trim();
   const policyCopy = policy.policy_documents?.find((document) => document.document_type === "policy_copy") ?? null;
-  const insurerLogo = getInsurerLogo(policy.insurance_companies?.name);
   return (
     <div className="flex min-w-0 items-center gap-2">
-      {insurerLogo ? (
-        <Image
-          src={insurerLogo}
-          alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
-          width={26}
-          height={26}
-          className="max-h-6 max-w-[28px] shrink-0 object-contain"
-        />
-      ) : null}
       <Link prefetch={false} href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
         <span className="block truncate"><span className="font-bold">{businessLine}</span><span aria-hidden="true" className="mx-1 text-[11px] font-normal">•</span><span className="font-normal">{category || "-"}</span></span>
         {product && product.toLowerCase() !== category.toLowerCase() ? <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{product}</span> : null}
@@ -564,6 +554,27 @@ function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy:
           <Files className="h-3.5 w-3.5" />
         </button>
       ) : null}
+    </div>
+  );
+}
+
+function InsurerLogoCell({ insurerName }: { insurerName: string | null | undefined }) {
+  const insurerLogo = getInsurerLogo(insurerName);
+  return (
+    <div className="flex items-center justify-center" title={insurerName || "Insurance company"}>
+      {insurerLogo ? (
+        <Image
+          src={insurerLogo}
+          alt={insurerName ? `${insurerName} logo` : "Insurance company"}
+          width={42}
+          height={24}
+          className="max-h-6 max-w-[48px] object-contain"
+        />
+      ) : (
+        <span className="grid h-7 w-9 place-items-center rounded-md border border-[#D8E2EE] bg-[#F8FAFC] text-[#64748B]" aria-label={insurerName ? `${insurerName} logo unavailable` : "Insurance company logo unavailable"}>
+          <ShieldCheck className="h-4 w-4" />
+        </span>
+      )}
     </div>
   );
 }
