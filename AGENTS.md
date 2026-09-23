@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Customer Add Vehicle insurer reference styling:** branch `ui/customer-add-vehicle-insurer-reference-style`; the fetched/locked insurer field in Customer App Add Vehicle now renders as a simple full-width read-only input matching the provided reference, without search/check icons. Editable insurer search behavior is unchanged. No data, API, schema, identity, or APK build changes. **IMPLEMENTED; PR/merge/deployment pending.**
+
+
 - **2026-09-23 — Customer Add Vehicle fetched insurer visibility:** branch `fix/customer-insurer-locked-full-opacity`; changed the fetched/locked insurer field from 10% opacity to 100% opacity while keeping the field locked/read-only after RC fetch. No data, API, schema, identity, or APK build changes. **IMPLEMENTED; PR/merge/deployment pending.**
 
 
