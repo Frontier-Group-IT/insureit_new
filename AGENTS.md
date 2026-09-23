@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Customer Add Vehicle fetched insurer masked reference:** branch `fix/customer-fetched-insurer-mask-reference`; locked/fetched insurer now reuses `maskAlternateCharacters()` so the displayed value matches the supplied dotted/masked reference while preserving the real insurer selection/value internally. Plain read-only field remains icon-free and full-opacity. No data, schema, API, validation, identity, APK, or native-build changes. **IMPLEMENTED; PR/merge/deployment pending.**
+
+
 - **2026-09-23 — Customer App alternate policy-number masking:** branch `ui/customer-policy-number-alternate-mask`; My Vehicles policy numbers now show alternating visible/masked characters (for example `6•7•6•4•6`) instead of first/last blocks with a fully masked middle. Display-only change; stored policy numbers are unchanged. No schema, migration, web portal, Partner app, APK/AAB or native-runtime change. **IMPLEMENTED; PR/CI/merge/OTA pending.**
 
 
