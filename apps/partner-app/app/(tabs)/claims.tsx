@@ -106,7 +106,7 @@ export default function ClaimsScreen() {
     <View>
       <View style={styles.hero}>
         <Image
-          source={require('../../assets/figma-dashboard/hero-banner.jpg')}
+          source={require('../../assets/partner/banners/claims-header-reference.jpg')}
           resizeMode="cover"
           style={styles.heroBackdrop}
         />
@@ -143,9 +143,6 @@ export default function ClaimsScreen() {
           <Text style={styles.heroSubtitle}>Support. Settle. Keep{'\\n'}Your Business Moving.</Text>
         </View>
 
-        <View pointerEvents="none" style={styles.heroArtworkWrap}>
-          <Image source={PartnerAssets.navigation.claims} resizeMode="contain" style={styles.heroArtwork} />
-        </View>
       </View>
 
       <View style={styles.body}>
@@ -544,15 +541,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  heroArtworkWrap: {
-    position: 'absolute',
-    right: 36,
-    bottom: 4,
-    width: 116,
-    height: 104,
-    opacity: 0.98,
-  },
-  heroArtwork: { width: '100%', height: '100%' },
 
   body: { marginTop: -13, paddingHorizontal: 10, zIndex: 5 },
   searchShell: {

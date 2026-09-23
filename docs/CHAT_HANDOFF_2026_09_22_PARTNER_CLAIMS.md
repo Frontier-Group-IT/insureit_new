@@ -613,3 +613,31 @@ Release safety:
 - no OTA publish yet
 
 Next step: open the feature PR, let Partner verification run, inspect CI, and wait for explicit user approval before merge.
+
+
+---
+
+# 15. Claims Hero Background Update — 2026-09-23
+
+User supplied a new wide blue Claims artwork featuring the city skyline, clipboard, shield, truck and car and explicitly requested it as the Claims header background.
+
+Implementation branch:
+
+- `ui/partner-claims-header-background-20260923`
+
+Implemented:
+
+- added the supplied artwork as `apps/partner-app/assets/partner/banners/claims-header-reference.jpg`
+- changed only the Partner Claims hero to use that dedicated asset
+- removed the separate foreground `PartnerAssets.navigation.claims` hero overlay because the supplied background already contains the Claims imagery
+- retained the existing official Partner logo, activity/profile controls, title/subtitle, search/filter bar, KPI cards, tabs, claim cards, pagination and all existing claims RPC/data behavior
+- Home and other Partner screens continue using their existing hero assets
+
+Release safety:
+
+- no APK created
+- no AAB created
+- no Expo/EAS native build triggered
+- no native dependency/config/runtime/permission change
+- OTA-safe JavaScript + bundled asset change
+- merge and OTA publish remain pending explicit user instruction
