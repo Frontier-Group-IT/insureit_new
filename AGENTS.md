@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Non-Motor single document slots:** branch `fix/non-motor-single-document-slots-main`; Non-Motor Policy Edit loads saved Policy Copy / Proposal Form / KYC / Other Document into their respective document cards, showing filename with Re-upload/Delete instead of Upload. Re-upload replaces the existing row/file for that policy + document type and cleans older duplicates; Delete removes all saved rows/files for that slot. New uploads remain limited to one logical active document per type without changing Motor behavior or schema. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-23 — Customer Add Vehicle fetched insurer visibility:** branch `fix/customer-insurer-locked-full-opacity`; changed the fetched/locked insurer field from 10% opacity to 100% opacity while keeping the field locked/read-only after RC fetch. No data, API, schema, identity, or APK build changes. **IMPLEMENTED; PR/merge/deployment pending.**
 
 
