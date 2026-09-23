@@ -13,7 +13,7 @@ type BrandOption = { manufacturer_id: string; brand_name: string };
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string; error?: string; vehicle_saved?: string; vehicle_linked?: string; saved_vehicle_id?: string }> }) {
+export default async function NewVehiclePage({ searchParams }: { searchParams: Promise<{ customer_id?: string; error?: string; vehicle_saved?: string; saved_vehicle_id?: string }> }) {
   const profile = await requireAnyCapability([
     { capability: "view_vehicles", minimumAccess: "edit" },
     { capability: "create_vehicles", minimumAccess: "edit" },
@@ -60,7 +60,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         allowPolicyContinuation={canCreatePolicy}
       />
       {params.vehicle_saved === "1" && params.customer_id && params.saved_vehicle_id ? (
-        <VehicleCreatedActionPopup customerId={params.customer_id} vehicleId={params.saved_vehicle_id} allowPolicyContinuation={canCreatePolicy && params.vehicle_linked !== "1"} />
+        <VehicleCreatedActionPopup customerId={params.customer_id} vehicleId={params.saved_vehicle_id} />
       ) : null}
     </AppShell>
   );

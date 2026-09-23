@@ -589,8 +589,3 @@ The first runtime-0.1.0 OTA attempt after PR #2191 failed during Expo bundling b
 ## 2026-09-21 — Customer OTP login bounce fix
 
 **IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `fix/customer-otp-post-login-routing` changes only the post-OTP customer routing guard in `apps/mobile-app/lib/auth.ts`. A freshly authenticated customer with an **active** profile is no longer signed out and redirected to `/login` solely because both `getCustomerForUser()` and `getOnboardingApplicationForUser()` return null. The session is preserved and routing continues to Customer Home, which already supports a missing customer record and can route the user into onboarding. Explicitly inactive customer profiles still revoke the local session and return to Login exactly as before. No database/schema/RLS/RPC/native/runtime-version changes.
-
-
-## 2026-09-22 — Customer app multi-customer vehicle linking
-
-**IMPLEMENTED / NOT MERGED / NOT PUBLISHED:** branch `feat/multi-customer-vehicle-links`. Customer Add Vehicle continues to block duplicate entry within the same selected customer account, but an RC already owned/linked elsewhere is now expected to be returned by `create_customer_vehicle_v2` and linked to the selected customer rather than rejected by global uniqueness. Customer Home, Vehicles, Vehicle Detail and Add Policy load canonical vehicles through `vehicle_customer_links`. No native permission/runtime/version change and no APK/AAB is authorized. This mobile behavior depends on migration `20260922170000_multi_customer_vehicle_links.sql`; do not publish OTA before schema application/verification after an approved merge.

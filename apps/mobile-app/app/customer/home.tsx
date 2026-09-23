@@ -14,7 +14,6 @@ import { LoadingState, UniversalBottomTabs } from '@/components/ui';
 import { getCurrentSession, getCustomerForUser, getOnboardingApplicationForUser, getProfile, isValidProfile, resetLocalAuthState, signOut } from '@/lib/auth';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
 import { getSelectedCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
-import { loadCustomerLinkedVehicles } from '@/lib/customer-vehicles';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimTask, Customer, CustomerOnboardingApplication, Policy, Profile, Vehicle } from '@/lib/types';
@@ -93,7 +92,7 @@ export default function CustomerMockupHomeScreen() {
       if (mountedRef.current) setKycPromptDismissed(Boolean(promptDismissed) || Boolean(nextCustomer) || nextOnboarding?.status === 'submitted' || nextOnboarding?.status === 'under_review');
       if (nextCustomer && !isPortfolioDashboardContext(selected)) {
         const [vehicleResult, policyResult, externalPolicyResult, claimResult, taskResult] = await Promise.all([
-          loadCustomerLinkedVehicles([nextCustomer.id]),
+          supabase.from('vehicles').select('*').eq('customer_id', nextCustomer.id),
           supabase.from('policies').select('*').eq('customer_id', nextCustomer.id),
           (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,premium_amount,insured_declared_value').eq('customer_id', nextCustomer.id),
           supabase.from('claims').select('*').eq('customer_id', nextCustomer.id),

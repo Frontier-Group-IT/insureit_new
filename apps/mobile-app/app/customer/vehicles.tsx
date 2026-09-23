@@ -7,7 +7,6 @@ import { Animated, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
-import { loadCustomerLinkedVehicles } from '@/lib/customer-vehicles';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -83,7 +82,7 @@ export default function VehiclesScreen() {
       setContexts(contexts);
       if (ids.length) {
         const [vehicleResult, policyResult, externalPolicyResult, claimResult, insurerResult] = await Promise.all([
-          loadCustomerLinkedVehicles(ids),
+          supabase.from('vehicles').select('*').in('customer_id', ids).order('created_at', { ascending: false }),
           supabase.from('policies').select('*').in('customer_id', ids),
           (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,start_date,end_date').in('customer_id', ids),
           supabase.from('claims').select('*').in('customer_id', ids),

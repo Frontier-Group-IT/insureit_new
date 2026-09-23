@@ -1,14 +1,3 @@
-## 2026-09-23 — Policy Onboarding actual server-error diagnostics
-
-- Branch: `diag/policy-onboarding-actual-server-error`.
-- Scope is diagnostics only. `apps/web-portal/app/policies/policy-onboarding-actions.ts` now emits server-side `console.error` records for:
-  - Supabase/PostgREST RPC failures under event `policy_onboarding_rpc_error`;
-  - unexpected caught exceptions under event `policy_onboarding_server_error`.
-- Logs include the execution stage, whether the request originated from Policy Intake, backend error code, a redacted backend message, hint, and stack for ordinary thrown `Error` objects.
-- UUIDs and policy-number-like values are redacted from backend messages before logging. The code does not log source intake IDs, policy/customer/vehicle payloads, or the Supabase error `details` field.
-- The user-facing popup/error mapping is unchanged. No validation, payload sanitization, RPC, migration, schema, RLS, permission, policy calculation, booking rule, or recovery behavior was modified.
-- **IMPLEMENTED; PR/CI/merge/deployment pending.**
-
 ## 2026-09-22 — Customer Add Vehicle fetched-policy lock correction v2
 
 - Branch: `fix/customer-fetched-policy-lock-v2`.
@@ -1702,8 +1691,3 @@ Automated non-exact comparisons create/reuse Anju tasks with field-level questio
 ## 2026-09-21 — Partner Business clean header deployment provenance
 
 PR #2170 merged as `ae609cfa573becf29ea1715096f595fb1c150047`. The first automatic production deploy run was blocked by the canonical provenance gate because PR #2170 had no completed `Verify web portal` pull-request run before merge. This follow-up PR exists only to establish canonical verification provenance on top of the already-merged Business header change; it does not alter runtime behavior. Canonical PR verification is required before the production deploy hook may run.
-
-
-## 2026-09-22 — Multi-customer vehicle ownership/linking
-
-User requested that the same physical vehicle/RC be addable to Customer A, B and C in Operations web and Customer app without a duplicate-vehicle error. Root cause was global vehicle identity uniqueness plus app/server assumptions that `vehicles.customer_id` is the only customer relationship. Branch `feat/multi-customer-vehicle-links` implements a many-to-many association through migration `20260922170000_multi_customer_vehicle_links.sql`, backfills existing primary links, preserves the canonical vehicle row and global RC/chassis uniqueness, updates `create_customer_vehicle`/`create_customer_vehicle_v2` to reuse existing RCs and link the requested customer, updates Customer vehicle access/RLS and external-policy validation, and changes Operations Add Vehicle plus Customer vehicle/home/detail/Add Policy reads to use the link model. Existing vehicle edit collision protection remains intentionally strict. State: **IMPLEMENTED only; migration NOT APPLIED; PR/CI pending; no merge/deployment.**

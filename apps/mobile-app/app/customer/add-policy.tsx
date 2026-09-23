@@ -7,7 +7,6 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View 
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
-import { loadCustomerVehicleAssociations } from '@/lib/customer-vehicles';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -58,7 +57,7 @@ export default function AddPolicyScreen() {
       const nextContexts = await getOperationalCustomerContexts();
       const ids = nextContexts.map((context) => context.customer_id);
       const [vehicleResult, companyResult, policyResult, externalPolicyResult] = await Promise.all([
-        ids.length ? loadCustomerVehicleAssociations(ids) : Promise.resolve({ data: [] as Vehicle[], error: null }),
+        ids.length ? supabase.from('vehicles').select('*').in('customer_id', ids).order('vehicle_no') : Promise.resolve({ data: [] as Vehicle[] }),
         supabase.from('insurance_companies').select('*').order('name'),
         ids.length ? supabase.from('policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as PolicyDateRow[] }),
         ids.length ? (supabase as any).from('external_policies').select('vehicle_id,start_date,end_date').in('customer_id', ids) : Promise.resolve({ data: [] as PolicyDateRow[] }),

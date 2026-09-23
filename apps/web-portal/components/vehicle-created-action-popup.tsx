@@ -7,11 +7,9 @@ import Link from "next/link";
 export function VehicleCreatedActionPopup({
   customerId,
   vehicleId,
-  allowPolicyContinuation = true,
 }: {
   customerId: string;
   vehicleId: string;
-  allowPolicyContinuation?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -45,19 +43,19 @@ export function VehicleCreatedActionPopup({
           </p>
         </div>
 
-        <div className={`grid gap-2 border-t border-[#E8EEF6] bg-[#FBFCFE] px-4 py-3 ${allowPolicyContinuation ? "grid-cols-2" : "grid-cols-1"}`}>
+        <div className="grid grid-cols-2 gap-2 border-t border-[#E8EEF6] bg-[#FBFCFE] px-4 py-3">
           <Link
             href="/vehicles?success=vehicle_created"
             className="grid h-10 place-items-center rounded-lg border border-[#BFD0E4] bg-white px-4 text-[10.5px] font-semibold text-[#17365D] transition hover:bg-[#F7FAFD]"
           >
             OK
           </Link>
-          {allowPolicyContinuation ? <Link
+          <Link
             href={`/policies/new?customer_id=${encodeURIComponent(customerId)}&vehicle_id=${encodeURIComponent(vehicleId)}`}
             className="grid h-10 place-items-center rounded-lg bg-[#17365D] px-4 text-[10.5px] font-semibold text-white shadow-[0_4px_10px_rgba(23,54,93,.18)] transition hover:bg-[#102A49]"
           >
             ADD POLICY
-          </Link> : null}
+          </Link>
         </div>
       </div>
     </div>,
