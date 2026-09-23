@@ -33,6 +33,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
     viewTasks,
     viewKyc,
     accountsCapability,
+    viewReports,
   ] = await Promise.all([
     hasEffectiveCapability(profile, "view_policies", "view"),
     hasEffectiveCapability(profile, "view_policies", "edit"),
@@ -47,6 +48,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
     hasEffectiveCapability(profile, "view_tasks", "view"),
     hasEffectiveCapability(profile, "view_kyc", "view"),
     hasEffectiveCapability(profile, "view_accounts", "view"),
+    hasEffectiveCapability(profile, "view_reports", "view"),
   ]);
 
   const commercial = canAccessPolicyCommercials(profile);
@@ -61,6 +63,7 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
     viewTasks,
     viewKyc,
     viewAccounts: accountsCapability && commercial,
+    viewReports,
     commercial,
   };
 
