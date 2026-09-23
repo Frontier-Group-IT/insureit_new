@@ -95,6 +95,8 @@ jobs:
         run: node scripts/external-claim-canonical-operations-regression.mjs
       - name: Auth phase observability regression
         run: npm run auth-phase-observability:regression
+      - name: Portal auth invite and password recovery regression
+        run: npm run portal-auth-email-flow:regression
       - name: Dashboard performance regression
         run: npm run dashboard-performance:regression
       - name: Dashboard pending intermediary count regression
