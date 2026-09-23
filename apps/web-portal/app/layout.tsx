@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { AadhaarMaskNormalizer } from "@/components/aadhaar-mask-normalizer";
 import { ClaimRealtimeRefresh } from "@/components/claim-realtime-refresh";
 import { ClientRuntimeErrorMonitor } from "@/components/client-runtime-error-monitor";
+import { GlobalDropdownDismiss } from "@/components/global-dropdown-dismiss";
 import { RouteProgressBar } from "@/components/loading/route-progress-bar";
 import { PolicyRouteEnhancements } from "@/components/policy-route-enhancements";
 import { PortalRouteEnhancements } from "@/components/portal-route-enhancements";
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
           <Suspense fallback={null}>
             <ClientRuntimeErrorMonitor />
+            <GlobalDropdownDismiss />
             <AadhaarMaskNormalizer />
             <ClaimRealtimeRefresh />
             <PortalRouteEnhancements />
