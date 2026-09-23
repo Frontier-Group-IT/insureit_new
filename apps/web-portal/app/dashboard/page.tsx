@@ -37,6 +37,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const viewTasks = can("view_tasks");
   const viewKyc = can("view_kyc");
   const accountsCapability = can("view_accounts");
+  const viewReports = can("view_reports");
 
   const commercial = canAccessPolicyCommercials(profile);
   const isRelationshipManager = profile?.role === "relationship_manager";
@@ -53,6 +54,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     viewTasks,
     viewKyc,
     viewAccounts: accountsCapability && commercial,
+    viewReports,
     commercial,
   };
 
