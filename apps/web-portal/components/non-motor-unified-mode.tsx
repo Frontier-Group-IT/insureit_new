@@ -28,6 +28,7 @@ type Props = {
   policyId?: string;
   initialValues?: NonMotorUnifiedInitialValues;
   existingDocuments?: ExistingNonMotorDocuments;
+  activityStatus?: ReactNode;
   sourceSection: ReactNode;
   source: {
     issuanceDate: string;
@@ -125,7 +126,7 @@ const emptyForm: FormState = {
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
-export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, existingDocuments = {}, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
+export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, existingDocuments = {}, activityStatus, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
   const router = useRouter();
   const commercialAccess = usePolicyCommercialAccess();
   const isEdit = mode === "edit";
@@ -350,6 +351,8 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
             <div className="md:col-span-2 xl:col-span-4"><Field label="Remarks" value={form.remarks} onChange={(e) => update("remarks", e.target.value)} placeholder="Any servicing note for future reference" /></div>
           </div> : null}
         </section>
+
+        {activityStatus ? <div className="mt-1">{activityStatus}</div> : null}
 
         <Section number="06" title="Documents">
           <NonMotorDocumentPicker
