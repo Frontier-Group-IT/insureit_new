@@ -109,6 +109,17 @@ function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
     policy_expiry_date: stringVariable(context.policy_expiry_date),
     previous_idv: stringVariable(context.previous_idv),
     previous_premium: stringVariable(context.previous_premium),
+    repeat_call: context.repeat_call,
+    previous_connected_call_count: String(context.previous_connected_call_count),
+    last_call_date: stringVariable(context.last_call_date),
+    last_call_disposition: stringVariable(context.last_call_disposition),
+    last_customer_interest: stringVariable(context.last_customer_interest),
+    last_customer_objection: stringVariable(context.last_customer_objection),
+    last_follow_up_time: stringVariable(context.last_follow_up_time),
+    last_call_summary: stringVariable(context.last_call_summary),
+    previous_conversation_context: stringVariable(context.previous_conversation_context),
+    opening_line: context.opening_line,
+    opening_follow_up: context.opening_follow_up,
   };
 
   for (const [key, value] of Object.entries(candidates)) {
