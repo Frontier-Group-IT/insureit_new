@@ -65,10 +65,10 @@ export default async function ReportsOverviewPage() {
         </header>
 
         <nav className="ov-tabs" aria-label="Report workspaces">
-          <Link href="/reports" className="ov-tab ov-tab--active">Overview</Link>
-          <Link href="/reports/business" className="ov-tab">Business</Link>
-          <Link href="/reports/renewals" className="ov-tab">Portfolio</Link>
-          <Link href="/reports/operations" className="ov-tab">Operations</Link>
+          <Link prefetch={false} href="/reports" className="ov-tab ov-tab--active">Overview</Link>
+          <Link prefetch={false} href="/reports/business" className="ov-tab">Business</Link>
+          <Link prefetch={false} href="/reports/renewals" className="ov-tab">Portfolio</Link>
+          <Link prefetch={false} href="/reports/operations" className="ov-tab">Operations</Link>
         </nav>
 
         {loadError || !pack ? (
