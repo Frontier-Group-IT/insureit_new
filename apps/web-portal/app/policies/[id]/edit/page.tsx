@@ -5,6 +5,7 @@ import { PolicyEditActionFooter } from "@/components/policy-edit-action-footer";
 import { PolicyLinkedMasterActions } from "@/components/policy-linked-master-actions";
 import { type PolicyRmOption, type PolicySourceOption, type PolicyUnifiedInitialValues } from "@/components/policy-unified-form";
 import type { NonMotorUnifiedInitialValues } from "@/components/non-motor-unified-mode";
+import type { ExistingNonMotorDocuments, NonMotorDocumentType } from "@/components/non-motor-document-picker";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
 import { loadPospMispAssociates } from "@/lib/posp-misp-associates";
@@ -48,6 +49,13 @@ type NonMotorPremiumRow = { net_premium: number | null; gst_amount: number | nul
 type NonMotorPayinRow = { commercial_basis: string | null; projected_commission_percent: number | null; projected_commission_amount: number | null; insurer_scheme_amount: number | null };
 type NonMotorPayoutRow = { payout_basis: string | null; partner_payout_percent: number | null; partner_payout_amount: number | null };
 type CustomerOptionRow = { id: string; contact_name: string; company_name: string | null; phone: string; email: string | null };
+type NonMotorPolicyDocumentRow = {
+  id: string;
+  document_type: string;
+  file_name: string;
+  updated_at: string;
+  created_at: string;
+};
 
 type InsurerOption = { id: string; name: string; is_active: boolean };
 type CreatorProfileRow = { full_name: string };
@@ -106,7 +114,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     : { data: null as CreatorProfileRow | null, error: null };
   if (creatorResult.error) throw new Error(`Unable to load policy creator: ${creatorResult.error.message}`);
 
-  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurerOptions, currentInsurerResult, salesEmployees, intermediariesResult, nonMotorDetailsResult, customersResult] = await Promise.all([
+  const [customerResult, vehicleResult, premiumResult, payinResult, payoutResult, activeInsurerOptions, currentInsurerResult, salesEmployees, intermediariesResult, nonMotorDetailsResult, customersResult, nonMotorDocumentsResult] = await Promise.all([
     admin.from("customers").select("id,contact_name,company_name,phone,email,address,customer_type,updated_at").eq("id", policy.customer_id).maybeSingle<CustomerRow>(),
     vehicleId
       ? admin.from("vehicles").select("id,vehicle_no,vehicle_type,vehicle_class_code,vehicle_class_description,make,model,year,chassis_no,engine_no,fuel_type,engine_capacity_cc,seating_capacity,gvw_kg,rto_name,rto_state,updated_at").eq("id", vehicleId).maybeSingle<VehicleRow>()
@@ -132,6 +140,15 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     isNonMotor
       ? admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerOptionRow[]>()
       : Promise.resolve({ data: [] as CustomerOptionRow[], error: null }),
+    isNonMotor
+      ? admin.from("policy_documents")
+        .select("id,document_type,file_name,updated_at,created_at")
+        .eq("policy_id", id)
+        .in("document_type", ["policy_copy", "proposal_form", "kyc", "other_document"])
+        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
+        .returns<NonMotorPolicyDocumentRow[]>()
+      : Promise.resolve({ data: [] as NonMotorPolicyDocumentRow[], error: null }),
   ]);
 
   const billingResult = commercialAccess
@@ -139,7 +156,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
     : { ok: true as const, billing: { billNumber: "", billedAmount: "", billDate: "", status: "Unbilled" } };
   if (!billingResult.ok) throw new Error(`Unable to load policy PayIn billing: ${billingResult.error}`);
 
-  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, currentInsurerResult.error, intermediariesResult.error, nonMotorDetailsResult.error, customersResult.error].filter(Boolean);
+  const errors = [customerResult.error, vehicleResult.error, premiumResult.error, payinResult.error, payoutResult.error, currentInsurerResult.error, intermediariesResult.error, nonMotorDetailsResult.error, customersResult.error, nonMotorDocumentsResult.error].filter(Boolean);
   if (errors.length) throw new Error(`Unable to load policy edit data: ${errors[0]?.message}`);
   if (!customerResult.data || (!isNonMotor && !vehicleResult.data)) throw new Error("The linked customer or vehicle record is missing.");
 
@@ -304,6 +321,12 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
       endorsements: recordString(additional, "endorsements", details?.endorsements ?? ""),
       remarks: recordString(additional, "remarks", details?.remarks ?? policy.remarks ?? ""),
     };
+    const existingDocuments: ExistingNonMotorDocuments = {};
+    for (const document of nonMotorDocumentsResult.data ?? []) {
+      const type = document.document_type as NonMotorDocumentType;
+      if (!existingDocuments[type]) existingDocuments[type] = { id: document.id, fileName: document.file_name };
+    }
+
     const initialValues: PolicyUnifiedInitialValues = {
       policyId: policy.id,
       policyCode: policy.policy_code ?? "",
@@ -337,6 +360,7 @@ export default async function EditPolicyPage({ params }: { params: Promise<{ id:
             sources={sourceOptions}
             initialValues={initialValues}
             nonMotorInitialValues={nonMotorInitialValues}
+            nonMotorExistingDocuments={existingDocuments}
             commercialAccess={commercialAccess}
           />
           <PolicyLinkedMasterActions
