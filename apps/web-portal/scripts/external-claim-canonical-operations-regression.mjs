@@ -49,7 +49,7 @@ assert(claimPage.includes('currentStatus={claim.current_status}'), 'The shared c
 // Stage UI must show one shared current stage, while Customer milestones still prove completed history.
 assert(operationsStages.includes('const hasExternalVisualProgress = externalCustomerMilestones !== undefined;'), 'External milestone projection must remain opt-in so Internal/SIBL is unchanged.');
 assert(operationsStages.includes('const externalSelectedCompleted = hasExternalVisualProgress && externalVisualCompletedKeys.has(selected.key);'), 'Completed External milestones must remain reviewable.');
-assert(operationsStages.includes('const selectedAvailable = journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;'), 'Completed External milestones must remain selectable for review.');
+assert(operationsStages.includes('const selectedAvailable = unrestrictedStageEditing || journeyComplete || selectedIndex <= activeIndex || externalSelectedCompleted;'), 'Completed External milestones must remain selectable for review, with unrestricted editing honored when explicitly enabled.');
 assert(operationsStages.includes('const selectedSaveOnly = !selectedIsCurrent;'), 'Only the shared current stage may advance; all historical review saves must be save-only.');
 assert(!operationsStages.includes('externalVisualCurrentIndex'), 'External current-stage styling must not derive a second current stage from Customer milestones.');
 assert(operationsStages.includes('const isCurrent = !journeyComplete && stage.key === active?.key;'), 'Operations current-stage styling must use the shared claims.current_status stage.');
@@ -66,8 +66,8 @@ assert(operationsStages.includes('`Save & move to ${nextStageLabel}`'), 'The cur
 assert(stageActions.includes('if (["notes", "next_status", "current_status", "milestone_key", "save_only", "completed_at"].includes(key)) continue;'), 'Stage form parsing must discard browser-supplied completed_at.');
 assert(stageActions.includes('const shouldAdvance = !saveOnly && !terminal && stageKey === activeKey && vehicleDeliveryReady;'), 'Only the current non-save-only stage may advance.');
 assert(stageActions.includes('details: shouldAdvance ? { ...details, completed_at: new Date().toISOString() } : details'), 'The server action must add the completion marker only after validating an explicit advance.');
-assert(stageActions.includes('claim.policy_service_source === "external" && !terminal && targetIndex > externalActiveIndex'), 'External future-stage review must remain guarded server-side.');
-assert(stageActions.includes('.from("claim_milestones")'), 'External future-stage review must verify the matching Customer milestone.');
+assert(stageActions.includes('const externalSaveOnlyEdit = claim.policy_service_source === "external" && saveOnly;'), 'External future-stage review must remain save-only and explicitly guarded server-side.');
+assert(stageActions.includes('if (!terminal && targetIndex > activeIndex) {'), 'Future-stage edits must remain explicitly guarded server-side.');
 
 // Shared-stage database rule: Customer Stage N completion opens N+1; Operations movement mirrors back.
 assert(sharedStageMigration.includes('v_target_stage := v_completed_stage + 1;'), 'Customer completion must open the next shared stage, not remain on the completed stage.');
