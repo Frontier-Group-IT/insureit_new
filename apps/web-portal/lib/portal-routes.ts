@@ -22,6 +22,7 @@ export const protectedPortalRoots = [
   "/policy-intakes",
   "/reconciliation",
   "/reports",
+  "/rm-performance",
   "/service-enquiries",
   "/settings",
   "/system",

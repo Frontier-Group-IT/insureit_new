@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowUpRight, Check, ChevronRight, Plus } from "lucide-react";
+import { ArrowUpRight, Check, ChevronRight, Plus, TrendingUp } from "lucide-react";
 import { DASHBOARD_ICON_ASSETS } from "@/lib/dashboard-icon-assets";
 import type {
   DashboardAccess,
@@ -74,6 +74,15 @@ export function DashboardFullyLoaded({ data, access, business, canCreatePolicy, 
           <span className="mr-1 text-[8.5px] font-semibold text-[#7A879A]">
             Updated {formatHeaderTime(data.generatedAt)}
           </span>
+          {access.viewReports ? (
+            <Link
+              prefetch={false}
+              href="/rm-performance"
+              className="inline-flex h-9 items-center gap-1.5 border border-[#BFCBDA] bg-white px-3 text-[8.5px] font-bold text-[#1E2E4A] transition hover:border-[#8298B5] hover:bg-[#F8FAFC]"
+            >
+              <TrendingUp className="h-3.5 w-3.5" /> RM Performance
+            </Link>
+          ) : null}
           {canCreatePolicy ? (
             <Link prefetch={false}
               href="/policies/new"
