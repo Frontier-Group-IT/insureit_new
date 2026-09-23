@@ -202,25 +202,6 @@ function buildAttention(data: DashboardCurrentData, access: DashboardAccess, bus
       tone: "violet",
     });
   }
-  if (data.claims?.actionPendingVehicles) {
-    rows.push({
-      label: "Claim action pending",
-      value: data.claims.actionPendingVehicles,
-      detail: "vehicles",
-      href: "/claims?queue=active",
-      icon: DASHBOARD_ICON_ASSETS.documentsPending,
-      tone: "slate",
-    });
-  }
-  if (data.claims?.assistanceRequested) {
-    rows.push({
-      label: "Assistance requested",
-      value: data.claims.assistanceRequested,
-      href: "/claims",
-      icon: DASHBOARD_ICON_ASSETS.claimOverdue,
-      tone: "red",
-    });
-  }
   if (data.intermediaries?.pendingApplications) {
     rows.push({
       label: "Intermediary onboarding",
