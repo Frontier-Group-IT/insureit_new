@@ -6,12 +6,14 @@ import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, HandCoins, IndianRupee, MapPin, ShieldCheck } from "lucide-react";
-import { uploadNonMotorPolicyDocument } from "@/app/policies/non-motor-policy-document-actions";
+import { deleteNonMotorPolicyDocument, uploadNonMotorPolicyDocument } from "@/app/policies/non-motor-policy-document-actions";
 import { createNonMotorPolicy, updateNonMotorPolicy, type NonMotorCommercialBasis, type NonMotorPolicyPayload } from "@/app/policies/non-motor-policy-actions";
 import { usePolicyCommercialAccess } from "@/components/policy-commercial-access-context";
 import { CustomerSearchField } from "@/components/customer-search-field";
 import {
   NonMotorDocumentPicker,
+  type ExistingNonMotorDocuments,
+  type NonMotorDocumentType,
   type NonMotorStagedDocuments,
 } from "@/components/non-motor-document-picker";
 import type { PolicySourceOption } from "@/components/policy-unified-form";
@@ -25,6 +27,7 @@ type Props = {
   mode?: "create" | "edit";
   policyId?: string;
   initialValues?: NonMotorUnifiedInitialValues;
+  existingDocuments?: ExistingNonMotorDocuments;
   sourceSection: ReactNode;
   source: {
     issuanceDate: string;
@@ -122,12 +125,14 @@ const emptyForm: FormState = {
   proposalNumber: "", previousInsurer: "", previousPolicyNumber: "", previousClaims: "", addOns: "", warranties: "", specialConditions: "", endorsements: "", remarks: "",
 };
 
-export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
+export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, existingDocuments = {}, sourceSection, source, insurers, customers, sources, onProgressChange }: Props) {
   const router = useRouter();
   const commercialAccess = usePolicyCommercialAccess();
   const isEdit = mode === "edit";
   const [form, setForm] = useState<FormState>(() => ({ ...emptyForm, ...initialValues, ...(mode === "edit" ? { customerMode: "existing" as const } : {}) }));
   const [documents, setDocuments] = useState<NonMotorStagedDocuments>({});
+  const [savedDocuments, setSavedDocuments] = useState<ExistingNonMotorDocuments>(existingDocuments);
+  const [deletingDocumentType, setDeletingDocumentType] = useState<NonMotorDocumentType | null>(null);
   const [additionalOpen, setAdditionalOpen] = useState(false);
   const [commercialModal, setCommercialModal] = useState<CommercialModal>(null);
   const [error, setError] = useState<string | null>(null);
@@ -196,6 +201,32 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
     } else {
       setForm((current) => ({ ...current, payoutBasis: basis, payoutPercent: basis === "FIXED_AMOUNT" ? "" : current.payoutPercent, payoutFixedAmount: basis === "NET_PREMIUM_PERCENT" ? "" : current.payoutFixedAmount }));
     }
+  }
+
+  function deleteSavedDocument(documentType: NonMotorDocumentType) {
+    if (!isEdit || !policyId || deletingDocumentType) return;
+    setError(null);
+    setDeletingDocumentType(documentType);
+    startTransition(async () => {
+      const result = await deleteNonMotorPolicyDocument(policyId, documentType);
+      if (!result.ok) {
+        setError(result.error);
+        setDeletingDocumentType(null);
+        return;
+      }
+      setSavedDocuments((current) => {
+        const next = { ...current };
+        delete next[documentType];
+        return next;
+      });
+      setDocuments((current) => {
+        const next = { ...current };
+        delete next[documentType];
+        return next;
+      });
+      setDeletingDocumentType(null);
+      router.refresh();
+    });
   }
 
   function submit() {
@@ -321,7 +352,14 @@ export function NonMotorUnifiedMode({ mode = "create", policyId, initialValues, 
         </section>
 
         <Section number="06" title="Documents">
-          <NonMotorDocumentPicker files={documents} onChange={setDocuments} onError={setError} />
+          <NonMotorDocumentPicker
+            files={documents}
+            existingDocuments={savedDocuments}
+            deletingType={deletingDocumentType}
+            onChange={setDocuments}
+            onDeleteExisting={isEdit ? deleteSavedDocument : undefined}
+            onError={setError}
+          />
         </Section>
       </div>
 
