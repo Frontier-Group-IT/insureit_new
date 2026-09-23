@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Customer Add Vehicle fetched insurer reference styling:** branch `ui/customer-add-vehicle-insurer-reference-field`; locked/fetched insurer in Policy details now renders as a plain full-width read-only field matching the supplied reference, without search/check icons, while retaining the fetched insurer name and existing lock behavior. No data, schema, API, validation, identity, APK, or native-build changes. **IMPLEMENTED; PR #2287 open; CI/merge/deployment pending.**
+
+
 - **2026-09-23 — Operations Dashboard stage-aware Open Claims amount:** branch `fix/dashboard-stage-aware-open-claim-amount-v2`; Open Claims KPI now sums each open Internal claim using the amount appropriate to its actual workflow progress: before Billing uses latest Estimate Amount from `claim_stage_details` (`claim_intimation`), after Billing uses latest Bill Amount (`billing`), and after Delivery Order uses latest DO Amount (`delivery_order`). Existing `claim_financials` values remain fallback only. Settled/Closed/Rejected claims remain excluded. No schema, migration, RLS, claim-workflow write, mobile, APK/AAB or native-runtime change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 
