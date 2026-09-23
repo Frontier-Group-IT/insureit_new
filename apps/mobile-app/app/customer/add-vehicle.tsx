@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   policyCopyText: { color: '#607089', fontSize: 10, fontWeight: '700', marginTop: 2 },
   policyHintBox: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F8FBFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
   policyHintText: { flex: 1, color: '#607089', fontSize: 10.3, lineHeight: 14, fontWeight: '700' },
-  fetchedLockedField: { opacity: 0.1 },
+  fetchedLockedField: { opacity: 1 },
   lockedCodeField: { backgroundColor: '#EEF2F6', opacity: 0.72 },
   fetchPopupOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, backgroundColor: 'rgba(8,29,63,0.08)' },
   fetchPopupCard: { width: '100%', maxWidth: 360, minHeight: 84, borderRadius: 18, borderWidth: 1, borderColor: '#B9E6D0', backgroundColor: '#FFFFFF', paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: '#0A2D55', shadowOpacity: 0.16, shadowRadius: 16, elevation: 8 },
