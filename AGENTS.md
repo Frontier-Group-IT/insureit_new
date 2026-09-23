@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-23 — Non-Motor document UI parity + activity placement:** branch `ui/non-motor-document-motor-parity`; Non-Motor Policy Edit document controls now use the compact Motor-style grouped action pattern (View document + re-upload/refresh + delete, with filename beneath; missing slots show compact Add actions) instead of large green upload cards. Non-Motor Activity Status is rendered immediately above Section 06 Documents rather than below the form. Single-document-per-type behavior from PR #2285 is preserved; no schema or Motor behavior change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-23 — Customer Add Vehicle fetched insurer masked reference:** branch `fix/customer-fetched-insurer-mask-reference`; locked/fetched insurer now reuses `maskAlternateCharacters()` so the displayed value matches the supplied dotted/masked reference while preserving the real insurer selection/value internally. Plain read-only field remains icon-free and full-opacity. No data, schema, API, validation, identity, APK, or native-build changes. **IMPLEMENTED; PR/merge/deployment pending.**
 
 
