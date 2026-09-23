@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
+import type { ClaimStatus } from "@/lib/claim-workflow";
 import { ClaimStageSuccessPopup } from "@/components/claim-manager/claim-stage-success-popup";
 import { finalDocumentDefinitions, finalDocumentTabs } from "./final-document-groups";
 import { loadFinalClaimIntimationDetails, saveFinalDealershipDetails, submitFinalDocumentsDraft } from "./final-documents-actions";
@@ -45,7 +46,7 @@ type DocumentVisual = {
   fallbackIcon: string;
 };
 
-export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null }) {
+export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, currentStatus, externalManagedClaim = false }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null; currentStatus: ClaimStatus; externalManagedClaim?: boolean }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -64,6 +65,8 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
     estimate_amount: ""
   });
   const visibleRows = rows.filter((row) => row.groupIndex === activeTab);
+  const claimIntimationCurrentStatuses = new Set<ClaimStatus>(["Vehicle Inspected", "Spot Survey Completed", "Final Documents Awaited", "Final Documents Verification Pending", "Final Documents Submitted", "Final Documents Verified", "Claim Intimation", "Final Surveyor Details", "Survey Status"]);
+  const saveOnlyExternalEdit = externalManagedClaim && !claimIntimationCurrentStatuses.has(currentStatus);
 
   const verifiedCount = useMemo(() => {
     if (!verificationData) return rows.filter((row) => row.status === "Verified").length;
@@ -164,6 +167,14 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
       if (!saved.ok) {
         setResult(saved);
         setPendingAction(null);
+        return;
+      }
+
+      if (saveOnlyExternalEdit) {
+        setPendingAction(null);
+        setResult(null);
+        setSuccessNotice("Claim Intimation details saved.");
+        router.refresh();
         return;
       }
 
