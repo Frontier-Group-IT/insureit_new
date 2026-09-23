@@ -150,7 +150,7 @@ function buildMetricRail(data: DashboardCurrentData, access: DashboardAccess, _b
       secondary: {
         label: "Settled claims",
         value: data.claims.settled.toLocaleString("en-IN"),
-        meta: `${formatMoney(data.claims.settledAmount)} settled amount`,
+        meta: `${formatMoney(data.claims.settledAmount)} amount received`,
       },
       href: "/claims",
       icon: DASHBOARD_ICON_ASSETS.claims,
