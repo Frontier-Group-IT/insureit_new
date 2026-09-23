@@ -45,7 +45,7 @@ type DocumentVisual = {
   fallbackIcon: string;
 };
 
-export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null }) {
+export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, allowStageAdvance = true }: { claimId: string; rows: FinalDocumentRowV2[]; dealershipDetails?: DealershipDetailsV2 | null; allowStageAdvance?: boolean }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(0);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -164,6 +164,14 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails }: 
       if (!saved.ok) {
         setResult(saved);
         setPendingAction(null);
+        return;
+      }
+
+      if (!allowStageAdvance) {
+        setPendingAction(null);
+        setResult(null);
+        setSuccessNotice("Stage details saved.");
+        router.refresh();
         return;
       }
 
