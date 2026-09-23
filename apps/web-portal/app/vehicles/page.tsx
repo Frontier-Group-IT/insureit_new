@@ -50,7 +50,7 @@ export default async function VehiclesPage() {
 
   let query = admin
     .from("vehicles")
-    .select("id, customer_id, vehicle_no, vehicle_type, make, model, permit_no, chassis_no, engine_no, registration_status, customers!inner(company_name, contact_name), policies(count), claims(count)")
+    .select("id, customer_id, vehicle_no, vehicle_type, make, model, permit_no, chassis_no, engine_no, registration_status, customers:customers!vehicles_customer_id_fkey(company_name, contact_name), policies(count), claims(count)")
     .order("created_at", { ascending: false });
   if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
   const { data, error } = await query.returns<VehicleRow[]>();

@@ -55,7 +55,7 @@ export default async function CustomersPage() {
 
   let request = admin
     .from("customers")
-    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles(count), policies(count), claims(count)")
+    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles:vehicles!vehicles_customer_id_fkey(count), policies(count), claims(count)")
     .order("created_at", { ascending: false });
   if (accessibleIds !== null) request = request.in("id", accessibleIds);
   const customersResult = await request.returns<CustomerRow[]>();
