@@ -16,6 +16,17 @@
 - Do not claim that a build, Vercel deployment, SQL migration, or live workflow succeeded unless there is direct evidence.
 - A committed migration is not the same as an applied migration.
 
+## 1.1 Vehicle ownership transfer contract
+
+- Vehicle ownership/customer transfer is a complete-transfer workflow, not a normal vehicle edit.
+- A vehicle must never be transferred by changing `vehicles.customer_id` alone.
+- The canonical transfer operation moves the vehicle plus all customer-scoped dependencies tied to it in one database transaction: managed/external policies, claims, claim documents, claim-related notifications/support tickets, customer activity/documents, policy-linked commission/referral rows, service enquiries, and dormant `vehicle_customer_links` state.
+- Historical policy snapshots/documents and claim/status history remain attached to their existing policy/claim IDs; they are not recreated or deleted.
+- Every transfer records `vehicle_ownership_history` plus an `audit_logs` event.
+- Transfer is restricted to Manager, Admin, Super Admin and IT Super User and must respect source/destination customer access scope.
+- Policy Onboarding must not perform the legacy partial vehicle-only transfer. Ownership conflicts should route authorized users to Vehicle Details → Transfer Vehicle.
+- Migration contract: `20260924163000_vehicle_full_customer_transfer.sql` defines service-role-only RPC `transfer_vehicle_customer_v1`. A committed migration is not the same as an applied migration.
+
 ## 2. Product domain model
 
 ### 2.0 Claim service ownership and customer journey
