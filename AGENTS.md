@@ -47,7 +47,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
-- **2026-09-24 — Revert Reports Overview PR #2307:** branch `revert/pr-2307-reports-overview-v2-20260924`; restores the Reports Overview files to their pre-#2307 state and removes the two client controls introduced by #2307. Because PR #2308 only fixed #2307's period-helper/typecheck code, its related management-pack changes are also removed by restoring the pre-#2307 file. No database/schema/mobile/APK change. **IMPLEMENTED; replacement PR pending; CI/merge/deployment pending.**
+- **2026-09-24 — RM Performance executive-summary redesign:** branch `redesign/rm-performance-premium-summary-latest`; latest-main replacement for PRs #2312/#2313. Removes source-type badges and warning banner, compresses MTD Context into a sparkline panel, highlights each RM's Today/MTD figures, and uses a five-column desktop source-card grid. Existing calculations, filters, permissions, source aggregation and drill-down behavior remain unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-24 — Revert PR #2207 ffmpeg auto-install:** branch `revert/pr-2207-ffmpeg-install`; restores the runtime 0.1.0 Partner OTA workflow behavior so it requires `ffmpeg` to already exist on the runner and fails with a clear message instead of installing it automatically. Later Policies banner normalization logic remains intact. **IMPLEMENTED; PR #2311 open; CI/merge/deployment pending.**
 
