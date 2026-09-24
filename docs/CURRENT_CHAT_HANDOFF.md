@@ -8,7 +8,8 @@
 - Policy snapshots/documents and claim/status history remain attached through their policy/claim IDs and are not recreated or deleted.
 - Existing Policy Onboarding ownership conflicts no longer allow the older partial transfer path; authorized users are sent to the full Vehicle Transfer page.
 - Added rollback, migration workflow and `vehicle-transfer:regression` wired into canonical web verification.
-- **IMPLEMENTED; PR/CI/merge/migration application/deployment pending.**
+- PR #2347 passed canonical `Verify web portal` workflow #4570, including the dedicated transfer regression, typecheck, lint and production build.
+- **IMPLEMENTED; PR #2347; merge/migration application/deployment pending.**
 
 ---
 
