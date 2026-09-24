@@ -1,3 +1,13 @@
+## 2026-09-24 — Business report scroll cleanup production deployment request
+
+- Deployment marker branch: `chore/deploy-business-report-scroll-cleanup`.
+- Purpose: create a fresh verified merged-PR provenance point so the guarded production deployment workflow can deploy the already-merged Business report scroll cleanup.
+- Runtime/report logic unchanged; this commit is documentation-only.
+- No schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **DEPLOYMENT REQUEST CREATED; PR/verification/merge/deployment pending.**
+
+---
+
 ## 2026-09-24 — Business report navigation/table scroll cleanup
 
 - Branch: `fix/business-report-remove-internal-scrolls`.
