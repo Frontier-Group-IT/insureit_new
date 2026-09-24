@@ -34,7 +34,7 @@ export async function loadRenewalOpportunityBuckets(profile: ViewerProfile, quer
   let page = 1;
   let totalPages = 1;
   do {
-    const payload = await loadRenewalReport(profile, { ...query, horizon: "30", page: String(page) }, pageSize);
+    const payload = await loadRenewalReport(profile, { ...query, horizon: "60", page: String(page) }, pageSize);
     rows.push(...payload.report.register.rows);
     totalPages = Math.max(1, Math.ceil(payload.report.register.total_count / pageSize));
     page += 1;
@@ -45,6 +45,7 @@ export async function loadRenewalOpportunityBuckets(profile: ViewerProfile, quer
     { key: "within_7", label: "Within 7 Days", min: 0, max: 7, policy_count: 0, net_premium: 0 },
     { key: "within_15", label: "Within 15 Days", min: 8, max: 15, policy_count: 0, net_premium: 0 },
     { key: "within_30", label: "Within 30 Days", min: 16, max: 30, policy_count: 0, net_premium: 0 },
+    { key: "within_60", label: "Within 60 Days", min: 31, max: 60, policy_count: 0, net_premium: 0 },
   ];
 
   for (const row of rows) {
