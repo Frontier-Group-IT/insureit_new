@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { matchesClaimIntimationDocument } from "@insureit/claim-journey";
 import { completeClaimJourneyStage } from "@/app/claims/stage-actions";
@@ -56,11 +56,12 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
   const [classifications, setClassifications] = useState<Record<string, string>>({});
   const [verificationData, setVerificationData] = useState<FinalVerificationData | null>(null);
   const [verificationLoadError, setVerificationLoadError] = useState("");
+  const dirtyDetailFieldsRef = useRef<Set<keyof ClaimIntimationDetails>>(new Set());
   const [details, setDetails] = useState<ClaimIntimationDetails>({
-    claim_intimation_date: dealershipDetails?.contact_person_name ?? "",
+    claim_intimation_date: "",
     dealership_name: dealershipDetails?.dealership_name ?? "",
     dealership_location: dealershipDetails?.dealership_address ?? "",
-    gate_in_date: dealershipDetails?.contact_number ?? "",
+    gate_in_date: "",
     estimate_amount: ""
   });
   const visibleRows = rows.filter((row) => row.groupIndex === activeTab);
@@ -75,13 +76,31 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
 
   useEffect(() => {
     let cancelled = false;
+    dirtyDetailFieldsRef.current = new Set();
+
+    loadFinalClaimIntimationDetails(claimId).then((detailsResponse) => {
+      if (cancelled || !detailsResponse.ok || !detailsResponse.details) return;
+      const loadedDetails = detailsResponse.details;
+      setDetails((current) => {
+        const next = { ...current };
+        (Object.keys(loadedDetails) as (keyof ClaimIntimationDetails)[]).forEach((key) => {
+          if (!dirtyDetailFieldsRef.current.has(key)) next[key] = loadedDetails[key];
+        });
+        return next;
+      });
+    });
+
+    return () => { cancelled = true; };
+  }, [claimId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     Promise.all([
-      loadFinalClaimIntimationDetails(claimId),
       loadStage3UnclassifiedAttachments(claimId),
       loadFinalDocumentVerificationData(claimId),
-    ]).then(([detailsResponse, attachmentResponse, verificationResponse]) => {
+    ]).then(([attachmentResponse, verificationResponse]) => {
       if (cancelled) return;
-      if (detailsResponse.ok && detailsResponse.details) setDetails(detailsResponse.details);
       if (attachmentResponse.ok) setUnclassifiedAttachments(attachmentResponse.attachments ?? []);
       if (verificationResponse.ok) {
         setVerificationData(verificationResponse.data);
@@ -90,6 +109,7 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
         setVerificationLoadError(verificationResponse.message);
       }
     });
+
     return () => { cancelled = true; };
   }, [claimId, rows]);
 
@@ -98,6 +118,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
     const timer = window.setTimeout(() => setSuccessNotice(null), 3500);
     return () => window.clearTimeout(timer);
   }, [successNotice]);
+
+  function updateStageDetail<K extends keyof ClaimIntimationDetails>(key: K, value: ClaimIntimationDetails[K]) {
+    dirtyDetailFieldsRef.current.add(key);
+    setDetails((current) => ({ ...current, [key]: value }));
+  }
 
   function baseForm() {
     const formData = new FormData();
@@ -210,11 +235,11 @@ export function FinalDocumentsWorkspaceV2({ claimId, rows, dealershipDetails, al
           <button type="button" disabled={isPending && pendingAction === "stage-details"} onClick={saveStageDetails} className="rounded-lg border border-[#BFD3F7] bg-[#F7FAFF] px-4 py-2 text-[12px] font-semibold text-[#174EA6] disabled:opacity-60">{isPending && pendingAction === "stage-details" ? "Saving..." : "Save Details"}</button>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-5">
-          <DateField label="Claim Intimation Date" value={details.claim_intimation_date} onChange={(value) => setDetails((prev) => ({ ...prev, claim_intimation_date: value }))} />
-          <Field label="Dealership Name" value={details.dealership_name} onChange={(value) => setDetails((prev) => ({ ...prev, dealership_name: value }))} />
-          <Field label="Dealership Location" value={details.dealership_location} onChange={(value) => setDetails((prev) => ({ ...prev, dealership_location: value }))} />
-          <DateField label="Gate-in Date" value={details.gate_in_date} onChange={(value) => setDetails((prev) => ({ ...prev, gate_in_date: value }))} />
-          <Field label="Estimate Amount" value={details.estimate_amount} onChange={(value) => setDetails((prev) => ({ ...prev, estimate_amount: value.replace(/[^0-9.]/g, "") }))} inputMode="decimal" />
+          <DateField label="Claim Intimation Date" value={details.claim_intimation_date} onChange={(value) => updateStageDetail("claim_intimation_date", value)} />
+          <Field label="Dealership Name" value={details.dealership_name} onChange={(value) => updateStageDetail("dealership_name", value)} />
+          <Field label="Dealership Location" value={details.dealership_location} onChange={(value) => updateStageDetail("dealership_location", value)} />
+          <DateField label="Gate-in Date" value={details.gate_in_date} onChange={(value) => updateStageDetail("gate_in_date", value)} />
+          <Field label="Estimate Amount" value={details.estimate_amount} onChange={(value) => updateStageDetail("estimate_amount", value.replace(/[^0-9.]/g, ""))} inputMode="decimal" />
         </div>
       </section>
 
