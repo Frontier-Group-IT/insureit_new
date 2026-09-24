@@ -1,3 +1,13 @@
+## 2026-09-24 — Customer Policy Detail renewed-action green pill
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-renew-action-green-pill`.
+
+- The `Add renewed policy` action in the Policy Detail page header now uses green text and a green refresh icon.
+- It uses a soft green background matching the status-pill visual language and has no border.
+- Navigation and renewal eligibility logic are unchanged.
+- No API/RPC/schema/RLS, native dependency/config, runtime version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer My Policies renewed-policy dedupe
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-policy-renewal-dedupe`.
