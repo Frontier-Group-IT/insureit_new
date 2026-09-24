@@ -568,9 +568,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       vehicle: { ...sanitizeVehicleNumbers(payload.vehicle), registrationMode: mode, registrationNumber: registration, chassisNumber: chassis, engineNumber: engine },
       resolution: {
         selectedCustomerId: effectiveCustomerId,
-        confirmOwnershipTransfer: ownershipDecision === "transfer",
-        canTransferOwnership: canTransferVehicle(profile.role),
-        transferReason: payload.resolution?.transferReason || "Confirmed during policy onboarding",
+        confirmOwnershipTransfer: false,
+        canTransferOwnership: false,
+        transferReason: payload.resolution?.transferReason || "Vehicle transfer is handled from Vehicle Details",
       },
       meta: { requestedBy: profile.id, requestedRole: profile.role },
     };
