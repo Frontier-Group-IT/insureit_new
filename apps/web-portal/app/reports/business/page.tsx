@@ -1,94 +1,481 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, ShieldCheck } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
 import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
+import { emptyFinanceReport, loadFinanceReport, type FinanceQuery, type FinanceReport } from "@/lib/reports/finance";
 import { loadPolicyBusinessNetReport, type PolicyBusinessFilters, type PolicyBusinessQuery, type PolicyBusinessNetReport } from "@/lib/reports/policy-business";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-const PERIODS = [{ value: "90d", label: "Last 90 days" }, { value: "mtd", label: "Month to date" }, { value: "ytd", label: "Year to date" }, { value: "all", label: "All time" }] as const;
-type Props = { searchParams: Promise<PolicyBusinessQuery> };
+
+const PERIODS = [
+  { value: "90d", label: "Last 90 days" },
+  { value: "mtd", label: "Month to date" },
+  { value: "ytd", label: "Year to date" },
+  { value: "all", label: "All time" },
+] as const;
+
+type BusinessPageQuery = PolicyBusinessQuery & { mix?: string };
+type Props = { searchParams: Promise<BusinessPageQuery> };
+type CommercialRow = {
+  key: string;
+  name: string;
+  type?: string;
+  rm?: string;
+  policies: number;
+  netPremium: number;
+  payin: number;
+  payout: number;
+  retention: number;
+};
 
 export default async function ReportsPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
+
   const query = await searchParams;
-  let payload: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>> | null = null;
-  let loadError = false;
-  try { payload = await loadPolicyBusinessNetReport(profile, query); } catch (error) { console.error("[reports] policy business net report failed", error instanceof Error ? error.message : "unknown error"); loadError = true; }
-  const report = payload?.report ?? emptyReport();
-  const filters = payload?.filters ?? fallbackFilters();
-  const pages = Math.max(1, Math.ceil(report.register.total_count / Math.max(report.register.page_size, 1)));
-  const exportHref = href("/reports/export/policy-business", filters);
-  return <AppShell title="Reports"><ReportPageShell title="Policy production & portfolio" loadError={loadError} actions={<ReportExportLink href={exportHref} />} controls={
-    <ReportQueryShortcuts
-      label="Period"
-      param="period"
-      activeValue={filters.period}
-      options={PERIODS}
-      showActiveFilterCount={false}
-      trailing={<>
-        {filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}
-        <ReportCompactFilters
-          path="/reports/business"
-          businessLine={filters.businessLine}
-          category={filters.category}
-          categories={report.filters.categories}
-          period={filters.period}
-          fromDate={filters.fromDate}
-          toDate={filters.toDate}
-          compactDrawer
-          clearAppliedFilters
-          fields={[
-            { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
-            { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
-            { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name !== x.code ? `${x.name} · ${x.code}` : x.name})) },
-          ]}
-        />
-      </>}
-    />
-  }>
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Metric label="Policies" value={integer(report.summary.policy_count)} detail={`Motor ${integer(report.summary.motor_policy_count)}\nNon-Motor ${integer(report.summary.non_motor_policy_count)}`} /><Metric label="Active policies" value={integer(report.summary.active_policy_count)} /><Metric label="Net premium" value={currency(report.summary.net_premium)} detail={`Motor ${compactCurrency(report.summary.motor_net_premium)}\nNon-Motor ${compactCurrency(report.summary.non_motor_net_premium)}`} /><Metric label="Avg. net / policy" value={currency(report.summary.average_net_premium)} /><Metric label="Intermediaries" value={integer(report.summary.intermediary_count)} /></section>
-    <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,.85fr)]"><article className="portal-card p-5 sm:p-6"><HeaderTitle title="Net premium production trend" /><Trend rows={report.trend} /></article><article className="portal-card p-5 sm:p-6"><HeaderTitle title={filters.businessLine === "Motor" ? "Premium composition" : filters.businessLine === "Non Motor" ? "Non-Motor category mix" : "Business mix"} /><Composition report={report} businessLine={filters.businessLine} /></article></section>
-    <section className="grid gap-4 xl:grid-cols-2"><article className="portal-card overflow-hidden"><Header title="Insurance company contribution" /><InsurerTable rows={report.insurers} /></article><article className="portal-card overflow-hidden"><Header title="RM production" /><RmTable rows={report.rms} /></article></section>
-    <section className="portal-card overflow-hidden"><div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">Policy business register</h2></div><Register rows={report.register.rows} /><Pagination page={report.register.page} pages={pages} total={report.register.total_count} prev={href("/reports/business", filters, Math.max(1, report.register.page - 1))} next={href("/reports/business", filters, report.register.page + 1)} /></section>
-  </ReportPageShell></AppShell>;
+  const businessQuery: PolicyBusinessQuery = { ...query, page: "1", pageSize: "5000" };
+  const financeQuery: FinanceQuery = { ...query, period: query.period ?? "mtd", page: "1", pageSize: "5000" };
+
+  const [businessResult, financeResult] = await Promise.all([
+    loadPolicyBusinessNetReport(profile, businessQuery)
+      .then((data) => ({ data, error: null as unknown }))
+      .catch((error) => ({ data: null, error })),
+    loadFinanceReport(profile, financeQuery)
+      .then((data) => ({ data, error: null as unknown }))
+      .catch((error) => ({ data: null, error })),
+  ]);
+
+  if (businessResult.error) {
+    console.error("[reports] business report failed", businessResult.error instanceof Error ? businessResult.error.message : "unknown error");
+  }
+  if (financeResult.error) {
+    console.error("[reports] business commercials failed", financeResult.error instanceof Error ? financeResult.error.message : "unknown error");
+  }
+
+  const report = businessResult.data?.report ?? emptyBusinessReport();
+  const filters = businessResult.data?.filters ?? fallbackFilters();
+  const finance = financeResult.data?.report ?? emptyFinanceReport();
+  const loadError = Boolean(businessResult.error || financeResult.error);
+  const mixMode = query.mix === "insurer" || query.mix === "rm" ? query.mix : "business-type";
+  const exportHref = reportHref("/reports/export/policy-business", filters);
+
+  const insurerRows = buildInsurerRows(finance);
+  const rmRows = buildRmRows(finance);
+  const intermediaryRows = buildIntermediaryRows(finance, report);
+  const businessTypeRows = buildBusinessTypeRows(report);
+  const mixRows = mixMode === "insurer"
+    ? insurerRows.map((row) => ({ key: row.key, name: row.name, policies: row.policies, value: row.netPremium }))
+    : mixMode === "rm"
+      ? rmRows.map((row) => ({ key: row.key, name: row.name, policies: row.policies, value: row.netPremium }))
+      : businessTypeRows;
+  const mixTitle = mixMode === "insurer" ? "Insurer" : mixMode === "rm" ? "RM" : "Business Type";
+
+  return (
+    <AppShell title="Reports">
+      <ReportPageShell
+        title="Business"
+        loadError={loadError}
+        actions={<ReportExportLink href={exportHref} />}
+        controls={
+          <ReportQueryShortcuts
+            label="Period"
+            param="period"
+            activeValue={filters.period}
+            options={PERIODS}
+            showActiveFilterCount={false}
+            trailing={
+              <>
+                {filters.period === "custom" ? <CustomDateRange filters={filters} /> : null}
+                <ReportCompactFilters
+                  path="/reports/business"
+                  businessLine={filters.businessLine}
+                  category={filters.category}
+                  categories={report.filters.categories}
+                  period={filters.period}
+                  fromDate={filters.fromDate}
+                  toDate={filters.toDate}
+                  compactDrawer
+                  clearAppliedFilters
+                  fields={[
+                    { name: "insurer", label: "Insurance company", value: filters.insurerId ?? "", options: report.filters.insurers.map((item) => ({ value: item.id, label: item.name })) },
+                    { name: "rm", label: "Relationship manager", value: filters.rmEmployeeId ?? "", options: report.filters.rms.map((item) => ({ value: item.id, label: item.name })) },
+                    { name: "intermediary", label: "Partner / intermediary", value: filters.intermediaryCode ?? "", options: report.filters.intermediaries.map((item) => ({ value: item.code, label: item.name !== item.code ? item.name + " · " + item.code : item.name })) },
+                  ]}
+                />
+              </>
+            }
+          />
+        }
+      >
+        <CommercialFlow finance={finance} policyCount={report.summary.policy_count} />
+
+        <section className="grid gap-3 xl:grid-cols-2">
+          <article className="portal-card overflow-hidden">
+            <div className="flex min-h-12 flex-wrap items-center justify-between gap-2 border-b border-[#e6ebf2] px-4 py-2.5">
+              <HeaderTitle title="Business Mix" />
+              <div className="inline-flex overflow-hidden rounded-lg border border-[#dbe3ee] bg-white text-[9px] font-bold">
+                <MixTab href={reportHref("/reports/business", filters, "business-type")} active={mixMode === "business-type"}>Business Type</MixTab>
+                <MixTab href={reportHref("/reports/business", filters, "insurer")} active={mixMode === "insurer"}>Insurer</MixTab>
+                <MixTab href={reportHref("/reports/business", filters, "rm")} active={mixMode === "rm"}>RM</MixTab>
+              </div>
+            </div>
+            <BusinessMix rows={mixRows} label={mixTitle} />
+          </article>
+
+          <article className="portal-card overflow-hidden">
+            <Header title="Insurer" />
+            <InsurerTable rows={insurerRows} />
+          </article>
+        </section>
+
+        <section className="portal-card overflow-hidden">
+          <Header title="RM Performance" />
+          <RmTable rows={rmRows} />
+        </section>
+
+        <section className="portal-card overflow-hidden">
+          <Header title="Intermediaries Business" />
+          <IntermediaryTable rows={intermediaryRows} />
+        </section>
+      </ReportPageShell>
+    </AppShell>
+  );
 }
-function CustomDateRange({filters}:{filters:PolicyBusinessFilters}) {
-  return <form action="/reports/business" method="get" className="flex flex-wrap items-end gap-2 rounded-xl border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-2">
-    <input type="hidden" name="period" value="custom" />
-    {filters.insurerId ? <input type="hidden" name="insurer" value={filters.insurerId} /> : null}
-    {filters.rmEmployeeId ? <input type="hidden" name="rm" value={filters.rmEmployeeId} /> : null}
-    {filters.intermediaryCode ? <input type="hidden" name="intermediary" value={filters.intermediaryCode} /> : null}
-    {filters.businessLine ? <input type="hidden" name="business" value={filters.businessLine} /> : null}
-    {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
-    <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
-      From
-      <input name="from" type="date" required defaultValue={filters.fromDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
-    </label>
-    <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
-      To
-      <input name="to" type="date" required defaultValue={filters.toDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
-    </label>
-    <button type="submit" className="h-8 rounded-lg bg-[#223a78] px-3 text-[9.5px] font-bold text-white transition hover:bg-[#1c3167]">Apply</button>
-  </form>;
+
+function CommercialFlow({ finance, policyCount }: { finance: FinanceReport; policyCount: number }) {
+  const retentionRate = ratio(finance.summary.retention_amount, finance.summary.projected_payin);
+  return (
+    <section className="portal-card overflow-hidden">
+      <div className="border-b border-[#e6ebf2] px-4 py-3">
+        <HeaderTitle title="Commercial Flow" />
+      </div>
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+        <FlowMetric label="Net Premium" value={currency(finance.summary.net_premium)} note={integer(policyCount) + " policies"} />
+        <FlowMetric label="Expected Pay-in" value={currency(finance.summary.projected_payin)} note={percent(ratio(finance.summary.projected_payin, finance.summary.net_premium)) + " of net premium"} />
+        <FlowMetric label="Partner Payout" value={currency(finance.summary.gross_payout)} note={percent(ratio(finance.summary.gross_payout, finance.summary.projected_payin)) + " of pay-in"} />
+        <FlowMetric label="Retention" value={currency(finance.summary.retention_amount)} note={percent(retentionRate) + " of pay-in"} last />
+      </div>
+    </section>
+  );
 }
-function Metric({label,value,detail}:{label:string;value:string;detail?:string}){return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[.1em] text-[#7c899b]">{label}</p><p className="mt-2 text-[23px] font-semibold tracking-[-.03em] text-[#14213c]">{value}</p>{detail?<p className="report-metric-detail mt-1.5 font-semibold">{detail}</p>:null}</article>}
-function HeaderTitle({title}:{title:string}){return <h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2>}
-function Header({title}:{title:string}){return <div className="border-b border-[#e9edf3] px-5 py-4"><HeaderTitle title={title}/></div>}
-function Trend({rows}:{rows:PolicyBusinessNetReport["trend"]}){if(!rows.length)return <Empty/>;const max=Math.max(...rows.map(x=>x.net_premium),1);return <div className="mt-5 space-y-3">{rows.map(x=><div key={x.month} className="grid grid-cols-[78px_minmax(0,1fr)_100px] items-center gap-3"><div><p className="text-[10px] font-bold text-[#35445d]">{month(x.month)}</p><p className="text-[8.5px] text-[#8a96a7]">{integer(x.policy_count)}</p></div><div className="h-2.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#3559a8]" style={{width:`${Math.max((x.net_premium/max)*100,2)}%`}}/></div><p className="text-right text-[10px] font-bold tabular-nums text-[#23334f]">{currency(x.net_premium)}</p></div>)}</div>}
-function Composition({report,businessLine}:{report:PolicyBusinessNetReport;businessLine:"Motor"|"Non Motor"|null}){const rows=businessLine==="Motor"?[{label:"Own damage",value:report.summary.od_premium},{label:"Third party",value:report.summary.tp_premium},{label:"CPA",value:report.summary.cpa_amount}]:businessLine==="Non Motor"?report.category_mix.map(x=>({label:x.category,value:x.net_premium})): [{label:"Motor",value:report.summary.motor_net_premium},{label:"Non Motor",value:report.summary.non_motor_net_premium}];const total=Math.max(rows.reduce((sum,row)=>sum+row.value,0),1);if(!rows.length)return <Empty/>;return <div className="mt-5 space-y-4">{rows.map(x=><div key={x.label}><div className="flex items-end justify-between gap-3"><p className="truncate text-[10.5px] font-semibold text-[#536174]">{x.label}</p><p className="text-[13px] font-bold tabular-nums text-[#21324f]">{currency(x.value)}</p></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#edf1f6]"><div className="h-full rounded-full bg-[#516dab]" style={{width:`${Math.min((x.value/total)*100,100)}%`}}/></div></div>)}</div>}
-function InsurerTable({rows}:{rows:PolicyBusinessNetReport["insurers"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[560px]"><thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[.08em] text-[#7c899b]"><th className="px-5 py-3 text-left">Insurance company</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Net premium</th><th className="px-5 py-3 text-right">Share</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=>{const logo=getInsurerLogo(x.name);return <tr key={x.id} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold"><div className="flex min-w-0 items-center gap-2">{logo?<Image src={logo} alt={`${x.name} logo`} width={24} height={24} className="max-h-6 max-w-6 shrink-0 object-contain"/>:null}<span className="min-w-0 truncate">{x.name}</span></div></td><td className="px-3 py-3.5 text-right">{integer(x.policy_count)}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.net_premium)}</td><td className="px-5 py-3.5 text-right">{percent(x.share_percent)}</td></tr>})}</tbody></table></div>}
-function RmTable({rows}:{rows:PolicyBusinessNetReport["rms"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[560px]"><thead><tr className="bg-[#f8fafc] text-[8.5px] font-black uppercase tracking-[.08em] text-[#7c899b]"><th className="px-5 py-3 text-left">Relationship manager</th><th className="px-3 py-3 text-right">Policies</th><th className="px-3 py-3 text-right">Partners</th><th className="px-5 py-3 text-right">Net premium</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=><tr key={x.employee_id??`unassigned-${x.name}`} className="text-[10.5px]"><td className="px-5 py-3.5 font-semibold">{x.name}</td><td className="px-3 py-3.5 text-right">{integer(x.policy_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.intermediary_count)}</td><td className="px-5 py-3.5 text-right font-bold">{currency(x.net_premium)}</td></tr>)}</tbody></table></div>}
-function Register({rows}:{rows:PolicyBusinessNetReport["register"]["rows"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[1180px]"><thead><tr className="bg-[#f8fafc] text-[8.2px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Business date</th><th className="px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Customer / risk</th><th className="px-3 py-3 text-center">Insurer</th><th className="px-3 py-3 text-left">RM / intermediary</th><th className="px-3 py-3 text-right">OD</th><th className="px-3 py-3 text-right">TP</th><th className="px-3 py-3 text-right">Net</th><th className="px-5 py-3 text-center">Open</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=>{const logo=getInsurerLogo(x.insurer_name);return <tr key={x.id} className="text-[10px] hover:bg-[#fbfcfe]"><td className="px-5 py-3.5 font-semibold">{date(x.business_date)}</td><td className="px-3 py-3.5"><p className="font-bold">{x.policy_no}</p><p className="text-[8.5px] text-[#8490a1]">{x.business_line} · {x.category}{x.policy_product && x.policy_product !== x.category ? ` · ${x.policy_product}` : ""}</p></td><td className="px-3 py-3.5"><p className="font-semibold">{x.customer_name}</p><p className="text-[8.5px] text-[#8490a1]">{x.risk_reference || x.vehicle_no || "—"}</p></td><td className="px-3 py-3.5 text-center"><span className="flex items-center justify-center">{logo?<Image src={logo} alt={x.insurer_name?`${x.insurer_name} logo`:"Insurance company"} width={28} height={24} className="max-h-6 max-w-[34px] shrink-0 object-contain"/>:<ShieldCheck className="h-4 w-4 text-[#7c899b]"/>}</span></td><td className="px-3 py-3.5"><p className="font-semibold">{x.rm_name??"Unassigned"}</p><p className="text-[8.5px] text-[#8490a1]">{x.intermediary_code??"—"}</p></td><td className="px-3 py-3.5 text-right">{currency(x.od_premium)}</td><td className="px-3 py-3.5 text-right">{currency(x.tp_premium)}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.net_premium)}</td><td className="px-5 py-3.5 text-center"><Link href={`/policies/${x.id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5"/></Link></td></tr>})}</tbody></table></div>}
-function Pagination({page,pages,total,prev,next}:{page:number;pages:number;total:number;prev:string;next:string}){return <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-3 text-[9.5px] text-[#738095]"><span>{integer(total)} records</span><div className="flex items-center gap-2"><Link href={page<=1?"#":prev} className={`rounded-md border px-3 py-1.5 font-bold ${page<=1?"pointer-events-none opacity-40":""}`}>Previous</Link><span>{page} / {pages}</span><Link href={page>=pages?"#":next} className={`rounded-md border px-3 py-1.5 font-bold ${page>=pages?"pointer-events-none opacity-40":""}`}>Next</Link></div></div>}
-function Empty(){return <ReportEmptyState/>}
-function href(path:string,f:PolicyBusinessFilters,page?:number){const s=new URLSearchParams();s.set("period",f.period);if(f.period==="custom"){if(f.fromDate)s.set("from",f.fromDate);if(f.toDate)s.set("to",f.toDate)}if(f.insurerId)s.set("insurer",f.insurerId);if(f.rmEmployeeId)s.set("rm",f.rmEmployeeId);if(f.intermediaryCode)s.set("intermediary",f.intermediaryCode);if(f.businessLine)s.set("business",f.businessLine);if(f.category)s.set("category",f.category);if(page)s.set("page",String(page));return `${path}?${s}`}
-function currency(v:number){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v||0)}function compactCurrency(v:number){const n=Math.abs(v||0);const format=(value:number,suffix:string)=>`₹${new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(value)} ${suffix}`;if(n>=1e7)return format(n/1e7,"Cr");if(n>=1e5)return format(n/1e5,"L");if(n>=1e3)return format(n/1e3,"K");return `₹${integer(n)}`}function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}function percent(v:number){return`${new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(v||0)}%`}function date(v:string){return v?new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`)):"—"}function month(v:string){return v?new Intl.DateTimeFormat("en-IN",{month:"short",year:"2-digit",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`)):"—"}
-function fallbackFilters():PolicyBusinessFilters{return{period:"90d",fromDate:null,toDate:null,insurerId:null,rmEmployeeId:null,intermediaryCode:null,businessLine:null,category:null,page:1}}
-function emptyReport():PolicyBusinessNetReport{return{summary:{policy_count:0,active_policy_count:0,gross_premium:0,net_premium:0,od_premium:0,tp_premium:0,cpa_amount:0,average_net_premium:0,insurer_count:0,intermediary_count:0,motor_policy_count:0,non_motor_policy_count:0,motor_net_premium:0,non_motor_net_premium:0},trend:[],category_mix:[],insurers:[],rms:[],filters:{insurers:[],rms:[],intermediaries:[],categories:[]},register:{rows:[],total_count:0,page:1,page_size:25}}}
+
+function FlowMetric({ label, value, note, last = false }: { label: string; value: string; note: string; last?: boolean }) {
+  return (
+    <div className={"min-h-[92px] px-5 py-4 " + (last ? "" : "border-b border-[#e8edf3] xl:border-b-0 xl:border-r")}>
+      <p className="text-[9px] font-bold text-[#52647b]">{label}</p>
+      <p className="mt-1.5 text-[22px] font-semibold tracking-[-.035em] text-[#122342]">{value}</p>
+      <p className="mt-1 text-[9px] font-semibold text-[#8290a4]">{note}</p>
+    </div>
+  );
+}
+
+function MixTab({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return <Link href={href} className={"px-3 py-2 transition " + (active ? "bg-[#155fba] text-white" : "text-[#66758a] hover:bg-[#f6f9fc]")}>{children}</Link>;
+}
+
+function BusinessMix({ rows, label }: { rows: Array<{ key: string; name: string; policies: number; value: number }>; label: string }) {
+  if (!rows.length) return <Empty />;
+  const total = Math.max(rows.reduce((sum, row) => sum + row.value, 0), 1);
+  const max = Math.max(...rows.map((row) => row.value), 1);
+  return (
+    <div className="max-h-[330px] overflow-y-auto">
+      <div className="sticky top-0 z-10 grid grid-cols-[28px_minmax(120px,1fr)_minmax(180px,1.5fr)_58px] gap-2 bg-[#f8fafc] px-4 py-2 text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
+        <span>#</span><span>{label}</span><span>Net Premium</span><span className="text-right">Share</span>
+      </div>
+      <div className="divide-y divide-[#edf1f5]">
+        {rows.map((row, index) => (
+          <div key={row.key} className="grid min-h-10 grid-cols-[28px_minmax(120px,1fr)_minmax(180px,1.5fr)_58px] items-center gap-2 px-4 text-[9.5px] text-[#3f526d]">
+            <span>{index + 1}</span>
+            <div className="min-w-0">
+              <p className="truncate font-semibold">{row.name}</p>
+              <p className="text-[8px] text-[#8a96a7]">{integer(row.policies)} policies</p>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_62px] items-center gap-2">
+              <div className="h-2 overflow-hidden rounded-sm bg-[#e9eef5]">
+                <div className="h-full rounded-sm bg-[#347ed0]" style={{ width: Math.max((row.value / max) * 100, 2) + "%" }} />
+              </div>
+              <span className="text-right font-bold tabular-nums">{compactCurrency(row.value)}</span>
+            </div>
+            <span className="text-right font-semibold tabular-nums">{percent((row.value / total) * 100)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InsurerTable({ rows }: { rows: CommercialRow[] }) {
+  if (!rows.length) return <Empty />;
+  return (
+    <div className="max-h-[330px] overflow-auto">
+      <table className="w-full min-w-[760px] border-collapse">
+        <thead className="sticky top-0 z-10 bg-[#f8fafc]">
+          <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
+            <th className="px-4 py-2.5 text-left">Insurer Name</th>
+            <th className="px-3 py-2.5 text-right">Policies</th>
+            <th className="px-3 py-2.5 text-right">Net Premium</th>
+            <th className="px-3 py-2.5 text-right">Pay-in</th>
+            <th className="px-4 py-2.5 text-right">Retention</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#edf1f5]">
+          {rows.map((row) => {
+            const logo = getInsurerLogo(row.name);
+            return (
+              <tr key={row.key} className="text-[9.5px] text-[#40536d]">
+                <td className="px-4 py-2.5 font-semibold">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {logo ? <Image src={logo} alt={row.name + " logo"} width={24} height={20} className="max-h-5 max-w-7 shrink-0 object-contain" /> : null}
+                    <span className="truncate">{row.name}</span>
+                  </div>
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
+                <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{retentionDisplay(row.retention, row.payin)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function RmTable({ rows }: { rows: CommercialRow[] }) {
+  if (!rows.length) return <Empty />;
+  return (
+    <div className="max-h-[360px] overflow-auto">
+      <table className="w-full min-w-[1020px] border-collapse">
+        <thead className="sticky top-0 z-10 bg-[#f8fafc]">
+          <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
+            <th className="px-5 py-2.5 text-left">RM Name</th>
+            <th className="px-3 py-2.5 text-right">Policies</th>
+            <th className="px-3 py-2.5 text-right">Net Premium</th>
+            <th className="px-3 py-2.5 text-right">Pay-in</th>
+            <th className="px-3 py-2.5 text-right">Payout</th>
+            <th className="px-5 py-2.5 text-right">Retention</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#edf1f5]">
+          {rows.map((row) => (
+            <tr key={row.key} className="text-[9.8px] text-[#40536d]">
+              <td className="px-5 py-2.5 font-semibold">{row.name}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
+              <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td>
+              <td className="px-5 py-2.5 text-right tabular-nums">{retentionDisplay(row.retention, row.payin)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
+  if (!rows.length) return <Empty />;
+  return (
+    <div className="max-h-[390px] overflow-auto">
+      <table className="w-full min-w-[1280px] border-collapse">
+        <thead className="sticky top-0 z-10 bg-[#f8fafc]">
+          <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
+            <th className="px-5 py-2.5 text-left">Name / Intermediary</th>
+            <th className="px-3 py-2.5 text-left">Type</th>
+            <th className="px-3 py-2.5 text-left">RM</th>
+            <th className="px-3 py-2.5 text-right">Policies</th>
+            <th className="px-3 py-2.5 text-right">Net Premium</th>
+            <th className="px-3 py-2.5 text-right">Pay-in</th>
+            <th className="px-3 py-2.5 text-right">Payout</th>
+            <th className="px-5 py-2.5 text-right">Retention</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#edf1f5]">
+          {rows.map((row) => (
+            <tr key={row.key} className="text-[9.8px] text-[#40536d]">
+              <td className="px-5 py-2.5 font-semibold">{row.name}</td>
+              <td className="px-3 py-2.5 font-semibold uppercase">{row.type || "—"}</td>
+              <td className="px-3 py-2.5">{row.rm || "Unassigned"}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
+              <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td>
+              <td className="px-5 py-2.5 text-right tabular-nums">{retentionDisplay(row.retention, row.payin)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function buildInsurerRows(finance: FinanceReport): CommercialRow[] {
+  const totals = new Map<string, CommercialRow>();
+  for (const row of finance.register.rows) {
+    const name = row.insurer_name.trim() || "Unassigned";
+    const key = (row.insurance_company_id || name).toLowerCase();
+    const current = totals.get(key) ?? baseCommercialRow(key, name);
+    addCommercialRow(current, row.net_premium, row.projected_payin, row.gross_payout, row.retention_amount);
+    totals.set(key, current);
+  }
+  return sortCommercialRows(totals);
+}
+
+function buildRmRows(finance: FinanceReport): CommercialRow[] {
+  const totals = new Map<string, CommercialRow>();
+  for (const row of finance.register.rows) {
+    const name = row.rm_name?.trim() || "Unassigned";
+    const key = name.toLowerCase();
+    const current = totals.get(key) ?? baseCommercialRow(key, name);
+    addCommercialRow(current, row.net_premium, row.projected_payin, row.gross_payout, row.retention_amount);
+    totals.set(key, current);
+  }
+  return sortCommercialRows(totals);
+}
+
+function buildIntermediaryRows(finance: FinanceReport, report: PolicyBusinessNetReport): CommercialRow[] {
+  const metadata = new Map(report.filters.intermediaries.map((item) => [item.code, item]));
+  const totals = new Map<string, CommercialRow & { rmNames: Set<string> }>();
+  for (const row of finance.register.rows) {
+    const code = row.intermediary_code?.trim() || "unassigned";
+    const meta = metadata.get(code);
+    const name = code === "unassigned" ? "Unassigned" : meta?.name || code;
+    const current = totals.get(code) ?? { ...baseCommercialRow(code, name), type: meta?.type || "—", rmNames: new Set<string>() };
+    if (row.rm_name?.trim()) current.rmNames.add(row.rm_name.trim());
+    addCommercialRow(current, row.net_premium, row.projected_payin, row.gross_payout, row.retention_amount);
+    totals.set(code, current);
+  }
+  return Array.from(totals.values())
+    .map((row) => ({ ...row, rm: row.rmNames.size === 0 ? "Unassigned" : row.rmNames.size === 1 ? Array.from(row.rmNames)[0] : "Multiple RMs" }))
+    .sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.name.localeCompare(b.name));
+}
+
+function buildBusinessTypeRows(report: PolicyBusinessNetReport) {
+  const totals = new Map<string, { key: string; name: string; policies: number; value: number }>();
+  for (const row of report.register.rows) {
+    const name = row.business_type?.trim() || row.business_line?.trim() || row.category?.trim() || "Unclassified";
+    const key = name.toLowerCase();
+    const current = totals.get(key) ?? { key, name, policies: 0, value: 0 };
+    current.policies += 1;
+    current.value += row.net_premium || 0;
+    totals.set(key, current);
+  }
+  return Array.from(totals.values()).sort((a, b) => b.value - a.value || b.policies - a.policies || a.name.localeCompare(b.name));
+}
+
+function baseCommercialRow(key: string, name: string): CommercialRow {
+  return { key, name, policies: 0, netPremium: 0, payin: 0, payout: 0, retention: 0 };
+}
+
+function addCommercialRow(target: CommercialRow, netPremium: number, payin: number, payout: number, retention: number) {
+  target.policies += 1;
+  target.netPremium += netPremium || 0;
+  target.payin += payin || 0;
+  target.payout += payout || 0;
+  target.retention += retention || 0;
+}
+
+function sortCommercialRows(totals: Map<string, CommercialRow>) {
+  return Array.from(totals.values()).sort((a, b) => b.netPremium - a.netPremium || b.policies - a.policies || a.name.localeCompare(b.name));
+}
+
+function CustomDateRange({ filters }: { filters: PolicyBusinessFilters }) {
+  return (
+    <form action="/reports/business" method="get" className="flex flex-wrap items-end gap-2 rounded-xl border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-2">
+      <input type="hidden" name="period" value="custom" />
+      {filters.insurerId ? <input type="hidden" name="insurer" value={filters.insurerId} /> : null}
+      {filters.rmEmployeeId ? <input type="hidden" name="rm" value={filters.rmEmployeeId} /> : null}
+      {filters.intermediaryCode ? <input type="hidden" name="intermediary" value={filters.intermediaryCode} /> : null}
+      {filters.businessLine ? <input type="hidden" name="business" value={filters.businessLine} /> : null}
+      {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
+      <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
+        From
+        <input name="from" type="date" required defaultValue={filters.fromDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
+      </label>
+      <label className="grid gap-1 text-[8px] font-black uppercase tracking-[.08em] text-[#7b8799]">
+        To
+        <input name="to" type="date" required defaultValue={filters.toDate ?? ""} className="h-8 min-w-[132px] rounded-lg border border-[#d7dfeb] bg-white px-2.5 text-[10px] font-semibold text-[#263750] outline-none focus:border-[#5871aa]" />
+      </label>
+      <button type="submit" className="h-8 rounded-lg bg-[#223a78] px-3 text-[9.5px] font-bold text-white transition hover:bg-[#1c3167]">Apply</button>
+    </form>
+  );
+}
+
+function HeaderTitle({ title }: { title: string }) {
+  return <h2 className="text-[13px] font-bold text-[#1b2943]">{title}</h2>;
+}
+
+function Header({ title }: { title: string }) {
+  return <div className="border-b border-[#e6ebf2] px-4 py-3"><HeaderTitle title={title} /></div>;
+}
+
+function Empty() {
+  return <ReportEmptyState />;
+}
+
+function retentionDisplay(amount: number, payin: number) {
+  return currency(amount) + " · " + percent(ratio(amount, payin));
+}
+
+function ratio(value: number, base: number) {
+  return base > 0 ? (value / base) * 100 : 0;
+}
+
+function currency(value: number) {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function compactCurrency(value: number) {
+  const number = Math.abs(value || 0);
+  const format = (amount: number, suffix: string) => "₹" + new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(amount) + " " + suffix;
+  if (number >= 1e7) return format(number / 1e7, "Cr");
+  if (number >= 1e5) return format(number / 1e5, "L");
+  if (number >= 1e3) return format(number / 1e3, "K");
+  return "₹" + integer(number);
+}
+
+function integer(value: number) {
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0);
+}
+
+function percent(value: number) {
+  return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 1 }).format(value || 0) + "%";
+}
+
+function reportHref(path: string, filters: PolicyBusinessFilters, mix?: string) {
+  const search = new URLSearchParams();
+  search.set("period", filters.period);
+  if (filters.period === "custom") {
+    if (filters.fromDate) search.set("from", filters.fromDate);
+    if (filters.toDate) search.set("to", filters.toDate);
+  }
+  if (filters.insurerId) search.set("insurer", filters.insurerId);
+  if (filters.rmEmployeeId) search.set("rm", filters.rmEmployeeId);
+  if (filters.intermediaryCode) search.set("intermediary", filters.intermediaryCode);
+  if (filters.businessLine) search.set("business", filters.businessLine);
+  if (filters.category) search.set("category", filters.category);
+  if (mix && path === "/reports/business") search.set("mix", mix);
+  return path + "?" + search.toString();
+}
+
+function fallbackFilters(): PolicyBusinessFilters {
+  return { period: "mtd", fromDate: null, toDate: null, insurerId: null, rmEmployeeId: null, intermediaryCode: null, businessLine: null, category: null, page: 1 };
+}
+
+function emptyBusinessReport(): PolicyBusinessNetReport {
+  return {
+    summary: { policy_count: 0, active_policy_count: 0, gross_premium: 0, net_premium: 0, od_premium: 0, tp_premium: 0, cpa_amount: 0, average_net_premium: 0, insurer_count: 0, intermediary_count: 0, motor_policy_count: 0, non_motor_policy_count: 0, motor_net_premium: 0, non_motor_net_premium: 0 },
+    trend: [],
+    category_mix: [],
+    insurers: [],
+    rms: [],
+    filters: { insurers: [], rms: [], intermediaries: [], categories: [] },
+    register: { rows: [], total_count: 0, page: 1, page_size: 25 },
+  };
+}
