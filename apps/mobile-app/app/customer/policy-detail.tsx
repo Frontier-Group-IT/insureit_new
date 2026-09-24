@@ -156,17 +156,16 @@ export default function PolicyDetailScreen() {
 }
 
 function StatusBadge({ state, label }: { state: 'success' | 'warning' | 'danger' | 'neutral'; label: string }) {
-  const color = {
-    success: '#0F8A61',
-    warning: '#B7791F',
-    danger: '#D7262E',
-    neutral: '#64748B',
+  const config = {
+    success: { text: '#0F8A61', background: '#EAF8F2' },
+    warning: { text: '#B7791F', background: '#FFF6E8' },
+    danger: { text: '#D7262E', background: '#FFF0F0' },
+    neutral: { text: '#64748B', background: '#F1F5F9' },
   }[state];
 
   return (
-    <View style={styles.statusBadge}>
-      <View style={[styles.statusDot, { backgroundColor: color }]} />
-      <Text style={[styles.statusText, { color }]}>{label}</Text>
+    <View style={[styles.statusBadge, { backgroundColor: config.background }]}>
+      <Text style={[styles.statusText, { color: config.text }]}>{label}</Text>
     </View>
   );
 }
@@ -300,9 +299,8 @@ const styles = StyleSheet.create({
   heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
   heroActionText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
 
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 },
-  statusDot: { width: 6, height: 6, borderRadius: 999 },
-  statusText: { fontSize: 9, fontWeight: '900' },
+  statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  statusText: { fontSize: 9, lineHeight: 12, fontWeight: '900' },
 
   vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 12 },
 
