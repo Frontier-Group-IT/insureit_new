@@ -15,7 +15,7 @@ import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
-import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
+import { loadPolicyBusinessDailyTrend, loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 
 type Props = { searchParams: Promise<{ period?: string; from?: string; to?: string; business?: string; trend?: string }> };
 
@@ -31,43 +31,52 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
   let loadError = false;
   let pack: Awaited<ReturnType<typeof loadManagementPack>> | null = null;
   let trendReport: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
+  let dailyTrend: Awaited<ReturnType<typeof loadPolicyBusinessDailyTrend>> = [];
 
   try {
-    const [managementPack, trendPayload] = await Promise.all([
-      loadManagementPack(profile, {
-        from: period.fromDate,
-        to: period.toDate,
-        business: business.businessLine ?? undefined,
-        category: business.category ?? undefined,
-      }),
-      loadPolicyBusinessNetReport(profile, {
-        period: "custom",
-        from: trendPeriod.fromDate,
-        to: trendPeriod.toDate,
-        business: business.businessLine ?? undefined,
-        category: business.category ?? undefined,
-        page: "1",
-        pageSize: trendPeriod.daily ? "5000" : "25",
-      }),
-    ]);
-    pack = managementPack;
-    trendReport = trendPayload.report;
+    const managementPackPromise = loadManagementPack(profile, {
+      from: period.fromDate,
+      to: period.toDate,
+      business: business.businessLine ?? undefined,
+      category: business.category ?? undefined,
+    });
+    const trendQuery = {
+      period: "custom",
+      from: trendPeriod.fromDate,
+      to: trendPeriod.toDate,
+      business: business.businessLine ?? undefined,
+      category: business.category ?? undefined,
+      page: "1",
+    };
+    if (trendPeriod.daily) {
+      const [managementPack, daily] = await Promise.all([
+        managementPackPromise,
+        loadPolicyBusinessDailyTrend(profile, trendQuery),
+      ]);
+      pack = managementPack;
+      dailyTrend = daily;
+    } else {
+      const [managementPack, trendPayload] = await Promise.all([
+        managementPackPromise,
+        loadPolicyBusinessNetReport(profile, trendQuery),
+      ]);
+      pack = managementPack;
+      trendReport = trendPayload.report;
+    }
   } catch (error) {
     loadError = true;
     console.error("Reports overview load failed", error);
   }
 
-  const trendPoints = trendReport
-    ? (trendPeriod.daily
-      ? buildDailyTrendPoints(trendReport.register.rows, trendPeriod.fromDate, trendPeriod.toDate)
-      : trendReport.trend.map((row) => ({
-          key: row.month,
-          label: monthYear(row.month),
-          axisLabel: monthYear(row.month),
-          policy_count: row.policy_count,
-          net_premium: row.net_premium,
-        })))
-    : [];
+  const trendPoints = trendPeriod.daily
+    ? buildDailyTrendPoints(dailyTrend, trendPeriod.fromDate, trendPeriod.toDate)
+    : (trendReport?.trend ?? []).map((row) => ({
+        key: row.month,
+        label: monthYear(row.month),
+        axisLabel: monthYear(row.month),
+        policy_count: row.policy_count,
+        net_premium: row.net_premium,
+      }));
   const topInsurers = (pack?.business.insurers ?? []).slice(0, 5);
   const recentRecords = (pack?.business.register.rows ?? []).slice(0, 5);
   const premiumDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.net_premium));
@@ -472,18 +481,11 @@ function managementPackExportHref(period: OverviewPeriodState, business: Overvie
 }
 
 function buildDailyTrendPoints(
-  rows: Array<{ business_date: string; net_premium: number }>,
+  rows: Array<{ date: string; policy_count: number; net_premium: number }>,
   fromDate: string,
   toDate: string,
 ): BusinessTrendPoint[] {
-  const totals = new Map<string, { policy_count: number; net_premium: number }>();
-  for (const row of rows) {
-    if (!row.business_date) continue;
-    const current = totals.get(row.business_date) ?? { policy_count: 0, net_premium: 0 };
-    current.policy_count += 1;
-    current.net_premium += row.net_premium || 0;
-    totals.set(row.business_date, current);
-  }
+  const totals = new Map(rows.map((row) => [row.date, { policy_count: row.policy_count, net_premium: row.net_premium }]));
 
   const result: BusinessTrendPoint[] = [];
   let cursor = parseIsoDate(fromDate);
