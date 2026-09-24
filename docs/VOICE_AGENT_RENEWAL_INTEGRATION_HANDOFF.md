@@ -547,3 +547,15 @@ Branch `feat/voice-campaign-excel-workflow` adds the first INSUREIT-managed batc
 ## Tata Commercial non-breaking renewal extension — 2026-09-24
 
 Feature branch `feat/tata-commercial-renewal-voice` adds campaign-aware Tata Commercial renewal context on top of the existing reusable Sarvam execution campaign. It imports only the workbook `Renewal` sheet, groups repeated mobiles into one multi-vehicle call prospect, carries source insurer/policy/expiry/name/model values into the attempt snapshot, calculates renewal timing buckets, and supplies repeat-call memory variables. `Breaking Case` remains explicitly out of scope. The Tata sales priority is cashless claim **assistance/support**; the agent must never promise guaranteed cashless settlement or claim approval. Existing IT-only dispatch, kill switch, calling window, provider-state precheck, active-attempt guard, DNC/terminal holds, attempt-UUID correlation, webhook/idempotency and no-verified-master-write rules remain authoritative. The portal code/migration must not be treated as production-ready for Tata calling until the migration is applied, canonical CI passes, the Sarvam agent/dashboard variables and prompt are updated, and controlled test evidence confirms the new cohort variables are consumed correctly. See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
+
+
+## Tata v11 opening / campaign upload correction — 2026-09-24
+
+Feature branch `fix/sarvam-v11-opening-unlimited-campaign` removes the stale website-generated Tata opening sentence that was still being passed through `opening_line` after Sarvam agent v11 was committed. First Tata calls now use the shorter renewal opening ending `अभी दो मिनट हैं?`; repeat calls keep continuation-aware opening logic.
+
+The same branch removes the fixed voice-campaign customer/source-row ceiling from:
+- upload parsing;
+- the New Voice Campaign UI;
+- voice-campaign database counter constraints.
+
+The upload file-size guard and all calling safety controls remain unchanged. Production must apply `20260924173500_remove_voice_campaign_row_limit.sql` before deploying the web change.
