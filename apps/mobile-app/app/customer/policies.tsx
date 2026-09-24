@@ -130,14 +130,12 @@ export default function PoliciesScreen() {
               </View>
               <View style={styles.policyTitleCopy}>
                 <View style={styles.stageRow}>
-                  <Text style={styles.stageLabel}>{policyStageLabel(policy, tone)}</Text>
-                  {policy.source === 'external' ? <View style={styles.sourcePill}><Text style={styles.sourceText}>EXTERNAL</Text></View> : null}
+                  <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
+                  <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
+                    <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone)}</Text>
+                  </View>
                 </View>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
-              </View>
-
-              <View style={[styles.statusBadge, { backgroundColor: colors.soft, borderColor: colors.border }]}>
-                <Text style={[styles.statusBadgeText, { color: colors.accent }]}>{policyStatusLabel(tone)}</Text>
               </View>
             </View>
 
@@ -158,6 +156,7 @@ export default function PoliciesScreen() {
                 fallbackIcon="car-side"
                 firstValue={vehicle?.make ?? '-'}
                 secondValue={vehicle?.model ?? '-'}
+                secondValueMuted
               />
               <View style={styles.infoDivider} />
               <PolicyDetailColumn
@@ -165,11 +164,12 @@ export default function PoliciesScreen() {
                 fallbackIcon="shield-outline"
                 firstValue={company?.name ?? '-'}
                 secondValue={formatDate(policy.end_date)}
+                secondValueDotColor={colors.accent}
               />
             </View>
 
             {tone !== 'active' ? (
-              <View style={[styles.warningStrip, { backgroundColor: colors.soft, borderColor: colors.border }]}>
+              <View style={[styles.warningStrip, { backgroundColor: colors.soft }]}>
                 <MaterialCommunityIcons name={tone === 'expired' ? 'alert-octagon-outline' : 'calendar-alert'} size={16} color={colors.accent} />
                 <Text style={[styles.warningStripText, { color: colors.accent }]}>{tone === 'expired' ? `Expired ${Math.abs(days)}d ago` : `${days}d left for renewal`}</Text>
               </View>
@@ -189,11 +189,15 @@ function PolicyDetailColumn({
   fallbackIcon,
   firstValue,
   secondValue,
+  secondValueMuted = false,
+  secondValueDotColor,
 }: {
   icon: ImageSourcePropType | null;
   fallbackIcon: 'car-side' | 'shield-outline';
   firstValue: string;
   secondValue: string;
+  secondValueMuted?: boolean;
+  secondValueDotColor?: string;
 }) {
   return (
     <View style={styles.infoColumn}>
@@ -206,7 +210,10 @@ function PolicyDetailColumn({
       </View>
       <View style={styles.infoColumnCopy}>
         <Text style={styles.infoValue} numberOfLines={1}>{firstValue}</Text>
-        <Text style={[styles.infoValue, styles.infoSecondValue]} numberOfLines={1}>{secondValue}</Text>
+        <View style={styles.infoSecondRow}>
+          <Text style={[styles.infoValue, styles.infoSecondValue, secondValueMuted && styles.infoSecondValueMuted]} numberOfLines={1}>{secondValue}</Text>
+          {secondValueDotColor ? <View style={[styles.expiryDot, { backgroundColor: secondValueDotColor }]} /> : null}
+        </View>
       </View>
     </View>
   );
@@ -239,10 +246,10 @@ function policyToneColors(tone: PolicyTone) {
   return { accent: '#0F8A61', soft: '#EAF8F2', border: '#C7EAD9' };
 }
 
-function policyStatusLabel(tone: PolicyTone) {
-  if (tone === 'expired') return 'Expired';
-  if (tone === 'due') return 'Renewal Due';
-  return 'Active';
+function compactPolicyStatusLabel(tone: PolicyTone) {
+  if (tone === 'expired') return 'EXPIRED';
+  if (tone === 'due') return 'DUE';
+  return 'ACTIVE';
 }
 
 function policyStageLabel(policy: PolicyRow, tone: PolicyTone) {
@@ -275,13 +282,12 @@ const styles = StyleSheet.create({
   policyTitleCopy: { flex: 1, minWidth: 0 },
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
-  vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '700', marginTop: 1 },
-  sourcePill: { borderRadius: 999, backgroundColor: '#EAF2FF', paddingHorizontal: 6, paddingVertical: 3 },
-  sourceText: { color: '#0A43A3', fontSize: 7.8, fontWeight: '900' },
-  statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
-  statusBadgeText: { fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
+  externalStageLabel: { color: '#0A43A3' },
+  vehicleNo: { color: palette.ink, fontSize: 14.5, fontWeight: '700', marginTop: 1 },
+  sourcePill: { borderRadius: 999, paddingHorizontal: 6, paddingVertical: 3 },
+  sourceText: { fontSize: 7.8, fontWeight: '900' },
   numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  numberBox: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6EF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
+  numberBox: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
   numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
   numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
   infoBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'stretch' },
@@ -291,8 +297,11 @@ const styles = StyleSheet.create({
   catalogIcon: { width: 34, height: 34 },
   infoColumnCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   infoValue: { color: palette.ink, fontSize: 11.1, lineHeight: 14, fontWeight: '900' },
-  infoSecondValue: { marginTop: 4 },
-  warningStrip: { marginTop: 9, borderRadius: 12, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  infoSecondRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  infoSecondValue: { flexShrink: 1 },
+  infoSecondValueMuted: { color: '#8A94A6', fontWeight: '700' },
+  expiryDot: { width: 6, height: 6, borderRadius: 999, flexShrink: 0 },
+  warningStrip: { marginTop: 9, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   warningStripText: { flex: 1, fontSize: 10.8, fontWeight: '900' },
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
