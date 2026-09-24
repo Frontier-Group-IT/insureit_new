@@ -6,7 +6,6 @@ import { normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { enrichExternalRenewalOpportunity } from "@/lib/external-renewal-authbridge";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const MAX_ROWS = 500;
 const TERMINAL = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost", "duplicate"]);
 const RC_HEADERS = new Set(["rcno", "rcnumber", "registrationno", "registrationnumber", "vehicleno", "vehiclenumber"]);
 const MOBILE_HEADERS = new Set(["mobileno", "mobilenumber", "mobile", "phone", "phonenumber", "contactnumber"]);
@@ -300,7 +299,6 @@ function parseWorkbook(buffer: ArrayBuffer) {
     .map((row, index) => ({ row, sourceRowNumber: index + 2 }))
     .filter(({ row }) => row.some((value) => String(value ?? "").trim()));
   if (!dataRows.length) throw new Error("The Excel file has no customer rows.");
-  if (dataRows.length > MAX_ROWS) throw new Error(`A campaign can contain a maximum of ${MAX_ROWS} source rows.`);
 
   const parsed: ParsedCampaignRow[] = dataRows.map(({ row, sourceRowNumber }) => ({
     sourceRowNumber,
@@ -813,7 +811,7 @@ export async function getVoiceCampaignDetail(campaignId: string) {
     .select("*")
     .eq("campaign_id", campaignId)
     .order("source_row_number", { ascending: true })
-    .limit(MAX_ROWS)
+    .limit(10000)
     .returns<VoiceCampaignMemberRow[]>();
 
   const opportunityIds = (members ?? []).map((row) => row.opportunity_id);
