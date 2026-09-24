@@ -45,7 +45,7 @@ type VehicleRow = VehicleValues & {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"]);
+const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user", "sales_operations_head"]);
 
 function capacityForVehicle(vehicle: VehicleValues) {
   if (vehicle.vehicle_type === "PCP" || vehicle.vehicle_type === "TWP" || vehicle.vehicle_type === "MISD") return vehicle.engine_capacity_cc;

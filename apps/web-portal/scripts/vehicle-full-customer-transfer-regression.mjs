@@ -37,7 +37,7 @@ for (const expected of [
 }
 
 for (const expected of [
-  'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"])',
+  'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user", "sales_operations_head"])',
   'formData.get("confirm_everything") === "on"',
   'admin.rpc("transfer_vehicle_customer_v1"',
   'getAccessibleCustomerIds',
@@ -54,7 +54,7 @@ assertIncludes(editPage, 'query.success === "vehicle_transferred"', "vehicle edi
 assertIncludes(editPage, "Vehicle and all associated dependencies transferred successfully.", "vehicle edit transfer success message");
 assertIncludes(editPage, "Transfer Vehicle", "vehicle edit transfer button");
 assertIncludes(editPage, '/vehicles/${vehicle.id}/transfer', "vehicle edit transfer destination");
-assertIncludes(editPage, 'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"])', "vehicle edit transfer roles");
+assertIncludes(editPage, 'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user", "sales_operations_head"])', "vehicle edit transfer roles");
 assertIncludes(vehicleForms, "{actionExtra}", "vehicle form extra footer action");
 assertIncludes(onboardingAction, "Vehicle ownership cannot be transferred during Policy Onboarding", "onboarding partial transfer block");
 assertIncludes(onboardingForm, "Open Vehicle Transfer", "onboarding full-transfer route");
