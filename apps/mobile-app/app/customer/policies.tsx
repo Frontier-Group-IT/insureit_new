@@ -132,7 +132,7 @@ export default function PoliciesScreen() {
                 <View style={styles.stageRow}>
                   <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
                   <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
-                    <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone)}</Text>
+                    <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
                   </View>
                 </View>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
@@ -167,13 +167,6 @@ export default function PoliciesScreen() {
                 secondValueDotColor={colors.accent}
               />
             </View>
-
-            {tone !== 'active' ? (
-              <View style={[styles.warningStrip, { backgroundColor: colors.soft }]}>
-                <MaterialCommunityIcons name={tone === 'expired' ? 'alert-octagon-outline' : 'calendar-alert'} size={16} color={colors.accent} />
-                <Text style={[styles.warningStripText, { color: colors.accent }]}>{tone === 'expired' ? `Expired ${Math.abs(days)}d ago` : `${days}d left for renewal`}</Text>
-              </View>
-            ) : null}
 
           </Pressable>
         );
@@ -246,9 +239,9 @@ function policyToneColors(tone: PolicyTone) {
   return { accent: '#0F8A61', soft: '#EAF8F2', border: '#C7EAD9' };
 }
 
-function compactPolicyStatusLabel(tone: PolicyTone) {
-  if (tone === 'expired') return 'EXPIRED';
-  if (tone === 'due') return 'DUE';
+function compactPolicyStatusLabel(tone: PolicyTone, days: number) {
+  if (tone === 'expired') return `EXPIRED ${Math.abs(days)}d ago`;
+  if (tone === 'due') return `DUE IN ${days}d`;
   return 'ACTIVE';
 }
 
@@ -301,8 +294,6 @@ const styles = StyleSheet.create({
   infoSecondValue: { flexShrink: 1 },
   infoSecondValueMuted: { color: '#8A94A6', fontWeight: '700' },
   expiryDot: { width: 6, height: 6, borderRadius: 999, flexShrink: 0 },
-  warningStrip: { marginTop: 9, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  warningStripText: { flex: 1, fontSize: 10.8, fontWeight: '900' },
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
 });
