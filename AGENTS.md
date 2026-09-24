@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Reports Overview PR #2307 rollback:** PR #2316 reverted the Reports Overview period/business/trend-control changes from PR #2307 and removed the follow-up PR #2308 management-pack helper/type changes. Full `Verify web portal` workflow #4524 passed before merge. Merge commit `2a91f48d2d34e355ce68930b6c35b2c85f322e06`. **MERGED; deployment not verified.**
+
 - **2026-09-24 — RM Performance executive-summary redesign:** branch `redesign/rm-performance-premium-summary-latest`; latest-main replacement for PRs #2312/#2313. Removes source-type badges and warning banner, compresses MTD Context into a sparkline panel, highlights each RM's Today/MTD figures, and uses a five-column desktop source-card grid. Existing calculations, filters, permissions, source aggregation and drill-down behavior remain unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-24 — Revert PR #2207 ffmpeg auto-install:** branch `revert/pr-2207-ffmpeg-install`; restores the runtime 0.1.0 Partner OTA workflow behavior so it requires `ffmpeg` to already exist on the runner and fails with a clear message instead of installing it automatically. Later Policies banner normalization logic remains intact. **IMPLEMENTED; PR #2311 open; CI/merge/deployment pending.**
