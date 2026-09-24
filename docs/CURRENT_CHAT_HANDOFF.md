@@ -8,7 +8,7 @@
 - Exception keeps the existing All vehicles / Missing / Expired / Due / AuthBridge-unverified choices.
 - Existing URL query behavior and page reset behavior are unchanged.
 - No Operations report cards, tables, KPIs, calculations, export, schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
-- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+- PR #2373 passed canonical `Verify web portal` workflow #4613, including regressions, typecheck, lint, and production build.\n- Merge commit: `65182afaf7c8aa366ba437f789cef15ae5a5aca7`.\n- **MERGED; production deployment not verified in this step.**
 
 ---
 
