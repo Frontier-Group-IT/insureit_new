@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Tata Commercial non-breaking renewal voice campaign:** branch `feat/tata-commercial-renewal-voice`; IT Voice Campaign upload now detects the Tata workbook `Renewal` sheet only (explicitly excluding `Breaking Case`), accepts up to 500 source rows, preserves Tata customer/vehicle/insurer/policy/expiry context, groups repeated mobiles into one multi-vehicle calling prospect, supplies campaign-aware/repeat-call Sarvam variables, and makes cashless claim assistance the primary Tata renewal service pitch without guaranteeing claim approval. Dedicated migration expands campaign count checks from 100 to 500. Existing IT-only control, calling window, kill switch, DNC/terminal, provider-state, active-attempt, webhook/idempotency and no-master-write safeguards remain. **IMPLEMENTED; migration committed but NOT APPLIED; PR/CI/merge/deployment/Sarvam agent configuration pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
+
+
 - **2026-09-24 — Customer App vehicle-card policy status dot + model emphasis:** branch `fix/customer-vehicle-policy-dot-model-style`; Customer App → Vehicles now colors the Policy Number status dot by policy expiry state (green active, amber due within 45 days, red expired) instead of using only an active/inactive boolean, and the vehicle model text now uses the same normal navy emphasis as the manufacturer rather than faded grey. No schema, migration, RLS, APK/AAB, or native-runtime change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 
