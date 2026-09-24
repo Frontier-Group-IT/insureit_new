@@ -15,6 +15,23 @@ export type ExternalRenewalVoiceStartContext = {
   policy_expiry_date: string | null;
   previous_idv: string | null;
   previous_premium: string | null;
+  campaign_type?: string | null;
+  calling_brand?: string | null;
+  vehicle_brand_context?: string | null;
+  primary_sales_pitch?: string | null;
+  cashless_claim_pitch?: string | null;
+  renewal_bucket?: string | null;
+  days_to_expiry?: number | null;
+  vehicle_count?: number | null;
+  vehicle_context_summary?: string | null;
+  current_policy_number?: string | null;
+  repeat_call?: boolean;
+  previous_connected_call_count?: number | null;
+  last_call_disposition?: string | null;
+  last_call_summary?: string | null;
+  last_customer_interest?: string | null;
+  last_customer_objection?: string | null;
+  last_follow_up_time?: string | null;
 };
 
 export type ExternalRenewalVoiceLatestAttempt = {
