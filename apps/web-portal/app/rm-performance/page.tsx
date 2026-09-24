@@ -5,6 +5,7 @@ import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadRmPerformance, type RmPerformanceQuery } from "@/lib/rm-performance";
 import { RmPerformanceTrendChart } from "@/app/rm-performance/rm-performance-trend-chart";
+import { RmSummaryCard } from "@/app/rm-performance/rm-summary-card";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -77,13 +78,12 @@ export default async function RmPerformancePage({
           </div>
         ) : null}
 
-        <section className="mt-4 overflow-hidden rounded-[22px] border border-[#DCE4EE] bg-white shadow-[0_18px_45px_rgba(30,49,80,.06)]">
+        <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
             <PerformancePanel
               eyebrow="TODAY"
               title={money(data.today.net_premium)}
               policies={data.today.policy_count}
-              average={data.today.average_net_premium}
               motor={data.today.motor_net_premium}
               nonMotor={data.today.non_motor_net_premium}
             />
@@ -91,7 +91,6 @@ export default async function RmPerformancePage({
               eyebrow="MONTH TO DATE"
               title={money(data.mtd.net_premium)}
               policies={data.mtd.policy_count}
-              average={data.mtd.average_net_premium}
               motor={data.mtd.motor_net_premium}
               nonMotor={data.mtd.non_motor_net_premium}
               bordered
@@ -104,7 +103,7 @@ export default async function RmPerformancePage({
           </div>
         </section>
 
-        <section className="mt-4 overflow-hidden rounded-[22px] border border-[#DCE4EE] bg-white shadow-[0_18px_45px_rgba(30,49,80,.05)]">
+        <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="flex items-center justify-between border-b border-[#E9EDF3] px-5 py-3.5">
             <div>
               <h2 className="text-[12px] font-bold text-[#172744]">RM Daily Summary</h2>
@@ -115,9 +114,9 @@ export default async function RmPerformancePage({
             </span>
           </div>
 
-          <div className="space-y-3 bg-[#F5F7FA] p-3">
-            {data.rows.length ? data.rows.map((row, index) => (
-              <RmSummaryCard key={row.employeeId ?? row.name} row={row} tone={index % 4} />
+          <div className="space-y-2 bg-[#F7F9FC] p-2">
+            {data.rows.length ? data.rows.map((row) => (
+              <RmSummaryCard key={row.employeeId ?? row.name} row={row} />
             )) : (
               <div className="rounded-xl border border-[#E4E9F1] bg-white">
                 <Empty label="No RM production is available for the current scope." />
@@ -134,7 +133,6 @@ function PerformancePanel({
   eyebrow,
   title,
   policies,
-  average,
   motor,
   nonMotor,
   bordered = false,
@@ -142,40 +140,27 @@ function PerformancePanel({
   eyebrow: string;
   title: string;
   policies: number;
-  average: number;
   motor: number;
   nonMotor: number;
   bordered?: boolean;
 }) {
   return (
-    <div className={"min-h-[188px] px-6 pb-4 pt-6 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
-      <p className="text-[8px] font-black tracking-[.15em] text-[#7B8798]">{eyebrow}</p>
-      <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
+    <div className={"px-5 py-4 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-[27px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p>
-          <p className="mt-0.5 text-[8.5px] text-[#8A96A6]">Net Premium</p>
+          <p className="text-[7.5px] font-black tracking-[.14em] text-[#7B8798]">{eyebrow}</p>
+          <p className="mt-1.5 truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p>
+          <p className="mt-0.5 text-[8px] text-[#8A96A6]">Net Premium</p>
         </div>
-        <div className="grid grid-cols-2 gap-x-5 text-right">
-          <div>
-            <p className="text-[14px] font-bold text-[#24364F]">{number(policies)}</p>
-            <p className="text-[7.5px] text-[#8A96A6]">Policies</p>
-          </div>
-          <div>
-            <p className="text-[14px] font-bold text-[#24364F]">{money(average)}</p>
-            <p className="text-[7.5px] text-[#8A96A6]">Avg / Policy</p>
-          </div>
+        <div className="pt-1 text-right">
+          <p className="text-[14px] font-black text-[#24364F]">{number(policies)}</p>
+          <p className="text-[7px] text-[#8A96A6]">Policies</p>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 border-t border-[#EEF1F5] pt-3">
-        <div className="rounded-lg bg-[#F8FAFC] px-3 py-2">
-          <p className="text-[7px] font-black uppercase tracking-[.08em] text-[#9AA4B2]">Motor</p>
-          <p className="mt-0.5 text-[9px] font-bold text-[#34445B]">{money(motor)}</p>
-        </div>
-        <div className="rounded-lg bg-[#F8FAFC] px-3 py-2">
-          <p className="text-[7px] font-black uppercase tracking-[.08em] text-[#9AA4B2]">Non-Motor</p>
-          <p className="mt-0.5 text-[9px] font-bold text-[#34445B]">{money(nonMotor)}</p>
-        </div>
+      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 border-t border-[#EEF1F5] pt-2.5 text-[8px]">
+        <span className="text-[#8A96A6]">Motor <strong className="ml-1 text-[#34445B]">{money(motor)}</strong></span>
+        <span className="text-[#8A96A6]">Non-Motor <strong className="ml-1 text-[#34445B]">{money(nonMotor)}</strong></span>
       </div>
     </div>
   );
@@ -197,7 +182,7 @@ function MtdContextPanel({
     : null;
 
   return (
-    <div className="min-h-[188px] border-t border-[#E9EDF3] px-6 pb-4 pt-6 xl:border-l xl:border-t-0">
+    <div className="border-t border-[#E9EDF3] px-5 py-4 xl:border-l xl:border-t-0">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]">
@@ -215,24 +200,24 @@ function MtdContextPanel({
         ) : null}
       </div>
 
-      <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_110px] items-end gap-4">
+      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_88px] items-end gap-3">
         <div className="min-w-0">
           <RmPerformanceTrendChart rows={rows} />
         </div>
 
-        <div className="space-y-2">
-          <div className="rounded-lg bg-[#F8FAFC] px-2.5 py-2">
+        <div className="space-y-2 border-l border-[#EEF1F5] pl-3">
+          <div>
             <p className="text-[6.5px] font-black uppercase tracking-[.07em] text-[#9AA4B2]">Latest</p>
-            <p className="mt-0.5 text-[9px] font-bold text-[#24364F]">{latest ? compactMoney(latest.net_premium) : "—"}</p>
+            <p className="mt-0.5 text-[8.5px] font-bold text-[#24364F]">{latest ? compactMoney(latest.net_premium) : "—"}</p>
           </div>
-          <div className="rounded-lg bg-[#F8FAFC] px-2.5 py-2">
+          <div>
             <p className="text-[6.5px] font-black uppercase tracking-[.07em] text-[#9AA4B2]">Policies</p>
-            <p className="mt-0.5 text-[9px] font-bold text-[#24364F]">{latest ? number(latest.policy_count) : "—"}</p>
+            <p className="mt-0.5 text-[8.5px] font-bold text-[#24364F]">{latest ? number(latest.policy_count) : "—"}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-2.5 grid grid-cols-2 gap-2 border-t border-[#EEF1F5] pt-2.5">
+      <div className="mt-2 grid grid-cols-2 gap-3 border-t border-[#EEF1F5] pt-2">
         <div>
           <p className="text-[6.5px] uppercase tracking-[.06em] text-[#9AA4B2]">Motor MTD</p>
           <p className="mt-0.5 text-[8.5px] font-bold text-[#34445B]">{money(motor)}</p>
@@ -240,142 +225,6 @@ function MtdContextPanel({
         <div>
           <p className="text-[6.5px] uppercase tracking-[.06em] text-[#9AA4B2]">Non-Motor MTD</p>
           <p className="mt-0.5 text-[8.5px] font-bold text-[#34445B]">{money(nonMotor)}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RmSummaryCard({
-  row,
-  tone,
-}: {
-  row: Awaited<ReturnType<typeof loadRmPerformance>>["rows"][number];
-  tone: number;
-}) {
-  const shell = [
-    "border-[#DCE7F4] bg-[#FBFDFF]",
-    "border-[#DDEBE7] bg-[#FBFEFC]",
-    "border-[#E8E1D6] bg-[#FFFDF9]",
-    "border-[#E5DFF0] bg-[#FDFBFF]",
-  ][tone];
-
-  const accent = ["#2E5FA7", "#1C7E70", "#9B6A27", "#6F56A5"][tone];
-
-  return (
-    <details className={"group relative overflow-hidden rounded-[18px] border shadow-[0_9px_24px_rgba(29,48,78,.04)] " + shell}>
-      <div className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: accent }} />
-
-      <summary className="cursor-pointer list-none px-5 py-3.5 marker:hidden [&::-webkit-details-marker]:hidden">
-        <div className="grid gap-3 xl:grid-cols-[minmax(190px,1.1fr)_minmax(250px,.9fr)_minmax(250px,.9fr)_28px] xl:items-center">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2.5">
-              <p className="truncate text-[12px] font-black tracking-[-.01em] text-[#1A2C48]">{row.name}</p>
-              <span className="rounded-full bg-white px-2 py-0.5 text-[7.5px] font-black text-[#315B9A] shadow-sm ring-1 ring-[#D9E3EF]">
-                {row.contributionPercent.toFixed(1)}%
-              </span>
-            </div>
-            <p className="mt-1 text-[8px] font-medium text-[#8A96A6]">MTD contribution</p>
-          </div>
-
-          <MetricGroup
-            label="TODAY"
-            tone="daily"
-            policies={row.todayPolicies}
-            net={row.todayNetPremium}
-          />
-
-          <MetricGroup
-            label="MONTH TO DATE"
-            tone="mtd"
-            policies={row.mtdPolicies}
-            net={row.mtdNetPremium}
-          />
-
-          <div className="flex justify-end">
-            <span className="grid h-7 w-7 place-items-center rounded-full border border-[#D7E0EB] bg-white text-[#60738F] transition group-open:rotate-180">
-              <ChevronDown className="h-3.5 w-3.5" />
-            </span>
-          </div>
-        </div>
-      </summary>
-
-      <div className="border-t border-black/[.055] bg-white/65 px-5 py-3.5">
-        <div className="mb-2.5 flex items-center justify-between">
-          <p className="text-[7.5px] font-black uppercase tracking-[.12em] text-[#748296]">Source Breakdown</p>
-          <span className="text-[7.5px] font-semibold text-[#9AA4B2]">{row.sources.length} source{row.sources.length === 1 ? "" : "s"}</span>
-        </div>
-
-        {row.sources.length ? (
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {row.sources.map((source) => (
-              <SourceCard key={source.key} source={source} />
-            ))}
-          </div>
-        ) : (
-          <div className="rounded-lg border border-dashed border-[#D9E0E8] bg-white/70 px-3 py-3 text-[8.5px] text-[#98A2B3]">
-            No source business recorded.
-          </div>
-        )}
-      </div>
-    </details>
-  );
-}
-
-function MetricGroup({
-  label,
-  tone,
-  policies,
-  net,
-}: {
-  label: string;
-  tone: "daily" | "mtd";
-  policies: number;
-  net: number;
-}) {
-  const palette = tone === "daily"
-    ? "border-[#D8E7F8] bg-[#F2F7FD]"
-    : "border-[#D8EDE7] bg-[#F1F8F5]";
-
-  const labelColor = tone === "daily" ? "text-[#4E75A8]" : "text-[#3F7D70]";
-  const valueColor = tone === "daily" ? "text-[#173E6B]" : "text-[#165E50]";
-
-  return (
-    <div className={"rounded-xl border px-3.5 py-2.5 " + palette}>
-      <p className={"text-[6.5px] font-black uppercase tracking-[.11em] " + labelColor}>{label}</p>
-      <div className="mt-1.5 grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-[6.5px] font-bold uppercase tracking-[.07em] text-[#8D99A9]">Policies</p>
-          <p className={"mt-0.5 text-[11px] font-black " + valueColor}>{number(policies)}</p>
-        </div>
-        <div className="border-l border-black/[.06] pl-3">
-          <p className="text-[6.5px] font-bold uppercase tracking-[.07em] text-[#8D99A9]">Net Premium</p>
-          <p className={"mt-0.5 truncate text-[11px] font-black " + valueColor}>{money(net)}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SourceCard({
-  source,
-}: {
-  source: Awaited<ReturnType<typeof loadRmPerformance>>["rows"][number]["sources"][number];
-}) {
-  return (
-    <div className="min-w-0 rounded-xl border border-[#E3E8EF] bg-white px-3 py-2.5 shadow-[0_3px_10px_rgba(31,51,81,.035)]">
-      <p className="truncate text-[8px] font-black text-[#354760]" title={source.label}>{source.label}</p>
-
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <div>
-          <p className="text-[6.2px] font-black uppercase tracking-[.07em] text-[#A0A9B5]">Today</p>
-          <p className="mt-0.5 truncate text-[8.5px] font-bold text-[#44546B]">{money(source.todayNetPremium)}</p>
-          <p className="mt-0.5 text-[6.8px] text-[#99A4B2]">{number(source.todayPolicies)} policies</p>
-        </div>
-        <div className="border-l border-[#EDF0F4] pl-2">
-          <p className="text-[6.2px] font-black uppercase tracking-[.07em] text-[#A0A9B5]">MTD</p>
-          <p className="mt-0.5 truncate text-[8.5px] font-black text-[#17365D]">{money(source.mtdNetPremium)}</p>
-          <p className="mt-0.5 text-[6.8px] text-[#99A4B2]">{number(source.mtdPolicies)} policies</p>
         </div>
       </div>
     </div>
