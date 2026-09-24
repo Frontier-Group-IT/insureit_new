@@ -88,5 +88,5 @@ export async function transferVehicleCustomer(vehicleId: string, formData: FormD
     revalidatePath(path);
   }
 
-  redirect(`/vehicles/${vehicleId}?success=vehicle_transferred`);
+  redirect(`/vehicles/${vehicleId}/edit?success=vehicle_transferred`);
 }
