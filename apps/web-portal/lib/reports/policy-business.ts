@@ -72,6 +72,43 @@ export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:P
  return[...totals.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([date,total])=>({date,...total}));
 }
 
+
+export async function loadPolicyBusinessSourceMix(profile:ViewerProfile,query:PolicyBusinessQuery){
+ const {filters,scopeRmEmployeeIds}=await reportContext(profile,query);
+ if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{key:string;name:string;policy_count:number;net_premium:number;share_percent:number}>;
+ const admin=createSupabaseAdminClient();
+ const pageSize=200;
+ const totals=new Map<string,{name:string;policy_count:number;net_premium:number}>();
+ const sourceNames=new Map<string,string>();
+ let page=1;
+ let totalPages=1;
+ do{
+  const pageFilters={...filters,page};
+  const result=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
+  if(result.error)throw new Error(`Policy business source mix query failed: ${result.error.message}`);
+  const report=normalizePolicyBusinessNetReport(result.data,page);
+  for(const source of report.filters.intermediaries){
+   sourceNames.set(source.code,source.name||source.code);
+  }
+  for(const row of report.register.rows){
+   const key=row.intermediary_code?.trim()||"unassigned";
+   const name=key==="unassigned"?"Unassigned":(sourceNames.get(key)||key);
+   const current=totals.get(key)??{name,policy_count:0,net_premium:0};
+   current.name=name;
+   current.policy_count+=1;
+   current.net_premium+=row.net_premium||0;
+   totals.set(key,current);
+  }
+  totalPages=Math.max(1,Math.ceil(report.register.total_count/pageSize));
+  page+=1;
+ }while(page<=totalPages);
+ const totalPremium=[...totals.values()].reduce((sum,row)=>sum+row.net_premium,0);
+ return[...totals.entries()]
+  .map(([key,row])=>({key,...row,share_percent:totalPremium>0?(row.net_premium/totalPremium)*100:0}))
+  .sort((a,b)=>b.net_premium-a.net_premium||b.policy_count-a.policy_count||a.name.localeCompare(b.name))
+  .slice(0,12);
+}
+
 async function reportContext(profile:ViewerProfile,query:PolicyBusinessQuery){
  const filters=resolvePolicyBusinessFilters(query);
  const [scopeRmEmployeeIds,scope]=await Promise.all([getAccessiblePolicyRmEmployeeIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);
