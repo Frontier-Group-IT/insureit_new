@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Reports Operations auto-apply filters:** branch `refine/reports-operations-auto-filters`; removes the duplicate 90-day shortcut control beside Export and removes Apply/Reset from the Operations report filter row. Horizon and Exception remain available and now update the report immediately on change while preserving the same query parameters and pagination reset behavior. No report calculation, export, schema, migration, RLS, permission, APK/AAB, or native-runtime changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-24 — Tata Commercial non-breaking renewal voice campaign:** refreshed branch `feat/tata-commercial-renewal-voice-main2`; IT Voice Campaign upload detects the Tata workbook `Renewal` sheet only (explicitly excluding `Breaking Case`), accepts up to 500 source rows, preserves Tata customer/vehicle/insurer/policy/expiry context, groups repeated mobiles into one multi-vehicle calling prospect, supplies campaign-aware/repeat-call Sarvam variables, and makes cashless claim assistance the primary Tata renewal service pitch without guaranteeing claim approval. Dedicated migration expands campaign count checks from 100 to 500. Existing IT-only control, calling window, kill switch, DNC/terminal, provider-state, active-attempt, webhook/idempotency and no-master-write safeguards remain. **IMPLEMENTED; migration committed but NOT APPLIED; CI/merge/deployment pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
 
 
