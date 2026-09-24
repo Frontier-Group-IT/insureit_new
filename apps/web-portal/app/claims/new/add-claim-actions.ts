@@ -45,7 +45,12 @@ export type AddClaimLookupResult =
 
 export type CreateOperationsClaimResult =
   | { ok: true; claimId: string; claimNo: string }
-  | { ok: false; message: string; existingClaim?: { id: string; claimNo: string } };
+  | {
+      ok: false;
+      message: string;
+      errorCode?: "no_eligible_policy";
+      existingClaim?: { id: string; claimNo: string };
+    };
 
 type VehicleRow = {
   id: string;
@@ -189,6 +194,7 @@ export async function createOperationsClaim(vehicleId: string, lossAtIso: string
     return {
       ok: false,
       message: "No active or eligible policy is linked to this vehicle. A claim cannot be created until a valid policy is available.",
+      errorCode: "no_eligible_policy",
     };
   }
 
