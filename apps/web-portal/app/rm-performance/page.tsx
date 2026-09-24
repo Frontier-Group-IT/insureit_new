@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays, Mail, TrendingUp } from "lucide-react";
+import { Mail, TrendingUp } from "lucide-react";
 
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
@@ -77,7 +77,7 @@ export default async function RmPerformancePage({
         ) : null}
 
         <section className="mt-4 overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.05)]">
-          <div className="grid lg:grid-cols-2">
+          <div className="grid xl:grid-cols-3">
             <SummaryBlock
               eyebrow="TODAY"
               title={money(data.today.net_premium)}
@@ -95,71 +95,40 @@ export default async function RmPerformancePage({
               nonMotor={data.mtd.non_motor_net_premium}
               bordered
             />
+            <MtdContext
+              rows={data.ytdTrend}
+              motor={data.mtd.motor_net_premium}
+              nonMotor={data.mtd.non_motor_net_premium}
+            />
           </div>
-        </section>
-
-        <section className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-          <article className="overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
-            <div className="flex items-center justify-between border-b border-[#E9EDF3] px-5 py-3.5">
-              <div>
-                <h2 className="text-[12px] font-bold text-[#172744]">RM Daily Summary</h2>
-                <p className="mt-0.5 text-[8.5px] text-[#8A96A6]">Today, MTD and source-wise business in one view</p>
-              </div>
-              <span className="text-[8.5px] font-semibold text-[#7E8A99]">
-                {data.rows.length} RM{data.rows.length === 1 ? "" : "s"}
-              </span>
-            </div>
-
-            {!data.sourceCoverageComplete ? (
-              <div className="border-b border-[#F0E2B7] bg-[#FFF9E9] px-5 py-2 text-[8.5px] font-semibold text-[#8A671D]">
-                Source breakdown is limited to the first 5,000 policies in the selected period.
-              </div>
-            ) : null}
-
-            <div className="divide-y divide-[#EDF1F5]">
-              {data.rows.length ? data.rows.map((row) => (
-                <RmSummaryRow key={row.employeeId ?? row.name} row={row} />
-              )) : (
-                <Empty label="No RM production is available for the current scope." />
-              )}
-            </div>
-          </article>
-
-          <article className="rounded-2xl border border-[#DCE4EE] bg-white p-4 shadow-[0_10px_28px_rgba(30,49,80,.04)]">
-            <div className="flex items-center gap-2">
-              <div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]">
-                <TrendingUp className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <h2 className="text-[11px] font-bold text-[#172744]">MTD context</h2>
-                <p className="text-[8px] text-[#8A96A6]">Recent monthly production</p>
-              </div>
-            </div>
-            <Trend rows={data.ytdTrend} />
-            <div className="mt-4 border-t border-[#EEF1F5] pt-3">
-              <div className="flex items-center justify-between text-[8.5px]">
-                <span className="text-[#7E8A99]">Motor MTD</span>
-                <strong className="text-[#24364F]">{money(data.mtd.motor_net_premium)}</strong>
-              </div>
-              <div className="mt-2 flex items-center justify-between text-[8.5px]">
-                <span className="text-[#7E8A99]">Non-Motor MTD</span>
-                <strong className="text-[#24364F]">{money(data.mtd.non_motor_net_premium)}</strong>
-              </div>
-            </div>
-          </article>
         </section>
 
         <section className="mt-4 overflow-hidden rounded-2xl border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="flex items-center justify-between border-b border-[#E9EDF3] px-5 py-3.5">
             <div>
-              <h2 className="text-[12px] font-bold text-[#172744]">Recent MTD Policies</h2>
-              <p className="mt-0.5 text-[8.5px] text-[#8A96A6]">Latest policies contributing to this summary</p>
+              <h2 className="text-[12px] font-bold text-[#172744]">RM Daily Summary</h2>
+              <p className="mt-0.5 text-[8.5px] text-[#8A96A6]">Today, MTD and source-wise business in one view</p>
             </div>
-            <Link href="/reports/business" className="inline-flex items-center gap-1 text-[8.5px] font-bold text-[#315B9A]">
-              Full Business Report <ArrowRight className="h-3 w-3" />
-            </Link>
+            <span className="text-[8.5px] font-semibold text-[#7E8A99]">
+              {data.rows.length} RM{data.rows.length === 1 ? "" : "s"}
+            </span>
           </div>
-          <RecentPolicies rows={data.recentPolicies} />
+
+          {!data.sourceCoverageComplete ? (
+            <div className="border-b border-[#F0E2B7] bg-[#FFF9E9] px-5 py-2 text-[8.5px] font-semibold text-[#8A671D]">
+              Source breakdown is limited to the first 5,000 policies in the selected period.
+            </div>
+          ) : null}
+
+          <div className="space-y-3 bg-[#F7F9FC] p-3">
+            {data.rows.length ? data.rows.map((row, index) => (
+              <RmSummaryRow key={row.employeeId ?? row.name} row={row} tone={index % 5} />
+            )) : (
+              <div className="rounded-xl border border-[#E4E9F1] bg-white">
+                <Empty label="No RM production is available for the current scope." />
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </AppShell>
@@ -184,7 +153,7 @@ function SummaryBlock({
   bordered?: boolean;
 }) {
   return (
-    <div className={"px-5 py-5 " + (bordered ? "border-t border-[#E9EDF3] lg:border-l lg:border-t-0" : "")}>
+    <div className={"px-5 py-5 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
       <p className="text-[8px] font-black tracking-[.14em] text-[#7D8999]">{eyebrow}</p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -210,14 +179,63 @@ function SummaryBlock({
   );
 }
 
-function RmSummaryRow({ row }: { row: Awaited<ReturnType<typeof loadRmPerformance>>["rows"][number] }) {
+function MtdContext({
+  rows,
+  motor,
+  nonMotor,
+}: {
+  rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"];
+  motor: number;
+  nonMotor: number;
+}) {
   return (
-    <div className="px-5 py-4">
-      <div className="grid gap-3 xl:grid-cols-[minmax(180px,1.15fr)_repeat(4,minmax(90px,.72fr))_80px] xl:items-center">
+    <div className="border-t border-[#E9EDF3] px-5 py-5 xl:border-l xl:border-t-0">
+      <div className="flex items-center gap-2">
+        <div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]">
+          <TrendingUp className="h-3.5 w-3.5" />
+        </div>
+        <div>
+          <p className="text-[8px] font-black tracking-[.14em] text-[#7D8999]">MTD CONTEXT</p>
+          <p className="mt-0.5 text-[8px] text-[#8A96A6]">Recent monthly production</p>
+        </div>
+      </div>
+      <Trend rows={rows} compact />
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-[#EEF1F5] pt-3">
+        <div>
+          <p className="text-[7.5px] uppercase tracking-[.06em] text-[#9AA4B2]">Motor MTD</p>
+          <p className="mt-1 text-[10px] font-bold text-[#34445B]">{money(motor)}</p>
+        </div>
+        <div>
+          <p className="text-[7.5px] uppercase tracking-[.06em] text-[#9AA4B2]">Non-Motor MTD</p>
+          <p className="mt-1 text-[10px] font-bold text-[#34445B]">{money(nonMotor)}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RmSummaryRow({
+  row,
+  tone,
+}: {
+  row: Awaited<ReturnType<typeof loadRmPerformance>>["rows"][number];
+  tone: number;
+}) {
+  const toneClass = [
+    "border-[#DCE8F5] bg-[#FBFDFF]",
+    "border-[#DCECE7] bg-[#FAFDFB]",
+    "border-[#EFE5D4] bg-[#FFFCF7]",
+    "border-[#E6DFF2] bg-[#FCFAFF]",
+    "border-[#E2E7EC] bg-[#FCFDFE]",
+  ][tone];
+
+  return (
+    <article className={"rounded-xl border px-4 py-4 shadow-[0_5px_16px_rgba(30,49,80,.025)] " + toneClass}>
+      <div className="grid gap-3 xl:grid-cols-[minmax(180px,1.2fr)_repeat(4,minmax(105px,.7fr))_76px] xl:items-center">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <p className="truncate text-[10px] font-bold text-[#20324D]">{row.name}</p>
-            <span className="rounded-full bg-[#EEF4FF] px-2 py-0.5 text-[7.5px] font-black text-[#315B9A]">
+            <p className="truncate text-[10.5px] font-bold text-[#20324D]">{row.name}</p>
+            <span className="rounded-full bg-white/90 px-2 py-0.5 text-[7.5px] font-black text-[#315B9A] ring-1 ring-[#DDE6F2]">
               {row.contributionPercent.toFixed(1)}%
             </span>
           </div>
@@ -233,7 +251,7 @@ function RmSummaryRow({ row }: { row: Awaited<ReturnType<typeof loadRmPerformanc
           {row.employeeId ? (
             <Link
               href={"/rm-performance?rm=" + row.employeeId}
-              className="inline-flex h-7 items-center rounded-lg border border-[#D8E1EC] px-2.5 text-[8px] font-bold text-[#315B9A]"
+              className="inline-flex h-7 items-center rounded-lg border border-[#D2DDEA] bg-white px-2.5 text-[8px] font-bold text-[#315B9A] transition hover:border-[#AEBFD3] hover:bg-[#F8FAFC]"
             >
               View
             </Link>
@@ -241,21 +259,53 @@ function RmSummaryRow({ row }: { row: Awaited<ReturnType<typeof loadRmPerformanc
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl bg-[#F8FAFC] px-3 py-2.5">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className="text-[7.5px] font-black uppercase tracking-[.08em] text-[#8A96A6]">Sources</span>
-          {row.sources.length ? row.sources.map((source) => (
-            <div key={source.key} className="flex items-center gap-2 text-[8.5px]">
-              <span className="font-semibold text-[#41516A]">{source.label}</span>
-              <span className="text-[#9AA4B2]">Today</span>
-              <strong className="text-[#2B3D58]">{money(source.todayNetPremium)} / {number(source.todayPolicies)}</strong>
-              <span className="text-[#C0C7D0]">•</span>
-              <span className="text-[#9AA4B2]">MTD</span>
-              <strong className="text-[#2B3D58]">{money(source.mtdNetPremium)} / {number(source.mtdPolicies)}</strong>
-            </div>
-          )) : (
-            <span className="text-[8.5px] text-[#98A2B3]">No source business recorded.</span>
-          )}
+      <div className="mt-3 border-t border-black/[.055] pt-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-[7.5px] font-black uppercase tracking-[.1em] text-[#7F8C9D]">Source Breakdown</span>
+          <span className="text-[7.5px] text-[#A0A9B5]">{row.sources.length} source{row.sources.length === 1 ? "" : "s"}</span>
+        </div>
+
+        {row.sources.length ? (
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            {row.sources.map((source) => (
+              <SourceCard key={source.key} source={source} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-dashed border-[#D9E0E8] bg-white/65 px-3 py-3 text-[8.5px] text-[#98A2B3]">
+            No source business recorded.
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function SourceCard({
+  source,
+}: {
+  source: Awaited<ReturnType<typeof loadRmPerformance>>["rows"][number]["sources"][number];
+}) {
+  return (
+    <div className="rounded-lg border border-white/80 bg-white/85 px-3 py-2.5 shadow-[0_2px_8px_rgba(31,51,81,.035)] ring-1 ring-black/[.025]">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <p className="min-w-0 truncate text-[8.5px] font-bold text-[#354760]" title={source.label}>{source.label}</p>
+        {source.type ? (
+          <span className="shrink-0 rounded-md bg-[#F1F4F8] px-1.5 py-0.5 text-[6.5px] font-bold uppercase tracking-[.04em] text-[#7D8999]">
+            {source.type}
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <div>
+          <p className="text-[6.5px] font-black uppercase tracking-[.06em] text-[#9AA4B2]">Today</p>
+          <p className="mt-0.5 text-[8.5px] font-bold text-[#34445B]">{money(source.todayNetPremium)}</p>
+          <p className="mt-0.5 text-[7px] text-[#8E99A8]">{number(source.todayPolicies)} policies</p>
+        </div>
+        <div className="border-l border-[#EDF0F4] pl-2">
+          <p className="text-[6.5px] font-black uppercase tracking-[.06em] text-[#9AA4B2]">MTD</p>
+          <p className="mt-0.5 text-[8.5px] font-bold text-[#17365D]">{money(source.mtdNetPremium)}</p>
+          <p className="mt-0.5 text-[7px] text-[#8E99A8]">{number(source.mtdPolicies)} policies</p>
         </div>
       </div>
     </div>
@@ -271,66 +321,30 @@ function NumberCell({ label, value, strong = false }: { label: string; value: st
   );
 }
 
-function Trend({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
+function Trend({
+  rows,
+  compact = false,
+}: {
+  rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"];
+  compact?: boolean;
+}) {
   if (!rows.length) return <Empty label="No trend data available." />;
   const max = Math.max(...rows.map((row) => row.net_premium), 1);
 
   return (
-    <div className="mt-4 space-y-3">
+    <div className={compact ? "mt-3 space-y-2" : "mt-4 space-y-3"}>
       {rows.map((row) => (
-        <div key={row.month} className="grid grid-cols-[42px_minmax(0,1fr)_72px] items-center gap-2">
+        <div key={row.month} className="grid grid-cols-[38px_minmax(0,1fr)_68px] items-center gap-2">
           <div>
-            <p className="text-[8.5px] font-bold text-[#40516C]">{month(row.month)}</p>
-            <p className="text-[7.5px] text-[#9AA4B2]">{number(row.policy_count)}</p>
+            <p className="text-[8px] font-bold text-[#40516C]">{month(row.month)}</p>
+            <p className="text-[7px] text-[#9AA4B2]">{number(row.policy_count)}</p>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-[#EDF1F6]">
             <div className="h-full rounded-full bg-[#3559A8]" style={{ width: String(Math.max(3, (row.net_premium / max) * 100)) + "%" }} />
           </div>
-          <p className="text-right text-[8.5px] font-bold text-[#23334F]">{compactMoney(row.net_premium)}</p>
+          <p className="text-right text-[8px] font-bold text-[#23334F]">{compactMoney(row.net_premium)}</p>
         </div>
       ))}
-    </div>
-  );
-}
-
-function RecentPolicies({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["recentPolicies"] }) {
-  if (!rows.length) return <Empty label="No month-to-date policies are available." />;
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1000px]">
-        <thead>
-          <tr className="bg-[#F8FAFC] text-[7.5px] font-black uppercase tracking-[.07em] text-[#7B8799]">
-            <th className="px-5 py-2.5 text-left">Date</th>
-            <th className="px-3 py-2.5 text-left">RM</th>
-            <th className="px-3 py-2.5 text-left">Customer / Risk</th>
-            <th className="px-3 py-2.5 text-left">Policy</th>
-            <th className="px-3 py-2.5 text-left">Source</th>
-            <th className="px-3 py-2.5 text-right">Net Premium</th>
-            <th className="px-5 py-2.5 text-center">Open</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-[#EDF0F4]">
-          {rows.map((row) => (
-            <tr key={row.id} className="text-[8.5px] hover:bg-[#FBFCFE]">
-              <td className="px-5 py-3 font-semibold">{displayDate(row.business_date)}</td>
-              <td className="px-3 py-3">{row.rm_name ?? "Unassigned"}</td>
-              <td className="px-3 py-3">
-                <p className="font-semibold text-[#2D3C55]">{row.customer_name || "—"}</p>
-                <p className="mt-0.5 text-[7.5px] text-[#8A96A7]">{row.risk_reference || row.vehicle_no || "—"}</p>
-              </td>
-              <td className="px-3 py-3 font-semibold">{row.policy_no || "—"}</td>
-              <td className="px-3 py-3">{row.intermediary_code || row.intermediary_type || "Direct / Unassigned"}</td>
-              <td className="px-3 py-3 text-right font-bold">{money(row.net_premium)}</td>
-              <td className="px-5 py-3 text-center">
-                <Link href={"/policies/" + row.id} className="inline-flex h-7 items-center rounded-lg border border-[#D8E1EC] px-2 text-[8px] font-bold text-[#315B9A]">
-                  Open
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 }
@@ -357,13 +371,6 @@ function month(value: string) {
   return date && !Number.isNaN(date.getTime())
     ? new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "UTC" }).format(date)
     : value;
-}
-function displayDate(value: string) {
-  if (!value) return "—";
-  const date = new Date(value + "T00:00:00+05:30");
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "2-digit", timeZone: "Asia/Kolkata" }).format(date);
 }
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-IN", {
