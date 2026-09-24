@@ -89,10 +89,19 @@ function customerGreetingIdentity(value: string | null | undefined) {
 function buildOpeningLine(context: ExternalRenewalVoiceStartContext) {
   const { firstName, salutation } = customerGreetingIdentity(context.customer_name);
   const addressee = [firstName, salutation].filter(Boolean).join(" ");
+  const brand = stringVariable(context.calling_brand) ?? "Frontier JCB";
+  const isRepeat = Boolean(context.repeat_call);
+  const intro = addressee ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ ${brand} से।` : `नमस्ते, मैं अंजना बोल रही हूँ ${brand} से।`;
 
-  return addressee
-    ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ फ्रंटियर जेसीबी से। आपकी पॉलिसी रिन्यूअल के बारे में कॉल किया था—दो मिनट बात कर सकते हैं क्या?`
-    : "नमस्ते, मैं अंजना बोल रही हूँ फ्रंटियर जेसीबी से। आपकी पॉलिसी रिन्यूअल के बारे में कॉल किया था—दो मिनट बात कर सकते हैं क्या?";
+  if (isRepeat) {
+    const followUp = context.last_call_disposition === "follow_up"
+      ? " पिछली बार आपने बाद में insurance renewal पर बात करने को कहा था—अभी दो मिनट हैं?"
+      : " पिछली बार insurance renewal पर हमारी बात हुई थी—अभी दो मिनट हैं?";
+    return intro + followUp;
+  }
+
+  const vehicleContext = context.campaign_type === "tata_commercial_renewal" ? "Tata commercial vehicle की " : "";
+  return `${intro} आपकी ${vehicleContext}policy renewal के बारे में call किया था—दो मिनट बात कर सकते हैं क्या?`;
 }
 
 function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
@@ -109,6 +118,24 @@ function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
     policy_expiry_date: stringVariable(context.policy_expiry_date),
     previous_idv: stringVariable(context.previous_idv),
     previous_premium: stringVariable(context.previous_premium),
+    campaign_type: stringVariable(context.campaign_type),
+    calling_brand: stringVariable(context.calling_brand),
+    vehicle_brand_context: stringVariable(context.vehicle_brand_context),
+    primary_sales_pitch: stringVariable(context.primary_sales_pitch),
+    cashless_claim_pitch: stringVariable(context.cashless_claim_pitch),
+    renewal_bucket: stringVariable(context.renewal_bucket),
+    days_to_expiry: context.days_to_expiry == null ? undefined : String(context.days_to_expiry),
+    vehicle_count: context.vehicle_count == null ? undefined : String(context.vehicle_count),
+    vehicle_context_summary: stringVariable(context.vehicle_context_summary),
+    current_policy_number: stringVariable(context.current_policy_number),
+    repeat_call: context.repeat_call ? "true" : "false",
+    previous_connected_call_count:
+      context.previous_connected_call_count == null ? undefined : String(context.previous_connected_call_count),
+    last_call_disposition: stringVariable(context.last_call_disposition),
+    last_call_summary: stringVariable(context.last_call_summary),
+    last_customer_interest: stringVariable(context.last_customer_interest),
+    last_customer_objection: stringVariable(context.last_customer_objection),
+    last_follow_up_time: stringVariable(context.last_follow_up_time),
   };
 
   for (const [key, value] of Object.entries(candidates)) {
