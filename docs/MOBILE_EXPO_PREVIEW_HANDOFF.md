@@ -1,3 +1,13 @@
+## 2026-09-24 — Customer Vehicles policy status dot and model emphasis
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-vehicle-policy-dot-model-style`.
+
+- Customer App → Vehicles now colors the Policy Number status dot by policy state: green for active policies, amber for policies due within 45 days, red for expired policies, and grey for future/upcoming coverage so a not-yet-started policy is never shown as active.
+- Date-only expiry comparisons now use local calendar dates so status does not drift around midnight because of UTC parsing.
+- Vehicle model text now uses the same normal navy emphasis as the manufacturer instead of faded grey.
+- No API/RPC/schema/RLS, native dependency, runtime version, permission, app config, APK/AAB, or package identifier change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-22 — Customer Add Vehicle fetched-policy lock correction v2
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-fetched-policy-lock-v2`.
