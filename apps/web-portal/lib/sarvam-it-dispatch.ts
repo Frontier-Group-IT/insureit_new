@@ -36,6 +36,7 @@ type OpportunityRow = {
   rc_enrichment_status: string | null;
   rc_enrichment_details: RcEnrichmentDetails | null;
   ai_profile_overrides: Record<string, unknown> | null;
+  source_payload: Record<string, unknown> | null;
   voice_queue_source: "import" | "it_quick_add" | "it_campaign" | null;
 };
 
@@ -60,7 +61,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
 
   const { data: opportunity, error: opportunityError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,current_policy_no,policy_end_date,rc_enrichment_status,rc_enrichment_details,ai_profile_overrides,voice_queue_source")
+    .select("id,batch_id,partner_id,is_active,mobile,opportunity_status,customer_name,contact_name,account_name,vehicle_make,vehicle_model,registration_no,chassis_no,current_insurer,current_policy_no,policy_end_date,rc_enrichment_status,rc_enrichment_details,ai_profile_overrides,source_payload,voice_queue_source")
     .eq("id", opportunityId)
     .maybeSingle<OpportunityRow>();
 
@@ -86,25 +87,39 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("This opportunity is already closed or suppressed.");
   }
 
-  if (opportunity.rc_enrichment_status !== "ready") {
-    throw new Error("Fetch RC details before starting the AI call.");
-  }
-
   const enrichment = opportunity.rc_enrichment_details ?? {};
   const overrides = opportunity.ai_profile_overrides ?? {};
+  const sourcePayload = opportunity.source_payload && typeof opportunity.source_payload === "object" ? opportunity.source_payload : {};
+  const campaignContexts =
+    sourcePayload.voice_campaign_contexts && typeof sourcePayload.voice_campaign_contexts === "object"
+      ? (sourcePayload.voice_campaign_contexts as Record<string, unknown>)
+      : {};
+  const rawCampaignContext = voiceCampaignId ? campaignContexts[voiceCampaignId] : null;
+  const campaignContext = rawCampaignContext && typeof rawCampaignContext === "object"
+    ? (rawCampaignContext as Record<string, unknown>)
+    : {};
+  const campaignText = (key: string) => {
+    const value = campaignContext[key];
+    return typeof value === "string" || typeof value === "number" ? String(value).replace(/\s+/g, " ").trim() || null : null;
+  };
+  const campaignVehicles = Array.isArray(campaignContext.vehicles) ? campaignContext.vehicles : [];
+  const tataSourceReady = campaignText("campaignType") === "tata_commercial_renewal";
+  if (opportunity.rc_enrichment_status !== "ready" && !tataSourceReady) {
+    throw new Error("Fetch RC details before starting the AI call.");
+  }
 
   const customerName = overrideText(
     overrides,
     "customerName",
-    opportunity.customer_name?.trim() || opportunity.contact_name?.trim() || opportunity.account_name?.trim() || null,
+    campaignText("customerName") || opportunity.customer_name?.trim() || opportunity.contact_name?.trim() || opportunity.account_name?.trim() || null,
   );
   const mobile = overrideText(overrides, "mobile", opportunity.mobile);
-  const vehicleMake = overrideText(overrides, "manufacturer", enrichment.manufacturer ?? opportunity.vehicle_make);
-  const vehicleModel = overrideText(overrides, "model", enrichment.model ?? opportunity.vehicle_model);
+  const vehicleMake = overrideText(overrides, "manufacturer", campaignText("manufacturer") ?? enrichment.manufacturer ?? opportunity.vehicle_make);
+  const vehicleModel = overrideText(overrides, "model", campaignText("model") ?? enrichment.model ?? opportunity.vehicle_model);
   const registrationNumber = overrideText(overrides, "registrationNumber", enrichment.registrationNumber ?? opportunity.registration_no);
   const chassisNumber = overrideText(overrides, "chassisNumber", enrichment.chassisNumber ?? opportunity.chassis_no);
-  const currentInsurer = overrideText(overrides, "insuranceCompany", enrichment.insuranceCompany ?? opportunity.current_insurer);
-  const policyNumber = overrideText(overrides, "policyNumber", enrichment.policyNumber ?? opportunity.current_policy_no);
+  const currentInsurer = overrideText(overrides, "insuranceCompany", campaignText("currentInsurer") ?? enrichment.insuranceCompany ?? opportunity.current_insurer);
+  const policyNumber = overrideText(overrides, "policyNumber", campaignText("policyNumber") ?? enrichment.policyNumber ?? opportunity.current_policy_no);
   const sourcePolicyExpiryDate =
     opportunity.voice_queue_source === "it_quick_add" ? null : opportunity.policy_end_date;
   const campaignSafePolicyExpiryDate =
@@ -112,7 +127,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
   const policyExpiryDate = overrideText(
     overrides,
     "policyExpiryDate",
-    enrichment.policyExpiryDate ?? campaignSafePolicyExpiryDate,
+    campaignText("policyExpiryDate") ?? enrichment.policyExpiryDate ?? campaignSafePolicyExpiryDate,
   );
   const previousIdv = overrideText(overrides, "previousIdv", null);
   const previousPremium = overrideText(overrides, "previousPremium", null);
@@ -123,6 +138,53 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
   if (!/^(?:91)?[6-9][0-9]{9}$/.test(digits)) {
     throw new Error("A valid mobile number is required before starting an AI call.");
   }
+
+  const { data: previousAttempts } = await admin
+    .from("external_renewal_voice_attempts")
+    .select("call_disposition,customer_interest,customer_objection,call_summary,follow_up_at,connectivity_status,created_at")
+    .eq("opportunity_id", opportunity.id)
+    .order("created_at", { ascending: false })
+    .limit(20)
+    .returns<Array<{
+      call_disposition: string | null;
+      customer_interest: string | null;
+      customer_objection: string | null;
+      call_summary: string | null;
+      follow_up_at: string | null;
+      connectivity_status: string | null;
+      created_at: string;
+    }>>();
+  const connectedPrevious = (previousAttempts ?? []).filter((attempt) => attempt.connectivity_status === "connected");
+  const lastConnected = connectedPrevious[0] ?? null;
+
+  const expiryDate = policyExpiryDate ? new Date(policyExpiryDate + "T00:00:00+05:30") : null;
+  const now = new Date();
+  const todayIndia = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  todayIndia.setHours(0, 0, 0, 0);
+  const daysToExpiry = expiryDate && !Number.isNaN(expiryDate.getTime())
+    ? Math.ceil((expiryDate.getTime() - todayIndia.getTime()) / 86_400_000)
+    : null;
+  const renewalBucket = daysToExpiry == null
+    ? null
+    : daysToExpiry <= 0
+      ? "DUE_TODAY"
+      : daysToExpiry <= 7
+        ? "DUE_1_7"
+        : daysToExpiry <= 15
+          ? "DUE_8_15"
+          : daysToExpiry <= 30
+            ? "DUE_16_30"
+            : "DUE_31_PLUS";
+  const vehicleCount = Number(campaignText("vehicleCount") ?? (campaignVehicles.length || 1));
+  const vehicleContextSummary = campaignVehicles
+    .slice(0, 10)
+    .map((vehicle) => {
+      if (!vehicle || typeof vehicle !== "object") return "";
+      const v = vehicle as Record<string, unknown>;
+      return [v.registrationNumber, v.model, v.policyExpiryDate].filter(Boolean).map(String).join(" | ");
+    })
+    .filter(Boolean)
+    .join("; ");
 
   const { data: activeAttempt, error: activeAttemptError } = await admin
     .from("external_renewal_voice_attempts")
@@ -149,6 +211,23 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     policy_expiry_date: policyExpiryDate,
     previous_idv: previousIdv,
     previous_premium: previousPremium,
+    campaign_type: campaignText("campaignType"),
+    calling_brand: campaignText("callingBrand"),
+    vehicle_brand_context: campaignText("vehicleBrandContext"),
+    primary_sales_pitch: campaignText("primarySalesPitch"),
+    cashless_claim_pitch: campaignText("cashlessClaimPitch"),
+    renewal_bucket: renewalBucket,
+    days_to_expiry: daysToExpiry,
+    vehicle_count: Number.isFinite(vehicleCount) ? vehicleCount : 1,
+    vehicle_context_summary: vehicleContextSummary || null,
+    current_policy_number: policyNumber,
+    repeat_call: connectedPrevious.length > 0,
+    previous_connected_call_count: connectedPrevious.length,
+    last_call_disposition: lastConnected?.call_disposition ?? null,
+    last_call_summary: lastConnected?.call_summary ?? null,
+    last_customer_interest: lastConnected?.customer_interest ?? null,
+    last_customer_objection: lastConnected?.customer_objection ?? null,
+    last_follow_up_time: lastConnected?.follow_up_at ?? null,
   };
 
   const { data: attempt, error: attemptError } = await admin
@@ -181,5 +260,22 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     policy_expiry_date: policyExpiryDate,
     previous_idv: previousIdv,
     previous_premium: previousPremium,
+    campaign_type: cohortContext.campaign_type,
+    calling_brand: cohortContext.calling_brand,
+    vehicle_brand_context: cohortContext.vehicle_brand_context,
+    primary_sales_pitch: cohortContext.primary_sales_pitch,
+    cashless_claim_pitch: cohortContext.cashless_claim_pitch,
+    renewal_bucket: cohortContext.renewal_bucket,
+    days_to_expiry: cohortContext.days_to_expiry,
+    vehicle_count: cohortContext.vehicle_count,
+    vehicle_context_summary: cohortContext.vehicle_context_summary,
+    current_policy_number: cohortContext.current_policy_number,
+    repeat_call: cohortContext.repeat_call,
+    previous_connected_call_count: cohortContext.previous_connected_call_count,
+    last_call_disposition: cohortContext.last_call_disposition,
+    last_call_summary: cohortContext.last_call_summary,
+    last_customer_interest: cohortContext.last_customer_interest,
+    last_customer_objection: cohortContext.last_customer_objection,
+    last_follow_up_time: cohortContext.last_follow_up_time,
   };
 }
