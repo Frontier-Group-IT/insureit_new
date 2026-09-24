@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Building2, ChevronDown } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export type OverviewBusinessScope = "all" | "motor" | "non_motor" | "life" | "health";
@@ -50,7 +50,7 @@ export function ReportOverviewBusinessControl({ value }: { value: OverviewBusine
   return (
     <div className="ov-dropdown">
       <button type="button" className="ov-control" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((state) => !state)}>
-        <span>{label}</span><ChevronDown className="h-3 w-3" />
+        <Building2 className="h-3.5 w-3.5" /><span>{label}</span><ChevronDown className="h-3 w-3" />
       </button>
       {open ? (
         <>
