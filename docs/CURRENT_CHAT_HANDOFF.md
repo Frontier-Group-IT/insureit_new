@@ -11,7 +11,7 @@
 - Insurer, RM, and intermediary commercial rows are aggregated from the canonical finance register; business type rows are aggregated from the canonical policy-business register. Both are requested with a bounded 5,000-row page size solely to support the requested all-record scroll views.
 - `FinanceQuery` now accepts an optional bounded `pageSize` parameter; existing callers keep the 25-row default.
 - No schema, migration, RLS, accounting formula, mobile app, Partner app, APK/AAB, or native runtime change.
-- **IMPLEMENTED; no PR created; not merged; not deployed; canonical PR CI has not run yet.**
+- PR #2338 passed canonical `Verify web portal` workflow #4558 after the policy-register regression was aligned with the approved removal of Avg. net / policy and capitalization of Net Premium.\n- Merge commit: `dc827094e14ba5801f5aacd905cfca3689a13c57`.\n- **MERGED; not deployed; production deployment not verified.**
 
 ---
 ## 2026-09-23 — External managed claims unrestricted Operations stage editing
