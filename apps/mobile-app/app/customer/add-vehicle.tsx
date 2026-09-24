@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AnchoredSearchSelect } from '@/components/anchored-search-select';
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
@@ -35,6 +36,7 @@ export default function AddVehicleScreen() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [makeOpen, setMakeOpen] = useState(false);
   const [makeQuery, setMakeQuery] = useState('');
+  const [insurerOpen, setInsurerOpen] = useState(false);
   const [vehicleNo, setVehicleNo] = useState('');
   const [vehicleType, setVehicleType] = useState('');
   const [make, setMake] = useState('');
@@ -412,7 +414,7 @@ export default function AddVehicleScreen() {
             </View>
           ) : null}
           <PremiumDateField label="Registration date" value={registrationDate} onPress={() => setDateTarget({ label: 'Registration date', value: registrationDate, onChange: setRegistrationDate })} />
-          <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(value); setMakeOpen(false); }} />
+          <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(''); setMakeOpen(false); }} />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><InputField required icon="car-info" label="Model" value={model} onChangeText={setModel} /></View>
             <View style={styles.column}><YearDropdown value={year} onSelect={setYear} /></View>
@@ -438,7 +440,7 @@ export default function AddVehicleScreen() {
         ) : null}
 
         <FormSection title="Policy details · Optional" icon="file-document-outline" tone="policy">
-          <SearchInsurer locked={insurerFetchedLocked} query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 10)} onChange={(value) => { setSelectedCompanyId(''); setInsurerQuery(value); }} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(company.name); }} />
+          <SearchInsurer locked={insurerFetchedLocked} query={insurerQuery} selectedInsurer={companies.find((company) => company.id === selectedCompanyId) ?? null} companies={companies.filter((company) => !insurerQuery.trim() || company.name.toLowerCase().includes(insurerQuery.trim().toLowerCase())).slice(0, 30)} open={insurerOpen} onToggle={() => setInsurerOpen((value) => !value)} onChange={setInsurerQuery} onSelect={(company) => { setSelectedCompanyId(company.id); setInsurerQuery(''); setInsurerOpen(false); }} />
           <MaskedCodeField locked={policyNumberFetchedLocked} icon="identifier" label="Policy no." value={policyNo} onChangeText={setPolicyNo} />
           <View style={styles.twoColumnRow}>
             <View style={styles.column}><PremiumDateField label="Start date" value={policyStartDate} onPress={() => setDateTarget({ label: 'Policy start date', value: policyStartDate, onChange: (value) => { setPolicyStartDate(value); setPolicyEndDate((current) => current || defaultPolicyEndDate(value)); }, autoEnd: true })} /></View>
@@ -511,11 +513,31 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
   return <View style={styles.field}><Text style={styles.fieldLabel}>Fuel type</Text><Pressable accessibilityRole="button" onPress={() => setOpen((current) => !current)} style={styles.selectButton}><View style={styles.selectIcon}><MaterialCommunityIcons name="gas-station-outline" size={18} color="#0A43A3" /></View><Text style={[styles.selectValue, !value && styles.placeholder]}>{value || 'Select fuel (optional)'}</Text><MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} /></Pressable>{open ? <View style={styles.selectMenu}>{fuelOptions.map((item) => <Pressable key={item} onPress={() => { onSelect(item); setOpen(false); }} style={[styles.selectOption, value === item && styles.selectOptionActive]}><Text style={[styles.selectOptionText, value === item && styles.selectOptionTextActive]}>{item}</Text>{value === item ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>)}</View> : null}</View>;
 }
 
-function SearchInsurer({ query, selectedInsurer, companies, onChange, onSelect, locked = false }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void; locked?: boolean }) {
+function SearchInsurer({ query, selectedInsurer, companies, open, onToggle, onChange, onSelect, locked = false }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; open: boolean; onToggle: () => void; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void; locked?: boolean }) {
   if (locked) {
     return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell, styles.fetchedInsurerThreeRowShell]}><View style={styles.fetchedInsurerRows}><Text style={styles.fetchedInsurerText}>••••••••••••••••••••••••••••</Text><Text style={styles.fetchedInsurerText}>••••••••••••••••••••••••</Text><Text style={styles.fetchedInsurerText}>••••••••••••••••••••</Text></View></View></View>;
   }
-  return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={styles.inputShell}><MaterialCommunityIcons name="magnify" size={17} color="#6A7A90" /><TextInput value={query} onChangeText={onChange} placeholder="Search insurer by name" placeholderTextColor="#9AA7B8" style={styles.input} />{selectedInsurer ? <MaterialCommunityIcons name="check-circle" size={18} color="#12805C" /> : null}</View>{!selectedInsurer ? <View style={styles.selectMenu}>{!query.trim() ? <Text style={styles.emptyLookupText}>Type matching letters to search insurer.</Text> : companies.length ? companies.map((company) => <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={styles.selectOption}><Text style={styles.selectOptionText} numberOfLines={1}>{company.name}</Text></Pressable>) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}</View> : null}</View>;
+  return (
+    <AnchoredSearchSelect
+      label="Insurer"
+      selectedId={selectedInsurer?.id ?? null}
+      selectedLabel={selectedInsurer?.name ?? null}
+      placeholder="Select insurer"
+      searchPlaceholder="Search insurer"
+      query={query}
+      open={open}
+      options={companies.map((company) => ({ id: company.id, label: company.name }))}
+      icon="domain"
+      onToggle={onToggle}
+      onQueryChange={onChange}
+      onSelect={(option) => {
+        const company = companies.find((item) => item.id === option.id);
+        if (company) onSelect(company);
+      }}
+      emptyText="No matching insurer found."
+      autoCapitalize="words"
+    />
+  );
 }
 
 function ReadonlyDateField({ label, value }: { label: string; value: string }) {
@@ -537,8 +559,27 @@ function accountSelectorRoleLabel(context: CustomerAccountContext) {
 }
 
 function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQueryChange, onSelect, required = false }: { manufacturers: string[]; selectedMake: string; query: string; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (make: string) => void; required?: boolean }) {
-  const visibleManufacturers = manufacturers.filter((manufacturer) => !query.trim() || manufacturer.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 10);
-  return <View style={styles.field}><Text style={styles.fieldLabel}>Manufacturer{required ? ' *' : ''}</Text><Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}><View style={styles.selectIcon}><MaterialCommunityIcons name="factory" size={18} color="#0A43A3" /></View><Text style={[styles.selectValue, !selectedMake && styles.placeholder]} numberOfLines={1}>{selectedMake || 'Select manufacturer'}</Text><MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} /></Pressable>{open ? <View style={styles.makeMenu}><View style={styles.makeSearch}><MaterialCommunityIcons name="magnify" size={18} color="#7A8799" /><TextInput value={query} onChangeText={onQueryChange} placeholder="Search make" placeholderTextColor="#8A94A6" style={styles.makeSearchInput} /></View>{manufacturers.length ? visibleManufacturers.map((manufacturer) => { const active = manufacturer === selectedMake; return <Pressable key={manufacturer} accessibilityRole="button" onPress={() => onSelect(manufacturer)} style={[styles.makeOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{manufacturer}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>; }) : <InputField icon="factory" label="Make" value={selectedMake} onChangeText={onSelect} />}</View> : null}</View>;
+  const visibleManufacturers = manufacturers
+    .filter((manufacturer) => !query.trim() || manufacturer.toLowerCase().includes(query.trim().toLowerCase()))
+    .slice(0, 30);
+  return (
+    <AnchoredSearchSelect
+      label={`Manufacturer${required ? ' *' : ''}`}
+      selectedId={selectedMake || null}
+      selectedLabel={selectedMake || null}
+      placeholder="Select manufacturer"
+      searchPlaceholder="Search manufacturer"
+      query={query}
+      open={open}
+      options={visibleManufacturers.map((manufacturer) => ({ id: manufacturer, label: manufacturer }))}
+      icon="factory"
+      onToggle={onToggle}
+      onQueryChange={onQueryChange}
+      onSelect={(option) => onSelect(option.label)}
+      emptyText="No matching manufacturer found."
+      autoCapitalize="words"
+    />
+  );
 }
 
 function PremiumDateField({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
