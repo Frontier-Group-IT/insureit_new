@@ -387,7 +387,6 @@ function buildCampaignContext(
   return {
     campaignType,
     sourceSheet: "Renewal",
-    callingBrand: "Frontier Trucks",
     vehicleBrandContext: "Tata Commercial",
     primarySalesPitch: "cashless_claim_support",
     cashlessClaimPitch:
