@@ -6,7 +6,7 @@ import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"]);
+const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user", "sales_operations_head"]);
 
 function textValue(formData: FormData, name: string) {
   const value = formData.get(name);

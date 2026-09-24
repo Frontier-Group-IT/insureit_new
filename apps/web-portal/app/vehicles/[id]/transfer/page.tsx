@@ -7,7 +7,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 import { TransferVehicleForm, type TransferCustomerOption } from "./transfer-vehicle-form";
 
-const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"]);
+const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user", "sales_operations_head"]);
 
 type VehicleRow = {
   id: string;

@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Varun Sabharwal Vehicle Transfer access:** branch `fix/varun-vehicle-transfer-access`; grants Varun Sabharwal an employee-specific `view_vehicles=edit` override with organization scope and allows `sales_operations_head` through the existing Vehicle Transfer role gate only when the effective edit permission is present. Other Operations Head users remain blocked unless they receive the same explicit permission override. Vehicle transfer workflow, atomic RPC, and dependency-move rules are unchanged. Includes migration `20260924185500_varun_vehicle_transfer_permission.sql` and regression expectation updates. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 
 - **2026-09-24 — Operations report compact header controls:** branch `refine/reports-operations-compact-header`; removed the visible `Horizon` and `Exception` labels above the Operations report filters and converted both controls to compact 34px inline selectors matching the Reports Overview header language. Horizon uses a calendar icon, Exception uses a compact filter icon, and the existing query/update behavior is preserved. No Operations report data, KPI, compliance, register, export, schema, RLS, permissions, mobile, APK/AAB, or native-runtime changes. **PR #2373 MERGED as `65182afaf7c8aa366ba437f789cef15ae5a5aca7`; `Verify web portal` workflow #4613 passed; deployment not verified.**
 
