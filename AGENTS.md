@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+
+- **2026-09-24 — Operations report compact header controls:** branch `refine/reports-operations-compact-header`; removed the visible `Horizon` and `Exception` labels above the Operations report filters and converted both controls to compact 34px inline selectors matching the Reports Overview header language. Horizon uses a calendar icon, Exception uses a compact filter icon, and the existing query/update behavior is preserved. No Operations report data, KPI, compliance, register, export, schema, RLS, permissions, mobile, APK/AAB, or native-runtime changes. **IMPLEMENTED ON BRANCH; PR #2372 open; not merged/deployed.**
+
 - **2026-09-24 — Customer Policy Detail renewed-action green pill:** branch `ui/customer-renew-action-green-pill`; the `Add renewed policy` header action now uses the same compact pill treatment as policy status chips, with green text/icon on a soft green background and no border. No policy logic, navigation, API/RPC, schema, RLS, native runtime, APK/AAB, or deployment change. **IMPLEMENTED; PR/CI/merge/OTA pending.**
 
 - **2026-09-24 — Sarvam v11 opening + unlimited voice campaign upload:** branch `fix/sarvam-v11-opening-unlimited-campaign-main3`; removes the stale website-generated Tata opening sentence, replaces first-call wording with the concise v11-compatible renewal opening, removes the fixed 100/500 source-row ceiling from parser/UI/schema, and preserves file-size validation plus existing IT-only calling safeguards. Follow-up migration `20260924173500_remove_voice_campaign_row_limit.sql`. **IMPLEMENTED; PR/CI/merge/application/deployment pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
