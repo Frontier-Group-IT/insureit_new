@@ -1,3 +1,14 @@
+## 2026-09-24 — Reports navigation scrollbar override cleanup
+
+- Branch: `fix/reports-nav-remove-scroll-override`.
+- Root cause: `reporting-v2.css` contained later duplicate definitions for `.reports-reference-tabs` and `.reports-reference-subtabs` using `overflow-x: auto`, which overrode the earlier `overflow: visible` rules.
+- Both later rules now also use `overflow: visible`.
+- Result: the shared Reports navigation no longer creates internal scrollbar controls for **Overview | Business | Portfolio | Operations**, and the same applies to secondary report tabs that use the shared subtab class.
+- No report data, page content, calculations, filters, export behavior, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **IMPLEMENTED ON BRANCH; no PR created; not merged; not deployed.**
+
+---
+
 ## 2026-09-24 — Business report navigation/table scroll cleanup
 
 - Branch: `fix/business-report-remove-internal-scrolls`.
