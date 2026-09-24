@@ -351,6 +351,9 @@ assert(!/9329861634|7225842509/.test(currentVoiceState), "current voice state do
 assert(!voiceCampaignModel.includes("MAX_ROWS"), "voice campaign upload has no fixed customer-count ceiling");
 assert(!voiceCampaignModel.includes("maximum of"), "voice campaign parser does not reject a fixed maximum row count");
 assert(sarvamClient.includes("Tata commercial vehicle की insurance renewal के लिए call किया है—अभी दो मिनट हैं?"), "Tata opening uses the v11 concise renewal line");
+assert(!sarvamClient.includes('const brand = stringVariable(context.calling_brand) ?? "Frontier JCB"'), "Tata opening does not inherit the legacy Frontier JCB fallback");
+assert(sarvamClient.includes('const brand = isTataCommercial ? explicitBrand : explicitBrand ?? "Frontier JCB"'), "Frontier JCB fallback remains limited to non-Tata renewal flows");
+assert(sarvamClient.includes('मैं अंजना बोल रही हूँ।'), "Tata opening can remain brand-neutral when no calling brand is supplied");
 assert(!sarvamClient.includes("policy renewal के बारे में call किया था—दो मिनट बात कर सकते हैं क्या?"), "legacy opening sentence is not sent to Sarvam");
 assert(voiceCampaignModel.includes('name.trim().toLowerCase() === "renewal"'), "Tata campaign import explicitly selects the Renewal sheet");
 assert(voiceCampaignModel.includes('"tata_commercial_renewal"'), "voice campaign model carries the Tata Commercial campaign type");
