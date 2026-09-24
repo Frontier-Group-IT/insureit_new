@@ -5,6 +5,8 @@ import {
   getAccessibleIntermediaryIds,
 } from "@/lib/employee-access-scope";
 import { buildIntermediaryDocumentSlots } from "@/lib/intermediary-document-slots";
+import { loadPolicyIntakeDuplicateMatches } from "@/lib/policy-intake-duplicate";
+import type { PolicyIntakeOcrField } from "@/app/policy-intakes/ocr-actions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
 type ProfileLike = { id: string; role?: string | null };
@@ -105,6 +107,7 @@ export type DashboardIntakeRow = {
   intake_number: string;
   status: string;
   ocr_status: string;
+  ocr_fields: PolicyIntakeOcrField[] | null;
   lead_source_name: string;
   customer_mobile: string;
   attention_reason: string | null;
@@ -365,7 +368,7 @@ export async function getDashboardCurrentData(
     ? (() => {
         let query = admin
           .from("policy_intake_requests")
-          .select("id,intake_number,status,ocr_status,lead_source_name,customer_mobile,attention_reason,created_at,updated_at")
+          .select("id,intake_number,status,ocr_status,ocr_fields,lead_source_name,customer_mobile,attention_reason,created_at,updated_at")
           .order("created_at", { ascending: false })
           .limit(500);
         if (!access.reviewPolicyIntakes) query = query.eq("submitted_by_profile_id", profile.id);
@@ -393,6 +396,20 @@ export async function getDashboardCurrentData(
   const claims = claimResult.data ?? [];
   const intermediaries = intermediaryResult.data ?? [];
   const intakes = intakeResult.data ?? [];
+
+  let effectiveIntakes = intakes;
+  let policyIntakeDuplicateLoadError = false;
+  if (access.viewPolicyIntakes && !intakeResult.error && intakes.length) {
+    const duplicateCheck = await loadPolicyIntakeDuplicateMatches(admin, intakes);
+    if (duplicateCheck.ok) {
+      effectiveIntakes = intakes.map((row) =>
+        duplicateCheck.matches.has(row.id) ? { ...row, status: "Duplicate" } : row,
+      );
+    } else {
+      policyIntakeDuplicateLoadError = true;
+      warnings.push("Policy Intake duplicate classification could not be refreshed.");
+    }
+  }
 
   const mtdPolicies = policies.filter((row) => {
     const effectiveDate = row.issuance_date || row.created_at.slice(0, 10);
@@ -662,27 +679,27 @@ export async function getDashboardCurrentData(
     }
   }
 
-  const policyIntakes = access.viewPolicyIntakes && !intakeResult.error
+  const policyIntakes = access.viewPolicyIntakes && !intakeResult.error && !policyIntakeDuplicateLoadError
     ? (() => {
-        const actionRequired = intakes.filter(
+        const actionRequired = effectiveIntakes.filter(
           (row) =>
             row.status === "ready_for_review" ||
             row.status === "needs_attention" ||
             (row.status === "processing" && row.ocr_status === "failed"),
         ).length;
-        const inReview = intakes.filter((row) => row.status === "in_review").length;
-        const processing = intakes.filter(
+        const inReview = effectiveIntakes.filter((row) => row.status === "in_review").length;
+        const processing = effectiveIntakes.filter(
           (row) => row.status === "processing" && row.ocr_status !== "failed",
         ).length;
         return {
-          active: intakes.filter((row) => ["ready_for_review", "in_review", "processing", "needs_attention"].includes(row.status)).length,
+          active: effectiveIntakes.filter((row) => ["ready_for_review", "in_review", "processing", "needs_attention"].includes(row.status)).length,
           actionRequired,
           inReview,
           processing,
           workload: actionRequired + inReview + processing,
-          needsAttention: intakes.filter((row) => row.status === "needs_attention").length,
-          ocrFailed: intakes.filter((row) => row.status === "processing" && row.ocr_status === "failed").length,
-          recent: intakes.filter((row) => !["completed", "rejected"].includes(row.status)).slice(0, 5),
+          needsAttention: effectiveIntakes.filter((row) => row.status === "needs_attention").length,
+          ocrFailed: effectiveIntakes.filter((row) => row.status === "processing" && row.ocr_status === "failed").length,
+          recent: effectiveIntakes.filter((row) => !["completed", "rejected", "Duplicate"].includes(row.status)).slice(0, 5),
         };
       })()
     : null;
