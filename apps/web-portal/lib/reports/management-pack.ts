@@ -9,9 +9,8 @@ import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 import { loadRenewalReport } from "@/lib/reports/renewals";
 
 type ViewerProfile = { id: string; role: string | null };
-export type ManagementPackPeriod = "mtd" | "last_month" | "last_6_months" | "custom";
-export type ManagementPackQuery = { month?: string; period?: ManagementPackPeriod; from?: string; to?: string; business?: string; category?: string };
-export type ManagementPackFilters = { month: string; period: ManagementPackPeriod; fromDate: string; toDate: string; currentMonth: string };
+export type ManagementPackQuery = { month?: string };
+export type ManagementPackFilters = { month: string; fromDate: string; toDate: string; currentMonth: string };
 
 export type ManagementPack = {
   filters: ManagementPackFilters;
@@ -31,7 +30,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     throw new Error("Backoffice Executive cannot access management-pack finance, payout or governance data.");
   }
   const filters = resolveManagementPackFilters(query);
-  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, business: query.business, category: query.category, page: "1" };
+  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" };
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
@@ -39,7 +38,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     loadDistributionReport(profile, { ...monthQuery, onboardingPage: "1" }),
     loadFinanceReport(profile, monthQuery),
     loadClaimsReport(profile, monthQuery),
-    loadRenewalReport(profile, { horizon: "90", business: query.business, category: query.category, page: "1" }),
+    loadRenewalReport(profile, { horizon: "90", page: "1" }),
     loadOperationsReport(profile, { horizon: "90", page: "1" }),
     canViewGovernance ? loadGovernanceReport({ period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" }) : Promise.resolve(null),
   ]);
@@ -61,55 +60,11 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
 export function resolveManagementPackFilters(query: ManagementPackQuery): ManagementPackFilters {
   const today = indiaDate(new Date());
   const currentMonth = today.slice(0, 7);
-
-  if (!query.period && validMonth(query.month) && query.month! <= currentMonth) {
-    const requested = query.month!;
-    const fromDate = `${requested}-01`;
-    const toDate = requested === currentMonth ? today : lastDayOfMonth(requested);
-    return { month: requested, period: "mtd", fromDate, toDate, currentMonth };
-  }
-
-  const requestedPeriod = query.period;
-  const period: ManagementPackPeriod = isManagementPackPeriod(requestedPeriod) ? requestedPeriod : "mtd";
-  if (period === "custom") {
-    const from = validDate(query.from);
-    const to = validDate(query.to);
-    if (from && to) {
-      const fromDate = from <= to ? from : to;
-      const toDate = from <= to ? to : from;
-      return { month: toDate.slice(0, 7), period, fromDate, toDate, currentMonth };
-    }
-  }
-
-  if (period === "last_month") {
-    const previousMonth = shiftMonth(currentMonth, -1);
-    return {
-      month: previousMonth,
-      period,
-      fromDate: `${previousMonth}-01`,
-      toDate: lastDayOfMonth(previousMonth),
-      currentMonth,
-    };
-  }
-
-  if (period === "last_6_months") {
-    const firstMonth = shiftMonth(currentMonth, -5);
-    return {
-      month: currentMonth,
-      period,
-      fromDate: `${firstMonth}-01`,
-      toDate: today,
-      currentMonth,
-    };
-  }
-
-  return {
-    month: currentMonth,
-    period: "mtd",
-    fromDate: `${currentMonth}-01`,
-    toDate: today,
-    currentMonth,
-  };
+  const requested = validMonth(query.month) && query.month! <= currentMonth ? query.month! : currentMonth;
+  const fromDate = `${requested}-01`;
+  const lastDay = lastDayOfMonth(requested);
+  const toDate = requested === currentMonth ? today : lastDay;
+  return { month: requested, fromDate, toDate, currentMonth };
 }
 
 export function managementPackCsvRows(pack: ManagementPack, snapshotVersion?: number) {
@@ -180,17 +135,6 @@ function numberField(value: Record<string, unknown>, key: string) {
   const raw = value[key];
   const numeric = typeof raw === "number" ? raw : Number(raw ?? 0);
   return Number.isFinite(numeric) ? numeric : 0;
-}
-function isManagementPackPeriod(value: string | undefined): value is ManagementPackPeriod {
-  return value === "mtd" || value === "last_month" || value === "last_6_months" || value === "custom";
-}
-function validDate(value: string | undefined) {
-  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
-}
-function shiftMonth(month: string, offset: number) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function validMonth(value: string | undefined) { return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)); }
 function lastDayOfMonth(month: string) {
