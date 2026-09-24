@@ -9,14 +9,15 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { ReportsOverviewToolbar, type OverviewPeriod } from "@/components/reports/reports-overview-toolbar";
+import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
+import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
 import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 
-type Props = { searchParams: Promise<{ period?: string; from?: string; to?: string }> };
+type Props = { searchParams: Promise<{ period?: string; from?: string; to?: string; business?: string; trend?: string }> };
 
 export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
@@ -24,28 +25,53 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
   const query = await searchParams;
   const period = resolveOverviewPeriod(query);
+  const business = resolveOverviewBusiness(query.business);
+  const trendPeriod = resolveTrendPeriod(query.trend);
   const commercialAccess = canAccessPolicyCommercials(profile);
   let loadError = false;
   let pack: Awaited<ReturnType<typeof loadManagementPack>> | null = null;
-  let ytdBusiness: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
+  let trendReport: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
 
   try {
-    const [managementPack, businessPayload] = await Promise.all([
-      loadManagementPack(profile, { from: period.fromDate, to: period.toDate }),
-      loadPolicyBusinessNetReport(profile, { period: "custom", from: period.fromDate, to: period.toDate, page: "1" }),
+    const [managementPack, trendPayload] = await Promise.all([
+      loadManagementPack(profile, {
+        from: period.fromDate,
+        to: period.toDate,
+        business: business.businessLine ?? undefined,
+        category: business.category ?? undefined,
+      }),
+      loadPolicyBusinessNetReport(profile, {
+        period: "custom",
+        from: trendPeriod.fromDate,
+        to: trendPeriod.toDate,
+        business: business.businessLine ?? undefined,
+        category: business.category ?? undefined,
+        page: "1",
+        pageSize: trendPeriod.daily ? "5000" : "25",
+      }),
     ]);
     pack = managementPack;
-    ytdBusiness = businessPayload.report;
+    trendReport = trendPayload.report;
   } catch (error) {
     loadError = true;
     console.error("Reports overview load failed", error);
   }
 
-  const trend = ytdBusiness?.trend ?? [];
-  const topInsurers = (ytdBusiness?.insurers ?? []).slice(0, 5);
-  const recentRecords = (ytdBusiness?.register.rows ?? []).slice(0, 5);
-  const premiumDelta = trendDelta(trend.map((row) => row.net_premium));
-  const policyDelta = trendDelta(trend.map((row) => row.policy_count));
+  const trendPoints = trendReport
+    ? (trendPeriod.daily
+      ? buildDailyTrendPoints(trendReport.register.rows, trendPeriod.fromDate, trendPeriod.toDate)
+      : trendReport.trend.map((row) => ({
+          key: row.month,
+          label: monthYear(row.month),
+          axisLabel: monthYear(row.month),
+          policy_count: row.policy_count,
+          net_premium: row.net_premium,
+        })))
+    : [];
+  const topInsurers = (pack?.business.insurers ?? []).slice(0, 5);
+  const recentRecords = (pack?.business.register.rows ?? []).slice(0, 5);
+  const premiumDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.net_premium));
+  const policyDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.policy_count));
   const riskByInsurer = pack ? buildRiskByInsurer(pack.renewals.insurers, pack.claims.insurers) : [];
 
   return (
@@ -59,10 +85,12 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
           </div>
           <ReportsOverviewToolbar
             activePeriod={period.period}
+            activeBusiness={business.key}
+            activeTrend={trendPeriod.period}
             fromDate={period.fromDate}
             toDate={period.toDate}
             today={period.today}
-            exportHref={pack ? `/reports/export/management-pack?from=${period.fromDate}&to=${period.toDate}` : "/reports"}
+            exportHref={pack ? managementPackExportHref(period, business) : "/reports"}
           />
         </header>
 
@@ -87,13 +115,11 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
             </section>
 
             <section className="ov-grid ov-grid--top">
-              <article className="ov-card ov-section">
-                <div className="ov-section-head">
-                  <h2>Business Trend</h2>
-                  <button type="button" className="ov-mini-select">Last 6 months <ChevronDown className="h-3 w-3" /></button>
-                </div>
-                <BusinessTrendChart trend={trend} />
-              </article>
+              <BusinessTrendCard
+                activePeriod={trendPeriod.period}
+                options={trendOptions(period, business)}
+                points={trendPoints}
+              />
 
               <article className="ov-card ov-section">
                 <div className="ov-section-head">
@@ -177,43 +203,6 @@ function Kpi({ label, value, delta, note, noteTone }: { label: string; value: st
       ) : (
         <div className={`ov-kpi-note ${noteTone === "danger" ? "ov-negative" : ""}`}>{note || "Month to date"}</div>
       )}
-    </div>
-  );
-}
-
-function BusinessTrendChart({ trend }: { trend: Array<{ month: string; policy_count: number; net_premium: number }> }) {
-  if (!trend.length) return <div className="r2-empty">No business trend available for the selected period</div>;
-  const width = 720;
-  const height = 220;
-  const pad = { left: 48, right: 46, top: 28, bottom: 38 };
-  const premiumMax = Math.max(...trend.map((row) => row.net_premium), 1);
-  const policyMax = Math.max(...trend.map((row) => row.policy_count), 1);
-  const x = (index: number) => pad.left + (trend.length === 1 ? 0 : index * ((width - pad.left - pad.right) / (trend.length - 1)));
-  const yPremium = (value: number) => height - pad.bottom - (value / premiumMax) * (height - pad.top - pad.bottom);
-  const yPolicy = (value: number) => height - pad.bottom - (value / policyMax) * (height - pad.top - pad.bottom);
-  const premiumPoints = trend.map((row, index) => `${x(index)},${yPremium(row.net_premium)}`).join(" ");
-  const policyPoints = trend.map((row, index) => `${x(index)},${yPolicy(row.policy_count)}`).join(" ");
-
-  return (
-    <div className="ov-chart">
-      <div className="ov-chart-legend"><span><i className="ov-dot ov-dot--blue" />Net Premium (₹ Lakh)</span><span><i className="ov-dot ov-dot--slate" />Policies (Count)</span></div>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Net premium and policy count trend">
-        {[0, .25, .5, .75, 1].map((tick) => {
-          const y = pad.top + tick * (height - pad.top - pad.bottom);
-          return <line key={tick} x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="ov-grid-line" />;
-        })}
-        <polyline points={premiumPoints} fill="none" className="ov-line ov-line--premium" />
-        <polyline points={policyPoints} fill="none" className="ov-line ov-line--policies" />
-        {trend.map((row, index) => (
-          <g key={row.month}>
-            <circle cx={x(index)} cy={yPremium(row.net_premium)} r="3.5" className="ov-point ov-point--premium" />
-            <circle cx={x(index)} cy={yPolicy(row.policy_count)} r="3" className="ov-point ov-point--policies" />
-            <text x={x(index)} y={height - 13} textAnchor="middle" className="ov-axis-label">{monthYear(row.month)}</text>
-          </g>
-        ))}
-        <text x="8" y="16" className="ov-axis-label">{compactMoney(premiumMax)}</text>
-        <text x={width - 5} y="16" textAnchor="end" className="ov-axis-label">{number(policyMax)}</text>
-      </svg>
     </div>
   );
 }
