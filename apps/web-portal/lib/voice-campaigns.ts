@@ -6,10 +6,17 @@ import { normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { enrichExternalRenewalOpportunity } from "@/lib/external-renewal-authbridge";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-const MAX_ROWS = 100;
+const MAX_ROWS = 500;
 const TERMINAL = new Set(["won", "renewed_elsewhere", "invalid_contact", "do_not_contact", "lost", "duplicate"]);
 const RC_HEADERS = new Set(["rcno", "rcnumber", "registrationno", "registrationnumber", "vehicleno", "vehiclenumber"]);
-const MOBILE_HEADERS = new Set(["mobileno", "mobilenumber", "mobile", "phone", "phonenumber"]);
+const MOBILE_HEADERS = new Set(["mobileno", "mobilenumber", "mobile", "phone", "phonenumber", "contactnumber"]);
+const SECOND_MOBILE_HEADERS = new Set(["secondnumber", "secondmobileno", "alternatemobile", "alternatephone"]);
+const CUSTOMER_NAME_HEADERS = new Set(["customername", "insuredname", "ownername", "ownersdetailsownersname"]);
+const MAKE_HEADERS = new Set(["manufacturer", "make", "vehiclemake", "vehicledetailsmakermanufacturer"]);
+const MODEL_HEADERS = new Set(["model", "vehiclemodel", "makersclass", "vehicledetailsmodelmakersclass"]);
+const INSURER_HEADERS = new Set(["insurer", "insurancecompany", "currentinsurer"]);
+const POLICY_NUMBER_HEADERS = new Set(["policynumber", "policyno", "currentpolicynumber"]);
+const POLICY_EXPIRY_HEADERS = new Set(["policyexpirydate", "insuranceupto", "insurancetodate", "insurancedetailsinsurancetodateinsuranceupto"]);
 
 type ExistingOpportunity = {
   id: string;
@@ -17,6 +24,7 @@ type ExistingOpportunity = {
   opportunity_status: string;
   is_active: boolean;
   ai_profile_overrides: Record<string, unknown> | null;
+  source_payload: Record<string, unknown> | null;
 };
 
 export type VoiceCampaignListRow = {
@@ -208,40 +216,191 @@ async function resolvePartnerId() {
   return ids[0];
 }
 
+function normalizeDate(value: unknown) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  const dmy = text.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+  if (dmy) {
+    const [, dd, mm, yyyy] = dmy;
+    const iso = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    const date = new Date(iso + "T00:00:00Z");
+    return Number.isNaN(date.getTime()) ? null : iso;
+  }
+
+  const ymd = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (ymd) {
+    const [, yyyy, mm, dd] = ymd;
+    const iso = `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    const date = new Date(iso + "T00:00:00Z");
+    return Number.isNaN(date.getTime()) ? null : iso;
+  }
+
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+}
+
+function cleanText(value: unknown) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  return text && !/^#?N\/?A$/i.test(text) ? text : null;
+}
+
+type ParsedCampaignRow = {
+  sourceRowNumber: number;
+  registrationNumber: string | null;
+  mobile: string | null;
+  secondaryMobile: string | null;
+  customerName: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  currentInsurer: string | null;
+  policyNumber: string | null;
+  policyExpiryDate: string | null;
+};
+
 function parseWorkbook(buffer: ArrayBuffer) {
   const workbook = XLSX.read(buffer, { type: "array" });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) throw new Error("The Excel file has no worksheet.");
+  const tataSheetName = workbook.SheetNames.find((name) => name.trim().toLowerCase() === "renewal");
+  const candidateSheetName = tataSheetName ?? workbook.SheetNames[0];
+  if (!candidateSheetName) throw new Error("The Excel file has no worksheet.");
 
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], {
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[candidateSheetName], {
     header: 1,
     raw: false,
     defval: "",
   });
-
   if (!rows.length) throw new Error("The Excel file is empty.");
 
   const headers = rows[0].map(normalizeHeader);
   const rcIndex = headers.findIndex((value) => RC_HEADERS.has(value));
   const mobileIndex = headers.findIndex((value) => MOBILE_HEADERS.has(value));
-
   if (rcIndex < 0 || mobileIndex < 0) {
-    throw new Error('Excel must contain the required fields "RC No." and "Mobile No.".');
+    throw new Error('Excel must contain the required fields "RC No./Registration Number" and "Mobile No./Contact Number".');
   }
+
+  const find = (set: Set<string>) => headers.findIndex((value) => set.has(value));
+  const secondMobileIndex = find(SECOND_MOBILE_HEADERS);
+  const customerNameIndex = find(CUSTOMER_NAME_HEADERS);
+  const makeIndex = find(MAKE_HEADERS);
+  const modelIndex = find(MODEL_HEADERS);
+  const insurerIndex = find(INSURER_HEADERS);
+  const policyNumberIndex = find(POLICY_NUMBER_HEADERS);
+  const policyExpiryIndex = find(POLICY_EXPIRY_HEADERS);
+
+  const isTataRenewal =
+    Boolean(tataSheetName) &&
+    customerNameIndex >= 0 &&
+    makeIndex >= 0 &&
+    modelIndex >= 0 &&
+    insurerIndex >= 0 &&
+    policyExpiryIndex >= 0;
 
   const dataRows = rows
     .slice(1)
     .map((row, index) => ({ row, sourceRowNumber: index + 2 }))
     .filter(({ row }) => row.some((value) => String(value ?? "").trim()));
-
   if (!dataRows.length) throw new Error("The Excel file has no customer rows.");
-  if (dataRows.length > MAX_ROWS) throw new Error("A campaign can contain a maximum of 100 customers.");
+  if (dataRows.length > MAX_ROWS) throw new Error(`A campaign can contain a maximum of ${MAX_ROWS} source rows.`);
 
-  return dataRows.map(({ row, sourceRowNumber }) => ({
+  const parsed: ParsedCampaignRow[] = dataRows.map(({ row, sourceRowNumber }) => ({
     sourceRowNumber,
-    registrationNumber: normalizeVehicleRegistrationNumber(String(row[rcIndex] ?? "")),
+    registrationNumber: normalizeVehicleRegistrationNumber(String(row[rcIndex] ?? "")) || null,
     mobile: normalizeMobile(row[mobileIndex]),
+    secondaryMobile: secondMobileIndex >= 0 ? normalizeMobile(row[secondMobileIndex]) : null,
+    customerName: customerNameIndex >= 0 ? cleanText(row[customerNameIndex]) : null,
+    manufacturer: makeIndex >= 0 ? cleanText(row[makeIndex]) : null,
+    model: modelIndex >= 0 ? cleanText(row[modelIndex]) : null,
+    currentInsurer: insurerIndex >= 0 ? cleanText(row[insurerIndex]) : null,
+    policyNumber: policyNumberIndex >= 0 ? cleanText(row[policyNumberIndex]) : null,
+    policyExpiryDate: policyExpiryIndex >= 0 ? normalizeDate(row[policyExpiryIndex]) : null,
   }));
+
+  return {
+    campaignType: isTataRenewal ? "tata_commercial_renewal" : "standard_renewal",
+    sourceSheetName: candidateSheetName,
+    rawRowCount: dataRows.length,
+    rows: parsed,
+  };
+}
+
+function groupTataRenewalRows(rows: ParsedCampaignRow[]) {
+  const rejectedRows = rows.filter((row) => !row.registrationNumber || !(row.mobile || row.secondaryMobile));
+  const groups = new Map<string, ParsedCampaignRow[]>();
+
+  for (const row of rows) {
+    if (!row.registrationNumber) continue;
+    const mobile = row.mobile || row.secondaryMobile;
+    if (!mobile) continue;
+    const group = groups.get(mobile) ?? [];
+    group.push({ ...row, mobile });
+    groups.set(mobile, group);
+  }
+
+  const grouped = [...groups.entries()].map(([mobile, vehicles]) => {
+    vehicles.sort((a, b) => {
+      const aDate = a.policyExpiryDate ?? "9999-12-31";
+      const bDate = b.policyExpiryDate ?? "9999-12-31";
+      return aDate.localeCompare(bDate) || a.sourceRowNumber - b.sourceRowNumber;
+    });
+    const primary = vehicles[0];
+    return {
+      ...primary,
+      mobile,
+      vehicles: vehicles.map((vehicle) => ({
+        registrationNumber: vehicle.registrationNumber,
+        manufacturer: vehicle.manufacturer,
+        model: vehicle.model,
+        currentInsurer: vehicle.currentInsurer,
+        policyNumber: vehicle.policyNumber,
+        policyExpiryDate: vehicle.policyExpiryDate,
+      })),
+    };
+  });
+
+  return {
+    rows: grouped,
+    rejectedCount: rejectedRows.length,
+    groupedVehicleCount: grouped.reduce((count, row) => count + Math.max(row.vehicles.length - 1, 0), 0),
+  };
+}
+
+function buildCampaignContext(
+  campaignType: string,
+  sourceSheetName: string,
+  row: ParsedCampaignRow & { vehicles: Array<Record<string, unknown>> },
+) {
+  if (campaignType !== "tata_commercial_renewal") {
+    return {
+      campaignType,
+      sourceSheet: sourceSheetName,
+      customerName: row.customerName,
+      manufacturer: row.manufacturer,
+      model: row.model,
+      currentInsurer: row.currentInsurer,
+      policyNumber: row.policyNumber,
+      policyExpiryDate: row.policyExpiryDate,
+      vehicleCount: row.vehicles.length,
+      vehicles: row.vehicles,
+    };
+  }
+
+  return {
+    campaignType,
+    sourceSheet: "Renewal",
+    callingBrand: "Frontier Trucks",
+    vehicleBrandContext: "Tata Commercial",
+    primarySalesPitch: "cashless_claim_support",
+    cashlessClaimPitch:
+      "हमारे through renewal कराने पर cashless claim process में end-to-end assistance हमारी main service benefit है. Exact cashless approval insurer और claim terms के according होता है.",
+    customerName: row.customerName,
+    manufacturer: row.manufacturer,
+    model: row.model,
+    currentInsurer: row.currentInsurer,
+    policyNumber: row.policyNumber,
+    policyExpiryDate: row.policyExpiryDate,
+    vehicleCount: row.vehicles.length,
+    vehicles: row.vehicles,
+  };
 }
 
 export type VoiceCampaignListState = {
@@ -293,7 +452,17 @@ export async function createVoiceCampaignFromWorkbook(input: {
   if (!/\.(xlsx|xls|csv)$/i.test(input.fileName)) throw new Error("Upload an Excel (.xlsx/.xls) or CSV file.");
   if (input.fileBuffer.byteLength > 2_500_000) throw new Error("Campaign file is too large.");
 
-  const rows = parseWorkbook(input.fileBuffer);
+  const parsedWorkbook = parseWorkbook(input.fileBuffer);
+  const isTataRenewal = parsedWorkbook.campaignType === "tata_commercial_renewal";
+  const tataGrouped = isTataRenewal ? groupTataRenewalRows(parsedWorkbook.rows) : null;
+  const rows = tataGrouped?.rows ?? parsedWorkbook.rows.map((row) => ({ ...row, vehicles: [{
+    registrationNumber: row.registrationNumber,
+    manufacturer: row.manufacturer,
+    model: row.model,
+    currentInsurer: row.currentInsurer,
+    policyNumber: row.policyNumber,
+    policyExpiryDate: row.policyExpiryDate,
+  }] }));
   const partnerId = await resolvePartnerId();
   const admin = createSupabaseAdminClient();
 
@@ -304,7 +473,7 @@ export async function createVoiceCampaignFromWorkbook(input: {
       name,
       description: input.description?.replace(/\s+/g, " ").trim().slice(0, 500) || null,
       status: "draft",
-      total_rows: rows.length,
+      total_rows: parsedWorkbook.rawRowCount,
       created_by_auth_user_id: input.requestedByAuthUserId,
     })
     .select("id")
@@ -318,9 +487,9 @@ export async function createVoiceCampaignFromWorkbook(input: {
       partner_id: partnerId,
       source_name: "IT Voice Campaign · " + name,
       source_file_name: input.fileName.slice(0, 200),
-      source_period: "IT-controlled voice campaign",
+      source_period: isTataRenewal ? "Tata Commercial Renewal" : "IT-controlled voice campaign",
       status: "validated",
-      total_rows: rows.length,
+      total_rows: parsedWorkbook.rawRowCount,
       imported_by: input.requestedByAuthUserId,
     })
     .select("id")
@@ -332,7 +501,7 @@ export async function createVoiceCampaignFromWorkbook(input: {
 
   const { data: existingRows, error: existingError } = await admin
     .from("external_renewal_opportunities")
-    .select("id,registration_no,opportunity_status,is_active,ai_profile_overrides")
+    .select("id,registration_no,opportunity_status,is_active,ai_profile_overrides,source_payload")
     .eq("partner_id", partnerId)
     .not("registration_no", "is", null)
     .order("created_at", { ascending: false })
@@ -349,17 +518,17 @@ export async function createVoiceCampaignFromWorkbook(input: {
 
   const seen = new Set<string>();
   let accepted = 0;
-  let rejected = 0;
-  let duplicates = 0;
+  let rejected = tataGrouped?.rejectedCount ?? 0;
+  let duplicates = tataGrouped?.groupedVehicleCount ?? 0;
 
   for (const row of rows) {
     if (!row.registrationNumber || !row.mobile) {
-      rejected += 1;
+      if (!isTataRenewal) rejected += 1;
       continue;
     }
 
     if (seen.has(row.registrationNumber)) {
-      duplicates += 1;
+      if (!isTataRenewal) duplicates += 1;
       continue;
     }
     seen.add(row.registrationNumber);
@@ -388,11 +557,22 @@ export async function createVoiceCampaignFromWorkbook(input: {
           ? { ...existing.ai_profile_overrides }
           : {};
       overrides.mobile = row.mobile;
+      const sourcePayload =
+        existing.source_payload && typeof existing.source_payload === "object"
+          ? { ...existing.source_payload }
+          : {};
+      const priorContexts =
+        sourcePayload.voice_campaign_contexts && typeof sourcePayload.voice_campaign_contexts === "object"
+          ? { ...(sourcePayload.voice_campaign_contexts as Record<string, unknown>) }
+          : {};
+      priorContexts[campaign.id] = buildCampaignContext(parsedWorkbook.campaignType, parsedWorkbook.sourceSheetName, row);
+      sourcePayload.voice_campaign_contexts = priorContexts;
 
       const { error } = await admin
         .from("external_renewal_opportunities")
         .update({
           ai_profile_overrides: overrides,
+          source_payload: sourcePayload,
           ai_profile_updated_at: new Date().toISOString(),
           ai_profile_updated_by: input.requestedByAuthUserId,
           updated_at: new Date().toISOString(),
@@ -408,11 +588,23 @@ export async function createVoiceCampaignFromWorkbook(input: {
           partner_id: partnerId,
           source_row_number: row.sourceRowNumber,
           mobile: row.mobile,
+          customer_name: row.customerName,
           registration_no: row.registrationNumber,
+          vehicle_make: row.manufacturer,
+          vehicle_model: row.model,
+          current_insurer: row.currentInsurer,
+          current_policy_no: row.policyNumber,
           invoice_date: todayIso(),
           opportunity_status: "new",
           is_active: true,
-          source_payload: { entry_type: "it_voice_campaign", campaign_id: campaign.id },
+          source_payload: {
+            entry_type: "it_voice_campaign",
+            campaign_id: campaign.id,
+            source_sheet: parsedWorkbook.sourceSheetName,
+            voice_campaign_contexts: {
+              [campaign.id]: buildCampaignContext(parsedWorkbook.campaignType, parsedWorkbook.sourceSheetName, row),
+            },
+          },
           voice_queue_source: "it_campaign",
         })
         .select("id")
@@ -589,7 +781,7 @@ export async function getVoiceCampaignDetail(campaignId: string) {
     .select("*")
     .eq("campaign_id", campaignId)
     .order("source_row_number", { ascending: true })
-    .limit(100)
+    .limit(MAX_ROWS)
     .returns<VoiceCampaignMemberRow[]>();
 
   const opportunityIds = (members ?? []).map((row) => row.opportunity_id);
