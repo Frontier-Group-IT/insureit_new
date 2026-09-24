@@ -1,3 +1,14 @@
+## 2026-09-24 — Customer Policy Detail renewal action moved to page header
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-policy-renew-action-header`.
+
+- Moves `Add renewed policy` from the full-width button inside the Policy Detail card to a compact rounded action at the far right of the `Policy details` page-title row.
+- Keeps the existing visibility rule: shown only when the policy is expired or due for renewal.
+- Keeps the existing navigation target to Customer Add Policy with the current vehicle preselected.
+- Removes the previous bottom full-width renewal button from the policy summary card.
+- No API/RPC/schema/RLS, policy calculation, native dependency/config, runtime-version, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Policy Detail status pill parity
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-policy-detail-status-pill`.
