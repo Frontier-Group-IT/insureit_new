@@ -62,6 +62,11 @@ begin
     raise exception 'Destination customer is already the current vehicle owner.';
   end if;
 
+  if not public.can_access_customer(p_actor_profile_id, v_old_customer_id)
+     or not public.can_access_customer(p_actor_profile_id, p_new_customer_id) then
+    raise exception 'You do not have access to both the source and destination customers.';
+  end if;
+
   if not exists (
     select 1
     from public.customers c
