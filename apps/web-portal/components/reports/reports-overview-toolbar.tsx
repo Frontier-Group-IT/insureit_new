@@ -52,8 +52,10 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent) {
-      if (periodOpen && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if ((periodOpen || customOpen) && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setPeriodOpen(false);
+        setCustomOpen(false);
+        setDateError("");
       }
       if (businessOpen && businessRef.current && !businessRef.current.contains(event.target as Node)) {
         setBusinessOpen(false);
@@ -73,7 +75,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [periodOpen, businessOpen]);
+  }, [periodOpen, businessOpen, customOpen]);
 
   function baseParams() {
     const params = new URLSearchParams();
@@ -91,6 +93,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
       setCustomOpen(true);
       return;
     }
+    setCustomOpen(false);
     const params = baseParams();
     params.set("period", period);
     router.push(`/reports?${params.toString()}`);
@@ -98,6 +101,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
 
   function applyBusiness(business: OverviewBusiness) {
     setBusinessOpen(false);
+    setCustomOpen(false);
     const params = new URLSearchParams();
     params.set("period", activePeriod);
     if (activePeriod === "custom") {
@@ -131,11 +135,6 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
     router.push(`/reports?${params.toString()}`);
   }
 
-  function closeCustom() {
-    setCustomOpen(false);
-    setDateError("");
-  }
-
   return (
     <>
       <div className="ov-toolbar">
@@ -145,7 +144,15 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
             className="ov-control"
             aria-haspopup="menu"
             aria-expanded={periodOpen}
-            onClick={() => setPeriodOpen((open) => !open)}
+            onClick={() => {
+              if (customOpen) {
+                setCustomOpen(false);
+                setDateError("");
+                setPeriodOpen(true);
+                return;
+              }
+              setPeriodOpen((open) => !open);
+            }}
           >
             <CalendarDays className="h-3.5 w-3.5" />
             <span>{activeLabel}</span>
@@ -169,6 +176,57 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
                   {option.label}
                 </button>
               ))}
+            </div>
+          ) : null}
+
+          {customOpen ? (
+            <div
+              role="dialog"
+              aria-labelledby="report-custom-period-title"
+              className="absolute right-0 top-[calc(100%+6px)] z-50 w-[390px] max-w-[calc(100vw-32px)] rounded-xl border border-[#d8e0eb] bg-white p-4 shadow-[0_16px_40px_rgba(25,45,78,0.18)]"
+            >
+              <h2 id="report-custom-period-title" className="text-[13px] font-bold text-[#152b4d]">
+                Select the period for report
+              </h2>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <label className="grid gap-1.5 text-[10px] font-bold text-[#50627a]">
+                  From Date
+                  <input
+                    type="date"
+                    value={customFrom}
+                    max={today}
+                    onChange={(event) => {
+                      setCustomFrom(event.target.value);
+                      setDateError("");
+                    }}
+                    className="h-9 w-full rounded-lg border border-[#d4deea] bg-white px-2.5 text-[11px] font-semibold text-[#243b5a]"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-[10px] font-bold text-[#50627a]">
+                  To Date
+                  <input
+                    type="date"
+                    value={customTo}
+                    min={customFrom || undefined}
+                    max={today}
+                    onChange={(event) => {
+                      setCustomTo(event.target.value);
+                      setDateError("");
+                    }}
+                    className="h-9 w-full rounded-lg border border-[#d4deea] bg-white px-2.5 text-[11px] font-semibold text-[#243b5a]"
+                  />
+                </label>
+              </div>
+              {dateError ? <p className="mt-2.5 text-[10px] font-semibold text-[#b42318]">{dateError}</p> : null}
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={applyCustomPeriod}
+                  className="h-8 min-w-[70px] rounded-lg bg-[#155fa0] px-4 text-[10px] font-bold text-white transition hover:bg-[#104f87]"
+                >
+                  OK
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
@@ -213,62 +271,6 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
         </Link>
       </div>
 
-      {customOpen ? (
-        <div
-          className="fixed inset-0 z-[120] grid place-items-center bg-[#0d1b2a]/25 px-4 backdrop-blur-[1px]"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="report-custom-period-title"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeCustom();
-          }}
-        >
-          <div className="w-full max-w-[430px] rounded-2xl border border-[#dce4ef] bg-white p-5 shadow-[0_24px_70px_rgba(20,39,70,0.24)]">
-            <h2 id="report-custom-period-title" className="text-[16px] font-bold text-[#152b4d]">
-              Select the period for report
-            </h2>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              <label className="grid gap-1.5 text-[10px] font-bold text-[#50627a]">
-                From Date
-                <input
-                  type="date"
-                  value={customFrom}
-                  max={today}
-                  onChange={(event) => {
-                    setCustomFrom(event.target.value);
-                    setDateError("");
-                  }}
-                  className="h-10 w-full rounded-lg border border-[#d4deea] bg-white px-3 text-[12px] font-semibold text-[#243b5a]"
-                />
-              </label>
-              <label className="grid gap-1.5 text-[10px] font-bold text-[#50627a]">
-                To Date
-                <input
-                  type="date"
-                  value={customTo}
-                  min={customFrom || undefined}
-                  max={today}
-                  onChange={(event) => {
-                    setCustomTo(event.target.value);
-                    setDateError("");
-                  }}
-                  className="h-10 w-full rounded-lg border border-[#d4deea] bg-white px-3 text-[12px] font-semibold text-[#243b5a]"
-                />
-              </label>
-            </div>
-            {dateError ? <p className="mt-3 text-[10px] font-semibold text-[#b42318]">{dateError}</p> : null}
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={applyCustomPeriod}
-                className="h-9 min-w-[76px] rounded-lg bg-[#155fa0] px-4 text-[11px] font-bold text-white transition hover:bg-[#104f87]"
-              >
-                OK
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </>
   );
 }
