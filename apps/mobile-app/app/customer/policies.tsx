@@ -25,6 +25,8 @@ type PolicyRow = {
   start_date: string;
   end_date: string;
   source: 'sibl' | 'external';
+  status?: string | null;
+  superseded_by_policy_id?: string | null;
 };
 
 export default function PoliciesScreen() {
@@ -45,16 +47,22 @@ export default function PoliciesScreen() {
       const ids = contexts.map((context) => context.customer_id);
       if (ids.length) {
         const [policyResult, externalPolicyResult, vehicleResult, companyResult] = await Promise.all([
-          supabase.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids).order('end_date', { ascending: true }),
+          supabase.from('policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date,status,superseded_by_policy_id').in('customer_id', ids).order('end_date', { ascending: true }),
           (supabase as any).from('external_policies').select('id,customer_id,vehicle_id,insurance_company_id,policy_no,policy_type,start_date,end_date').in('customer_id', ids).order('end_date', { ascending: true }),
           supabase.from('vehicles').select('*').in('customer_id', ids),
           supabase.from('insurance_companies').select('*'),
         ]);
         if (!active) return;
-        setPolicies([
+        const combinedPolicies: PolicyRow[] = [
           ...((policyResult.data ?? []) as Omit<PolicyRow, 'source'>[]).map((policy) => ({ ...policy, source: 'sibl' as const })),
-          ...((externalPolicyResult.data ?? []) as Omit<PolicyRow, 'source'>[]).map((policy) => ({ ...policy, source: 'external' as const })),
-        ].sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime()));
+          ...((externalPolicyResult.data ?? []) as Omit<PolicyRow, 'source' | 'status' | 'superseded_by_policy_id'>[]).map((policy) => ({
+            ...policy,
+            source: 'external' as const,
+            status: null,
+            superseded_by_policy_id: null,
+          })),
+        ];
+        setPolicies(currentPoliciesByVehicle(combinedPolicies));
         setVehicles(vehicleResult.data ?? []);
         setCompanies(companyResult.data ?? []);
       }
@@ -192,6 +200,37 @@ function PolicySummaryColumn({
       </View>
     </View>
   );
+}
+
+
+function currentPoliciesByVehicle(policies: PolicyRow[]) {
+  const candidates = policies.filter((policy) => {
+    if (policy.superseded_by_policy_id) return false;
+    return !['superseded', 'cancelled', 'canceled', 'rejected', 'void'].includes((policy.status ?? '').trim().toLowerCase());
+  });
+
+  const latestByVehicle = new Map<string, PolicyRow>();
+  for (const policy of candidates) {
+    const existing = latestByVehicle.get(policy.vehicle_id);
+    if (!existing || comparePolicyRecency(policy, existing) > 0) {
+      latestByVehicle.set(policy.vehicle_id, policy);
+    }
+  }
+
+  return Array.from(latestByVehicle.values()).sort(
+    (a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime(),
+  );
+}
+
+function comparePolicyRecency(a: PolicyRow, b: PolicyRow) {
+  const startDifference = new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
+  if (startDifference !== 0) return startDifference;
+
+  const endDifference = new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+  if (endDifference !== 0) return endDifference;
+
+  if (a.source !== b.source) return a.source === 'sibl' ? 1 : -1;
+  return a.id.localeCompare(b.id);
 }
 
 function countForFilter(filter: PolicyFilter, policies: PolicyRow[]) {
