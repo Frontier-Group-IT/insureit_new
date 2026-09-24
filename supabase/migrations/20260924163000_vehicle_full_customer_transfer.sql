@@ -180,8 +180,7 @@ begin
   v_counts := v_counts || jsonb_build_object('commissionLedger', v_count);
 
   update public.intermediary_referrals
-  set customer_id = p_new_customer_id,
-      updated_at = now()
+  set customer_id = p_new_customer_id
   where policy_id = any(v_policy_ids)
     and customer_id is distinct from p_new_customer_id;
   get diagnostics v_count = row_count;
