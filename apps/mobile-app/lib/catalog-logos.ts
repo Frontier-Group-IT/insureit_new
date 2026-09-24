@@ -37,7 +37,13 @@ const insurerLogos: Record<string, ImageSourcePropType> = {
 };
 
 const insurerAliases: Record<string, keyof typeof insurerLogos> = {
+  bajajgeneral: 'bajajallianz',
   bajajgeneralinsurance: 'bajajallianz',
+  bajajgeneralinsurancecoltd: 'bajajallianz',
+  bajajgeneralinsuranceltd: 'bajajallianz',
+  bajajallianzgeneral: 'bajajallianz',
+  bajajallianzgeneralinsurancecoltd: 'bajajallianz',
+  bajajallianzgeneralinsuranceltd: 'bajajallianz',
   bajajgeneralinsurancelimited: 'bajajallianz',
   bajajgeneralinsurancecompany: 'bajajallianz',
   bajajgeneralinsurancecompanylimited: 'bajajallianz',

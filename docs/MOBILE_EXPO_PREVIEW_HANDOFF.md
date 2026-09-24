@@ -1,3 +1,13 @@
+## 2026-09-24 — Customer App Bajaj insurer logo fix
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-bajaj-insurer-logo`.
+
+- Replaces `apps/mobile-app/assets/catalog/insurers/bajaj-allianz.png` with the clearer existing mobile Bajaj insurer artwork.
+- Expands logo aliases for Bajaj General / Bajaj Allianz short and `Co Ltd` / `Ltd` name variants.
+- Policy list/detail continue to resolve through the shared `getInsurerLogoSource` catalog helper.
+- No policy logic, API/RPC/schema/RLS, native dependency/config, runtime version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Policy Detail renewed-action green pill
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-renew-action-green-pill`.
