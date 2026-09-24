@@ -49,6 +49,9 @@ assertIncludes(page, "INSUREIT does not allow a vehicle-only transfer", "transfe
 assertIncludes(form, "Transfer vehicle and all dependencies", "transfer confirmation");
 assertIncludes(form, 'name="confirm_everything"', "transfer confirmation checkbox");
 assertIncludes(detail, "/transfer", "vehicle detail transfer link");
+assertIncludes(action, 'redirect(`/vehicles/${vehicleId}/edit?success=vehicle_transferred`)', "transfer post-success edit redirect");
+assertIncludes(editPage, 'query.success === "vehicle_transferred"', "vehicle edit transfer success state");
+assertIncludes(editPage, "Vehicle and all associated dependencies transferred successfully.", "vehicle edit transfer success message");
 assertIncludes(editPage, "Transfer Vehicle", "vehicle edit transfer button");
 assertIncludes(editPage, '/vehicles/${vehicle.id}/transfer', "vehicle edit transfer destination");
 assertIncludes(editPage, 'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"])', "vehicle edit transfer roles");
