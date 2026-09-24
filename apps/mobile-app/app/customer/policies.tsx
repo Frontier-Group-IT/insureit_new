@@ -120,51 +120,30 @@ export default function PoliciesScreen() {
           >
             <View style={styles.accentBar} />
 
-            <View style={styles.policyTop}>
-              <View style={styles.headerInsurerIconWrap}>
-                {insurerLogo ? (
-                  <Image source={insurerLogo} resizeMode="contain" style={styles.headerInsurerIcon} />
-                ) : (
-                  <MaterialCommunityIcons name="shield-outline" size={22} color={palette.navy} />
-                )}
-              </View>
-              <View style={styles.policyTitleCopy}>
-                <View style={styles.stageRow}>
-                  <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
-                  <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
-                    <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
-                  </View>
-                </View>
-                <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
+            <View style={styles.policyHeader}>
+              <Text style={[styles.stageLabel, policy.source === 'external' && styles.externalStageLabel]}>{policyStageLabel(policy, tone)}</Text>
+              <View style={[styles.sourcePill, { backgroundColor: colors.soft }]}>
+                <Text style={[styles.sourceText, { color: colors.accent }]}>{compactPolicyStatusLabel(tone, days)}</Text>
               </View>
             </View>
 
-            <View style={styles.numberRow}>
-              <View style={styles.numberBox}>
-                <Text style={styles.numberLabel}>Policy No.</Text>
-                <Text style={styles.numberValue} numberOfLines={2}>{policy.policy_no}</Text>
-              </View>
-              <View style={styles.numberBox}>
-                <Text style={styles.numberLabel}>Policy Product</Text>
-                <Text style={styles.numberValue} numberOfLines={2}>{policy.policy_type || 'Policy'}</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoBox}>
-              <PolicyDetailColumn
-                icon={manufacturerLogo}
-                fallbackIcon="car-side"
-                firstValue={vehicle?.make ?? '-'}
-                secondValue={vehicle?.model ?? '-'}
-                secondValueMuted
-              />
-              <View style={styles.infoDivider} />
-              <PolicyDetailColumn
+            <View style={styles.policyContentRow}>
+              <PolicySummaryColumn
                 icon={insurerLogo}
                 fallbackIcon="shield-outline"
-                firstValue={company?.name ?? '-'}
-                secondValue={formatDate(policy.end_date)}
-                secondValueDotColor={colors.accent}
+                primaryValue={policy.policy_no}
+                secondaryValue={company?.name ?? '-'}
+                tertiaryValue={formatDate(policy.end_date)}
+                tertiaryDotColor={colors.accent}
+              />
+              <View style={styles.contentDivider} />
+              <PolicySummaryColumn
+                icon={manufacturerLogo}
+                fallbackIcon="car-side"
+                primaryValue={vehicle?.vehicle_no ?? 'Vehicle unavailable'}
+                secondaryValue={vehicle?.make ?? '-'}
+                tertiaryValue={vehicle?.model ?? '-'}
+                tertiaryMuted
               />
             </View>
 
@@ -177,23 +156,25 @@ export default function PoliciesScreen() {
   );
 }
 
-function PolicyDetailColumn({
+function PolicySummaryColumn({
   icon,
   fallbackIcon,
-  firstValue,
-  secondValue,
-  secondValueMuted = false,
-  secondValueDotColor,
+  primaryValue,
+  secondaryValue,
+  tertiaryValue,
+  tertiaryMuted = false,
+  tertiaryDotColor,
 }: {
   icon: ImageSourcePropType | null;
   fallbackIcon: 'car-side' | 'shield-outline';
-  firstValue: string;
-  secondValue: string;
-  secondValueMuted?: boolean;
-  secondValueDotColor?: string;
+  primaryValue: string;
+  secondaryValue: string;
+  tertiaryValue: string;
+  tertiaryMuted?: boolean;
+  tertiaryDotColor?: string;
 }) {
   return (
-    <View style={styles.infoColumn}>
+    <View style={styles.summaryColumn}>
       <View style={styles.catalogIconWrap}>
         {icon ? (
           <Image source={icon} resizeMode="contain" style={styles.catalogIcon} />
@@ -201,11 +182,12 @@ function PolicyDetailColumn({
           <MaterialCommunityIcons name={fallbackIcon} size={24} color={palette.navy} />
         )}
       </View>
-      <View style={styles.infoColumnCopy}>
-        <Text style={styles.infoValue} numberOfLines={1}>{firstValue}</Text>
-        <View style={styles.infoSecondRow}>
-          <Text style={[styles.infoValue, styles.infoSecondValue, secondValueMuted && styles.infoSecondValueMuted]} numberOfLines={1}>{secondValue}</Text>
-          {secondValueDotColor ? <View style={[styles.expiryDot, { backgroundColor: secondValueDotColor }]} /> : null}
+      <View style={styles.summaryCopy}>
+        <Text style={styles.summaryPrimary} numberOfLines={1}>{primaryValue}</Text>
+        <Text style={styles.summarySecondary} numberOfLines={1}>{secondaryValue}</Text>
+        <View style={styles.summaryTertiaryRow}>
+          <Text style={[styles.summaryTertiary, tertiaryMuted && styles.summaryTertiaryMuted]} numberOfLines={1}>{tertiaryValue}</Text>
+          {tertiaryDotColor ? <View style={[styles.expiryDot, { backgroundColor: tertiaryDotColor }]} /> : null}
         </View>
       </View>
     </View>
@@ -269,30 +251,22 @@ const styles = StyleSheet.create({
   policyCard: { backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#D8E3EE', borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
-  policyTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  headerInsurerIconWrap: { width: 34, height: 34, borderRadius: 9, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  headerInsurerIcon: { width: 28, height: 28 },
-  policyTitleCopy: { flex: 1, minWidth: 0 },
-  stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  policyHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 22 },
   stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
   externalStageLabel: { color: '#0A43A3' },
-  vehicleNo: { color: palette.ink, fontSize: 14.5, fontWeight: '700', marginTop: 1 },
   sourcePill: { borderRadius: 999, paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { fontSize: 7.8, fontWeight: '900' },
-  numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  numberBox: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
-  numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
-  numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
-  infoBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'stretch' },
-  infoColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 2 },
-  infoDivider: { width: 1, backgroundColor: '#E5ECF5', marginHorizontal: 8 },
+  policyContentRow: { marginTop: 10, flexDirection: 'row', alignItems: 'stretch' },
+  summaryColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 2, paddingVertical: 4 },
+  contentDivider: { width: 1, backgroundColor: '#E1E8F0', marginHorizontal: 10, marginVertical: 2 },
   catalogIconWrap: { width: 42, height: 42, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   catalogIcon: { width: 34, height: 34 },
-  infoColumnCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  infoValue: { color: palette.ink, fontSize: 11.1, lineHeight: 14, fontWeight: '900' },
-  infoSecondRow: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
-  infoSecondValue: { flexShrink: 1 },
-  infoSecondValueMuted: { color: '#8A94A6', fontWeight: '700' },
+  summaryCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  summaryPrimary: { color: palette.ink, fontSize: 12.4, lineHeight: 16, fontWeight: '900' },
+  summarySecondary: { color: palette.ink, fontSize: 10.8, lineHeight: 14, fontWeight: '800', marginTop: 2 },
+  summaryTertiaryRow: { marginTop: 3, flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  summaryTertiary: { color: '#64748B', fontSize: 10.4, lineHeight: 13, fontWeight: '700', flexShrink: 1 },
+  summaryTertiaryMuted: { color: '#97A2B2', fontWeight: '700' },
   expiryDot: { width: 6, height: 6, borderRadius: 999, flexShrink: 0 },
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   footerHint: { color: palette.slate, fontSize: 11.5, fontWeight: '900' },
