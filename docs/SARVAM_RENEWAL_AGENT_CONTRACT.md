@@ -222,3 +222,39 @@ Do not enable outbound calling until all of these are true:
 - a single controlled External Renewal Opportunity is selected for end-to-end verification
 
 Bulk or autonomous campaigns remain out of scope until that single-call lifecycle is verified.
+
+## Tata Commercial campaign-aware extension — 2026-09-24
+
+For the approved Tata Commercial non-breaking renewal campaign, the existing renewal agent contract is extended by campaign-scoped inputs supplied by INSUREIT. `Breaking Case` is not part of this extension.
+
+Additional inputs that may be supplied when known:
+- `campaign_type`
+- `calling_brand`
+- `vehicle_brand_context`
+- `primary_sales_pitch`
+- `cashless_claim_pitch`
+- `renewal_bucket`
+- `days_to_expiry`
+- `vehicle_count`
+- `vehicle_context_summary`
+- `current_policy_number`
+- `repeat_call`
+- `previous_connected_call_count`
+- `last_call_disposition`
+- `last_call_summary`
+- `last_customer_interest`
+- `last_customer_objection`
+- `last_follow_up_time`
+
+The dynamic `opening_line` remains authoritative and must still be spoken exactly once. Sarvam must not reconstruct or prepend a second greeting.
+
+For `campaign_type=tata_commercial_renewal`:
+- use the supplied `calling_brand`; do not hard-code Frontier JCB;
+- treat `vehicle_brand_context=Tata Commercial` as context, not as a claim that Tata Motors is the insurer or insurance provider;
+- if `vehicle_count>1`, handle the customer as one multi-vehicle renewal conversation and do not repeat a complete script for each vehicle;
+- use previous connected-call variables as continuation memory and do not rediscover reliable known information;
+- make cashless claim assistance/support the primary service-value pitch when renewal interest is being discussed;
+- never say or imply cashless approval, claim approval, zero customer payment, settlement amount or insurer authorization is guaranteed;
+- when certainty is requested, state briefly that exact cashless approval depends on insurer and claim/policy terms while Frontier assists with coordination/process support.
+
+The existing explain/capture/execute authority, truthful-action rule, opt-out rule, privacy boundary, one-question-at-a-time style and no-`won` rule remain unchanged.
