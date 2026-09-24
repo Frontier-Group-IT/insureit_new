@@ -93,3 +93,8 @@ The Voice Integration control center must remain usable if the optional voice-ca
 ## Detailed campaign report export — 2026-09-21
 
 Campaign detail may export a server-generated XLSX operational report for IT Super User only. Preserve the exact approved 33 columns and the Voice Integration privacy boundary: mobile stays masked, raw transcripts remain excluded, and unsupported conversation facts such as Add-on Interest must be shown as not captured rather than inferred. Derived outcome/next-action/quality fields must come only from persisted normalized campaign, attempt, retry-event, and opportunity state. See `docs/SARVAM_VOICE_CAMPAIGNS_2026_09_21.md`.
+
+
+## Tata Commercial Renewal campaign — 2026-09-24
+
+The IT Voice Campaign workflow may accept the approved Tata Commercial workbook as a special source. Detect the `Renewal` worksheet and ignore `Breaking Case`; never silently mix the two cohorts. Tata source insurer/policy/expiry/customer/vehicle fields are campaign-scoped evidence and may satisfy pre-call context without AuthBridge spend. Group repeated usable mobiles to one callable prospect and pass multi-vehicle context to Sarvam. The Tata campaign's primary service pitch is **cashless claim assistance/support**, never guaranteed cashless settlement or guaranteed claim approval. Keep all existing IT-only authority, calling-window, kill-switch, DNC/terminal, active-attempt, provider-state, UUID-correlation, webhook/idempotency and no-master-write boundaries. See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
