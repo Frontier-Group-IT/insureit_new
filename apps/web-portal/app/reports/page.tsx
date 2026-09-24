@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
+  ChevronDown,
   Clock3,
   Info,
   TriangleAlert,
@@ -80,7 +81,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               <Kpi label="Net Premium" value={compactMoney(pack.business.summary.net_premium)} delta={premiumDelta} note={period.label} />
               <Kpi label="Policies" value={number(pack.business.summary.policy_count)} delta={policyDelta} note={period.label} />
               <Kpi label={commercialAccess ? "PayIn" : "Commercials"} value={commercialAccess ? compactMoney(pack.finance.summary.payin_after_tds) : "Restricted"} note={commercialAccess ? "Less TDS" : "Authorized users only"} />
-              <Kpi label="Payout" value={commercialAccess ? compactMoney(pack.finance.summary.gross_payout) : "Restricted"} note={commercialAccess ? "Month to date" : "Authorized users only"} />
+              <Kpi label="Payout" value={commercialAccess ? compactMoney(pack.finance.summary.gross_payout) : "Restricted"} note={commercialAccess ? period.label : "Authorized users only"} />
               <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note={`${number(pack.claims.summary.claims_with_pending_documents)} documents pending`} noteTone={pack.claims.summary.claims_with_pending_documents > 0 ? "danger" : undefined} />
               <Kpi label="Renewals 30d" value={number(pack.renewals.summary.due_30_count)} note={`${compactMoney(pack.renewals.summary.premium_due_30)} premium at risk`} />
             </section>
