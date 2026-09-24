@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { AnchoredSearchSelect } from '@/components/anchored-search-select';
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
@@ -392,22 +393,25 @@ function VehicleDropdown({ vehicles, protection, query, selectedVehicle, open, o
 
 function InsurerDropdown({ companies, query, selectedInsurer, open, onToggle, onQueryChange, onSelect }: { companies: InsuranceCompany[]; query: string; selectedInsurer: InsuranceCompany | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void }) {
   return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>Insurer *</Text>
-      <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
-        <View style={styles.selectIcon}><MaterialCommunityIcons name="domain" size={18} color="#0A43A3" /></View>
-        <Text style={[styles.selectValue, !selectedInsurer && styles.placeholder]} numberOfLines={1}>{selectedInsurer ? selectedInsurer.name : 'Select insurer'}</Text>
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
-      </Pressable>
-      <Text style={styles.helperText}>Type matching letters to search insurer.</Text>
-      {open ? <View style={styles.makeMenu}>
-        <View style={styles.makeSearch}><MaterialCommunityIcons name="magnify" size={18} color="#7A8799" /><TextInput value={query} onChangeText={onQueryChange} placeholder="Search insurer" placeholderTextColor="#8A94A6" style={styles.makeSearchInput} /></View>
-        {companies.length ? companies.map((company) => {
-          const active = selectedInsurer?.id === company.id;
-          return <Pressable key={company.id} accessibilityRole="button" onPress={() => onSelect(company)} style={[styles.makeOption, active && styles.selectOptionActive]}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive]} numberOfLines={1}>{company.name}</Text>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</Pressable>;
-        }) : <Text style={styles.emptyLookupText}>No matching insurer found.</Text>}
-      </View> : null}
-    </View>
+    <AnchoredSearchSelect
+      label="Insurer *"
+      selectedId={selectedInsurer?.id ?? null}
+      selectedLabel={selectedInsurer?.name ?? null}
+      placeholder="Select insurer"
+      searchPlaceholder="Search insurer"
+      query={query}
+      open={open}
+      options={companies.map((company) => ({ id: company.id, label: company.name }))}
+      icon="domain"
+      onToggle={onToggle}
+      onQueryChange={onQueryChange}
+      onSelect={(option) => {
+        const company = companies.find((item) => item.id === option.id);
+        if (company) onSelect(company);
+      }}
+      emptyText="No matching insurer found."
+      autoCapitalize="words"
+    />
   );
 }
 
