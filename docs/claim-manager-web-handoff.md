@@ -1,5 +1,16 @@
 # InsureIT Claim Manager Web Dashboard Handoff
 
+## 2026-09-24 — Internal Claim Claim-Intimation Stage Details input-reset fix
+
+**IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `fix/internal-claim-stage-details-input-reset`.
+
+- Fixed the Claim Intimation Stage Details form in `apps/web-portal/components/final-documents/final-documents-workspace-v2.tsx` so asynchronous data loading can no longer erase values the operator has just typed.
+- Stage Details now load separately from document verification/classification refreshes; document-row changes can still reload verification data without resetting the five Stage Details fields.
+- Dirtiness is tracked per field: late server data is merged into untouched fields while locally edited fields are preserved.
+- Removed incorrect initial mappings that populated Claim Intimation Date from Contact Person Name and Gate-in Date from Contact Number. Dealership Name/Location may still use their legitimate server fallback values.
+- Save actions and database contract are unchanged; no schema, migration, RLS, permission, or workflow-state change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 This document is for a fresh ChatGPT/Codex session that will continue the InsureIT project from the current local/GitHub repository state. The customer mobile app is considered complete for now. The next major work is the claim-manager web dashboard using the existing unfinished web app in `apps/web-portal`.
 
 ## Project overview
