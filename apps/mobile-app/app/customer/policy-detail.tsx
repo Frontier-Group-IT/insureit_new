@@ -20,6 +20,12 @@ const policyDetailIcons = {
   vehicle: require('../../assets/custom-icons/policy-detail/linked-vehicle.png'),
 } satisfies Record<string, ImageSourcePropType>;
 
+type PolicyPremiumDetails = {
+  od_premium: number | null;
+  tp_premium: number | null;
+  cpa_amount: number | null;
+};
+
 type PolicyDisplay = {
   id: string;
   customer_id: string;
@@ -40,6 +46,7 @@ export default function PolicyDetailScreen() {
   const [policy, setPolicy] = useState<PolicyDisplay | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [company, setCompany] = useState<InsuranceCompany | null>(null);
+  const [premiumDetails, setPremiumDetails] = useState<PolicyPremiumDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,13 +80,17 @@ export default function PolicyDetailScreen() {
       if (!active) return;
       if (next) setPolicy({ ...next, source: nextSource });
       if (next) {
-        const [vehicleResult, companyResult] = await Promise.all([
+        const [vehicleResult, companyResult, premiumResult] = await Promise.all([
           supabase.from('vehicles').select('*').eq('id', next.vehicle_id).in('customer_id', ids).maybeSingle(),
           supabase.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle(),
+          nextSource === 'sibl'
+            ? (supabase as any).from('policy_premium_details').select('od_premium,tp_premium,cpa_amount').eq('policy_id', next.id).maybeSingle()
+            : Promise.resolve({ data: null }),
         ]);
         if (!active) return;
         setVehicle(vehicleResult.data);
         setCompany(companyResult.data);
+        setPremiumDetails((premiumResult.data ?? null) as PolicyPremiumDetails | null);
       }
       setLoading(false);
     })();
@@ -142,6 +153,13 @@ export default function PolicyDetailScreen() {
               financialValue={formatCurrency(policy.insured_declared_value)}
               financialImage={policyDetailIcons.idv}
             />
+          </View>
+          <View style={styles.heroMetaRow}>
+            <HeroMetric image={policyDetailIcons.premium} label="OD Premium" value={formatCurrency(premiumDetails?.od_premium)} />
+            <HeroMetric image={policyDetailIcons.premium} label="TP Premium" value={formatCurrency(premiumDetails?.tp_premium)} />
+          </View>
+          <View style={styles.heroMetaRow}>
+            <HeroMetric image={policyDetailIcons.premium} label="CPA Amount" value={formatCurrency(premiumDetails?.cpa_amount)} />
           </View>
         </View>
 
