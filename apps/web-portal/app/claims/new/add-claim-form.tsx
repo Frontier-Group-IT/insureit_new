@@ -99,7 +99,10 @@ export function AddClaimForm() {
     try {
       const result = await createOperationsClaim(lookup.vehicle.id, lossAt.toISOString());
       if (!result.ok) {
-        if (result.existingClaim) {
+        if (result.errorCode === "no_eligible_policy") {
+          setShowNoEligiblePolicy(true);
+          setSaveMessage("");
+        } else if (result.existingClaim) {
           setExistingClaim(result.existingClaim);
           setSaveMessage("");
         } else {
