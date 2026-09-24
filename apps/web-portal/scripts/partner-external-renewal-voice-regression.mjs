@@ -12,6 +12,7 @@ const rcEnrichmentMigration = fs.readFileSync(path.join(repoRoot, "supabase/migr
 const editableProfileMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919110000_voice_prospect_editable_profile.sql"), "utf8");
 const quickAddMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919114500_voice_quick_add_queue_source.sql"), "utf8");
 const tataCampaignCapacityMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql"), "utf8");
+const unlimitedVoiceCampaignMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260924173500_remove_voice_campaign_row_limit.sql"), "utf8");
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
@@ -347,7 +348,10 @@ assert(currentVoiceState.includes("INSUREIT-Re-e2468e47-50a8"), "current voice s
 assert(currentVoiceState.includes("PAUSED"), "current voice state records the campaign safety state");
 assert(!/9329861634|7225842509/.test(currentVoiceState), "current voice state does not persist internal test phone numbers");
 
-assert(voiceCampaignModel.includes("const MAX_ROWS = 500"), "voice campaigns accept the approved Tata 406-row source workbook");
+assert(!voiceCampaignModel.includes("MAX_ROWS"), "voice campaign upload has no fixed customer-count ceiling");
+assert(!voiceCampaignModel.includes("maximum of"), "voice campaign parser does not reject a fixed maximum row count");
+assert(sarvamClient.includes("Tata commercial vehicle की insurance renewal के लिए call किया है—अभी दो मिनट हैं?"), "Tata opening uses the v11 concise renewal line");
+assert(!sarvamClient.includes("policy renewal के बारे में call किया था—दो मिनट बात कर सकते हैं क्या?"), "legacy opening sentence is not sent to Sarvam");
 assert(voiceCampaignModel.includes('name.trim().toLowerCase() === "renewal"'), "Tata campaign import explicitly selects the Renewal sheet");
 assert(voiceCampaignModel.includes('"tata_commercial_renewal"'), "voice campaign model carries the Tata Commercial campaign type");
 assert(voiceCampaignModel.includes("groupTataRenewalRows"), "Tata repeated mobiles are grouped before campaign membership");
@@ -357,8 +361,11 @@ assert(sarvamClient.includes("cashless_claim_pitch"), "Sarvam cohort variables i
 assert(sarvamClient.includes("campaign_type"), "Sarvam cohort variables include campaign type");
 assert(itDispatchModel.includes("previous_connected_call_count"), "IT dispatch supplies repeat-call memory");
 assert(tataCampaignCapacityMigration.includes("voice_campaigns_total_rows_check"), "Tata campaign capacity migration updates the source row constraint");
-assert(tataCampaignCapacityMigration.includes("between 0 and 500"), "Tata campaign capacity is bounded at 500 rows");
-assert(deployWorkflow.includes("20260924170000_expand_voice_campaign_capacity.sql"), "production deploy waits for Tata voice campaign schema capacity");
+assert(tataCampaignCapacityMigration.includes("between 0 and 500"), "historical Tata capacity migration remains documented");
+assert(unlimitedVoiceCampaignMigration.includes("total_rows >= 0"), "voice campaign counters remain non-negative after removing the upper limit");
+assert(!unlimitedVoiceCampaignMigration.includes("between 0 and 500"), "voice campaign schema no longer caps campaigns at 500 rows");
+assert(!unlimitedVoiceCampaignMigration.includes("between 0 and 100"), "voice campaign schema no longer caps campaigns at 100 rows");
+assert(deployWorkflow.includes("20260924173500_remove_voice_campaign_row_limit.sql"), "production deploy waits for unlimited voice campaign schema");
 
 assert(voiceCampaignModel.includes("getVoiceCampaignReportRows"), "voice campaign model exposes detailed report rows");
 assert(voiceCampaignModel.includes('addOnInterest: "Not captured"'), "report does not invent add-on interest that is not persisted");
