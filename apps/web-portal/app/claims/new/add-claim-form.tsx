@@ -24,12 +24,14 @@ export function AddClaimForm() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [existingClaim, setExistingClaim] = useState<{ id: string; claimNo: string } | null>(null);
+  const [showNoEligiblePolicy, setShowNoEligiblePolicy] = useState(false);
 
   useEffect(() => {
     const normalized = normalizeVehicleNumber(vehicleNumber);
     const nextRequestId = ++requestId.current;
     setSaveMessage("");
     setExistingClaim(null);
+    setShowNoEligiblePolicy(false);
 
     if (normalized.length < 4) {
       setLookup(null);
@@ -77,6 +79,13 @@ export function AddClaimForm() {
   async function saveClaim(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!lookup?.vehicle.id || !lossDateTime || saving) return;
+
+    if (!lookup.policy) {
+      setSaveMessage("");
+      setExistingClaim(null);
+      setShowNoEligiblePolicy(true);
+      return;
+    }
 
     const lossAt = new Date(lossDateTime);
     if (Number.isNaN(lossAt.getTime())) {
@@ -196,12 +205,58 @@ export function AddClaimForm() {
         </div>
       </form>
 
+      {showNoEligiblePolicy ? (
+        <NoEligiblePolicyPopup onClose={() => setShowNoEligiblePolicy(false)} />
+      ) : null}
+
       {existingClaim ? (
         <ExistingClaimPopup
           onViewClaim={() => router.push(`/claims/${existingClaim.id}`)}
           onCancel={() => setExistingClaim(null)}
         />
       ) : null}
+    </div>
+  );
+}
+
+function NoEligiblePolicyPopup({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#071832]/60 px-5 py-8 backdrop-blur-[1px]"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="no-policy-title"
+        aria-describedby="no-policy-description"
+        className="w-full max-w-[420px] rounded-[22px] bg-white px-6 pb-6 pt-7 text-center shadow-[0_20px_60px_rgba(7,29,73,0.24)] sm:px-7"
+      >
+        <div className="mx-auto mb-5 grid h-[58px] w-[58px] place-items-center rounded-full bg-[#FFF0E8] text-[#E66A4E]">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.3 3.3 2.7 17a2 2 0 0 0 1.75 3h15.1A2 2 0 0 0 21.3 17L13.7 3.3a2 2 0 0 0-3.4 0Z" />
+            <path d="M12 8v5" />
+            <path d="M12 17h.01" />
+          </svg>
+        </div>
+        <h2 id="no-policy-title" className="text-[21px] font-extrabold tracking-[-0.02em] text-[#081D49]">
+          No Eligible Policy Available
+        </h2>
+        <p id="no-policy-description" className="mt-3 text-[13.5px] font-semibold leading-5 text-[#667085]">
+          No active or eligible policy is linked to this vehicle. A claim cannot be created until a valid policy is available.
+        </p>
+        <button
+          type="button"
+          autoFocus
+          onClick={onClose}
+          className="mt-6 min-h-[50px] w-full rounded-[14px] bg-[#07327B] px-4 text-[13px] font-extrabold text-white transition hover:bg-[#062A68] focus:outline-none focus:ring-2 focus:ring-[#9CB6DA] focus:ring-offset-2"
+        >
+          OK
+        </button>
+      </div>
     </div>
   );
 }
