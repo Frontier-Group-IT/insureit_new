@@ -122,8 +122,13 @@ Branch: `feat/tata-commercial-renewal-voice`
 State at documentation time:
 - portal implementation: **IMPLEMENTED on feature branch**
 - migration: **COMMITTED, NOT APPLIED**
-- PR/CI: **PENDING**
+- PR: **#2343 OPEN**
+- canonical CI: **PENDING / no PR workflow run observed yet**
 - merge: **NOT DONE**
 - production deployment: **NOT DONE**
 - live customer calling: **NOT STARTED**
 - Sarvam agent/dashboard configuration for the new variables/prompt: **REQUIRED BEFORE LIVE TATA CALLING**
+
+## Deployment gating update
+
+The dedicated `apply-voice-campaigns.yml` workflow now includes the 2026-09-24 capacity migration and verifies the 500-row constraint. `deploy-production.yml` recognizes the new migration and waits on that schema workflow before production deployment. The Partner web core voice regression now guards Tata Renewal-sheet detection, 500-row capacity, mobile grouping, cashless non-guarantee wording, repeat-call context, Sarvam variable delivery and production schema gating.
