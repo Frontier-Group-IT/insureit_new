@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Reports Business single-page navigation:** branch `simplify/reports-business-single-page`; removes the Business secondary subtabs (Performance / Distribution / Finance), keeps `/reports/business` as the single Business report page showing the existing performance dashboard directly, and redirects legacy `/reports/distribution` and `/reports/finance` routes to `/reports/business` so old links do not break. No report calculations, schema, migration, RLS, permission, APK/AAB, or native-runtime changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 
 - **2026-09-24 — Reports header exact-reference correction:** branch `fix/reports-reference-header-exact`; removed the legacy `ReportNavigation` injection from `ClaimManagerShell` so report child pages no longer render the old white boxed navigation above the shared header. `ReportPageShell` now places report controls/actions in the same top row as `Reports` + updated time, keeps only flat Overview / Business / Portfolio / Operations tabs plus flat Business subtabs, and removes the extra page-context row. Period/horizon shortcuts are compact dropdown controls and Export uses the same blue primary treatment as the approved Overview reference. Report content, calculations, filters, queries, schema, RLS, mobile, APK/AAB, and native runtime are unchanged. **PR #2345 MERGED as `47453542b8e104347595f150a8f01268d7fdcf74`; `Verify web portal` workflow #4566 passed; deployment not verified.**
 
