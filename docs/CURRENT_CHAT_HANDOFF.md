@@ -8,7 +8,7 @@
 - `Intermediaries Business` no longer has a fixed-height vertical scroll container and expands to show all intermediary rows already aggregated by the report dataset.
 - `Business Mix` and `Insurer` cards keep their existing internal scroll behavior.
 - No report formulas, commercial calculations, query/filter behavior, schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
-- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+- `Verify web portal` workflow #4588 passed, including regressions, typecheck, lint, and production build.\n- Merge commit: `06d0cbf4ed9497fc3cf66a2aece0422b503eb224`.\n- **MERGED; production deployment not verified in this step.**
 
 ---
 
