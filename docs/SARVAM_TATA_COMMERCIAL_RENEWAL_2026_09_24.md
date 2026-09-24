@@ -62,7 +62,7 @@ The existing variables such as `opening_line`, customer identity, vehicle, insur
 
 Tata campaign defaults:
 - `campaign_type=tata_commercial_renewal`
-- `calling_brand` is optional; when absent the existing Frontier JCB caller identity remains the website fallback.
+- `calling_brand` is optional. For Tata Commercial campaigns, if it is absent, INSUREIT now uses a brand-neutral Anjna introduction and does **not** fall back to Frontier JCB.
 - `vehicle_brand_context=Tata Commercial`
 - `primary_sales_pitch=cashless_claim_support`
 
@@ -147,3 +147,14 @@ For a first Tata renewal call it now sends:
 Repeat calls still use continuation-aware wording from prior connected-call memory.
 
 The upload parser no longer rejects a campaign because it exceeds 100 or 500 rows, and the new schema migration removes the fixed upper bound from the voice campaign counters. File-size validation, DNC/terminal holds, IT-only authority, manual start, calling window, kill switch and active-attempt protections remain unchanged.
+
+
+## Caller identity correction — 2026-09-24
+
+Root cause confirmed after v11 testing: the Tata campaign importer does not populate `callingBrand`, while `sarvam-renewal-call.ts` previously applied `?? "Frontier JCB"` to every campaign. That caused INSUREIT to send a Frontier JCB opening even though Tata campaign context was otherwise correct.
+
+The corrected contract is:
+- Tata Commercial + explicit `calling_brand` -> speak that exact authorized brand.
+- Tata Commercial + no `calling_brand` -> introduce only Anjna, with no company fallback.
+- Non-Tata renewal flows keep the existing Frontier JCB fallback for backward compatibility.
+- `vehicle_brand_context=Tata Commercial` remains vehicle context only and must never be treated as caller identity.
