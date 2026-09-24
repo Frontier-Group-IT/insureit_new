@@ -70,7 +70,10 @@ export async function transferVehicleCustomer(vehicleId: string, formData: FormD
     p_actor_profile_id: profile.id,
   });
 
-  if (error) redirect(errorUrl(vehicleId, `Transfer failed: ${error.message}`));
+  if (error) {
+    console.error("vehicle_customer_transfer_failed", { vehicleId, destinationCustomerId, actorProfileId: profile.id, error: error.message });
+    redirect(errorUrl(vehicleId, "Transfer failed. No records were moved."));
+  }
   const result = data as { ok?: boolean } | null;
   if (!result?.ok) redirect(errorUrl(vehicleId, "Transfer could not be completed. No records were moved."));
 
