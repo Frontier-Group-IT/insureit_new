@@ -26,6 +26,36 @@ export async function loadRenewalReport(profile: ViewerProfile, query: RenewalQu
 }
 
 export async function loadRenewalExport(profile: ViewerProfile, query: RenewalQuery) { const payload = await loadRenewalReport(profile, { ...query, page: "1" }, 10001); return { rows: payload.report.register.rows.slice(0, 10000), truncated: payload.report.register.total_count > 10000 }; }
+
+
+export async function loadRenewalOpportunityBuckets(profile: ViewerProfile, query: RenewalQuery) {
+  const pageSize = 200;
+  const rows: RenewalRow[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const payload = await loadRenewalReport(profile, { ...query, horizon: "30", page: String(page) }, pageSize);
+    rows.push(...payload.report.register.rows);
+    totalPages = Math.max(1, Math.ceil(payload.report.register.total_count / pageSize));
+    page += 1;
+  } while (page <= totalPages);
+
+  const buckets = [
+    { key: "expired", label: "Expired", min: Number.NEGATIVE_INFINITY, max: -1, policy_count: 0, net_premium: 0 },
+    { key: "within_7", label: "Within 7 Days", min: 0, max: 7, policy_count: 0, net_premium: 0 },
+    { key: "within_15", label: "Within 15 Days", min: 8, max: 15, policy_count: 0, net_premium: 0 },
+    { key: "within_30", label: "Within 30 Days", min: 16, max: 30, policy_count: 0, net_premium: 0 },
+  ];
+
+  for (const row of rows) {
+    const bucket = buckets.find((item) => row.days_to_expiry >= item.min && row.days_to_expiry <= item.max);
+    if (!bucket) continue;
+    bucket.policy_count += 1;
+    bucket.net_premium += row.net_premium || 0;
+  }
+
+  return buckets.map(({ key, label, policy_count, net_premium }) => ({ key, label, policy_count, net_premium }));
+}
 export function resolveRenewalFilters(query: RenewalQuery): RenewalFilters { return { horizonDays: horizon(query.horizon), insurerId: uuid(query.insurer), rmEmployeeId: uuid(query.rm), intermediaryCode: text(query.intermediary, 120), businessLine: businessLine(query.business), category: text(query.category, 120), bucket: bucket(query.bucket), page: positiveInt(query.page) }; }
 function normalizeReport(value:unknown,page:number,pageSize:number):RenewalReport { const raw=obj(value),summary=obj(raw.summary),register=obj(raw.register),filters=obj(raw.filters); return {summary:{upcoming_policy_count:num(summary.upcoming_policy_count),expired_policy_count:num(summary.expired_policy_count),due_30_count:num(summary.due_30_count),due_90_count:num(summary.due_90_count),customer_count:num(summary.customer_count),premium_at_risk:num(summary.premium_at_risk),premium_due_30:num(summary.premium_due_30),nearest_expiry:nullable(summary.nearest_expiry)},buckets:arr(raw.buckets).map(v=>{const x=obj(v);return{key:bucket(str(x.key))??"expired",label:str(x.label),policy_count:num(x.policy_count),gross_premium:num(x.gross_premium),net_premium:num(x.net_premium)}}),insurers:arr(raw.insurers).map(v=>{const x=obj(v);return{id:nullable(x.id),insurer_name:str(x.insurer_name),upcoming_policy_count:num(x.upcoming_policy_count),due_30_count:num(x.due_30_count),expired_count:num(x.expired_count),premium_at_risk:num(x.premium_at_risk),nearest_expiry:nullable(x.nearest_expiry)}}),rms:arr(raw.rms).map(v=>{const x=obj(v);return{rm_name:str(x.rm_name),upcoming_policy_count:num(x.upcoming_policy_count),customer_count:num(x.customer_count),due_30_count:num(x.due_30_count),expired_count:num(x.expired_count),premium_at_risk:num(x.premium_at_risk),nearest_expiry:nullable(x.nearest_expiry)}}),filters:{insurers:arr(filters.insurers).map(v=>{const x=obj(v);return{id:str(x.id),name:str(x.name)}}).filter(x=>x.id&&x.name),rms:[],intermediaries:arr(filters.intermediaries).map(v=>{const x=obj(v);return{code:str(x.code),type:nullable(x.type),name:str(x.name)}}).filter(x=>x.code),categories:arr(filters.categories).map(str).filter(Boolean)},register:{rows:arr(register.rows).map(v=>{const x=obj(v);return{id:str(x.id),policy_no:str(x.policy_no),policy_type:str(x.policy_type),policy_product:str(x.policy_product),business_line:str(x.business_line)||"Motor",category:str(x.category)||str(x.policy_type),start_date:str(x.start_date),end_date:str(x.end_date),status:str(x.status),customer_name:str(x.customer_name),customer_code:str(x.customer_code),vehicle_no:str(x.vehicle_no),risk_reference:str(x.risk_reference),insurer_name:str(x.insurer_name),rm_name:str(x.rm_name),intermediary_type:nullable(x.intermediary_type),intermediary_code:nullable(x.intermediary_code),gross_premium:num(x.gross_premium),net_premium:num(x.net_premium),days_to_expiry:num(x.days_to_expiry),renewal_bucket:bucket(str(x.renewal_bucket))??"expired"}}),total_count:num(register.total_count),page:num(register.page)||page,page_size:num(register.page_size)||pageSize}}; }
 function normalizeRmOptions(value:unknown):Array<{id:string;name:string}>{return arr(value).map(v=>{const x=obj(v);return{id:str(x.id),name:str(x.name)}}).filter((x):x is {id:string;name:string}=>Boolean(x.id&&x.name))}
