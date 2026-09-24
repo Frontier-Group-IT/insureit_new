@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — RM Performance MTD-context/source-separation refinement:** branch `refine/rm-performance-mtd-context-source-dividers`; MTD Context now shows only the interactive monthly trend and percentage movement, removing Latest, Policies, Motor MTD and Non-Motor MTD values. Expanded RM source breakdown now renders each source as a clearly separated bordered tile with stronger visual separation between adjacent sources. Reporting calculations and source data are unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-24 — Customer App inline policy status timing:** branch `ui/customer-policy-status-inline-days`; Customer App → Policies removes the duplicate bottom expired/renewal warning strips and moves the timing into the compact status pill beside the policy stage. Expired policies show `EXPIRED Nd ago`, renewal-due policies show `DUE IN Nd`, and active policies continue to show `ACTIVE`. No schema, migration, RLS, APK/AAB, or native-runtime change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-24 — Reports custom-period anchored panel:** PR #2328, merge commit `f97196d29e6ade3b99f41cc9493908907ce7cba3`; selecting Custom from the report period menu now closes the MTD menu and opens a compact From/To/OK panel directly below the period control instead of a centered page-blocking modal. Clicking outside or pressing Escape closes the panel without applying changes; existing date validation and report query behavior are preserved. `Verify web portal` workflow #4543 passed before merge. No schema, migration, RLS, permission, APK/AAB, or native-runtime change. **MERGED; deployment not verified.**

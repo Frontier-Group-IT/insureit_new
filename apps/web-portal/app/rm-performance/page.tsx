@@ -95,11 +95,7 @@ export default async function RmPerformancePage({
               nonMotor={data.mtd.non_motor_net_premium}
               bordered
             />
-            <MtdContextPanel
-              rows={data.ytdTrend}
-              motor={data.mtd.motor_net_premium}
-              nonMotor={data.mtd.non_motor_net_premium}
-            />
+            <MtdContextPanel rows={data.ytdTrend} />
           </div>
         </section>
 
@@ -168,15 +164,11 @@ function PerformancePanel({
 
 function MtdContextPanel({
   rows,
-  motor,
-  nonMotor,
 }: {
   rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"];
-  motor: number;
-  nonMotor: number;
 }) {
-  const latest = rows.at(-1);
   const previous = rows.at(-2);
+  const latest = rows.at(-1);
   const movement = latest && previous && previous.net_premium > 0
     ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100
     : null;
@@ -200,32 +192,8 @@ function MtdContextPanel({
         ) : null}
       </div>
 
-      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_88px] items-end gap-3">
-        <div className="min-w-0">
-          <RmPerformanceTrendChart rows={rows} />
-        </div>
-
-        <div className="space-y-2 border-l border-[#EEF1F5] pl-3">
-          <div>
-            <p className="text-[6.5px] font-black uppercase tracking-[.07em] text-[#9AA4B2]">Latest</p>
-            <p className="mt-0.5 text-[8.5px] font-bold text-[#24364F]">{latest ? compactMoney(latest.net_premium) : "—"}</p>
-          </div>
-          <div>
-            <p className="text-[6.5px] font-black uppercase tracking-[.07em] text-[#9AA4B2]">Policies</p>
-            <p className="mt-0.5 text-[8.5px] font-bold text-[#24364F]">{latest ? number(latest.policy_count) : "—"}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-2 grid grid-cols-2 gap-3 border-t border-[#EEF1F5] pt-2">
-        <div>
-          <p className="text-[6.5px] uppercase tracking-[.06em] text-[#9AA4B2]">Motor MTD</p>
-          <p className="mt-0.5 text-[8.5px] font-bold text-[#34445B]">{money(motor)}</p>
-        </div>
-        <div>
-          <p className="text-[6.5px] uppercase tracking-[.06em] text-[#9AA4B2]">Non-Motor MTD</p>
-          <p className="mt-0.5 text-[8.5px] font-bold text-[#34445B]">{money(nonMotor)}</p>
-        </div>
+      <div className="mt-2 min-w-0">
+        <RmPerformanceTrendChart rows={rows} />
       </div>
     </div>
   );
@@ -241,14 +209,6 @@ function money(value: number) {
 
 function number(value: number) {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0);
-}
-
-function compactMoney(value: number) {
-  const n = Math.abs(value || 0);
-  if (n >= 10000000) return "₹" + (value / 10000000).toFixed(2) + " Cr";
-  if (n >= 100000) return "₹" + (value / 100000).toFixed(1) + " L";
-  if (n >= 1000) return "₹" + (value / 1000).toFixed(1) + " K";
-  return money(value);
 }
 
 function formatDate(value: string) {

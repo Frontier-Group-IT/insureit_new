@@ -91,13 +91,9 @@ export function RmSummaryCard({ row }: { row: RmRow }) {
           </div>
 
           {row.sources.length ? (
-            <div className="grid overflow-hidden rounded-lg border border-[#E1E7EE] bg-white sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {row.sources.map((source, index) => (
-                <SourceItem
-                  key={source.key}
-                  source={source}
-                  last={index === row.sources.length - 1}
-                />
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              {row.sources.map((source) => (
+                <SourceItem key={source.key} source={source} />
               ))}
             </div>
           ) : (
@@ -152,14 +148,9 @@ function MetricGroup({
   );
 }
 
-function SourceItem({ source, last }: { source: Source; last: boolean }) {
+function SourceItem({ source }: { source: Source }) {
   return (
-    <div
-      className={
-        "min-w-0 px-3 py-2.5 " +
-        (!last ? "border-b border-[#EDF1F5] sm:border-r xl:border-b-0" : "")
-      }
-    >
+    <div className="min-w-0 rounded-lg border-2 border-[#D3DDE9] bg-white px-3 py-2.5">
       <p className="truncate text-[8px] font-black text-[#354760]" title={source.label}>
         {source.label}
       </p>
