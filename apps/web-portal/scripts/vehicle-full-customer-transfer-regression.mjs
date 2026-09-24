@@ -14,6 +14,8 @@ const action = read("app/vehicles/[id]/transfer/actions.ts");
 const page = read("app/vehicles/[id]/transfer/page.tsx");
 const form = read("app/vehicles/[id]/transfer/transfer-vehicle-form.tsx");
 const detail = read("app/vehicles/[id]/page.tsx");
+const onboardingAction = read("app/policies/policy-onboarding-actions.ts");
+const onboardingForm = read("components/policy-unified-form.tsx");
 
 for (const expected of [
   "transfer_vehicle_customer_v1",
@@ -45,5 +47,7 @@ assertIncludes(page, "INSUREIT does not allow a vehicle-only transfer", "transfe
 assertIncludes(form, "Transfer vehicle and all dependencies", "transfer confirmation");
 assertIncludes(form, 'name="confirm_everything"', "transfer confirmation checkbox");
 assertIncludes(detail, "/transfer", "vehicle detail transfer link");
+assertIncludes(onboardingAction, "Vehicle ownership cannot be transferred during Policy Onboarding", "onboarding partial transfer block");
+assertIncludes(onboardingForm, "Open Vehicle Transfer", "onboarding full-transfer route");
 
 console.log("vehicle full customer transfer regression passed");
