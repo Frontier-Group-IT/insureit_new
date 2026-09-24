@@ -1,3 +1,16 @@
+## 2026-09-24 — Customer Policy Detail header action + compact linked vehicle
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-policy-detail-linked-vehicle`.
+
+- Moves the existing renewal action from the bottom of the policy summary card to the far right of the `Policy details` page header.
+- The action remains conditional on the existing renewal-state logic and routes to the same Add Policy flow.
+- Linked Vehicle becomes one compact, fully clickable card.
+- The card shows the resolved manufacturer catalog logo on the left (existing linked-vehicle artwork remains fallback), `Linked vehicle` as the title, and the vehicle number beneath it.
+- Removes manufacturer/model subtitle, separate Vehicle Number row, Vehicle Type row, and the separate `View vehicle details` row.
+- Clicking anywhere on the Linked Vehicle card opens the existing vehicle detail route.
+- No API/RPC/schema/RLS, native dependency/config, runtime-version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Policy Detail status pill parity
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-policy-detail-status-pill`.
