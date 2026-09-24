@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, TrendingUp } from "lucide-react";
+import { ChevronDown, Mail, TrendingUp } from "lucide-react";
 
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
@@ -254,47 +254,53 @@ function RmSummaryCard({
   tone: number;
 }) {
   const shell = [
-    "border-[#DCE7F4] bg-[linear-gradient(135deg,#FBFDFF_0%,#F7FAFE_100%)]",
-    "border-[#DDEBE7] bg-[linear-gradient(135deg,#FBFEFC_0%,#F7FBF9_100%)]",
-    "border-[#E8E1D6] bg-[linear-gradient(135deg,#FFFDF9_0%,#FAF7F1_100%)]",
-    "border-[#E5DFF0] bg-[linear-gradient(135deg,#FDFBFF_0%,#F9F6FC_100%)]",
+    "border-[#DCE7F4] bg-[#FBFDFF]",
+    "border-[#DDEBE7] bg-[#FBFEFC]",
+    "border-[#E8E1D6] bg-[#FFFDF9]",
+    "border-[#E5DFF0] bg-[#FDFBFF]",
   ][tone];
 
   const accent = ["#2E5FA7", "#1C7E70", "#9B6A27", "#6F56A5"][tone];
 
   return (
-    <article className={"relative overflow-hidden rounded-[18px] border shadow-[0_9px_24px_rgba(29,48,78,.04)] " + shell}>
+    <details className={"group relative overflow-hidden rounded-[18px] border shadow-[0_9px_24px_rgba(29,48,78,.04)] " + shell}>
       <div className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: accent }} />
 
-      <div className="grid gap-3 px-5 pb-3 pt-4 xl:grid-cols-[minmax(190px,1.25fr)_repeat(4,minmax(110px,.72fr))_72px] xl:items-center">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5">
-            <p className="truncate text-[12px] font-black tracking-[-.01em] text-[#1A2C48]">{row.name}</p>
-            <span className="rounded-full bg-white px-2 py-0.5 text-[7.5px] font-black text-[#315B9A] shadow-sm ring-1 ring-[#D9E3EF]">
-              {row.contributionPercent.toFixed(1)}%
+      <summary className="cursor-pointer list-none px-5 py-3.5 marker:hidden [&::-webkit-details-marker]:hidden">
+        <div className="grid gap-3 xl:grid-cols-[minmax(190px,1.1fr)_minmax(250px,.9fr)_minmax(250px,.9fr)_28px] xl:items-center">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5">
+              <p className="truncate text-[12px] font-black tracking-[-.01em] text-[#1A2C48]">{row.name}</p>
+              <span className="rounded-full bg-white px-2 py-0.5 text-[7.5px] font-black text-[#315B9A] shadow-sm ring-1 ring-[#D9E3EF]">
+                {row.contributionPercent.toFixed(1)}%
+              </span>
+            </div>
+            <p className="mt-1 text-[8px] font-medium text-[#8A96A6]">MTD contribution</p>
+          </div>
+
+          <MetricGroup
+            label="TODAY"
+            tone="daily"
+            policies={row.todayPolicies}
+            net={row.todayNetPremium}
+          />
+
+          <MetricGroup
+            label="MONTH TO DATE"
+            tone="mtd"
+            policies={row.mtdPolicies}
+            net={row.mtdNetPremium}
+          />
+
+          <div className="flex justify-end">
+            <span className="grid h-7 w-7 place-items-center rounded-full border border-[#D7E0EB] bg-white text-[#60738F] transition group-open:rotate-180">
+              <ChevronDown className="h-3.5 w-3.5" />
             </span>
           </div>
-          <p className="mt-1 text-[8px] font-medium text-[#8A96A6]">MTD contribution</p>
         </div>
+      </summary>
 
-        <InlineMetric label="Today Policies" value={number(row.todayPolicies)} />
-        <InlineMetric label="Today Net" value={money(row.todayNetPremium)} emphasis />
-        <InlineMetric label="MTD Policies" value={number(row.mtdPolicies)} />
-        <InlineMetric label="MTD Net" value={money(row.mtdNetPremium)} emphasis />
-
-        <div className="xl:text-right">
-          {row.employeeId ? (
-            <Link
-              href={"/rm-performance?rm=" + row.employeeId}
-              className="inline-flex h-8 items-center rounded-lg border border-[#CAD7E6] bg-white px-3 text-[8px] font-black text-[#315B9A] shadow-sm transition hover:border-[#9CB2CB] hover:bg-[#F8FAFC]"
-            >
-              View
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="border-t border-black/[.055] bg-white/55 px-5 py-3">
+      <div className="border-t border-black/[.055] bg-white/65 px-5 py-3.5">
         <div className="mb-2.5 flex items-center justify-between">
           <p className="text-[7.5px] font-black uppercase tracking-[.12em] text-[#748296]">Source Breakdown</p>
           <span className="text-[7.5px] font-semibold text-[#9AA4B2]">{row.sources.length} source{row.sources.length === 1 ? "" : "s"}</span>
@@ -312,15 +318,41 @@ function RmSummaryCard({
           </div>
         )}
       </div>
-    </article>
+    </details>
   );
 }
 
-function InlineMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+function MetricGroup({
+  label,
+  tone,
+  policies,
+  net,
+}: {
+  label: string;
+  tone: "daily" | "mtd";
+  policies: number;
+  net: number;
+}) {
+  const palette = tone === "daily"
+    ? "border-[#D8E7F8] bg-[#F2F7FD]"
+    : "border-[#D8EDE7] bg-[#F1F8F5]";
+
+  const labelColor = tone === "daily" ? "text-[#4E75A8]" : "text-[#3F7D70]";
+  const valueColor = tone === "daily" ? "text-[#173E6B]" : "text-[#165E50]";
+
   return (
-    <div className="min-w-0 border-l border-[#DCE3EC] pl-4 first:border-l-0 first:pl-0">
-      <p className="text-[6.5px] font-black uppercase tracking-[.09em] text-[#95A0AF]">{label}</p>
-      <p className={"mt-1 truncate tracking-[-.015em] " + (emphasis ? "text-[12px] font-black text-[#17365D]" : "text-[11px] font-bold text-[#33445C]")}>{value}</p>
+    <div className={"rounded-xl border px-3.5 py-2.5 " + palette}>
+      <p className={"text-[6.5px] font-black uppercase tracking-[.11em] " + labelColor}>{label}</p>
+      <div className="mt-1.5 grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-[6.5px] font-bold uppercase tracking-[.07em] text-[#8D99A9]">Policies</p>
+          <p className={"mt-0.5 text-[11px] font-black " + valueColor}>{number(policies)}</p>
+        </div>
+        <div className="border-l border-black/[.06] pl-3">
+          <p className="text-[6.5px] font-bold uppercase tracking-[.07em] text-[#8D99A9]">Net Premium</p>
+          <p className={"mt-0.5 truncate text-[11px] font-black " + valueColor}>{money(net)}</p>
+        </div>
+      </div>
     </div>
   );
 }
