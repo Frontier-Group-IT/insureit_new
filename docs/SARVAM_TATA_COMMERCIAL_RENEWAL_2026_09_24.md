@@ -27,7 +27,7 @@ The campaign importer still accepts standard RC + mobile Excel/CSV campaigns.
 When an Excel workbook contains a `Renewal` sheet with the Tata Commercial column family, INSUREIT treats it as `tata_commercial_renewal` and:
 - reads only `Renewal`;
 - ignores `Breaking Case` even when present in the same workbook;
-- accepts up to 500 source rows;
+- has no fixed customer/source-row ceiling; upload capacity is governed by file processing limits rather than a hard row-count cap;
 - normalizes Registration Number, Contact Number and Second number;
 - preserves customer name, manufacturer/model, current insurer, policy number and policy expiry;
 - groups valid rows by usable mobile so one customer/mobile is called once even when multiple Tata vehicles are due;
@@ -113,7 +113,9 @@ The Tata slice preserves:
 Migration:
 `supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql`
 
-It raises voice-campaign source-row/count checks from 100 to 500. It does not relax calling controls or enable automatic dispatch.
+The original capacity migration raised the old 100-row limit to 500. A follow-up migration,
+`supabase/migrations/20260924173500_remove_voice_campaign_row_limit.sql`,
+removes the fixed upper bound entirely while keeping all counters non-negative. Neither migration relaxes calling controls or enables automatic dispatch.
 
 ## Implementation state
 
@@ -132,3 +134,16 @@ State at documentation time:
 ## Deployment gating update
 
 The dedicated `apply-voice-campaigns.yml` workflow now includes the 2026-09-24 capacity migration and verifies the 500-row constraint. `deploy-production.yml` recognizes the new migration and waits on that schema workflow before production deployment. The Partner web core voice regression now guards Tata Renewal-sheet detection, 500-row capacity, mobile grouping, cashless non-guarantee wording, repeat-call context, Sarvam variable delivery and production schema gating.
+
+
+## v11 opening + campaign-size correction — 2026-09-24
+
+The website no longer sends the legacy Tata opening sentence:
+`policy renewal के बारे में call किया था—दो मिनट बात कर सकते हैं क्या?`
+
+For a first Tata renewal call it now sends:
+`Tata commercial vehicle की insurance renewal के लिए call किया है—अभी दो मिनट हैं?`
+
+Repeat calls still use continuation-aware wording from prior connected-call memory.
+
+The upload parser no longer rejects a campaign because it exceeds 100 or 500 rows, and the new schema migration removes the fixed upper bound from the voice campaign counters. File-size validation, DNC/terminal holds, IT-only authority, manual start, calling window, kill switch and active-attempt protections remain unchanged.
