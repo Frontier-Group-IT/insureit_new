@@ -9,8 +9,9 @@ import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 import { loadRenewalReport } from "@/lib/reports/renewals";
 
 type ViewerProfile = { id: string; role: string | null };
-export type ManagementPackQuery = { month?: string };
-export type ManagementPackFilters = { month: string; fromDate: string; toDate: string; currentMonth: string };
+export type ManagementPackPeriod = "mtd" | "last_month" | "last_6_months" | "custom";
+export type ManagementPackQuery = { month?: string; period?: ManagementPackPeriod; from?: string; to?: string };
+export type ManagementPackFilters = { month: string; period: ManagementPackPeriod; fromDate: string; toDate: string; currentMonth: string };
 
 export type ManagementPack = {
   filters: ManagementPackFilters;
@@ -60,11 +61,54 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
 export function resolveManagementPackFilters(query: ManagementPackQuery): ManagementPackFilters {
   const today = indiaDate(new Date());
   const currentMonth = today.slice(0, 7);
-  const requested = validMonth(query.month) && query.month! <= currentMonth ? query.month! : currentMonth;
-  const fromDate = `${requested}-01`;
-  const lastDay = lastDayOfMonth(requested);
-  const toDate = requested === currentMonth ? today : lastDay;
-  return { month: requested, fromDate, toDate, currentMonth };
+
+  if (!query.period && validMonth(query.month) && query.month! <= currentMonth) {
+    const requested = query.month!;
+    const fromDate = `${requested}-01`;
+    const toDate = requested === currentMonth ? today : lastDayOfMonth(requested);
+    return { month: requested, period: "mtd", fromDate, toDate, currentMonth };
+  }
+
+  const period: ManagementPackPeriod = isManagementPackPeriod(query.period) ? query.period : "mtd";
+  if (period === "custom") {
+    const from = validDate(query.from);
+    const to = validDate(query.to);
+    if (from && to) {
+      const fromDate = from <= to ? from : to;
+      const toDate = from <= to ? to : from;
+      return { month: toDate.slice(0, 7), period, fromDate, toDate, currentMonth };
+    }
+  }
+
+  if (period === "last_month") {
+    const previousMonth = shiftMonth(currentMonth, -1);
+    return {
+      month: previousMonth,
+      period,
+      fromDate: `${previousMonth}-01`,
+      toDate: lastDayOfMonth(previousMonth),
+      currentMonth,
+    };
+  }
+
+  if (period === "last_6_months") {
+    const firstMonth = shiftMonth(currentMonth, -5);
+    return {
+      month: currentMonth,
+      period,
+      fromDate: `${firstMonth}-01`,
+      toDate: today,
+      currentMonth,
+    };
+  }
+
+  return {
+    month: currentMonth,
+    period: "mtd",
+    fromDate: `${currentMonth}-01`,
+    toDate: today,
+    currentMonth,
+  };
 }
 
 export function managementPackCsvRows(pack: ManagementPack, snapshotVersion?: number) {
