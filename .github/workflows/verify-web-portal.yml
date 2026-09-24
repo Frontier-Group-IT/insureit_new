@@ -71,6 +71,8 @@ jobs:
         run: npm run vehicle-prefix:new-regression
       - name: Vehicle registration regression
         run: npm run vehicle-registration:regression
+      - name: Full vehicle customer transfer regression
+        run: npm run vehicle-transfer:regression
       - name: Register workflow prefetch regression
         run: npm run register-prefetch:regression
       - name: Commercial and reports prefetch regression
