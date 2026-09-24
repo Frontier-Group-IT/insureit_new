@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronDown, Mail, TrendingUp } from "lucide-react";
+import { Mail, TrendingUp } from "lucide-react";
 
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
