@@ -268,7 +268,7 @@ function BusinessMix({ mode, rows }: { mode: OverviewMix; rows: BusinessMixRow[]
   const entityLabel = mode === "rm" ? "RM" : mode === "source" ? "Source" : "Insurer";
   return (
     <div className="ov-mix">
-      <div className="ov-mix-head"><span>#</span><span>{entityLabel}</span><span>Net Premium (₹ L)</span><span>Share</span></div>
+      <div className="ov-mix-head"><span>#</span><span>{entityLabel}</span><span>Net Premium (₹ L)</span><span>Policies</span><span>Share</span></div>
       {rows.map((row, index) => {
         const logo = mode === "insurer" ? getInsurerLogo(row.name) : null;
         return (
@@ -278,7 +278,11 @@ function BusinessMix({ mode, rows }: { mode: OverviewMix; rows: BusinessMixRow[]
               {logo ? <Image src={logo} alt="" width={18} height={18} className="ov-insurer-logo" /> : null}
               <strong>{row.name || "Unassigned"}</strong>
             </span>
-            <span className="ov-mix-bar-wrap"><i style={{ width: `${Math.max(4, (row.net_premium / max) * 100)}%` }} /><em>{lakh(row.net_premium)}</em></span>
+            <span className="ov-mix-bar-wrap">
+              <span className="ov-mix-value-label">{compactMoney(row.net_premium)}</span>
+              <i style={{ width: `${Math.max(4, (row.net_premium / max) * 100)}%` }} />
+            </span>
+            <span className="ov-mix-policy-count">{number(row.policy_count)}</span>
             <span>{row.share_percent.toFixed(1)}%</span>
           </div>
         );
@@ -340,11 +344,14 @@ function RenewalOpportunity({ rows }: { rows: RenewalOpportunityRow[] }) {
         {rows.map((row) => (
           <div className="ov-risk-group" key={row.key}>
             <div className="ov-risk-bars">
-              <span
-                className="ov-risk-bar ov-risk-bar--renewal"
-                style={{ height: `${row.net_premium > 0 ? Math.max(3, (row.net_premium / max) * 100) : 0}%` }}
-                title={`${compactMoney(row.net_premium)} · ${number(row.policy_count)} policies`}
-              />
+              <span className="ov-risk-bar-stack">
+                <span className="ov-risk-count-label">{number(row.policy_count)}</span>
+                <span
+                  className="ov-risk-bar ov-risk-bar--renewal"
+                  style={{ height: `${row.net_premium > 0 ? Math.max(3, (row.net_premium / max) * 100) : 0}%` }}
+                  title={`${compactMoney(row.net_premium)} · ${number(row.policy_count)} policies`}
+                />
+              </span>
             </div>
             <span className="ov-risk-label">{row.label}</span>
           </div>

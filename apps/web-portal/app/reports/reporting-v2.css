@@ -628,7 +628,7 @@
 .reports-overview-reference .ov-mix-head,
 .reports-overview-reference .ov-mix-row {
   display: grid;
-  grid-template-columns: 24px minmax(115px, 1fr) minmax(160px, 1.4fr) 52px;
+  grid-template-columns: 24px minmax(115px, 1fr) minmax(160px, 1.4fr) 48px 52px;
   align-items: center;
   gap: 8px;
 }
@@ -671,15 +671,26 @@
 
 .reports-overview-reference .ov-mix-bar-wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 38px;
-  align-items: center;
-  gap: 6px;
+  min-width: 0;
+  grid-template-rows: 11px 9px;
+  align-items: end;
+  row-gap: 2px;
+}
+
+.reports-overview-reference .ov-mix-value-label {
+  grid-column: 1;
+  grid-row: 1;
+  color: #536982;
+  font-size: 7.7px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .reports-overview-reference .ov-mix-bar-wrap::before {
   content: "";
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
   height: 9px;
   border-radius: 2px;
   background: #e8edf4;
@@ -688,20 +699,17 @@
 .reports-overview-reference .ov-mix-bar-wrap i {
   z-index: 1;
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 2;
   height: 9px;
   border-radius: 2px;
   background: linear-gradient(90deg, #0f67b8, #3f8bd0);
 }
 
-.reports-overview-reference .ov-mix-bar-wrap em {
-  grid-column: 2;
-  grid-row: 1;
-  color: #536982;
-  font-size: 8.2px;
-  font-style: normal;
-  font-weight: 700;
+.reports-overview-reference .ov-mix-policy-count {
+  color: #40546e;
+  font-weight: 720;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .reports-overview-reference .ov-risk {
@@ -711,7 +719,7 @@
 
 .reports-overview-reference .ov-risk-plot {
   display: grid;
-  grid-template-columns: repeat(6, minmax(44px, 1fr));
+  grid-template-columns: repeat(5, minmax(52px, 1fr));
   align-items: end;
   min-height: 175px;
   margin-top: 8px;
@@ -735,6 +743,24 @@
   height: 132px;
   align-items: end;
   gap: 4px;
+}
+
+.reports-overview-reference .ov-risk-bar-stack {
+  display: flex;
+  width: 24px;
+  height: 132px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.reports-overview-reference .ov-risk-count-label {
+  margin-bottom: 3px;
+  color: #29415f;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .reports-overview-reference .ov-risk-bar {
@@ -890,7 +916,7 @@
   }
   .reports-overview-reference .ov-mix-head,
   .reports-overview-reference .ov-mix-row {
-    grid-template-columns: 22px 120px minmax(150px, 1fr) 46px;
+    grid-template-columns: 22px 120px minmax(150px, 1fr) 44px 46px;
   }
   .reports-overview-reference .ov-risk-plot {
     min-width: 520px;
