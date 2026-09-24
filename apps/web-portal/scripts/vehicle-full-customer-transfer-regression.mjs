@@ -14,6 +14,8 @@ const action = read("app/vehicles/[id]/transfer/actions.ts");
 const page = read("app/vehicles/[id]/transfer/page.tsx");
 const form = read("app/vehicles/[id]/transfer/transfer-vehicle-form.tsx");
 const detail = read("app/vehicles/[id]/page.tsx");
+const editPage = read("app/vehicles/[id]/edit/page.tsx");
+const vehicleForms = read("components/forms.tsx");
 const onboardingAction = read("app/policies/policy-onboarding-actions.ts");
 const onboardingForm = read("components/policy-unified-form.tsx");
 
@@ -47,6 +49,10 @@ assertIncludes(page, "INSUREIT does not allow a vehicle-only transfer", "transfe
 assertIncludes(form, "Transfer vehicle and all dependencies", "transfer confirmation");
 assertIncludes(form, 'name="confirm_everything"', "transfer confirmation checkbox");
 assertIncludes(detail, "/transfer", "vehicle detail transfer link");
+assertIncludes(editPage, "Transfer Vehicle", "vehicle edit transfer button");
+assertIncludes(editPage, `/vehicles/${vehicle.id}/transfer`, "vehicle edit transfer destination");
+assertIncludes(editPage, 'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"])', "vehicle edit transfer roles");
+assertIncludes(vehicleForms, "{actionExtra}", "vehicle form extra footer action");
 assertIncludes(onboardingAction, "Vehicle ownership cannot be transferred during Policy Onboarding", "onboarding partial transfer block");
 assertIncludes(onboardingForm, "Open Vehicle Transfer", "onboarding full-transfer route");
 

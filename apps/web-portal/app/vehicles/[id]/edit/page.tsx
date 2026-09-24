@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowRightLeft } from "lucide-react";
 import { saveVehicleMaster } from "@/app/vehicles/vehicle-master-actions";
 import { VehicleActivityStatus } from "@/components/vehicle-activity-status";
 import { VehiclePolicyFooterSummary, type VehicleLinkedPolicy } from "@/components/vehicle-policy-footer-summary";
@@ -42,6 +44,8 @@ type VehicleRow = VehicleValues & {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"]);
 
 function capacityForVehicle(vehicle: VehicleValues) {
   if (vehicle.vehicle_type === "PCP" || vehicle.vehicle_type === "TWP" || vehicle.vehicle_type === "MISD") return vehicle.engine_capacity_cc;
@@ -113,6 +117,15 @@ export default async function EditVehiclePage({ params, searchParams }: { params
           submitLabel="Save changes"
           beforeActions={<VehicleActivityStatus vehicleId={vehicle.id} createdAt={vehicle.created_at} updatedAt={vehicle.updated_at} />}
           footerContent={<VehiclePolicyFooterSummary policies={policiesResult.data ?? []} customerId={vehicle.customer_id} vehicleId={vehicle.id} />}
+          actionExtra={canEdit && TRANSFER_ROLES.has(profile.role ?? "") ? (
+            <Link
+              href={`/vehicles/${vehicle.id}/transfer`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#9FB4CC] bg-[#F8FBFF] px-4 py-2 text-[11px] font-semibold text-[#17365D] transition hover:border-[#6F8EAE] hover:bg-[#EEF5FC]"
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Transfer Vehicle
+            </Link>
+          ) : null}
         />
       </fieldset>
     </>
