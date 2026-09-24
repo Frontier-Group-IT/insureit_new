@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { CalendarDays } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export type ReportShortcut = { value: string; label: string };
 
@@ -22,6 +22,7 @@ export function ReportQueryShortcuts({
   trailing?: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const currentQuery = searchParams.toString();
   const displayedOptions = param === "period" && !options.some((option) => option.value === "custom")
@@ -35,27 +36,26 @@ export function ReportQueryShortcuts({
   }).length;
 
   return (
-    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="mr-1 text-[8.5px] font-black uppercase tracking-[0.08em] text-[#7b8799]">{label}</span>
-        {displayedOptions.map((option) => (
-          <Link
-            key={option.value}
-            href={buildHref(pathname, currentQuery, param, option.value)}
-            className={`rounded-lg border px-3 py-2 text-[10px] font-bold transition ${activeValue === option.value ? "border-[#223a78] bg-[#223a78] text-white" : "border-[#dfe5ee] bg-white text-[#506077] hover:border-[#bfc9db] hover:text-[#23365f]"}`}
-          >
-            {option.label}
-          </Link>
-        ))}
-      </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
-        {showActiveFilterCount && activeFilterCount > 0 ? (
-          <span className="rounded-full border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-1 text-[8.5px] font-bold text-[#607087]">
-            {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
-          </span>
-        ) : null}
-        {trailing}
-      </div>
+    <div className="report-shortcuts flex min-w-0 flex-wrap items-center justify-end gap-2">
+      <label className="report-shortcut-select">
+        <span className="sr-only">{label}</span>
+        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+        <select
+          value={activeValue}
+          aria-label={label}
+          onChange={(event) => router.push(buildHref(pathname, currentQuery, param, event.target.value))}
+        >
+          {displayedOptions.map((option) => (
+            <option key={option.value} value={option.value}>{compactLabel(option.label)}</option>
+          ))}
+        </select>
+      </label>
+      {showActiveFilterCount && activeFilterCount > 0 ? (
+        <span className="rounded-full border border-[#dfe5ee] bg-[#f8fafc] px-2.5 py-1 text-[8.5px] font-bold text-[#607087]">
+          {activeFilterCount} active {activeFilterCount === 1 ? "filter" : "filters"}
+        </span>
+      ) : null}
+      {trailing}
     </div>
   );
 }
@@ -89,6 +89,13 @@ export function ReportFilterSubmitGuard() {
   }, [currentPeriod]);
 
   return null;
+}
+
+function compactLabel(label: string) {
+  if (label === "Month to date") return "MTD";
+  if (label === "Year to date") return "YTD";
+  if (label === "Last 90 days") return "90D";
+  return label;
 }
 
 function buildHref(pathname: string, currentQuery: string, param: "period" | "horizon", value: string) {

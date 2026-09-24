@@ -1,3 +1,19 @@
+## 2026-09-24 — Reports header exact-reference correction
+
+- Branch: `fix/reports-reference-header-exact`.
+- PR: #2344.
+- Root cause fixed: the app shell was still injecting legacy `ReportNavigation` on report routes while child report pages also rendered the new shared report header, causing the duplicate white boxed navigation seen on Business.
+- The legacy report navigation injection is removed from `ClaimManagerShell`; report pages now own their single header/navigation system.
+- Shared child-page header matches the approved Overview structure: **Reports + Updated time** on the left, compact controls/actions on the right, flat **Overview | Business | Portfolio | Operations** tabs below, and flat **Performance | Distribution | Finance** subtabs only for Business pages.
+- The extra child-page context row is removed.
+- Period/horizon shortcuts are compact dropdowns; existing query/filter behavior is retained.
+- Export uses the blue primary action treatment from the approved Overview reference.
+- Business report cards and all other report content/data logic remain unchanged.
+- No schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+
+---
+
 ## 2026-09-24 — Reports shared reference header
 
 - Branch: `ui/reports-shared-reference-header`.

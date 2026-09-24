@@ -33,26 +33,23 @@ export function ReportPageShell({
       <ReportFilterSubmitGuard />
       <ReportRegisterEnhancer />
 
-      <header className={`reports-reference-header ${headerClassName}`}>
+      <header className={`reports-reference-header ${headerClassName}`} aria-label={title}>
         <div className="reports-reference-topbar">
           <div className="reports-reference-heading">
             <h1>Reports</h1>
             <span>Updated {indiaTime()}</span>
+            {titleAccessory ? <span className="reports-reference-title-accessory">{titleAccessory}</span> : null}
           </div>
-          {actions ? <div className="reports-reference-actions report-header-actions">{actions}</div> : null}
+
+          {controls || actions ? (
+            <div className={`reports-reference-toolbar ${controlsClassName}`}>
+              {controls ? <div className="reports-reference-filter-area">{controls}</div> : null}
+              {actions ? <div className="reports-reference-actions report-header-actions">{actions}</div> : null}
+            </div>
+          ) : null}
         </div>
 
         <ReportWorkspaceNavigation />
-
-        {controls || title ? (
-          <div className={`reports-reference-controls ${controlsClassName}`}>
-            <div className="reports-reference-page-context">
-              <strong>{title}</strong>
-              {titleAccessory}
-            </div>
-            {controls ? <div className="reports-reference-filter-area">{controls}</div> : null}
-          </div>
-        ) : null}
       </header>
 
       {loadError ? <ReportErrorBanner /> : null}
@@ -97,7 +94,7 @@ export function ReportResetLink({ href, label = "Reset" }: { href: string; label
 
 export function ReportExportLink({ href, label = "Export" }: { href: string; label?: string }) {
   return (
-    <a href={href} className="report-secondary-action inline-flex h-9 items-center gap-1.5 rounded-md border border-[#d2dae4] bg-white px-3 text-[10.5px] font-bold text-[#34445d] transition hover:border-[#aebdce] hover:bg-[#f8fafc] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7692b6] focus-visible:ring-offset-2">
+    <a href={href} className="report-secondary-action inline-flex h-9 items-center gap-1.5 rounded-md border border-[#0e5da5] bg-[#0e5da5] px-3 text-[10.5px] font-bold text-white transition hover:border-[#0b4d89] hover:bg-[#0b4d89] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7692b6] focus-visible:ring-offset-2">
       <Download className="h-3.5 w-3.5" /> {label}
     </a>
   );
