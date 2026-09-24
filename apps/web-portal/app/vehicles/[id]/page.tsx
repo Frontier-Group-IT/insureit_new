@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CarFront, Eye } from "lucide-react";
+import { ArrowRightLeft, CarFront, Eye } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { VehiclePolicyFooterSummary, type VehicleLinkedPolicy } from "@/components/vehicle-policy-footer-summary";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
@@ -36,10 +36,19 @@ type VehicleDetail = {
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function VehicleReadOnlyPage({ params }: { params: Promise<{ id: string }> }) {
+const TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"]);
+
+export default async function VehicleReadOnlyPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ success?: string }>;
+}) {
   const profile = await requireCapability("view_vehicles");
   if (!profile?.id) redirect("/access-denied");
   const { id } = await params;
+  const { success } = await searchParams;
   const admin = createSupabaseAdminClient();
   const [vehicleResult, policiesResult] = await Promise.all([
     admin
@@ -57,6 +66,11 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
 
   return (
     <AppShell title="Vehicle details" backHref="/vehicles">
+      {success === "vehicle_transferred" ? (
+        <div className="mx-auto mb-3 max-w-[1100px] rounded-lg border border-[#B7E1C4] bg-[#F2FBF5] px-4 py-2 text-[10px] font-semibold text-[#24713D]">
+          Vehicle and all associated dependencies transferred successfully.
+        </div>
+      ) : null}
       <section className="mx-auto max-w-[1100px] overflow-hidden rounded-2xl border border-[#DCE5EF] bg-white shadow-sm">
         <div className="flex flex-col gap-3 border-b border-[#E5ECF5] bg-[#F8FAFC] px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3"><span className="grid h-11 w-11 place-items-center rounded-xl bg-[#17365D] text-white"><CarFront className="h-5 w-5" /></span><div><p className="text-[9px] font-bold uppercase tracking-[.1em] text-[#64748B]">Read-only vehicle record</p><h1 className="mt-1 font-mono text-[18px] font-semibold text-[#0F172A]">{displayVehicleRegistrationNumber(data)}</h1><p className="mt-1 text-[10px] text-[#64748B]">{data.vehicle_type} · {[data.make, data.model].filter(Boolean).join(" ") || "Vehicle details"}</p></div></div>
@@ -84,6 +98,11 @@ export default async function VehicleReadOnlyPage({ params }: { params: Promise<
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#E5ECF5] bg-[#FBFCFE] px-5 py-3">
           <VehiclePolicyFooterSummary policies={policiesResult.data ?? []} customerId={data.customer_id} vehicleId={data.id} />
+          {TRANSFER_ROLES.has(profile.role ?? "") ? (
+            <Link href={`/vehicles/${data.id}/transfer`} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#C7D6E7] bg-white px-3 py-2 text-[9.5px] font-bold text-[#17365D] hover:bg-[#F8FAFC]">
+              <ArrowRightLeft className="h-3.5 w-3.5" />Transfer Vehicle
+            </Link>
+          ) : null}
           <Link href="/vehicles" className="ml-auto shrink-0 text-[9.5px] font-bold text-[#315B9A] hover:underline">Back to Vehicle Register</Link>
         </div>
       </section>

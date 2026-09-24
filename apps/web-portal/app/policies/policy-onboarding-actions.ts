@@ -523,7 +523,13 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       return { ok: false, kind: "ownership_conflict", conflict: { vehicleId: vehicle.id, registrationNumber: vehicleDisplay, customerId: vehicle.customer_id, customerName: vehicle.customers?.contact_name ?? "Existing customer", customerPhone: vehicle.customers?.phone ?? "", canTransfer: canTransferVehicle(profile.role) } };
     }
     if (vehicle && ownershipDecision === "keep_existing") effectiveCustomerId = vehicle.customer_id;
-    if (ownershipDecision === "transfer" && !canTransferVehicle(profile.role)) return { ok: false, kind: "permission", error: "Only a Manager or Administrator can transfer vehicle ownership." };
+    if (ownershipDecision === "transfer") {
+      return {
+        ok: false,
+        kind: "validation",
+        error: "Vehicle ownership cannot be transferred during Policy Onboarding. Open the vehicle record and use Transfer Vehicle so every associated policy, claim and dependency moves together.",
+      };
+    }
 
     let rpcCustomer = { ...payload.customer, name, phone };
     if (effectiveCustomerId) {
@@ -562,9 +568,9 @@ export async function onboardPolicy(payload: PolicyOnboardingPayload): Promise<P
       vehicle: { ...sanitizeVehicleNumbers(payload.vehicle), registrationMode: mode, registrationNumber: registration, chassisNumber: chassis, engineNumber: engine },
       resolution: {
         selectedCustomerId: effectiveCustomerId,
-        confirmOwnershipTransfer: ownershipDecision === "transfer",
-        canTransferOwnership: canTransferVehicle(profile.role),
-        transferReason: payload.resolution?.transferReason || "Confirmed during policy onboarding",
+        confirmOwnershipTransfer: false,
+        canTransferOwnership: false,
+        transferReason: payload.resolution?.transferReason || "Vehicle transfer is handled from Vehicle Details",
       },
       meta: { requestedBy: profile.id, requestedRole: profile.role },
     };

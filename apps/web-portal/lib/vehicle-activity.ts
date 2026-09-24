@@ -5,6 +5,7 @@ export const VEHICLE_ACTIVITY_ACTIONS = {
   VEHICLE_EDITED: "vehicle_edited",
   VEHICLE_LINKED_TO_POLICY: "vehicle_linked_to_policy",
   VEHICLE_REGISTRATION_UPDATED: "vehicle_registration_updated",
+  VEHICLE_CUSTOMER_TRANSFERRED: "vehicle_customer_transferred",
 } as const;
 
 export type VehicleActivityAction = (typeof VEHICLE_ACTIVITY_ACTIONS)[keyof typeof VEHICLE_ACTIVITY_ACTIONS];
@@ -14,6 +15,7 @@ const ACTION_LABELS: Record<VehicleActivityAction, string> = {
   vehicle_edited: "Vehicle Edited",
   vehicle_linked_to_policy: "Vehicle Linked to Policy",
   vehicle_registration_updated: "Vehicle Registration Updated",
+  vehicle_customer_transferred: "Vehicle Transferred",
 };
 
 const TRACKED_ACTIONS = Object.values(VEHICLE_ACTIVITY_ACTIONS);
