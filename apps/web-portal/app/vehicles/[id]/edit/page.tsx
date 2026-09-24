@@ -54,7 +54,7 @@ function capacityForVehicle(vehicle: VehicleValues) {
   return vehicle.engine_capacity_cc ?? vehicle.gvw_kg ?? vehicle.seating_capacity;
 }
 
-export default async function EditVehiclePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ embedded?: string; error?: string }> }) {
+export default async function EditVehiclePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ embedded?: string; error?: string; success?: string }> }) {
   const profile = await requireCapability("view_vehicles");
   const [{ id }, query, canEdit, accessibleCustomerIds] = await Promise.all([
     params,
@@ -101,6 +101,11 @@ export default async function EditVehiclePage({ params, searchParams }: { params
 
   const editor = (
     <>
+      {query.success === "vehicle_transferred" ? (
+        <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#B7E1C4] bg-[#F2FBF5] px-4 py-3 text-[10px] font-semibold text-[#24713D]">
+          Vehicle and all associated dependencies transferred successfully.
+        </div>
+      ) : null}
       {query.error && canEdit ? <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#F0C9C5] bg-[#FFF5F4] px-4 py-3 text-[10px] font-semibold text-[#B42318]">{query.error}</div> : null}
       {!canEdit ? (
         <div className="mx-auto mb-3 max-w-[1480px] rounded-xl border border-[#D6E2F0] bg-[#F7FAFD] px-4 py-2.5 text-[10.5px] font-semibold text-[#3D536D]">
