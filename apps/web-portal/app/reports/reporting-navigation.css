@@ -83,7 +83,7 @@
   min-height: 42px;
   align-items: center;
   gap: 4px;
-  overflow-x: auto;
+  overflow: visible;
   padding: 7px 12px;
   background: #fbfcfd;
 }
