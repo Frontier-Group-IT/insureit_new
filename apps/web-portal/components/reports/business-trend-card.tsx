@@ -8,6 +8,7 @@ import type { OverviewTrendPeriod } from "@/components/reports/reports-overview-
 export type BusinessTrendPoint = {
   key: string;
   label: string;
+  axisLabel: string;
   policy_count: number;
   net_premium: number;
 };
@@ -125,7 +126,9 @@ function BusinessTrendChart({
             {hoveredIndex === index ? <line x1={x(index)} x2={x(index)} y1={pad.top} y2={height - pad.bottom} stroke="#9db0c8" strokeWidth="1" strokeDasharray="3 4" /> : null}
             <circle cx={x(index)} cy={yPremium(row.net_premium)} r={hoveredIndex === index ? "5" : "3.5"} className="ov-point ov-point--premium" onMouseEnter={() => setHoveredIndex(index)} />
             <circle cx={x(index)} cy={yPolicy(row.policy_count)} r={hoveredIndex === index ? "4.5" : "3"} className="ov-point ov-point--policies" onMouseEnter={() => setHoveredIndex(index)} />
-            <text x={x(index)} y={height - 13} textAnchor="middle" className="ov-axis-label">{row.label}</text>
+            {shouldShowAxisLabel(index, points.length) ? (
+              <text x={x(index)} y={height - 13} textAnchor="middle" className="ov-axis-label">{row.axisLabel}</text>
+            ) : null}
           </g>
         ))}
 
@@ -161,4 +164,11 @@ function compactMoney(value: number) {
 }
 function number(value: number) {
   return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0);
+}
+
+
+function shouldShowAxisLabel(index: number, total: number) {
+  if (total <= 8) return true;
+  const step = Math.ceil(total / 6);
+  return index === 0 || index === total - 1 || index % step === 0;
 }
