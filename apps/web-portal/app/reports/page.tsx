@@ -3,48 +3,84 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
-  Building2,
-  CalendarDays,
   ChevronDown,
   Clock3,
-  Download,
-  Filter,
   Info,
   TriangleAlert,
 } from "lucide-react";
 import { AppShell } from "@/components/shell";
+import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
+import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
-import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
+import { loadPolicyBusinessDailyTrend, loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 
-export default async function ReportsOverviewPage() {
+type Props = { searchParams: Promise<{ period?: string; from?: string; to?: string; business?: string; trend?: string }> };
+
+export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
 
+  const query = await searchParams;
+  const period = resolveOverviewPeriod(query);
+  const business = resolveOverviewBusiness(query.business);
+  const trendPeriod = resolveTrendPeriod(query.trend);
   const commercialAccess = canAccessPolicyCommercials(profile);
   let loadError = false;
   let pack: Awaited<ReturnType<typeof loadManagementPack>> | null = null;
-  let ytdBusiness: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
+  let trendReport: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
+  let dailyTrend: Awaited<ReturnType<typeof loadPolicyBusinessDailyTrend>> = [];
 
   try {
-    const [managementPack, businessPayload] = await Promise.all([
-      loadManagementPack(profile, {}),
-      loadPolicyBusinessNetReport(profile, { period: "ytd", page: "1" }),
-    ]);
-    pack = managementPack;
-    ytdBusiness = businessPayload.report;
+    const managementPackPromise = loadManagementPack(profile, {
+      from: period.fromDate,
+      to: period.toDate,
+      business: business.businessLine ?? undefined,
+      category: business.category ?? undefined,
+    });
+    const trendQuery = {
+      period: "custom",
+      from: trendPeriod.fromDate,
+      to: trendPeriod.toDate,
+      business: business.businessLine ?? undefined,
+      category: business.category ?? undefined,
+      page: "1",
+    };
+    if (trendPeriod.daily) {
+      const [managementPack, daily] = await Promise.all([
+        managementPackPromise,
+        loadPolicyBusinessDailyTrend(profile, trendQuery),
+      ]);
+      pack = managementPack;
+      dailyTrend = daily;
+    } else {
+      const [managementPack, trendPayload] = await Promise.all([
+        managementPackPromise,
+        loadPolicyBusinessNetReport(profile, trendQuery),
+      ]);
+      pack = managementPack;
+      trendReport = trendPayload.report;
+    }
   } catch (error) {
     loadError = true;
     console.error("Reports overview load failed", error);
   }
 
-  const trend = (ytdBusiness?.trend ?? []).slice(-6);
-  const topInsurers = (ytdBusiness?.insurers ?? []).slice(0, 5);
-  const recentRecords = (ytdBusiness?.register.rows ?? []).slice(0, 5);
-  const premiumDelta = trendDelta(trend.map((row) => row.net_premium));
-  const policyDelta = trendDelta(trend.map((row) => row.policy_count));
+  const trendPoints = trendPeriod.daily
+    ? buildDailyTrendPoints(dailyTrend, trendPeriod.fromDate, trendPeriod.toDate)
+    : (trendReport?.trend ?? []).map((row) => ({
+        key: row.month,
+        label: monthYear(row.month),
+        axisLabel: monthYear(row.month),
+        policy_count: row.policy_count,
+        net_premium: row.net_premium,
+      }));
+  const topInsurers = (pack?.business.insurers ?? []).slice(0, 5);
+  const recentRecords = (pack?.business.register.rows ?? []).slice(0, 5);
+  const premiumDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.net_premium));
+  const policyDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.policy_count));
   const riskByInsurer = pack ? buildRiskByInsurer(pack.renewals.insurers, pack.claims.insurers) : [];
 
   return (
@@ -56,12 +92,15 @@ export default async function ReportsOverviewPage() {
             <h1>Reports</h1>
             <span>Updated {indiaTime()}</span>
           </div>
-          <div className="ov-toolbar">
-            <button type="button" className="ov-control"><CalendarDays className="h-3.5 w-3.5" /><span>MTD</span><ChevronDown className="h-3 w-3" /></button>
-            <button type="button" className="ov-control"><Building2 className="h-3.5 w-3.5" /><span>All Business</span><ChevronDown className="h-3 w-3" /></button>
-            <Link prefetch={false} href="/reports/business" className="ov-control ov-control--filter"><Filter className="h-3.5 w-3.5" /><span>Filters</span><span className="ov-filter-count">2</span></Link>
-            <Link prefetch={false} href={pack ? `/reports/export/management-pack?month=${pack.filters.month}` : "/reports"} className="ov-control ov-control--primary"><Download className="h-3.5 w-3.5" /><span>Export</span></Link>
-          </div>
+          <ReportsOverviewToolbar
+            activePeriod={period.period}
+            activeBusiness={business.key}
+            activeTrend={trendPeriod.period}
+            fromDate={period.fromDate}
+            toDate={period.toDate}
+            today={period.today}
+            exportHref={pack ? managementPackExportHref(period, business) : "/reports"}
+          />
         </header>
 
         <nav className="ov-tabs" aria-label="Report workspaces">
@@ -76,22 +115,20 @@ export default async function ReportsOverviewPage() {
         ) : (
           <>
             <section className="ov-card ov-kpis" aria-label="Overview key performance indicators">
-              <Kpi label="Net Premium" value={compactMoney(pack.business.summary.net_premium)} delta={premiumDelta} />
-              <Kpi label="Policies" value={number(pack.business.summary.policy_count)} delta={policyDelta} />
+              <Kpi label="Net Premium" value={compactMoney(pack.business.summary.net_premium)} delta={premiumDelta} note={period.label} />
+              <Kpi label="Policies" value={number(pack.business.summary.policy_count)} delta={policyDelta} note={period.label} />
               <Kpi label={commercialAccess ? "PayIn" : "Commercials"} value={commercialAccess ? compactMoney(pack.finance.summary.payin_after_tds) : "Restricted"} note={commercialAccess ? "Less TDS" : "Authorized users only"} />
-              <Kpi label="Payout" value={commercialAccess ? compactMoney(pack.finance.summary.gross_payout) : "Restricted"} note={commercialAccess ? "Month to date" : "Authorized users only"} />
+              <Kpi label="Payout" value={commercialAccess ? compactMoney(pack.finance.summary.gross_payout) : "Restricted"} note={commercialAccess ? period.label : "Authorized users only"} />
               <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note={`${number(pack.claims.summary.claims_with_pending_documents)} documents pending`} noteTone={pack.claims.summary.claims_with_pending_documents > 0 ? "danger" : undefined} />
               <Kpi label="Renewals 30d" value={number(pack.renewals.summary.due_30_count)} note={`${compactMoney(pack.renewals.summary.premium_due_30)} premium at risk`} />
             </section>
 
             <section className="ov-grid ov-grid--top">
-              <article className="ov-card ov-section">
-                <div className="ov-section-head">
-                  <h2>Business Trend</h2>
-                  <button type="button" className="ov-mini-select">Last 6 months <ChevronDown className="h-3 w-3" /></button>
-                </div>
-                <BusinessTrendChart trend={trend} />
-              </article>
+              <BusinessTrendCard
+                activePeriod={trendPeriod.period}
+                options={trendOptions(period, business)}
+                points={trendPoints}
+              />
 
               <article className="ov-card ov-section">
                 <div className="ov-section-head">
@@ -175,43 +212,6 @@ function Kpi({ label, value, delta, note, noteTone }: { label: string; value: st
       ) : (
         <div className={`ov-kpi-note ${noteTone === "danger" ? "ov-negative" : ""}`}>{note || "Month to date"}</div>
       )}
-    </div>
-  );
-}
-
-function BusinessTrendChart({ trend }: { trend: Array<{ month: string; policy_count: number; net_premium: number }> }) {
-  if (!trend.length) return <div className="r2-empty">No year-to-date business trend available</div>;
-  const width = 720;
-  const height = 220;
-  const pad = { left: 48, right: 46, top: 28, bottom: 38 };
-  const premiumMax = Math.max(...trend.map((row) => row.net_premium), 1);
-  const policyMax = Math.max(...trend.map((row) => row.policy_count), 1);
-  const x = (index: number) => pad.left + (trend.length === 1 ? 0 : index * ((width - pad.left - pad.right) / (trend.length - 1)));
-  const yPremium = (value: number) => height - pad.bottom - (value / premiumMax) * (height - pad.top - pad.bottom);
-  const yPolicy = (value: number) => height - pad.bottom - (value / policyMax) * (height - pad.top - pad.bottom);
-  const premiumPoints = trend.map((row, index) => `${x(index)},${yPremium(row.net_premium)}`).join(" ");
-  const policyPoints = trend.map((row, index) => `${x(index)},${yPolicy(row.policy_count)}`).join(" ");
-
-  return (
-    <div className="ov-chart">
-      <div className="ov-chart-legend"><span><i className="ov-dot ov-dot--blue" />Net Premium (₹ Lakh)</span><span><i className="ov-dot ov-dot--slate" />Policies (Count)</span></div>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Six month net premium and policy count trend">
-        {[0, .25, .5, .75, 1].map((tick) => {
-          const y = pad.top + tick * (height - pad.top - pad.bottom);
-          return <line key={tick} x1={pad.left} x2={width - pad.right} y1={y} y2={y} className="ov-grid-line" />;
-        })}
-        <polyline points={premiumPoints} fill="none" className="ov-line ov-line--premium" />
-        <polyline points={policyPoints} fill="none" className="ov-line ov-line--policies" />
-        {trend.map((row, index) => (
-          <g key={row.month}>
-            <circle cx={x(index)} cy={yPremium(row.net_premium)} r="3.5" className="ov-point ov-point--premium" />
-            <circle cx={x(index)} cy={yPolicy(row.policy_count)} r="3" className="ov-point ov-point--policies" />
-            <text x={x(index)} y={height - 13} textAnchor="middle" className="ov-axis-label">{monthYear(row.month)}</text>
-          </g>
-        ))}
-        <text x="8" y="16" className="ov-axis-label">{compactMoney(premiumMax)}</text>
-        <text x={width - 5} y="16" textAnchor="end" className="ov-axis-label">{number(policyMax)}</text>
-      </svg>
     </div>
   );
 }
@@ -337,4 +337,178 @@ function monthYear(value: string) {
 function shortName(value: string) {
   const words = value.trim().split(/\s+/);
   return words.slice(0, 2).join(" ").slice(0, 16) || "—";
+}
+
+
+type OverviewPeriodState = {
+  period: OverviewPeriod;
+  fromDate: string;
+  toDate: string;
+  today: string;
+  label: string;
+};
+
+function resolveOverviewPeriod(query: { period?: string; from?: string; to?: string }): OverviewPeriodState {
+  const today = indiaDateValue(new Date());
+  const currentMonth = today.slice(0, 7);
+  const selected = query.period === "last_month" || query.period === "last_6_months" || query.period === "custom" ? query.period : "mtd";
+
+  if (selected === "custom" && validDateValue(query.from) && validDateValue(query.to) && query.from! <= query.to! && query.to! <= today) {
+    return { period: "custom", fromDate: query.from!, toDate: query.to!, today, label: "Custom period" };
+  }
+
+  if (selected === "last_month") {
+    const previousMonth = shiftMonth(currentMonth, -1);
+    return {
+      period: "last_month",
+      fromDate: `${previousMonth}-01`,
+      toDate: lastDayOfMonthValue(previousMonth),
+      today,
+      label: "Last month",
+    };
+  }
+
+  if (selected === "last_6_months") {
+    return {
+      period: "last_6_months",
+      fromDate: `${shiftMonth(currentMonth, -5)}-01`,
+      toDate: today,
+      today,
+      label: "Last 6 months",
+    };
+  }
+
+  return { period: "mtd", fromDate: `${currentMonth}-01`, toDate: today, today, label: "Month to date" };
+}
+
+function shiftMonth(month: string, offset: number) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+function lastDayOfMonthValue(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year, monthNumber, 0));
+  return `${year}-${String(monthNumber).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function validDateValue(value: string | undefined) {
+  return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value));
+}
+
+function indiaDateValue(date: Date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+
+type OverviewBusinessState = {
+  key: OverviewBusiness;
+  label: string;
+  businessLine: "Motor" | "Non Motor" | null;
+  category: string | null;
+};
+
+function resolveOverviewBusiness(value: string | undefined): OverviewBusinessState {
+  if (value === "motor") return { key: "motor", label: "Motor", businessLine: "Motor", category: null };
+  if (value === "non_motor") return { key: "non_motor", label: "Non Motor", businessLine: "Non Motor", category: null };
+  if (value === "life") return { key: "life", label: "Life", businessLine: "Non Motor", category: "Life" };
+  if (value === "health") return { key: "health", label: "Health", businessLine: "Non Motor", category: "Health" };
+  return { key: "all", label: "All Business", businessLine: null, category: null };
+}
+
+type OverviewTrendState = {
+  period: OverviewTrendPeriod;
+  fromDate: string;
+  toDate: string;
+  daily: boolean;
+};
+
+function resolveTrendPeriod(value: string | undefined): OverviewTrendState {
+  const today = indiaDateValue(new Date());
+  const currentMonth = today.slice(0, 7);
+
+  if (value === "mtd") {
+    return { period: "mtd", fromDate: `${currentMonth}-01`, toDate: today, daily: true };
+  }
+  if (value === "last_month") {
+    const previousMonth = shiftMonth(currentMonth, -1);
+    return { period: "last_month", fromDate: `${previousMonth}-01`, toDate: lastDayOfMonthValue(previousMonth), daily: true };
+  }
+  if (value === "1_year") {
+    return { period: "1_year", fromDate: `${shiftMonth(currentMonth, -11)}-01`, toDate: today, daily: false };
+  }
+  return { period: "last_6_months", fromDate: `${shiftMonth(currentMonth, -5)}-01`, toDate: today, daily: false };
+}
+
+function trendOptions(period: OverviewPeriodState, business: OverviewBusinessState) {
+  const options: Array<{ value: OverviewTrendPeriod; label: string }> = [
+    { value: "mtd", label: "MTD" },
+    { value: "last_month", label: "Last Month" },
+    { value: "last_6_months", label: "Last 6 Months" },
+    { value: "1_year", label: "1 Year" },
+  ];
+  return options.map((option) => ({
+    ...option,
+    href: overviewHref(period, business, option.value),
+  }));
+}
+
+function overviewHref(period: OverviewPeriodState, business: OverviewBusinessState, trend: OverviewTrendPeriod) {
+  const params = new URLSearchParams();
+  params.set("period", period.period);
+  if (period.period === "custom") {
+    params.set("from", period.fromDate);
+    params.set("to", period.toDate);
+  }
+  if (business.key !== "all") params.set("business", business.key);
+  if (trend !== "last_6_months") params.set("trend", trend);
+  return `/reports?${params.toString()}`;
+}
+
+function managementPackExportHref(period: OverviewPeriodState, business: OverviewBusinessState) {
+  const params = new URLSearchParams();
+  params.set("from", period.fromDate);
+  params.set("to", period.toDate);
+  if (business.businessLine) params.set("business", business.businessLine);
+  if (business.category) params.set("category", business.category);
+  return `/reports/export/management-pack?${params.toString()}`;
+}
+
+function buildDailyTrendPoints(
+  rows: Array<{ date: string; policy_count: number; net_premium: number }>,
+  fromDate: string,
+  toDate: string,
+): BusinessTrendPoint[] {
+  const totals = new Map(rows.map((row) => [row.date, { policy_count: row.policy_count, net_premium: row.net_premium }]));
+
+  const result: BusinessTrendPoint[] = [];
+  let cursor = parseIsoDate(fromDate);
+  const end = parseIsoDate(toDate);
+  while (cursor.getTime() <= end.getTime()) {
+    const key = isoDate(cursor);
+    const total = totals.get(key) ?? { policy_count: 0, net_premium: 0 };
+    result.push({
+      key,
+      label: new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(cursor),
+      axisLabel: new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" }).format(cursor),
+      policy_count: total.policy_count,
+      net_premium: total.net_premium,
+    });
+    cursor = new Date(cursor.getTime() + 86_400_000);
+  }
+  return result;
+}
+
+function parseIsoDate(value: string) {
+  return new Date(`${value}T00:00:00Z`);
+}
+
+function isoDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }

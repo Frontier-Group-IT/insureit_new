@@ -45,6 +45,33 @@ export async function loadPolicyBusinessNetReport(profile:ViewerProfile,query:Po
  return{report:normalizePolicyBusinessNetReport(reportResult.data,filters.page),filters,scopeMode:scope.mode};
 }
 
+
+export async function loadPolicyBusinessDailyTrend(profile:ViewerProfile,query:PolicyBusinessQuery){
+ const {filters,scopeRmEmployeeIds}=await reportContext(profile,query);
+ if(scopeRmEmployeeIds!==null&&scopeRmEmployeeIds.length===0)return[] as Array<{date:string;policy_count:number;net_premium:number}>;
+ const admin=createSupabaseAdminClient();
+ const pageSize=200;
+ const totals=new Map<string,{policy_count:number;net_premium:number}>();
+ let page=1;
+ let totalPages=1;
+ do{
+  const pageFilters={...filters,page};
+  const result=await admin.rpc("get_policy_business_report_v5",reportRpcArgs(scopeRmEmployeeIds,pageFilters,pageSize));
+  if(result.error)throw new Error(`Policy business daily trend query failed: ${result.error.message}`);
+  const report=normalizePolicyBusinessNetReport(result.data,page);
+  for(const row of report.register.rows){
+   if(!row.business_date)continue;
+   const current=totals.get(row.business_date)??{policy_count:0,net_premium:0};
+   current.policy_count+=1;
+   current.net_premium+=row.net_premium||0;
+   totals.set(row.business_date,current);
+  }
+  totalPages=Math.max(1,Math.ceil(report.register.total_count/pageSize));
+  page+=1;
+ }while(page<=totalPages);
+ return[...totals.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([date,total])=>({date,...total}));
+}
+
 async function reportContext(profile:ViewerProfile,query:PolicyBusinessQuery){
  const filters=resolvePolicyBusinessFilters(query);
  const [scopeRmEmployeeIds,scope]=await Promise.all([getAccessiblePolicyRmEmployeeIds(profile.id,profile.role,"view_reports"),getEmployeeAccessScope(profile.id,profile.role,"view_reports")]);

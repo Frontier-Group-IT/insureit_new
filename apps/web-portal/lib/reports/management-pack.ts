@@ -9,7 +9,7 @@ import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 import { loadRenewalReport } from "@/lib/reports/renewals";
 
 type ViewerProfile = { id: string; role: string | null };
-export type ManagementPackQuery = { month?: string };
+export type ManagementPackQuery = { month?: string; from?: string; to?: string; business?: string; category?: string };
 export type ManagementPackFilters = { month: string; fromDate: string; toDate: string; currentMonth: string };
 
 export type ManagementPack = {
@@ -30,7 +30,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     throw new Error("Backoffice Executive cannot access management-pack finance, payout or governance data.");
   }
   const filters = resolveManagementPackFilters(query);
-  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" };
+  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, business: query.business, category: query.category, page: "1" };
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
@@ -60,6 +60,16 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
 export function resolveManagementPackFilters(query: ManagementPackQuery): ManagementPackFilters {
   const today = indiaDate(new Date());
   const currentMonth = today.slice(0, 7);
+
+  if (validDate(query.from) && validDate(query.to) && query.from! <= query.to! && query.to! <= today) {
+    return {
+      month: query.from!.slice(0, 7),
+      fromDate: query.from!,
+      toDate: query.to!,
+      currentMonth,
+    };
+  }
+
   const requested = validMonth(query.month) && query.month! <= currentMonth ? query.month! : currentMonth;
   const fromDate = `${requested}-01`;
   const lastDay = lastDayOfMonth(requested);
@@ -137,6 +147,7 @@ function numberField(value: Record<string, unknown>, key: string) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 function validMonth(value: string | undefined) { return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)); }
+function validDate(value: string | undefined) { return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)); }
 function lastDayOfMonth(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);
   const date = new Date(Date.UTC(year, monthNumber, 0));
