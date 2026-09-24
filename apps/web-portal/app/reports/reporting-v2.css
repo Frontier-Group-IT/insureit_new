@@ -989,7 +989,7 @@
   min-height: 42px;
   align-items: stretch;
   gap: 4px;
-  overflow-x: auto;
+  overflow: visible;
   border-bottom: 1px solid #dfe6ef;
 }
 
@@ -1030,7 +1030,7 @@
   min-height: 34px;
   align-items: center;
   gap: 18px;
-  overflow-x: auto;
+  overflow: visible;
   border-bottom: 1px solid #e7edf3;
   padding: 0 10px;
 }
