@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Customer App Policy Detail renewal action moved to page header:** branch `ui/customer-policy-renew-action-header`; moves `Add renewed policy` from the full-width red button at the bottom of the Policy Detail summary card to a compact action at the far right of the `Policy details` page-title row. The action remains visible only for expired / renewal-due policies and keeps the same Add Policy navigation target. No policy-status calculation, API/RPC, schema, RLS, APK/AAB, native config, or runtime-version change. **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB CREATED.**
+
 - **2026-09-24 — Tata Commercial non-breaking renewal voice campaign:** refreshed branch `feat/tata-commercial-renewal-voice-main2`; IT Voice Campaign upload detects the Tata workbook `Renewal` sheet only (explicitly excluding `Breaking Case`), accepts up to 500 source rows, preserves Tata customer/vehicle/insurer/policy/expiry context, groups repeated mobiles into one multi-vehicle calling prospect, supplies campaign-aware/repeat-call Sarvam variables, and makes cashless claim assistance the primary Tata renewal service pitch without guaranteeing claim approval. Dedicated migration expands campaign count checks from 100 to 500. Existing IT-only control, calling window, kill switch, DNC/terminal, provider-state, active-attempt, webhook/idempotency and no-master-write safeguards remain. **IMPLEMENTED; migration committed but NOT APPLIED; CI/merge/deployment pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
 
 
