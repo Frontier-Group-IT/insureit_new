@@ -1,3 +1,16 @@
+## 2026-09-24 — Reports shared reference header
+
+- Branch: `ui/reports-shared-reference-header`.
+- Shared `ReportPageShell` now uses the same plain header language as the approved Reports Overview reference: **Reports + Updated time**, flat primary tabs, and compact filters/actions without the previous large boxed header card.
+- Primary tabs are **Overview | Business | Portfolio | Operations**.
+- Business-family pages show compact secondary tabs **Performance | Distribution | Finance**.
+- Accounts Reports was migrated onto the shared report shell so its header also follows the same pattern.
+- The existing `/reports` Overview page already used the approved reference header and remains unchanged.
+- No report formulas/data logic, schema, migration, RLS, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **IMPLEMENTED ON BRANCH; no PR created; not merged; not deployed.**
+
+---
+
 ## 2026-09-24 — Business report reference-layout redesign
 
 - Branch: `redesign/business-report-reference-layout`.

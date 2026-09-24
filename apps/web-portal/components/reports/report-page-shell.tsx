@@ -3,6 +3,7 @@ import { Download, Filter } from "lucide-react";
 import type { ReactNode } from "react";
 import { ReportRegisterEnhancer } from "@/components/reports/report-register-enhancer";
 import { ReportFilterSubmitGuard } from "@/components/reports/report-query-shortcuts";
+import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
 
 export const reportInputClass = "h-9 w-full rounded-md border border-[#d9e0e8] bg-white px-2.5 text-[11px] font-semibold text-[#344054] outline-none transition focus:border-[#7692b6] focus:ring-2 focus:ring-[#e9f0f7]";
 
@@ -28,23 +29,45 @@ export function ReportPageShell({
   controlsClassName?: string;
 }) {
   return (
-    <div className={`report-page-shell mx-auto max-w-[1560px] space-y-3.5 pb-8 ${className}`}>
+    <div className={`reports-reference-shell report-page-shell mx-auto max-w-[1560px] pb-8 ${className}`}>
       <ReportFilterSubmitGuard />
       <ReportRegisterEnhancer />
-      <header className={`portal-card overflow-hidden ${headerClassName}`}>
-        <div className="flex flex-col gap-3 border-b border-[#e8ecf1] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <h1 className="report-title text-[24px] font-semibold tracking-[-0.03em] text-[#172033]">{title}</h1>
-            {titleAccessory}
+
+      <header className={`reports-reference-header ${headerClassName}`}>
+        <div className="reports-reference-topbar">
+          <div className="reports-reference-heading">
+            <h1>Reports</h1>
+            <span>Updated {indiaTime()}</span>
           </div>
-          {actions ? <div className="report-header-actions flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+          {actions ? <div className="reports-reference-actions report-header-actions">{actions}</div> : null}
         </div>
-        {controls ? <div className={`report-controls bg-[#fbfcfd] px-4 py-3.5 sm:px-5 ${controlsClassName}`}>{controls}</div> : null}
+
+        <ReportWorkspaceNavigation />
+
+        {controls || title ? (
+          <div className={`reports-reference-controls ${controlsClassName}`}>
+            <div className="reports-reference-page-context">
+              <strong>{title}</strong>
+              {titleAccessory}
+            </div>
+            {controls ? <div className="reports-reference-filter-area">{controls}</div> : null}
+          </div>
+        ) : null}
       </header>
+
       {loadError ? <ReportErrorBanner /> : null}
-      {children}
+      <div className="reports-reference-content">{children}</div>
     </div>
   );
+}
+
+function indiaTime() {
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date());
 }
 
 export function ReportFilterField({ label, children }: { label: string; children: ReactNode }) {
