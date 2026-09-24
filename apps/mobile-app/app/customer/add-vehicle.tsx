@@ -578,6 +578,8 @@ function MakeDropdown({ manufacturers, selectedMake, query, open, onToggle, onQu
       onSelect={(option) => onSelect(option.label)}
       emptyText="No matching manufacturer found."
       autoCapitalize="words"
+      allowCustomValue
+      onCustomValue={onSelect}
     />
   );
 }
