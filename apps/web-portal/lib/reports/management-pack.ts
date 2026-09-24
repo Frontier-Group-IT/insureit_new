@@ -69,7 +69,8 @@ export function resolveManagementPackFilters(query: ManagementPackQuery): Manage
     return { month: requested, period: "mtd", fromDate, toDate, currentMonth };
   }
 
-  const period: ManagementPackPeriod = isManagementPackPeriod(query.period) ? query.period : "mtd";
+  const requestedPeriod = query.period;
+  const period: ManagementPackPeriod = isManagementPackPeriod(requestedPeriod) ? requestedPeriod : "mtd";
   if (period === "custom") {
     const from = validDate(query.from);
     const to = validDate(query.to);
