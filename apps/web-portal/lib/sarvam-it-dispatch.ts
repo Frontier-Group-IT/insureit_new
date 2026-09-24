@@ -87,10 +87,6 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     throw new Error("This opportunity is already closed or suppressed.");
   }
 
-  if (opportunity.rc_enrichment_status !== "ready") {
-    throw new Error("Fetch RC details before starting the AI call.");
-  }
-
   const enrichment = opportunity.rc_enrichment_details ?? {};
   const overrides = opportunity.ai_profile_overrides ?? {};
   const sourcePayload = opportunity.source_payload && typeof opportunity.source_payload === "object" ? opportunity.source_payload : {};
@@ -107,6 +103,10 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     return typeof value === "string" || typeof value === "number" ? String(value).replace(/\s+/g, " ").trim() || null : null;
   };
   const campaignVehicles = Array.isArray(campaignContext.vehicles) ? campaignContext.vehicles : [];
+  const tataSourceReady = campaignText("campaignType") === "tata_commercial_renewal";
+  if (opportunity.rc_enrichment_status !== "ready" && !tataSourceReady) {
+    throw new Error("Fetch RC details before starting the AI call.");
+  }
 
   const customerName = overrideText(
     overrides,
