@@ -7,7 +7,7 @@
 - Accounts Reports was migrated onto the shared report shell so its header also follows the same pattern.
 - The existing `/reports` Overview page already used the approved reference header and remains unchanged.
 - No report formulas/data logic, schema, migration, RLS, mobile app, Partner app, APK/AAB, or native runtime changes.
-- **IMPLEMENTED ON BRANCH; no PR created; not merged; not deployed.**
+- PR #2340 passed canonical `Verify web portal` workflow #4562, including regressions, typecheck, lint, and production build.\n- Merge commit: `665d0a94022bf607cdd3f51cc4a76666368719db`.\n- **MERGED; production deployment not verified in this step.**
 
 ---
 
