@@ -38,7 +38,7 @@ export default async function NewVoiceCampaignPage({
             Voice Integration
           </Link>
           <span className="rounded-full border border-[#D4E3F6] bg-white px-3 py-1 text-[8px] font-bold text-[#3156B8]">
-            Maximum 100 customers
+            Maximum 500 source rows
           </span>
         </div>
 
@@ -52,8 +52,9 @@ export default async function NewVoiceCampaignPage({
                 Add voice campaign
               </h1>
               <p className="mt-1 text-[10px] leading-5 text-[#687B96]">
-                Upload only RC No. and Mobile No. Frontier JCB will fetch the approved vehicle,
-                insurer and policy context through the existing RC API before calls can start.
+                Upload a standard RC + mobile campaign, or the Tata Commercial workbook. For Tata files,
+                only the Renewal sheet is imported; Breaking Case is excluded. Existing insurer,
+                policy, expiry, customer and vehicle context is preserved before calls can start.
               </p>
             </div>
           </div>
@@ -79,7 +80,7 @@ export default async function NewVoiceCampaignPage({
                   name="name"
                   required
                   maxLength={120}
-                  placeholder="V5 Pilot - 100 Customers"
+                  placeholder="Tata Commercial Renewal"
                   className="h-10 w-full rounded-lg border border-[#D6E0EC] px-3 text-[10px] font-semibold text-[#29415F] outline-none focus:border-[#3156B8]"
                 />
               </label>
@@ -91,7 +92,7 @@ export default async function NewVoiceCampaignPage({
                 <input
                   name="description"
                   maxLength={500}
-                  placeholder="Real-customer V5 validation"
+                  placeholder="Upcoming Tata Commercial renewals"
                   className="h-10 w-full rounded-lg border border-[#D6E0EC] px-3 text-[10px] text-[#29415F] outline-none focus:border-[#3156B8]"
                 />
               </label>
@@ -103,8 +104,8 @@ export default async function NewVoiceCampaignPage({
                 Upload Excel sheet
               </span>
               <span className="mt-1 block text-[8.5px] text-[#72849C]">
-                Required columns: <strong>RC No.</strong> and <strong>Mobile No.</strong> · .xlsx,
-                .xls or .csv
+                Standard: <strong>RC No.</strong> + <strong>Mobile No.</strong>. Tata workbook:
+                <strong> Renewal</strong> sheet is detected automatically; <strong>Breaking Case</strong> is ignored.
               </span>
               <input
                 type="file"
@@ -116,9 +117,9 @@ export default async function NewVoiceCampaignPage({
             </label>
 
             <div className="rounded-xl bg-[#F4F7FB] px-3.5 py-3 text-[8.5px] leading-5 text-[#64748B]">
-              Upload does not call customers. Rows are validated first, DNC/closed RCs are held,
-              and RC enrichment runs before the campaign becomes callable. Starting calls remains
-              a separate explicit action.
+              Upload does not call customers. Tata renewal rows sharing one usable mobile are grouped into one
+              calling prospect with multi-vehicle context. DNC/closed RCs remain held, RC enrichment
+              still runs before dispatch, and starting calls remains a separate explicit action.
             </div>
 
             <div className="flex justify-end gap-2">
