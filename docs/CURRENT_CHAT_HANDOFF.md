@@ -1,3 +1,17 @@
+## 2026-09-24 — Operations report compact header controls
+
+- Branch: `refine/reports-operations-compact-header`.
+- PR: #2372.
+- Removed the visible **Horizon** and **Exception** headings above the Operations report dropdowns.
+- Both controls are compact 34px inline selectors matching the Reports Overview header language.
+- Horizon keeps the existing 30 / 60 / 90 / 180 / 365 day choices.
+- Exception keeps the existing All vehicles / Missing / Expired / Due / AuthBridge-unverified choices.
+- Existing URL query behavior and page reset behavior are unchanged.
+- No Operations report cards, tables, KPIs, calculations, export, schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+
+---
+
 ## 2026-09-24 — Reports navigation scrollbar override cleanup
 
 - Branch: `fix/reports-nav-remove-scroll-override`.
