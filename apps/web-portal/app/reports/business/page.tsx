@@ -250,7 +250,7 @@ function InsurerTable({ rows }: { rows: CommercialRow[] }) {
 function RmTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
-    <div className="max-h-[360px] overflow-auto">
+    <div className="overflow-x-auto">
       <table className="w-full min-w-[1020px] border-collapse">
         <thead className="sticky top-0 z-10 bg-[#f8fafc]">
           <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
@@ -282,7 +282,7 @@ function RmTable({ rows }: { rows: CommercialRow[] }) {
 function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
-    <div className="max-h-[390px] overflow-auto">
+    <div className="overflow-x-auto">
       <table className="w-full min-w-[1280px] border-collapse">
         <thead className="sticky top-0 z-10 bg-[#f8fafc]">
           <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
