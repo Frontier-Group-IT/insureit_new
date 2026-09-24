@@ -175,7 +175,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
           : daysToExpiry <= 30
             ? "DUE_16_30"
             : "DUE_31_PLUS";
-  const vehicleCount = Number(campaignText("vehicleCount") ?? campaignVehicles.length || 1);
+  const vehicleCount = Number(campaignText("vehicleCount") ?? (campaignVehicles.length || 1));
   const vehicleContextSummary = campaignVehicles
     .slice(0, 10)
     .map((vehicle) => {
