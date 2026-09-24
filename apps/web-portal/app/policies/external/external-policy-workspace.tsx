@@ -266,26 +266,15 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
             {pageRows.map((policy) => (
               <tr key={policy.id} className="h-11 transition hover:bg-[#FAFCFF]">
                 <td className="px-2.5">
-                  <div className="flex min-w-0 items-center gap-2">
-                    {getInsurerLogo(policy.insurance_companies?.name) ? (
-                      <Image
-                        src={getInsurerLogo(policy.insurance_companies?.name)!}
-                        alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
-                        width={26}
-                        height={26}
-                        className="max-h-6 max-w-[28px] shrink-0 object-contain"
-                      />
-                    ) : null}
-                    <div className="min-w-0">
-                      {canEdit ? (
-                        <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
-                          {policy.policy_no}
-                        </Link>
-                      ) : (
-                        <p className="truncate text-[12px] font-bold text-[#0F172A]" title={policy.policy_no}>{policy.policy_no}</p>
-                      )}
-                      <p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.policy_type}</p>
-                    </div>
+                  <div className="min-w-0">
+                    {canEdit ? (
+                      <Link prefetch={false} href={`/policies/external/${policy.id}/edit`} className="block truncate text-[12px] font-bold text-[#17365D] hover:underline" title={policy.policy_no}>
+                        {policy.policy_no}
+                      </Link>
+                    ) : (
+                      <p className="truncate text-[12px] font-bold text-[#0F172A]" title={policy.policy_no}>{policy.policy_no}</p>
+                    )}
+                    <p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.policy_type}</p>
                   </div>
                 </td>
                 <td className="px-2.5">
@@ -293,7 +282,20 @@ export function ExternalPolicyWorkspace({ rows, canEdit }: { rows: ExternalPolic
                   {policy.customers?.company_name ? <p className="truncate text-[9px] leading-4 text-[#64748B]">{policy.customers.company_name}</p> : null}
                 </td>
                 <td className="px-2.5 font-semibold">{policy.vehicles?.vehicle_no ?? "-"}</td>
-                <td className="px-2.5"><span className="block truncate" title={policy.insurance_companies?.name ?? "-"}>{policy.insurance_companies?.name ?? "-"}</span></td>
+                <td className="px-2.5">
+                  {getInsurerLogo(policy.insurance_companies?.name) ? (
+                    <Image
+                      src={getInsurerLogo(policy.insurance_companies?.name)!}
+                      alt={policy.insurance_companies?.name ? `${policy.insurance_companies.name} logo` : "Insurance company"}
+                      title={policy.insurance_companies?.name ?? undefined}
+                      width={34}
+                      height={24}
+                      className="max-h-6 max-w-[42px] object-contain"
+                    />
+                  ) : (
+                    <span className="text-[#94A3B8]" aria-label="Insurer logo unavailable">-</span>
+                  )}
+                </td>
                 <td className="px-2.5">
                   <p className="whitespace-nowrap font-semibold">{formatDate(policy.start_date)} - {formatDate(policy.end_date)}</p>
                   <p className={`text-[9px] leading-4 ${policy.status === "Expiring soon" ? "font-semibold text-amber-600" : policy.status === "Expired" ? "text-red-600" : "text-[#64748B]"}`}>{validityHint(policy.end_date)}</p>
