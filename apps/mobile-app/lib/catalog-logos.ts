@@ -3,7 +3,7 @@ import type { ImageSourcePropType } from 'react-native';
 const insurerLogos: Record<string, ImageSourcePropType> = {
   adityabirlasunlife: require('../assets/catalog/insurers/aditya-birla-sun-life.png'),
   axismaxlife: require('../assets/catalog/insurers/axis-max-life.png'),
-  bajajallianz: require('../assets/catalog/insurers/bajaj-allianz.png'),
+  bajajallianz: require('../assets/vehicles/bajaj-allianz.png'),
   bajajlife: require('../assets/catalog/insurers/bajaj-life.png'),
   bandhanlife: require('../assets/catalog/insurers/bandhan-life.png'),
   carehealth: require('../assets/catalog/insurers/care-health.png'),
