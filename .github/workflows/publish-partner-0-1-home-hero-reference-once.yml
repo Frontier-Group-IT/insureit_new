@@ -168,10 +168,10 @@ jobs:
           # The supplied banner is a progressive JPEG. The legacy Expo 0.1 asset
           # pipeline cannot read it reliably, so normalize the copied compatibility
           # asset to a baseline JPEG before Metro exports the OTA bundle.
-          if ! command -v ffmpeg >/dev/null 2>&1; then
-            sudo apt-get update
-            sudo apt-get install -y ffmpeg
-          fi
+          command -v ffmpeg >/dev/null 2>&1 || {
+            echo "ffmpeg is required to normalize the Policies banner for the legacy Expo bundler." >&2
+            exit 1
+          }
           ffmpeg -hide_banner -loglevel error -y \
             -i compat/apps/partner-app/assets/partner/banners/policies-header-reference.jpg \
             -frames:v 1 -c:v mjpeg -q:v 2 -pix_fmt yuvj420p \
