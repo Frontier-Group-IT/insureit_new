@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'supabase/migrations/20260921145500_voice_campaigns.sql'
+      - 'supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql'
       - '.github/workflows/apply-voice-campaigns.yml'
 
 permissions:
@@ -43,6 +44,7 @@ jobs:
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260921145500_voice_campaigns.sql
+          test -f supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -57,6 +59,8 @@ jobs:
           set -euo pipefail
           supabase db query --linked --file supabase/migrations/20260921145500_voice_campaigns.sql
           supabase migration repair --linked --status applied 20260921145500
+          supabase db query --linked --file supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql
+          supabase migration repair --linked --status applied 20260924170000
 
       - name: Verify schema contract
         shell: bash
@@ -71,9 +75,15 @@ jobs:
                 where table_schema='public'
                   and table_name='external_renewal_voice_attempts'
                   and column_name='voice_campaign_id'
-              ) as attempt_campaign_ready
+              ) as attempt_campaign_ready,
+              (
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where conrelid='public.voice_campaigns'::regclass
+                  and conname='voice_campaigns_total_rows_check'
+              ) like '%500%' as campaign_capacity_ready
           ")
           echo "$result"
-          for key in campaigns_ready members_ready attempt_campaign_ready; do
+          for key in campaigns_ready members_ready attempt_campaign_ready campaign_capacity_ready; do
             echo "$result" | grep -Eq "\"$key\"[[:space:]]*:[[:space:]]*true"
           done
