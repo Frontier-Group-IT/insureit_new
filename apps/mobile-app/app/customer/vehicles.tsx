@@ -814,7 +814,7 @@ function RenewalSuccessModal({ visible, onClose }: { visible: boolean; onClose: 
   );
 }
 
-function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusTone?: 'active' | 'due' | 'expired'; badge?: string }) {
+function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusTone?: 'active' | 'due' | 'expired' | 'upcoming'; badge?: string }) {
   return (
     <View style={styles.infoBlock}>
       <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
@@ -834,7 +834,7 @@ function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, ba
   );
 }
 
-function BlinkingPolicyDot({ tone }: { tone: 'active' | 'due' | 'expired' }) {
+function BlinkingPolicyDot({ tone }: { tone: 'active' | 'due' | 'expired' | 'upcoming' }) {
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -848,7 +848,13 @@ function BlinkingPolicyDot({ tone }: { tone: 'active' | 'due' | 'expired' }) {
 
   return <Animated.View style={[
     styles.policyStatusDot,
-    tone === 'active' ? styles.policyStatusDotActive : tone === 'due' ? styles.policyStatusDotDue : styles.policyStatusDotExpired,
+    tone === 'active'
+      ? styles.policyStatusDotActive
+      : tone === 'due'
+        ? styles.policyStatusDotDue
+        : tone === 'expired'
+          ? styles.policyStatusDotExpired
+          : styles.policyStatusDotUpcoming,
     { opacity },
   ]} />;
 }
@@ -969,11 +975,11 @@ function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicie
   })[0];
 }
 
-function policyStatusTone(policy: Pick<VehiclePolicyDisplay, 'end_date'>): 'active' | 'due' | 'expired' {
-  const days = daysUntil(policy.end_date);
-  if (days < 0) return 'expired';
-  if (days <= 45) return 'due';
-  return 'active';
+function policyStatusTone(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>): 'active' | 'due' | 'expired' | 'upcoming' {
+  const today = localIsoDate();
+  if (policy.start_date > today) return 'upcoming';
+  if (policy.end_date < today) return 'expired';
+  return daysUntil(policy.end_date) <= 45 ? 'due' : 'active';
 }
 
 function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {
@@ -1027,7 +1033,19 @@ function maskPolicyNumber(value?: string | null) {
 }
 
 function daysUntil(date: string) {
-  return Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const target = localDateOnly(date);
+  const today = localDateOnly(localIsoDate());
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function localIsoDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function localDateOnly(value: string) {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  return new Date(year, Math.max(0, month - 1), day);
 }
 
 function vehicleCompanyName(customerId: string, contexts: CustomerAccountContext[]) {
@@ -1179,6 +1197,7 @@ const styles = StyleSheet.create({
   policyStatusDotActive: { backgroundColor: '#12B76A' },
   policyStatusDotDue: { backgroundColor: '#F6C33B' },
   policyStatusDotExpired: { backgroundColor: '#D92D20' },
+  policyStatusDotUpcoming: { backgroundColor: '#98A2B3' },
   policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F6FAFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 9, paddingVertical: 9, justifyContent: 'center' },
   policyEmptyTop: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
   policyEmptyIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#E4F0FF', alignItems: 'center', justifyContent: 'center' },
