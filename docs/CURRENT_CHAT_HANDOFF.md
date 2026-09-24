@@ -1,7 +1,7 @@
 ## 2026-09-24 — Operations report compact header controls
 
 - Branch: `refine/reports-operations-compact-header`.
-- PR: #2372.
+- PR: #2373.
 - Removed the visible **Horizon** and **Exception** headings above the Operations report dropdowns.
 - Both controls are compact 34px inline selectors matching the Reports Overview header language.
 - Horizon keeps the existing 30 / 60 / 90 / 180 / 365 day choices.
