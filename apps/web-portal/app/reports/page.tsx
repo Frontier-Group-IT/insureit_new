@@ -4,11 +4,9 @@ import {
   AlertCircle,
   ArrowRight,
   Building2,
-  CalendarDays,
   ChevronDown,
   Clock3,
   Download,
-  Filter,
   Info,
   TriangleAlert,
 } from "lucide-react";
@@ -16,12 +14,23 @@ import { AppShell } from "@/components/shell";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
-import { loadManagementPack } from "@/lib/reports/management-pack";
+import { ReportOverviewPeriodControl } from "@/components/reports/report-overview-period-control";
+import { loadManagementPack, resolveManagementPackFilters, type ManagementPackPeriod } from "@/lib/reports/management-pack";
 import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 
-export default async function ReportsOverviewPage() {
+type Query = Record<string, string | string[] | undefined>;
+type Props = { searchParams: Promise<Query> };
+
+export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
   if (!profile) return null;
+
+  const query = await searchParams;
+  const requestedPeriod = periodValue(single(query.period));
+  const requestedFrom = single(query.from);
+  const requestedTo = single(query.to);
+  const overviewQuery = { period: requestedPeriod, from: requestedFrom, to: requestedTo };
+  const overviewFilters = resolveManagementPackFilters(overviewQuery);
 
   const commercialAccess = canAccessPolicyCommercials(profile);
   let loadError = false;
@@ -30,8 +39,13 @@ export default async function ReportsOverviewPage() {
 
   try {
     const [managementPack, businessPayload] = await Promise.all([
-      loadManagementPack(profile, {}),
-      loadPolicyBusinessNetReport(profile, { period: "ytd", page: "1" }),
+      loadManagementPack(profile, overviewQuery),
+      loadPolicyBusinessNetReport(profile, {
+        period: "custom",
+        from: overviewFilters.fromDate,
+        to: overviewFilters.toDate,
+        page: "1",
+      }),
     ]);
     pack = managementPack;
     ytdBusiness = businessPayload.report;
@@ -57,9 +71,8 @@ export default async function ReportsOverviewPage() {
             <span>Updated {indiaTime()}</span>
           </div>
           <div className="ov-toolbar">
-            <button type="button" className="ov-control"><CalendarDays className="h-3.5 w-3.5" /><span>MTD</span><ChevronDown className="h-3 w-3" /></button>
+            <ReportOverviewPeriodControl period={overviewFilters.period} fromDate={overviewFilters.fromDate} toDate={overviewFilters.toDate} />
             <button type="button" className="ov-control"><Building2 className="h-3.5 w-3.5" /><span>All Business</span><ChevronDown className="h-3 w-3" /></button>
-            <Link prefetch={false} href="/reports/business" className="ov-control ov-control--filter"><Filter className="h-3.5 w-3.5" /><span>Filters</span><span className="ov-filter-count">2</span></Link>
             <Link prefetch={false} href={pack ? `/reports/export/management-pack?month=${pack.filters.month}` : "/reports"} className="ov-control ov-control--primary"><Download className="h-3.5 w-3.5" /><span>Export</span></Link>
           </div>
         </header>
@@ -337,4 +350,9 @@ function monthYear(value: string) {
 function shortName(value: string) {
   const words = value.trim().split(/\s+/);
   return words.slice(0, 2).join(" ").slice(0, 16) || "—";
+}
+
+function single(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
+function periodValue(value: string | undefined): ManagementPackPeriod {
+  return value === "last_month" || value === "last_6_months" || value === "custom" ? value : "mtd";
 }
