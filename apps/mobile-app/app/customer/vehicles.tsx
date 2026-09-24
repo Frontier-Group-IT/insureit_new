@@ -221,7 +221,7 @@ export default function VehiclesScreen() {
       {filteredVehicles.map((vehicle) => {
         const policy = policyForVehicle(vehicle.id, policies, externalPolicies);
         const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
-        const active = Boolean(policy && isPolicyActive(policy));
+        const policyTone = policy ? policyStatusTone(policy) : null;
         const externalPolicy = policy?.source === 'external';
         const insurerLogo = insurerImage(insurer?.name);
         const displayVehicleNo = vehicle.vehicle_no.replace(/^NEW-/i, '');
@@ -278,7 +278,7 @@ export default function VehiclesScreen() {
                       iconColor="#12805C"
                       label="Policy Number"
                       value={maskPolicyNumber(policy.policy_no)}
-                      statusActive={active}
+                      statusTone={policyTone ?? undefined}
                     />
                     <InfoBlock
                       icon="calendar-alert"
@@ -814,7 +814,7 @@ function RenewalSuccessModal({ visible, onClose }: { visible: boolean; onClose: 
   );
 }
 
-function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusActive?: boolean; badge?: string }) {
+function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusTone?: 'active' | 'due' | 'expired' | 'upcoming'; badge?: string }) {
   return (
     <View style={styles.infoBlock}>
       <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
@@ -826,7 +826,7 @@ function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive, 
           {badge ? <View style={styles.externalBadge}><Text style={styles.externalBadgeText}>{badge}</Text></View> : null}
         </View>
         <View style={styles.infoValueRow}>
-          {typeof statusActive === 'boolean' ? <BlinkingPolicyDot active={statusActive} /> : null}
+          {statusTone ? <BlinkingPolicyDot tone={statusTone} /> : null}
           <Text style={styles.infoValue}>{value}</Text>
         </View>
       </View>
@@ -834,7 +834,7 @@ function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusActive, 
   );
 }
 
-function BlinkingPolicyDot({ active }: { active: boolean }) {
+function BlinkingPolicyDot({ tone }: { tone: 'active' | 'due' | 'expired' | 'upcoming' }) {
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -846,7 +846,17 @@ function BlinkingPolicyDot({ active }: { active: boolean }) {
     return () => loop.stop();
   }, [opacity]);
 
-  return <Animated.View style={[styles.policyStatusDot, active ? styles.policyStatusDotActive : styles.policyStatusDotInactive, { opacity }]} />;
+  return <Animated.View style={[
+    styles.policyStatusDot,
+    tone === 'active'
+      ? styles.policyStatusDotActive
+      : tone === 'due'
+        ? styles.policyStatusDotDue
+        : tone === 'expired'
+          ? styles.policyStatusDotExpired
+          : styles.policyStatusDotUpcoming,
+    { opacity },
+  ]} />;
 }
 
 type ComplianceHealth = {
@@ -965,6 +975,13 @@ function policyForVehicle(vehicleId: string, policies: Policy[], externalPolicie
   })[0];
 }
 
+function policyStatusTone(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>): 'active' | 'due' | 'expired' | 'upcoming' {
+  const today = localIsoDate();
+  if (policy.start_date > today) return 'upcoming';
+  if (policy.end_date < today) return 'expired';
+  return daysUntil(policy.end_date) <= 45 ? 'due' : 'active';
+}
+
 function isPolicyActive(policy: Pick<VehiclePolicyDisplay, 'start_date' | 'end_date'>) {
   const now = new Date();
   const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1016,7 +1033,19 @@ function maskPolicyNumber(value?: string | null) {
 }
 
 function daysUntil(date: string) {
-  return Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const target = localDateOnly(date);
+  const today = localDateOnly(localIsoDate());
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function localIsoDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+function localDateOnly(value: string) {
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  return new Date(year, Math.max(0, month - 1), day);
 }
 
 function vehicleCompanyName(customerId: string, contexts: CustomerAccountContext[]) {
@@ -1151,7 +1180,7 @@ const styles = StyleSheet.create({
   twpVehicleVisual: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   twpRoadLine: { position: 'absolute', bottom: 8, width: 112, height: 2, borderRadius: 2, backgroundColor: '#D6E5F7' },
   vehicleMake: { color: palette.navy, fontSize: 12.4, lineHeight: 15, fontWeight: '900', marginTop: 5, flexShrink: 1 },
-  vehicleModel: { color: '#8A94A6', fontWeight: '700' },
+  vehicleModel: { color: palette.navy, fontWeight: '900' },
 
   rightPane: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: '#E5ECF5', paddingLeft: 10, position: 'relative' },
   infoBlock: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
@@ -1166,7 +1195,9 @@ const styles = StyleSheet.create({
   infoValue: { flex: 1, minWidth: 0, flexShrink: 1, color: palette.navy, fontSize: 11.4, lineHeight: 14, fontWeight: '900', marginTop: 1 },
   policyStatusDot: { width: 8, height: 8, borderRadius: 4, marginTop: 3 },
   policyStatusDotActive: { backgroundColor: '#12B76A' },
-  policyStatusDotInactive: { backgroundColor: '#D92D20' },
+  policyStatusDotDue: { backgroundColor: '#F6C33B' },
+  policyStatusDotExpired: { backgroundColor: '#D92D20' },
+  policyStatusDotUpcoming: { backgroundColor: '#98A2B3' },
   policyEmptyState: { flex: 1, minHeight: 144, borderRadius: 14, backgroundColor: '#F6FAFF', borderWidth: 1, borderColor: '#CFE0F5', paddingHorizontal: 9, paddingVertical: 9, justifyContent: 'center' },
   policyEmptyTop: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
   policyEmptyIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#E4F0FF', alignItems: 'center', justifyContent: 'center' },
