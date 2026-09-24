@@ -62,7 +62,7 @@ The existing variables such as `opening_line`, customer identity, vehicle, insur
 
 Tata campaign defaults:
 - `campaign_type=tata_commercial_renewal`
-- `calling_brand=Frontier Trucks`
+- `calling_brand` is optional; when absent the existing Frontier JCB caller identity remains the website fallback.
 - `vehicle_brand_context=Tata Commercial`
 - `primary_sales_pitch=cashless_claim_support`
 
