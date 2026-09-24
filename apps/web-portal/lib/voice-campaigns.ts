@@ -14,8 +14,8 @@ const SECOND_MOBILE_HEADERS = new Set(["secondnumber", "secondmobileno", "altern
 const CUSTOMER_NAME_HEADERS = new Set(["customername", "insuredname", "ownername", "ownersdetailsownersname"]);
 const MAKE_HEADERS = new Set(["manufacturer", "make", "vehiclemake", "vehicledetailsmakermanufacturer"]);
 const MODEL_HEADERS = new Set(["model", "vehiclemodel", "makersclass", "vehicledetailsmodelmakersclass"]);
-const INSURER_HEADERS = new Set(["insurer", "insurancecompany", "currentinsurer"]);
-const POLICY_NUMBER_HEADERS = new Set(["policynumber", "policyno", "currentpolicynumber"]);
+const INSURER_HEADERS = new Set(["insurer", "insurancecompany", "currentinsurer", "insurancedetailsinsurancecompany"]);
+const POLICY_NUMBER_HEADERS = new Set(["policynumber", "policyno", "currentpolicynumber", "insurancedetailspolicynumber"]);
 const POLICY_EXPIRY_HEADERS = new Set(["policyexpirydate", "insuranceupto", "insurancetodate", "insurancedetailsinsurancetodateinsuranceupto"]);
 
 type ExistingOpportunity = {
