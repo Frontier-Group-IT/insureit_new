@@ -3,21 +3,22 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowRight,
-  ChevronDown,
   Clock3,
   Info,
   TriangleAlert,
 } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
+import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewMix, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
+import { OverviewSectionSelect } from "@/components/reports/overview-section-select";
 import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadManagementPack } from "@/lib/reports/management-pack";
-import { loadPolicyBusinessDailyTrend, loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
+import { loadPolicyBusinessDailyTrend, loadPolicyBusinessNetReport, loadPolicyBusinessSourceMix } from "@/lib/reports/policy-business";
+import { loadRenewalOpportunityBuckets } from "@/lib/reports/renewals";
 
-type Props = { searchParams: Promise<{ period?: string; from?: string; to?: string; business?: string; trend?: string }> };
+type Props = { searchParams: Promise<{ period?: string; from?: string; to?: string; business?: string; trend?: string; mix?: string }> };
 
 export default async function ReportsOverviewPage({ searchParams }: Props) {
   const profile = await requireCapability("view_reports");
@@ -27,11 +28,14 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
   const period = resolveOverviewPeriod(query);
   const business = resolveOverviewBusiness(query.business);
   const trendPeriod = resolveTrendPeriod(query.trend);
+  const mix = resolveOverviewMix(query.mix);
   const commercialAccess = canAccessPolicyCommercials(profile);
   let loadError = false;
   let pack: Awaited<ReturnType<typeof loadManagementPack>> | null = null;
   let trendReport: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null = null;
   let dailyTrend: Awaited<ReturnType<typeof loadPolicyBusinessDailyTrend>> = [];
+  let sourceMix: Awaited<ReturnType<typeof loadPolicyBusinessSourceMix>> = [];
+  let renewalOpportunity: Awaited<ReturnType<typeof loadRenewalOpportunityBuckets>> = [];
 
   try {
     const managementPackPromise = loadManagementPack(profile, {
@@ -40,6 +44,14 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
       business: business.businessLine ?? undefined,
       category: business.category ?? undefined,
     });
+    const periodBusinessQuery = {
+      period: "custom",
+      from: period.fromDate,
+      to: period.toDate,
+      business: business.businessLine ?? undefined,
+      category: business.category ?? undefined,
+      page: "1",
+    };
     const trendQuery = {
       period: "custom",
       from: trendPeriod.fromDate,
@@ -48,20 +60,36 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
       category: business.category ?? undefined,
       page: "1",
     };
+    const sourceMixPromise = mix === "source"
+      ? loadPolicyBusinessSourceMix(profile, periodBusinessQuery)
+      : Promise.resolve([]);
+    const renewalOpportunityPromise = loadRenewalOpportunityBuckets(profile, {
+      business: business.businessLine ?? undefined,
+      category: business.category ?? undefined,
+    });
+
     if (trendPeriod.daily) {
-      const [managementPack, daily] = await Promise.all([
+      const [managementPack, daily, sourceRows, renewalRows] = await Promise.all([
         managementPackPromise,
         loadPolicyBusinessDailyTrend(profile, trendQuery),
+        sourceMixPromise,
+        renewalOpportunityPromise,
       ]);
       pack = managementPack;
       dailyTrend = daily;
+      sourceMix = sourceRows;
+      renewalOpportunity = renewalRows;
     } else {
-      const [managementPack, trendPayload] = await Promise.all([
+      const [managementPack, trendPayload, sourceRows, renewalRows] = await Promise.all([
         managementPackPromise,
         loadPolicyBusinessNetReport(profile, trendQuery),
+        sourceMixPromise,
+        renewalOpportunityPromise,
       ]);
       pack = managementPack;
       trendReport = trendPayload.report;
+      sourceMix = sourceRows;
+      renewalOpportunity = renewalRows;
     }
   } catch (error) {
     loadError = true;
@@ -77,11 +105,10 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
         policy_count: row.policy_count,
         net_premium: row.net_premium,
       }));
-  const topInsurers = (pack?.business.insurers ?? []).slice(0, 5);
+  const businessMixRows = buildBusinessMixRows(mix, pack?.business ?? null, sourceMix);
   const recentRecords = (pack?.business.register.rows ?? []).slice(0, 5);
   const premiumDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.net_premium));
   const policyDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.policy_count));
-  const riskByInsurer = pack ? buildRiskByInsurer(pack.renewals.insurers, pack.claims.insurers) : [];
 
   return (
     <AppShell title="Reports">
@@ -96,6 +123,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
             activePeriod={period.period}
             activeBusiness={business.key}
             activeTrend={trendPeriod.period}
+            activeMix={mix}
             fromDate={period.fromDate}
             toDate={period.toDate}
             today={period.today}
@@ -126,7 +154,7 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
             <section className="ov-grid ov-grid--top">
               <BusinessTrendCard
                 activePeriod={trendPeriod.period}
-                options={trendOptions(period, business)}
+                options={trendOptions(period, business, mix)}
                 points={trendPoints}
               />
 
@@ -148,17 +176,16 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
               <article className="ov-card ov-section">
                 <div className="ov-section-head">
                   <h2>Business Mix</h2>
-                  <button type="button" className="ov-mini-select">By Insurer <ChevronDown className="h-3 w-3" /></button>
+                  <OverviewSectionSelect label={mixLabel(mix)} options={mixOptions(period, business, trendPeriod.period)} />
                 </div>
-                <BusinessMix insurers={topInsurers} />
+                <BusinessMix mode={mix} rows={businessMixRows} />
               </article>
 
               <article className="ov-card ov-section">
                 <div className="ov-section-head">
-                  <h2>Portfolio Risk</h2>
-                  <button type="button" className="ov-mini-select">By Insurer <ChevronDown className="h-3 w-3" /></button>
+                  <h2>Renewal Opportunity</h2>
                 </div>
-                <PortfolioRisk rows={riskByInsurer} />
+                <RenewalOpportunity rows={renewalOpportunity} />
               </article>
             </section>
 
@@ -227,16 +254,25 @@ function AttentionItem({ icon, value, title, detail, href }: { icon: "danger" | 
   );
 }
 
-function BusinessMix({ insurers }: { insurers: Array<{ id: string; name: string; policy_count: number; net_premium: number; share_percent: number }> }) {
-  if (!insurers.length) return <div className="r2-empty">No insurer business available</div>;
-  const max = Math.max(...insurers.map((row) => row.net_premium), 1);
+type BusinessMixRow = {
+  key: string;
+  name: string;
+  policy_count: number;
+  net_premium: number;
+  share_percent: number;
+};
+
+function BusinessMix({ mode, rows }: { mode: OverviewMix; rows: BusinessMixRow[] }) {
+  if (!rows.length) return <div className="r2-empty">No business mix data available</div>;
+  const max = Math.max(...rows.map((row) => row.net_premium), 1);
+  const entityLabel = mode === "rm" ? "RM" : mode === "source" ? "Source" : "Insurer";
   return (
     <div className="ov-mix">
-      <div className="ov-mix-head"><span>#</span><span>Insurer</span><span>Net Premium (₹ L)</span><span>Share</span></div>
-      {insurers.map((row, index) => {
-        const logo = getInsurerLogo(row.name);
+      <div className="ov-mix-head"><span>#</span><span>{entityLabel}</span><span>Net Premium (₹ L)</span><span>Share</span></div>
+      {rows.map((row, index) => {
+        const logo = mode === "insurer" ? getInsurerLogo(row.name) : null;
         return (
-          <div className="ov-mix-row" key={`${row.id}-${row.name}`}>
+          <div className="ov-mix-row" key={row.key}>
             <span>{index + 1}</span>
             <span className="ov-mix-insurer">
               {logo ? <Image src={logo} alt="" width={18} height={18} className="ov-insurer-logo" /> : null}
@@ -251,46 +287,71 @@ function BusinessMix({ insurers }: { insurers: Array<{ id: string; name: string;
   );
 }
 
-type RiskRow = { name: string; renewal: number; claims: number };
-function PortfolioRisk({ rows }: { rows: RiskRow[] }) {
-  if (!rows.length) return <div className="r2-empty">No portfolio risk data available</div>;
-  const max = Math.max(...rows.flatMap((row) => [row.renewal, row.claims]), 1);
+function buildBusinessMixRows(
+  mode: OverviewMix,
+  report: Awaited<ReturnType<typeof loadPolicyBusinessNetReport>>["report"] | null,
+  sourceRows: Awaited<ReturnType<typeof loadPolicyBusinessSourceMix>>,
+): BusinessMixRow[] {
+  if (!report) return [];
+  if (mode === "source") {
+    return sourceRows.slice(0, 5).map((row) => ({
+      key: row.key,
+      name: row.name,
+      policy_count: row.policy_count,
+      net_premium: row.net_premium,
+      share_percent: row.share_percent,
+    }));
+  }
+  if (mode === "rm") {
+    const totalPremium = report.rms.reduce((sum, row) => sum + row.net_premium, 0);
+    return report.rms.slice(0, 5).map((row, index) => ({
+      key: row.employee_id || `rm-${index}-${row.name}`,
+      name: row.name || "Unassigned",
+      policy_count: row.policy_count,
+      net_premium: row.net_premium,
+      share_percent: totalPremium > 0 ? (row.net_premium / totalPremium) * 100 : 0,
+    }));
+  }
+  return report.insurers.slice(0, 5).map((row, index) => ({
+    key: row.id || `insurer-${index}-${row.name}`,
+    name: row.name || "Unassigned",
+    policy_count: row.policy_count,
+    net_premium: row.net_premium,
+    share_percent: row.share_percent,
+  }));
+}
+
+type RenewalOpportunityRow = {
+  key: string;
+  label: string;
+  policy_count: number;
+  net_premium: number;
+};
+
+function RenewalOpportunity({ rows }: { rows: RenewalOpportunityRow[] }) {
+  if (!rows.length) return <div className="r2-empty">No renewal opportunity data available</div>;
+  const max = Math.max(...rows.map((row) => row.net_premium), 1);
   return (
     <div className="ov-risk">
-      <div className="ov-chart-legend"><span><i className="ov-dot ov-dot--blue" />Renewals at Risk (₹ L)</span><span><i className="ov-dot ov-dot--light" />Claims Exposure (₹ L)</span></div>
+      <div className="ov-chart-legend">
+        <span><i className="ov-dot ov-dot--blue" />Net Premium at Risk (₹ L)</span>
+      </div>
       <div className="ov-risk-plot">
         {rows.map((row) => (
-          <div className="ov-risk-group" key={row.name}>
+          <div className="ov-risk-group" key={row.key}>
             <div className="ov-risk-bars">
-              <span className="ov-risk-bar ov-risk-bar--renewal" style={{ height: `${Math.max(3, (row.renewal / max) * 100)}%` }} title={compactMoney(row.renewal)} />
-              <span className="ov-risk-bar ov-risk-bar--claims" style={{ height: `${Math.max(3, (row.claims / max) * 100)}%` }} title={compactMoney(row.claims)} />
+              <span
+                className="ov-risk-bar ov-risk-bar--renewal"
+                style={{ height: `${row.net_premium > 0 ? Math.max(3, (row.net_premium / max) * 100) : 0}%` }}
+                title={`${compactMoney(row.net_premium)} · ${number(row.policy_count)} policies`}
+              />
             </div>
-            <span className="ov-risk-label">{shortName(row.name)}</span>
+            <span className="ov-risk-label">{row.label}</span>
           </div>
         ))}
       </div>
     </div>
   );
-}
-
-function buildRiskByInsurer(
-  renewals: Array<{ insurer_name: string; premium_at_risk: number }>,
-  claims: Array<{ insurer_name: string; estimated_loss: number }>,
-): RiskRow[] {
-  const rows = new Map<string, RiskRow>();
-  for (const row of renewals) {
-    const name = row.insurer_name || "Unassigned";
-    const current = rows.get(name) ?? { name, renewal: 0, claims: 0 };
-    current.renewal += row.premium_at_risk || 0;
-    rows.set(name, current);
-  }
-  for (const row of claims) {
-    const name = row.insurer_name || "Unassigned";
-    const current = rows.get(name) ?? { name, renewal: 0, claims: 0 };
-    current.claims += row.estimated_loss || 0;
-    rows.set(name, current);
-  }
-  return [...rows.values()].sort((a, b) => (b.renewal + b.claims) - (a.renewal + a.claims)).slice(0, 6);
 }
 
 function trendDelta(values: number[]) {
@@ -446,7 +507,7 @@ function resolveTrendPeriod(value: string | undefined): OverviewTrendState {
   return { period: "last_6_months", fromDate: `${shiftMonth(currentMonth, -5)}-01`, toDate: today, daily: false };
 }
 
-function trendOptions(period: OverviewPeriodState, business: OverviewBusinessState) {
+function trendOptions(period: OverviewPeriodState, business: OverviewBusinessState, mix: OverviewMix) {
   const options: Array<{ value: OverviewTrendPeriod; label: string }> = [
     { value: "mtd", label: "MTD" },
     { value: "last_month", label: "Last Month" },
@@ -455,11 +516,11 @@ function trendOptions(period: OverviewPeriodState, business: OverviewBusinessSta
   ];
   return options.map((option) => ({
     ...option,
-    href: overviewHref(period, business, option.value),
+    href: overviewHref(period, business, option.value, mix),
   }));
 }
 
-function overviewHref(period: OverviewPeriodState, business: OverviewBusinessState, trend: OverviewTrendPeriod) {
+function overviewHref(period: OverviewPeriodState, business: OverviewBusinessState, trend: OverviewTrendPeriod, mix: OverviewMix) {
   const params = new URLSearchParams();
   params.set("period", period.period);
   if (period.period === "custom") {
@@ -468,7 +529,30 @@ function overviewHref(period: OverviewPeriodState, business: OverviewBusinessSta
   }
   if (business.key !== "all") params.set("business", business.key);
   if (trend !== "last_6_months") params.set("trend", trend);
+  if (mix !== "insurer") params.set("mix", mix);
   return `/reports?${params.toString()}`;
+}
+
+function resolveOverviewMix(value: string | undefined): OverviewMix {
+  return value === "rm" || value === "source" ? value : "insurer";
+}
+
+function mixLabel(mix: OverviewMix) {
+  if (mix === "rm") return "By RM";
+  if (mix === "source") return "By Source";
+  return "By Insurer";
+}
+
+function mixOptions(period: OverviewPeriodState, business: OverviewBusinessState, trend: OverviewTrendPeriod) {
+  const options: Array<{ value: OverviewMix; label: string }> = [
+    { value: "insurer", label: "By Insurer" },
+    { value: "rm", label: "By RM" },
+    { value: "source", label: "By Source" },
+  ];
+  return options.map((option) => ({
+    ...option,
+    href: overviewHref(period, business, trend, option.value),
+  }));
 }
 
 function managementPackExportHref(period: OverviewPeriodState, business: OverviewBusinessState) {
