@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Sarvam v11 opening + unlimited voice campaign upload:** branch `fix/sarvam-v11-opening-unlimited-campaign-main3`; removes the stale website-generated Tata opening sentence, replaces first-call wording with the concise v11-compatible renewal opening, removes the fixed 100/500 source-row ceiling from parser/UI/schema, and preserves file-size validation plus existing IT-only calling safeguards. Follow-up migration `20260924173500_remove_voice_campaign_row_limit.sql`. **IMPLEMENTED; PR/CI/merge/application/deployment pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
+
+
 
 - **2026-09-24 — Reports navigation scrollbar override cleanup:** branch `fix/reports-nav-remove-scroll-override`; corrected the later duplicate `.reports-reference-tabs` and `.reports-reference-subtabs` CSS rules that were overriding the earlier non-scroll styles with `overflow-x: auto`. Both primary and secondary Reports navigation rows now resolve to `overflow: visible`, removing the internal scrollbar controls from Overview / Business / Portfolio / Operations and applicable Business subtabs. No report content, calculations, filters, queries, schema, RLS, permissions, mobile, APK/AAB, or native-runtime changes. **PR #2366 MERGED as `7d45d95ed7081a542b9a05874e42398501432ef2`; `Verify web portal` workflow #4598 passed; deployment not verified.**
 

@@ -38,7 +38,7 @@ export default async function NewVoiceCampaignPage({
             Voice Integration
           </Link>
           <span className="rounded-full border border-[#D4E3F6] bg-white px-3 py-1 text-[8px] font-bold text-[#3156B8]">
-            Maximum 500 source rows
+            Excel campaign upload
           </span>
         </div>
 

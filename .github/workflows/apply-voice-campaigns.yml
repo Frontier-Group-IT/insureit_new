@@ -8,6 +8,7 @@ on:
     paths:
       - 'supabase/migrations/20260921145500_voice_campaigns.sql'
       - 'supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql'
+      - 'supabase/migrations/20260924173500_remove_voice_campaign_row_limit.sql'
       - '.github/workflows/apply-voice-campaigns.yml'
 
 permissions:
@@ -45,6 +46,7 @@ jobs:
           test -n "$SUPABASE_PROJECT_REF"
           test -f supabase/migrations/20260921145500_voice_campaigns.sql
           test -f supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql
+          test -f supabase/migrations/20260924173500_remove_voice_campaign_row_limit.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -61,6 +63,8 @@ jobs:
           supabase migration repair --linked --status applied 20260921145500
           supabase db query --linked --file supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql
           supabase migration repair --linked --status applied 20260924170000
+          supabase db query --linked --file supabase/migrations/20260924173500_remove_voice_campaign_row_limit.sql
+          supabase migration repair --linked --status applied 20260924173500
 
       - name: Verify schema contract
         shell: bash
@@ -81,7 +85,14 @@ jobs:
                 from pg_constraint
                 where conrelid='public.voice_campaigns'::regclass
                   and conname='voice_campaigns_total_rows_check'
-              ) like '%500%' as campaign_capacity_ready
+              ) not like '%500%'
+              and (
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where conrelid='public.voice_campaigns'::regclass
+                  and conname='voice_campaigns_total_rows_check'
+              ) not like '%100%'
+              as campaign_capacity_ready
           ")
           echo "$result"
           for key in campaigns_ready members_ready attempt_campaign_ready campaign_capacity_ready; do
