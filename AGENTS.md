@@ -55,7 +55,7 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 - **2026-09-24 — Customer Policy Detail renewed-action green pill:** branch `ui/customer-renew-action-green-pill`; the `Add renewed policy` header action now uses the same compact pill treatment as policy status chips, with green text/icon on a soft green background and no border. No policy logic, navigation, API/RPC, schema, RLS, native runtime, APK/AAB, or deployment change. **IMPLEMENTED; PR/CI/merge/OTA pending.**
 
-- **2026-09-24 — Sarvam v11 opening + unlimited voice campaign upload:** branch `fix/sarvam-v11-opening-unlimited-campaign-main3`; removes the stale website-generated Tata opening sentence, replaces first-call wording with the concise v11-compatible renewal opening, removes the fixed 100/500 source-row ceiling from parser/UI/schema, and preserves file-size validation plus existing IT-only calling safeguards. Follow-up migration `20260924173500_remove_voice_campaign_row_limit.sql`. **IMPLEMENTED; PR/CI/merge/application/deployment pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
+- **2026-09-24 — Tata caller identity fallback correction:** branch `fix/tata-calling-brand-fallback`; confirmed PR #2368 was merged as `323724869dc6d4cfae28c501d9d92773e5315a26` and deployed, but Tata calls still inherited `Frontier JCB` because `calling_brand` was absent and the website applied a global fallback. This follow-up keeps the legacy fallback only for non-Tata renewal flows; Tata calls with no explicit authorized `calling_brand` now use a brand-neutral Anjna introduction. **IMPLEMENTED; PR/CI/merge/deployment pending.** See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
 
 
 
