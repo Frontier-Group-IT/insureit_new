@@ -1,3 +1,15 @@
+## 2026-09-24 — Customer My Policies renewed-policy dedupe
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-policy-renewal-dedupe`.
+
+- Customer App → My Policies no longer shows an old expired policy beside its renewed replacement for the same vehicle.
+- Internal policies now load `status` and `superseded_by_policy_id`; explicitly superseded/cancelled/canceled/rejected/void records are excluded from the visible list.
+- Remaining internal + external policies are collapsed to one latest policy per vehicle using newest coverage start date, then end date, with SIBL preferred on an exact tie.
+- The All / Active / Renewal Due / Expired counts, search, and rendered cards all use the same deduplicated visible-policy set.
+- Historical policy rows remain in the database and policy audit/history is untouched.
+- No API/RPC/schema/RLS, native dependency/config, runtime version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Policy Detail header action + compact linked vehicle
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-policy-detail-linked-vehicle`.
