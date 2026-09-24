@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Customer App Policy Detail compact redesign:** branch `redesign/customer-policy-detail-compact`; Customer App → Policy Detail removes the `POLICY DETAIL` eyebrow, leading policy icon, duplicate policy-type subtitle, Cover Left tile, and standalone Financial Summary card. Policy number is smaller with the inline `ACTIVE` / `DUE IN Nd` / `EXPIRED Nd ago` status immediately to its right with no badge background; insurer uses the shared catalog logo resolver; Policy Product replaces Cover Left; Premium and IDV now sit directly below Start Date and End Date with their existing icons. No schema, migration, RLS, API/RPC, APK/AAB, native config, or runtime-version change. **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB CREATED.**
+
 - **2026-09-24 — Customer App vehicle-card policy status dot + model emphasis:** branch `fix/customer-vehicle-policy-dot-model-style`; Customer App → Vehicles now colors the Policy Number status dot by policy expiry state (green active, amber due within 45 days, red expired) instead of using only an active/inactive boolean, and the vehicle model text now uses the same normal navy emphasis as the manufacturer rather than faded grey. No schema, migration, RLS, APK/AAB, or native-runtime change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 

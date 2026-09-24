@@ -6,6 +6,7 @@ import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } fr
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
+import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { supabase } from '@/lib/supabase';
 import { palette, radii } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -14,7 +15,6 @@ const policyDetailIcons = {
   policy: require('../../assets/custom-icons/policy-detail/policy-booked.png'),
   insurer: require('../../assets/custom-icons/policy-detail/insurer.png'),
   renewal: require('../../assets/custom-icons/policy-detail/renewal.png'),
-  finance: require('../../assets/custom-icons/policy-detail/financial-summary.png'),
   premium: require('../../assets/custom-icons/policy-detail/premium.png'),
   idv: require('../../assets/custom-icons/policy-detail/idv.png'),
   vehicle: require('../../assets/custom-icons/policy-detail/linked-vehicle.png'),
@@ -106,23 +106,30 @@ export default function PolicyDetailScreen() {
         <View style={styles.heroLayout}>
           <View style={[styles.heroAccent, { backgroundColor: renewalTone(renewalState.tone).accent }]} />
           <View style={styles.heroTop}>
-            <View style={[styles.heroIcon, { backgroundColor: '#FFFFFF', borderColor: renewalTone(renewalState.tone).border }]}>
-              <Image source={policyDetailIcons.policy} resizeMode="contain" style={styles.heroIconImage} />
-            </View>
-            <View style={styles.heroCopy}>
-              <Text style={[styles.eyebrow, { color: renewalTone(renewalState.tone).accent }]}>POLICY DETAIL</Text>
-              <Text style={styles.policyNo} numberOfLines={2}>{policy.policy_no}</Text>
-              <Text style={styles.policyType} numberOfLines={1}>{formatPolicyType(policy.policy_type)}</Text>
-            </View>
-            <StatusBadge state={renewalState.tone} label={renewalState.label} />
+            <Text style={styles.policyNo} numberOfLines={1}>{policy.policy_no}</Text>
+            <StatusBadge state={renewalState.tone} label={compactPolicyStatusLabel(policy.end_date)} />
           </View>
           <View style={styles.heroMetaRow}>
-            <HeroMetric image={policyDetailIcons.insurer} label="Insurer" value={company?.name ?? 'Insurer pending'} />
-            <HeroMetric image={policyDetailIcons.renewal} label="Cover left" value={renewalState.helper || '-'} />
+            <HeroMetric image={getInsurerLogoSource(company?.name) ?? policyDetailIcons.insurer} label="Insurer" value={company?.name ?? 'Insurer pending'} />
+            <HeroMetric image={policyDetailIcons.policy} label="Policy product" value={formatPolicyType(policy.policy_type)} />
           </View>
           <View style={styles.heroMetaRow}>
-            <HeroMetric image={policyDetailIcons.renewal} label="Start date" value={formatDate(policy.start_date)} />
-            <HeroMetric image={policyDetailIcons.renewal} label="End date" value={formatDate(policy.end_date)} />
+            <DateFinancialMetric
+              dateLabel="Start date"
+              dateValue={formatDate(policy.start_date)}
+              dateImage={policyDetailIcons.renewal}
+              financialLabel="Premium"
+              financialValue={formatCurrency(policy.premium_amount)}
+              financialImage={policyDetailIcons.premium}
+            />
+            <DateFinancialMetric
+              dateLabel="End date"
+              dateValue={formatDate(policy.end_date)}
+              dateImage={policyDetailIcons.renewal}
+              financialLabel="IDV"
+              financialValue={formatCurrency(policy.insured_declared_value)}
+              financialImage={policyDetailIcons.idv}
+            />
           </View>
           {renewalState.action ? <View style={styles.heroActionRow}>
             <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
@@ -131,14 +138,6 @@ export default function PolicyDetailScreen() {
             </Pressable>
           </View> : null}
         </View>
-
-        <Card style={styles.financialCard}>
-          <SectionTitle image={policyDetailIcons.finance} title="Financial summary" hint="Policy financial information" strongIcon />
-          <View style={styles.financialGrid}>
-            <FinancialValue image={policyDetailIcons.premium} label="Premium" value={formatCurrency(policy.premium_amount)} primary />
-            <FinancialValue image={policyDetailIcons.idv} label="IDV" value={formatCurrency(policy.insured_declared_value)} />
-          </View>
-        </Card>
 
         <Card style={styles.vehicleCard}>
           <SectionTitle image={policyDetailIcons.vehicle} title="Linked vehicle" hint={[vehicle?.make, vehicle?.model].filter(Boolean).join(' ') || vehicle?.vehicle_type || 'Vehicle record'} strongIcon />
@@ -157,16 +156,17 @@ export default function PolicyDetailScreen() {
 }
 
 function StatusBadge({ state, label }: { state: 'success' | 'warning' | 'danger' | 'neutral'; label: string }) {
-  const config = {
-    success: { border: '#8FD7B7', text: '#067647', soft: '#F2FBF7' },
-    warning: { border: '#E7C46E', text: '#B7791F', soft: '#FFFBF3' },
-    danger: { border: '#E7A0A0', text: '#C43838', soft: '#FFF7F7' },
-    neutral: { border: '#CBD5E1', text: '#64748B', soft: '#F8FAFC' },
+  const color = {
+    success: '#0F8A61',
+    warning: '#B7791F',
+    danger: '#D7262E',
+    neutral: '#64748B',
   }[state];
+
   return (
-    <View style={[styles.statusBadge, { borderColor: config.border, backgroundColor: config.soft }]}>
-      <View style={[styles.statusDot, { backgroundColor: config.text }]} />
-      <Text style={[styles.statusText, { color: config.text }]}>{label}</Text>
+    <View style={styles.statusBadge}>
+      <View style={[styles.statusDot, { backgroundColor: color }]} />
+      <Text style={[styles.statusText, { color }]}>{label}</Text>
     </View>
   );
 }
@@ -183,13 +183,37 @@ function HeroMetric({ image, label, value }: { image: ImageSourcePropType; label
   );
 }
 
-function FinancialValue({ image, label, value, primary = false }: { image: ImageSourcePropType; label: string; value: string; primary?: boolean }) {
+function DateFinancialMetric({
+  dateLabel,
+  dateValue,
+  dateImage,
+  financialLabel,
+  financialValue,
+  financialImage,
+}: {
+  dateLabel: string;
+  dateValue: string;
+  dateImage: ImageSourcePropType;
+  financialLabel: string;
+  financialValue: string;
+  financialImage: ImageSourcePropType;
+}) {
   return (
-    <View style={[styles.financialValue, primary && styles.financialValuePrimary]}>
-      <View style={styles.financialIcon}><Image source={image} resizeMode="contain" style={styles.financialIconImage} /></View>
-      <View style={styles.financialCopy}>
-        <Text style={styles.financialLabel}>{label}</Text>
-        <Text style={styles.financialAmount} numberOfLines={1}>{value}</Text>
+    <View style={styles.dateFinancialMetric}>
+      <View style={styles.dateFinancialRow}>
+        <Image source={dateImage} resizeMode="contain" style={styles.dateFinancialIcon} />
+        <View style={styles.dateFinancialCopy}>
+          <Text style={styles.heroMetricLabel}>{dateLabel}</Text>
+          <Text style={styles.dateFinancialValue} numberOfLines={1}>{dateValue}</Text>
+        </View>
+      </View>
+      <View style={styles.dateFinancialDivider} />
+      <View style={styles.dateFinancialRow}>
+        <Image source={financialImage} resizeMode="contain" style={styles.dateFinancialIcon} />
+        <View style={styles.dateFinancialCopy}>
+          <Text style={styles.financialInlineLabel}>{financialLabel}</Text>
+          <Text style={styles.financialInlineValue} numberOfLines={1}>{financialValue}</Text>
+        </View>
       </View>
     </View>
   );
@@ -225,6 +249,17 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
 }
 
+function daysUntil(value: string) {
+  return Math.ceil((new Date(value).getTime() - Date.now()) / 86400000);
+}
+
+function compactPolicyStatusLabel(endDate: string) {
+  const days = daysUntil(endDate);
+  if (days < 0) return `EXPIRED ${Math.abs(days)}d ago`;
+  if (days <= 30) return `DUE IN ${days}d`;
+  return 'ACTIVE';
+}
+
 function formatCurrency(value?: number | null) {
   return value === null || value === undefined ? '-' : `INR ${Number(value).toLocaleString('en-IN')}`;
 }
@@ -242,13 +277,8 @@ const styles = StyleSheet.create({
 
   heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, marginBottom: 8, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, overflow: 'hidden' },
   heroAccent: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
-  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  heroIcon: { width: 44, height: 44, borderRadius: 13, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  heroIconImage: { width: 31, height: 31 },
-  heroCopy: { flex: 1, minWidth: 0 },
-  eyebrow: { fontSize: 9, fontWeight: '900', letterSpacing: 0.8 },
-  policyNo: { color: palette.navy, fontSize: 20, lineHeight: 23, fontWeight: '900', marginTop: 1 },
-  policyType: { color: '#64748B', fontSize: 11.5, lineHeight: 14, fontWeight: '700', marginTop: 1 },
+  heroTop: { flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 30 },
+  policyNo: { color: palette.navy, fontSize: 16.5, lineHeight: 20, fontWeight: '900', flexShrink: 1 },
 
   heroMetaRow: { flexDirection: 'row', gap: 7, marginTop: 7 },
   heroMetric: { flex: 1, minHeight: 48, borderRadius: 11, backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -256,17 +286,24 @@ const styles = StyleSheet.create({
   heroMetricCopy: { flex: 1, minWidth: 0 },
   heroMetricLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
   heroMetricValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
+  dateFinancialMetric: { flex: 1, minHeight: 92, borderRadius: 11, backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, paddingVertical: 8 },
+  dateFinancialRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 31 },
+  dateFinancialIcon: { width: 21, height: 21 },
+  dateFinancialCopy: { flex: 1, minWidth: 0 },
+  dateFinancialValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
+  dateFinancialDivider: { height: 1, backgroundColor: '#E1E8F0', marginVertical: 6 },
+  financialInlineLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
+  financialInlineValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
 
   heroActionRow: { marginTop: 7 },
   heroAction: { alignSelf: 'stretch', minHeight: 31, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
   heroActionText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
 
-  statusBadge: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 0 },
   statusDot: { width: 6, height: 6, borderRadius: 999 },
   statusText: { fontSize: 9, fontWeight: '900' },
 
-  financialCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 12, marginBottom: 8 },
   vehicleCard: { backgroundColor: '#FFFFFF', borderColor: '#DCE8F4', padding: 12 },
 
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 7 },
@@ -277,15 +314,6 @@ const styles = StyleSheet.create({
   sectionCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' },
   sectionHint: { color: palette.slate, fontSize: 10.5, lineHeight: 13, fontWeight: '600', marginTop: 1 },
-
-  financialGrid: { flexDirection: 'row', gap: 8 },
-  financialValue: { flex: 1, minHeight: 56, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F0', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  financialValuePrimary: { borderColor: '#D6E2EF', backgroundColor: '#FFFFFF' },
-  financialIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F4F7FB', alignItems: 'center', justifyContent: 'center' },
-  financialIconImage: { width: 23, height: 23 },
-  financialCopy: { flex: 1, minWidth: 0 },
-  financialLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
-  financialAmount: { color: palette.navy, fontSize: 14, fontWeight: '900', marginTop: 2 },
 
   vehicleFacts: { borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E3ECF6', overflow: 'hidden' },
   factRow: { minHeight: 37, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderBottomColor: '#E7EEF7' },

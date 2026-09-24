@@ -1,3 +1,17 @@
+## 2026-09-24 — Customer Policy Detail compact redesign
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `redesign/customer-policy-detail-compact`.
+
+- Removes the `POLICY DETAIL` eyebrow, leading policy icon, and the duplicate policy-type text under the policy number.
+- Reduces the policy-number font and places the timing state immediately to its right as plain colored inline text: `ACTIVE`, `DUE IN Nd`, or `EXPIRED Nd ago`, with no badge background/border.
+- Replaces Cover Left with Policy Product.
+- Insurer now resolves the real insurer artwork through the shared mobile catalog-logo resolver, retaining the existing insurer artwork only as a fallback.
+- Removes the standalone Financial Summary card.
+- Premium is shown directly below Start Date and IDV directly below End Date, with the existing Premium/IDV icons on the left.
+- Existing renewal action and linked-vehicle section remain unchanged.
+- No API/RPC/schema/RLS, native dependency/config, runtime-version, permission, app identifier, APK/AAB, or OTA publish change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Vehicles policy status dot and model emphasis
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-vehicle-policy-dot-model-style`.
