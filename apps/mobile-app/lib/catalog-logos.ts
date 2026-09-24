@@ -37,7 +37,12 @@ const insurerLogos: Record<string, ImageSourcePropType> = {
 };
 
 const insurerAliases: Record<string, keyof typeof insurerLogos> = {
+  bajajgeneralinsurance: 'bajajallianz',
+  bajajgeneralinsurancelimited: 'bajajallianz',
+  bajajgeneralinsurancecompany: 'bajajallianz',
   bajajgeneralinsurancecompanylimited: 'bajajallianz',
+  bajajallianzgeneralinsurance: 'bajajallianz',
+  bajajallianzgeneralinsurancelimited: 'bajajallianz',
   bajajallianzgeneralinsurancecompanylimited: 'bajajallianz',
   cholamandalammsgeneralinsurancecompanylimited: 'cholamandalamsgeneral',
   cholamandalamsgeneralinsurancecompanylimited: 'cholamandalamsgeneral',
@@ -169,7 +174,9 @@ function resolveLogo(
     .sort((a, b) => b.length - a.length)
     .find((candidate) => key.includes(candidate));
 
-  return contained ? logos[contained] : null;
+  if (contained) return logos[contained];
+  if (logos.bajajallianz && key.startsWith('bajajgeneralinsurance')) return logos.bajajallianz;
+  return null;
 }
 
 export function getInsurerLogoSource(insurerName: string | null | undefined) {

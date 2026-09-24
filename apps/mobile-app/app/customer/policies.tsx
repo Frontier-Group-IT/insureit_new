@@ -121,6 +121,13 @@ export default function PoliciesScreen() {
             <View style={styles.accentBar} />
 
             <View style={styles.policyTop}>
+              <View style={styles.headerInsurerIconWrap}>
+                {insurerLogo ? (
+                  <Image source={insurerLogo} resizeMode="contain" style={styles.headerInsurerIcon} />
+                ) : (
+                  <MaterialCommunityIcons name="shield-outline" size={22} color={palette.navy} />
+                )}
+              </View>
               <View style={styles.policyTitleCopy}>
                 <View style={styles.stageRow}>
                   <Text style={styles.stageLabel}>{policyStageLabel(policy, tone)}</Text>
@@ -149,18 +156,14 @@ export default function PoliciesScreen() {
               <PolicyDetailColumn
                 icon={manufacturerLogo}
                 fallbackIcon="car-side"
-                firstLabel="Manufacturer"
                 firstValue={vehicle?.make ?? '-'}
-                secondLabel="Model"
                 secondValue={vehicle?.model ?? '-'}
               />
               <View style={styles.infoDivider} />
               <PolicyDetailColumn
                 icon={insurerLogo}
                 fallbackIcon="shield-outline"
-                firstLabel="Insurer"
                 firstValue={company?.name ?? '-'}
-                secondLabel="Expiry"
                 secondValue={formatDate(policy.end_date)}
               />
             </View>
@@ -184,16 +187,12 @@ export default function PoliciesScreen() {
 function PolicyDetailColumn({
   icon,
   fallbackIcon,
-  firstLabel,
   firstValue,
-  secondLabel,
   secondValue,
 }: {
   icon: ImageSourcePropType | null;
   fallbackIcon: 'car-side' | 'shield-outline';
-  firstLabel: string;
   firstValue: string;
-  secondLabel: string;
   secondValue: string;
 }) {
   return (
@@ -206,10 +205,8 @@ function PolicyDetailColumn({
         )}
       </View>
       <View style={styles.infoColumnCopy}>
-        <Text style={styles.infoLabel}>{firstLabel}</Text>
         <Text style={styles.infoValue} numberOfLines={1}>{firstValue}</Text>
-        <Text style={[styles.infoLabel, styles.infoSecondLabel]}>{secondLabel}</Text>
-        <Text style={styles.infoValue} numberOfLines={1}>{secondValue}</Text>
+        <Text style={[styles.infoValue, styles.infoSecondValue]} numberOfLines={1}>{secondValue}</Text>
       </View>
     </View>
   );
@@ -272,11 +269,13 @@ const styles = StyleSheet.create({
   policyCard: { backgroundColor: '#FBFCFE', borderWidth: 1, borderColor: '#D8E3EE', borderRadius: 18, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: 0.04, shadowRadius: 8, elevation: 1 },
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
-  policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  policyTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  headerInsurerIconWrap: { width: 34, height: 34, borderRadius: 9, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  headerInsurerIcon: { width: 28, height: 28 },
   policyTitleCopy: { flex: 1, minWidth: 0 },
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
-  vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 1 },
+  vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '700', marginTop: 1 },
   sourcePill: { borderRadius: 999, backgroundColor: '#EAF2FF', paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { color: '#0A43A3', fontSize: 7.8, fontWeight: '900' },
   statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
@@ -290,10 +289,9 @@ const styles = StyleSheet.create({
   infoDivider: { width: 1, backgroundColor: '#E5ECF5', marginHorizontal: 8 },
   catalogIconWrap: { width: 42, height: 42, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   catalogIcon: { width: 34, height: 34 },
-  infoColumnCopy: { flex: 1, minWidth: 0 },
-  infoLabel: { color: palette.slate, fontSize: 9.3, lineHeight: 12, fontWeight: '800' },
-  infoSecondLabel: { marginTop: 4 },
+  infoColumnCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
   infoValue: { color: palette.ink, fontSize: 11.1, lineHeight: 14, fontWeight: '900' },
+  infoSecondValue: { marginTop: 4 },
   warningStrip: { marginTop: 9, borderRadius: 12, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   warningStripText: { flex: 1, fontSize: 10.8, fontWeight: '900' },
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
