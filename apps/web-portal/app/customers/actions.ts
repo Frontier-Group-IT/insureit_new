@@ -45,9 +45,8 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   if (partnerType !== "individual_proprietor") return failure("Only the Individual / Proprietor workflow is available in this release.", "partner_type");
   if (!contactName) return failure("Enter the customer or proprietor name.", "contact_name");
   if (!phone) return failure("Enter a valid 10-digit mobile number.", "phone");
-  if (!locationId || !city || !state || !postalCode) return failure("Select a city from the suggestions and confirm State and PIN Code.", "city_search");
-  if (!panNumber || !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) return failure("Enter a valid PAN number.", "pan_number");
-  if (!aadhaarNumber || !/^[0-9]{12}$/.test(aadhaarNumber)) return failure("Enter a valid 12-digit Aadhaar number.", "aadhaar_number");
+  if (panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) return failure("Enter a valid PAN number.", "pan_number");
+  if (aadhaarNumber && !/^[0-9]{12}$/.test(aadhaarNumber)) return failure("Enter a valid 12-digit Aadhaar number.", "aadhaar_number");
   if (isGstRegistered && !legalTradeName) return failure("Legal Trade Name is required for a GST-registered customer.", "legal_trade_name");
   if (isGstRegistered && !gstNumber) return failure("GST Number is required for a GST-registered customer.", "gst_number");
   if (isGstRegistered && gstNumber && !GSTIN_PATTERN.test(gstNumber)) return failure("Enter a valid 15-character GSTIN, for example 22AAAAA0000A1Z5.", "gst_number");
@@ -90,12 +89,14 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   if ((matchingCustomers?.length ?? 0) > 1) return failure("More than one customer record already exists for this mobile number. Run the duplicate-customer repair migration before retrying.", "phone");
   const existingCustomer = matchingCustomers?.[0] ?? null;
 
-  const { data: duplicatePan, error: panLookupError } = await admin.from("customers").select("id").eq("pan_number", panNumber).limit(2).returns<Array<{ id: string }>>();
-  if (panLookupError) return failure(`Unable to validate PAN number: ${panLookupError.message}`, "pan_number");
-  if ((duplicatePan ?? []).some((row) => row.id !== existingCustomer?.id)) return failure("A different customer already uses this PAN number.", "pan_number");
+  if (panNumber) {
+    const { data: duplicatePan, error: panLookupError } = await admin.from("customers").select("id").eq("pan_number", panNumber).limit(2).returns<Array<{ id: string }>>();
+    if (panLookupError) return failure(`Unable to validate PAN number: ${panLookupError.message}`, "pan_number");
+    if ((duplicatePan ?? []).some((row) => row.id !== existingCustomer?.id)) return failure("A different customer already uses this PAN number.", "pan_number");
+  }
 
   const customerCode = `CUST-${Date.now().toString().slice(-9)}`;
-  const aadhaarHash = createHash("sha256").update(aadhaarNumber).digest("hex");
+  const aadhaarHash = aadhaarNumber ? createHash("sha256").update(aadhaarNumber).digest("hex") : null;
   const addressStreet = textValue(formData, "address_street");
   const addressLocality = textValue(formData, "address_locality");
   const address = [addressStreet, addressLocality, city, state, postalCode].filter(Boolean).join(", ");
@@ -116,7 +117,7 @@ export async function createCustomerOnboarding(_previousState: CustomerOnboardin
   const customerPayload = {
     profile_id: profileId, partner_type: partnerType, contact_name: contactName, company_name: legalTradeName, phone, email, address,
     address_street: addressStreet, address_locality: addressLocality, india_location_id: locationId, city, state, postal_code: postalCode,
-    pan_number: panNumber, aadhaar_last_four: aadhaarNumber.slice(-4), aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName,
+    pan_number: panNumber, aadhaar_last_four: aadhaarNumber ? aadhaarNumber.slice(-4) : null, aadhaar_hash: aadhaarHash, legal_trade_name: legalTradeName,
     is_gst_registered: isGstRegistered, gst_number: isGstRegistered ? gstNumber : null,
     onboarding_status: "active", onboarding_completed_at: new Date().toISOString(), updated_by: profile.id
   };
