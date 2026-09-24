@@ -10,7 +10,7 @@ import { loadRenewalReport } from "@/lib/reports/renewals";
 
 type ViewerProfile = { id: string; role: string | null };
 export type ManagementPackPeriod = "mtd" | "last_month" | "last_6_months" | "custom";
-export type ManagementPackQuery = { month?: string; period?: ManagementPackPeriod; from?: string; to?: string };
+export type ManagementPackQuery = { month?: string; period?: ManagementPackPeriod; from?: string; to?: string; business?: string; category?: string };
 export type ManagementPackFilters = { month: string; period: ManagementPackPeriod; fromDate: string; toDate: string; currentMonth: string };
 
 export type ManagementPack = {
@@ -31,7 +31,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     throw new Error("Backoffice Executive cannot access management-pack finance, payout or governance data.");
   }
   const filters = resolveManagementPackFilters(query);
-  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" };
+  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, business: query.business, category: query.category, page: "1" };
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
@@ -39,7 +39,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     loadDistributionReport(profile, { ...monthQuery, onboardingPage: "1" }),
     loadFinanceReport(profile, monthQuery),
     loadClaimsReport(profile, monthQuery),
-    loadRenewalReport(profile, { horizon: "90", page: "1" }),
+    loadRenewalReport(profile, { horizon: "90", business: query.business, category: query.category, page: "1" }),
     loadOperationsReport(profile, { horizon: "90", page: "1" }),
     canViewGovernance ? loadGovernanceReport({ period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" }) : Promise.resolve(null),
   ]);
