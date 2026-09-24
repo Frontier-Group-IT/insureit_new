@@ -7,6 +7,7 @@ import { AppSearchBar } from '@/components/design-system';
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
+import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -14,11 +15,6 @@ import type { InsuranceCompany, Vehicle } from '@/lib/types';
 type PolicyFilter = 'All' | 'Active' | 'Renewal Due' | 'Expired';
 type PolicyTone = 'active' | 'due' | 'expired';
 
-const policyCardIcons = {
-  active: require('../../assets/custom-icons/policies-list/policy-booked.png'),
-  due: require('../../assets/custom-icons/policies-list/renewal.png'),
-  expired: require('../../assets/custom-icons/policies-list/expired-policy.png'),
-} satisfies Record<PolicyTone, ImageSourcePropType>;
 type PolicyRow = {
   id: string;
   customer_id: string;
@@ -112,6 +108,8 @@ export default function PoliciesScreen() {
         const days = daysUntil(policy.end_date);
         const tone = policyTone(policy.end_date);
         const colors = policyToneColors(tone);
+        const manufacturerLogo = getVehicleBrandLogoSource(vehicle?.make);
+        const insurerLogo = getInsurerLogoSource(company?.name);
 
         return (
           <Pressable
@@ -123,10 +121,6 @@ export default function PoliciesScreen() {
             <View style={styles.accentBar} />
 
             <View style={styles.policyTop}>
-              <View style={styles.statusIcon}>
-                <Image source={policyCardIcons[tone]} resizeMode="contain" style={styles.statusIconImage} />
-              </View>
-
               <View style={styles.policyTitleCopy}>
                 <View style={styles.stageRow}>
                   <Text style={styles.stageLabel}>{policyStageLabel(policy, tone)}</Text>
@@ -135,8 +129,8 @@ export default function PoliciesScreen() {
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle unavailable'}</Text>
               </View>
 
-              <View style={[styles.statusBadge, { backgroundColor: colors.accent }]}>
-                <Text style={styles.statusBadgeText}>{policyStatusLabel(tone)}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: colors.soft, borderColor: colors.border }]}>
+                <Text style={[styles.statusBadgeText, { color: colors.accent }]}>{policyStatusLabel(tone)}</Text>
               </View>
             </View>
 
@@ -146,15 +140,29 @@ export default function PoliciesScreen() {
                 <Text style={styles.numberValue} numberOfLines={2}>{policy.policy_no}</Text>
               </View>
               <View style={styles.numberBox}>
-                <Text style={styles.numberLabel}>Type</Text>
+                <Text style={styles.numberLabel}>Policy Product</Text>
                 <Text style={styles.numberValue} numberOfLines={2}>{policy.policy_type || 'Policy'}</Text>
               </View>
             </View>
 
             <View style={styles.infoBox}>
-              <InfoPair leftLabel="Manufacturer" leftValue={vehicle?.make ?? '-'} rightLabel="Model" rightValue={vehicle?.model ?? '-'} />
-              <InfoPair leftLabel="Insurer" leftValue={company?.name ?? '-'} rightLabel="Source" rightValue={policy.source === 'external' ? 'External' : 'Sankalp'} />
-              <InfoPair leftLabel="Start" leftValue={formatDate(policy.start_date)} rightLabel="Expiry" rightValue={formatDate(policy.end_date)} />
+              <PolicyDetailColumn
+                icon={manufacturerLogo}
+                fallbackIcon="car-side"
+                firstLabel="Manufacturer"
+                firstValue={vehicle?.make ?? '-'}
+                secondLabel="Model"
+                secondValue={vehicle?.model ?? '-'}
+              />
+              <View style={styles.infoDivider} />
+              <PolicyDetailColumn
+                icon={insurerLogo}
+                fallbackIcon="shield-outline"
+                firstLabel="Insurer"
+                firstValue={company?.name ?? '-'}
+                secondLabel="Expiry"
+                secondValue={formatDate(policy.end_date)}
+              />
             </View>
 
             {tone !== 'active' ? (
@@ -173,14 +181,35 @@ export default function PoliciesScreen() {
   );
 }
 
-function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel: string; leftValue: string; rightLabel: string; rightValue: string }) {
+function PolicyDetailColumn({
+  icon,
+  fallbackIcon,
+  firstLabel,
+  firstValue,
+  secondLabel,
+  secondValue,
+}: {
+  icon: ImageSourcePropType | null;
+  fallbackIcon: 'car-side' | 'shield-outline';
+  firstLabel: string;
+  firstValue: string;
+  secondLabel: string;
+  secondValue: string;
+}) {
   return (
-    <View style={styles.infoPairRow}>
-      <View style={styles.infoPairHalf}>
-        <Text style={styles.infoPairText} numberOfLines={1}><Text style={styles.infoPairLabel}>{leftLabel}: </Text>{leftValue}</Text>
+    <View style={styles.infoColumn}>
+      <View style={styles.catalogIconWrap}>
+        {icon ? (
+          <Image source={icon} resizeMode="contain" style={styles.catalogIcon} />
+        ) : (
+          <MaterialCommunityIcons name={fallbackIcon} size={24} color={palette.navy} />
+        )}
       </View>
-      <View style={styles.infoPairHalf}>
-        <Text style={styles.infoPairText} numberOfLines={1}><Text style={styles.infoPairLabel}>{rightLabel}: </Text>{rightValue}</Text>
+      <View style={styles.infoColumnCopy}>
+        <Text style={styles.infoLabel}>{firstLabel}</Text>
+        <Text style={styles.infoValue} numberOfLines={1}>{firstValue}</Text>
+        <Text style={[styles.infoLabel, styles.infoSecondLabel]}>{secondLabel}</Text>
+        <Text style={styles.infoValue} numberOfLines={1}>{secondValue}</Text>
       </View>
     </View>
   );
@@ -244,25 +273,27 @@ const styles = StyleSheet.create({
   policyCardPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: palette.navy },
   policyTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  statusIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center' },
-  statusIconImage: { width: 32, height: 32 },
   policyTitleCopy: { flex: 1, minWidth: 0 },
   stageRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   stageLabel: { color: palette.navy, fontSize: 9.8, fontWeight: '900', letterSpacing: 0.6 },
   vehicleNo: { color: palette.ink, fontSize: 17, fontWeight: '900', marginTop: 1 },
   sourcePill: { borderRadius: 999, backgroundColor: '#EAF2FF', paddingHorizontal: 6, paddingVertical: 3 },
   sourceText: { color: '#0A43A3', fontSize: 7.8, fontWeight: '900' },
-  statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
-  statusBadgeText: { color: '#FFFFFF', fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
+  statusBadge: { maxWidth: 126, minHeight: 34, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, alignItems: 'center', justifyContent: 'center' },
+  statusBadgeText: { fontSize: 10.2, lineHeight: 13, fontWeight: '900', textAlign: 'center' },
   numberRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
   numberBox: { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDE6EF', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 7 },
   numberLabel: { color: palette.slate, fontSize: 9.3, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.4 },
   numberValue: { color: palette.ink, fontSize: 11.7, lineHeight: 15, fontWeight: '900', marginTop: 2 },
-  infoBox: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', gap: 5 },
-  infoPairRow: { flexDirection: 'row', gap: 8 },
-  infoPairHalf: { flex: 1, minWidth: 0 },
-  infoPairText: { color: palette.ink, fontSize: 11.1, lineHeight: 15, fontWeight: '800' },
-  infoPairLabel: { color: palette.slate, fontSize: 10.2, fontWeight: '900' },
+  infoBox: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'stretch' },
+  infoColumn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 2 },
+  infoDivider: { width: 1, backgroundColor: '#E5ECF5', marginHorizontal: 8 },
+  catalogIconWrap: { width: 42, height: 42, borderRadius: 11, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF1', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  catalogIcon: { width: 34, height: 34 },
+  infoColumnCopy: { flex: 1, minWidth: 0 },
+  infoLabel: { color: palette.slate, fontSize: 9.3, lineHeight: 12, fontWeight: '800' },
+  infoSecondLabel: { marginTop: 4 },
+  infoValue: { color: palette.ink, fontSize: 11.1, lineHeight: 14, fontWeight: '900' },
   warningStrip: { marginTop: 9, borderRadius: 12, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 },
   warningStripText: { flex: 1, fontSize: 10.8, fontWeight: '900' },
   cardFooter: { marginTop: 10, paddingTop: 9, borderTopWidth: 1, borderTopColor: '#E5ECF5', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
