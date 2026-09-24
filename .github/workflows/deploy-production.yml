@@ -298,6 +298,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260924163000_vehicle_full_customer_transfer.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-vehicle-full-customer-transfer.yml"
             echo "Full vehicle customer transfer migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260924185500_varun_vehicle_transfer_permission.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-varun-vehicle-transfer-permission.yml"
+            echo "Varun vehicle transfer permission migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
