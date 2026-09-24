@@ -681,6 +681,39 @@ export async function enrichVoiceCampaignBatch(campaignId: string) {
 
   for (const member of members ?? []) {
     try {
+      const { data: opportunity } = await admin
+        .from("external_renewal_opportunities")
+        .select("source_payload")
+        .eq("id", member.opportunity_id)
+        .maybeSingle<{ source_payload: Record<string, unknown> | null }>();
+      const sourcePayload =
+        opportunity?.source_payload && typeof opportunity.source_payload === "object"
+          ? opportunity.source_payload
+          : {};
+      const contexts =
+        sourcePayload.voice_campaign_contexts && typeof sourcePayload.voice_campaign_contexts === "object"
+          ? (sourcePayload.voice_campaign_contexts as Record<string, unknown>)
+          : {};
+      const campaignContext = contexts[campaignId];
+      const isTataSource =
+        campaignContext &&
+        typeof campaignContext === "object" &&
+        (campaignContext as Record<string, unknown>).campaignType === "tata_commercial_renewal";
+
+      if (isTataSource) {
+        await admin
+          .from("voice_campaign_members")
+          .update({
+            enrichment_status: "ready",
+            enrichment_error: null,
+            dispatch_status: "pending",
+            dispatch_error: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", member.id);
+        continue;
+      }
+
       const result = await enrichExternalRenewalOpportunity(member.opportunity_id);
       const ready = result.status === "ready";
 
