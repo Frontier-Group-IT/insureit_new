@@ -1,3 +1,13 @@
+## 2026-09-24 — Customer Policy Detail status pill parity
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-policy-detail-status-pill`.
+
+- Removes the colored dot immediately left of the Policy Detail status text.
+- Restores the rounded soft-background pill treatment to match the approved Policies reference: red for expired, amber for renewal due, green for active, neutral grey fallback.
+- Status wording and expiry-day calculation are unchanged: `ACTIVE`, `DUE IN Nd`, `EXPIRED Nd ago`.
+- No API/RPC/schema/RLS, native dependency/config, runtime-version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Policy Detail compact redesign
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `redesign/customer-policy-detail-compact`.
