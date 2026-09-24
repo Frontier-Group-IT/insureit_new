@@ -185,6 +185,12 @@ export async function createOperationsClaim(vehicleId: string, lossAtIso: string
   if (!allowed) return { ok: false, message: "The selected vehicle could not be found." };
 
   const policy = await getActivePolicy(admin, vehicle.id, vehicle.customer_id);
+  if (!policy) {
+    return {
+      ok: false,
+      message: "No active or eligible policy is linked to this vehicle. A claim cannot be created until a valid policy is available.",
+    };
+  }
 
   let existingRequest = admin
     .from("claims")
