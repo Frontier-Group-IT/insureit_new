@@ -1,3 +1,19 @@
+## 2026-09-24 — Business report reference-layout redesign
+
+- Branch: `redesign/business-report-reference-layout`.
+- `/reports/business` is redesigned as one compact commercial dashboard based on the approved mockup.
+- Removed from the Business page: the original summary KPI row, Net Premium production trend, and Policy Business Register.
+- Commercial Flow is now the first content row and shows Net Premium, Expected Pay-in, Partner Payout, and Retention in a segmented summary-style card.
+- Business Mix defaults to **Business Type**, keeps Business Type / Insurer / RM selectors, is vertically scrollable, and renders every aggregated row returned from the bounded report register instead of a top-N slice.
+- Insurer is paired with Business Mix in the same row and shows Insurer Name, Policies, Net Premium, Pay-in, and amount-first Retention.
+- RM Performance is full width and shows RM Name, Policies, Net Premium, Pay-in, Payout, and amount-first Retention.
+- Intermediaries Business is full width and shows only the intermediary name in the first column plus Type, RM, Policies, Net Premium, Pay-in, Payout, and amount-first Retention.
+- Insurer, RM, and intermediary commercial rows are aggregated from the canonical finance register; business type rows are aggregated from the canonical policy-business register. Both are requested with a bounded 5,000-row page size solely to support the requested all-record scroll views.
+- `FinanceQuery` now accepts an optional bounded `pageSize` parameter; existing callers keep the 25-row default.
+- No schema, migration, RLS, accounting formula, mobile app, Partner app, APK/AAB, or native runtime change.
+- **IMPLEMENTED; no PR created; not merged; not deployed; canonical PR CI has not run yet.**
+
+---
 ## 2026-09-23 — External managed claims unrestricted Operations stage editing
 
 - Branch: `feat/external-claims-unlocked-editing`.
