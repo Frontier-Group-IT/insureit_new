@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Customer App Policy Detail status pill parity:** branch `fix/customer-policy-detail-status-pill`; removes the leading colored status dot beside `ACTIVE` / `DUE IN Nd` / `EXPIRED Nd ago` on Customer App → Policy Detail and restores the soft rounded status-pill background matching the approved Policies reference styling (red/amber/green/neutral by state). No policy calculation, API/RPC, schema, RLS, APK/AAB, native config, or runtime-version change. **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB CREATED.**
+
 - **2026-09-24 — Internal Claim Stage Details input-reset fix:** branch `fix/internal-claim-stage-details-input-reset`; Claim Intimation Stage Details no longer overwrite Dealership Name/Location, Claim Intimation Date, Gate-in Date, or Estimate Amount while the user is typing. The Stage Details async load now runs independently from document-row refreshes, merges persisted values only into untouched fields, and removes the incorrect legacy Contact Person/Contact Number → date-field initialization. No schema, migration, RLS, or claim-save contract change. See `docs/claim-manager-web-handoff.md`. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 
