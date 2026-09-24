@@ -1,3 +1,17 @@
+## 2026-09-24 — Business report navigation/table scroll cleanup
+
+- Branch: `fix/business-report-remove-internal-scrolls`.
+- PR: #2357.
+- Shared Reports primary navigation no longer uses horizontal scrolling; **Overview | Business | Portfolio | Operations** remain directly visible.
+- Report Business subnavigation no longer uses horizontal scrolling; **Performance | Distribution | Finance** remain directly visible.
+- `RM Performance` no longer has a fixed-height vertical scroll container and expands to show all RM rows already aggregated by the report dataset.
+- `Intermediaries Business` no longer has a fixed-height vertical scroll container and expands to show all intermediary rows already aggregated by the report dataset.
+- `Business Mix` and `Insurer` cards keep their existing internal scroll behavior.
+- No report formulas, commercial calculations, query/filter behavior, schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+
+---
+
 ## 2026-09-24 — Full vehicle customer transfer workflow
 
 - Branch: `feature/vehicle-full-customer-transfer-final`.
