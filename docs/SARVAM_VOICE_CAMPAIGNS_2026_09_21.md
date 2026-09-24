@@ -97,3 +97,8 @@ Privacy and evidence rules:
 - raw transcripts are not stored or exported;
 - Add-on Interest is emitted as `Not captured` because the current normalized webhook contract does not persist a dedicated add-on field;
 - conversation outcome, next action, availability, follow-up confidence, and quality flags are deterministic projections of persisted normalized fields, not transcript inference.
+
+
+## Tata Commercial Renewal extension — 2026-09-24
+
+Branch `feat/tata-commercial-renewal-voice` extends the campaign importer without changing the Sarvam execution-layer model. Standard RC + Mobile campaigns continue to work. An approved Tata workbook is detected by its `Renewal` sheet and Tata column family; `Breaking Case` is excluded. The source-row ceiling is raised to 500 by a dedicated migration, repeated callable mobiles are grouped to one prospect with multi-vehicle context, and Tata-provided customer/vehicle/insurer/policy/expiry values remain campaign-scoped evidence. Tata source context can satisfy the campaign enrichment gate without an AuthBridge lookup. Upload still never initiates calls. See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
