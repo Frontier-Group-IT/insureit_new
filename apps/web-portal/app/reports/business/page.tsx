@@ -213,14 +213,15 @@ function InsurerTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
     <div className="max-h-[330px] overflow-auto">
-      <table className="w-full min-w-[760px] border-collapse">
+      <table className="w-full min-w-[840px] border-collapse">
         <thead className="sticky top-0 z-10 bg-[#f8fafc]">
           <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
             <th className="px-4 py-2.5 text-left">Insurer Name</th>
             <th className="px-3 py-2.5 text-right">Policies</th>
             <th className="px-3 py-2.5 text-right">Net Premium</th>
             <th className="px-3 py-2.5 text-right">Pay-in</th>
-            <th className="px-4 py-2.5 text-right">Retention</th>
+            <th className="px-3 py-2.5 text-right">Retention Amount</th>
+            <th className="px-4 py-2.5 text-right">%</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#edf1f5]">
@@ -237,7 +238,8 @@ function InsurerTable({ rows }: { rows: CommercialRow[] }) {
                 <td className="px-3 py-2.5 text-right tabular-nums">{integer(row.policies)}</td>
                 <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{retentionDisplay(row.retention, row.payin)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
               </tr>
             );
           })}
@@ -251,7 +253,7 @@ function RmTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1020px] border-collapse">
+      <table className="w-full min-w-[1110px] border-collapse">
         <thead className="sticky top-0 z-10 bg-[#f8fafc]">
           <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
             <th className="px-5 py-2.5 text-left">RM Name</th>
@@ -259,7 +261,8 @@ function RmTable({ rows }: { rows: CommercialRow[] }) {
             <th className="px-3 py-2.5 text-right">Net Premium</th>
             <th className="px-3 py-2.5 text-right">Pay-in</th>
             <th className="px-3 py-2.5 text-right">Payout</th>
-            <th className="px-5 py-2.5 text-right">Retention</th>
+            <th className="px-3 py-2.5 text-right">Retention Amount</th>
+            <th className="px-5 py-2.5 text-right">%</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#edf1f5]">
@@ -270,7 +273,8 @@ function RmTable({ rows }: { rows: CommercialRow[] }) {
               <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td>
-              <td className="px-5 py-2.5 text-right tabular-nums">{retentionDisplay(row.retention, row.payin)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td>
+              <td className="px-5 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
             </tr>
           ))}
         </tbody>
@@ -283,7 +287,7 @@ function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
   if (!rows.length) return <Empty />;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[1280px] border-collapse">
+      <table className="w-full min-w-[1370px] border-collapse">
         <thead className="sticky top-0 z-10 bg-[#f8fafc]">
           <tr className="text-[8px] font-black uppercase tracking-[.06em] text-[#7a899c]">
             <th className="px-5 py-2.5 text-left">Name / Intermediary</th>
@@ -293,7 +297,8 @@ function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
             <th className="px-3 py-2.5 text-right">Net Premium</th>
             <th className="px-3 py-2.5 text-right">Pay-in</th>
             <th className="px-3 py-2.5 text-right">Payout</th>
-            <th className="px-5 py-2.5 text-right">Retention</th>
+            <th className="px-3 py-2.5 text-right">Retention Amount</th>
+            <th className="px-5 py-2.5 text-right">%</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-[#edf1f5]">
@@ -306,7 +311,8 @@ function IntermediaryTable({ rows }: { rows: CommercialRow[] }) {
               <td className="px-3 py-2.5 text-right font-bold tabular-nums">{currency(row.netPremium)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payin)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.payout)}</td>
-              <td className="px-5 py-2.5 text-right tabular-nums">{retentionDisplay(row.retention, row.payin)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{currency(row.retention)}</td>
+              <td className="px-5 py-2.5 text-right tabular-nums">{percent(ratio(row.retention, row.payin))}</td>
             </tr>
           ))}
         </tbody>
@@ -419,9 +425,6 @@ function Empty() {
   return <ReportEmptyState />;
 }
 
-function retentionDisplay(amount: number, payin: number) {
-  return currency(amount) + " · " + percent(ratio(amount, payin));
-}
 
 function ratio(value: number, base: number) {
   return base > 0 ? (value / base) * 100 : 0;
