@@ -1,3 +1,13 @@
+## 2026-09-24 — Reports exact-reference production deployment request
+
+- Deployment marker branch: `chore/deploy-reports-exact-header`.
+- Purpose: establish a fresh verified merged-PR provenance point so the repository's guarded production deployment workflow can deploy the already-merged Reports exact-reference header changes.
+- Runtime/report logic unchanged; this is documentation-only.
+- No schema, migration, RLS, permission, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **DEPLOYMENT REQUEST CREATED; PR/verification/merge/deployment pending.**
+
+---
+
 ## 2026-09-24 — Reports header exact-reference correction
 
 - Branch: `fix/reports-reference-header-exact`.
