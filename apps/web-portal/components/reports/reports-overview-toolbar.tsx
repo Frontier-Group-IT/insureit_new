@@ -8,11 +8,13 @@ import { Building2, CalendarDays, ChevronDown, Download } from "lucide-react";
 export type OverviewPeriod = "mtd" | "last_month" | "last_6_months" | "custom";
 export type OverviewBusiness = "all" | "motor" | "non_motor" | "life" | "health";
 export type OverviewTrendPeriod = "mtd" | "last_month" | "last_6_months" | "1_year";
+export type OverviewMix = "insurer" | "rm" | "source";
 
 type Props = {
   activePeriod: OverviewPeriod;
   activeBusiness: OverviewBusiness;
   activeTrend: OverviewTrendPeriod;
+  activeMix: OverviewMix;
   fromDate: string;
   toDate: string;
   today: string;
@@ -34,7 +36,7 @@ const BUSINESS_OPTIONS: Array<{ value: OverviewBusiness; label: string }> = [
   { value: "health", label: "Health" },
 ];
 
-export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTrend, fromDate, toDate, today, exportHref }: Props) {
+export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTrend, activeMix, fromDate, toDate, today, exportHref }: Props) {
   const router = useRouter();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const businessRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
     const params = new URLSearchParams();
     if (activeBusiness !== "all") params.set("business", activeBusiness);
     if (activeTrend !== "last_6_months") params.set("trend", activeTrend);
+    if (activeMix !== "insurer") params.set("mix", activeMix);
     return params;
   }
 
@@ -110,6 +113,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
     }
     if (business !== "all") params.set("business", business);
     if (activeTrend !== "last_6_months") params.set("trend", activeTrend);
+    if (activeMix !== "insurer") params.set("mix", activeMix);
     router.push(`/reports?${params.toString()}`);
   }
 
