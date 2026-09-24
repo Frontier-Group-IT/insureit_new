@@ -1,3 +1,13 @@
+## 2026-09-24 — Customer Bajaj insurer icon render fix
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-bajaj-insurer-icon`.
+
+- Verified production insurer master contains `Bajaj General Insurance Limited`; existing aliases already resolve that name to the Bajaj insurer key.
+- Switched that key from the catalog Bajaj PNG to the existing mobile-safe Bajaj PNG under `apps/mobile-app/assets/vehicles/bajaj-allianz.png`.
+- This fixes the missing Bajaj insurer icon anywhere the shared `getInsurerLogoSource()` resolver is used, including My Policies and Policy Detail.
+- No API/RPC/schema/RLS, native dependency/config, runtime version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Policy Detail renewed-action green pill
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-renew-action-green-pill`.
