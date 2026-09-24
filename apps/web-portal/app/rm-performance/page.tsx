@@ -4,6 +4,7 @@ import { Mail, TrendingUp } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { requireCapability } from "@/lib/master-data-server";
 import { loadRmPerformance, type RmPerformanceQuery } from "@/lib/rm-performance";
+import { RmPerformanceTrendChart } from "@/app/rm-performance/rm-performance-trend-chart";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -147,7 +148,7 @@ function PerformancePanel({
   bordered?: boolean;
 }) {
   return (
-    <div className={"min-h-[188px] px-5 py-4.5 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
+    <div className={"min-h-[188px] px-6 pb-4 pt-6 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
       <p className="text-[8px] font-black tracking-[.15em] text-[#7B8798]">{eyebrow}</p>
       <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
         <div className="min-w-0">
@@ -189,7 +190,6 @@ function MtdContextPanel({
   motor: number;
   nonMotor: number;
 }) {
-  const points = sparklinePoints(rows);
   const latest = rows.at(-1);
   const previous = rows.at(-2);
   const movement = latest && previous && previous.net_premium > 0
@@ -197,7 +197,7 @@ function MtdContextPanel({
     : null;
 
   return (
-    <div className="min-h-[188px] border-t border-[#E9EDF3] px-5 py-4.5 xl:border-l xl:border-t-0">
+    <div className="min-h-[188px] border-t border-[#E9EDF3] px-6 pb-4 pt-6 xl:border-l xl:border-t-0">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]">
@@ -217,37 +217,7 @@ function MtdContextPanel({
 
       <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_110px] items-end gap-4">
         <div className="min-w-0">
-          {rows.length ? (
-            <>
-              <svg viewBox="0 0 260 70" className="h-[62px] w-full overflow-visible" role="img" aria-label="Recent monthly net premium trend">
-                <defs>
-                  <linearGradient id="rm-performance-area" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#315B9A" stopOpacity="0.18" />
-                    <stop offset="100%" stopColor="#315B9A" stopOpacity="0.02" />
-                  </linearGradient>
-                </defs>
-                <path d={points.area} fill="url(#rm-performance-area)" />
-                <polyline
-                  points={points.line}
-                  fill="none"
-                  stroke="#315B9A"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                {points.dots.map((dot) => (
-                  <circle key={dot.key} cx={dot.x} cy={dot.y} r="3.3" fill="#fff" stroke="#315B9A" strokeWidth="2" />
-                ))}
-              </svg>
-              <div className="mt-0.5 grid grid-cols-6 gap-1 text-center">
-                {rows.slice(-6).map((row) => (
-                  <span key={row.month} className="text-[6.5px] font-bold text-[#8A96A6]">{month(row.month)}</span>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="grid h-[76px] place-items-center rounded-lg bg-[#F8FAFC] text-[8px] text-[#98A2B3]">No trend data</div>
-          )}
+          <RmPerformanceTrendChart rows={rows} />
         </div>
 
         <div className="space-y-2">
@@ -307,10 +277,10 @@ function RmSummaryCard({
           <p className="mt-1 text-[8px] font-medium text-[#8A96A6]">MTD contribution</p>
         </div>
 
-        <PrimaryMetric label="Today Policies" value={number(row.todayPolicies)} />
-        <PrimaryMetric label="Today Net" value={money(row.todayNetPremium)} emphasis />
-        <PrimaryMetric label="MTD Policies" value={number(row.mtdPolicies)} />
-        <PrimaryMetric label="MTD Net" value={money(row.mtdNetPremium)} emphasis />
+        <InlineMetric label="Today Policies" value={number(row.todayPolicies)} />
+        <InlineMetric label="Today Net" value={money(row.todayNetPremium)} emphasis />
+        <InlineMetric label="MTD Policies" value={number(row.mtdPolicies)} />
+        <InlineMetric label="MTD Net" value={money(row.mtdNetPremium)} emphasis />
 
         <div className="xl:text-right">
           {row.employeeId ? (
@@ -346,11 +316,11 @@ function RmSummaryCard({
   );
 }
 
-function PrimaryMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
+function InlineMetric({ label, value, emphasis = false }: { label: string; value: string; emphasis?: boolean }) {
   return (
-    <div className={"rounded-xl px-3 py-2.5 " + (emphasis ? "bg-[#17365D] text-white shadow-[0_6px_16px_rgba(23,54,93,.12)]" : "bg-white/80 text-[#24364F] ring-1 ring-black/[.025]")}>
-      <p className={"text-[6.5px] font-black uppercase tracking-[.08em] " + (emphasis ? "text-white/60" : "text-[#9AA4B2]")}>{label}</p>
-      <p className="mt-1 truncate text-[11px] font-black tracking-[-.01em]">{value}</p>
+    <div className="min-w-0 border-l border-[#DCE3EC] pl-4 first:border-l-0 first:pl-0">
+      <p className="text-[6.5px] font-black uppercase tracking-[.09em] text-[#95A0AF]">{label}</p>
+      <p className={"mt-1 truncate tracking-[-.015em] " + (emphasis ? "text-[12px] font-black text-[#17365D]" : "text-[11px] font-bold text-[#33445C]")}>{value}</p>
     </div>
   );
 }
@@ -384,36 +354,6 @@ function Empty({ label }: { label: string }) {
   return <div className="px-5 py-8 text-center text-[9px] font-semibold text-[#8A96A7]">{label}</div>;
 }
 
-function sparklinePoints(rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"]) {
-  const values = rows.slice(-6);
-  if (!values.length) return { line: "", area: "", dots: [] as Array<{ key: string; x: number; y: number }> };
-
-  const width = 260;
-  const height = 62;
-  const padX = 6;
-  const padY = 7;
-  const max = Math.max(...values.map((row) => row.net_premium), 1);
-  const min = Math.min(...values.map((row) => row.net_premium), 0);
-  const span = Math.max(max - min, 1);
-
-  const dots = values.map((row, index) => {
-    const x = values.length === 1
-      ? width / 2
-      : padX + (index * (width - padX * 2)) / (values.length - 1);
-    const y = padY + ((max - row.net_premium) / span) * (height - padY * 2);
-    return { key: row.month, x, y };
-  });
-
-  const line = dots.map((dot) => dot.x.toFixed(1) + "," + dot.y.toFixed(1)).join(" ");
-  const area = dots.length
-    ? "M " + dots[0].x.toFixed(1) + " " + (height - padY) + " L "
-      + dots.map((dot) => dot.x.toFixed(1) + " " + dot.y.toFixed(1)).join(" L ")
-      + " L " + dots[dots.length - 1].x.toFixed(1) + " " + (height - padY) + " Z"
-    : "";
-
-  return { line, area, dots };
-}
-
 function money(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
 }
@@ -428,13 +368,6 @@ function compactMoney(value: number) {
   if (n >= 100000) return "₹" + (value / 100000).toFixed(1) + " L";
   if (n >= 1000) return "₹" + (value / 1000).toFixed(1) + " K";
   return money(value);
-}
-
-function month(value: string) {
-  const date = value ? new Date(value.slice(0, 7) + "-01T00:00:00Z") : null;
-  return date && !Number.isNaN(date.getTime())
-    ? new Intl.DateTimeFormat("en-IN", { month: "short", timeZone: "UTC" }).format(date)
-    : value;
 }
 
 function formatDate(value: string) {
