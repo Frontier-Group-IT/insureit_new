@@ -11,6 +11,7 @@ const operationalSettingsMigration = fs.readFileSync(path.join(repoRoot, "supaba
 const rcEnrichmentMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260918235000_external_renewal_rc_enrichment.sql"), "utf8");
 const editableProfileMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919110000_voice_prospect_editable_profile.sql"), "utf8");
 const quickAddMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260919114500_voice_quick_add_queue_source.sql"), "utf8");
+const tataCampaignCapacityMigration = fs.readFileSync(path.join(repoRoot, "supabase/migrations/20260924170000_expand_voice_campaign_capacity.sql"), "utf8");
 const deployWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/deploy-production.yml"), "utf8");
 const schemaWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/apply-external-renewal-voice-attempts.yml"), "utf8");
 const sarvamClient = fs.readFileSync(path.join(root, "lib/sarvam-renewal-call.ts"), "utf8");
@@ -345,6 +346,19 @@ assert(adminAgents.includes("it_super_user"), "IT voice admin instructions prese
 assert(currentVoiceState.includes("INSUREIT-Re-e2468e47-50a8"), "current voice state records the approved controlled campaign binding");
 assert(currentVoiceState.includes("PAUSED"), "current voice state records the campaign safety state");
 assert(!/9329861634|7225842509/.test(currentVoiceState), "current voice state does not persist internal test phone numbers");
+
+assert(voiceCampaignModel.includes("const MAX_ROWS = 500"), "voice campaigns accept the approved Tata 406-row source workbook");
+assert(voiceCampaignModel.includes('name.trim().toLowerCase() === "renewal"'), "Tata campaign import explicitly selects the Renewal sheet");
+assert(voiceCampaignModel.includes('"tata_commercial_renewal"'), "voice campaign model carries the Tata Commercial campaign type");
+assert(voiceCampaignModel.includes("groupTataRenewalRows"), "Tata repeated mobiles are grouped before campaign membership");
+assert(voiceCampaignModel.includes('primarySalesPitch: "cashless_claim_support"'), "Tata campaign marks cashless claim support as the primary sales pitch");
+assert(voiceCampaignModel.includes("Exact cashless approval insurer"), "Tata cashless pitch preserves non-guarantee wording");
+assert(sarvamClient.includes("cashless_claim_pitch"), "Sarvam cohort variables include the Tata cashless claim pitch");
+assert(sarvamClient.includes("campaign_type"), "Sarvam cohort variables include campaign type");
+assert(itDispatchModel.includes("previous_connected_call_count"), "IT dispatch supplies repeat-call memory");
+assert(tataCampaignCapacityMigration.includes("voice_campaigns_total_rows_check"), "Tata campaign capacity migration updates the source row constraint");
+assert(tataCampaignCapacityMigration.includes("between 0 and 500"), "Tata campaign capacity is bounded at 500 rows");
+assert(deployWorkflow.includes("20260924170000_expand_voice_campaign_capacity.sql"), "production deploy waits for Tata voice campaign schema capacity");
 
 assert(voiceCampaignModel.includes("getVoiceCampaignReportRows"), "voice campaign model exposes detailed report rows");
 assert(voiceCampaignModel.includes('addOnInterest: "Not captured"'), "report does not invent add-on interest that is not persisted");
