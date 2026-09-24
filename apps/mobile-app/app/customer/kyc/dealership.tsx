@@ -274,6 +274,8 @@ function OemSelector({ manufacturers, selectedOem, query, open, onOpenChange, on
       onSelect={(option) => onSelect(option.label)}
       emptyText="No matching OEM found."
       autoCapitalize="words"
+      allowCustomValue
+      onCustomValue={onSelect}
     />
   );
 }
