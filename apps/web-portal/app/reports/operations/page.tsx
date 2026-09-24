@@ -2,16 +2,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
-import { ReportApplyButton, ReportEmptyState, ReportExportLink, ReportFilterField, ReportPageShell, ReportResetLink, reportInputClass } from "@/components/reports/report-page-shell";
+import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
+import { OperationsReportFilters } from "@/components/reports/operations-report-filters";
 import { requireCapability } from "@/lib/master-data-server";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { emptyOperationsReport, loadOperationsReport, type OperationsFilters, type OperationsQuery, type OperationsReport } from "@/lib/reports/operations";
 
 export const dynamic="force-dynamic";
 export const revalidate=0;
-const HORIZONS=[30,60,90,180,365] as const;
-const HORIZON_OPTIONS=HORIZONS.map(value=>({value:String(value),label:`${value} days`}));
 type Props={searchParams:Promise<OperationsQuery>};
 
 export default async function OperationsReportsPage({searchParams}:Props){
@@ -25,15 +23,7 @@ export default async function OperationsReportsPage({searchParams}:Props){
   title="Motor vehicle operations & compliance"
   loadError={loadError}
   actions={<ReportExportLink href={exportHref}/>} 
-  controls={<>
-   <ReportQueryShortcuts label="Horizon" param="horizon" activeValue={String(filters.horizonDays)} options={HORIZON_OPTIONS}/>
-   <form action="/reports/operations" method="get" className="grid gap-2 sm:grid-cols-[160px_minmax(180px,1fr)_auto_auto]">
-    <ReportFilterField label="Horizon"><select name="horizon" defaultValue={String(filters.horizonDays)} className={reportInputClass}>{HORIZONS.map(x=><option key={x} value={x}>{x} days</option>)}</select></ReportFilterField>
-    <ReportFilterField label="Exception"><select name="exception" defaultValue={filters.exception??""} className={reportInputClass}><option value="">All vehicles</option><option value="missing">Missing compliance data</option><option value="expired">Expired documents</option><option value="due">Due within horizon</option><option value="unverified">AuthBridge unverified</option></select></ReportFilterField>
-    <ReportApplyButton/>
-    <ReportResetLink href="/reports/operations"/>
-   </form>
-  </>}
+  controls={<OperationsReportFilters horizonDays={filters.horizonDays} exception={filters.exception}/>} 
  >
   <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"><Metric label="Vehicles" value={integer(report.summary.vehicle_count)}/><Metric label="AuthBridge verified" value={integer(report.summary.authbridge_verified_count)}/><Metric label="Missing compliance" value={integer(report.summary.vehicles_missing_compliance_data)}/><Metric label="Missing fields" value={integer(report.summary.missing_compliance_fields)}/><Metric label="Expired" value={integer(report.summary.expired_document_count)}/><Metric label={`Due ≤ ${filters.horizonDays}d`} value={integer(report.summary.due_document_count)}/></section>
   <section className="portal-card overflow-hidden"><Header title="Vehicle compliance"/><ComplianceTable rows={report.compliance}/></section>
