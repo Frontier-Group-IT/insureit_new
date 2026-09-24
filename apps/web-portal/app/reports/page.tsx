@@ -303,7 +303,7 @@ function buildBusinessMixRows(
     }));
   }
   if (mode === "rm") {
-    const totalPremium = report.rms.reduce((sum, row) => sum + row.net_premium, 0);
+    const totalPremium = report.summary.net_premium;
     return report.rms.slice(0, 5).map((row, index) => ({
       key: row.employee_id || `rm-${index}-${row.name}`,
       name: row.name || "Unassigned",
