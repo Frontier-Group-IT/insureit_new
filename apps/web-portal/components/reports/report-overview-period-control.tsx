@@ -99,7 +99,7 @@ export function ReportOverviewPeriodControl({
             aria-labelledby="report-period-title"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <h2 id="report-period-title">Select the period for report</h2>
+            <h2 id="report-period-title">select the period for report</h2>
             <div className="ov-period-fields">
               <label>
                 <span>From Date</span>
