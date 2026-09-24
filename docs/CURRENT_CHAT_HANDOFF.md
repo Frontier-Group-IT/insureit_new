@@ -5,7 +5,7 @@
 - Both later rules now also use `overflow: visible`.
 - Result: the shared Reports navigation no longer creates internal scrollbar controls for **Overview | Business | Portfolio | Operations**, and the same applies to secondary report tabs that use the shared subtab class.
 - No report data, page content, calculations, filters, export behavior, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, or native runtime changes.
-- **IMPLEMENTED ON BRANCH; no PR created; not merged; not deployed.**
+- PR #2366 passed canonical `Verify web portal` workflow #4598, including regressions, typecheck, lint, and production build.\n- Merge commit: `7d45d95ed7081a542b9a05874e42398501432ef2`.\n- **MERGED; production deployment not verified in this step.**
 
 ---
 
