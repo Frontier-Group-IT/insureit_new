@@ -69,7 +69,8 @@ export function resolveManagementPackFilters(query: ManagementPackQuery): Manage
     return { month: requested, period: "mtd", fromDate, toDate, currentMonth };
   }
 
-  const period: ManagementPackPeriod = isManagementPackPeriod(query.period) ? query.period : "mtd";
+  const requestedPeriod = query.period;
+  const period: ManagementPackPeriod = isManagementPackPeriod(requestedPeriod) ? requestedPeriod : "mtd";
   if (period === "custom") {
     const from = validDate(query.from);
     const to = validDate(query.to);
@@ -179,6 +180,17 @@ function numberField(value: Record<string, unknown>, key: string) {
   const raw = value[key];
   const numeric = typeof raw === "number" ? raw : Number(raw ?? 0);
   return Number.isFinite(numeric) ? numeric : 0;
+}
+function isManagementPackPeriod(value: string | undefined): value is ManagementPackPeriod {
+  return value === "mtd" || value === "last_month" || value === "last_6_months" || value === "custom";
+}
+function validDate(value: string | undefined) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+function shiftMonth(month: string, offset: number) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function validMonth(value: string | undefined) { return Boolean(value && /^\d{4}-(0[1-9]|1[0-2])$/.test(value)); }
 function lastDayOfMonth(month: string) {
