@@ -396,3 +396,117 @@ function indiaDateValue(date: Date) {
     day: "2-digit",
   }).format(date);
 }
+
+
+type OverviewBusinessState = {
+  key: OverviewBusiness;
+  label: string;
+  businessLine: "Motor" | "Non Motor" | null;
+  category: string | null;
+};
+
+function resolveOverviewBusiness(value: string | undefined): OverviewBusinessState {
+  if (value === "motor") return { key: "motor", label: "Motor", businessLine: "Motor", category: null };
+  if (value === "non_motor") return { key: "non_motor", label: "Non Motor", businessLine: "Non Motor", category: null };
+  if (value === "life") return { key: "life", label: "Life", businessLine: "Non Motor", category: "Life" };
+  if (value === "health") return { key: "health", label: "Health", businessLine: "Non Motor", category: "Health" };
+  return { key: "all", label: "All Business", businessLine: null, category: null };
+}
+
+type OverviewTrendState = {
+  period: OverviewTrendPeriod;
+  fromDate: string;
+  toDate: string;
+  daily: boolean;
+};
+
+function resolveTrendPeriod(value: string | undefined): OverviewTrendState {
+  const today = indiaDateValue(new Date());
+  const currentMonth = today.slice(0, 7);
+
+  if (value === "mtd") {
+    return { period: "mtd", fromDate: `${currentMonth}-01`, toDate: today, daily: true };
+  }
+  if (value === "last_month") {
+    const previousMonth = shiftMonth(currentMonth, -1);
+    return { period: "last_month", fromDate: `${previousMonth}-01`, toDate: lastDayOfMonthValue(previousMonth), daily: true };
+  }
+  if (value === "1_year") {
+    return { period: "1_year", fromDate: `${shiftMonth(currentMonth, -11)}-01`, toDate: today, daily: false };
+  }
+  return { period: "last_6_months", fromDate: `${shiftMonth(currentMonth, -5)}-01`, toDate: today, daily: false };
+}
+
+function trendOptions(period: OverviewPeriodState, business: OverviewBusinessState) {
+  const options: Array<{ value: OverviewTrendPeriod; label: string }> = [
+    { value: "mtd", label: "MTD" },
+    { value: "last_month", label: "Last Month" },
+    { value: "last_6_months", label: "Last 6 Months" },
+    { value: "1_year", label: "1 Year" },
+  ];
+  return options.map((option) => ({
+    ...option,
+    href: overviewHref(period, business, option.value),
+  }));
+}
+
+function overviewHref(period: OverviewPeriodState, business: OverviewBusinessState, trend: OverviewTrendPeriod) {
+  const params = new URLSearchParams();
+  params.set("period", period.period);
+  if (period.period === "custom") {
+    params.set("from", period.fromDate);
+    params.set("to", period.toDate);
+  }
+  if (business.key !== "all") params.set("business", business.key);
+  if (trend !== "last_6_months") params.set("trend", trend);
+  return `/reports?${params.toString()}`;
+}
+
+function managementPackExportHref(period: OverviewPeriodState, business: OverviewBusinessState) {
+  const params = new URLSearchParams();
+  params.set("from", period.fromDate);
+  params.set("to", period.toDate);
+  if (business.businessLine) params.set("business", business.businessLine);
+  if (business.category) params.set("category", business.category);
+  return `/reports/export/management-pack?${params.toString()}`;
+}
+
+function buildDailyTrendPoints(
+  rows: Array<{ business_date: string; net_premium: number }>,
+  fromDate: string,
+  toDate: string,
+): BusinessTrendPoint[] {
+  const totals = new Map<string, { policy_count: number; net_premium: number }>();
+  for (const row of rows) {
+    if (!row.business_date) continue;
+    const current = totals.get(row.business_date) ?? { policy_count: 0, net_premium: 0 };
+    current.policy_count += 1;
+    current.net_premium += row.net_premium || 0;
+    totals.set(row.business_date, current);
+  }
+
+  const result: BusinessTrendPoint[] = [];
+  let cursor = parseIsoDate(fromDate);
+  const end = parseIsoDate(toDate);
+  while (cursor.getTime() <= end.getTime()) {
+    const key = isoDate(cursor);
+    const total = totals.get(key) ?? { policy_count: 0, net_premium: 0 };
+    result.push({
+      key,
+      label: new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(cursor),
+      axisLabel: new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" }).format(cursor),
+      policy_count: total.policy_count,
+      net_premium: total.net_premium,
+    });
+    cursor = new Date(cursor.getTime() + 86_400_000);
+  }
+  return result;
+}
+
+function parseIsoDate(value: string) {
+  return new Date(`${value}T00:00:00Z`);
+}
+
+function isoDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
