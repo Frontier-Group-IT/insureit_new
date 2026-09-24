@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — RM Performance hover + inline metric refinement:** branch `redesign/rm-performance-hover-and-inline-metrics-main`; latest-main replacement for PR #2320. Adds proper top spacing in Today/MTD/MTD Context, makes the trend chart interactive on hover/focus with tooltip and guide line, and replaces RM Today/MTD KPI cards with compact inline metrics. Source layout and reporting logic remain unchanged. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-24 — Customer App policy-card header/logo cleanup:** branch `fix/customer-policy-card-header-logo-labels`; Customer App → Policies now adds the resolved insurer logo immediately left of the policy-stage text, reduces the vehicle-number weight for a less heavy visual hierarchy, expands Bajaj General insurer aliases/fallback handling so the Bajaj insurer artwork resolves instead of the generic shield, and removes the Manufacturer/Model/Insurer/Expiry labels so those detail columns show values only. Policy No. and Policy Product labels remain unchanged. No schema, migration, RLS, APK/AAB, or native-runtime change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-24 — Reports Overview PR #2307 rollback:** PR #2316 reverted the Reports Overview period/business/trend-control changes from PR #2307 and removed the follow-up PR #2308 management-pack helper/type changes. Full `Verify web portal` workflow #4524 passed before merge. Merge commit `2a91f48d2d34e355ce68930b6c35b2c85f322e06`. **MERGED; deployment not verified.**
