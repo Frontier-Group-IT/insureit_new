@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-24 — Reports retention amount/% split:** branch `refine/reports-retention-amount-percent-columns`; on Reports > Business, all record tables that previously combined retention amount and retention percentage in one cell now use separate **Retention Amount** and **%** columns for Insurer, RM Performance, and Intermediary/Source views. Retention calculations remain unchanged (`retention / pay-in × 100`); Management Pack/readiness summary retention displays are unchanged because they do not use the combined table-column format. No schema, migration, RLS, permission, export, APK/AAB, or native-runtime changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
 - **2026-09-24 — Varun Sabharwal Vehicle Transfer access:** branch `fix/varun-vehicle-transfer-access`; grants Varun Sabharwal an employee-specific `view_vehicles=edit` override with organization scope and allows `sales_operations_head` through the existing Vehicle Transfer role gate only when the effective edit permission is present. Other Operations Head users remain blocked unless they receive the same explicit permission override. Vehicle transfer workflow, atomic RPC, and dependency-move rules are unchanged. Includes migration `20260924185500_varun_vehicle_transfer_permission.sql` and regression expectation updates. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 
