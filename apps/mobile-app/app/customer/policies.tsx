@@ -246,12 +246,6 @@ function policyToneColors(tone: PolicyTone) {
   return { accent: '#0F8A61', soft: '#EAF8F2', border: '#C7EAD9' };
 }
 
-function policyStatusLabel(tone: PolicyTone) {
-  if (tone === 'expired') return 'Expired';
-  if (tone === 'due') return 'Renewal Due';
-  return 'Active';
-}
-
 function compactPolicyStatusLabel(tone: PolicyTone) {
   if (tone === 'expired') return 'EXPIRED';
   if (tone === 'due') return 'DUE';
