@@ -2,11 +2,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Animated, Image, Modal, NativeModules, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
-import { getOperationalCustomerContexts, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
+import { getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { Claim, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
@@ -102,16 +102,6 @@ export default function VehiclesScreen() {
     void load();
   }, [router]);
 
-  const expiringSoon = policies.filter((policy) => {
-    const days = daysUntil(policy.end_date);
-    return days >= 0 && days <= 30;
-  }).length;
-
-  const renewalMessage = useMemo(() => {
-    if (expiringSoon > 0) return `${expiringSoon} policy${expiringSoon === 1 ? '' : 'ies'} need attention soon`;
-    return 'Renew your policy on time and keep your vehicles protected';
-  }, [expiringSoon]);
-  const isPortfolioFleet = contexts.some(isPortfolioCustomerContext);
   const filteredVehicles = useMemo(() => vehicles.filter((vehicle) => {
     const policy = policyForVehicle(vehicle.id, policies, externalPolicies);
     const insurer = policy ? insurers.find((item) => item.id === policy.insurance_company_id) : null;
@@ -234,8 +224,9 @@ export default function VehiclesScreen() {
         const active = Boolean(policy && isPolicyActive(policy));
         const externalPolicy = policy?.source === 'external';
         const insurerLogo = insurerImage(insurer?.name);
-        const vehicleDescriptor = [vehicle.make, vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ') || 'Vehicle details pending';
         const displayVehicleNo = vehicle.vehicle_no.replace(/^NEW-/i, '');
+        const vehicleMake = vehicle.make?.trim() || 'Vehicle';
+        const vehicleModelYear = [vehicle.model, vehicle.year ? String(vehicle.year) : null].filter(Boolean).join(' - ');
         const accountName = vehicleCompanyName(vehicle.customer_id, contexts);
         const vehicleImage = vehicleSketchFor(vehicle);
         const health = vehicleComplianceHealth(vehicle, policy);
@@ -247,15 +238,26 @@ export default function VehiclesScreen() {
               <View style={styles.leftPane}>
                 {accountName ? <Text style={styles.accountName} numberOfLines={1}>{accountName}</Text> : null}
                 <View style={styles.chipRow}>
-                  <View style={styles.vehicleNoChip}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Copy vehicle number ${displayVehicleNo}`}
+                    onPress={(event) => {
+                      event.stopPropagation();
+                      void copyVehicleNumber(displayVehicleNo);
+                    }}
+                    style={({ pressed }) => [styles.vehicleNoChip, pressed && styles.vehicleNoChipPressed]}
+                  >
                     <Text style={styles.vehicleNoText}>{displayVehicleNo}</Text>
                     <MaterialCommunityIcons name="content-copy" size={13} color={palette.navy} />
-                  </View>
+                  </Pressable>
                 </View>
 
                 <Image source={vehicleImage} style={styles.truckImage} resizeMode="contain" />
 
-                <Text style={styles.vehicleMake}>{vehicleDescriptor}</Text>
+                <Text style={styles.vehicleMake} numberOfLines={2}>
+                  {vehicleMake}
+                  {vehicleModelYear ? <Text style={styles.vehicleModel}> - {vehicleModelYear}</Text> : null}
+                </Text>
               </View>
 
               <View style={styles.rightPane}>
@@ -360,21 +362,29 @@ export default function VehiclesScreen() {
 
       <EndorsementSuccessModal visible={endorsementSuccess} onClose={() => setEndorsementSuccess(false)} />
 
-      <View style={styles.protectionBanner}>
-        <View style={styles.bannerIcon}>
-          <MaterialCommunityIcons name="shield-check-outline" size={25} color={palette.navy} />
-        </View>
-        <View style={styles.bannerCopy}>
-          <Text style={styles.bannerTitle}>Stay Protected, Always!</Text>
-          <Text style={styles.bannerText}>{renewalMessage}</Text>
-        </View>
-        <Pressable accessibilityRole="button" onPress={() => router.push(isPortfolioFleet ? '/customer/group/policies' : '/customer/policies')} style={styles.viewRenewals}>
-          <Text style={styles.viewRenewalsText}>View Renewals</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color={palette.navy} />
-        </Pressable>
-      </View>
     </Screen>
   );
+}
+
+async function copyVehicleNumber(value: string) {
+  const clipboardModule =
+    NativeModules.ExpoClipboard ??
+    NativeModules.RNCClipboard ??
+    NativeModules.Clipboard;
+
+  if (typeof clipboardModule?.setString === 'function') {
+    clipboardModule.setString(value);
+    return;
+  }
+  if (typeof clipboardModule?.setStringAsync === 'function') {
+    await clipboardModule.setStringAsync(value);
+    return;
+  }
+
+  const webClipboard = globalThis.navigator?.clipboard;
+  if (webClipboard?.writeText) {
+    await webClipboard.writeText(value);
+  }
 }
 
 function AddVehicleModal({
@@ -1134,12 +1144,14 @@ const styles = StyleSheet.create({
   leftPane: { width: 164, paddingRight: 4 },
   accountName: { color: '#0A43A3', fontSize: 10.8, lineHeight: 13, fontWeight: '900', marginBottom: 3, textTransform: 'uppercase' },
   chipRow: { width: '100%', flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  vehicleNoChip: { width: '100%', minHeight: 31, borderRadius: 8, backgroundColor: '#EAF3FF', paddingHorizontal: 8, paddingVertical: 5, flexDirection: 'row', alignItems: 'flex-start', gap: 5 },
-  vehicleNoText: { flex: 1, minWidth: 0, flexShrink: 1, color: palette.navy, fontSize: 13.2, lineHeight: 16, fontWeight: '900' },
+  vehicleNoChip: { alignSelf: 'flex-start', minHeight: 31, borderRadius: 8, backgroundColor: '#EAF3FF', paddingHorizontal: 8, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  vehicleNoChipPressed: { opacity: 0.72 },
+  vehicleNoText: { color: palette.navy, fontSize: 13.2, lineHeight: 16, fontWeight: '900' },
   truckImage: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10 },
   twpVehicleVisual: { width: 148, height: 78, marginTop: 0, alignSelf: 'center', borderRadius: 10, backgroundColor: '#F7FAFF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   twpRoadLine: { position: 'absolute', bottom: 8, width: 112, height: 2, borderRadius: 2, backgroundColor: '#D6E5F7' },
   vehicleMake: { color: palette.navy, fontSize: 12.4, lineHeight: 15, fontWeight: '900', marginTop: 5, flexShrink: 1 },
+  vehicleModel: { color: '#8A94A6', fontWeight: '700' },
 
   rightPane: { flex: 1, minWidth: 0, borderLeftWidth: 1, borderLeftColor: '#E5ECF5', paddingLeft: 10, position: 'relative' },
   infoBlock: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, borderBottomWidth: 1, borderBottomColor: '#E5ECF5' },
@@ -1184,11 +1196,4 @@ const styles = StyleSheet.create({
   actionTitle: { fontSize: 9.2, lineHeight: 11, fontWeight: '900' },
   actionSub: { color: palette.slate, fontSize: 7.7, lineHeight: 9, fontWeight: '700', marginTop: 1 },
 
-  protectionBanner: { minHeight: 64, borderRadius: 14, borderWidth: 1, borderColor: '#DCE8F4', backgroundColor: '#F8FBFF', padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  bannerIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
-  bannerCopy: { flex: 1, minWidth: 0 },
-  bannerTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '900' },
-  bannerText: { color: palette.slate, fontSize: 11.3, fontWeight: '700', marginTop: 3 },
-  viewRenewals: { height: 38, borderRadius: 9, borderWidth: 1, borderColor: '#BBD2F2', backgroundColor: '#FFFFFF', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  viewRenewalsText: { color: palette.navy, fontSize: 11.5, fontWeight: '900' },
 });
