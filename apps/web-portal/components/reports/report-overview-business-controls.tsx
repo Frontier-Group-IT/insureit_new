@@ -9,6 +9,7 @@ export type OverviewTrendPeriod = "mtd" | "last_month" | "last_6_months" | "year
 export type OverviewTrendPoint = {
   key: string;
   label: string;
+  axisLabel?: string;
   policyCount: number;
   netPremium: number;
 };
@@ -157,7 +158,7 @@ export function ReportOverviewBusinessTrend({
                     onMouseEnter={() => setHovered(index)}
                     onMouseMove={() => setHovered(index)}
                   />
-                  <text x={chart.x(index)} y={chart.height - 13} textAnchor="middle" className="ov-axis-label">{row.label}</text>
+                  <text x={chart.x(index)} y={chart.height - 13} textAnchor="middle" className="ov-axis-label">{row.axisLabel ?? row.label}</text>
                 </g>
               ))}
               <text x="8" y="16" className="ov-axis-label">{compactMoney(chart.premiumMax)}</text>
