@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Button, Card, Message, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
+const vehicleNumberIcon = require('../../assets/custom-icons/policy-detail/linked-vehicle.png');
 const MAX_POLICY_COPY_SIZE_BYTES = 5 * 1024 * 1024;
 type PickedPolicyCopy = { uri: string; name: string; mimeType: string | null; size: number | null };
 type PolicyDateRow = { vehicle_id: string; start_date: string; end_date: string };
@@ -256,32 +257,135 @@ function lockedStatusTone(tone: 'red' | 'orange' | 'green') {
   return { accent: '#C43838', soft: '#FDECEC' };
 }
 
-function vehicleProtectionTone(tone: 'red' | 'orange' | 'green') {
-  return lockedStatusTone(tone);
-}
-
 function VehicleDropdown({ vehicles, protection, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; protection: Map<string, ProtectionState>; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
+  const anchorRef = useRef<View>(null);
+  const searchInputRef = useRef<TextInput>(null);
+  const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
+
+  function focusSearchInput() {
+    requestAnimationFrame(() => {
+      setTimeout(() => searchInputRef.current?.focus(), 40);
+    });
+  }
+
+  function closeSelector() {
+    Keyboard.dismiss();
+    if (open) onToggle();
+  }
+
+  function toggleSelector() {
+    if (open) {
+      Keyboard.dismiss();
+      onToggle();
+      return;
+    }
+    anchorRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ x, y, width, height });
+      onToggle();
+    });
+  }
+
   return (
-    <View style={styles.field}>
+    <View style={styles.vehicleField}>
       <Text style={styles.fieldLabel}>Vehicle number *</Text>
-      <Pressable accessibilityRole="button" onPress={onToggle} style={styles.selectButton}>
-        <View style={styles.selectIcon}><MaterialCommunityIcons name="truck-outline" size={18} color="#0A43A3" /></View>
-        <Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>
-        <MaterialCommunityIcons name={open ? 'chevron-up' : 'chevron-down'} size={21} color={palette.navy} />
-      </Pressable>
-      <Text style={styles.helperText}>Start typing to find a vehicle.</Text>
-      {open ? <View style={styles.makeMenu}>
-        <View style={styles.makeSearch}><MaterialCommunityIcons name="magnify" size={18} color="#7A8799" /><TextInput value={query} onChangeText={onQueryChange} autoCapitalize="characters" placeholder="Search vehicle number" placeholderTextColor="#8A94A6" style={styles.makeSearchInput} /></View>
-        {vehicles.length ? vehicles.map((vehicle) => {
-          const active = selectedVehicle?.id === vehicle.id;
-          const vehicleStatus = protection.get(vehicle.id) ?? { label: 'No policy', tone: 'red' as const, blocking: false };
-          const statusTone = vehicleProtectionTone(vehicleStatus.tone);
-          return <Pressable key={vehicle.id} accessibilityRole="button" disabled={vehicleStatus.blocking} onPress={() => onSelect(vehicle)} style={[styles.makeOption, active && styles.selectOptionActive, vehicleStatus.blocking && styles.makeOptionDisabled]}>
-            <View style={styles.vehicleOptionCopy}><Text style={[styles.selectOptionText, active && styles.selectOptionTextActive, vehicleStatus.blocking && styles.disabledOptionText]} numberOfLines={1}>{vehicle.vehicle_no}</Text><Text style={styles.optionMeta} numberOfLines={1}>{[vehicle.make, vehicle.model].filter(Boolean).join(' - ') || vehicle.vehicle_type}</Text></View>
-            <View style={styles.vehicleOptionTrailing}><View style={[styles.vehicleStatusPill, { backgroundColor: statusTone.soft }]}><Text style={[styles.vehicleStatusText, { color: statusTone.accent }]} numberOfLines={1}>{vehicleStatus.label}</Text></View>{active ? <MaterialCommunityIcons name="check-circle" size={17} color={palette.navy} /> : null}</View>
-          </Pressable>;
-        }) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
-      </View> : null}
+      <View ref={anchorRef} collapsable={false} style={[styles.vehicleSelectButton, open && styles.vehicleSelectButtonHidden]}>
+        <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
+        <View pointerEvents="none" style={styles.vehicleSelectCopy}>
+          <Text style={[styles.vehicleSelectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>
+            {selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}
+          </Text>
+          {selectedVehicle ? (
+            <Text style={styles.vehicleSelectMeta} numberOfLines={1}>
+              {[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}
+            </Text>
+          ) : null}
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open vehicle selector"
+          accessibilityState={{ expanded: open }}
+          hitSlop={8}
+          onPress={toggleSelector}
+          style={({ pressed }) => [styles.vehicleSelectorTrigger, pressed && styles.vehicleSelectorTriggerPressed]}
+        >
+          <MaterialCommunityIcons name="format-list-bulleted" size={20} color={palette.navy} />
+        </Pressable>
+      </View>
+
+      <Modal
+        visible={open}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeSelector}
+        onShow={focusSearchInput}
+      >
+        <Pressable accessibilityRole="button" accessibilityLabel="Close vehicle selector" onPress={closeSelector} style={styles.vehicleDropdownOverlay}>
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={[
+              styles.vehicleAnchoredMenu,
+              {
+                left: anchor.x,
+                top: anchor.y + anchor.height + 4,
+                width: anchor.width,
+              },
+            ]}
+          >
+            <View style={styles.vehicleSearch}>
+              <MaterialCommunityIcons name="magnify" size={19} color="#145ED7" />
+              <TextInput
+                ref={searchInputRef}
+                value={query}
+                onChangeText={onQueryChange}
+                autoCapitalize="characters"
+                returnKeyType="search"
+                placeholder="Search vehicle number, make or model"
+                placeholderTextColor="#6E7F96"
+                style={styles.vehicleSearchInput}
+              />
+            </View>
+
+            <ScrollView
+              keyboardShouldPersistTaps="always"
+              showsVerticalScrollIndicator={false}
+              style={styles.vehicleModalOptions}
+            >
+              {vehicles.length ? vehicles.map((vehicle) => {
+                const active = selectedVehicle?.id === vehicle.id;
+                const vehicleStatus = protection.get(vehicle.id) ?? { label: 'No policy', tone: 'red' as const, blocking: false };
+                return (
+                  <Pressable
+                    key={vehicle.id}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active, disabled: vehicleStatus.blocking }}
+                    disabled={vehicleStatus.blocking}
+                    onPress={() => {
+                      Keyboard.dismiss();
+                      onSelect(vehicle);
+                    }}
+                    style={[
+                      styles.vehicleOption,
+                      active && styles.vehicleOptionActive,
+                      vehicleStatus.blocking && styles.vehicleOptionDisabled,
+                    ]}
+                  >
+                    <View style={styles.vehicleOptionCopy}>
+                      <Text style={[styles.vehicleOptionText, active && styles.vehicleOptionTextActive, vehicleStatus.blocking && styles.disabledOptionText]} numberOfLines={1}>
+                        {vehicle.vehicle_no}
+                      </Text>
+                      <Text style={styles.vehicleOptionMeta} numberOfLines={1}>
+                        {[vehicle.make, vehicle.model].filter(Boolean).join(' · ') || vehicle.vehicle_type}
+                      </Text>
+                    </View>
+                    {active ? <MaterialCommunityIcons name="check-circle" size={17} color="#0A43A3" /> : null}
+                  </Pressable>
+                );
+              }) : <Text style={styles.emptyLookupText}>No matching vehicles found.</Text>}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -460,6 +564,26 @@ const styles = StyleSheet.create({
   lockedTitle: { color: palette.navy, fontSize: 16, fontWeight: '900', letterSpacing: 0.3, marginTop: 1 },
   lockedStatusPill: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 999 },
   lockedStatusText: { fontSize: 9, fontWeight: '900' },
+  vehicleField: { gap: 6 },
+  vehicleSelectorTrigger: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
+  vehicleSelectorTriggerPressed: { backgroundColor: '#EEF5FF' },
+  vehicleSelectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  vehicleSelectButtonHidden: { opacity: 0 },
+  selectVehicleArtwork: { width: 36, height: 36 },
+  vehicleSelectCopy: { flex: 1, minWidth: 0 },
+  vehicleSelectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
+  vehicleSelectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
+  vehicleDropdownOverlay: { flex: 1, backgroundColor: 'transparent' },
+  vehicleAnchoredMenu: { position: 'absolute', maxHeight: 330, borderRadius: 15, borderWidth: 1, borderColor: '#C8D9EF', backgroundColor: '#FFFFFF', overflow: 'hidden', shadowColor: '#071D49', shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 12 },
+  vehicleModalOptions: { maxHeight: 270 },
+  vehicleSearch: { minHeight: 50, margin: 7, borderRadius: 12, borderWidth: 2, borderColor: '#6FA1EA', backgroundColor: '#F0F6FF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  vehicleSearchInput: { flex: 1, minHeight: 46, color: palette.navy, fontSize: 13, fontWeight: '700' },
+  vehicleOption: { minHeight: 54, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#EEF2F6' },
+  vehicleOptionActive: { backgroundColor: '#EEF5FF' },
+  vehicleOptionDisabled: { opacity: 0.48 },
+  vehicleOptionText: { color: '#607089', fontSize: 12, fontWeight: '800' },
+  vehicleOptionTextActive: { color: palette.navy, fontWeight: '900' },
+  vehicleOptionMeta: { color: '#8A94A6', fontSize: 10.5, fontWeight: '600', marginTop: 2 },
   selectButton: { minHeight: 45, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FBFDFF', paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
   selectIcon: { width: 28, height: 28, borderRadius: 10, backgroundColor: '#EEF5FF', alignItems: 'center', justifyContent: 'center' },
   selectValue: { flex: 1, color: palette.navy, fontSize: 12.1, fontWeight: '700' },
