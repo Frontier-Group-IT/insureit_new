@@ -50,7 +50,7 @@ assertIncludes(form, "Transfer vehicle and all dependencies", "transfer confirma
 assertIncludes(form, 'name="confirm_everything"', "transfer confirmation checkbox");
 assertIncludes(detail, "/transfer", "vehicle detail transfer link");
 assertIncludes(editPage, "Transfer Vehicle", "vehicle edit transfer button");
-assertIncludes(editPage, `/vehicles/${vehicle.id}/transfer`, "vehicle edit transfer destination");
+assertIncludes(editPage, '/vehicles/${vehicle.id}/transfer', "vehicle edit transfer destination");
 assertIncludes(editPage, 'TRANSFER_ROLES = new Set(["manager", "admin", "super_admin", "it_super_user"])', "vehicle edit transfer roles");
 assertIncludes(vehicleForms, "{actionExtra}", "vehicle form extra footer action");
 assertIncludes(onboardingAction, "Vehicle ownership cannot be transferred during Policy Onboarding", "onboarding partial transfer block");
