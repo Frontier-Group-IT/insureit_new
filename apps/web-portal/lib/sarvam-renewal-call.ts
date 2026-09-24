@@ -91,7 +91,9 @@ function buildOpeningLine(context: ExternalRenewalVoiceStartContext) {
   const addressee = [firstName, salutation].filter(Boolean).join(" ");
   const brand = stringVariable(context.calling_brand) ?? "Frontier JCB";
   const isRepeat = Boolean(context.repeat_call);
-  const intro = addressee ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ ${brand} से।` : `नमस्ते, मैं अंजना बोल रही हूँ ${brand} से।`;
+  const intro = addressee
+    ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ ${brand} से।`
+    : `नमस्ते, मैं अंजना बोल रही हूँ ${brand} से।`;
 
   if (isRepeat) {
     const followUp = context.last_call_disposition === "follow_up"
@@ -100,8 +102,11 @@ function buildOpeningLine(context: ExternalRenewalVoiceStartContext) {
     return intro + followUp;
   }
 
-  const vehicleContext = context.campaign_type === "tata_commercial_renewal" ? "Tata commercial vehicle की " : "";
-  return `${intro} आपकी ${vehicleContext}policy renewal के बारे में call किया था—दो मिनट बात कर सकते हैं क्या?`;
+  if (context.campaign_type === "tata_commercial_renewal") {
+    return `${intro} Tata commercial vehicle की insurance renewal के लिए call किया है—अभी दो मिनट हैं?`;
+  }
+
+  return `${intro} insurance renewal के लिए call किया है—अभी दो मिनट हैं?`;
 }
 
 function buildAgentVariables(context: ExternalRenewalVoiceStartContext) {
