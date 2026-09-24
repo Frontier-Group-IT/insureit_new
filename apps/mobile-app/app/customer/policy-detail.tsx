@@ -109,7 +109,7 @@ export default function PolicyDetailScreen() {
             onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })}
             style={({ pressed }) => [styles.pageRenewAction, pressed && styles.pageRenewActionPressed]}
           >
-            <MaterialCommunityIcons name="refresh" size={15} color="#0F5DB8" />
+            <MaterialCommunityIcons name="refresh" size={15} color="#0F8A61" />
             <Text style={styles.pageRenewActionText}>Add renewed policy</Text>
           </Pressable>
         ) : null}
@@ -280,9 +280,9 @@ function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
 const styles = StyleSheet.create({
   pageHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
   pageTitle: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900', flexShrink: 1 },
-  pageRenewAction: { minHeight: 32, borderRadius: 999, borderWidth: 1, borderColor: '#0F5DB8', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  pageRenewAction: { minHeight: 32, borderRadius: 999, backgroundColor: '#EAF8F2', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   pageRenewActionPressed: { opacity: 0.8 },
-  pageRenewActionText: { color: '#0F5DB8', fontSize: 10.5, lineHeight: 13, fontWeight: '900' },
+  pageRenewActionText: { color: '#0F8A61', fontSize: 10.5, lineHeight: 13, fontWeight: '900' },
   contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
 
   heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, marginBottom: 8, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, overflow: 'hidden' },
