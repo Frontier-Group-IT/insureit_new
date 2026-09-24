@@ -19,10 +19,12 @@ export async function GET(request: NextRequest) {
   const month = request.nextUrl.searchParams.get("month") || undefined;
   const from = request.nextUrl.searchParams.get("from") || undefined;
   const to = request.nextUrl.searchParams.get("to") || undefined;
+  const business = request.nextUrl.searchParams.get("business") || undefined;
+  const category = request.nextUrl.searchParams.get("category") || undefined;
   const snapshotId = request.nextUrl.searchParams.get("snapshot") || undefined;
   const archived = snapshotId ? await loadManagementPackSnapshot(profile.id, snapshotId) : null;
   if (snapshotId && !archived) return new Response("Snapshot not found", { status: 404 });
-  const pack = archived?.pack ?? await loadManagementPack(profile, { month, from, to });
+  const pack = archived?.pack ?? await loadManagementPack(profile, { month, from, to, business, category });
   const dataRows = managementPackCsvRows(pack, archived?.snapshotVersion);
   const rows: Array<Array<string | number>> = [
     ["Month", from && to ? "Custom range" : pack.filters.month],
