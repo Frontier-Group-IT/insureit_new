@@ -101,7 +101,19 @@ export default function PolicyDetailScreen() {
 
   return (
     <Screen title="Policy details" subtitle={vehicle?.vehicle_no ?? policy.policy_no} showLogout showTitleHeader={false}>
-      <Text style={styles.pageTitle}>Policy details</Text>
+      <View style={styles.pageTitleRow}>
+        <Text style={styles.pageTitle}>Policy details</Text>
+        {renewalState.action ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })}
+            style={({ pressed }) => [styles.pageRenewAction, pressed && styles.pageRenewActionPressed]}
+          >
+            <MaterialCommunityIcons name="refresh" size={13} color="#C43838" />
+            <Text style={styles.pageRenewActionText}>Add renewed policy</Text>
+          </Pressable>
+        ) : null}
+      </View>
       <View style={styles.contentStack}>
         <View style={styles.heroLayout}>
           <View style={[styles.heroAccent, { backgroundColor: renewalTone(renewalState.tone).accent }]} />
@@ -131,12 +143,6 @@ export default function PolicyDetailScreen() {
               financialImage={policyDetailIcons.idv}
             />
           </View>
-          {renewalState.action ? <View style={styles.heroActionRow}>
-            <Pressable accessibilityRole="button" onPress={() => router.push({ pathname: '/customer/add-policy', params: { vehicleId: policy.vehicle_id } })} style={({ pressed }) => [styles.heroAction, { backgroundColor: renewalTone(renewalState.tone).accent }, pressed && styles.heroActionPressed]}>
-              <MaterialCommunityIcons name="refresh" size={15} color="#FFFFFF" />
-              <Text style={styles.heroActionText}>Add renewed policy</Text>
-            </Pressable>
-          </View> : null}
         </View>
 
         <Card style={styles.vehicleCard}>
@@ -271,7 +277,11 @@ function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
 }
 
 const styles = StyleSheet.create({
-  pageTitle: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900', marginBottom: 8 },
+  pageTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 },
+  pageTitle: { color: palette.navy, fontSize: 21, lineHeight: 26, fontWeight: '900', flexShrink: 1 },
+  pageRenewAction: { minHeight: 28, borderRadius: 999, backgroundColor: '#FFF0F0', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, flexShrink: 0 },
+  pageRenewActionPressed: { opacity: 0.82, transform: [{ scale: 0.985 }] },
+  pageRenewActionText: { color: '#C43838', fontSize: 9.5, lineHeight: 12, fontWeight: '900' },
   contentStack: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1 },
 
   heroLayout: { alignSelf: 'stretch', flexGrow: 0, flexShrink: 1, minHeight: 0, marginBottom: 8, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', padding: 12, overflow: 'hidden' },
@@ -293,11 +303,6 @@ const styles = StyleSheet.create({
   dateFinancialDivider: { height: 1, backgroundColor: '#E1E8F0', marginVertical: 6 },
   financialInlineLabel: { color: '#64748B', fontSize: 8.5, fontWeight: '900', textTransform: 'uppercase' },
   financialInlineValue: { color: palette.navy, fontSize: 10.8, lineHeight: 14, fontWeight: '900', marginTop: 2 },
-
-  heroActionRow: { marginTop: 7 },
-  heroAction: { alignSelf: 'stretch', minHeight: 31, borderRadius: 9, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  heroActionPressed: { opacity: 0.86, transform: [{ scale: 0.985 }] },
-  heroActionText: { color: '#FFFFFF', fontSize: 10.5, fontWeight: '900' },
 
   statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   statusText: { fontSize: 9, lineHeight: 12, fontWeight: '900' },
