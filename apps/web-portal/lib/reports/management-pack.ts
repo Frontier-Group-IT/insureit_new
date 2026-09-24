@@ -9,7 +9,7 @@ import { loadPolicyBusinessNetReport } from "@/lib/reports/policy-business";
 import { loadRenewalReport } from "@/lib/reports/renewals";
 
 type ViewerProfile = { id: string; role: string | null };
-export type ManagementPackQuery = { month?: string; from?: string; to?: string };
+export type ManagementPackQuery = { month?: string; from?: string; to?: string; business?: string; category?: string };
 export type ManagementPackFilters = { month: string; fromDate: string; toDate: string; currentMonth: string };
 
 export type ManagementPack = {
@@ -30,7 +30,7 @@ export async function loadManagementPack(profile: ViewerProfile, query: Manageme
     throw new Error("Backoffice Executive cannot access management-pack finance, payout or governance data.");
   }
   const filters = resolveManagementPackFilters(query);
-  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, page: "1" };
+  const monthQuery = { period: "custom", from: filters.fromDate, to: filters.toDate, business: query.business, category: query.category, page: "1" };
   const canViewGovernance = await hasEffectiveCapability(profile, "manage_users");
 
   const [businessPayload, distributionPayload, financePayload, claimsPayload, renewalsPayload, operationsPayload, governancePayload] = await Promise.all([
