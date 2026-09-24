@@ -1,3 +1,17 @@
+## 2026-09-24 — Full vehicle customer transfer workflow
+
+- Branch: `feature/vehicle-full-customer-transfer`.
+- Vehicle Details adds **Transfer Vehicle** for Manager/Admin/Super Admin/IT Super User.
+- Vehicle-only transfer is intentionally forbidden. The confirmation explicitly states that all associated customer-scoped dependencies move together.
+- New migration `20260924163000_vehicle_full_customer_transfer.sql` adds service-role-only `transfer_vehicle_customer_v1`, which runs atomically and moves the vehicle, managed/external policies, claims and claim documents, claim notifications/support references, customer activity/documents, policy-linked commission/referral rows, service enquiries and dormant vehicle-customer link state to the destination customer.
+- The RPC checks actor role, source/destination customer scope, destination active state, effective date and reason; it writes `vehicle_ownership_history` and a detailed `audit_logs` event.
+- Policy snapshots/documents and claim/status history remain attached through their policy/claim IDs and are not recreated or deleted.
+- Existing Policy Onboarding ownership conflicts no longer allow the older partial transfer path; authorized users are sent to the full Vehicle Transfer page.
+- Added rollback, migration workflow and `vehicle-transfer:regression` wired into canonical web verification.
+- **IMPLEMENTED; PR/CI/merge/migration application/deployment pending.**
+
+---
+
 ## 2026-09-24 — Reports shared reference header
 
 - Branch: `ui/reports-shared-reference-header`.
