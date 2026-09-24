@@ -40,8 +40,8 @@ assert.ok(dashboardView.includes("Ranked by gross premium"), "Dashboard rankings
 assert.ok(reportBusiness.includes("getAccessiblePolicyRmEmployeeIds"), "Business reports must use policy RM scope rather than customer scope.");
 assert.ok(reportBusiness.includes('get_policy_business_report_v5'), "Business reports must use the net-premium RM-scoped report function.");
 assert.ok(reportBusiness.includes('query.period)?query.period:"mtd"'), "Business reports should default to MTD to reconcile with Dashboard and Policy Register.");
-assert.ok(reportPage.includes("Net premium"), "Business report must label premium output as Net premium.");
-assert.ok(reportPage.includes("Avg. net / policy"), "Business report must show average net premium per policy.");
+assert.ok(reportPage.includes("Net Premium"), "Business report must label premium output as Net Premium.");
+assert.ok(!reportPage.includes("Avg. net / policy"), "Business report must not restore the removed average-net-per-policy summary metric.");
 assert.ok(!reportPage.includes("Gross premium"), "Business report page must not expose Gross premium labels.");
 assert.ok(reportMigration.includes("p.rm_employee_id=any(p_scope_rm_employee_ids)"), "Report SQL must enforce the authorized RM employee scope.");
 assert.ok(reportMigration.includes("b.rm_employee_id=p_rm_employee_id"), "Selected RM report filter must match stable employee id, not RM name text.");
