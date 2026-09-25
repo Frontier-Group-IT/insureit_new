@@ -144,7 +144,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
     .select("call_disposition,customer_interest,customer_objection,call_summary,follow_up_at,connectivity_status,created_at")
     .eq("opportunity_id", opportunity.id)
     .order("created_at", { ascending: false })
-    .limit(20)
+    .limit(100)
     .returns<Array<{
       call_disposition: string | null;
       customer_interest: string | null;
@@ -238,6 +238,7 @@ export async function startItSuperUserExternalRenewalVoiceAttempt({
       requested_by_auth_user_id: requestedByAuthUserId,
       voice_campaign_id: voiceCampaignId,
       cohort_context: cohortContext,
+      retry_attempt: (previousAttempts ?? []).length,
     })
     .select("id")
     .single<{ id: string }>();
