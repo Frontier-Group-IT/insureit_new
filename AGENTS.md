@@ -45,7 +45,24 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 **Critical state rule:** merge is not deployment; deployment is not runtime application; an OTA publish is not installed-device verification; a migration commit is not an applied migration. Record these states separately.
 
+## INSUREIT Private Voice Agent rollout continuity
+
+**MANDATORY FOR EVERY AGENT WORKING ON VOICE AI:** read and update `docs/INSUREIT_PRIVATE_VOICE_AGENT_ROLLOUT.md` whenever a major implementation, experiment, architecture decision, evaluation result, production realization, provider finding, or rollout phase materially changes the private-agent program.
+
+The private-agent rollout is deliberately isolated from the working Sarvam managed-agent system. Until a later explicitly approved migration step:
+- do not refactor the working Sarvam production path merely to share code with the private agent;
+- do not reuse Sarvam campaign/attempt tables as writable private-agent state;
+- do not change Sarvam provider configuration, webhook behavior, kill switch, calling window, campaign dispatch, or production prompts as part of private-agent work;
+- reuse stable business facts and pure business logic only through explicit provider-neutral adapters or read-only context boundaries;
+- keep private-agent calling disabled until its current rollout phase explicitly authorizes live calls;
+- preserve Sarvam as an independently operable fallback throughout the rollout.
+
+The rollout Markdown is the detailed chronological source of truth. `AGENTS.md` remains the compact rule/index surface.
+
 ### Latest implementation ledger
+
+- **2026-09-25 — INSUREIT Private Voice Agent Phase 0:** branch `feature/insureit-private-voice-phase0`; documented the existing Sarvam managed-agent production architecture and the phased private-agent migration plan, introduced the mandatory private-agent rollout continuity file, and added an IT-Super-User-only UI-only `Insureit Agent` workspace under Development → Voice Agents. No private runtime, schema, telephony, STT/TTS, LLM, campaign execution, or Sarvam production behavior is changed. **IMPLEMENTED; PR/CI/merge/deployment pending.** See `docs/INSUREIT_PRIVATE_VOICE_AGENT_ROLLOUT.md`.
+
 
 - **2026-09-25 — Supabase Log Ingestion forensic investigation:** docs-only branch `docs/supabase-log-ingestion-investigation-20260925`. Added `docs/SUPABASE_LOG_INGESTION_INVESTIGATION_2026_09_25.md` with evidence from Supabase logs, Vercel runtime logs, Git history and current auth/permission/voice code. Key finding: measured billing-cycle Edge-log payload is dominated by `profiles` + auth + employee/role permission resolution (~39.9% combined); the latest 24h also has a major voice-campaign spike (~23.7%) driven by real campaign attempts/retries rather than duplicate webhooks. The 14 Sep middleware coverage expansion and 17 Sep forced role/profile revalidation are strongly correlated with the auth spike. **No production behavior, security rule or schema changed. Optimization planning pending.**
 
