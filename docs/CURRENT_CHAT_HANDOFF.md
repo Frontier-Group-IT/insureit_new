@@ -1,3 +1,15 @@
+## 2026-09-25 — Customer My Claims card cleanup
+
+- Branch: `ui/customer-claims-remove-second-icon`.
+- Removed the secondary claim/status icon rendered after the vehicle manufacturer logo on Customer App → My Claims cards.
+- External/self-tracked claim milestone text on the far right, including **Spot Status**, now renders in red.
+- Managed/internal claim milestone text keeps its existing navy color.
+- Added `customer-claims-card-icon-status-regression.mjs` and wired it into `Verify mobile app`.
+- No schema, RLS, API/RPC, native runtime, APK/AAB, or data change.
+- **IMPLEMENTED; PR/CI/merge/OTA pending.**
+
+---
+
 ## 2026-09-25 — Hide Non-Motor policy product subline in Policy Register
 
 - Branch: `fix/non-motor-hide-policy-product-subline`.
