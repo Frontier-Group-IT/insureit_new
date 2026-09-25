@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AnchoredSearchSelect } from '@/components/anchored-search-select';
-import { Button, Card, Message, Screen } from '@/components/ui';
+import { Button, Card, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, isPortfolioCustomerContext, partnerTypeLabel, type CustomerAccountContext } from '@/lib/customer-context';
 import { lookupCustomerRc } from '@/lib/customer-rc-lookup';
@@ -26,6 +26,7 @@ const MAX_POLICY_COPY_SIZE_BYTES = 5 * 1024 * 1024;
 type PickedPolicyCopy = { uri: string; name: string; mimeType: string | null; size: number | null };
 type RcLookupState = 'idle' | 'loading' | 'success' | 'error';
 type ComplianceKey = 'fitness' | 'puc' | 'road_tax' | 'national_permit' | 'local_permit';
+type ErrorPopupState = { title: string; message: string; actionLabel?: string; onAction?: () => void } | null;
 
 export default function AddVehicleScreen() {
   const router = useRouter();
@@ -65,7 +66,7 @@ export default function AddVehicleScreen() {
   const [localPermitExpiryDate, setLocalPermitExpiryDate] = useState('');
   const [dateTarget, setDateTarget] = useState<{ label: string; value: string; onChange: (value: string) => void; autoEnd?: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  const [errorPopup, setErrorPopup] = useState<ErrorPopupState>(null);
   const [rcLookupState, setRcLookupState] = useState<RcLookupState>('idle');
   const [rcLookupMessage, setRcLookupMessage] = useState('');
   const [rcSuccessPopup, setRcSuccessPopup] = useState('');
@@ -135,6 +136,10 @@ export default function AddVehicleScreen() {
     return () => clearTimeout(timeout);
   }, [rcSuccessPopup]);
 
+  function showError(title: string, message: string, actionLabel?: string, onAction?: () => void) {
+    setErrorPopup({ title, message, actionLabel, onAction });
+  }
+
   function changeVehicleNo(value: string) {
     const next = value.replace(/[^A-Za-z0-9 -]/g, '').toUpperCase();
     setVehicleNo(next);
@@ -149,7 +154,7 @@ export default function AddVehicleScreen() {
 
   async function fetchRcDetails() {
     if (rcLookupState === 'loading') return;
-    setMessage('');
+    setErrorPopup(null);
     setRcLookupMessage('');
     setRcSuccessPopup('');
     setInsurerFetchedLocked(false);
@@ -158,7 +163,8 @@ export default function AddVehicleScreen() {
     const normalized = normalizeRc(vehicleNo);
     if (!isValidIndianRegistrationNumber(normalized)) {
       setRcLookupState('error');
-      return setRcLookupMessage('Enter the complete vehicle registration number.');
+      setRcLookupMessage('');
+      return showError('Invalid registration number', 'Please enter the complete vehicle registration number.');
     }
     if (lastFetchedRc === normalized && rcLookupState === 'success') return;
 
@@ -167,7 +173,8 @@ export default function AddVehicleScreen() {
       const duplicate = (existingVehicles ?? []).find((item) => normalizeRc(String(item.vehicle_no ?? '')) === normalized);
       if (duplicate) {
         setRcLookupState('error');
-        return setRcLookupMessage('This vehicle is already added to this account.');
+        setRcLookupMessage('');
+        return showError('Vehicle already added', 'This vehicle is already added to this account.');
       }
     }
 
@@ -257,24 +264,25 @@ export default function AddVehicleScreen() {
       }
     } catch (error) {
       setRcLookupState('error');
-      setRcLookupMessage(error instanceof Error ? error.message : 'We could not fetch vehicle details. You can continue manually.');
+      setRcLookupMessage('');
+      showError('Vehicle lookup failed', error instanceof Error ? error.message : 'We could not fetch vehicle details. You can continue manually.');
     }
   }
 
   async function save() {
-    setMessage('');
+    setErrorPopup(null);
     if (saving) return;
     const session = await getCurrentSession();
     if (!session?.user) return router.replace('/login');
     const target = contexts.find((context) => context.customer_id === selectedCustomerId);
-    if (!target) return setMessage('Select the customer account for this vehicle.');
-    if (!isValidIndianRegistrationNumber(normalizeRc(vehicleNo))) return setMessage('Enter the complete vehicle registration number.');
-    if (!vehicleType) return setMessage('Select the vehicle class.');
-    if (!make.trim()) return setMessage('Select the vehicle manufacturer.');
-    if (!model.trim()) return setMessage('Enter the vehicle model.');
-    if (!year.trim()) return setMessage('Select the manufacturing year.');
+    if (!target) return showError('Customer account required', 'Please select the customer account for this vehicle.');
+    if (!isValidIndianRegistrationNumber(normalizeRc(vehicleNo))) return showError('Invalid registration number', 'Please enter the complete vehicle registration number.');
+    if (!vehicleType) return showError('Vehicle class required', 'Please select the vehicle class first.');
+    if (!make.trim()) return showError('Manufacturer required', 'Please select the vehicle manufacturer first.');
+    if (!model.trim()) return showError('Vehicle model required', 'Please enter the vehicle model first.');
+    if (!year.trim()) return showError('Manufacturing year required', 'Please select the manufacturing year first.');
     const parsedYear = Number(year);
-    if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return setMessage('Enter a valid manufacturing year.');
+    if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return showError('Invalid manufacturing year', 'Please enter a valid manufacturing year.');
 
     const usesGvw = vehicleType === 'GCV' || vehicleType === 'CPM';
     const usesSeats = vehicleType === 'PCV';
@@ -284,20 +292,20 @@ export default function AddVehicleScreen() {
     const parsedCc = usesEngineCapacity && engineCapacityCc ? Number(engineCapacityCc) : null;
     const parsedSeats = usesSeats && seatingCapacity ? Number(seatingCapacity) : null;
 
-    if (usesGvw && parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid GVW.');
-    if (usesEngineCapacity && parsedCc !== null && (!Number.isFinite(parsedCc) || parsedCc <= 0)) return setMessage('Enter a valid engine capacity.');
-    if (usesSeats && parsedSeats !== null && (!Number.isInteger(parsedSeats) || parsedSeats <= 0)) return setMessage('Enter a valid seating capacity.');
+    if (usesGvw && parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return showError('Invalid GVW', 'Please enter a valid GVW.');
+    if (usesEngineCapacity && parsedCc !== null && (!Number.isFinite(parsedCc) || parsedCc <= 0)) return showError('Invalid engine capacity', 'Please enter a valid engine capacity.');
+    if (usesSeats && parsedSeats !== null && (!Number.isInteger(parsedSeats) || parsedSeats <= 0)) return showError('Invalid seating capacity', 'Please enter a valid seating capacity.');
 
     const hasPolicyDetails = Boolean(selectedCompanyId || policyNo.trim() || policyStartDate || policyEndDate || premium.trim() || idv.trim() || policyCopy);
-    if (hasPolicyDetails && !selectedCompanyId) return setMessage('Search and select the insurer to save policy details.');
-    if (hasPolicyDetails && !policyNo.trim()) return setMessage('Enter policy number to save policy details.');
-    if (hasPolicyDetails && !policyStartDate) return setMessage('Select policy start date to save policy details.');
-    if (hasPolicyDetails && !policyEndDate) return setMessage('Select policy end date to save policy details.');
-    if (hasPolicyDetails && new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return setMessage('End date must be after start date.');
+    if (hasPolicyDetails && !selectedCompanyId) return showError('Insurer not selected', 'Please select the insurer first to save the policy details.', 'Select Insurer', () => setInsurerOpen(true));
+    if (hasPolicyDetails && !policyNo.trim()) return showError('Policy number required', 'Please enter the policy number first.');
+    if (hasPolicyDetails && !policyStartDate) return showError('Policy start date required', 'Please select the policy start date first.');
+    if (hasPolicyDetails && !policyEndDate) return showError('Policy end date required', 'Please select the policy end date first.');
+    if (hasPolicyDetails && new Date(policyEndDate).getTime() < new Date(policyStartDate).getTime()) return showError('Invalid policy dates', 'Policy end date must be after the policy start date.');
     const premiumValue = premium ? Number(premium) : null;
-    if (hasPolicyDetails && premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return setMessage('Enter a valid premium amount.');
+    if (hasPolicyDetails && premiumValue !== null && (!Number.isFinite(premiumValue) || premiumValue < 0)) return showError('Invalid premium', 'Please enter a valid premium amount.');
     const idvValue = idv ? Number(idv) : null;
-    if (hasPolicyDetails && idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return setMessage('Enter a valid IDV.');
+    if (hasPolicyDetails && idvValue !== null && (!Number.isFinite(idvValue) || idvValue < 0)) return showError('Invalid IDV', 'Please enter a valid IDV amount.');
 
     const rpcPayload = {
       p_customer_id: target.customer_id,
@@ -363,13 +371,13 @@ export default function AddVehicleScreen() {
     if (error) {
       console.warn('Customer vehicle save failed', error.message);
       setSaving(false);
-      return setMessage('We could not save this vehicle right now. Please try again.');
+      return showError('Vehicle could not be saved', 'We could not save this vehicle right now. Please try again.');
     }
 
     const createdVehicle = Array.isArray(vehicleData) ? vehicleData[0] : vehicleData;
     if (!createdVehicle?.id) {
       setSaving(false);
-      return setMessage('Vehicle was saved, but we could not confirm the new vehicle record.');
+      return showError('Vehicle confirmation failed', 'Vehicle was saved, but we could not confirm the new vehicle record.');
     }
 
     if (hasPolicyDetails) {
@@ -388,14 +396,14 @@ export default function AddVehicleScreen() {
       if (policyResult.error) {
         console.warn('Customer vehicle policy save failed', policyResult.error.message);
         setSaving(false);
-        return setMessage('Vehicle saved, but the policy details could not be saved. Please add the policy again from the vehicle screen.');
+        return showError('Policy could not be saved', 'Vehicle was saved successfully, but the policy details could not be saved. You can add the policy again from the vehicle screen.');
       }
       if (policyCopy) {
         const uploadError = await uploadPolicyCopy(target.customer_id, policyCopy, session.user.id);
         if (uploadError) {
           console.warn('Customer vehicle policy copy upload failed', uploadError);
           setSaving(false);
-          return setMessage('Vehicle and policy saved, but the policy copy could not be uploaded. You can add the copy again later.');
+          return showError('Policy copy upload failed', 'Vehicle and policy were saved, but the policy copy could not be uploaded. You can upload it again later.');
         }
       }
     }
@@ -404,11 +412,11 @@ export default function AddVehicleScreen() {
   }
 
   async function pickPolicyCopy() {
-    setMessage('');
+    setErrorPopup(null);
     const result = await DocumentPicker.getDocumentAsync({ type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], copyToCacheDirectory: true });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    if (asset.size && asset.size > MAX_POLICY_COPY_SIZE_BYTES) return setMessage('Policy copy must be 5 MB or smaller.');
+    if (asset.size && asset.size > MAX_POLICY_COPY_SIZE_BYTES) return showError('Policy copy too large', 'Policy copy must be 5 MB or smaller.');
     setPolicyCopy({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null, size: asset.size ?? null });
   }
 
@@ -418,13 +426,12 @@ export default function AddVehicleScreen() {
       <Card style={styles.formCard}>
         <View pointerEvents="none" style={styles.formAccentOne} />
         <View pointerEvents="none" style={styles.formAccentTwo} />
-        {message ? <Message type="error">{message}</Message> : null}
         {contexts.length > 1 ? <AccountDropdown contexts={contexts} selectedCustomerId={selectedCustomerId} open={accountOpen} onToggle={() => setAccountOpen((value) => !value)} onSelect={(customerId) => { setSelectedCustomerId(customerId); setAccountOpen(false); setRcLookupState('idle'); setRcLookupMessage(''); setRcSuccessPopup(''); setInsurerFetchedLocked(false); setPolicyNumberFetchedLocked(false); setLastFetchedRc(''); }} /> : null}
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
-          {rcLookupMessage ? (
-            <View style={[styles.rcStatus, rcLookupState === 'success' ? styles.rcStatusSuccess : rcLookupState === 'error' ? styles.rcStatusError : styles.rcStatusInfo]}>
+          {rcLookupMessage && rcLookupState !== 'error' ? (
+            <View style={[styles.rcStatus, rcLookupState === 'success' ? styles.rcStatusSuccess : styles.rcStatusInfo]}>
               {rcLookupState === 'loading' ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name={rcLookupState === 'success' ? 'check-circle-outline' : rcLookupState === 'error' ? 'alert-circle-outline' : 'information-outline'} size={17} color={rcLookupState === 'success' ? '#12805C' : rcLookupState === 'error' ? '#B54747' : '#0A43A3'} />}
               <Text style={styles.rcStatusText}>{rcLookupMessage}</Text>
             </View>
@@ -487,6 +494,33 @@ export default function AddVehicleScreen() {
           <View style={styles.fetchPopupCard}>
             <MaterialCommunityIcons name="check-circle" size={22} color="#12805C" />
             <Text style={styles.fetchPopupText}>{rcSuccessPopup}</Text>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={Boolean(errorPopup)} transparent animationType="fade" statusBarTranslucent onRequestClose={() => setErrorPopup(null)}>
+        <View style={styles.errorPopupOverlay}>
+          <View style={styles.errorPopupCard}>
+            <View style={styles.errorPopupIcon}><MaterialCommunityIcons name="alert-circle-outline" size={24} color="#B54747" /></View>
+            <Text style={styles.errorPopupTitle}>{errorPopup?.title}</Text>
+            <Text style={styles.errorPopupMessage}>{errorPopup?.message}</Text>
+            <View style={styles.errorPopupActions}>
+              {errorPopup?.actionLabel ? (
+                <Pressable accessibilityRole="button" onPress={() => setErrorPopup(null)} style={styles.errorPopupSecondaryButton}>
+                  <Text style={styles.errorPopupSecondaryText}>Cancel</Text>
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  const action = errorPopup?.onAction;
+                  setErrorPopup(null);
+                  action?.();
+                }}
+                style={styles.errorPopupPrimaryButton}
+              >
+                <Text style={styles.errorPopupPrimaryText}>{errorPopup?.actionLabel ?? 'OK'}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>
@@ -709,6 +743,16 @@ const styles = StyleSheet.create({
   formCard: { borderRadius: 18, padding: 12, gap: 12, backgroundColor: '#F8FBFF', borderColor: '#CFE0F8', overflow: 'hidden' },
   formAccentOne: { position: 'absolute', right: -28, top: -18, width: 110, height: 58, borderRadius: 18, backgroundColor: 'rgba(10,67,163,0.08)', transform: [{ rotate: '-10deg' }] },
   formAccentTwo: { position: 'absolute', left: -20, bottom: 80, width: 86, height: 48, borderRadius: 16, backgroundColor: 'rgba(18,128,92,0.08)', transform: [{ rotate: '12deg' }] },
+  errorPopupOverlay: { flex: 1, backgroundColor: 'rgba(8,21,43,0.42)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
+  errorPopupCard: { width: '100%', maxWidth: 360, borderRadius: 18, backgroundColor: '#FFFFFF', paddingHorizontal: 18, paddingTop: 18, paddingBottom: 14, alignItems: 'center', shadowColor: '#08152B', shadowOpacity: 0.18, shadowRadius: 18, elevation: 8 },
+  errorPopupIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFF1EF', alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  errorPopupTitle: { color: palette.navy, fontSize: 15, lineHeight: 20, fontWeight: '900', textAlign: 'center' },
+  errorPopupMessage: { color: '#526176', fontSize: 11.8, lineHeight: 17, fontWeight: '600', textAlign: 'center', marginTop: 5 },
+  errorPopupActions: { alignSelf: 'stretch', flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
+  errorPopupSecondaryButton: { minWidth: 88, minHeight: 40, borderRadius: 11, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  errorPopupSecondaryText: { color: '#607089', fontSize: 11.5, fontWeight: '800' },
+  errorPopupPrimaryButton: { minWidth: 96, minHeight: 40, borderRadius: 11, backgroundColor: '#0A43A3', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
+  errorPopupPrimaryText: { color: '#FFFFFF', fontSize: 11.5, fontWeight: '900' },
   accountBlock: { gap: 6 },
   accountPill: { minHeight: 52, borderRadius: 14, borderWidth: 1, borderColor: '#CFE0F8', backgroundColor: '#F8FBFF', paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 9 },
   accountPillLabel: { color: '#607089', fontSize: 9.5, fontWeight: '700' },
