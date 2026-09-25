@@ -1,3 +1,15 @@
+## 2026-09-25 — Large voice campaign XLSX export fix
+
+- Branch: `fix/voice-campaign-large-export`.
+- Production evidence: campaign export route returned HTTP 500 with runtime error `Could not load campaign call failures for export.`; affected campaign had 612 members, 1,298 call attempts and 1,294 attempt-event rows.
+- Root cause: report loader still used `.limit(100)` for members and sent the full attempt-ID list in one event `.in(...)` query; call-attempt reads also relied on the default Supabase row cap.
+- Fix: page campaign members and attempts at 500 rows, chunk opportunity/event UUID filters at 100 IDs, page event rows inside each chunk, and retain deterministic ordering.
+- Privacy/access boundary unchanged: IT Super User + `manage_system:approve`, masked mobile numbers, no transcript/raw provider payload export.
+- Added `voice-campaign-export:regression` to canonical web verification.
+- **IMPLEMENTED; PR/CI/merge/deployment/runtime re-test pending.**
+
+---
+
 ## 2026-09-25 — Customer Start Claim manufacturer logo
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-start-claim-manufacturer-logo`.

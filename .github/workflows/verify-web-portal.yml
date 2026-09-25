@@ -65,6 +65,8 @@ jobs:
         run: node scripts/partner-push-device-registration-regression.mjs
       - name: Partner push notification template regression
         run: node scripts/partner-push-template-regression.mjs
+      - name: Voice campaign large export regression
+        run: npm run voice-campaign-export:regression
       - name: Vehicle and policy intake resume regression
         run: npm run vehicle-policy-intake:resume-regression
       - name: Canonical NEW vehicle prefix regression

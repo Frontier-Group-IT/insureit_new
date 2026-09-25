@@ -122,6 +122,7 @@ type VoiceCampaignReportAttemptRow = {
 };
 
 type VoiceCampaignReportAttemptEventRow = {
+  id: string;
   voice_attempt_id: string;
   failure_reason: string | null;
   created_at: string;
@@ -1074,6 +1075,9 @@ function deriveQualityFlag(attempt: VoiceCampaignReportAttemptRow | null) {
   return "Review Required";
 }
 
+const VOICE_CAMPAIGN_REPORT_PAGE_SIZE = 500;
+const VOICE_CAMPAIGN_REPORT_ID_CHUNK_SIZE = 100;
+
 export async function getVoiceCampaignReportRows(campaignId: string): Promise<{
   campaign: VoiceCampaignDetailRow;
   rows: VoiceCampaignReportRow[];
@@ -1088,69 +1092,95 @@ export async function getVoiceCampaignReportRows(campaignId: string): Promise<{
 
   if (campaignError || !campaign) return null;
 
-  const { data: members, error: membersError } = await admin
-    .from("voice_campaign_members")
-    .select("*")
-    .eq("campaign_id", campaignId)
-    .order("source_row_number", { ascending: true })
-    .limit(100)
-    .returns<VoiceCampaignMemberRow[]>();
+  const memberRows: VoiceCampaignMemberRow[] = [];
+  for (let offset = 0; ; offset += VOICE_CAMPAIGN_REPORT_PAGE_SIZE) {
+    const { data: members, error: membersError } = await admin
+      .from("voice_campaign_members")
+      .select("*")
+      .eq("campaign_id", campaignId)
+      .order("source_row_number", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + VOICE_CAMPAIGN_REPORT_PAGE_SIZE - 1)
+      .returns<VoiceCampaignMemberRow[]>();
 
-  if (membersError) throw new Error("Could not load campaign members for export.");
+    if (membersError) throw new Error("Could not load campaign members for export.");
 
-  const memberRows = members ?? [];
-  const opportunityIds = memberRows.map((row) => row.opportunity_id);
+    const page = members ?? [];
+    memberRows.push(...page);
+    if (page.length < VOICE_CAMPAIGN_REPORT_PAGE_SIZE) break;
+  }
+
+  const opportunityIds = [...new Set(memberRows.map((row) => row.opportunity_id))];
   const opportunityMap = new Map<string, VoiceCampaignReportOpportunityRow>();
   const attemptsByOpportunity = new Map<string, VoiceCampaignReportAttemptRow[]>();
   const failureByAttempt = new Map<string, string>();
 
   if (opportunityIds.length) {
-    const [{ data: opportunities, error: opportunitiesError }, { data: attempts, error: attemptsError }] =
-      await Promise.all([
-        admin
-          .from("external_renewal_opportunities")
-          .select(
-            "id,registration_no,mobile,customer_name,contact_name,vehicle_make,vehicle_model,current_insurer,current_policy_no,policy_end_date,opportunity_status,rc_enrichment_details,ai_profile_overrides",
-          )
-          .in("id", opportunityIds)
-          .returns<VoiceCampaignReportOpportunityRow[]>(),
-        admin
-          .from("external_renewal_voice_attempts")
-          .select(
-            "id,opportunity_id,submission_status,connectivity_status,completion_status,retry_attempt,duration_seconds,started_at,ended_at,call_disposition,customer_interest,follow_up_required,follow_up_at,customer_objection,call_summary,created_at,updated_at",
-          )
-          .eq("voice_campaign_id", campaignId)
-          .order("created_at", { ascending: true })
-          .returns<VoiceCampaignReportAttemptRow[]>(),
-      ]);
+    for (let index = 0; index < opportunityIds.length; index += VOICE_CAMPAIGN_REPORT_ID_CHUNK_SIZE) {
+      const chunk = opportunityIds.slice(index, index + VOICE_CAMPAIGN_REPORT_ID_CHUNK_SIZE);
+      const { data: opportunities, error: opportunitiesError } = await admin
+        .from("external_renewal_opportunities")
+        .select(
+          "id,registration_no,mobile,customer_name,contact_name,vehicle_make,vehicle_model,current_insurer,current_policy_no,policy_end_date,opportunity_status,rc_enrichment_details,ai_profile_overrides",
+        )
+        .in("id", chunk)
+        .returns<VoiceCampaignReportOpportunityRow[]>();
 
-    if (opportunitiesError || attemptsError) {
-      throw new Error("Could not load campaign call data for export.");
+      if (opportunitiesError) throw new Error("Could not load campaign opportunities for export.");
+
+      for (const opportunity of opportunities ?? []) opportunityMap.set(opportunity.id, opportunity);
     }
 
-    for (const opportunity of opportunities ?? []) opportunityMap.set(opportunity.id, opportunity);
+    const attempts: VoiceCampaignReportAttemptRow[] = [];
+    for (let offset = 0; ; offset += VOICE_CAMPAIGN_REPORT_PAGE_SIZE) {
+      const { data: attemptPage, error: attemptsError } = await admin
+        .from("external_renewal_voice_attempts")
+        .select(
+          "id,opportunity_id,submission_status,connectivity_status,completion_status,retry_attempt,duration_seconds,started_at,ended_at,call_disposition,customer_interest,follow_up_required,follow_up_at,customer_objection,call_summary,created_at,updated_at",
+        )
+        .eq("voice_campaign_id", campaignId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(offset, offset + VOICE_CAMPAIGN_REPORT_PAGE_SIZE - 1)
+        .returns<VoiceCampaignReportAttemptRow[]>();
 
-    for (const attempt of attempts ?? []) {
+      if (attemptsError) throw new Error("Could not load campaign call data for export.");
+
+      const page = attemptPage ?? [];
+      attempts.push(...page);
+      if (page.length < VOICE_CAMPAIGN_REPORT_PAGE_SIZE) break;
+    }
+
+    for (const attempt of attempts) {
       const current = attemptsByOpportunity.get(attempt.opportunity_id) ?? [];
       current.push(attempt);
       attemptsByOpportunity.set(attempt.opportunity_id, current);
     }
 
-    const attemptIds = (attempts ?? []).map((attempt) => attempt.id);
-    if (attemptIds.length) {
-      const { data: events, error: eventsError } = await admin
-        .from("external_renewal_voice_attempt_events")
-        .select("voice_attempt_id,failure_reason,created_at")
-        .in("voice_attempt_id", attemptIds)
-        .order("created_at", { ascending: false })
-        .returns<VoiceCampaignReportAttemptEventRow[]>();
+    const attemptIds = attempts.map((attempt) => attempt.id);
+    for (let index = 0; index < attemptIds.length; index += VOICE_CAMPAIGN_REPORT_ID_CHUNK_SIZE) {
+      const chunk = attemptIds.slice(index, index + VOICE_CAMPAIGN_REPORT_ID_CHUNK_SIZE);
 
-      if (eventsError) throw new Error("Could not load campaign call failures for export.");
+      for (let offset = 0; ; offset += VOICE_CAMPAIGN_REPORT_PAGE_SIZE) {
+        const { data: events, error: eventsError } = await admin
+          .from("external_renewal_voice_attempt_events")
+          .select("id,voice_attempt_id,failure_reason,created_at")
+          .in("voice_attempt_id", chunk)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + VOICE_CAMPAIGN_REPORT_PAGE_SIZE - 1)
+          .returns<VoiceCampaignReportAttemptEventRow[]>();
 
-      for (const event of events ?? []) {
-        if (!failureByAttempt.has(event.voice_attempt_id) && event.failure_reason) {
-          failureByAttempt.set(event.voice_attempt_id, event.failure_reason);
+        if (eventsError) throw new Error("Could not load campaign call failures for export.");
+
+        const page = events ?? [];
+        for (const event of page) {
+          if (!failureByAttempt.has(event.voice_attempt_id) && event.failure_reason) {
+            failureByAttempt.set(event.voice_attempt_id, event.failure_reason);
+          }
         }
+
+        if (page.length < VOICE_CAMPAIGN_REPORT_PAGE_SIZE) break;
       }
     }
   }
