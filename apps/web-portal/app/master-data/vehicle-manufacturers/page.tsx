@@ -21,6 +21,8 @@ type ManufacturerRow = {
   sort_order: number;
 };
 type SegmentRow = { manufacturer_id: string; segment_code: string };
+type BrandRow = { manufacturer_id: string; brand_name: string; is_active: boolean };
+type AliasRow = { manufacturer_id: string; alias: string; is_active: boolean };
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,19 +31,45 @@ export default async function VehicleManufacturerMasterPage({ searchParams }: { 
   await requireCapability("manage_master_data");
   const admin = createSupabaseAdminClient();
   const params = await searchParams;
-  const [{ data: manufacturers, error }, { data: segments, error: segmentError }] = await Promise.all([
+  const [
+    { data: manufacturers, error },
+    { data: segments, error: segmentError },
+    { data: brands, error: brandError },
+    { data: aliases, error: aliasError },
+  ] = await Promise.all([
     admin.from("vehicle_manufacturers").select("id, manufacturer_code, name, display_name, slug, logo_path, logo_status, market_status, source_name, source_verified_at, is_active, sort_order").order("sort_order", { ascending: true }).order("display_name", { ascending: true }).returns<ManufacturerRow[]>(),
     admin.from("vehicle_manufacturer_segments").select("manufacturer_id, segment_code").returns<SegmentRow[]>(),
+    admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name, is_active").returns<BrandRow[]>(),
+    admin.from("vehicle_manufacturer_aliases").select("manufacturer_id, alias, is_active").returns<AliasRow[]>(),
   ]);
   if (error) throw new Error(`Unable to load vehicle manufacturers: ${error.message}`);
   if (segmentError) throw new Error(`Unable to load manufacturer segments: ${segmentError.message}`);
+  if (brandError) throw new Error(`Unable to load manufacturer brands: ${brandError.message}`);
+  if (aliasError) throw new Error(`Unable to load manufacturer aliases: ${aliasError.message}`);
 
   const segmentMap = new Map<string, string[]>();
+  const brandMap = new Map<string, string[]>();
+  const aliasMap = new Map<string, string[]>();
   for (const segment of segments ?? []) segmentMap.set(segment.manufacturer_id, [...(segmentMap.get(segment.manufacturer_id) ?? []), segment.segment_code]);
+  for (const brand of brands ?? []) {
+    if (!brand.is_active) continue;
+    brandMap.set(brand.manufacturer_id, [...(brandMap.get(brand.manufacturer_id) ?? []), brand.brand_name]);
+  }
+  for (const alias of aliases ?? []) {
+    if (!alias.is_active) continue;
+    aliasMap.set(alias.manufacturer_id, [...(aliasMap.get(alias.manufacturer_id) ?? []), alias.alias]);
+  }
   const q = params.q?.trim().toLowerCase() ?? "";
   const filtered = (manufacturers ?? []).filter((row) => {
     const rowSegments = segmentMap.get(row.id) ?? [];
-    if (q && !`${row.display_name} ${row.name} ${row.manufacturer_code ?? ""}`.toLowerCase().includes(q)) return false;
+    const searchText = [
+      row.display_name,
+      row.name,
+      row.manufacturer_code ?? "",
+      ...(brandMap.get(row.id) ?? []),
+      ...(aliasMap.get(row.id) ?? []),
+    ].join(" ").toLowerCase();
+    if (q && !searchText.includes(q)) return false;
     if (params.market && params.market !== "all" && row.market_status !== params.market) return false;
     if (params.activity === "active" && !row.is_active) return false;
     if (params.activity === "inactive" && row.is_active) return false;
@@ -71,7 +99,7 @@ export default async function VehicleManufacturerMasterPage({ searchParams }: { 
 
       <Card>
         <form className="grid gap-2 md:grid-cols-[minmax(220px,1fr)_180px_220px_150px_auto]" method="get">
-          <input name="q" defaultValue={params.q ?? ""} placeholder="Search name or code..." className="h-10 rounded-xl border border-[#DCE2EC] bg-white px-3 text-[11px] outline-none focus:border-[#6759ff]" />
+          <input name="q" defaultValue={params.q ?? ""} placeholder="Search name, code, brand or alias..." className="h-10 rounded-xl border border-[#DCE2EC] bg-white px-3 text-[11px] outline-none focus:border-[#6759ff]" />
           <select name="market" defaultValue={params.market ?? "all"} className="h-10 rounded-xl border border-[#DCE2EC] bg-white px-3 text-[11px]"><option value="all">All market statuses</option><option value="current">Current</option><option value="legacy">Legacy</option><option value="ceased">Ceased</option><option value="pending_review">Pending review</option></select>
           <select name="segment" defaultValue={params.segment ?? "all"} className="h-10 rounded-xl border border-[#DCE2EC] bg-white px-3 text-[11px]"><option value="all">All segments</option>{VEHICLE_MANUFACTURER_SEGMENTS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
           <select name="activity" defaultValue={params.activity ?? "all"} className="h-10 rounded-xl border border-[#DCE2EC] bg-white px-3 text-[11px]"><option value="all">Active + inactive</option><option value="active">Active only</option><option value="inactive">Inactive only</option></select>
