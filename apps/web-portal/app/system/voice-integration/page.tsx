@@ -2,24 +2,18 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   Activity,
-  Bot,
-  CalendarClock,
-  CheckCircle2,
   Clock3,
   Database,
   LockKeyhole,
+  MoreHorizontal,
   Plus,
   FileSpreadsheet,
   Pause,
-  Pencil,
   PhoneCall,
   Play,
   RefreshCw,
   RotateCcw,
   ServerCog,
-  ShieldCheck,
-  UsersRound,
-  Webhook,
   Wifi,
 } from "lucide-react";
 
@@ -220,19 +214,16 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
 
   return (
     <AppShell title="Voice Integration">
-      <div className="mx-auto max-w-[1380px] space-y-3 pb-8">
-        <section className="rounded-2xl border border-[#DDE6F0] bg-[linear-gradient(110deg,#F4F3FF_0%,#FFFFFF_55%,#EAFBFF_100%)] px-5 py-4 shadow-[0_6px_20px_rgba(31,55,86,0.04)]">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[8px] font-black uppercase tracking-[0.13em] text-[#6674CB]">System operations</p>
-              <h1 className="mt-1 text-[22px] font-black tracking-[-0.03em] text-[#142B50]">Voice Integration</h1>
-              <p className="mt-0.5 text-[9.5px] text-[#687B96]">Production control center for AI renewal calling.</p>
-            </div>
-            <span className="hidden rounded-full border border-[#D4E3F6] bg-white/80 px-3 py-1.5 text-[9px] font-bold text-[#3156B8] sm:inline-flex">
-              IT Super User only
+      <div className="mx-auto max-w-[1380px] space-y-2 pb-6">
+        <header className="flex min-h-9 items-center justify-between gap-3 px-0.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="truncate text-[17px] font-black tracking-[-0.025em] text-[#142B50]">Voice Integration</h1>
+            <span className="inline-flex items-center gap-1 text-[7.5px] font-bold text-[#8192A7]" title="IT Super User only">
+              <LockKeyhole className="h-3 w-3" />
+              Production
             </span>
           </div>
-        </section>
+        </header>
 
         {actionNotice ? (
           <div className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-[9.5px] font-semibold ${actionNotice.ok ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
@@ -245,7 +236,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           </div>
         ) : null}
 
-        <section className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
+        <section className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
           <div className="flex items-center justify-between gap-3">
             <SectionTitle icon={FileSpreadsheet} title="Voice campaigns" />
             {voiceCampaignState.schemaReady ? (
@@ -264,9 +255,6 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
               </span>
             )}
           </div>
-          <p className="mt-1 text-[8.5px] text-[#71839A]">
-            Create a campaign from Excel/CSV. Campaign size is governed by upload processing capacity, not a fixed customer limit.
-          </p>
           {!voiceCampaignState.schemaReady ? (
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[8.5px] font-semibold text-amber-800">
               Campaign setup is temporarily unavailable while the database schema is being prepared. Existing Voice Integration controls remain available.
@@ -326,89 +314,103 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           </div>
         </section>
 
-        <section className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-          <StatusTile icon={Wifi} label="Provider" value={providerReady ? "Ready" : "Attention"} ready={providerReady} />
-          <StatusTile icon={CalendarClock} label="Campaign" value={labelize(campaignLifecycle.status)} ready={campaignLifecycle.ok && campaignLifecycle.status !== "ended" && campaignLifecycle.status !== "cancelled"} />
-          <StatusTile icon={ShieldCheck} label="Kill switch" value={readiness.callingEnabled ? "Enabled" : "Disabled"} ready={readiness.callingEnabled} />
-          <StatusTile icon={Webhook} label="Webhook" value={webhookObserved ? "Healthy" : "No callback"} ready={webhookObserved} />
-          <StatusTile icon={UsersRound} label="Partner actions" value="Disabled" ready={true} neutral />
-        </section>
+        <section className="rounded-xl border border-[#DDE6F0] bg-white px-2.5 py-2 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              <CompactHealthStatus
+                label={dispatchReady ? "Ready" : "Attention"}
+                ok={dispatchReady}
+                strong
+              />
+              <CompactHealthStatus label={`Provider · ${providerReady ? "Ready" : "Attention"}`} ok={providerReady} />
+              <CompactHealthStatus
+                label={`Campaign · ${labelize(campaignLifecycle.status)}`}
+                ok={campaignLifecycle.ok && campaignLifecycle.status !== "ended" && campaignLifecycle.status !== "cancelled"}
+              />
+              <CompactHealthStatus
+                label={`Window · ${operationalPolicy.start}–${operationalPolicy.end}`}
+                ok={operationalPolicy.withinCallingWindow}
+              />
+              <CompactHealthStatus label={`Webhook · ${webhookObserved ? "Healthy" : "No callback"}`} ok={webhookObserved} />
+              <CompactHealthStatus label="DND protected" ok />
+              {!readiness.callingEnabled ? <CompactHealthStatus label="Calling disabled" ok={false} /> : null}
+            </div>
 
-        <section className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
-          <SectionTitle icon={ServerCog} title="Production control">
-            <div className="flex items-center gap-1.5">
-              <form action="/api/system/voice-integration/sarvam-connection-test" method="post">
-                <PendingButton
-                  disabled={!connectionConfigReady}
-                  pendingLabel=""
-                  className="grid h-7 w-7 place-items-center rounded-lg border border-[#D6E0EC] bg-white text-[#536984] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
-                  aria-label="Test Sarvam connection"
-                  title="Test Sarvam connection"
+            <div className="flex shrink-0 items-center gap-1.5">
+              {campaignLifecycle.status === "active" ? (
+                <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
+                  <input type="hidden" name="action" value="pause" />
+                  <ControlButton icon={Pause} label="Pause Campaign" />
+                </form>
+              ) : campaignLifecycle.status === "paused" ? (
+                <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
+                  <input type="hidden" name="action" value="resume" />
+                  <ControlButton icon={Play} label="Resume Campaign" primary />
+                </form>
+              ) : null}
+
+              <details className="relative">
+                <summary
+                  className="grid h-7 w-7 cursor-pointer list-none place-items-center rounded-lg border border-[#D6E0EC] bg-white text-[#61758F] transition hover:bg-[#F8FAFC] [&::-webkit-details-marker]:hidden"
+                  aria-label="More voice controls"
+                  title="More controls"
                 >
-                  <Wifi className="h-3 w-3" />
-                </PendingButton>
-              </form>
-              <Link
-                href="/system/voice-integration"
-                className="grid h-7 w-7 place-items-center rounded-lg border border-[#D6E0EC] bg-white text-[#536984] transition hover:bg-[#F8FAFC]"
-                aria-label="Refresh voice integration"
-                title="Refresh"
-              >
-                <RefreshCw className="h-3 w-3" />
-              </Link>
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </summary>
+                <div className="absolute right-0 z-30 mt-1.5 w-44 overflow-hidden rounded-xl border border-[#DCE5EF] bg-white p-1 shadow-[0_12px_30px_rgba(31,55,86,0.16)]">
+                  <form action="/api/system/voice-integration/sarvam-connection-test" method="post">
+                    <PendingButton
+                      disabled={!connectionConfigReady}
+                      pendingLabel="Testing…"
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-[8.5px] font-bold text-[#405774] transition hover:bg-[#F6F8FB] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Wifi className="h-3.5 w-3.5 text-[#3156B8]" />
+                      Test connection
+                    </PendingButton>
+                  </form>
+                  <Link
+                    href="/system/voice-integration"
+                    className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-[8.5px] font-bold text-[#405774] transition hover:bg-[#F6F8FB]"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 text-[#3156B8]" />
+                    Refresh status
+                  </Link>
+                  <Link
+                    href="/system/voice-integration?edit_window=1"
+                    className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-[8.5px] font-bold text-[#405774] transition hover:bg-[#F6F8FB]"
+                  >
+                    <Clock3 className="h-3.5 w-3.5 text-[#3156B8]" />
+                    Edit calling window
+                  </Link>
+                  <Link
+                    href="/system/voice-integration/diagnostics"
+                    className="flex h-8 items-center gap-2 rounded-lg px-2.5 text-[8.5px] font-bold text-[#405774] transition hover:bg-[#F6F8FB]"
+                  >
+                    <ServerCog className="h-3.5 w-3.5 text-[#3156B8]" />
+                    Diagnostics
+                  </Link>
+                </div>
+              </details>
             </div>
-          </SectionTitle>
+          </div>
 
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4EBF3] bg-[#FAFCFF] px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="text-[7px] font-black uppercase tracking-[.06em] text-[#8998AA]">Campaign state</p>
-              <p className="mt-0.5 text-[9px] font-bold text-[#29415F]">{labelize(campaignLifecycle.status)}</p>
+          {editWindow ? (
+            <div className="mt-2 border-t border-[#E9EEF4] pt-2">
+              <CompactCallingWindowEditor start={operationalPolicy.start} end={operationalPolicy.end} />
             </div>
-
-            {campaignLifecycle.status === "active" ? (
-              <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
-                <input type="hidden" name="action" value="pause" />
-                <ControlButton icon={Pause} label="Pause Campaign" />
-              </form>
-            ) : campaignLifecycle.status === "paused" ? (
-              <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
-                <input type="hidden" name="action" value="resume" />
-                <ControlButton icon={Play} label="Resume Campaign" primary />
-              </form>
-            ) : (
-              <span className="text-[8px] font-semibold text-[#8798AC]">Pause / Resume unavailable</span>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
-          <SectionTitle icon={LockKeyhole} title="Access & policy" />
-          <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            <PolicyTile icon={UsersRound} label="Controller" value="IT Super User" good />
-            <PolicyTile icon={LockKeyhole} label="Partner" value="No actions" />
-            <CallingWindowPolicyTile
-              start={operationalPolicy.start}
-              end={operationalPolicy.end}
-              withinCallingWindow={operationalPolicy.withinCallingWindow}
-              editing={editWindow}
-            />
-            <PolicyTile icon={ShieldCheck} label="DND / terminal" value="Active" good />
-            <PolicyTile icon={RotateCcw} label="Auto retry" value="Disabled" good />
-          </div>
+          ) : null}
         </section>
 
         <section className="grid gap-3 xl:grid-cols-[1.55fr_.75fr]">
-          <div id="voice-queue" className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
+          <div id="voice-queue" className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
             <div className="flex items-center justify-between gap-3">
               <SectionTitle icon={PhoneCall} title="Calling queue" />
-              <div className="flex items-center gap-1.5 text-[8px] font-bold">
+              <div className="flex items-center gap-1 text-[8px] font-bold">
                 <MetricPill label="Queue" value={queuePreview.totalDueWindow} />
                 <MetricPill label="Ready" value={queuePreview.eligibleCount} good />
                 <MetricPill label="Held" value={queuePreview.heldCount} />
+                <VoiceQuickAddCard compact />
               </div>
-            </div>
-            <div className="mt-2">
-              <VoiceQuickAddCard />
             </div>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full min-w-[780px] text-left text-[9px]">
@@ -488,7 +490,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             </div>
           </div>
 
-          <div className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
+          <div className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
             <SectionTitle icon={Activity} title="Campaign" />
             <div className="mt-2 divide-y divide-[#EDF2F7] rounded-xl border border-[#E4EBF3]">
               <InfoRow label="State" value={labelize(campaignLifecycle.status)} />
@@ -511,7 +513,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           </div>
         ) : null}
 
-        <section id="recent-attempts" className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
+        <section id="recent-attempts" className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
           <div className="flex items-center justify-between">
             <SectionTitle icon={Activity} title="Recent voice attempts" />
             <span className="text-[8px] font-bold text-[#8798AC]">{attempts?.length ?? 0} shown</span>
@@ -567,32 +569,6 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
   );
 }
 
-function StatusTile({
-  icon: Icon,
-  label,
-  value,
-  ready,
-  neutral = false,
-}: {
-  icon: typeof Wifi;
-  label: string;
-  value: string;
-  ready: boolean;
-  neutral?: boolean;
-}) {
-  return (
-    <div className="flex min-h-[70px] items-center gap-2.5 rounded-xl border border-[#DDE6F0] bg-white px-3 py-2.5 shadow-[0_4px_14px_rgba(31,55,86,0.035)]">
-      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${neutral ? "bg-[#EEF4FF] text-[#3156B8]" : ready ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
-        <Icon className="h-4 w-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[7.5px] font-black uppercase tracking-[.06em] text-[#8495A9]">{label}</p>
-        <p className={`mt-0.5 truncate text-[10px] font-black ${neutral ? "text-[#3156B8]" : ready ? "text-emerald-700" : "text-amber-700"}`}>{value}</p>
-      </div>
-    </div>
-  );
-}
-
 function SectionTitle({ icon: Icon, title, children }: { icon: typeof ServerCog; title: string; children?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -610,72 +586,64 @@ function ControlButton({ icon: Icon, label, disabled = false, primary = false }:
     <PendingButton
       disabled={disabled}
       pendingLabel={`${label}…`}
-      className={`inline-flex h-8 min-w-[132px] items-center justify-center gap-1.5 rounded-lg border px-3 text-[8.5px] font-bold transition disabled:cursor-not-allowed disabled:opacity-45 ${primary ? "border-[#102A56] bg-[#102A56] text-white" : "border-[#D6E0EC] bg-white text-[#263D5E] hover:bg-[#F8FAFC]"}`}
+      className={`inline-flex h-7 min-w-[112px] items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[8px] font-bold transition disabled:cursor-not-allowed disabled:opacity-45 ${primary ? "border-[#102A56] bg-[#102A56] text-white" : "border-[#D6E0EC] bg-white text-[#263D5E] hover:bg-[#F8FAFC]"}`}
     >
       <Icon className="h-3.5 w-3.5" /> {label}
     </PendingButton>
   );
 }
 
-function PolicyTile({ icon: Icon, label, value, good = false }: { icon: typeof UsersRound; label: string; value: string; good?: boolean }) {
-  return (
-    <div className="flex h-10 items-center gap-2 rounded-lg border border-[#E1E8F0] bg-[#FAFCFF] px-3">
-      <Icon className="h-3.5 w-3.5 text-[#3156B8]" />
-      <div className="min-w-0">
-        <p className="text-[7px] font-black uppercase tracking-[.05em] text-[#8998AA]">{label}</p>
-        <p className={`truncate text-[8.5px] font-bold ${good ? "text-emerald-700" : "text-[#52667F]"}`}>{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function CallingWindowPolicyTile({
-  start,
-  end,
-  withinCallingWindow,
-  editing,
+function CompactHealthStatus({
+  label,
+  ok,
+  strong = false,
 }: {
-  start: string;
-  end: string;
-  withinCallingWindow: boolean;
-  editing: boolean;
+  label: string;
+  ok: boolean;
+  strong?: boolean;
 }) {
-  if (editing) {
-    return (
-      <form
-        action="/api/system/voice-integration/calling-window"
-        method="post"
-        className="rounded-lg border border-[#D7E2F0] bg-[#FAFCFF] px-2.5 py-2"
-      >
-        <div className="flex items-center gap-1.5">
-          <Clock3 className="h-3.5 w-3.5 shrink-0 text-[#3156B8]" />
-          <div className="grid min-w-0 flex-1 grid-cols-[1fr_auto_1fr] items-center gap-1">
-            <input type="time" name="window_start" defaultValue={start} required className="h-7 min-w-0 rounded-md border border-[#D6E0EC] bg-white px-1.5 text-[8.5px] font-bold text-[#29415F]" aria-label="Calling window start" />
-            <span className="text-[8px] font-bold text-[#94A3B8]">to</span>
-            <input type="time" name="window_end" defaultValue={end} required className="h-7 min-w-0 rounded-md border border-[#D6E0EC] bg-white px-1.5 text-[8.5px] font-bold text-[#29415F]" aria-label="Calling window end" />
-          </div>
-        </div>
-        <div className="mt-1.5 flex items-center justify-end gap-1.5">
-          <Link href="/system/voice-integration" className="inline-flex h-6 items-center rounded-md px-2 text-[7.5px] font-bold text-[#6B7E98]">Cancel</Link>
-          <PendingButton pendingLabel="Saving…" className="inline-flex h-6 items-center gap-1 rounded-md bg-[#102A56] px-2.5 text-[7.5px] font-bold text-white">Save</PendingButton>
-        </div>
-      </form>
-    );
-  }
-
   return (
-    <div className="flex h-10 items-center gap-2 rounded-lg border border-[#E1E8F0] bg-[#FAFCFF] px-3">
-      <Clock3 className="h-3.5 w-3.5 shrink-0 text-[#3156B8]" />
-      <div className="min-w-0 flex-1">
-        <p className="text-[7px] font-black uppercase tracking-[.05em] text-[#8998AA]">Window</p>
-        <p className={`truncate text-[8.5px] font-bold ${withinCallingWindow ? "text-emerald-700" : "text-[#52667F]"}`}>{start}–{end}</p>
-      </div>
-      <Link href="/system/voice-integration?edit_window=1" className="inline-flex h-6 shrink-0 items-center gap-1 rounded-md border border-[#D6E0EC] bg-white px-2 text-[7.5px] font-bold text-[#3156B8] hover:bg-[#F5F8FC]" aria-label="Edit calling window">
-        <Pencil className="h-2.5 w-2.5" /> Edit
-      </Link>
-    </div>
+    <span
+      className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[7.5px] font-bold ${ok ? "border-emerald-100 bg-emerald-50/70 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"} ${strong ? "pr-2.5" : ""}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} />
+      {label}
+    </span>
   );
 }
+
+function CompactCallingWindowEditor({ start, end }: { start: string; end: string }) {
+  return (
+    <form action="/api/system/voice-integration/calling-window" method="post" className="flex flex-wrap items-center gap-1.5">
+      <Clock3 className="h-3.5 w-3.5 text-[#3156B8]" />
+      <span className="text-[7.5px] font-black uppercase tracking-[.05em] text-[#8192A7]">Calling window</span>
+      <input
+        type="time"
+        name="window_start"
+        defaultValue={start}
+        required
+        className="h-7 w-[92px] rounded-md border border-[#D6E0EC] bg-white px-1.5 text-[8.5px] font-bold text-[#29415F]"
+        aria-label="Calling window start"
+      />
+      <span className="text-[8px] font-bold text-[#94A3B8]">to</span>
+      <input
+        type="time"
+        name="window_end"
+        defaultValue={end}
+        required
+        className="h-7 w-[92px] rounded-md border border-[#D6E0EC] bg-white px-1.5 text-[8.5px] font-bold text-[#29415F]"
+        aria-label="Calling window end"
+      />
+      <PendingButton pendingLabel="Saving…" className="inline-flex h-7 items-center rounded-md bg-[#102A56] px-2.5 text-[7.5px] font-bold text-white">
+        Save
+      </PendingButton>
+      <Link href="/system/voice-integration" className="inline-flex h-7 items-center rounded-md px-2 text-[7.5px] font-bold text-[#6B7E98]">
+        Cancel
+      </Link>
+    </form>
+  );
+}
+
 
 function MetricPill({ label, value, good = false }: { label: string; value: number; good?: boolean }) {
   return (
