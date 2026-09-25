@@ -432,7 +432,7 @@ export default function AddVehicleScreen() {
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
           {rcLookupMessage && rcLookupState !== 'error' ? (
             <View style={[styles.rcStatus, rcLookupState === 'success' ? styles.rcStatusSuccess : styles.rcStatusInfo]}>
-              {rcLookupState === 'loading' ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name={rcLookupState === 'success' ? 'check-circle-outline' : rcLookupState === 'error' ? 'alert-circle-outline' : 'information-outline'} size={17} color={rcLookupState === 'success' ? '#12805C' : rcLookupState === 'error' ? '#B54747' : '#0A43A3'} />}
+              {rcLookupState === 'loading' ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name={rcLookupState === 'success' ? 'check-circle-outline' : 'information-outline'} size={17} color={rcLookupState === 'success' ? '#12805C' : '#0A43A3'} />}
               <Text style={styles.rcStatusText}>{rcLookupMessage}</Text>
             </View>
           ) : null}
