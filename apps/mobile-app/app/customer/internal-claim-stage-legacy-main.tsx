@@ -13,6 +13,7 @@ import { ExternalClaimDocumentTabs } from '@/components/external-claim-document-
 import { ClaimActionBar, ClaimFormSection } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
+import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { palette } from '@/lib/theme';
 import { ExternalClaimMilestoneStageBody } from './self-managed-milestone';
 
@@ -141,6 +142,8 @@ export default function InternalClaimStageScreen() {
   const [claim, setClaim] = useState<ManagedClaim | null>(null);
   const [vehicleNo, setVehicleNo] = useState('');
   const [vehicleMeta, setVehicleMeta] = useState('');
+  const [vehicleMake, setVehicleMake] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
   const [policyNo, setPolicyNo] = useState('');
   const [insurerName, setInsurerName] = useState('');
   const [documentTypes, setDocumentTypes] = useState<string[]>([]);
@@ -182,6 +185,8 @@ export default function InternalClaimStageScreen() {
       const vehicleResult = await supabase.from('vehicles').select('vehicle_no,make,model').eq('id', nextClaim.vehicle_id).maybeSingle();
       if (!active) return;
       setVehicleNo(vehicleResult.data?.vehicle_no ?? '');
+      setVehicleMake(vehicleResult.data?.make ?? '');
+      setVehicleModel(vehicleResult.data?.model ?? '');
       setVehicleMeta([vehicleResult.data?.make, vehicleResult.data?.model].filter(Boolean).join(' · '));
 
       if (nextClaim.policy_id) {
@@ -277,6 +282,8 @@ export default function InternalClaimStageScreen() {
           vehicleNo={vehicleNo || 'Vehicle'}
           policyNo={policyNo || undefined}
           vehicleMeta={vehicleMeta}
+          vehicleMake={vehicleMake}
+          vehicleModel={vehicleModel}
         />
 
         {message ? <Message type="error">{message}</Message> : null}
@@ -648,7 +655,28 @@ function InternalSpotStatusIdentityCard({ claimNo, insurerName, vehicleNo, polic
   );
 }
 
-function InternalStageIdentityCard({ title, claimNo, insurerName, vehicleNo, policyNo, vehicleMeta }: { title: string; claimNo?: string | null; insurerName?: string | null; vehicleNo?: string | null; policyNo?: string | null; vehicleMeta?: string | null }) {
+function InternalStageIdentityCard({
+  title,
+  claimNo,
+  insurerName,
+  vehicleNo,
+  policyNo,
+  vehicleMeta,
+  vehicleMake,
+  vehicleModel,
+}: {
+  title: string;
+  claimNo?: string | null;
+  insurerName?: string | null;
+  vehicleNo?: string | null;
+  policyNo?: string | null;
+  vehicleMeta?: string | null;
+  vehicleMake?: string | null;
+  vehicleModel?: string | null;
+}) {
+  const manufacturerLogo = getVehicleBrandLogoSource(vehicleMake);
+  const insurerLogo = getInsurerLogoSource(insurerName);
+
   return (
     <View style={styles.spotStatusCard}>
       <View style={styles.spotStatusGlowLarge} />
@@ -661,40 +689,36 @@ function InternalStageIdentityCard({ title, claimNo, insurerName, vehicleNo, pol
         <Text style={styles.spotStatusClaimNo} numberOfLines={1}>{claimNo || 'New claim'}</Text>
       </View>
       <View style={styles.spotStatusHeaderDivider} />
-      <View style={styles.spotStatusInfoGrid}>
-        <View style={styles.spotStatusInfoSection}>
-          <View style={styles.spotStatusMainInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusVehicleBadge]}>
-              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
-              <Text style={styles.spotStatusMainInfoLabel}>Vehicle: </Text>
-              <Text style={styles.spotStatusMainInfoValue}>{vehicleNo || 'Vehicle'}</Text>
-            </Text>
+
+      <View style={styles.identityReferenceRow}>
+        <View style={styles.identityReferenceHalf}>
+          <View style={styles.identityReferenceLogo}>
+            {manufacturerLogo ? (
+              <Image source={manufacturerLogo} style={styles.identityReferenceLogoImage} resizeMode="contain" />
+            ) : (
+              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.identityReferenceLogoImage} resizeMode="contain" />
+            )}
           </View>
-          <View style={styles.spotStatusSecondaryInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusMakeModelBadge]}>
-              <Image source={require('../../assets/claims/fleet-vehicle.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusSecondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
+          <View style={styles.identityReferenceCopy}>
+            <Text style={styles.identityReferencePrimary} numberOfLines={1}>{vehicleNo || 'Vehicle'}</Text>
+            <Text style={styles.identityReferenceSecondary} numberOfLines={1}>{vehicleMake || vehicleMeta || 'Manufacturer'}</Text>
+            <Text style={styles.identityReferenceTertiary} numberOfLines={1}>{vehicleModel || '—'}</Text>
           </View>
         </View>
+
         <View style={styles.spotStatusSectionDivider} />
-        <View style={styles.spotStatusInfoSection}>
-          <View style={styles.spotStatusMainInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusPolicyBadge]}>
-              <Image source={require('../../assets/claims/policy.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusMainInfoLine} numberOfLines={1}>
-              <Text style={[styles.spotStatusMainInfoLabel, styles.spotStatusPolicyMainLabel]}>Policy: </Text>
-              <Text style={styles.spotStatusMainInfoValue}>{policyNo || '—'}</Text>
-            </Text>
+
+        <View style={styles.identityReferenceHalf}>
+          <View style={styles.identityReferenceLogo}>
+            {insurerLogo ? (
+              <Image source={insurerLogo} style={styles.identityReferenceLogoImage} resizeMode="contain" />
+            ) : (
+              <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.identityReferenceLogoImage} resizeMode="contain" />
+            )}
           </View>
-          <View style={styles.spotStatusSecondaryInfoRow}>
-            <View style={[styles.spotStatusIconBadge, styles.spotStatusInsurerBadge]}>
-              <Image source={require('../../assets/claims/accounts-finance.png')} style={styles.spotStatusBadgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.spotStatusSecondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+          <View style={styles.identityReferenceCopy}>
+            <Text style={styles.identityReferencePrimary} numberOfLines={1}>{policyNo || '—'}</Text>
+            <Text style={styles.identityReferenceSecondary} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
           </View>
         </View>
       </View>
@@ -913,4 +937,13 @@ const styles = StyleSheet.create({
   spotStatusMakeModelBadge: { backgroundColor: '#E8F1FF' },
   spotStatusInsurerBadge: { backgroundColor: '#FFF2D8' },
   spotStatusSecondaryValue: { flex: 1, minWidth: 0, color: '#EAF2FF', fontSize: 8.8, lineHeight: 11.5, fontWeight: '700' },
+  identityReferenceRow: { flexDirection: 'row', alignItems: 'stretch', minWidth: 0 },
+  identityReferenceHalf: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 3 },
+  identityReferenceLogo: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(210,225,247,0.8)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  identityReferenceLogoImage: { width: 34, height: 34 },
+  identityReferenceCopy: { flex: 1, minWidth: 0 },
+  identityReferencePrimary: { color: '#FFFFFF', fontSize: 12.2, lineHeight: 15, fontWeight: '900' },
+  identityReferenceSecondary: { color: '#EAF2FF', fontSize: 9.4, lineHeight: 12, fontWeight: '800', marginTop: 2 },
+  identityReferenceTertiary: { color: '#AFC4E4', fontSize: 9.2, lineHeight: 12, fontWeight: '700', marginTop: 1 },
+
 });
