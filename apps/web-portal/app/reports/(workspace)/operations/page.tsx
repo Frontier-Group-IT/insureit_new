@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Info } from "lucide-react";
-import { AppShell } from "@/components/shell";
 import { ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { OperationsReportFilters } from "@/components/reports/operations-report-filters";
 import { OperationsInteractiveChart, type OperationsInteractiveVariant } from "@/components/reports/operations-interactive-chart";
@@ -44,7 +43,7 @@ export default async function OperationsReportsPage({searchParams}:Props){
   const exceptionMix=buildExceptionMix(report,allRows);
   const registerRows=allRows.slice(0,6);
 
-  return <AppShell title="Reports"><ReportPageShell
+  return <ReportPageShell persistentHeader
     title="Operations"
     loadError={loadError}
     actions={<ReportExportLink href={exportHref}/>}
@@ -99,7 +98,7 @@ export default async function OperationsReportsPage({searchParams}:Props){
         <Register rows={registerRows}/>
       </section>
     </div>
-  </ReportPageShell></AppShell>;
+  </ReportPageShell>;
 }
 
 function Kpi({label,value,note}:{label:string;value:string;note:string}){

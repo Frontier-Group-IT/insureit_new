@@ -8,7 +8,7 @@ const policyDetail = await readFile(new URL("../app/policies/[id]/page.tsx", imp
 const dashboardBusiness = await readFile(new URL("../app/dashboard-v2/dashboard-business.ts", import.meta.url), "utf8");
 const dashboardView = await readFile(new URL("../app/dashboard-v2/dashboard-view.tsx", import.meta.url), "utf8");
 const reportBusiness = await readFile(new URL("../lib/reports/policy-business.ts", import.meta.url), "utf8");
-const reportPage = await readFile(new URL("../app/reports/business/page.tsx", import.meta.url), "utf8");
+const reportPage = await readFile(new URL("../app/reports/(workspace)/business/page.tsx", import.meta.url), "utf8");
 const reportMigration = await readFile(new URL("../../../supabase/migrations/20260915163500_policy_business_report_net_premium_v5.sql", import.meta.url), "utf8");
 
 const mainQuery = page.match(/let query = admin\.from\("policies"\)\.select\("([^"]+)"\)/)?.[1] ?? "";

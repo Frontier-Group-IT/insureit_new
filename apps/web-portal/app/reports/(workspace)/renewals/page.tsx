@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Info } from "lucide-react";
 import { PortfolioInteractiveChart, type PortfolioChartVariant } from "@/components/reports/portfolio-interactive-chart";
-import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
 import { ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
@@ -61,7 +60,7 @@ export default async function RenewalReportsPage({searchParams}:Props){
   const renewalRows=report.register.rows.slice(0,5);
   const claimsRows=claimRows.slice(0,5);
 
-  return <AppShell title="Reports"><ReportPageShell
+  return <ReportPageShell persistentHeader
     title="Portfolio"
     loadError={loadError}
     actions={<ReportExportLink href={exportHref}/>}
@@ -127,7 +126,7 @@ export default async function RenewalReportsPage({searchParams}:Props){
         {registerTab==="renewals"?<RenewalRegister rows={renewalRows}/>:<ClaimsRegister rows={claimsRows}/>}
       </section>
     </div>
-  </ReportPageShell></AppShell>;
+  </ReportPageShell>;
 }
 
 function Kpi({label,value,note}:{label:string;value:string;note:string}){

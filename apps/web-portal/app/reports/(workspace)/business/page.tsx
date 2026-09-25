@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
 import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
@@ -76,8 +75,7 @@ export default async function ReportsPage({ searchParams }: Props) {
   const mixTitle = mixMode === "insurer" ? "Insurer" : mixMode === "rm" ? "RM" : "Business Type";
 
   return (
-    <AppShell title="Reports">
-      <ReportPageShell
+    <ReportPageShell persistentHeader
         title="Business"
         loadError={loadError}
         actions={<ReportExportLink href={exportHref} />}
@@ -143,7 +141,6 @@ export default async function ReportsPage({ searchParams }: Props) {
           <IntermediaryTable rows={intermediaryRows} />
         </section>
       </ReportPageShell>
-    </AppShell>
   );
 }
 

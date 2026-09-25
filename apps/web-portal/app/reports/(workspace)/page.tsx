@@ -7,9 +7,8 @@ import {
   Info,
   TriangleAlert,
 } from "lucide-react";
-import { AppShell } from "@/components/shell";
 import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewMix, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
-import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
+import { ReportToolbarPortal } from "@/components/reports/report-toolbar-portal";
 import { OverviewSectionSelect } from "@/components/reports/overview-section-select";
 import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -112,117 +111,108 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
   const policyDelta = trendDelta((pack?.business.trend ?? []).map((row) => row.policy_count));
 
   return (
-    <AppShell title="Reports">
-      <div className="reports-v2-page reports-overview-reference reports-reference-shell report-page-shell mx-auto max-w-[1560px] pb-8">
-        <header className="reports-reference-header" aria-label="Reports">
-          <div className="reports-reference-topbar">
-            <div className="reports-reference-left">
-              <div className="reports-reference-heading"><h1>Reports</h1></div>
-              <ReportWorkspaceNavigation />
-            </div>
-            <div className="reports-reference-toolbar">
-              <ReportsOverviewToolbar
-                activePeriod={period.period}
-                activeBusiness={business.key}
-                activeTrend={trendPeriod.period}
-                activeMix={mix}
-                fromDate={period.fromDate}
-                toDate={period.toDate}
-                today={period.today}
-                exportHref={pack ? managementPackExportHref(period, business) : "/reports"}
-              />
-            </div>
-          </div>
-        </header>
+    <>
+      <ReportToolbarPortal>
+        <ReportsOverviewToolbar
+                        activePeriod={period.period}
+                        activeBusiness={business.key}
+                        activeTrend={trendPeriod.period}
+                        activeMix={mix}
+                        fromDate={period.fromDate}
+                        toDate={period.toDate}
+                        today={period.today}
+                        exportHref={pack ? managementPackExportHref(period, business) : "/reports"}
+                      />
+      </ReportToolbarPortal>
+      <div className="reports-v2-page reports-overview-reference">
+      {loadError || !pack ? (
+        <section className="ov-card px-5 py-10 text-center text-[11px] font-semibold text-[#b42318]">Reporting service unavailable</section>
+      ) : (
+        <>
+          <section className="ov-card ov-kpis" aria-label="Overview key performance indicators">
+            <Kpi label="Net Premium" value={compactMoney(pack.business.summary.net_premium)} delta={premiumDelta} note={period.label} />
+            <Kpi label="Policies" value={number(pack.business.summary.policy_count)} delta={policyDelta} note={period.label} />
+            <Kpi label={commercialAccess ? "PayIn" : "Commercials"} value={commercialAccess ? compactMoney(pack.finance.summary.payin_after_tds) : "Restricted"} note={commercialAccess ? "Less TDS" : "Authorized users only"} />
+            <Kpi label="Payout" value={commercialAccess ? compactMoney(pack.finance.summary.gross_payout) : "Restricted"} note={commercialAccess ? period.label : "Authorized users only"} />
+            <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note={`${number(pack.claims.summary.claims_with_pending_documents)} documents pending`} noteTone={pack.claims.summary.claims_with_pending_documents > 0 ? "danger" : undefined} />
+            <Kpi label="Renewals 30d" value={number(pack.renewals.summary.due_30_count)} note={`${compactMoney(pack.renewals.summary.premium_due_30)} premium at risk`} />
+          </section>
 
-        {loadError || !pack ? (
-          <section className="ov-card px-5 py-10 text-center text-[11px] font-semibold text-[#b42318]">Reporting service unavailable</section>
-        ) : (
-          <>
-            <section className="ov-card ov-kpis" aria-label="Overview key performance indicators">
-              <Kpi label="Net Premium" value={compactMoney(pack.business.summary.net_premium)} delta={premiumDelta} note={period.label} />
-              <Kpi label="Policies" value={number(pack.business.summary.policy_count)} delta={policyDelta} note={period.label} />
-              <Kpi label={commercialAccess ? "PayIn" : "Commercials"} value={commercialAccess ? compactMoney(pack.finance.summary.payin_after_tds) : "Restricted"} note={commercialAccess ? "Less TDS" : "Authorized users only"} />
-              <Kpi label="Payout" value={commercialAccess ? compactMoney(pack.finance.summary.gross_payout) : "Restricted"} note={commercialAccess ? period.label : "Authorized users only"} />
-              <Kpi label="Open Claims" value={number(pack.claims.summary.open_claim_count)} note={`${number(pack.claims.summary.claims_with_pending_documents)} documents pending`} noteTone={pack.claims.summary.claims_with_pending_documents > 0 ? "danger" : undefined} />
-              <Kpi label="Renewals 30d" value={number(pack.renewals.summary.due_30_count)} note={`${compactMoney(pack.renewals.summary.premium_due_30)} premium at risk`} />
-            </section>
+          <section className="ov-grid ov-grid--top">
+            <BusinessTrendCard
+              activePeriod={trendPeriod.period}
+              options={trendOptions(period, business, mix)}
+              points={trendPoints}
+            />
 
-            <section className="ov-grid ov-grid--top">
-              <BusinessTrendCard
-                activePeriod={trendPeriod.period}
-                options={trendOptions(period, business, mix)}
-                points={trendPoints}
-              />
-
-              <article className="ov-card ov-section">
-                <div className="ov-section-head">
-                  <h2>Attention</h2>
-                  <Link prefetch={false} href="/reports/readiness" className="ov-view-link">View all <ArrowRight className="h-3 w-3" /></Link>
-                </div>
-                <div className="ov-attention">
-                  <AttentionItem icon="danger" value={pack.renewals.summary.due_30_count} title="Renewals due" detail={`${compactMoney(pack.renewals.summary.premium_due_30)} premium at risk · Next 30 days`} href="/reports/renewals" />
-                  <AttentionItem icon="clock" value={pack.claims.summary.claims_with_pending_documents} title="Claim documents pending" detail={`Across open claims · Avg age ${number(pack.claims.summary.average_open_age_days)} days`} href="/reports/claims" />
-                  <AttentionItem icon="warn" value={commercialAccess ? (pack.finance.summary.missing_payin_count ?? 0) : 0} title="Missing PayIn" detail={commercialAccess ? "Policies issued but PayIn not recorded" : "Commercial access restricted"} href={commercialAccess ? "/reports/finance" : "/reports"} />
-                  <AttentionItem icon="danger" value={pack.operations.summary.expired_document_count + pack.operations.summary.missing_compliance_fields} title="Compliance exceptions" detail="KYC / documents / underwriting" href="/reports/operations" />
-                </div>
-              </article>
-            </section>
-
-            <section className="ov-grid ov-grid--bottom">
-              <article className="ov-card ov-section">
-                <div className="ov-section-head">
-                  <h2>Business Mix</h2>
-                  <OverviewSectionSelect label={mixLabel(mix)} options={mixOptions(period, business, trendPeriod.period)} />
-                </div>
-                <BusinessMix mode={mix} rows={businessMixRows} />
-              </article>
-
-              <article className="ov-card ov-section">
-                <div className="ov-section-head">
-                  <h2>Renewal Opportunity</h2>
-                </div>
-                <RenewalOpportunity rows={renewalOpportunity} />
-              </article>
-            </section>
-
-            <section className="ov-card ov-section ov-recent">
+            <article className="ov-card ov-section">
               <div className="ov-section-head">
-                <h2>Recent / filtered records</h2>
-                <Link prefetch={false} href="/reports/business" className="ov-view-link">View all <ArrowRight className="h-3 w-3" /></Link>
+                <h2>Attention</h2>
+                <Link prefetch={false} href="/reports/readiness" className="ov-view-link">View all <ArrowRight className="h-3 w-3" /></Link>
               </div>
-              {recentRecords.length ? (
-                <div className="ov-table-wrap">
-                  <table className="ov-table">
-                    <thead><tr><th>Customer</th><th>Policy</th><th>Insurer</th><th>Status</th><th className="ov-num">Premium (₹)</th><th aria-label="Open" /></tr></thead>
-                    <tbody>
-                      {recentRecords.map((row) => {
-                        const logo = getInsurerLogo(row.insurer_name);
-                        return (
-                          <tr key={row.id}>
-                            <td><strong>{row.customer_name || "—"}</strong></td>
-                            <td>{row.policy_no || "—"}</td>
-                            <td>
-                              <span className="ov-insurer-cell">
-                                {logo ? <Image src={logo} alt="" width={18} height={18} className="ov-insurer-logo" /> : null}
-                                {row.insurer_name || "—"}
-                              </span>
-                            </td>
-                            <td><span className={statusClass(row.status)}>{friendlyStatus(row.status)}</span></td>
-                            <td className="ov-num">{money(row.net_premium)}</td>
-                            <td className="ov-arrow-cell"><Link prefetch={false} href={`/policies/${row.id}`} aria-label={`Open policy ${row.policy_no}`}><ArrowRight className="h-3.5 w-3.5" /></Link></td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : <div className="r2-empty">No recent policy records available</div>}
-            </section>
-          </>
-        )}
+              <div className="ov-attention">
+                <AttentionItem icon="danger" value={pack.renewals.summary.due_30_count} title="Renewals due" detail={`${compactMoney(pack.renewals.summary.premium_due_30)} premium at risk · Next 30 days`} href="/reports/renewals" />
+                <AttentionItem icon="clock" value={pack.claims.summary.claims_with_pending_documents} title="Claim documents pending" detail={`Across open claims · Avg age ${number(pack.claims.summary.average_open_age_days)} days`} href="/reports/claims" />
+                <AttentionItem icon="warn" value={commercialAccess ? (pack.finance.summary.missing_payin_count ?? 0) : 0} title="Missing PayIn" detail={commercialAccess ? "Policies issued but PayIn not recorded" : "Commercial access restricted"} href={commercialAccess ? "/reports/finance" : "/reports"} />
+                <AttentionItem icon="danger" value={pack.operations.summary.expired_document_count + pack.operations.summary.missing_compliance_fields} title="Compliance exceptions" detail="KYC / documents / underwriting" href="/reports/operations" />
+              </div>
+            </article>
+          </section>
+
+          <section className="ov-grid ov-grid--bottom">
+            <article className="ov-card ov-section">
+              <div className="ov-section-head">
+                <h2>Business Mix</h2>
+                <OverviewSectionSelect label={mixLabel(mix)} options={mixOptions(period, business, trendPeriod.period)} />
+              </div>
+              <BusinessMix mode={mix} rows={businessMixRows} />
+            </article>
+
+            <article className="ov-card ov-section">
+              <div className="ov-section-head">
+                <h2>Renewal Opportunity</h2>
+              </div>
+              <RenewalOpportunity rows={renewalOpportunity} />
+            </article>
+          </section>
+
+          <section className="ov-card ov-section ov-recent">
+            <div className="ov-section-head">
+              <h2>Recent / filtered records</h2>
+              <Link prefetch={false} href="/reports/business" className="ov-view-link">View all <ArrowRight className="h-3 w-3" /></Link>
+            </div>
+            {recentRecords.length ? (
+              <div className="ov-table-wrap">
+                <table className="ov-table">
+                  <thead><tr><th>Customer</th><th>Policy</th><th>Insurer</th><th>Status</th><th className="ov-num">Premium (₹)</th><th aria-label="Open" /></tr></thead>
+                  <tbody>
+                    {recentRecords.map((row) => {
+                      const logo = getInsurerLogo(row.insurer_name);
+                      return (
+                        <tr key={row.id}>
+                          <td><strong>{row.customer_name || "—"}</strong></td>
+                          <td>{row.policy_no || "—"}</td>
+                          <td>
+                            <span className="ov-insurer-cell">
+                              {logo ? <Image src={logo} alt="" width={18} height={18} className="ov-insurer-logo" /> : null}
+                              {row.insurer_name || "—"}
+                            </span>
+                          </td>
+                          <td><span className={statusClass(row.status)}>{friendlyStatus(row.status)}</span></td>
+                          <td className="ov-num">{money(row.net_premium)}</td>
+                          <td className="ov-arrow-cell"><Link prefetch={false} href={`/policies/${row.id}`} aria-label={`Open policy ${row.policy_no}`}><ArrowRight className="h-3.5 w-3.5" /></Link></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="r2-empty">No recent policy records available</div>}
+          </section>
+        </>
+      )}
       </div>
-    </AppShell>
+    </>
   );
 }
 
@@ -232,9 +222,9 @@ function Kpi({ label, value, delta, note, noteTone }: { label: string; value: st
       <div className="ov-kpi-label">{label}<Info className="h-3 w-3" /></div>
       <div className="ov-kpi-value">{value}</div>
       {delta != null ? (
-        <div className={`ov-kpi-note ${delta >= 0 ? "ov-positive" : "ov-negative"}`}><span>{delta >= 0 ? "▲" : "▼"} {delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span><span className="ov-note-muted">vs. last month</span></div>
+      <div className={`ov-kpi-note ${delta >= 0 ? "ov-positive" : "ov-negative"}`}><span>{delta >= 0 ? "▲" : "▼"} {delta >= 0 ? "+" : ""}{delta.toFixed(0)}%</span><span className="ov-note-muted">vs. last month</span></div>
       ) : (
-        <div className={`ov-kpi-note ${noteTone === "danger" ? "ov-negative" : ""}`}>{note || "Month to date"}</div>
+      <div className={`ov-kpi-note ${noteTone === "danger" ? "ov-negative" : ""}`}>{note || "Month to date"}</div>
       )}
     </div>
   );
@@ -267,22 +257,22 @@ function BusinessMix({ mode, rows }: { mode: OverviewMix; rows: BusinessMixRow[]
     <div className="ov-mix">
       <div className="ov-mix-head"><span>#</span><span>{entityLabel}</span><span>Net Premium (₹ L)</span><span>Policies</span><span>Share</span></div>
       {rows.map((row, index) => {
-        const logo = mode === "insurer" ? getInsurerLogo(row.name) : null;
-        return (
-          <div className="ov-mix-row" key={row.key}>
-            <span>{index + 1}</span>
-            <span className="ov-mix-insurer">
-              {logo ? <Image src={logo} alt="" width={18} height={18} className="ov-insurer-logo" /> : null}
-              <strong>{row.name || "Unassigned"}</strong>
-            </span>
-            <span className="ov-mix-bar-wrap">
-              <span className="ov-mix-value-label">{compactMoney(row.net_premium)}</span>
-              <i style={{ width: `${Math.max(4, (row.net_premium / max) * 100)}%` }} />
-            </span>
-            <span className="ov-mix-policy-count">{number(row.policy_count)}</span>
-            <span>{row.share_percent.toFixed(1)}%</span>
-          </div>
-        );
+      const logo = mode === "insurer" ? getInsurerLogo(row.name) : null;
+      return (
+        <div className="ov-mix-row" key={row.key}>
+          <span>{index + 1}</span>
+          <span className="ov-mix-insurer">
+            {logo ? <Image src={logo} alt="" width={18} height={18} className="ov-insurer-logo" /> : null}
+            <strong>{row.name || "Unassigned"}</strong>
+          </span>
+          <span className="ov-mix-bar-wrap">
+            <span className="ov-mix-value-label">{compactMoney(row.net_premium)}</span>
+            <i style={{ width: `${Math.max(4, (row.net_premium / max) * 100)}%` }} />
+          </span>
+          <span className="ov-mix-policy-count">{number(row.policy_count)}</span>
+          <span>{row.share_percent.toFixed(1)}%</span>
+        </div>
+      );
       })}
     </div>
   );
@@ -335,24 +325,24 @@ function RenewalOpportunity({ rows }: { rows: RenewalOpportunityRow[] }) {
   return (
     <div className="ov-risk">
       <div className="ov-chart-legend">
-        <span><i className="ov-dot ov-dot--blue" />Net Premium at Risk (₹ L)</span>
+      <span><i className="ov-dot ov-dot--blue" />Net Premium at Risk (₹ L)</span>
       </div>
       <div className="ov-risk-plot">
-        {rows.map((row) => (
-          <div className="ov-risk-group" key={row.key}>
-            <div className="ov-risk-bars">
-              <span className="ov-risk-bar-stack">
-                <span className="ov-risk-count-label">{number(row.policy_count)}</span>
-                <span
-                  className="ov-risk-bar ov-risk-bar--renewal"
-                  style={{ height: `${row.net_premium > 0 ? Math.max(3, (row.net_premium / max) * 100) : 0}%` }}
-                  title={`${compactMoney(row.net_premium)} · ${number(row.policy_count)} policies`}
-                />
-              </span>
-            </div>
-            <span className="ov-risk-label">{row.label}</span>
+      {rows.map((row) => (
+        <div className="ov-risk-group" key={row.key}>
+          <div className="ov-risk-bars">
+            <span className="ov-risk-bar-stack">
+              <span className="ov-risk-count-label">{number(row.policy_count)}</span>
+              <span
+                className="ov-risk-bar ov-risk-bar--renewal"
+                style={{ height: `${row.net_premium > 0 ? Math.max(3, (row.net_premium / max) * 100) : 0}%` }}
+                title={`${compactMoney(row.net_premium)} · ${number(row.policy_count)} policies`}
+              />
+            </span>
           </div>
-        ))}
+          <span className="ov-risk-label">{row.label}</span>
+        </div>
+      ))}
       </div>
     </div>
   );
