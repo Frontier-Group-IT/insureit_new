@@ -8,11 +8,13 @@ export function VoiceCampaignRunner({
   status,
   autoEnrich = false,
   pendingDispatch,
+  retryableFailures = 0,
 }: {
   campaignId: string;
   status: string;
   autoEnrich?: boolean;
   pendingDispatch: number;
+  retryableFailures?: number;
 }) {
   const autoStarted = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -79,6 +81,55 @@ export function VoiceCampaignRunner({
     }
   }
 
+  async function retryBusyOrUnanswered() {
+    if (
+      !window.confirm(
+        "Retry " + retryableFailures + " failed call" + (retryableFailures === 1 ? "" : "s") + " where the number was busy or unanswered?",
+      )
+    ) {
+      return;
+    }
+
+    setBusy(true);
+    setMessage("Preparing retry calls…");
+
+    try {
+      const response = await fetch(
+        "/api/system/voice-integration/campaigns/" + campaignId + "/retry",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({}),
+        },
+      );
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Could not prepare retry calls.");
+
+      if (!body.requeued) {
+        setMessage("No busy or unanswered calls are currently eligible for retry.");
+        setBusy(false);
+        return;
+      }
+
+      if (status === "running") {
+        setMessage(body.requeued + " call" + (body.requeued === 1 ? "" : "s") + " ready to retry · queueing now…");
+        await dispatchAll();
+        return;
+      }
+
+      setMessage(
+        body.requeued +
+          " call" +
+          (body.requeued === 1 ? "" : "s") +
+          " ready to retry · Resume campaign to queue them.",
+      );
+      setBusy(false);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not prepare retry calls.");
+      setBusy(false);
+    }
+  }
+
   async function changeStatus(action: "start" | "pause" | "resume") {
     if (
       action === "start" &&
@@ -125,6 +176,18 @@ export function VoiceCampaignRunner({
     <div className="flex flex-wrap items-center justify-end gap-2">
       {message ? (
         <span className="mr-auto text-[8.5px] font-semibold text-[#61758F]">{message}</span>
+      ) : null}
+
+      {retryableFailures > 0 && ["running", "paused"].includes(status) ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void retryBusyOrUnanswered()}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-[8.5px] font-bold text-amber-800 disabled:opacity-50"
+        >
+          <RefreshCw className="h-3 w-3" />
+          Retry busy / unanswered ({retryableFailures})
+        </button>
       ) : null}
 
       {status === "enriching" || status === "needs_review" ? (
