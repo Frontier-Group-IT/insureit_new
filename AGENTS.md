@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-25 — Customer signup direct master + no-review KYC:** branch `feature/customer-signup-direct-master-kyc-submit`; Customer App signup now creates the canonical customer master and active primary membership immediately so the customer appears in Customer Register and can add vehicles before KYC. Standalone Customer App KYC submission enriches that same customer and auto-completes the application without Operations review/verification; historical Group-associated onboarding remains unchanged. Migration `20260925103000_customer_signup_direct_master_kyc_submit.sql` includes safe repair of existing profile-only mobile signups and a dedicated schema workflow/deployment gate. Mobile success copy no longer says verification is pending. **IMPLEMENTED; PR/CI/merge/migration application/OTA pending. NO APK/AAB CREATED.**
+
 - **2026-09-25 — Voice Integration control cleanup:** branch `ui/voice-integration-controls-cleanup`; Production control now exposes only the currently valid Pause or Resume action as the primary button, moves Sarvam connection test and refresh to compact icon actions, removes redundant full-size Queue/Recovery navigation buttons, and corrects the stale 100-customer campaign-limit copy. No calling logic, API contract, schema, migration, DNC, webhook, retry, or campaign behavior change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 

@@ -1,5 +1,9 @@
 # INSUREIT Project Context and Technical Handover
 
+## Customer App signup and KYC master-account rule — 2026-09-25
+
+**IMPLEMENTED on branch `feature/customer-signup-direct-master-kyc-submit`; not yet merged/applied.** Customer App signup is the customer-master creation boundary: after successful signup synchronization, create the canonical customer and active primary membership immediately. KYC is optional for normal customer operations such as Add Vehicle. For standalone Customer App KYC, submission updates/enriches that same customer and auto-completes the onboarding application; do not create a duplicate customer and do not require an Operations review/verification stage. Group-associated child onboarding remains a separate reviewed workflow. Migration: `20260925103000_customer_signup_direct_master_kyc_submit.sql`.
+
 > **Last consolidated:** 2026-08-02 (IST)
 >
 > This is the durable project context for developers and AI agents working on the INSUREIT repository. Read this file before changing intermediary, Partner, POSP, MISP, onboarding, document, registration, portal-user, or IIB workflows. Update it after material business-rule, schema, workflow, or architecture changes.

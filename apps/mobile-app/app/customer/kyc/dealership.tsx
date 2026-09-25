@@ -232,7 +232,7 @@ export default function DealershipKycScreen() {
     </ScrollView>
     <View style={styles.footer}>{error ? <View style={styles.error}><Text style={styles.errorText}>{error}</Text></View> : null}<Pressable disabled={submitting} onPress={() => void submit()} style={[styles.submit, submitting && styles.disabled]}>{submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Submit Dealership KYC</Text>}</Pressable></View>
     </KeyboardAvoidingView>
-    <Modal visible={successVisible} transparent animationType="fade"><View style={styles.modalBackdrop}>{dealershipType === 'posp' ? <PospSuccessModal onDone={() => router.replace('/customer/home')} /> : <View style={styles.modal}><Text style={styles.modalTitle}>KYC submitted</Text><Text style={styles.modalText}>Your Dealership details have been submitted for verification.</Text><Pressable onPress={() => router.replace('/customer/home')} style={styles.modalButton}><Text style={styles.submitText}>Return to dashboard</Text></Pressable></View>}</View></Modal>
+    <Modal visible={successVisible} transparent animationType="fade"><View style={styles.modalBackdrop}>{dealershipType === 'posp' ? <PospSuccessModal onDone={() => router.replace('/customer/home')} /> : <View style={styles.modal}><Text style={styles.modalTitle}>KYC saved</Text><Text style={styles.modalText}>Your Dealership details have been saved directly to the same customer profile.</Text><Pressable onPress={() => router.replace('/customer/home')} style={styles.modalButton}><Text style={styles.submitText}>Return to dashboard</Text></Pressable></View>}</View></Modal>
   </SafeAreaView>;
 }
 
