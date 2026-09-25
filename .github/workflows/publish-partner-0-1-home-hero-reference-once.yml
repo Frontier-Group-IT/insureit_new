@@ -218,6 +218,16 @@ jobs:
           grep -q 'GROW & LEARN' 'compat/apps/partner-app/app/(tabs)/more.tsx'
           grep -q 'Profile & registration' 'compat/apps/partner-app/app/(tabs)/more.tsx'
           grep -q 'Settings & app info' 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "insureit-partner-official.png" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroLogo: { width: 30, height: 35" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroBrandInsureit: { color: '#FFFFFF', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroBrandPartner: { color: '#F5AB2E', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroIconButton: {" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroAvatar: {" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "<Text style={styles.heroTitle}>Profile</Text>" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "heroTitle: {" 'compat/apps/partner-app/app/(tabs)/more.tsx'
+          grep -q "fontSize: 14" 'compat/apps/partner-app/app/(tabs)/more.tsx'
 
       - name: Install reference-style Claims layout for runtime 0.1.0
         shell: bash
