@@ -282,8 +282,6 @@ export default function InternalClaimStageScreen() {
           vehicleNo={vehicleNo || 'Vehicle'}
           policyNo={policyNo || undefined}
           vehicleMeta={vehicleMeta}
-          vehicleMake={vehicleMake}
-          vehicleModel={vehicleModel}
         />
 
         {message ? <Message type="error">{message}</Message> : null}
@@ -410,6 +408,8 @@ export default function InternalClaimStageScreen() {
           vehicleNo={vehicleNo || 'Vehicle'}
           policyNo={policyNo || undefined}
           vehicleMeta={vehicleMeta}
+          vehicleMake={vehicleMake}
+          vehicleModel={vehicleModel}
         />
 
         {message ? <Message type="error">{message}</Message> : null}
