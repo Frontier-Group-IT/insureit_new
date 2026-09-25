@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-25 — Customer My Claims card cleanup:** branch `ui/customer-claims-remove-second-icon`; removed the secondary claim/status icon beside the vehicle manufacturer logo on Customer App → My Claims cards. External/self-tracked claim milestone text on the far right (for example `Spot Status`) is now red; managed/internal claim milestone text remains unchanged. Added dedicated mobile regression coverage. No schema, RLS, API/RPC, native runtime, APK/AAB, or data-contract change. **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB CREATED.**
+
 
 - **2026-09-25 — Hide Non-Motor policy product subline in Policy Register:** branch `fix/non-motor-hide-policy-product-subline`; updated `PolicyTypeLink()` so Non Motor rows show only `Non Motor • <category>` in the Policy / Product column and no longer render the secondary `policy_product` line that can contain insurer-branded product text. Motor rows retain existing product-subline behavior. No stored policy data, insurer field, search/filter logic, calculations, schema, RLS, permissions, mobile, APK/AAB, or native-runtime changes. **Replacement PR #2407 MERGED as `4957d91520dd4e59d00bc1a485f83fa6972adb89`; `Verify web portal` workflow #4658 passed; deployment not verified.**
 
