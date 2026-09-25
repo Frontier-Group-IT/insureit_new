@@ -91,7 +91,7 @@ function PortfolioDualBarChart({variant}:{variant:PortfolioChartVariant}){
       <span><i className="primary"/>{variant.primaryLabel}</span>
       <span><i className="secondary"/>{variant.secondaryLabel}</span>
     </div>
-    <div className="portfolio-chart-plot">
+    <div className="portfolio-chart-plot" style={{gridTemplateColumns:`repeat(${Math.max(variant.rows.length,5)}, minmax(58px, 1fr))`,minWidth:variant.rows.length>5?`${variant.rows.length*82}px`:undefined}}>
       {variant.rows.map((row)=><div className="portfolio-chart-group" key={row.key}>
         <div className="portfolio-chart-bars">
           <div className="portfolio-bar-wrap">
