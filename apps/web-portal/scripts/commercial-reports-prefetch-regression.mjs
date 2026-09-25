@@ -9,6 +9,10 @@ const financeReportMigration = await readFile(
   new URL("../../../supabase/migrations/20260831184000_optimize_finance_report_deferred_enrichment.sql", import.meta.url),
   "utf8",
 );
+const renewalReportMigration = await readFile(
+  new URL("../../../supabase/migrations/20260831190000_optimize_renewal_report_deferred_enrichment.sql", import.meta.url),
+  "utf8",
+);
 
 for (const file of [
   "../app/policies/commercial-review/commercial-review-client.tsx",
@@ -63,6 +67,27 @@ assert.doesNotMatch(
   financeReportMigration,
   /from\s+public\.policies\s+p[\s\S]{0,1200}?left\s+join\s+public\.vehicles/i,
   "Finance report base scan should not join every policy to vehicle display data.",
+);
+
+assert.match(
+  renewalReportMigration,
+  /page_base\s+as\s*\(/i,
+  "Renewal report should paginate before customer, vehicle, and risk display enrichment.",
+);
+assert.match(
+  renewalReportMigration,
+  /from\s+page_base\s+pb\s+left\s+join\s+public\.customers/i,
+  "Renewal report customer enrichment should run only on paginated rows.",
+);
+assert.doesNotMatch(
+  renewalReportMigration,
+  /from\s+public\.policies\s+p[\s\S]{0,1200}?left\s+join\s+public\.customers/i,
+  "Renewal report base scan should not enrich every policy with customer display data.",
+);
+assert.doesNotMatch(
+  renewalReportMigration,
+  /from\s+public\.policies\s+p[\s\S]{0,1200}?left\s+join\s+public\.vehicles/i,
+  "Renewal report base scan should not enrich every policy with vehicle display data.",
 );
 
 console.log("Commercial/reports prefetch regression passed.");
