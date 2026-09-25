@@ -268,7 +268,7 @@ export default function StartClaimScreen() {
                 <View style={styles.policyArcTwo} />
               </View>
               <View style={[styles.policyContent, styles.policyContentCompact]}>
-                <View style={[styles.policyIcon, styles.policyIconCompact]}>
+                <View style={[styles.policyIcon, styles.policyIconCompact, getInsurerLogoSource(selectedInsurer?.name) && styles.policyIconWhiteBadge]}>
                   <Image
                     accessible={false}
                     source={getInsurerLogoSource(selectedInsurer?.name) ?? (selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon)}
@@ -558,6 +558,7 @@ const styles = StyleSheet.create({
   policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   policyIconCompact: { width: 46, height: 46, borderRadius: 13, backgroundColor: 'transparent' },
+  policyIconWhiteBadge: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F2', padding: 4 },
   policyIconArtwork: { width: 43, height: 43 },
   policyIconArtworkCompact: { width: 34, height: 34 },
   selfTrackedPolicyIconArtwork: { tintColor: '#FFFFFF', opacity: 0.96 },
