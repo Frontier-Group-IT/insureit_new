@@ -268,7 +268,7 @@ export default function StartClaimScreen() {
                 <View style={styles.policyArcTwo} />
               </View>
               <View style={[styles.policyContent, styles.policyContentCompact]}>
-                <View style={[styles.policyIcon, styles.policyIconCompact, getInsurerLogoSource(selectedInsurer?.name) && styles.policyIconWhiteBadge]}>
+                <View style={[styles.policyIcon, styles.policyIconCompact, Boolean(getInsurerLogoSource(selectedInsurer?.name)) && styles.policyIconWhiteBadge]}>
                   <Image
                     accessible={false}
                     source={getInsurerLogoSource(selectedInsurer?.name) ?? (selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon)}
