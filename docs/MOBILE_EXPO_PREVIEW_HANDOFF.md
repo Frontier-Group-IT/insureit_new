@@ -1,3 +1,17 @@
+## 2026-09-25 — Customer My Claims compact card redesign
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-claims-card-compact-layout`.
+
+- Customer App → My Claims claim cards now show the linked vehicle manufacturer logo immediately before the existing claim/status icon when a catalog logo is available.
+- Removed manufacturer/model text from below the vehicle number.
+- Replaced the far-right chevron with the current claim milestone/status text; External Claims continue deriving this from External Claim milestones.
+- Consolidated the lower claim summary into one row: `Incident | Control No. | Claim No.`.
+- Removed the previous second row that separately showed Current Milestone/Status and Incident.
+- Existing claim navigation, filters, assistance state, expired-policy warning, and claim journey logic are unchanged.
+- Updated the Customer External Claim regression script to cover the new card contract.
+- No Supabase migration, API/RPC/RLS contract, native dependency/config, runtime-version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-25 — Customer Add Vehicle class-aware capacity validation
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-vehicle-capacity-validation`.

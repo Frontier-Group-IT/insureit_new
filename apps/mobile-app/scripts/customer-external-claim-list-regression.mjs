@@ -11,7 +11,11 @@ assert.match(source, /if \(SELF_MANAGED_MILESTONES\.every\(\(stage\) => complete
 assert.match(source, /if \(filter === 'Completed'\) return externalClaim \? externalCompleted : \['Closed', 'Settled', 'Claim Complete'\]\.includes\(claim\.current_status\);/, 'Completed filtering must use External milestones for External Claims.');
 assert.match(source, /if \(externalCompleted \|\| claim\.claim_service_mode !== 'self_managed'\) return false;/, 'Broker-managed External Claims must not inherit Internal customer Action Required state.');
 assert.match(source, /if \(externalClaim\) return !externalCompleted && claim\.current_status !== 'Rejected';/, 'Open filtering must close a fully completed External milestone journey.');
-assert.match(source, /externalClaim \? 'CURRENT MILESTONE' : 'CURRENT STATUS'/, 'External Claims must display milestone language in the claims list.');
-assert.match(source, /externalClaim \? externalCurrentMilestone\(claimMilestones\) : internalProjection\?\.substage/, 'External Claim cards must derive their visible status from External milestones.');
+assert.match(source, /getVehicleBrandLogoSource\(vehicle\?\.make\)/, 'Customer claim cards must resolve the linked vehicle manufacturer logo.');
+assert.match(source, /styles\.milestoneRightValue[\s\S]*externalClaim \? externalCurrentMilestone\(claimMilestones\) : internalProjection\?\.substage/, 'External Claim cards must show their current milestone at the far right of the top row.');
+assert.match(source, /<Text style=\{styles\.identityLabel\}>INCIDENT<\/Text>[\s\S]*<Text style=\{styles\.identityLabel\}>CONTROL NO\.<\/Text>[\s\S]*<Text style=\{styles\.identityLabel\}>CLAIM NO\.<\/Text>/, 'Claim cards must show Incident, Control No. and Claim No. in one summary row.');
+assert.doesNotMatch(source, /styles\.vehicleMeta/, 'Claim cards must not show manufacturer/model text below the vehicle number.');
+assert.doesNotMatch(source, /name="chevron-right"/, 'Claim cards must not show the old far-right chevron.');
+assert.doesNotMatch(source, /styles\.currentRow/, 'Claim cards must not render the removed second summary row.');
 
 console.log('Customer External Claim list regression passed.');
