@@ -269,16 +269,18 @@ export default function StartClaimScreen() {
               </View>
               <View style={[styles.policyContent, styles.policyContentCompact]}>
                 <View style={[styles.policyIcon, styles.policyIconCompact]}>
-                  <Image
-                    accessible={false}
-                    source={getInsurerLogoSource(selectedInsurer?.name) ?? (selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon)}
-                    style={[
-                      styles.policyIconArtwork,
-                      styles.policyIconArtworkCompact,
-                      !getInsurerLogoSource(selectedInsurer?.name) && selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
-                    ]}
-                    resizeMode="contain"
-                  />
+                  <View style={[styles.policyLogoSurface, Boolean(getInsurerLogoSource(selectedInsurer?.name)) && styles.policyIconWhiteBadge]}>
+                    <Image
+                      accessible={false}
+                      source={getInsurerLogoSource(selectedInsurer?.name) ?? (selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon)}
+                      style={[
+                        styles.policyIconArtwork,
+                        styles.policyIconArtworkCompact,
+                        !getInsurerLogoSource(selectedInsurer?.name) && selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
+                      ]}
+                      resizeMode="contain"
+                    />
+                  </View>
                 </View>
                 <View style={styles.policyCopy}>
                   <Text style={[styles.policyMode, styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
@@ -558,6 +560,8 @@ const styles = StyleSheet.create({
   policyContentCompact: { minHeight: 106, paddingHorizontal: 10, paddingVertical: 8, gap: 8 },
   policyIcon: { width: 60, height: 60, borderRadius: 17, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   policyIconCompact: { width: 46, height: 46, borderRadius: 13, backgroundColor: 'transparent' },
+  policyLogoSurface: { alignItems: 'center', justifyContent: 'center' },
+  policyIconWhiteBadge: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E1E8F2', padding: 4 },
   policyIconArtwork: { width: 43, height: 43 },
   policyIconArtworkCompact: { width: 34, height: 34 },
   selfTrackedPolicyIconArtwork: { tintColor: '#FFFFFF', opacity: 0.96 },
