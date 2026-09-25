@@ -47,6 +47,8 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-25 — Customer Profile remove Documents & KYC count badge:** branch `ui/customer-profile-remove-document-count-badge-v2`; rebuilt from latest `main` after PR #2415 developed merge conflicts. Removes the blue numeric document-count badge from the right side of Customer App → Profile → Documents & KYC while keeping the subtitle count, expand/collapse chevron, upload control, and document list unchanged. Added mobile regression coverage. No schema, RLS, API/RPC, native runtime, APK/AAB, or data change. **IMPLEMENTED; replacement PR/CI/merge/OTA pending. NO APK/AAB CREATED.**
+
 - **2026-09-25 — Partner Business faded header banner 0.1.0 compatibility delivery:** branch `fix/partner-business-faded-banner-0-1-0-compat`; updated the runtime-0.1.0 compatibility Business layout template to use 0.70 hero artwork opacity and updated the approved compatibility OTA workflow assertion accordingly. No native dependency/runtime/APK/AAB change. **IMPLEMENTED; PR/CI/merge/OTA pending. NO APK/AAB CREATED.**
 
 - **2026-09-25 — Partner Business faded header banner:** branch `fix/partner-business-faded-banner-0-1-0`; changed only `apps/partner-app/app/(tabs)/business.tsx` hero background artwork opacity from 1.0 to 0.70 so the Business header image is faded while foreground branding/controls remain unchanged. JS/TS UI-only; no schema/API/business logic/native dependency/runtime/APK/AAB change. **IMPLEMENTED; PR #2411 OPEN; CI/merge/OTA pending. NO APK/AAB CREATED.**
