@@ -101,7 +101,6 @@ export default function ClaimsScreen() {
   return (
     <Screen title="My Claims" showLogout showTitleHeader={false}>
       <View style={styles.pageHeader}>
-        <Text style={styles.eyebrow}>CLAIMS</Text>
         <Text style={styles.pageTitle}>My Claims</Text>
         <Text style={styles.pageSubtitle}>Track active claims, actions and completed settlements.</Text>
       </View>
@@ -153,8 +152,17 @@ export default function ClaimsScreen() {
                 <Text style={[styles.modeLabel, { color: externalClaim ? externalStatusColor : tone.accent }]}>{externalClaim ? externalModeLabel : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
               </View>
-              <View style={styles.milestoneRight}>
-                <Text style={[styles.milestoneRightValue, externalClaim && styles.externalMilestoneRightValue]} numberOfLines={2}>{externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.substage ?? claim.current_status}</Text>
+              <View style={[styles.milestoneRight, !externalClaim && (internalProjection?.substage ?? claim.current_status) === 'Initial documents required' && styles.milestoneRightWide]}>
+                <Text
+                  style={[
+                    styles.milestoneRightValue,
+                    externalClaim && styles.externalMilestoneRightValue,
+                    !externalClaim && (internalProjection?.substage ?? claim.current_status) === 'Initial documents required' && styles.internalInitialDocumentsRequired,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.substage ?? claim.current_status}
+                </Text>
               </View>
             </View>
 
@@ -167,7 +175,6 @@ export default function ClaimsScreen() {
             {assistanceRequested ? <View style={styles.assistancePill}><MaterialCommunityIcons name="clock-outline" size={13} color="#805700" /><Text style={styles.assistancePillText}>Assistance requested</Text></View> : null}
             {policyExpiredBeforeIncident ? <View style={styles.expiredClaimWarning}><MaterialCommunityIcons name="alert-octagon-outline" size={16} color="#B42318" /><Text style={styles.expiredClaimWarningText}>Policy expired before loss date</Text></View> : null}
 
-            {!externalClaim ? <Text style={styles.managedMeta} numberOfLines={1}>{[policy?.policy_no, insurer?.name].filter(Boolean).join(' · ')}</Text> : null}
           </Pressable>
         );
       })}
@@ -230,5 +237,5 @@ function policyExpiryEndOfDay(value?: string | null) { if (!value || !/^\d{4}-\d
 const styles = StyleSheet.create({
   pageHeader: { marginBottom: 12 }, eyebrow: { color: '#0A43A3', fontSize: 10, fontWeight: '900', letterSpacing: 1 }, pageTitle: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 }, pageSubtitle: { color: '#667085', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 3 },
   filterScroller: { maxHeight: 44, marginTop: 10, marginBottom: 12 }, filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 }, filterChip: { minHeight: 36, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: palette.slate, fontSize: 11, fontWeight: '900' }, filterTextActive: { color: '#FFFFFF' },
-  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 8 }, manufacturerIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF2', alignItems: 'center', justifyContent: 'center' }, manufacturerIconImage: { width: 26, height: 26 }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, milestoneRight: { maxWidth: 112, alignItems: 'flex-end', justifyContent: 'center' }, milestoneRightValue: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'right' }, externalMilestoneRightValue: { color: '#C43838' }, identityRow: { marginTop: 11, paddingTop: 10, paddingHorizontal: 9, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 8 }, identityBlock: { flex: 1, minWidth: 0 }, identityBlockCenter: { alignItems: 'center' }, identityBlockRight: { alignItems: 'flex-end' }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.3, fontWeight: '900', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
+  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 8 }, manufacturerIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF2', alignItems: 'center', justifyContent: 'center' }, manufacturerIconImage: { width: 26, height: 26 }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, milestoneRight: { maxWidth: 112, alignItems: 'flex-end', justifyContent: 'center' }, milestoneRightWide: { maxWidth: 156 }, milestoneRightValue: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'right' }, externalMilestoneRightValue: { color: '#C43838' }, internalInitialDocumentsRequired: { color: '#C43838' }, identityRow: { marginTop: 11, paddingTop: 10, paddingHorizontal: 9, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 8 }, identityBlock: { flex: 1, minWidth: 0 }, identityBlockCenter: { alignItems: 'center' }, identityBlockRight: { alignItems: 'flex-end' }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.3, fontWeight: '900', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
 });
