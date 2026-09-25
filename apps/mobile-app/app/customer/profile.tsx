@@ -79,7 +79,7 @@ export default function ProfileScreen() {
       try {
         const session = await getCurrentSession();
         if (!session?.user) return router.replace('/login');
-        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user), getOnboardingApplicationForUser(session.user.id)]);
+        const [nextProfile, nextCustomer, nextOnboarding] = await Promise.all([getProfile(session.user.id), ensureCustomerForUser(session.user), getOnboardingApplicationForUser(session.user.id, true)]);
         if (!active) return;
         const documentResult = nextCustomer
           ? await supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
@@ -113,8 +113,10 @@ export default function ProfileScreen() {
   const avatarLift = float.interpolate({ inputRange: [0, 1], outputRange: [0, -5] });
   const avatarScale = float.interpolate({ inputRange: [0, 1], outputRange: [1, 1.025] });
   const profileAddress = useMemo(() => formatAddress(customer), [customer]);
+  const kycCompleted = onboarding?.status === 'approved';
   const kycAwaitingReview = onboarding?.status === 'submitted' || onboarding?.status === 'under_review';
-  const kycRoute = onboarding?.partner_type === 'individual_proprietor' ? '/customer/kyc/individual' : '/customer/kyc/partner-type';
+  const kycStarted = Boolean(onboarding && !['not_started', 'approved', 'rejected', 'cancelled'].includes(onboarding.status));
+  const kycRoute = '/customer/kyc/individual' as const;
 
   async function saveContactDetails() {
     if (!profile || saving) return;
@@ -376,10 +378,10 @@ export default function ProfileScreen() {
             </Pressable>
           ) : null}
         </Animated.View>
-        <View style={styles.identity}><Text style={styles.customerName}>{displayName}</Text><Text style={styles.customerId}>{customer ? `Customer ID: ${customer.customer_code}` : 'Customer profile not activated'}</Text><View style={[styles.verified, !customer && styles.pendingVerification]}><MaterialCommunityIcons name={customer ? 'check-circle' : 'clock-outline'} size={15} color={customer ? '#69D6BA' : '#FFD27A'} /><Text style={[styles.verifiedText, !customer && styles.pendingVerificationText]}>{customer ? 'Verified account' : kycAwaitingReview ? 'KYC under review' : 'KYC pending'}</Text></View></View>
+        <View style={styles.identity}><Text style={styles.customerName}>{displayName}</Text><Text style={styles.customerId}>{customer ? `Customer ID: ${customer.customer_code}` : 'Customer profile not activated'}</Text><View style={[styles.verified, !kycCompleted && styles.pendingVerification]}><MaterialCommunityIcons name={kycCompleted ? 'check-circle' : 'clock-outline'} size={15} color={kycCompleted ? '#69D6BA' : '#FFD27A'} /><Text style={[styles.verifiedText, !kycCompleted && styles.pendingVerificationText]}>{kycCompleted ? 'Verified account' : kycAwaitingReview ? 'KYC under review' : 'KYC pending'}</Text></View></View>
       </View>
 
-      {!customer ? <Pressable accessibilityRole="button" disabled={kycAwaitingReview} onPress={() => router.push(kycRoute)} style={styles.kycActionCard}><View style={styles.kycActionIcon}><MaterialCommunityIcons name={kycAwaitingReview ? 'clipboard-clock-outline' : 'shield-account-outline'} size={25} color="#0A43A3" /></View><View style={styles.kycActionCopy}><Text style={styles.kycActionTitle}>{kycAwaitingReview ? 'Verification in progress' : onboarding?.partner_type ? 'Continue KYC' : 'Complete your KYC'}</Text><Text style={styles.kycActionText}>{kycAwaitingReview ? 'Your submitted details are being reviewed.' : 'Complete identity and business details to activate your customer profile.'}</Text></View>{kycAwaitingReview ? <View style={styles.reviewPill}><Text style={styles.reviewPillText}>Submitted</Text></View> : <MaterialCommunityIcons name="chevron-right" size={23} color="#0A43A3" />}</Pressable> : null}
+      {!kycCompleted ? <Pressable accessibilityRole="button" disabled={kycAwaitingReview} onPress={() => router.push(kycRoute)} style={styles.kycActionCard}><View style={styles.kycActionIcon}><MaterialCommunityIcons name={kycAwaitingReview ? 'clipboard-clock-outline' : 'shield-account-outline'} size={25} color="#0A43A3" /></View><View style={styles.kycActionCopy}><Text style={styles.kycActionTitle}>{kycAwaitingReview ? 'Verification in progress' : kycStarted ? 'Continue KYC' : 'Complete your KYC'}</Text><Text style={styles.kycActionText}>{kycAwaitingReview ? 'Your submitted details are being reviewed.' : 'Complete your individual KYC details and documents.'}</Text></View>{kycAwaitingReview ? <View style={styles.reviewPill}><Text style={styles.reviewPillText}>Submitted</Text></View> : <MaterialCommunityIcons name="chevron-right" size={23} color="#0A43A3" />}</Pressable> : null}
 
       <Section
         title="Contact Information"
