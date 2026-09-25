@@ -1,46 +1,251 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { AppShell } from "@/components/shell";
-import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
+import { ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { OperationsReportFilters } from "@/components/reports/operations-report-filters";
 import { requireCapability } from "@/lib/master-data-server";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
-import { emptyOperationsReport, loadOperationsReport, type OperationsFilters, type OperationsQuery, type OperationsReport } from "@/lib/reports/operations";
+import { emptyOperationsReport, loadOperationsReport, type OperationsFilters, type OperationsQuery, type OperationsReport, type OperationsRow } from "@/lib/reports/operations";
 
 export const dynamic="force-dynamic";
 export const revalidate=0;
 type Props={searchParams:Promise<OperationsQuery>};
+type ChartRow={key:string;label:string;missing:number;expired:number;due:number};
 
 export default async function OperationsReportsPage({searchParams}:Props){
- const profile=await requireCapability("view_reports"); const query=await searchParams;
- let payload:Awaited<ReturnType<typeof loadOperationsReport>>|null=null; let loadError=false;
- try{payload=await loadOperationsReport(profile,query)}catch(error){console.error("[reports] operations report failed",error instanceof Error?error.message:"unknown error");loadError=true}
- const report=payload?.report??emptyOperationsReport(); const filters=payload?.filters??fallbackFilters();
- const pages=Math.max(1,Math.ceil(report.register.total_count/Math.max(report.register.page_size,1)));
- const exportHref=href("/reports/export/operations",filters);
- return <AppShell title="Reports"><ReportPageShell
-  title="Motor vehicle operations & compliance"
-  loadError={loadError}
-  actions={<ReportExportLink href={exportHref}/>} 
-  controls={<OperationsReportFilters horizonDays={filters.horizonDays} exception={filters.exception}/>} 
- >
-  <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6"><Metric label="Vehicles" value={integer(report.summary.vehicle_count)}/><Metric label="AuthBridge verified" value={integer(report.summary.authbridge_verified_count)}/><Metric label="Missing compliance" value={integer(report.summary.vehicles_missing_compliance_data)}/><Metric label="Missing fields" value={integer(report.summary.missing_compliance_fields)}/><Metric label="Expired" value={integer(report.summary.expired_document_count)}/><Metric label={`Due ≤ ${filters.horizonDays}d`} value={integer(report.summary.due_document_count)}/></section>
-  <section className="portal-card overflow-hidden"><Header title="Vehicle compliance"/><ComplianceTable rows={report.compliance}/></section>
-  <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5"><Mini label="Customer documents" value={report.customer_documents.document_count}/><Mini label="Verified" value={report.customer_documents.verified_count}/><Mini label="Pending" value={report.customer_documents.pending_count}/><Mini label="Rejected" value={report.customer_documents.rejected_count}/><Mini label="Customers with exceptions" value={report.customer_documents.customers_with_exceptions}/></section>
-  <section className="portal-card overflow-hidden"><div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">Vehicle exception register</h2></div><Register rows={report.register.rows}/><Pagination page={report.register.page} pages={pages} total={report.register.total_count} prev={href("/reports/operations",filters,Math.max(1,report.register.page-1))} next={href("/reports/operations",filters,report.register.page+1)}/></section>
- </ReportPageShell></AppShell>
+  const profile=await requireCapability("view_reports");
+  const query=await searchParams;
+  let payload:Awaited<ReturnType<typeof loadOperationsReport>>|null=null;
+  let allRows:OperationsRow[]=[];
+  let loadError=false;
+
+  try{
+    payload=await loadOperationsReport(profile,{...query,page:"1"},200);
+    allRows=[...payload.report.register.rows];
+    const pages=Math.max(1,Math.ceil(payload.report.register.total_count/Math.max(payload.report.register.page_size,1)));
+    for(let page=2;page<=pages;page++){
+      const next=await loadOperationsReport(profile,{...query,page:String(page)},200);
+      allRows.push(...next.report.register.rows);
+    }
+  }catch(error){
+    console.error("[reports] operations report failed",error instanceof Error?error.message:"unknown error");
+    loadError=true;
+  }
+
+  const report=payload?.report??emptyOperationsReport();
+  const filters=payload?.filters??fallbackFilters();
+  const exportHref=href("/reports/export/operations",filters);
+  const complianceRows=buildComplianceRows(report);
+  const agingRows=buildExpiryAging(allRows);
+  const exceptionMix=buildExceptionMix(report,allRows);
+  const registerRows=allRows.slice(0,6);
+
+  return <AppShell title="Reports"><ReportPageShell
+    title="Operations"
+    loadError={loadError}
+    actions={<ReportExportLink href={exportHref}/>}
+    controls={<OperationsReportFilters horizonDays={filters.horizonDays} exception={filters.exception}/>}
+  >
+    <div className="operations-ref">
+      <section className="operations-kpis operations-card">
+        <Kpi label="Vehicles" value={integer(report.summary.vehicle_count)} note="Current vehicle portfolio"/>
+        <Kpi label="AuthBridge Verified" value={integer(report.summary.authbridge_verified_count)} note="Verified vehicle records"/>
+        <Kpi label="Missing Compliance" value={integer(report.summary.vehicles_missing_compliance_data)} note="Vehicles with missing data"/>
+        <Kpi label="Missing Fields" value={integer(report.summary.missing_compliance_fields)} note="Compliance fields missing"/>
+        <Kpi label="Expired Documents" value={integer(report.summary.expired_document_count)} note="Expired compliance documents"/>
+        <Kpi label={`Due ≤ ${filters.horizonDays}d`} value={integer(report.summary.due_document_count)} note="Due within selected horizon"/>
+      </section>
+
+      <section className="operations-grid">
+        <article className="operations-card">
+          <CardHead title="Compliance Status" action="By Document"/>
+          <TripleBarChart rows={complianceRows}/>
+        </article>
+        <article className="operations-card">
+          <CardHead title="Document Expiry Aging" action="By Expiry Bucket"/>
+          <AgingChart rows={agingRows}/>
+        </article>
+      </section>
+
+      <section className="operations-grid">
+        <article className="operations-card">
+          <CardHead title="Compliance by Document"/>
+          <ComplianceBars rows={report.compliance}/>
+        </article>
+        <article className="operations-card">
+          <CardHead title="Vehicle Exception Mix"/>
+          <ExceptionMix rows={exceptionMix}/>
+        </article>
+      </section>
+
+      <section className="operations-card">
+        <CardHead title="Customer Documents"/>
+        <div className="operations-customer-docs">
+          <MiniMetric label="Documents" value={report.customer_documents.document_count}/>
+          <MiniMetric label="Verified" value={report.customer_documents.verified_count}/>
+          <MiniMetric label="Pending" value={report.customer_documents.pending_count}/>
+          <MiniMetric label="Rejected" value={report.customer_documents.rejected_count}/>
+          <MiniMetric label="Customers with Exceptions" value={report.customer_documents.customers_with_exceptions}/>
+        </div>
+      </section>
+
+      <section className="operations-card operations-register">
+        <div className="operations-register-head">
+          <strong>Vehicle Exception Register</strong>
+          <Link className="operations-view-all" href={href("/reports/operations",filters)}>View all <ArrowRight className="h-3.5 w-3.5"/></Link>
+        </div>
+        <Register rows={registerRows}/>
+      </section>
+    </div>
+  </ReportPageShell></AppShell>;
 }
 
-function Metric({label,value}:{label:string;value:string}){return <article className="portal-card px-4 py-4"><p className="text-[8.5px] font-black uppercase tracking-[.08em] text-[#7c899b]">{label}</p><p className="mt-2 text-[21px] font-semibold text-[#14213c]">{value}</p></article>}
-function Mini({label,value}:{label:string;value:number}){return <article className="rounded-xl border border-[#e2e7ee] bg-white px-4 py-3"><p className="text-[8px] font-black uppercase tracking-[.08em] text-[#8994a5]">{label}</p><p className="mt-1.5 text-[18px] font-semibold text-[#1e2d49]">{integer(value)}</p></article>}
-function Header({title}:{title:string}){return <div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2></div>}
-function ComplianceTable({rows}:{rows:OperationsReport["compliance"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[760px]"><thead><tr className="bg-[#f8fafc] text-[8px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Document</th><th className="px-3 py-3 text-right">Vehicles</th><th className="px-3 py-3 text-right">Missing</th><th className="px-3 py-3 text-right">Expired</th><th className="px-3 py-3 text-right">Due</th><th className="px-5 py-3 text-right">Nearest expiry</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=><tr key={x.label} className="text-[10px]"><td className="px-5 py-3.5 font-semibold">{x.label}</td><td className="px-3 py-3.5 text-right">{integer(x.vehicle_count)}</td><td className="px-3 py-3.5 text-right font-bold text-amber-700">{integer(x.missing_count)}</td><td className="px-3 py-3.5 text-right font-bold text-red-700">{integer(x.expired_count)}</td><td className="px-3 py-3.5 text-right font-bold text-[#3559a8]">{integer(x.due_count)}</td><td className="px-5 py-3.5 text-right">{date(x.nearest_expiry_date)}</td></tr>)}</tbody></table></div>}
-function Register({rows}:{rows:OperationsReport["register"]["rows"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[1450px]"><thead><tr className="bg-[#f8fafc] text-[8px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Vehicle</th><th className="px-3 py-3 text-left">Customer</th><th className="px-3 py-3 text-left">Registration</th><th className="px-3 py-3 text-left">AuthBridge</th><th className="px-3 py-3 text-right">Fitness</th><th className="px-3 py-3 text-right">PUC</th><th className="px-3 py-3 text-right">Road tax</th><th className="px-3 py-3 text-right">National permit</th><th className="px-3 py-3 text-right">Local permit</th><th className="px-3 py-3 text-right">Missing</th><th className="px-3 py-3 text-right">Expired</th><th className="px-3 py-3 text-right">Due</th><th className="px-5 py-3 text-center">Open</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=>{const logo=getVehicleBrandLogo(x.make);return <tr key={x.id} className="text-[9.5px] hover:bg-[#fbfcfe]"><td className="px-5 py-3.5"><div className="flex items-center gap-2">{logo?<Image src={logo} alt={x.make?`${x.make} logo`:"Vehicle manufacturer"} width={24} height={24} className="max-h-6 max-w-6 shrink-0 object-contain"/>:null}<p className="font-bold">{x.vehicle_no}</p></div></td><td className="px-3 py-3.5"><p className="font-semibold">{x.customer_name}</p><p className="text-[8px] text-[#8490a1]">{x.customer_code}</p></td><td className="px-3 py-3.5">{label(x.registration_status)}</td><td className="px-3 py-3.5 font-semibold">{x.authbridge_verified?"Verified":"Unverified"}</td><td className="px-3 py-3.5 text-right">{date(x.fitness_expiry_date)}</td><td className="px-3 py-3.5 text-right">{date(x.puc_expiry_date)}</td><td className="px-3 py-3.5 text-right">{date(x.road_tax_expiry_date)}</td><td className="px-3 py-3.5 text-right">{date(x.national_permit_expiry_date)}</td><td className="px-3 py-3.5 text-right">{date(x.local_permit_expiry_date)}</td><td className="px-3 py-3.5 text-right font-bold text-amber-700">{integer(x.missing_compliance_count)}</td><td className="px-3 py-3.5 text-right font-bold text-red-700">{integer(x.expired_compliance_count)}</td><td className="px-3 py-3.5 text-right font-bold text-[#3559a8]">{integer(x.due_compliance_count)}</td><td className="px-5 py-3.5 text-center"><Link href={`/vehicles/${x.id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5"/></Link></td></tr>})}</tbody></table></div>}
-function Pagination({page,pages,total,prev,next}:{page:number;pages:number;total:number;prev:string;next:string}){return <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-3 text-[9.5px] text-[#738095]"><span>{integer(total)} records</span><div className="flex items-center gap-2"><Link href={page<=1?"#":prev} className={`rounded-md border px-3 py-1.5 font-bold ${page<=1?"pointer-events-none opacity-40":""}`}>Previous</Link><span>{page} / {pages}</span><Link href={page>=pages?"#":next} className={`rounded-md border px-3 py-1.5 font-bold ${page>=pages?"pointer-events-none opacity-40":""}`}>Next</Link></div></div>}
-function Empty(){return <ReportEmptyState/>}
-function href(path:string,f:OperationsFilters,page?:number){const s=new URLSearchParams();s.set("horizon",String(f.horizonDays));if(f.exception)s.set("exception",f.exception);if(page)s.set("page",String(page));return `${path}?${s}`}
-function date(v:string|null){if(!v)return "—";return new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(new Date(`${v}T00:00:00+05:30`))}
+function Kpi({label,value,note}:{label:string;value:string;note:string}){
+  return <article className="operations-kpi">
+    <div className="operations-kpi-label">{label}<Info className="h-3 w-3"/></div>
+    <div className="operations-kpi-value">{value}</div>
+    <div className="operations-kpi-note">{note}</div>
+  </article>;
+}
+
+function MiniMetric({label,value}:{label:string;value:number}){
+  return <div className="operations-mini"><span>{label}</span><strong>{integer(value)}</strong></div>;
+}
+
+function CardHead({title,action}:{title:string;action?:string}){
+  return <div className="operations-card-head"><h2>{title}</h2>{action?<button type="button">{action} <span>⌄</span></button>:null}</div>;
+}
+
+function TripleBarChart({rows}:{rows:ChartRow[]}){
+  const max=Math.max(...rows.flatMap(r=>[r.missing,r.expired,r.due]),1);
+  return <div className="operations-chart">
+    <div className="operations-legend"><span><i className="missing"/>Missing</span><span><i className="expired"/>Expired</span><span><i className="due"/>Due</span></div>
+    <div className="operations-chart-plot">
+      {rows.map(row=><div className="operations-chart-group" key={row.key}>
+        <div className="operations-chart-bars">
+          <Bar value={row.missing} max={max} tone="missing"/>
+          <Bar value={row.expired} max={max} tone="expired"/>
+          <Bar value={row.due} max={max} tone="due"/>
+        </div>
+        <span className="operations-chart-label">{row.label}</span>
+      </div>)}
+    </div>
+  </div>;
+}
+
+function AgingChart({rows}:{rows:Array<{key:string;label:string;count:number}>}){
+  const max=Math.max(...rows.map(r=>r.count),1);
+  return <div className="operations-chart">
+    <div className="operations-legend"><span><i className="due"/>Documents (Count)</span></div>
+    <div className="operations-chart-plot">
+      {rows.map(row=><div className="operations-chart-group" key={row.key}>
+        <div className="operations-chart-bars single"><Bar value={row.count} max={max} tone="due"/></div>
+        <span className="operations-chart-label">{row.label}</span>
+      </div>)}
+    </div>
+  </div>;
+}
+
+function Bar({value,max,tone}:{value:number;max:number;tone:"missing"|"expired"|"due"}){
+  return <div className="operations-bar-wrap"><strong>{integer(value)}</strong><i className={`operations-bar ${tone}`} style={{height:`${Math.max(value?5:0,(value/max)*100)}%`}}/></div>;
+}
+
+function ComplianceBars({rows}:{rows:OperationsReport["compliance"]}){
+  if(!rows.length)return <div className="operations-empty">No compliance data available</div>;
+  const max=Math.max(...rows.map(r=>r.vehicle_count),1);
+  return <div className="operations-status">
+    <div className="operations-status-head"><span>#</span><span>Document</span><span>Coverage / Exceptions</span><span>Missing</span></div>
+    {rows.map((row,index)=>{
+      const complete=Math.max(0,row.vehicle_count-row.missing_count);
+      return <div className="operations-status-row" key={row.label}>
+        <span>{index+1}</span>
+        <strong>{row.label}</strong>
+        <div className="operations-status-bar"><i style={{width:`${Math.max(4,(complete/max)*100)}%`}}/><em>{integer(complete)}</em></div>
+        <span>{integer(row.missing_count)}</span>
+      </div>;
+    })}
+  </div>;
+}
+
+function ExceptionMix({rows}:{rows:Array<{label:string;count:number}>}){
+  const max=Math.max(...rows.map(r=>r.count),1);
+  return <div className="operations-status">
+    <div className="operations-status-head"><span>#</span><span>Exception</span><span>Vehicles</span><span>Count</span></div>
+    {rows.map((row,index)=><div className="operations-status-row" key={row.label}>
+      <span>{index+1}</span>
+      <strong>{row.label}</strong>
+      <div className="operations-status-bar"><i style={{width:`${Math.max(4,(row.count/max)*100)}%`}}/><em>{integer(row.count)}</em></div>
+      <span>{integer(row.count)}</span>
+    </div>)}
+  </div>;
+}
+
+function Register({rows}:{rows:OperationsRow[]}){
+  if(!rows.length)return <div className="operations-empty">No vehicle exception records available</div>;
+  return <div className="operations-table-wrap"><table className="operations-table"><thead><tr><th>Vehicle</th><th>Customer</th><th>Exception</th><th>AuthBridge</th><th>Nearest Expiry</th><th>Make / Model</th><th/></tr></thead><tbody>
+    {rows.map(row=>{const logo=getVehicleBrandLogo(row.make);return <tr key={row.id}>
+      <td><span className="operations-vehicle">{logo?<Image src={logo} alt="" width={20} height={20}/>:null}<strong>{row.vehicle_no||"—"}</strong></span></td>
+      <td><strong>{row.customer_name}</strong><small>{row.customer_code}</small></td>
+      <td><span className={exceptionClass(row)}>{exceptionLabel(row)}</span></td>
+      <td>{row.authbridge_verified?"Verified":"Unverified"}</td>
+      <td>{date(row.nearest_expiry_date)}</td>
+      <td>{[row.make,row.model].filter(Boolean).join(" · ")||"—"}</td>
+      <td className="arrow"><Link href={`/vehicles/${row.id}`}><ArrowRight className="h-3.5 w-3.5"/></Link></td>
+    </tr>})}
+  </tbody></table></div>;
+}
+
+function buildComplianceRows(report:OperationsReport):ChartRow[]{
+  return report.compliance.map((row,index)=>({key:String(index),label:shortLabel(row.label),missing:row.missing_count,expired:row.expired_count,due:row.due_count}));
+}
+
+function buildExceptionMix(report:OperationsReport,rows:OperationsRow[]){
+  return [
+    {label:"Missing Compliance",count:report.summary.vehicles_missing_compliance_data},
+    {label:"Expired Documents",count:rows.filter(r=>r.expired_compliance_count>0).length},
+    {label:"Due in Horizon",count:rows.filter(r=>r.due_compliance_count>0).length},
+    {label:"AuthBridge Unverified",count:report.summary.authbridge_unverified_count},
+  ];
+}
+
+function buildExpiryAging(rows:OperationsRow[]){
+  const today=indiaStart();
+  const defs=[
+    {key:"expired",label:"Expired",min:Number.NEGATIVE_INFINITY,max:-1},
+    {key:"0_30",label:"0 – 30 days",min:0,max:30},
+    {key:"31_60",label:"31 – 60 days",min:31,max:60},
+    {key:"61_90",label:"61 – 90 days",min:61,max:90},
+    {key:"90_plus",label:"90+ days",min:91,max:Number.POSITIVE_INFINITY},
+  ];
+  const dates:string[]=[];
+  for(const row of rows){
+    for(const value of [row.fitness_expiry_date,row.puc_expiry_date,row.road_tax_expiry_date,row.national_permit_expiry_date,row.local_permit_expiry_date])if(value)dates.push(value);
+  }
+  return defs.map(def=>({key:def.key,label:def.label,count:dates.filter(value=>{const days=daysFrom(today,value);return days>=def.min&&days<=def.max}).length}));
+}
+
+function exceptionLabel(row:OperationsRow){
+  if(row.expired_compliance_count>0)return"Expired";
+  if(row.due_compliance_count>0)return"Due";
+  if(row.missing_compliance_count>0)return"Missing";
+  if(!row.authbridge_verified)return"Unverified";
+  return"Clear";
+}
+
+function exceptionClass(row:OperationsRow){
+  const label=exceptionLabel(row);
+  if(label==="Expired")return"operations-pill operations-pill-red";
+  if(label==="Due")return"operations-pill operations-pill-amber";
+  if(label==="Missing")return"operations-pill operations-pill-orange";
+  if(label==="Unverified")return"operations-pill operations-pill-blue";
+  return"operations-pill operations-pill-green";
+}
+
+function shortLabel(value:string){return value.replace("National permit","National").replace("Local permit","Local").replace("Road tax","Road Tax")}
+function indiaStart(){const ymd=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());return new Date(`${ymd}T00:00:00+05:30`)}
+function daysFrom(today:Date,value:string){const d=new Date(`${value}T00:00:00+05:30`);return Math.floor((d.getTime()-today.getTime())/86400000)}
+function href(path:string,f:OperationsFilters){const s=new URLSearchParams();s.set("horizon",String(f.horizonDays));if(f.exception)s.set("exception",f.exception);return `${path}?${s}`}
+function date(v:string|null){if(!v)return"—";const d=new Date(`${v}T00:00:00+05:30`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(d)}
 function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}
-function label(v:string|null){return v?v.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase()):"—"}
 function fallbackFilters():OperationsFilters{return{horizonDays:90,exception:null,page:1}}
