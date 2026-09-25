@@ -1,3 +1,16 @@
+## 2026-09-25 — Customer Start Claim manufacturer logo
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-start-claim-manufacturer-logo`.
+
+- Customer App → Start a Claim → Vehicle number selector now shows the selected vehicle's manufacturer logo on the left.
+- Uses the existing shared `getVehicleBrandLogoSource(vehicle.make)` catalog, so Tata, Toyota, Suzuki, Hero, Bajaj and other mapped makes reuse the same app-wide manufacturer assets.
+- If a manufacturer has no mapped asset, the existing linked-vehicle icon remains the fallback.
+- The selector's vehicle number and make/model text layout and selector behavior are otherwise unchanged.
+- Added `customer-start-claim-manufacturer-logo-regression.mjs` to mobile verification.
+- No database/schema/RLS/native dependency/runtime/APK/AAB change.
+
+---
+
 ## 2026-09-25 — Operations continuation prefill handoff fix
 
 **IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `fix/operations-continuation-prefill-handoff`.

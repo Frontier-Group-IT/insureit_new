@@ -10,7 +10,7 @@ import { findActiveManagedClaim } from '@/lib/active-managed-claim';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
-import { getInsurerLogoSource } from '@/lib/catalog-logos';
+import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -393,6 +393,7 @@ function ChoiceChip({ label, active, onPress }: { label: string; active: boolean
 }
 
 function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQueryChange, onSelect }: { vehicles: Vehicle[]; query: string; selectedVehicle: Vehicle | null; open: boolean; onToggle: () => void; onQueryChange: (value: string) => void; onSelect: (vehicle: Vehicle) => void }) {
+  const selectedVehicleBrandLogo = selectedVehicle ? getVehicleBrandLogoSource(selectedVehicle.make) : null;
   const anchorRef = useRef<View>(null);
   const searchInputRef = useRef<TextInput>(null);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -423,7 +424,14 @@ function VehicleDropdown({ vehicles, query, selectedVehicle, open, onToggle, onQ
   return <View style={styles.vehicleField}>
     <Text style={styles.sectionLabel}>Vehicle number *</Text>
     <View ref={anchorRef} collapsable={false} style={[styles.selectButton, open && styles.selectButtonHidden]}>
-      <Image accessible={false} source={vehicleNumberIcon} style={styles.selectVehicleArtwork} resizeMode="contain" />
+      <View style={styles.selectVehicleLogoShell}>
+        <Image
+          accessible={false}
+          source={selectedVehicleBrandLogo ?? vehicleNumberIcon}
+          style={[styles.selectVehicleArtwork, selectedVehicleBrandLogo ? styles.selectVehicleBrandArtwork : undefined]}
+          resizeMode="contain"
+        />
+      </View>
       <View pointerEvents="none" style={styles.selectCopy}><Text style={[styles.selectValue, !selectedVehicle && styles.placeholder]} numberOfLines={1}>{selectedVehicle ? selectedVehicle.vehicle_no : 'Select vehicle'}</Text>{selectedVehicle ? <Text style={styles.selectMeta} numberOfLines={1}>{[selectedVehicle.make, selectedVehicle.model].filter(Boolean).join(' · ') || selectedVehicle.vehicle_type}</Text> : null}</View>
       <Pressable
         accessibilityRole="button"
@@ -529,7 +537,9 @@ const styles = StyleSheet.create({
   selectButton: { minHeight: 64, borderRadius: 16, borderWidth: 1.5, borderColor: '#AFC9EC', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
   selectButtonOpen: { borderColor: '#3F7FE5', backgroundColor: '#FBFDFF', shadowColor: '#145ED7', shadowOpacity: 0.09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 2 },
   selectButtonHidden: { opacity: 0 },
-  selectVehicleArtwork: { width: 36, height: 36 },
+  selectVehicleLogoShell: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, borderColor: '#DFE8F3', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  selectVehicleArtwork: { width: 30, height: 30 },
+  selectVehicleBrandArtwork: { width: 32, height: 32 },
   selectCopy: { flex: 1, minWidth: 0 },
   selectValue: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
   selectMeta: { color: '#718198', fontSize: 10.5, fontWeight: '600', marginTop: 2 },

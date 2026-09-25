@@ -104,6 +104,9 @@ jobs:
       - name: Customer Start Claim OTA regression
         run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
 
+      - name: Customer Start Claim manufacturer logo regression
+        run: node apps/mobile-app/scripts/customer-start-claim-manufacturer-logo-regression.mjs
+
       - name: Customer internal claim video upload regression
         run: node apps/mobile-app/scripts/customer-internal-video-upload-regression.mjs
 
@@ -151,6 +154,7 @@ jobs:
             echo "- Add Vehicle regression: Policy Type is absent from the Customer Add Vehicle UI while vehicle-linked policy creation remains Motor-backed"
             echo "- Add Vehicle error popup regression: validation, RC lookup, vehicle save, policy save and policy-copy errors use the shared popup; insurer-missing uses Select Insurer"
             echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
+            echo "- Start Claim manufacturer logo regression: selected vehicle uses the shared manufacturer logo resolver with the existing vehicle icon as fallback"
             echo "- Internal claim video regression: multi-select, 3-way concurrency, verification/re-upload guards, 50 MB limit and resumable upload contract remain intact"
             echo "- Claim video source regression: internal and external Accident Video flows offer Camera and Gallery / File while reusing the installed expo-image-picker native capability"
             echo "- Verified voice-note regression: verified audio uses the green locked card, hides destructive actions and plays from the Voice note ready row"
