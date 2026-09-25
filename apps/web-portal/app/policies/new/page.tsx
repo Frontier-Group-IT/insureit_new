@@ -166,6 +166,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
         initialRegistrationMode={workflowRegistrationMode}
         authoritativeInitialValues={vehicleHandoff}
         preselectedCustomerId={preselectedCustomerId}
+        preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null}
         sourceIntakeId={sourceIntakeId}
         initialDraftRevision={initialDraftRevision}
       />
