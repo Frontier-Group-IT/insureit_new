@@ -111,6 +111,7 @@ type Props = {
   sourceIntakeId?: string | null;
   initialDraftRevision?: number | null;
   initialRegistrationMode?: VehicleRegistrationMode;
+  authoritativeInitialValues?: boolean;
 };
 
 type FormState = Required<Omit<PolicyUnifiedInitialValues, "policyId" | "policyCode">>;
@@ -161,7 +162,7 @@ function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
 const registrationValidationMessage="Enter a valid Registration number.";
 
-export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, nonMotorInitialValues, nonMotorExistingDocuments, nonMotorActivityStatus, commercialAccess = true, preselectedCustomerId = null, sourceIntakeId = null, initialDraftRevision = null, initialRegistrationMode = "registered" }: Props) {
+export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, nonMotorInitialValues, nonMotorExistingDocuments, nonMotorActivityStatus, commercialAccess = true, preselectedCustomerId = null, sourceIntakeId = null, initialDraftRevision = null, initialRegistrationMode = "registered", authoritativeInitialValues = false }: Props) {
   const router = useRouter();
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>(initialRegistrationMode);
@@ -215,6 +216,13 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
 
   useEffect(()=>{
     if(isEdit||sourceIntakeId||typeof window==="undefined"){draftHydrated.current=true;return;}
+    if(authoritativeInitialValues){
+      try{sessionStorage.removeItem(POLICY_DRAFT_KEY);}catch{}
+      setForm(stateFrom(initialValues));
+      setVehicleRegistrationMode(initialRegistrationMode);
+      draftHydrated.current=true;
+      return;
+    }
     try{
       const raw=sessionStorage.getItem(POLICY_DRAFT_KEY);
       if(raw){
@@ -231,12 +239,12 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
       }
     }catch{}
     draftHydrated.current=true;
-  },[isEdit,sourceIntakeId]);
+  },[authoritativeInitialValues,initialRegistrationMode,initialValues,isEdit,sourceIntakeId]);
   useEffect(()=>{
-    if(isEdit||sourceIntakeId||!draftHydrated.current||typeof window==="undefined")return;
+    if(isEdit||sourceIntakeId||authoritativeInitialValues||!draftHydrated.current||typeof window==="undefined")return;
     const timer=window.setTimeout(()=>{try{sessionStorage.setItem(POLICY_DRAFT_KEY,JSON.stringify({savedAt:Date.now(),form,registrationMode:vehicleRegistrationMode}));}catch{}},250);
     return()=>window.clearTimeout(timer);
-  },[form,vehicleRegistrationMode,isEdit,sourceIntakeId]);
+  },[form,vehicleRegistrationMode,isEdit,sourceIntakeId,authoritativeInitialValues]);
   useEffect(()=>{
     if(isEdit||!sourceIntakeId||!draftHydrated.current||isSubmitting)return;
     const timer=window.setTimeout(()=>{void savePolicyIntakeOnboardingDraft(sourceIntakeId,draftRevisionRef.current,{...form,registrationMode:vehicleRegistrationMode} as PolicyIntakeDraft).then(result=>{if(result.ok){draftRevisionRef.current=result.revision;setDraftSaveError(null);}else if(result.conflict){setDraftSaveError(result.error);}});},900);
