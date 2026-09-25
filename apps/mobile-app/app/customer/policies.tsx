@@ -139,7 +139,7 @@ export default function PoliciesScreen() {
               <PolicySummaryColumn
                 icon={insurerLogo}
                 fallbackIcon="shield-outline"
-                primaryValue={policy.policy_no}
+                primaryValue={policy.source === 'external' ? maskAlternateCharacters(policy.policy_no) : policy.policy_no}
                 secondaryValue={company?.name ?? '-'}
                 tertiaryValue={formatDate(policy.end_date)}
                 tertiaryDotColor={colors.accent}
@@ -238,6 +238,10 @@ function countForFilter(filter: PolicyFilter, policies: PolicyRow[]) {
     const tone = policyTone(policy.end_date);
     return filter === 'All' || (filter === 'Renewal Due' ? tone === 'due' : filter.toLowerCase() === tone);
   }).length;
+}
+
+function maskAlternateCharacters(value: string) {
+  return value.split('').map((char, index) => index % 2 === 1 ? '•' : char).join('');
 }
 
 function formatDate(value?: string | null) {
