@@ -235,6 +235,16 @@ jobs:
           grep -q 'Load More Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "claims-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "insureit-partner-official.png" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q 'Feather name="clock" size={17}' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroLogo: { width: 30, height: 35" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroBrandInsureit: { color: '#FFFFFF', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroBrandPartner: { color: '#F5AB2E', fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroIconButton: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "width: 33" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroAvatar: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "width: 35" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroTitle: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           if grep -q "heroArtworkWrap" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
             echo "Legacy Claims foreground artwork overlay is still present." >&2
             exit 1

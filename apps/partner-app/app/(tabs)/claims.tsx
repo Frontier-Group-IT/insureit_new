@@ -11,12 +11,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PartnerBanner } from '@/components/ui/partner-banner';
-import { PartnerIconButton } from '@/components/ui/partner-icon-button';
 import { PartnerStateView } from '@/components/ui/partner-state-view';
 import {
   getPartnerClaimSummary,
@@ -113,27 +112,34 @@ export default function ClaimsScreen() {
         <View style={styles.heroShade} />
 
         <View style={styles.heroTopRow}>
-          <Image
-            source={require('../../assets/insureit-partner-official.png')}
-            resizeMode="contain"
-            style={styles.officialLogo}
-            accessibilityLabel="InsureIT Partner"
-          />
-          <View style={styles.heroActions}>
-            <PartnerIconButton
-              icon="time-outline"
-              label="View recent activity"
-              onPress={() => router.push('/activity')}
+          <View style={styles.heroBrand}>
+            <Image
+              source={require('../../assets/insureit-partner-official.png')}
+              resizeMode="contain"
+              style={styles.heroLogo}
+              accessibilityLabel="InsureIT Partner"
             />
+            <View style={styles.heroBrandCopy} accessibilityLabel="insureit Partner">
+              <Text style={styles.heroBrandInsureit}>insureit</Text>
+              <Text style={styles.heroBrandPartner}>Partner</Text>
+            </View>
+          </View>
+          <View style={styles.heroActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="View recent activity"
+              onPress={() => router.push('/activity')}
+              style={({ pressed }) => [styles.heroIconButton, pressed && styles.pressed]}
+            >
+              <Feather name="clock" size={17} color="#FFFFFF" />
+            </Pressable>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open profile"
               onPress={() => router.push('/profile')}
-              style={({ pressed }) => [styles.avatarTouch, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.heroAvatar, pressed && styles.pressed]}
             >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{initials(name)}</Text>
-              </View>
+              <Text style={styles.heroAvatarText}>{initials(name)}</Text>
             </Pressable>
           </View>
         </View>
@@ -495,47 +501,66 @@ const styles = StyleSheet.create({
   heroTopRow: {
     zIndex: 3,
     position: 'absolute',
-    top: 6,
-    left: 16,
-    right: 12,
-    minHeight: 48,
+    top: 30,
+    left: 15,
+    right: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  officialLogo: { width: 108, height: 42 },
-  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  avatarTouch: {
-    width: partnerTheme.control.minTouchTarget,
-    height: partnerTheme.control.minTouchTarget,
+  heroBrand: { flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '60%' },
+  heroLogo: { width: 30, height: 35, tintColor: '#FFFFFF' },
+  heroBrandCopy: { justifyContent: 'center' },
+  heroBrandInsureit: { color: '#FFFFFF', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroBrandPartner: { color: '#F5AB2E', fontSize: 14, lineHeight: 16, fontWeight: '800', letterSpacing: -0.08 },
+  heroActions: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  heroIconButton: {
+    width: 33,
+    height: 33,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(4,33,78,0.72)',
+    borderWidth: 1.25,
+    borderColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.24,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+  heroAvatar: {
+    width: 35,
+    height: 35,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: partnerTheme.colors.brandSoft,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.98)',
+    shadowColor: '#001B42',
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  avatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
-  heroCopy: { zIndex: 3, position: 'absolute', left: 18, top: 64, width: 148 },
+  heroAvatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
+  heroCopy: { zIndex: 3, position: 'absolute', left: 16, top: 78, width: 178 },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 20,
-    lineHeight: 25,
+    fontSize: 14,
+    lineHeight: 18,
     fontWeight: '700',
-    letterSpacing: -0.2,
-    textShadowColor: 'rgba(0,0,0,0.18)',
+    letterSpacing: -0.04,
+    textShadowColor: 'rgba(0,0,0,0.20)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
   },
   heroSubtitle: {
     marginTop: 1,
     color: '#FFFFFF',
-    fontSize: 10.5,
-    lineHeight: 13,
+    fontSize: 9,
+    lineHeight: 12,
     fontWeight: '500',
     textShadowColor: 'rgba(0,0,0,0.15)',
     textShadowOffset: { width: 0, height: 1 },
