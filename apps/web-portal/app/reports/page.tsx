@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewMix, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
+import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
 import { OverviewSectionSelect } from "@/components/reports/overview-section-select";
 import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
@@ -112,31 +113,27 @@ export default async function ReportsOverviewPage({ searchParams }: Props) {
 
   return (
     <AppShell title="Reports">
-      <style>{`.reports-nav-shell{display:none!important}`}</style>
-      <div className="reports-v2-page reports-overview-reference report-page-shell mx-auto max-w-[1560px] pb-8">
-        <header className="ov-topbar">
-          <div className="ov-heading">
-            <h1>Reports</h1>
-            <span>Updated {indiaTime()}</span>
+      <div className="reports-v2-page reports-overview-reference reports-reference-shell report-page-shell mx-auto max-w-[1560px] pb-8">
+        <header className="reports-reference-header" aria-label="Reports">
+          <div className="reports-reference-topbar">
+            <div className="reports-reference-left">
+              <div className="reports-reference-heading"><h1>Reports</h1></div>
+              <ReportWorkspaceNavigation />
+            </div>
+            <div className="reports-reference-toolbar">
+              <ReportsOverviewToolbar
+                activePeriod={period.period}
+                activeBusiness={business.key}
+                activeTrend={trendPeriod.period}
+                activeMix={mix}
+                fromDate={period.fromDate}
+                toDate={period.toDate}
+                today={period.today}
+                exportHref={pack ? managementPackExportHref(period, business) : "/reports"}
+              />
+            </div>
           </div>
-          <ReportsOverviewToolbar
-            activePeriod={period.period}
-            activeBusiness={business.key}
-            activeTrend={trendPeriod.period}
-            activeMix={mix}
-            fromDate={period.fromDate}
-            toDate={period.toDate}
-            today={period.today}
-            exportHref={pack ? managementPackExportHref(period, business) : "/reports"}
-          />
         </header>
-
-        <nav className="ov-tabs" aria-label="Report workspaces">
-          <Link prefetch={false} href="/reports" className="ov-tab ov-tab--active">Overview</Link>
-          <Link prefetch={false} href="/reports/business" className="ov-tab">Business</Link>
-          <Link prefetch={false} href="/reports/renewals" className="ov-tab">Portfolio</Link>
-          <Link prefetch={false} href="/reports/operations" className="ov-tab">Operations</Link>
-        </nav>
 
         {loadError || !pack ? (
           <section className="ov-card px-5 py-10 text-center text-[11px] font-semibold text-[#b42318]">Reporting service unavailable</section>
@@ -383,9 +380,6 @@ function friendlyStatus(status: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function indiaTime() {
-  return new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date());
-}
 function money(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
 }
