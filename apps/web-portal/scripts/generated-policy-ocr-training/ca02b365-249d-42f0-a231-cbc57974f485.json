@@ -1,0 +1,59 @@
+{
+  "parser_id": "national_motor_v1",
+  "ground_truth": {
+    "section_02": {
+      "vehicle_make": "Hero",
+      "vehicle_class": "TWP",
+      "vehicle_model": "HF DELUX",
+      "vehicle_capacity": "2",
+      "vehicle_rto_name": "JAIPUR",
+      "vehicle_fuel_type": "Petrol",
+      "vehicle_rto_state": "RAJASTHAN",
+      "vehicle_engine_number": "SYNENGINE54DB662CB857",
+      "vehicle_chassis_number": "SYNCHASSIS54DB662CB857",
+      "vehicle_manufacturing_year": 2026,
+      "vehicle_registration_number": null,
+      "vehicle_registration_status": "registration_pending"
+    },
+    "section_03": {
+      "idv": 61677,
+      "cpa_opted": false,
+      "od_premium": 103,
+      "tp_premium": 3851,
+      "valid_from": "2026-07-23",
+      "valid_upto": "2027-07-22",
+      "cpa_premium": 0,
+      "printed_gst": 711.72,
+      "insurer_name": "National Insurance Company Limited",
+      "policy_number": "SYN-54DB662CB857",
+      "policy_product": "Package",
+      "printed_net_premium": 3954,
+      "printed_gross_premium": 4665.72
+    }
+  },
+  "parser_version": "national_motor_v1.1.0+layout-national_twp_bundled-v5",
+  "schema_version": "policy_ocr_training_candidate_v2",
+  "evidence_labels": {
+    "idv": "IDV / Sum Insured · Page 1",
+    "cpa_opted": "Owner-driver CPA · Page 1",
+    "tax_amount": "GST / Tax · Page 1",
+    "tp_premium": "Policy Product · Page 2",
+    "cpa_premium": "Owner-driver CPA · Page 1",
+    "insurer_name": "Insurer Header · Page 1",
+    "vehicle_make": "Vehicle Make · Page 1",
+    "gross_premium": "Gross / Total Payable · Page 1",
+    "policy_number": "Policy Number · Page 1",
+    "total_premium": "Net Premium · Page 8",
+    "vehicle_class": "Vehicle Class · Page 1",
+    "vehicle_model": "Vehicle Model · Page 4",
+    "policy_product": "Policy Product · Page 1",
+    "policy_end_date": "Valid upto · Page 1",
+    "vehicle_capacity": "Vehicle Capacity · Page 4",
+    "policy_start_date": "Policy Period · Page 1",
+    "vehicle_fuel_type": "Vehicle Class · Page 1",
+    "vehicle_engine_number": "Chassis Number · Page 1",
+    "vehicle_chassis_number": "Chassis Number · Page 1",
+    "vehicle_manufacturing_year": "Manufacturing Year · Page 4",
+    "vehicle_registration_status": "Vehicle Registration Status · Page 1"
+  }
+}
