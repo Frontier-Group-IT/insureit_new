@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ReportRegisterEnhancer } from "@/components/reports/report-register-enhancer";
 import { ReportFilterSubmitGuard } from "@/components/reports/report-query-shortcuts";
 import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
+import { ReportToolbarPortal } from "@/components/reports/report-toolbar-portal";
 
 export const reportInputClass = "h-9 w-full rounded-md border border-[#d9e0e8] bg-white px-2.5 text-[11px] font-semibold text-[#344054] outline-none transition focus:border-[#7692b6] focus:ring-2 focus:ring-[#e9f0f7]";
 
@@ -17,6 +18,7 @@ export function ReportPageShell({
   className = "",
   headerClassName = "",
   controlsClassName = "",
+  persistentHeader = false,
 }: {
   title: string;
   titleAccessory?: ReactNode;
@@ -27,7 +29,27 @@ export function ReportPageShell({
   className?: string;
   headerClassName?: string;
   controlsClassName?: string;
+  persistentHeader?: boolean;
 }) {
+  if (persistentHeader) {
+    return (
+      <>
+        <ReportFilterSubmitGuard />
+        <ReportRegisterEnhancer />
+        {controls || actions ? (
+          <ReportToolbarPortal>
+            <>
+              {controls ? <div className={`reports-reference-filter-area ${controlsClassName}`}>{controls}</div> : null}
+              {actions ? <div className="reports-reference-actions report-header-actions">{actions}</div> : null}
+            </>
+          </ReportToolbarPortal>
+        ) : null}
+        {loadError ? <ReportErrorBanner /> : null}
+        <div className={`reports-reference-content ${className}`}>{children}</div>
+      </>
+    );
+  }
+
   return (
     <div className={`reports-reference-shell report-page-shell mx-auto max-w-[1560px] pb-8 ${className}`}>
       <ReportFilterSubmitGuard />
