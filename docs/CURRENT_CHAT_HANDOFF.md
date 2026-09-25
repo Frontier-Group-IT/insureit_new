@@ -10,6 +10,7 @@
 - Existing normal policy draft-resume behavior remains unchanged when the page is opened without the vehicle handoff parameters.
 - Regression coverage added to `vehicle-policy-intake-resume-regression.mjs`.
 - No schema, migration, RLS, API contract, or mobile/native change.
+- Branch refreshed with latest `main` before final PR verification/merge.
 
 ## 2026-09-25 — Customer App catalog logo fix
 
