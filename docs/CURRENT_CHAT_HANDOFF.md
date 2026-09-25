@@ -1,6 +1,6 @@
 ## 2026-09-25 — Customer App Add Vehicle error popup UX
 
-- Branch: `fix/customer-add-vehicle-error-popups`.
+- Branch: `fix/customer-add-vehicle-error-popups-ci`; replacement validation PR: **#2406** (supersedes #2402 after the initial mobile typecheck failure was repaired).
 - Customer App → Add Vehicle no longer renders the general inline red error banner.
 - Validation errors, RC lookup failures, duplicate-vehicle errors, vehicle-save errors, policy-save errors and policy-copy upload/size errors use one compact modal.
 - Missing insurer popup is exactly: **Insurer not selected** / **Please select the insurer first to save the policy details.** with **Cancel** and **Select Insurer** actions; Select Insurer opens the insurer selector.
