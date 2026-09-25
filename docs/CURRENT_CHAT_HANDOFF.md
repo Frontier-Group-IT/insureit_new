@@ -1,3 +1,15 @@
+## 2026-09-25 — Customer App default initials avatar
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-profile-initials-avatar`.
+
+- Customer App → Profile now shows a navy circular initials avatar when the customer has not uploaded a profile photo.
+- Initials use the first character of the first name and the first character of the last name, so `Ragini Gupta` displays `RG`.
+- The existing lower-right camera action remains unchanged and an uploaded profile photo still replaces the initials avatar.
+- No schema, migration, RLS, native dependency/config, runtime-version, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
+---
+
 ## 2026-09-25 — Customer App profile photo picker
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `feature/customer-profile-photo-picker`.
