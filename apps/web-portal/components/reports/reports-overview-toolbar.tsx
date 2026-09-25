@@ -174,7 +174,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
                   role="menuitem"
                   onClick={() => applyPeriod(option.value)}
                   className={`flex w-full items-center rounded-md px-3 py-2 text-left text-[11px] font-semibold transition hover:bg-[#f1f5fb] ${
-                    option.value === activePeriod ? "bg-[#eef4fb] text-[#174b82]" : "text-[#344862]"
+                    option.value === activePeriod ? "bg-[#f7f8fa] text-[#344862]" : "text-[#344862]"
                   }`}
                 >
                   {option.label}
@@ -259,7 +259,7 @@ export function ReportsOverviewToolbar({ activePeriod, activeBusiness, activeTre
                   role="menuitem"
                   onClick={() => applyBusiness(option.value)}
                   className={`flex w-full items-center rounded-md px-3 py-2 text-left text-[11px] font-semibold transition hover:bg-[#f1f5fb] ${
-                    option.value === activeBusiness ? "bg-[#eef4fb] text-[#174b82]" : "text-[#344862]"
+                    option.value === activeBusiness ? "bg-[#f7f8fa] text-[#344862]" : "text-[#344862]"
                   }`}
                 >
                   {option.label}
