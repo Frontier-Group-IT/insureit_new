@@ -38,10 +38,10 @@ export function ReportPageShell({
         <ReportRegisterEnhancer />
         {controls || actions ? (
           <ReportToolbarPortal>
-            <div className={`reports-reference-toolbar ${controlsClassName}`}>
-              {controls ? <div className="reports-reference-filter-area">{controls}</div> : null}
+            <>
+              {controls ? <div className={`reports-reference-filter-area ${controlsClassName}`}>{controls}</div> : null}
               {actions ? <div className="reports-reference-actions report-header-actions">{actions}</div> : null}
-            </div>
+            </>
           </ReportToolbarPortal>
         ) : null}
         {loadError ? <ReportErrorBanner /> : null}
