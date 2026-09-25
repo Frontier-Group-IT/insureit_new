@@ -12,7 +12,7 @@ const financeReportMigration = await readFile(
 
 for (const file of [
   "../app/policies/commercial-review/commercial-review-client.tsx",
-  "../app/reports/page.tsx",
+  "../app/reports/(workspace)/page.tsx",
   "../app/accounts/other-recon/page.tsx",
   "../components/reports/report-navigation.tsx",
 ]) {
