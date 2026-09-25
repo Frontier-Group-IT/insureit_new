@@ -1,3 +1,13 @@
+## 2026-09-25 — Customer Policies external policy-number masking
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-external-policy-number-mask`.
+
+- Customer App → Policies now masks the displayed policy number only for `EXTERNAL POLICY` cards using the existing alternate-character pattern: every second character is replaced with `•` (for example, `PTAS376326` → `P•A•3•6•2•`).
+- Internal/SIBL policy numbers remain unchanged.
+- The stored policy number, search matching, policy detail routing, database records, API/RPC/schema/RLS, and business logic are unchanged.
+- JavaScript/React Native presentation-only change; no native/runtime/app configuration, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-24 — Customer Bajaj insurer icon render fix
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-bajaj-insurer-icon`.
