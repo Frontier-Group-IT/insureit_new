@@ -1,3 +1,16 @@
+## 2026-09-25 — Operations continuation prefill handoff fix
+
+**IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `fix/operations-continuation-prefill-handoff`.
+
+- Customer → Add Vehicle now explicitly reloads the `customer_id` handoff record, guarantees it is present at the top of the customer options, and preselects that saved customer even if the general customer list is stale or reordered.
+- Vehicle → Add Policy now treats `customer_id + vehicle_id` as authoritative handoff state.
+- The saved customer and vehicle are loaded server-side and passed as initial policy values together with the existing vehicle ID.
+- Policy handoff mode clears/bypasses the normal sessionStorage policy draft so stale/blank draft values cannot overwrite the freshly fetched vehicle/customer values.
+- Policy onboarding now starts with the handed-off saved vehicle selected, avoiding accidental duplicate-vehicle resolution during the continuation flow.
+- Existing normal policy draft-resume behavior remains unchanged when the page is opened without the vehicle handoff parameters.
+- Regression coverage added to `vehicle-policy-intake-resume-regression.mjs`.
+- No schema, migration, RLS, API contract, or mobile/native change.
+
 ## 2026-09-25 — Customer App catalog logo fix
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-catalog-logo-mapping`.
