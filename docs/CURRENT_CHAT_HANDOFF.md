@@ -1,3 +1,15 @@
+## 2026-09-25 — Customer Profile remove Documents & KYC count badge (rebuilt from latest main)
+
+- Branch: `ui/customer-profile-remove-document-count-badge-v2`.
+- PR #2415 passed both canonical checks but became unmergeable because newer `main` introduced merge conflicts; this branch rebuilds the same UI-only change from the latest `main`.
+- Removed the blue numeric badge from the right side of **Documents & KYC** on Customer App → Profile.
+- The subtitle document count, expand/collapse chevron, upload control, and document list remain unchanged.
+- Added `customer-profile-document-count-badge-regression.mjs` to `Verify mobile app`.
+- No schema, RLS, API/RPC, native runtime, APK/AAB, or data change.
+- **IMPLEMENTED; replacement PR/CI/merge/OTA pending.**
+
+---
+
 ## 2026-09-25 — Customer My Claims card cleanup
 
 - Branch: `ui/customer-claims-remove-second-icon`.
