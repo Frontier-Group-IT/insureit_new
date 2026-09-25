@@ -152,7 +152,6 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
 
   return (
     <AppShell title="Add Policy">
-      {vehicleHandoff ? <script dangerouslySetInnerHTML={{ __html: 'try{sessionStorage.removeItem("insureit:policy-onboarding:draft:v2")}catch{}' }} /> : null}
       <PolicyRemarksActionStyle />
       <PolicyOnboardingProductGuard />
       <PolicyCommercialShell
@@ -165,6 +164,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
         commercialAccess={commercialAccess}
         initialValues={workflowInitialValues}
         initialRegistrationMode={workflowRegistrationMode}
+        authoritativeInitialValues={vehicleHandoff}
         preselectedCustomerId={preselectedCustomerId}
         sourceIntakeId={sourceIntakeId}
         initialDraftRevision={initialDraftRevision}
