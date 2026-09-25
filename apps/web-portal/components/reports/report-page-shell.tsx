@@ -35,10 +35,12 @@ export function ReportPageShell({
 
       <header className={`reports-reference-header ${headerClassName}`} aria-label={title}>
         <div className="reports-reference-topbar">
-          <div className="reports-reference-heading">
-            <h1>Reports</h1>
-            <span>Updated {indiaTime()}</span>
-            {titleAccessory ? <span className="reports-reference-title-accessory">{titleAccessory}</span> : null}
+          <div className="reports-reference-left">
+            <div className="reports-reference-heading">
+              <h1>Reports</h1>
+              {titleAccessory ? <span className="reports-reference-title-accessory">{titleAccessory}</span> : null}
+            </div>
+            <ReportWorkspaceNavigation />
           </div>
 
           {controls || actions ? (
@@ -48,23 +50,12 @@ export function ReportPageShell({
             </div>
           ) : null}
         </div>
-
-        <ReportWorkspaceNavigation />
       </header>
 
       {loadError ? <ReportErrorBanner /> : null}
       <div className="reports-reference-content">{children}</div>
     </div>
   );
-}
-
-function indiaTime() {
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(new Date());
 }
 
 export function ReportFilterField({ label, children }: { label: string; children: ReactNode }) {
