@@ -1,3 +1,17 @@
+## 2026-09-25 — Reports All Business neutral custom dropdown
+
+- Branch: `fix/reports-business-neutral-custom-dropdown`.
+- Replaced the native top-level **All Business** `<select>` in `ReportCompactFilters` with a custom dropdown/menu so Chrome/Windows can no longer paint the selected item with the native blue background.
+- The closed control remains white/neutral.
+- The selected open-menu row uses neutral light gray; hover and keyboard focus also use neutral styling.
+- Choices remain exactly **All Business | Motor | Non Motor**.
+- Existing `applyBusiness()` behavior is preserved: URL query updates, category reset outside Non Motor, and report page reset behavior are unchanged.
+- Because Business and Portfolio use the shared `ReportCompactFilters` top-level business selector, the visual correction is shared across those report pages.
+- No report data, calculations, export, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, or native runtime changes.
+- **IMPLEMENTED ON BRANCH; replacement PR pending after rebase; not merged; not deployed.**
+
+---
+
 ## 2026-09-25 — Reports dropdown neutral selected/focus state
 
 - Branch: `fix/reports-neutral-dropdown-selection`.
