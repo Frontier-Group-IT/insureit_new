@@ -50,6 +50,10 @@ assert(uiFeedback.includes("document.body"));
 const vehiclePage=read("app/vehicles/new/page.tsx");
 assert(vehiclePage.includes("/customers/new?partner_type=individual_proprietor&return_to=vehicle"));
 assert(vehiclePage.includes('"manage_customers"'));
+assert(vehiclePage.includes("handoffCustomerResult"));
+assert(vehiclePage.includes('.eq("id", params.customer_id).maybeSingle<CustomerOption>()'));
+assert(vehiclePage.includes("handoffCustomer?.id ?? params.customer_id ?? null"));
+assert(vehiclePage.includes("customer.id !== handoffCustomer?.id"));
 
 const customerForm=read("app/customers/customer-onboarding-form.tsx");
 assert(customerForm.includes("CUSTOMER CREATED"));
@@ -143,6 +147,15 @@ const policyForm=read("components/policy-unified-form.tsx");
 assert(policyForm.includes("Save &amp; Return to Intake"));
 assert(policyForm.includes("savePolicyIntakeOnboardingDraft"));
 assert(policyForm.includes("draftRevisionRef"));
+assert(policyForm.includes("authoritativeInitialValues"));
+assert(policyForm.includes("sessionStorage.removeItem(POLICY_DRAFT_KEY)"));
+assert(policyForm.includes("if(isEdit||sourceIntakeId||authoritativeInitialValues||!draftHydrated.current"));
+assert(policyForm.includes("useState<string|null>(preselectedVehicleId)"));
+
+const policyPage=read("app/policies/new/page.tsx");
+assert(policyPage.includes("authoritativeInitialValues={vehicleHandoff}"));
+assert(policyPage.includes("preselectedVehicleId={vehicleHandoff ? params.vehicle_id ?? null : null}"));
+assert(!policyPage.includes('dangerouslySetInnerHTML={{ __html: \'try{sessionStorage.removeItem("insureit:policy-onboarding:draft:v2")}catch{}\' }}'));
 
 const policyActions=read("app/policies/policy-onboarding-actions.ts");
 assert(policyActions.includes("finalize_policy_intake_motor_v1"));
