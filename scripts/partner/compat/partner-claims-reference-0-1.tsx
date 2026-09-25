@@ -146,7 +146,6 @@ export default function ClaimsScreen() {
 
         <View style={styles.heroCopy}>
           <Text style={styles.heroTitle}>Claims</Text>
-          <Text style={styles.heroSubtitle}>Support. Settle. Keep{'\\n'}Your Business Moving.</Text>
         </View>
 
       </View>
@@ -545,7 +544,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   heroAvatarText: { color: partnerTheme.colors.brandStrong, ...partnerTheme.typography.label },
-  heroCopy: { zIndex: 3, position: 'absolute', left: 16, top: 78, width: 178 },
+  heroCopy: { zIndex: 3, position: 'absolute', left: 16, bottom: 22, width: 178 },
   heroTitle: {
     color: '#FFFFFF',
     fontSize: 14,
@@ -556,17 +555,6 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  heroSubtitle: {
-    marginTop: 1,
-    color: '#FFFFFF',
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0,0,0,0.15)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-
   body: { marginTop: -13, paddingHorizontal: 10, zIndex: 5 },
   searchShell: {
     height: 40,
