@@ -1,0 +1,45 @@
+name: Prepare mobile SDK55 Observe dependencies
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/prepare-mobile-observe-deps.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Upgrade customer app to SDK 55 and install Observe
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install expo@^55.0.0 --workspace apps/mobile-app --no-audit --no-fund
+          cd apps/mobile-app
+          npx expo install --fix
+          npx expo install expo-observe
+          cd ../..
+          npm install --package-lock-only --no-audit --no-fund
+      - name: Check dependency health
+        working-directory: apps/mobile-app
+        run: npx expo-doctor
+      - name: Stage dependency result
+        shell: bash
+        run: |
+          mkdir -p observe-deps
+          cp apps/mobile-app/package.json observe-deps/mobile-package.json
+          cp package-lock.json observe-deps/package-lock.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-sdk55-observe-dependencies
+          path: observe-deps
+          retention-days: 2
