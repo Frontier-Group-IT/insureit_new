@@ -1,3 +1,18 @@
+## 2026-09-25 — Customer external claim compact reference summary
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-external-claim-reference-summary`.
+
+- Customer App external/self-tracked claim stages now share the compact reference-style blue identity section.
+- Top row: compact stage icon + milestone name on the left, Control No. on the far right.
+- Bottom row is a single compact two-column layout: vehicle block on the left and policy block on the right.
+- Vehicle block uses the linked manufacturer catalog logo when available, then vehicle number as the primary line and make/model below it.
+- Policy block uses the insurer catalog logo when available, then policy number as the primary line and insurer name below it.
+- Removed the taller two-row-per-column presentation and Vehicle:/Policy: text labels from this external-claim identity section.
+- Applies through the shared native external-claim identity card across Spot Intimation, Spot Status and remaining self-tracked external claim stages.
+- Added a dedicated mobile CI regression and workflow hook for the compact reference contract.
+- No Supabase/schema/RLS/API/native dependency/runtime/APK/AAB change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-25 — Customer My Claims compact card redesign
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-claims-card-compact-layout`.
