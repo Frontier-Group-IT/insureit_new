@@ -1,14 +1,14 @@
 ## 2026-09-25 — Reports dropdown neutral selected/focus state
 
 - Branch: `fix/reports-neutral-dropdown-selection`.
-- PR: #2395.
+- PR: #2397 (replacement for #2395 after rebase onto latest main).
 - Operations header dropdowns now use a report-scoped neutral select class so the global purple `select:focus` treatment does not create a blue/purple highlight around **All vehicles** or the Horizon selector.
 - Shared report period/horizon dropdowns use the same neutral focus treatment.
 - Native selected options are styled white/light gray where supported by the browser.
 - Reports Overview custom Period and Business dropdown menus now use a neutral light-gray selected row instead of the previous pale-blue selected row.
 - Active Reports navigation tab underlines remain blue; navigation state styling is unchanged.
 - Dropdown choices, query parameters, routing, filtering, calculations, export behavior, report data, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, and native runtime are unchanged.
-- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+- PR #2397 passed canonical `Verify web portal` workflow #4642, including regressions, typecheck, lint, and production build.\n- Merge commit: `b7da00d17f02c776d17050d59afabd76c5fb4628`.\n- **MERGED; production deployment not verified in this step.**
 
 ---
 
