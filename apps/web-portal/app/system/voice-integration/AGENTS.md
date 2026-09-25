@@ -54,7 +54,7 @@ Every material provider/API/campaign/telephony/webhook/CRM/reconciliation trial 
 
 ## Current production authority model
 
-AI voice calling actions are IT-Super-User-only. Partner users may view normalized AI status/results but must not receive a call-start action or an API path that can reach Sarvam. All future Partner self-service is deferred until separately approved. The production Voice Integration page should remain compact and operations-oriented; experimental diagnostics belong on dedicated diagnostic routes/docs.
+AI voice calling actions are IT-Super-User-only. Partner users may view normalized AI status/results but must not receive a call-start action or an API path that can reach Sarvam. All future Partner self-service is deferred until separately approved. The production Voice Integration page should remain compact and operations-oriented; experimental diagnostics belong on dedicated diagnostic routes/docs. Normal readiness/safety state must not be rendered as large dashboard cards: keep provider/campaign/window/webhook/DND readiness in one compact production strip, expose only the currently valid Pause or Resume action prominently, and place rare controls such as connection test, refresh, calling-window edit and diagnostics behind a compact overflow control. Avoid duplicate campaign-summary/status sections when the same state is already visible in the health strip.
 
 
 ## External Renewal RC enrichment rule
