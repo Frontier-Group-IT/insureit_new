@@ -34,7 +34,7 @@ export default function GroupKycScreen() {
           getProfile(session.user.id),
           ensureCustomerOnboardingForPartner(session.user, 'group'),
         ]);
-        if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/group/under-review');
+        if (nextApplication.status === 'submitted' || nextApplication.status === 'under_review') return router.replace('/customer/home');
         if (nextApplication.partner_type !== 'group') {
           if (active) setError('Your Group KYC could not be opened. Go back and choose the partner type again.');
           return;
@@ -127,8 +127,8 @@ export default function GroupKycScreen() {
       </ScrollView>
       <View style={styles.footer}>{error ? <View style={styles.errorBox}><MaterialCommunityIcons name="alert-circle-outline" size={18} color="#B42318" /><Text style={styles.errorText}>{error}</Text></View> : null}<Pressable accessibilityRole="button" disabled={submitting} onPress={submit} style={[styles.submitButton, submitting && styles.submitDisabled]}>{submitting ? <ActivityIndicator color="#FFFFFF" /> : <><Text style={styles.submitText}>Submit Group KYC</Text><MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" /></>}</Pressable></View>
       </KeyboardAvoidingView>
-      <Modal visible={successVisible} transparent animationType="fade" onRequestClose={() => router.replace('/customer/group/under-review')}>
-        <View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>KYC submitted</Text><Text style={styles.modalText}>Your Group details have been submitted for verification. You can now explore the Group dashboard.</Text><Pressable onPress={() => router.replace('/customer/group/under-review')} style={styles.modalButton}><Text style={styles.modalButtonText}>Open Group dashboard</Text></Pressable></View></View>
+      <Modal visible={successVisible} transparent animationType="fade" onRequestClose={() => router.replace('/customer/home')}>
+        <View style={styles.modalBackdrop}><View style={styles.modalCard}><View style={styles.successIcon}><MaterialCommunityIcons name="check" size={34} color="#FFFFFF" /></View><Text style={styles.modalTitle}>KYC saved</Text><Text style={styles.modalText}>Your Group details have been saved directly to the same customer profile.</Text><Pressable onPress={() => router.replace('/customer/home')} style={styles.modalButton}><Text style={styles.modalButtonText}>Open dashboard</Text></Pressable></View></View>
       </Modal>
     </SafeAreaView>
   );
