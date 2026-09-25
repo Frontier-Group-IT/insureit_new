@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/shell";
+import { VoiceCampaignRetryRowButton } from "@/components/voice/voice-campaign-retry-row-button";
 import { VoiceCampaignRunner } from "@/components/voice/voice-campaign-runner";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
@@ -94,6 +95,7 @@ export default async function VoiceCampaignDetailPage({
               status={detail.campaign.status}
               autoEnrich={autoEnrich}
               pendingDispatch={detail.counts.pendingDispatch}
+              retryableFailures={detail.counts.retryable}
             />
           </div>
 
@@ -124,7 +126,7 @@ export default async function VoiceCampaignDetailPage({
           </div>
 
           <div className="mt-2 overflow-x-auto">
-            <table className="w-full min-w-[1050px] text-left text-[8.5px]">
+            <table className="w-full min-w-[1120px] text-left text-[8.5px]">
               <thead>
                 <tr className="border-y border-[#E7EDF4] bg-[#F8FAFC] text-[7px] font-black uppercase tracking-[.05em] text-[#7890AC]">
                   <th className="px-2.5 py-2">Row</th>
@@ -137,6 +139,7 @@ export default async function VoiceCampaignDetailPage({
                   <th className="px-2.5 py-2">API</th>
                   <th className="px-2.5 py-2">Call</th>
                   <th className="px-2.5 py-2">Outcome</th>
+                  <th className="px-2.5 py-2 text-right">Retry</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#EEF2F7]">
@@ -167,13 +170,29 @@ export default async function VoiceCampaignDetailPage({
                       />
                     </td>
                     <td className="px-2.5 py-2">
-                      <StateBadge
-                        value={row.attemptStatus || row.dispatch_status}
-                        good={row.dispatch_status === "queued"}
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <StateBadge
+                          value={row.latestConnectivityStatus || row.attemptStatus || row.dispatch_status}
+                          good={row.latestConnectivityStatus === "connected"}
+                        />
+                        {row.attemptCount > 1 ? (
+                          <span className="text-[7px] font-bold text-[#8798AC]">Attempt {row.attemptCount}</span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-2.5 py-2 text-[#61758F]">
                       {label(row.callDisposition)}
+                    </td>
+                    <td className="px-2.5 py-2 text-right">
+                      {row.retryable ? (
+                        <VoiceCampaignRetryRowButton
+                          campaignId={id}
+                          opportunityId={row.opportunityId}
+                          campaignStatus={detail.campaign.status}
+                        />
+                      ) : (
+                        <span className="text-[#B1BCC9]">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
