@@ -1,3 +1,28 @@
+## 2026-09-25 — Customer My Claims card cleanup
+
+- Branch: `ui/customer-claims-remove-second-icon`.
+- Removed the secondary claim/status icon rendered after the vehicle manufacturer logo on Customer App → My Claims cards.
+- External/self-tracked claim milestone text on the far right, including **Spot Status**, now renders in red.
+- Managed/internal claim milestone text keeps its existing navy color.
+- Added `customer-claims-card-icon-status-regression.mjs` and wired it into `Verify mobile app`.
+- No schema, RLS, API/RPC, native runtime, APK/AAB, or data change.
+- **IMPLEMENTED; PR/CI/merge/OTA pending.**
+
+---
+
+## 2026-09-25 — Hide Non-Motor policy product subline in Policy Register
+
+- Branch: `fix/non-motor-hide-policy-product-subline`.
+- PR: #2407 (replacement for #2405 after rebasing onto latest main).
+- In `apps/web-portal/app/policies/policy-workspace.tsx`, `PolicyTypeLink()` now suppresses the secondary `policy_product` line when `businessLine === "Non Motor"`.
+- Non-Motor rows now show only **Non Motor • <category>** in the Policy / Product column.
+- Motor rows keep the existing secondary product-line behavior.
+- The stored `policy_product` value is unchanged and remains available elsewhere.
+- Search/filter logic, insurer data/logo column, policy details, calculations, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, and native runtime are unchanged.
+- PR #2407 passed canonical `Verify web portal` workflow #4658, including regressions, typecheck, lint, and production build.\n- Merge commit: `4957d91520dd4e59d00bc1a485f83fa6972adb89`.\n- **MERGED; production deployment not verified in this step.**
+
+---
+
 ## 2026-09-25 — Customer App secure multi-account switching (final security hardening)
 
 **IMPLEMENTED, REVERSIBLE, NOT YET MERGED/PUBLISHED:** rebuilt from current `main`.

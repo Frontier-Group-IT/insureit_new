@@ -95,6 +95,9 @@ jobs:
       - name: Customer Add Vehicle Policy Type regression
         run: node apps/mobile-app/scripts/customer-add-vehicle-policy-type-regression.mjs
 
+      - name: Customer Add Vehicle error popup regression
+        run: node apps/mobile-app/scripts/customer-add-vehicle-error-popup-regression.mjs
+
       - name: Customer Start Claim OTA regression
         run: node apps/mobile-app/scripts/customer-start-claim-ota-regression.mjs
 
@@ -109,6 +112,9 @@ jobs:
 
       - name: Managed claim card parity regression
         run: node apps/mobile-app/scripts/managed-claim-card-parity-regression.mjs
+
+      - name: Customer claims card icon/status regression
+        run: node apps/mobile-app/scripts/customer-claims-card-icon-status-regression.mjs
 
       - name: Customer External Claim list identity regression
         run: node apps/mobile-app/scripts/customer-external-claim-list-regression.mjs
@@ -137,6 +143,7 @@ jobs:
             echo "- Customer loading regression: normal Customer page loading resolves through route-aware dashboard/list/detail/form skeletons while non-Customer loader behavior is preserved"
             echo "- Customer multi-account security regression: secrets stay in SecureStore, failed add-account sessions roll back, Home headers expose switching, offline sign-out preserves unrelated accounts, and startup retains per-user context"
             echo "- Add Vehicle regression: Policy Type is absent from the Customer Add Vehicle UI while vehicle-linked policy creation remains Motor-backed"
+            echo "- Add Vehicle error popup regression: validation, RC lookup, vehicle save, policy save and policy-copy errors use the shared popup; insurer-missing uses Select Insurer"
             echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
             echo "- Internal claim video regression: multi-select, 3-way concurrency, verification/re-upload guards, 50 MB limit and resumable upload contract remain intact"
             echo "- Claim video source regression: internal and external Accident Video flows offer Camera and Gallery / File while reusing the installed expo-image-picker native capability"
