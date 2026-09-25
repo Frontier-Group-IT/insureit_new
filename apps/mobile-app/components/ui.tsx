@@ -6,6 +6,7 @@ import { ActivityIndicator, Animated, Easing, Keyboard, KeyboardAvoidingView, Pl
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NotificationBell } from '@/components/realtime-notifications';
+import { CustomerAccountSwitcherButton } from '@/components/customer-account-switcher';
 import { BrandLogo } from '@/components/first-look';
 import { getCurrentSession, getProfile, isValidProfile, routeForRole } from '@/lib/auth';
 import { getSelectedCustomerContext, isPortfolioCustomerContext, type CustomerAccountContext } from '@/lib/customer-context';
@@ -136,9 +137,13 @@ export function Screen({ title, subtitle, children, showLogout = false, showTitl
           ) : (
             <NotificationBell />
           )}
-          <Pressable accessibilityRole="button" onPress={openProfile} style={[styles.avatar, customerHeader && styles.customerAvatar]}>
-            <Text style={styles.avatarText}>{profileInitial}</Text>
-          </Pressable>
+          {customerHeader ? (
+            <CustomerAccountSwitcherButton initial={profileInitial} />
+          ) : (
+            <Pressable accessibilityRole="button" onPress={openProfile} style={styles.avatar}>
+              <Text style={styles.avatarText}>{profileInitial}</Text>
+            </Pressable>
+          )}
         </View>
       ) : null}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
