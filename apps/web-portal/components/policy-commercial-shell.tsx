@@ -29,6 +29,7 @@ export type PolicyCommercialShellProps = {
   sourceIntakeId?: string | null;
   initialDraftRevision?: number | null;
   initialRegistrationMode?: "registered" | "unregistered";
+  authoritativeInitialValues?: boolean;
 };
 
 export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
@@ -50,6 +51,7 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         sourceIntakeId={props.sourceIntakeId}
         initialDraftRevision={props.initialDraftRevision}
         initialRegistrationMode={props.initialRegistrationMode}
+        authoritativeInitialValues={props.authoritativeInitialValues}
       />
       {props.mode === "create" ? <PolicyIntakeOnboardingContextCard /> : null}
     </PolicyCommercialAccessProvider>
