@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+
+- **2026-09-25 — Hide Non-Motor policy product subline in Policy Register:** branch `fix/non-motor-hide-policy-product-subline`; updated `PolicyTypeLink()` so Non Motor rows show only `Non Motor • <category>` in the Policy / Product column and no longer render the secondary `policy_product` line that can contain insurer-branded product text. Motor rows retain existing product-subline behavior. No stored policy data, insurer field, search/filter logic, calculations, schema, RLS, permissions, mobile, APK/AAB, or native-runtime changes. **IMPLEMENTED ON BRANCH; PR #2405 open; not merged/deployed.**
+
 - **2026-09-25 — Customer App secure multi-account switching (final security hardening):** rebuilt from current `main`; secure saved sessions remain in `expo-secure-store`; account switching verifies exact Supabase user identity; failed Add Account attempts restore the prior session; failed routing after a successful target `setSession` now also restores the exact prior authenticated session before leaving the old screen active; normal/offline sign-out and inactive-account startup remove only the affected identity; per-user customer context is preserved; standard Home, portfolio Home, and shared Customer headers expose the switcher. No schema/RLS/new native dependency/runtime/APK/AAB change. **IMPLEMENTED; FINAL CI PENDING. REVERSIBLE. NO APK/AAB CREATED.**
 
 - **2026-09-25 — Dashboard settled-claims width adjustment:** branch `ui/dashboard-settled-claims-width`; widens the Settled Claims half of the combined Open/Settled Claims KPI rail by changing the internal split from equal halves to 0.82fr / 1.18fr. No claims data, calculations, dashboard counts, schema, RLS, permissions, APK/AAB, or native-runtime changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**\n\n
