@@ -4,6 +4,7 @@ import { ArrowRight, Info } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { OperationsReportFilters } from "@/components/reports/operations-report-filters";
+import { OperationsInteractiveChart, type OperationsInteractiveVariant } from "@/components/reports/operations-interactive-chart";
 import { requireCapability } from "@/lib/master-data-server";
 import { getVehicleBrandLogo } from "@/lib/vehicle-brand-logo";
 import { emptyOperationsReport, loadOperationsReport, type OperationsFilters, type OperationsQuery, type OperationsReport, type OperationsRow } from "@/lib/reports/operations";
@@ -37,7 +38,9 @@ export default async function OperationsReportsPage({searchParams}:Props){
   const filters=payload?.filters??fallbackFilters();
   const exportHref=href("/reports/export/operations",filters);
   const complianceRows=buildComplianceRows(report);
+  const complianceByException=buildComplianceByException(report);
   const agingRows=buildExpiryAging(allRows);
+  const agingByDocument=buildExpiryByDocument(allRows);
   const exceptionMix=buildExceptionMix(report,allRows);
   const registerRows=allRows.slice(0,6);
 
@@ -59,12 +62,10 @@ export default async function OperationsReportsPage({searchParams}:Props){
 
       <section className="operations-grid">
         <article className="operations-card">
-          <CardHead title="Compliance Status" action="By Document"/>
-          <TripleBarChart rows={complianceRows}/>
+          <OperationsInteractiveChart title="Compliance Status" defaultId="document" variants={complianceChartVariants(complianceRows,complianceByException)}/>
         </article>
         <article className="operations-card">
-          <CardHead title="Document Expiry Aging" action="By Expiry Bucket"/>
-          <AgingChart rows={agingRows}/>
+          <OperationsInteractiveChart title="Document Expiry Aging" defaultId="aging" variants={agingChartVariants(agingRows,agingByDocument)}/>
         </article>
       </section>
 
@@ -117,40 +118,6 @@ function CardHead({title,action}:{title:string;action?:string}){
   return <div className="operations-card-head"><h2>{title}</h2>{action?<button type="button">{action} <span>⌄</span></button>:null}</div>;
 }
 
-function TripleBarChart({rows}:{rows:ChartRow[]}){
-  const max=Math.max(...rows.flatMap(r=>[r.missing,r.expired,r.due]),1);
-  return <div className="operations-chart">
-    <div className="operations-legend"><span><i className="missing"/>Missing</span><span><i className="expired"/>Expired</span><span><i className="due"/>Due</span></div>
-    <div className="operations-chart-plot">
-      {rows.map(row=><div className="operations-chart-group" key={row.key}>
-        <div className="operations-chart-bars">
-          <Bar value={row.missing} max={max} tone="missing"/>
-          <Bar value={row.expired} max={max} tone="expired"/>
-          <Bar value={row.due} max={max} tone="due"/>
-        </div>
-        <span className="operations-chart-label">{row.label}</span>
-      </div>)}
-    </div>
-  </div>;
-}
-
-function AgingChart({rows}:{rows:Array<{key:string;label:string;count:number}>}){
-  const max=Math.max(...rows.map(r=>r.count),1);
-  return <div className="operations-chart">
-    <div className="operations-legend"><span><i className="due"/>Documents (Count)</span></div>
-    <div className="operations-chart-plot">
-      {rows.map(row=><div className="operations-chart-group" key={row.key}>
-        <div className="operations-chart-bars single"><Bar value={row.count} max={max} tone="due"/></div>
-        <span className="operations-chart-label">{row.label}</span>
-      </div>)}
-    </div>
-  </div>;
-}
-
-function Bar({value,max,tone}:{value:number;max:number;tone:"missing"|"expired"|"due"}){
-  return <div className="operations-bar-wrap"><strong>{integer(value)}</strong><i className={`operations-bar ${tone}`} style={{height:`${Math.max(value?5:0,(value/max)*100)}%`}}/></div>;
-}
-
 function ComplianceBars({rows}:{rows:OperationsReport["compliance"]}){
   if(!rows.length)return <div className="operations-empty">No compliance data available</div>;
   const max=Math.max(...rows.map(r=>r.vehicle_count),1);
@@ -200,6 +167,17 @@ function buildComplianceRows(report:OperationsReport):ChartRow[]{
   return report.compliance.map((row,index)=>({key:String(index),label:shortLabel(row.label),missing:row.missing_count,expired:row.expired_count,due:row.due_count}));
 }
 
+function buildComplianceByException(report:OperationsReport){
+  const missing=report.compliance.reduce((sum,row)=>sum+row.missing_count,0);
+  const expired=report.compliance.reduce((sum,row)=>sum+row.expired_count,0);
+  const due=report.compliance.reduce((sum,row)=>sum+row.due_count,0);
+  return [
+    {key:"missing",label:"Missing",count:missing},
+    {key:"expired",label:"Expired",count:expired},
+    {key:"due",label:"Due",count:due},
+  ];
+}
+
 function buildExceptionMix(report:OperationsReport,rows:OperationsRow[]){
   return [
     {label:"Missing Compliance",count:report.summary.vehicles_missing_compliance_data},
@@ -223,6 +201,51 @@ function buildExpiryAging(rows:OperationsRow[]){
     for(const value of [row.fitness_expiry_date,row.puc_expiry_date,row.road_tax_expiry_date,row.national_permit_expiry_date,row.local_permit_expiry_date])if(value)dates.push(value);
   }
   return defs.map(def=>({key:def.key,label:def.label,count:dates.filter(value=>{const days=daysFrom(today,value);return days>=def.min&&days<=def.max}).length}));
+}
+
+function buildExpiryByDocument(rows:OperationsRow[]){
+  const defs=[
+    {key:"fitness",label:"Fitness",pick:(row:OperationsRow)=>row.fitness_expiry_date},
+    {key:"puc",label:"PUC",pick:(row:OperationsRow)=>row.puc_expiry_date},
+    {key:"road_tax",label:"Road Tax",pick:(row:OperationsRow)=>row.road_tax_expiry_date},
+    {key:"national",label:"National",pick:(row:OperationsRow)=>row.national_permit_expiry_date},
+    {key:"local",label:"Local",pick:(row:OperationsRow)=>row.local_permit_expiry_date},
+  ];
+  return defs.map(def=>({key:def.key,label:def.label,count:rows.filter(row=>Boolean(def.pick(row))).length}));
+}
+
+function complianceChartVariants(byDocument:ChartRow[],byException:Array<{key:string;label:string;count:number}>):OperationsInteractiveVariant[]{
+  return [
+    {
+      id:"document",
+      label:"By Document",
+      series:["Missing","Expired","Due"],
+      rows:byDocument.map(row=>({key:row.key,label:row.label,values:[row.missing,row.expired,row.due]})),
+    },
+    {
+      id:"exception",
+      label:"By Exception Type",
+      series:["Documents"],
+      rows:byException.map(row=>({key:row.key,label:row.label,values:[row.count]})),
+    },
+  ];
+}
+
+function agingChartVariants(byAging:Array<{key:string;label:string;count:number}>,byDocument:Array<{key:string;label:string;count:number}>):OperationsInteractiveVariant[]{
+  return [
+    {
+      id:"aging",
+      label:"By Expiry Bucket",
+      series:["Documents (Count)"],
+      rows:byAging.map(row=>({key:row.key,label:row.label,values:[row.count]})),
+    },
+    {
+      id:"document",
+      label:"By Document",
+      series:["Documents with Expiry Date"],
+      rows:byDocument.map(row=>({key:row.key,label:row.label,values:[row.count]})),
+    },
+  ];
 }
 
 function exceptionLabel(row:OperationsRow){
