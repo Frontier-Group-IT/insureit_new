@@ -137,6 +137,10 @@ export async function selectCustomerContext(customerId: string): Promise<Custome
   return selected;
 }
 
+export async function clearSelectedCustomerContextForUser(userId: string) {
+  await AsyncStorage.removeItem(`${selectedCustomerKeyPrefix}:${userId}`);
+}
+
 export async function clearSelectedCustomerContext() {
   const keys = await AsyncStorage.getAllKeys();
   const selectedKeys = keys.filter((key) => key === selectedCustomerKeyPrefix || key.startsWith(`${selectedCustomerKeyPrefix}:`));

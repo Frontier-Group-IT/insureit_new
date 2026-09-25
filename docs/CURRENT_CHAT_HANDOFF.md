@@ -1,3 +1,19 @@
+## 2026-09-25 — Customer App secure multi-account switching (final security hardening)
+
+**IMPLEMENTED, REVERSIBLE, NOT YET MERGED/PUBLISHED:** rebuilt from current `main`.
+
+- Saved secondary Supabase access/refresh tokens remain only in existing `expo-secure-store` with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`; AsyncStorage holds bounded non-secret account metadata only.
+- Every target switch verifies exact Supabase user identity.
+- Failed Add Account flows restore the previous customer session, or locally sign out the candidate when restoration is impossible.
+- New P1 fix: if the target session activates successfully but later routing/profile/membership/customer loading fails, the switcher restores the exact previous authenticated session before leaving the prior screen usable; if that restoration itself fails, it closes the switcher and returns to Login rather than allowing stale-screen/cross-account requests.
+- Normal/offline sign-out and inactive-account startup remove only the affected remembered account/context. Full reset remains the only all-account wipe.
+- Selected customer/group context remains keyed per authenticated user across cold start.
+- Switcher is present in standard Customer Home, portfolio Home, and shared Customer headers.
+- No schema/RLS migration, no new native package, no runtime-version change, and no APK/AAB.
+- Evidence state: **IMPLEMENTED; final CI pending.**
+
+---
+
 ## 2026-09-25 — Reports All Business neutral custom dropdown
 
 - Branch: `fix/reports-business-neutral-custom-dropdown`.

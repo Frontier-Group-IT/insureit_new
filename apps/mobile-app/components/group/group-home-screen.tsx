@@ -5,6 +5,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '@/components/first-look';
+import { CustomerAccountSwitcherButton } from '@/components/customer-account-switcher';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
 import { buildComplianceRenewals } from '@/lib/compliance-renewals';
@@ -100,7 +101,7 @@ export function GroupHomeScreen({ profile, groupContext = null, onboarding = nul
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
       <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
-      <Pressable onPress={() => router.push(underReview ? '/customer/profile' : '/customer/group/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(profile.full_name || groupName)}</Text></Pressable>
+      <CustomerAccountSwitcherButton initial={initialFor(profile.full_name || groupName)} />
     </View>
 
     <ScrollView style={styles.scroll} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>

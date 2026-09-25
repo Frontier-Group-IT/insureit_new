@@ -7,10 +7,10 @@ import {
   getOnboardingApplicationForUser,
   getProfile,
   isValidProfile,
-  resetLocalAuthState,
   routeForRole,
 } from './auth';
-import { clearSelectedCustomerContext } from './customer-context';
+import { clearSelectedCustomerContextForUser } from './customer-context';
+import { removeRememberedCustomerAccount } from './customer-account-vault';
 import { logStartupDiagnostic } from './startup-diagnostics';
 import { supabase } from './supabase';
 
@@ -23,10 +23,12 @@ export async function routeRestoredUser(user: User, router: Router) {
 
   if (profile?.role === 'customer' && !profile.is_active) {
     await logStartupDiagnostic('confirmed_inactive_customer', { reason: 'profile_inactive' });
+    await removeRememberedCustomerAccount(user.id).catch(() => undefined);
+    await clearSelectedCustomerContextForUser(user.id).catch(() => undefined);
     try {
       await supabase.auth.signOut({ scope: 'local' });
     } finally {
-      await resetLocalAuthState(router);
+      router.replace('/login');
     }
     throw new Error(inactiveCustomerMessage);
   }
@@ -37,7 +39,6 @@ export async function routeRestoredUser(user: User, router: Router) {
   }
 
   if (profile.role === 'customer') {
-    await clearSelectedCustomerContext();
     await claimPendingCustomerMemberships();
 
     const [customer, onboarding] = await Promise.all([

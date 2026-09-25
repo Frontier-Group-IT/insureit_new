@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Link, useRouter } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import type { Href } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -7,7 +7,9 @@ import { Animated, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { AuthExperience, SignupPromptCard } from '@/components/auth-experience';
 import { AuthGlassPanel, AuthStatusMessage, SecureActionButton } from '@/components/first-look';
 import { OtpDotsInput } from '@/components/otp-dots-input';
-import { getRestoredSession, routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
+import { getCurrentSession, getProfile, getRestoredSession, routeSignedInUser, sendPhoneOtp, verifyPhoneOtp } from '@/lib/auth';
+import { rememberCustomerAccount, removeRememberedCustomerAccount, switchToRememberedCustomerAccount } from '@/lib/customer-account-vault';
+import { supabase } from '@/lib/supabase';
 
 const countryCode = '+91';
 const termsHref = '/legal/terms-of-use' as Href;
@@ -15,6 +17,8 @@ const privacyHref = '/legal/privacy-policy' as Href;
 
 export default function LoginScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ addAccount?: string }>();
+  const addingAccount = params.addAccount === '1';
   const [mobile, setMobile] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -24,10 +28,17 @@ export default function LoginScreen() {
   const [restoringSession, setRestoringSession] = useState(true);
   const opacity = useRef(new Animated.Value(1)).current;
   const inputPulse = useRef(new Animated.Value(0)).current;
+  const previousCustomerUserId = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
     async function restoreExistingSession() {
+      if (addingAccount) {
+        const current = await getCurrentSession().catch(() => null);
+        previousCustomerUserId.current = current?.user?.id ?? null;
+        if (active) setRestoringSession(false);
+        return;
+      }
       try {
         const session = await getRestoredSession();
         if (!active || !session?.user) return;
@@ -42,7 +53,7 @@ export default function LoginScreen() {
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [addingAccount, router]);
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -97,14 +108,54 @@ export default function LoginScreen() {
       return;
     }
     setLoading(true);
+    let candidateSessionInstalled = false;
     try {
       const data = await verifyPhoneOtp(fullPhone, otp);
+      candidateSessionInstalled = Boolean(addingAccount && data.session);
       if (!data.user) {
-        setError('OTP verification did not return an active account.');
-        return;
+        throw new Error('OTP verification did not return an active account.');
       }
-      await routeSignedInUser(data.user, router);
+
+      if (addingAccount && data.session) {
+        const candidateProfile = await getProfile(data.user.id);
+        if (candidateProfile?.role !== 'customer' || !candidateProfile.is_active) {
+          throw new Error('Only an active Customer App account can be added here.');
+        }
+        await rememberCustomerAccount({
+          session: data.session,
+          displayName: candidateProfile.full_name,
+          phone: candidateProfile.phone ?? data.user.phone ?? null,
+        });
+      }
+
+      const profile = await routeSignedInUser(data.user, router);
+      if (!addingAccount && profile?.role === 'customer' && data.session) {
+        await rememberCustomerAccount({
+          session: data.session,
+          displayName: profile.full_name,
+          phone: profile.phone ?? data.user.phone ?? null,
+        });
+      }
     } catch (nextError) {
+      if (addingAccount && candidateSessionInstalled) {
+        const candidateUserId = (await getCurrentSession().catch(() => null))?.user?.id ?? null;
+        const previousUserId = previousCustomerUserId.current;
+        if (candidateUserId && candidateUserId !== previousUserId) {
+          await removeRememberedCustomerAccount(candidateUserId).catch(() => undefined);
+        }
+        let restored = false;
+        if (previousUserId) {
+          try {
+            await switchToRememberedCustomerAccount(previousUserId);
+            restored = true;
+          } catch {
+            restored = false;
+          }
+        }
+        if (!restored) {
+          await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+        }
+      }
       setError(phoneAuthErrorMessage(nextError, 'verify'));
     } finally {
       setLoading(false);

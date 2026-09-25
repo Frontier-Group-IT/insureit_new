@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppLoadingProvider } from '@/components/app-loading';
 import { SplashIntro } from '@/components/first-look';
 import { RealtimeNotificationProvider } from '@/components/realtime-notifications';
+import { syncRememberedCustomerSession } from '@/lib/customer-account-vault';
+import { supabase } from '@/lib/supabase';
 
 export const unstable_settings = { initialRouteName: 'index' };
 
@@ -29,6 +31,17 @@ function RootApplication() {
     const timer = setTimeout(() => setMinimumIntroComplete(true), 1100);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session || !['SIGNED_IN', 'TOKEN_REFRESHED', 'USER_UPDATED'].includes(event)) return;
+      void syncRememberedCustomerSession(session).catch((error) => {
+        console.warn('Saved customer session sync failed', error);
+      });
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+
 
   useEffect(() => {
     if (__DEV__ || !Updates.isEnabled || !isUpdatePending || updateReloadRequested.current) return;

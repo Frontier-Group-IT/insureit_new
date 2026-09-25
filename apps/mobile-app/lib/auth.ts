@@ -6,7 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import type { AppRole, Customer, CustomerOnboardingApplication, CustomerOnboardingDocument, Json, PartnerType, Profile } from './types';
 import { isSalesHierarchyRole, isStaffRole } from './roles';
-import { clearSelectedCustomerContext } from './customer-context';
+import { clearSelectedCustomerContext, clearSelectedCustomerContextForUser } from './customer-context';
+import { clearRememberedCustomerAccounts, isRememberedCustomerUser, listRememberedCustomerAccounts, removeRememberedCustomerAccount, switchToRememberedCustomerAccount } from './customer-account-vault';
 
 export const validRoles: AppRole[] = [
   'customer',
@@ -442,12 +443,43 @@ export async function signUp(email: string, password: string, fullName: string, 
 }
 
 export async function signOut(router: Router) {
+  const currentSession = await getCurrentSession().catch(() => null);
+  const currentUserId = currentSession?.user?.id ?? null;
+  const rememberedCustomer = currentUserId ? await isRememberedCustomerUser(currentUserId).catch(() => false) : false;
+
+  if (currentUserId && rememberedCustomer) {
+    await removeRememberedCustomerAccount(currentUserId);
+    await clearSelectedCustomerContextForUser(currentUserId);
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.warn('Customer account sign out failed; continuing with local account removal.', error);
+    }
+
+    const remaining = await listRememberedCustomerAccounts().catch(() => []);
+    for (const account of remaining) {
+      if (account.requiresReauth) continue;
+      try {
+        const restored = await switchToRememberedCustomerAccount(account.userId);
+        await routeSignedInUser(restored.user, router);
+        return;
+      } catch {
+        // Invalid saved account remains isolated; try another remembered account.
+      }
+    }
+
+    await clearSupabaseAuthKeys();
+    router.replace('/login');
+    return;
+  }
+
   try {
     await supabase.auth.signOut({ scope: 'local' });
   } catch (error) {
     console.warn('Local sign out failed; returning to login.', error);
   } finally {
-    await clearStoredAuthSession();
+    // Normal sign-out never destroys unrelated remembered Customer App accounts.
+    await clearSupabaseAuthKeys();
   }
   router.replace('/login');
 }
@@ -459,22 +491,32 @@ export async function resetLocalAuthState(router: Router) {
 
 async function clearStoredAuthSession() {
   try {
-    const keys = await AsyncStorage.getAllKeys();
-    const authKeys = keys.filter((key) => key.startsWith('sb-') || key.toLowerCase().includes('supabase'));
-    if (authKeys.length) await AsyncStorage.multiRemove(authKeys);
+    await clearSupabaseAuthKeys();
     await clearSelectedCustomerContext();
+    await clearRememberedCustomerAccounts();
   } catch (error) {
     console.warn('Stored auth cleanup failed', error);
   }
 }
 
+async function clearSupabaseAuthKeys() {
+  const keys = await AsyncStorage.getAllKeys();
+  const authKeys = keys.filter((key) => key.startsWith('sb-') || key.toLowerCase().includes('supabase'));
+  if (authKeys.length) await AsyncStorage.multiRemove(authKeys);
+}
+
 async function revokeLocalCustomerSession() {
+  const currentSession = await getCurrentSession().catch(() => null);
+  if (currentSession?.user) {
+    await removeRememberedCustomerAccount(currentSession.user.id);
+    await clearSelectedCustomerContextForUser(currentSession.user.id);
+  }
   try {
     await supabase.auth.signOut({ scope: 'local' });
   } catch (error) {
-    console.warn('Customer session sign out failed; clearing local auth state.', error);
+    console.warn('Customer session sign out failed; clearing current auth state.', error);
   } finally {
-    await clearStoredAuthSession();
+    await clearSupabaseAuthKeys();
   }
 }
 
@@ -505,7 +547,6 @@ export async function routeSignedInUser(user: User, router: Router, knownProfile
   }
 
   if (profile.role === 'customer') {
-    await clearSelectedCustomerContext();
     await claimPendingCustomerMemberships();
 
     if (!explicitSignupFlow) {

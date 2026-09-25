@@ -8,6 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg';
 
 import { BrandLogo } from '@/components/first-look';
+import { CustomerAccountSwitcherButton } from '@/components/customer-account-switcher';
 import { GroupHomeScreen } from '@/components/group/group-home-screen';
 import { NotificationBell } from '@/components/realtime-notifications';
 import { LoadingState, UniversalBottomTabs } from '@/components/ui';
@@ -184,7 +185,7 @@ export default function CustomerMockupHomeScreen() {
     <View style={styles.header}>
       <Pressable onPress={() => router.replace('/customer/home')} style={styles.brand}><BrandLogo width={132} inverse /></Pressable>
       <View style={styles.iconCircle}><NotificationBell color="#FFFFFF" /></View>
-      <Pressable onPress={() => router.push('/customer/profile')} style={styles.avatar}><Text style={styles.avatarText}>{initialFor(name)}</Text></Pressable>
+      <CustomerAccountSwitcherButton initial={initialFor(name)} />
     </View>
     <ScrollView
       style={styles.scroll}
