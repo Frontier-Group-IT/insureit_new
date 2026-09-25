@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedProfile } from "@/lib/auth";
+import { getServerAccessToken } from "@/lib/auth-server";
 import { lookupAuthbridgeRc, normalizeVehicleRegistrationNumber } from "@/lib/authbridge-rc-api";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
@@ -52,7 +53,8 @@ type CacheRow = {
 
 export async function POST(request: Request) {
   const authorization = request.headers.get("authorization") ?? "";
-  const accessToken = authorization.replace(/^Bearer\s+/i, "").trim();
+  const bearerAccessToken = authorization.replace(/^Bearer\s+/i, "").trim();
+  const accessToken = bearerAccessToken || (await getServerAccessToken()) || "";
   const auth = await getAuthenticatedProfile(accessToken);
 
   if (!auth.user || !auth.profile?.is_active) {
