@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Info } from "lucide-react";
+import { PortfolioInteractiveChart, type PortfolioChartVariant } from "@/components/reports/portfolio-interactive-chart";
 import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
@@ -15,6 +16,7 @@ export const revalidate=0;
 
 const HORIZONS=[{value:"30",label:"30 days"},{value:"60",label:"60 days"},{value:"90",label:"90 days"},{value:"180",label:"180 days"},{value:"365",label:"365 days"}] as const;
 type Props={searchParams:Promise<RenewalQuery&{register?:string}>};
+type ChartRow={key:string;label:string;count:number;amount:number;secondary:number};
 
 export default async function RenewalReportsPage({searchParams}:Props){
   const profile=await requireCapability("view_reports");
@@ -48,7 +50,11 @@ export default async function RenewalReportsPage({searchParams}:Props){
   const registerTab=query.register==="claims"?"claims":"renewals";
   const exportHref=href("/reports/export/renewals",filters);
   const renewalPipeline=buildRenewalPipeline(report);
+  const renewalByInsurer=buildRenewalByInsurer(report);
+  const renewalByRm=buildRenewalByRm(report);
   const claimsAging=buildClaimsAging(claimRows);
+  const claimsByStatus=buildClaimsByStatus(claimsReport);
+  const claimsByInsurer=buildClaimsByInsurer(claimsReport);
   const claimStatuses=buildClaimStatuses(claimsReport);
   const insurerExposure=buildInsurerExposure(report,claimsReport);
   const claimExposure=claimsReport.summary.estimated_loss;
@@ -93,23 +99,20 @@ export default async function RenewalReportsPage({searchParams}:Props){
 
       <section className="portfolio-grid portfolio-grid-top">
         <article className="portfolio-card">
-          <CardHead title="Renewal Pipeline" action="By Renewal Bucket"/>
-          <DualBarChart rows={renewalPipeline} primaryLabel="Policies (Count)" secondaryLabel="Premium at Risk (₹ L)" primaryKey="count" secondaryKey="amount"/>
+          <PortfolioInteractiveChart title="Renewal Pipeline" defaultId="bucket" variants={renewalChartVariants(renewalPipeline,renewalByInsurer,renewalByRm)}/>
         </article>
         <article className="portfolio-card">
-          <CardHead title="Claims Aging" action="By Aging Bucket"/>
-          <DualBarChart rows={claimsAging} primaryLabel="Claims (Count)" secondaryLabel="Exposure (₹ L)" primaryKey="count" secondaryKey="amount"/>
+          <PortfolioInteractiveChart title="Claims Aging" defaultId="aging" variants={claimsChartVariants(claimsAging,claimsByStatus,claimsByInsurer)}/>
         </article>
       </section>
 
       <section className="portfolio-grid portfolio-grid-bottom">
         <article className="portfolio-card">
-          <CardHead title="Claim Status"/>
+          <div className="portfolio-card-head"><h2>Claim Status</h2></div>
           <ClaimStatus rows={claimStatuses}/>
         </article>
         <article className="portfolio-card">
-          <CardHead title="Portfolio Exposure by Insurer" action="Top 5 Insurers"/>
-          <DualBarChart rows={insurerExposure} primaryLabel="Renewal at Risk (₹ L)" secondaryLabel="Claim Exposure (₹ L)" primaryKey="amount" secondaryKey="secondary"/>
+          <PortfolioInteractiveChart title="Portfolio Exposure by Insurer" defaultId="top5" variants={insurerExposureVariants(insurerExposure)}/>
         </article>
       </section>
 
@@ -133,31 +136,6 @@ function Kpi({label,value,note}:{label:string;value:string;note:string}){
     <div className="portfolio-kpi-value">{value}</div>
     <div className="portfolio-kpi-note">{note}</div>
   </article>;
-}
-
-function CardHead({title,action}:{title:string;action?:string}){
-  return <div className="portfolio-card-head"><h2>{title}</h2>{action?<button type="button">{action} <span>⌄</span></button>:null}</div>;
-}
-
-type ChartRow={key:string;label:string;count:number;amount:number;secondary:number};
-function DualBarChart({rows,primaryLabel,secondaryLabel,primaryKey,secondaryKey}:{rows:ChartRow[];primaryLabel:string;secondaryLabel:string;primaryKey:"count"|"amount";secondaryKey:"amount"|"secondary"}){
-  const primaryMax=Math.max(...rows.map(r=>r[primaryKey]),1);
-  const secondaryMax=Math.max(...rows.map(r=>r[secondaryKey]),1);
-  return <div className="portfolio-chart">
-    <div className="portfolio-legend"><span><i className="primary"/>{primaryLabel}</span><span><i className="secondary"/>{secondaryLabel}</span></div>
-    <div className="portfolio-chart-plot">
-      {rows.map(row=>{
-        const p=row[primaryKey],s=row[secondaryKey];
-        return <div className="portfolio-chart-group" key={row.key}>
-          <div className="portfolio-chart-bars">
-            <div className="portfolio-bar-wrap"><strong>{formatChartValue(p,primaryKey)}</strong><i className="portfolio-bar primary" style={{height:`${Math.max(p?5:0,(p/primaryMax)*100)}%`}}/></div>
-            <div className="portfolio-bar-wrap"><strong>{formatChartValue(s,secondaryKey)}</strong><i className="portfolio-bar secondary" style={{height:`${Math.max(s?5:0,(s/secondaryMax)*100)}%`}}/></div>
-          </div>
-          <span className="portfolio-chart-label">{row.label}</span>
-        </div>;
-      })}
-    </div>
-  </div>;
 }
 
 function ClaimStatus({rows}:{rows:Array<{status:string;count:number;share:number}>}){
@@ -222,6 +200,20 @@ function buildRenewalPipeline(report:RenewalReport):ChartRow[]{
   ];
 }
 
+function buildRenewalByInsurer(report:RenewalReport):ChartRow[]{
+  return report.insurers
+    .map((item,index)=>row(item.id??`insurer-${index}`,shortName(item.insurer_name),item.upcoming_policy_count,item.premium_at_risk))
+    .sort((a,b)=>b.amount-a.amount)
+    .slice(0,5);
+}
+
+function buildRenewalByRm(report:RenewalReport):ChartRow[]{
+  return report.rms
+    .map((item,index)=>row(`rm-${index}`,item.rm_name||"Unassigned",item.upcoming_policy_count,item.premium_at_risk))
+    .sort((a,b)=>b.amount-a.amount)
+    .slice(0,5);
+}
+
 function buildClaimsAging(rows:ClaimsRow[]):ChartRow[]{
   const defs=[
     {key:"0_7",label:"0 – 7 days",min:0,max:7},
@@ -236,6 +228,20 @@ function buildClaimsAging(rows:ClaimsRow[]):ChartRow[]{
   });
 }
 
+function buildClaimsByStatus(report:ClaimsReport):ChartRow[]{
+  return [...report.statuses]
+    .map((item,index)=>row(`status-${index}`,pretty(item.status),item.claim_count,item.estimated_loss))
+    .sort((a,b)=>b.count-a.count)
+    .slice(0,5);
+}
+
+function buildClaimsByInsurer(report:ClaimsReport):ChartRow[]{
+  return [...report.insurers]
+    .map((item,index)=>row(item.id??`claim-insurer-${index}`,shortName(item.insurer_name),item.claim_count,item.estimated_loss))
+    .sort((a,b)=>b.count-a.count)
+    .slice(0,5);
+}
+
 function buildClaimStatuses(report:ClaimsReport){
   const total=Math.max(report.statuses.reduce((sum,row)=>sum+row.claim_count,0),1);
   return [...report.statuses].sort((a,b)=>b.claim_count-a.claim_count).slice(0,5).map(x=>({status:x.status,count:x.claim_count,share:(x.claim_count/total)*100}));
@@ -245,11 +251,56 @@ function buildInsurerExposure(renewals:RenewalReport,claims:ClaimsReport):ChartR
   const map=new Map<string,{name:string;renewal:number;claims:number}>();
   for(const r of renewals.insurers){const key=r.insurer_name.trim().toLowerCase();map.set(key,{name:r.insurer_name||"Unassigned",renewal:r.premium_at_risk||0,claims:0});}
   for(const c of claims.insurers){const key=c.insurer_name.trim().toLowerCase();const current=map.get(key)??{name:c.insurer_name||"Unassigned",renewal:0,claims:0};current.claims+=c.estimated_loss||0;map.set(key,current);}
-  return [...map.entries()].map(([key,v])=>({key,label:shortName(v.name),count:0,amount:v.renewal/100000,secondary:v.claims/100000})).sort((a,b)=>(b.amount+b.secondary)-(a.amount+a.secondary)).slice(0,5);
+  return [...map.entries()].map(([key,v])=>({key,label:shortName(v.name),count:0,amount:v.renewal/100000,secondary:v.claims/100000})).sort((a,b)=>(b.amount+b.secondary)-(a.amount+a.secondary));
+}
+
+function renewalChartVariants(bucket:ChartRow[],insurer:ChartRow[],rm:ChartRow[]):PortfolioChartVariant[]{
+  return [
+    chartVariant("bucket","By Renewal Bucket",bucket,"Policies (Count)","Premium at Risk (₹ L)","count","number"),
+    chartVariant("insurer","By Insurer",insurer,"Policies (Count)","Premium at Risk (₹ L)","count","number"),
+    chartVariant("rm","By RM",rm,"Policies (Count)","Premium at Risk (₹ L)","count","number"),
+  ];
+}
+
+function claimsChartVariants(aging:ChartRow[],status:ChartRow[],insurer:ChartRow[]):PortfolioChartVariant[]{
+  return [
+    chartVariant("aging","By Aging Bucket",aging,"Claims (Count)","Exposure (₹ L)","count","number"),
+    chartVariant("status","By Claim Status",status,"Claims (Count)","Exposure (₹ L)","count","number"),
+    chartVariant("insurer","By Insurer",insurer,"Claims (Count)","Exposure (₹ L)","count","number"),
+  ];
+}
+
+function insurerExposureVariants(rows:ChartRow[]):PortfolioChartVariant[]{
+  return [
+    chartVariant("top5","Top 5 Insurers",rows.slice(0,5),"Renewal at Risk (₹ L)","Claim Exposure (₹ L)","number","number","amount","secondary"),
+    chartVariant("top10","Top 10 Insurers",rows.slice(0,10),"Renewal at Risk (₹ L)","Claim Exposure (₹ L)","number","number","amount","secondary"),
+    chartVariant("all","All Insurers",rows,"Renewal at Risk (₹ L)","Claim Exposure (₹ L)","number","number","amount","secondary"),
+  ];
+}
+
+function chartVariant(
+  id:string,
+  label:string,
+  rows:ChartRow[],
+  primaryLabel:string,
+  secondaryLabel:string,
+  primaryFormat:"count"|"number",
+  secondaryFormat:"count"|"number",
+  primaryKey:"count"|"amount"="count",
+  secondaryKey:"amount"|"secondary"="amount",
+):PortfolioChartVariant{
+  return {
+    id,
+    label,
+    primaryLabel,
+    secondaryLabel,
+    primaryFormat,
+    secondaryFormat,
+    rows:rows.map((item)=>({key:item.key,label:item.label,primary:item[primaryKey],secondary:item[secondaryKey]})),
+  };
 }
 
 function row(key:string,label:string,count:number,amount:number):ChartRow{return{key,label,count,amount:amount/100000,secondary:0}}
-function formatChartValue(value:number,key:"count"|"amount"|"secondary"){return key==="count"?integer(value):new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(value)}
 function compactMoney(v:number){const n=Math.abs(v||0);if(n>=1e7)return "₹"+new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(n/1e7)+"Cr";if(n>=1e5)return "₹"+new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(n/1e5)+"L";return currency(n)}
 function shortName(name:string){const cleaned=name.replace(/General Insurance Company Limited|Insurance Company Limited|General Insurance Co\. Limited|Limited/gi,"").trim();return cleaned.split(" ").slice(0,2).join(" ")||name}
 function pretty(value:string){return value.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())}

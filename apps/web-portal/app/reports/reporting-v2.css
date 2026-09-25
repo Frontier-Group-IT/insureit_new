@@ -1372,8 +1372,82 @@
   font-weight: 700;
 }
 
+.portfolio-grid .portfolio-card {
+  overflow: visible;
+}
+
+.portfolio-chart-select {
+  position: relative;
+  z-index: 12;
+}
+
+.portfolio-chart-select > button {
+  min-width: 118px;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.portfolio-chart-select > button:hover,
+.portfolio-chart-select > button[aria-expanded="true"] {
+  border-color: #aab9ca;
+  background: #f8fbff;
+  color: #234f7c;
+}
+
+.portfolio-chart-select > button svg {
+  width: 12px;
+  height: 12px;
+  transition: transform .15s ease;
+}
+
+.portfolio-chart-select > button svg.open {
+  transform: rotate(180deg);
+}
+
+.portfolio-chart-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 30;
+  min-width: 152px;
+  overflow: hidden;
+  border: 1px solid #d8e1eb;
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 0 10px 28px rgba(20, 40, 70, .14);
+}
+
+.portfolio-chart-menu > button {
+  display: flex;
+  width: 100%;
+  min-height: 30px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0 8px;
+  color: #53677f;
+  font-size: 8.7px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.portfolio-chart-menu > button:hover {
+  background: #f3f7fb;
+  color: #173f6c;
+}
+
+.portfolio-chart-menu > button.active {
+  background: #edf5fd;
+  color: #0e63b6;
+}
+
 .portfolio-chart {
   min-height: 190px;
+  overflow-x: auto;
   padding: 9px 12px 8px;
 }
 
@@ -1865,8 +1939,82 @@
   font-weight: 700;
 }
 
+.operations-grid .operations-card {
+  overflow: visible;
+}
+
+.operations-chart-select {
+  position: relative;
+  z-index: 12;
+}
+
+.operations-chart-select > button {
+  min-width: 118px;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.operations-chart-select > button:hover,
+.operations-chart-select > button[aria-expanded="true"] {
+  border-color: #aab9ca;
+  background: #f8fbff;
+  color: #234f7c;
+}
+
+.operations-chart-select > button svg {
+  width: 12px;
+  height: 12px;
+  transition: transform .15s ease;
+}
+
+.operations-chart-select > button svg.open {
+  transform: rotate(180deg);
+}
+
+.operations-chart-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  z-index: 30;
+  min-width: 154px;
+  overflow: hidden;
+  border: 1px solid #d8e1eb;
+  border-radius: 6px;
+  background: #fff;
+  padding: 4px;
+  box-shadow: 0 10px 28px rgba(20, 40, 70, .14);
+}
+
+.operations-chart-menu > button {
+  display: flex;
+  width: 100%;
+  min-height: 30px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0 8px;
+  color: #53677f;
+  font-size: 8.7px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.operations-chart-menu > button:hover {
+  background: #f3f7fb;
+  color: #173f6c;
+}
+
+.operations-chart-menu > button.active {
+  background: #edf5fd;
+  color: #0e63b6;
+}
+
 .operations-chart {
   min-height: 190px;
+  overflow-x: auto;
   padding: 9px 12px 8px;
 }
 
