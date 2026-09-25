@@ -26,9 +26,11 @@ export type PolicyCommercialShellProps = {
   nonMotorActivityStatus?: ReactNode;
   commercialAccess: boolean;
   preselectedCustomerId?: string | null;
+  preselectedVehicleId?: string | null;
   sourceIntakeId?: string | null;
   initialDraftRevision?: number | null;
   initialRegistrationMode?: "registered" | "unregistered";
+  authoritativeInitialValues?: boolean;
 };
 
 export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
@@ -47,9 +49,11 @@ export function PolicyCommercialShell(props: PolicyCommercialShellProps) {
         nonMotorActivityStatus={props.nonMotorActivityStatus}
         commercialAccess={props.commercialAccess}
         preselectedCustomerId={props.preselectedCustomerId}
+        preselectedVehicleId={props.preselectedVehicleId}
         sourceIntakeId={props.sourceIntakeId}
         initialDraftRevision={props.initialDraftRevision}
         initialRegistrationMode={props.initialRegistrationMode}
+        authoritativeInitialValues={props.authoritativeInitialValues}
       />
       {props.mode === "create" ? <PolicyIntakeOnboardingContextCard /> : null}
     </PolicyCommercialAccessProvider>

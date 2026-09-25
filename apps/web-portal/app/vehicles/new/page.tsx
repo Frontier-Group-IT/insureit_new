@@ -6,7 +6,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { requireAnyCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-type CustomerOption = { id: string; company_name: string | null; contact_name: string };
+type CustomerOption = { id: string; company_name: string | null; contact_name: string; phone?: string | null; email?: string | null };
 type ManufacturerId = { id: string };
 type BrandOption = { manufacturer_id: string; brand_name: string };
 
@@ -25,13 +25,16 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
   const admin = createSupabaseAdminClient();
   const params = await searchParams;
 
-  const [customersResult, manufacturersResult, brandsResult] = await Promise.all([
-    admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
+  const [customersResult, manufacturersResult, brandsResult, handoffCustomerResult] = await Promise.all([
+    admin.from("customers").select("id, company_name, contact_name, phone, email").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
     admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
     admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
+    params.customer_id
+      ? admin.from("customers").select("id, company_name, contact_name, phone, email").eq("id", params.customer_id).maybeSingle<CustomerOption>()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
-  if (customersResult.error || manufacturersResult.error || brandsResult.error) {
+  if (customersResult.error || manufacturersResult.error || brandsResult.error || handoffCustomerResult.error) {
     return (
       <AppShell title="Add Vehicle">
         <div className="mx-auto max-w-[900px] rounded-2xl border border-amber-200 bg-amber-50 px-5 py-5 shadow-sm">
@@ -42,7 +45,17 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
     );
   }
 
-  const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
+  const handoffCustomer = handoffCustomerResult.data ?? null;
+  const customerRows = customersResult.data ?? [];
+  const customerOptions = [
+    ...(handoffCustomer ? [handoffCustomer] : []),
+    ...customerRows.filter((customer) => customer.id !== handoffCustomer?.id),
+  ].map((customer) => ({
+    value: customer.id,
+    label: customer.company_name?.trim()
+      ? `${customer.company_name.trim()} · ${customer.contact_name}${customer.phone ? ` · ${customer.phone}` : ""}`
+      : `${customer.contact_name}${customer.phone ? ` · ${customer.phone}` : ""}`,
+  }));
   const activeManufacturerIds = new Set((manufacturersResult.data ?? []).map((manufacturer) => manufacturer.id));
   const makeNames = Array.from(new Set((brandsResult.data ?? []).filter((brand) => activeManufacturerIds.has(brand.manufacturer_id)).map((brand) => brand.brand_name))).sort((a, b) => a.localeCompare(b));
   const manufacturerOptions = makeNames.map((name) => ({ value: name, label: name }));
@@ -54,7 +67,7 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
         action={addVehicleMaster}
         customers={customerOptions}
         manufacturers={manufacturerOptions}
-        values={{ customer_id: params.customer_id ?? null }}
+        values={{ customer_id: handoffCustomer?.id ?? params.customer_id ?? null }}
         submitLabel="Create Vehicle"
         createCustomerHref={canOnboardCustomer ? "/customers/new?partner_type=individual_proprietor&return_to=vehicle" : undefined}
         allowPolicyContinuation={canCreatePolicy}
