@@ -1,17 +1,3 @@
-## 2026-09-25 — Customer App global bottom-up page transitions
-
-**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-global-bottom-up-navigation`.
-
-- Root cause: the app root navigator had `animation: 'none'` globally, while only `customer/add-vehicle` had a one-off `slide_from_bottom` override. That is why Add Vehicle opened bottom-to-top but Add Policy and other Customer pages did not.
-- Added `apps/mobile-app/app/customer/_layout.tsx` with a Customer-level Stack using `animation: 'slide_from_bottom'` and hidden native headers. All route pushes within the Customer App now inherit the same bottom-up page-opening behavior.
-- Removed the one-off Add Vehicle root override because Add Vehicle now inherits the shared Customer navigator behavior.
-- Updated Customer KYC nested Stack from `animation: 'none'` to `slide_from_bottom` so KYC page buttons follow the same behavior.
-- In-page interactions such as dropdowns, filters, form controls, and existing React Native modals are intentionally unchanged; the request is applied to page navigation.
-- Added `apps/mobile-app/scripts/customer-navigation-transition-regression.mjs` to mobile CI.
-- No database/schema/RLS/native dependency/runtime/APK/AAB change.
-
----
-
 ## 2026-09-25 — Operations continuation prefill handoff fix
 
 **IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `fix/operations-continuation-prefill-handoff`.
