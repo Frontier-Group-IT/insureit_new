@@ -15,6 +15,7 @@ Before changing this route or any related Sarvam renewal integration code, read:
 - `docs/SARVAM_CAMPAIGN_DISPATCH_PRECHECK_2026_09_18.md`
 - `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md`
 - `docs/SARVAM_RENEWAL_AGENT_CONTRACT.md`
+- `docs/INSUREIT_PRIVATE_VOICE_AGENT_ROLLOUT.md`
 - `apps/web-portal/app/partner/renewals/external/AGENTS.md`
 
 Treat `docs/SARVAM_VOICE_WORKFLOW_CURRENT_STATE_2026_09_15.md` as the current continuation record for agent version, controlled campaign binding, portal activation state, live-test evidence and the active Sarvam authentication blocker. Read `docs/SARVAM_DIAGNOSTIC_EVIDENCE_2026_09_16.md` for the repeated production provider-response evidence and original-campaign isolation results. Read `docs/SARVAM_CONTROL_CAMPAIGN_DIAGNOSTIC_2026_09_16.md` for the fresh control-campaign comparison and its safety state. Read `docs/SARVAM_PRODUCTION_READINESS_SUCCESS_2026_09_17.md` for the production proof that the configured campaign reaches normal `cohorts/stream` validation with `X-API-Key`, plus the remaining webhook-secret rotation gate. Keep these records current after any material provider-authentication, campaign, agent-version, webhook or portal-dispatch change. Treat `docs/SARVAM_CONTROLLED_LIVE_TEST_2026_09_18.md` as the durable evidence record for the first closed-loop production telephony tests, the missing-webhook failure, successful retry, and manual reconciliation lesson.
@@ -102,3 +103,18 @@ Large campaign exports must page campaign members and call attempts instead of r
 The IT Voice Campaign workflow may accept the approved Tata Commercial workbook as a special source. Detect the `Renewal` worksheet and ignore `Breaking Case`; never silently mix the two cohorts. Tata source insurer/policy/expiry/customer/vehicle fields are campaign-scoped evidence and may satisfy pre-call context without AuthBridge spend. Group repeated usable mobiles to one callable prospect and pass multi-vehicle context to Sarvam. The Tata campaign's primary service pitch is **cashless claim assistance/support**, never guaranteed cashless settlement or guaranteed claim approval. Keep all existing IT-only authority, calling-window, kill-switch, DNC/terminal, active-attempt, provider-state, UUID-correlation, webhook/idempotency and no-master-write boundaries. See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
 
 - Campaign upload accepts an optional `Second number`/alternate mobile column. If the primary contact number is missing or invalid, the secondary number is used. Manual retry controls may requeue only provider results with connectivity `busy` or `no_answer`; this does not enable application-level automatic retry. Each subsequent call attempt must create a new voice-attempt row with an incremented `retry_attempt` and preserve existing terminal/DNC/active-attempt safeguards.
+
+## INSUREIT Private Voice Agent isolation rule — 2026-09-25
+
+The new INSUREIT-trained/private voice-agent program is a parallel system, not an in-place replacement for Sarvam. The working Sarvam managed-agent path remains the production fallback and must stay independently operable.
+
+Every agent doing Voice AI work must update `docs/INSUREIT_PRIVATE_VOICE_AGENT_ROLLOUT.md` after each major implementation or realization phase. Record what changed, what was learned, exact evidence state, affected files/schema/providers, safety boundary, tests, and the next safe step. Preserve failed experiments and superseding lessons rather than rewriting history.
+
+Until a later explicitly approved phase:
+- the `Insureit Agent` workspace is UI/documentation only;
+- no private-agent live calling is authorized;
+- no private-agent schema or provider credentials are required;
+- do not write private-agent state into `voice_campaigns`, `voice_campaign_members`, `external_renewal_voice_attempts`, or `external_renewal_voice_attempt_events`;
+- do not modify current Sarvam dispatch, cohort, webhook, lifecycle, calling-window, DND/terminal, retry, or reporting behavior just to support the private agent;
+- shared Customer/Vehicle/Policy/External Renewal facts may be reused read-only, and pure business rules may later be extracted behind provider-neutral interfaces without changing Sarvam behavior.
+
