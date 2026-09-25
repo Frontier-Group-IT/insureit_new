@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { ReportsOverviewToolbar, type OverviewBusiness, type OverviewMix, type OverviewPeriod, type OverviewTrendPeriod } from "@/components/reports/reports-overview-toolbar";
 import { ReportToolbarPortal } from "@/components/reports/report-toolbar-portal";
-import { ReportWorkspaceNavigation } from "@/components/reports/report-workspace-navigation";
 import { OverviewSectionSelect } from "@/components/reports/overview-section-select";
 import { BusinessTrendCard, type BusinessTrendPoint } from "@/components/reports/business-trend-card";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
