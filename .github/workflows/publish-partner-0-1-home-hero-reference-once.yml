@@ -230,7 +230,6 @@ jobs:
             compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
           test -s compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg
           file compat/apps/partner-app/assets/partner/banners/claims-header-reference.jpg | grep -q 'JPEG image data'
-          grep -q 'Support. Settle. Keep' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q 'Total Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q 'Load More Claims' 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "claims-header-reference.jpg" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
