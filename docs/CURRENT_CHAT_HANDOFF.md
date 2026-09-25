@@ -1,3 +1,16 @@
+## 2026-09-25 — Customer App Add Vehicle error popup UX
+
+- Branch: `fix/customer-add-vehicle-error-popups`.
+- Customer App → Add Vehicle no longer renders the general inline red error banner.
+- Validation errors, RC lookup failures, duplicate-vehicle errors, vehicle-save errors, policy-save errors and policy-copy upload/size errors use one compact modal.
+- Missing insurer popup is exactly: **Insurer not selected** / **Please select the insurer first to save the policy details.** with **Cancel** and **Select Insurer** actions; Select Insurer opens the insurer selector.
+- RC loading and successful fetch/confirmation notices remain inline because they are informational rather than errors.
+- Added `customer-add-vehicle-error-popup-regression.mjs` and wired it into `Verify mobile app`.
+- No schema, RLS, API/RPC contract, native runtime, APK/AAB, or production deployment change.
+- **IMPLEMENTED; PR/CI/merge/OTA pending.**
+
+---
+
 ## 2026-09-25 — Reports All Business neutral custom dropdown
 
 - Branch: `fix/reports-business-neutral-custom-dropdown`.
