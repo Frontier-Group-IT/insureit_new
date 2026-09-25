@@ -245,6 +245,15 @@ jobs:
           grep -q "width: 35" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "heroTitle: {" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
           grep -q "fontSize: 14" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          grep -q "heroCopy: { zIndex: 3, position: 'absolute', left: 16, bottom: 22, width: 178 }" 'compat/apps/partner-app/app/(tabs)/claims.tsx'
+          if grep -q "Support. Settle. Keep" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
+            echo "Claims subheading is still present." >&2
+            exit 1
+          fi
+          if grep -q "heroSubtitle" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
+            echo "Legacy Claims subtitle styling is still present." >&2
+            exit 1
+          fi
           if grep -q "heroArtworkWrap" 'compat/apps/partner-app/app/(tabs)/claims.tsx'; then
             echo "Legacy Claims foreground artwork overlay is still present." >&2
             exit 1
