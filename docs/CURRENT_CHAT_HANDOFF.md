@@ -1,3 +1,17 @@
+## 2026-09-25 — Customer signup creates customer master; KYC has no review stage
+
+- Branch: `feature/customer-signup-direct-master-kyc-submit`.
+- New Customer App signup creates the canonical `customers` row plus active primary `customer_memberships` row immediately after OTP signup profile synchronization.
+- Customer Register therefore includes the user immediately; Add Vehicle no longer depends on KYC completion because the normal customer context exists from signup.
+- KYC may be Not started, In progress, or Submitted without blocking vehicle creation.
+- Standalone Customer App KYC submission updates the same existing customer and completes the onboarding application automatically; no Operations review/verify action is required for the new path.
+- Existing Group-associated child onboarding is intentionally excluded from auto-finalization.
+- Existing profile-only mobile signups with an active standalone onboarding shell are safely backfilled to a customer master + membership by migration `20260925103000_customer_signup_direct_master_kyc_submit.sql`.
+- Dedicated schema workflow and production deployment gate are included. No APK/AAB or native/runtime change.
+- **IMPLEMENTED; PR/CI/merge/migration application/OTA pending.**
+
+---
+
 ## 2026-09-24 — Operations report compact header controls
 
 - Branch: `refine/reports-operations-compact-header`.
