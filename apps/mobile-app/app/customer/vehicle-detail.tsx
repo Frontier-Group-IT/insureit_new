@@ -7,6 +7,7 @@ import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
+import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -98,7 +99,7 @@ export default function VehicleDetailScreen() {
         </View>
         <View style={styles.policySummary}>
           <MiniStat label="Insurer" value={latestPolicyCompany?.name ?? 'Pending'} />
-          <MiniStat label="Policy" value={latestPolicy?.policy_no ? (maskAlternateCharacters(latestPolicy.policy_no) ?? 'Not added') : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
+          <MiniStat label="Policy" value={latestPolicy?.policy_no ? (latestPolicy.source === 'external' ? formatExternalPolicyNumber(latestPolicy.policy_no) : latestPolicy.policy_no) : 'Not added'} badge={latestPolicy?.source === 'external' ? 'External' : undefined} />
           <MiniStat label="Expiry" value={latestPolicy ? formatDate(latestPolicy.end_date) : '-'} />
         </View>
         <View style={styles.protectionRow}>
