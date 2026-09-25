@@ -217,13 +217,24 @@ export default function AddVehicleScreen() {
 
       if (details.model) setModel(cleanProviderModel(details.model, details.manufacturer));
       if (details.manufacturingYear) setYear(details.manufacturingYear);
-      if (details.vehicleClass && vehicleClasses.some((item) => item.value === details.vehicleClass)) setVehicleType(details.vehicleClass);
+      const fetchedVehicleType = details.vehicleClass && vehicleClasses.some((item) => item.value === details.vehicleClass)
+        ? details.vehicleClass
+        : '';
+      if (fetchedVehicleType) setVehicleType(fetchedVehicleType);
       if (details.chassisNumber) setChassisNo(details.chassisNumber);
       if (details.engineNumber) setEngineNo(details.engineNumber);
       if (details.fuelType && fuelOptions.includes(details.fuelType)) setFuelType(details.fuelType);
-      if (details.gvwKg) setGvwKg(details.gvwKg);
-      if (details.engineCapacityCc) setEngineCapacityCc(details.engineCapacityCc);
-      if (details.seatingCapacity) setSeatingCapacity(details.seatingCapacity);
+
+      setGvwKg('');
+      setEngineCapacityCc('');
+      setSeatingCapacity('');
+      if ((fetchedVehicleType === 'GCV' || fetchedVehicleType === 'CPM') && isPositiveNumberString(details.gvwKg)) {
+        setGvwKg(details.gvwKg!);
+      } else if (fetchedVehicleType === 'PCV' && isPositiveIntegerString(details.seatingCapacity)) {
+        setSeatingCapacity(details.seatingCapacity!);
+      } else if (fetchedVehicleType && isPositiveNumberString(details.engineCapacityCc)) {
+        setEngineCapacityCc(details.engineCapacityCc!);
+      }
       if (details.fitnessExpiryDate) setFitnessExpiryDate(details.fitnessExpiryDate);
       if (details.pucExpiryDate) setPucExpiryDate(details.pucExpiryDate);
       if (details.roadTaxExpiryDate) setRoadTaxExpiryDate(details.roadTaxExpiryDate);
@@ -265,12 +276,17 @@ export default function AddVehicleScreen() {
     const parsedYear = Number(year);
     if (!Number.isInteger(parsedYear) || parsedYear < 1950 || parsedYear > new Date().getFullYear() + 1) return setMessage('Enter a valid manufacturing year.');
 
-    const parsedGvw = gvwKg ? Number(gvwKg) : null;
-    const parsedCc = engineCapacityCc ? Number(engineCapacityCc) : null;
-    const parsedSeats = seatingCapacity ? Number(seatingCapacity) : null;
-    if (parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid GVW.');
-    if (parsedCc !== null && (!Number.isFinite(parsedCc) || parsedCc <= 0)) return setMessage('Enter a valid engine capacity.');
-    if (parsedSeats !== null && (!Number.isInteger(parsedSeats) || parsedSeats <= 0)) return setMessage('Enter a valid seating capacity.');
+    const usesGvw = vehicleType === 'GCV' || vehicleType === 'CPM';
+    const usesSeats = vehicleType === 'PCV';
+    const usesEngineCapacity = !usesGvw && !usesSeats;
+
+    const parsedGvw = usesGvw && gvwKg ? Number(gvwKg) : null;
+    const parsedCc = usesEngineCapacity && engineCapacityCc ? Number(engineCapacityCc) : null;
+    const parsedSeats = usesSeats && seatingCapacity ? Number(seatingCapacity) : null;
+
+    if (usesGvw && parsedGvw !== null && (!Number.isFinite(parsedGvw) || parsedGvw <= 0)) return setMessage('Enter a valid GVW.');
+    if (usesEngineCapacity && parsedCc !== null && (!Number.isFinite(parsedCc) || parsedCc <= 0)) return setMessage('Enter a valid engine capacity.');
+    if (usesSeats && parsedSeats !== null && (!Number.isInteger(parsedSeats) || parsedSeats <= 0)) return setMessage('Enter a valid seating capacity.');
 
     const hasPolicyDetails = Boolean(selectedCompanyId || policyNo.trim() || policyStartDate || policyEndDate || premium.trim() || idv.trim() || policyCopy);
     if (hasPolicyDetails && !selectedCompanyId) return setMessage('Search and select the insurer to save policy details.');
@@ -422,7 +438,12 @@ export default function AddVehicleScreen() {
         </FormSection>
 
         <FormSection title="Vehicle specification" icon="identifier" tone="identity">
-          <VehicleTypeDropdown required value={vehicleType} onSelect={setVehicleType} />
+          <VehicleTypeDropdown required value={vehicleType} onSelect={(value) => {
+            setVehicleType(value);
+            if (value !== 'GCV' && value !== 'CPM') setGvwKg('');
+            if (value !== 'PCV') setSeatingCapacity('');
+            if (value === 'GCV' || value === 'CPM' || value === 'PCV') setEngineCapacityCc('');
+          }} />
           <MaskedCodeField icon="barcode" label="Chassis number" value={chassisNo} onChangeText={setChassisNo} />
           <MaskedCodeField icon="engine-outline" label="Engine number" value={engineNo} onChangeText={setEngineNo} />
           <View style={styles.twoColumnRow}>
@@ -642,6 +663,18 @@ function capacityFieldForVehicleType(vehicleType: string, state: { gvwKg: string
   if (vehicleType === 'GCV' || vehicleType === 'CPM') return { label: 'GVW (KG)', icon: 'weight-kilogram' as const, value: state.gvwKg, keyboardType: 'decimal-pad' as const, onChangeText: (value: string) => state.setGvwKg(value.replace(/[^0-9.]/g, '')) };
   return { label: 'Engine capacity (CC)', icon: 'engine-outline' as const, value: state.engineCapacityCc, keyboardType: 'decimal-pad' as const, onChangeText: (value: string) => state.setEngineCapacityCc(value.replace(/[^0-9.]/g, '')) };
 }
+function isPositiveNumberString(value?: string | null) {
+  if (!value) return false;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
+function isPositiveIntegerString(value?: string | null) {
+  if (!value) return false;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0;
+}
+
 function cleanDate(value: string) { const next = value.trim(); return next ? next : null; }
 function cleanCode(value: string) { const next = value.replace(/\s/g, '').toUpperCase(); return next ? next : null; }
 async function uploadPolicyCopy(customerId: string, file: PickedPolicyCopy, userId: string) {
