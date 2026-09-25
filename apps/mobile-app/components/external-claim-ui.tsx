@@ -6,6 +6,8 @@ import type { ImageSourcePropType } from 'react-native';
 
 import { AppBadge } from '@/components/design-system';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
+import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
+import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
 
@@ -75,42 +77,68 @@ export function ClaimIdentityCard({
   vehicleNo,
   policyNo,
   vehicleMeta,
+  vehicleMake,
+  vehicleModel,
 }: {
   claimNo?: string | null;
   insurerName?: string | null;
   vehicleNo?: string | null;
   policyNo?: string | null;
   vehicleMeta?: string | null;
+  vehicleMake?: string | null;
+  vehicleModel?: string | null;
 }) {
+  const parsedMeta = String(vehicleMeta ?? '').split(' · ');
+  const make = vehicleMake || parsedMeta[0] || '';
+  const model = vehicleModel || parsedMeta.slice(1).join(' · ') || '';
+  const manufacturerLogo = getVehicleBrandLogoSource(make);
+  const insurerLogo = getInsurerLogoSource(insurerName);
+  const displayedPolicyNo = formatExternalPolicyNumber(policyNo) || '—';
+
   return (
     <View style={styles.claimIdentityCard}>
       <View style={styles.claimIdentityGlow} />
-      <View style={styles.claimIdentitySection}>
-        <View style={styles.claimIdentityPrimaryIcon}>
-          <MaterialCommunityIcons name="file-document-outline" size={23} color="#083B9B" />
+
+      <View style={styles.claimIdentityTopRow}>
+        <View style={styles.claimIdentityReferenceHalf}>
+          <View style={styles.claimIdentityLogoBox}>
+            {manufacturerLogo ? (
+              <Image source={manufacturerLogo} style={styles.claimIdentityLogoImage} resizeMode="contain" />
+            ) : (
+              <MaterialCommunityIcons name="car-outline" size={26} color="#0A43A3" />
+            )}
+          </View>
+          <View style={styles.claimIdentityReferenceCopy}>
+            <Text style={styles.claimIdentityReferencePrimary} numberOfLines={1}>{vehicleNo || 'Vehicle'}</Text>
+            <Text style={styles.claimIdentityReferenceSecondary} numberOfLines={1}>{make || 'Manufacturer'}</Text>
+            <Text style={styles.claimIdentityReferenceTertiary} numberOfLines={1}>{model || '—'}</Text>
+          </View>
         </View>
-        <View style={styles.claimIdentityCopy}>
-          <Text style={styles.claimIdentityLabel}>CLAIM DETAILS</Text>
-          <Text style={styles.claimIdentityValue} numberOfLines={1}>{claimNo || 'New claim'}</Text>
-          <Text style={styles.claimIdentityMeta} numberOfLines={1}>{insurerName || 'Insurance company'}</Text>
+
+        <View style={styles.claimIdentityVerticalDivider} />
+
+        <View style={styles.claimIdentityReferenceHalf}>
+          <View style={styles.claimIdentityLogoBox}>
+            {insurerLogo ? (
+              <Image source={insurerLogo} style={styles.claimIdentityLogoImage} resizeMode="contain" />
+            ) : (
+              <MaterialCommunityIcons name="shield-outline" size={25} color="#0A43A3" />
+            )}
+          </View>
+          <View style={styles.claimIdentityReferenceCopy}>
+            <Text style={styles.claimIdentityReferencePrimary} numberOfLines={1}>{displayedPolicyNo}</Text>
+            <Text style={styles.claimIdentityReferenceSecondary} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
+          </View>
         </View>
       </View>
-      <View style={styles.claimIdentityDivider} />
-      <View style={styles.claimIdentitySection}>
-        <View style={styles.claimIdentityVehicleIcon}>
-          <MaterialCommunityIcons name="car-outline" size={21} color="#FFFFFF" />
+
+      {claimNo ? (
+        <View style={styles.claimIdentityClaimRow}>
+          <MaterialCommunityIcons name="file-document-outline" size={16} color="#AFCBFF" />
+          <Text style={styles.claimIdentityClaimLabel}>Claim</Text>
+          <Text style={styles.claimIdentityClaimValue} numberOfLines={1}>{claimNo}</Text>
         </View>
-        <View style={styles.claimIdentityCopy}>
-          <Text style={styles.claimIdentityLabel}>CLAIM VEHICLE</Text>
-          <Text style={styles.claimIdentityValue} numberOfLines={1}>{vehicleNo || 'Vehicle'}</Text>
-          <Text style={styles.claimIdentityMeta} numberOfLines={1}>
-            {[policyNo ? `Policy: ${policyNo}` : '', vehicleMeta || ''].filter(Boolean).join('  •  ')}
-          </Text>
-        </View>
-        <View style={styles.claimIdentityFocus}>
-          <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#AFCBFF" />
-        </View>
-      </View>
+      ) : null}
     </View>
   );
 }
@@ -373,6 +401,18 @@ const styles = StyleSheet.create({
   claimIdentityCopy: { flex: 1, minWidth: 0 },
   claimIdentityLabel: { color: '#BBD1F6', fontSize: 7.8, lineHeight: 10, fontWeight: '900', letterSpacing: 0.55 },
   claimIdentityValue: { color: '#FFFFFF', fontSize: 14.5, lineHeight: 19, fontWeight: '900', marginTop: 2 },
+  claimIdentityTopRow: { flexDirection: 'row', alignItems: 'stretch', minWidth: 0 },
+  claimIdentityReferenceHalf: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  claimIdentityLogoBox: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE6F5', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  claimIdentityLogoImage: { width: 38, height: 38 },
+  claimIdentityReferenceCopy: { flex: 1, minWidth: 0 },
+  claimIdentityReferencePrimary: { color: '#FFFFFF', fontSize: 14.5, lineHeight: 18, fontWeight: '900' },
+  claimIdentityReferenceSecondary: { color: '#EAF2FF', fontSize: 10.2, lineHeight: 13, fontWeight: '800', marginTop: 3 },
+  claimIdentityReferenceTertiary: { color: '#AFC4E4', fontSize: 10, lineHeight: 13, fontWeight: '700', marginTop: 1 },
+  claimIdentityVerticalDivider: { width: 1, backgroundColor: 'rgba(174,204,255,0.24)', marginHorizontal: 10, marginVertical: 1 },
+  claimIdentityClaimRow: { marginTop: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(174,204,255,0.20)', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  claimIdentityClaimLabel: { color: '#AFCBFF', fontSize: 9.5, fontWeight: '800' },
+  claimIdentityClaimValue: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 10.2, fontWeight: '900' },
   claimIdentityMeta: { color: '#D8E4F4', fontSize: 8.2, lineHeight: 11, fontWeight: '700', marginTop: 2 },
   claimIdentityDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.22)', marginHorizontal: 11 },
   claimIdentityFocus: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
