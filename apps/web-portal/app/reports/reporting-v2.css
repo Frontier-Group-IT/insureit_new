@@ -2462,7 +2462,7 @@
   min-width: 0;
   flex: 1 1 auto;
   align-items: stretch;
-  gap: 14px;
+  gap: 18px;
 }
 
 .reports-reference-heading {
@@ -2470,10 +2470,12 @@
   flex: 0 0 auto;
   align-items: center;
   min-width: max-content;
+  border-right: 1px solid #d7e0ea;
+  padding-right: 18px;
 }
 
 .reports-reference-heading h1 {
-  font-size: 20px;
+  font-size: 17px;
 }
 
 .reports-reference-tabs {
@@ -2561,7 +2563,12 @@
   .reports-reference-left {
     align-items: flex-start;
     flex-direction: column;
-    gap: 2px;
+    gap: 6px;
+  }
+
+  .reports-reference-heading {
+    border-right: 0;
+    padding-right: 0;
   }
 
   .reports-reference-tabs {
