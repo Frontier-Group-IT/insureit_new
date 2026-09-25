@@ -236,7 +236,7 @@ export default function IndividualKycScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Pressable accessibilityRole="button" onPress={() => router.replace('/customer/kyc/partner-type')} style={styles.backButton}><MaterialCommunityIcons name="chevron-left" size={27} color={palette.navy} /></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => router.replace('/customer/profile')} style={styles.backButton}><MaterialCommunityIcons name="chevron-left" size={27} color={palette.navy} /></Pressable>
         <BrandLogo width={145} />
         <View style={styles.headerSpacer} />
       </View>
@@ -244,7 +244,6 @@ export default function IndividualKycScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} automaticallyAdjustKeyboardInsets keyboardDismissMode="interactive">
         <Text style={styles.screenTitle}>Complete Your KYC</Text>
         <KycStepper />
-        <View style={styles.partnerSummary}><View style={styles.partnerIcon}><MaterialCommunityIcons name="account-outline" size={21} color="#0A43A3" /></View><View style={styles.partnerCopy}><Text style={styles.partnerEyebrow}>Partner type</Text><Text style={styles.partnerTitle}>Individual / Proprietor</Text></View><MaterialCommunityIcons name="check-circle" size={21} color="#21A66B" /></View>
 
         <FormSection number="1" title="Personal information" subtitle="Use details that match your identity documents.">
           <Field label="Full name" required value={fullName} onChangeText={setFullName} placeholder="Your full legal name" autoCapitalize="words" />
@@ -319,7 +318,8 @@ async function uploadDocument(applicationId: string, type: DocumentType, file: P
 }
 
 function KycStepper() {
-  return <View style={styles.stepper}>{['Partner', 'Details', 'Documents', 'Review'].map((label, index) => <View key={label} style={styles.stepItem}><View style={[styles.stepCircle, index <= 2 && styles.stepActive]}>{index === 0 ? <MaterialCommunityIcons name="check" size={15} color="#FFFFFF" /> : <Text style={[styles.stepNumber, index <= 2 && styles.stepNumberActive]}>{index + 1}</Text>}</View><Text style={[styles.stepLabel, index <= 2 && styles.stepLabelActive]}>{label}</Text>{index < 3 ? <View style={[styles.stepLine, index < 2 && styles.stepLineActive]} /> : null}</View>)}</View>;
+  const steps = ['Details', 'Documents', 'Review'];
+  return <View style={styles.stepper}>{steps.map((label, index) => <View key={label} style={styles.stepItem}><View style={[styles.stepCircle, index <= 1 && styles.stepActive]}><Text style={[styles.stepNumber, index <= 1 && styles.stepNumberActive]}>{index + 1}</Text></View><Text style={[styles.stepLabel, index <= 1 && styles.stepLabelActive]}>{label}</Text>{index < steps.length - 1 ? <View style={[styles.stepLine, index < 1 && styles.stepLineActive]} /> : null}</View>)}</View>;
 }
 
 function FormSection({ number, title, subtitle, children }: { number: string; title: string; subtitle: string; children: React.ReactNode }) {
@@ -355,7 +355,6 @@ const styles = StyleSheet.create({
   backButton: { width: 42, height: 42, borderRadius: 12, borderWidth: 1, borderColor: '#D7E1EC', alignItems: 'center', justifyContent: 'center' }, headerSpacer: { width: 42 },
   content: { paddingHorizontal: 15, paddingTop: 16, paddingBottom: 110 }, screenTitle: { color: palette.navy, fontSize: 21, fontWeight: '800' },
   stepper: { flexDirection: 'row', marginTop: 19, marginBottom: 20 }, stepItem: { flex: 1, alignItems: 'center', position: 'relative' }, stepCircle: { width: 31, height: 31, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#CBD5E1', alignItems: 'center', justifyContent: 'center', zIndex: 2 }, stepActive: { backgroundColor: '#0A3B8F', borderColor: '#0A3B8F' }, stepNumber: { color: '#8491A3', fontSize: 12, fontWeight: '700' }, stepNumberActive: { color: '#FFFFFF' }, stepLabel: { marginTop: 6, color: '#8793A4', fontSize: 9.5 }, stepLabelActive: { color: palette.navy, fontWeight: '700' }, stepLine: { position: 'absolute', left: '66%', top: 15, width: '68%', height: 2, backgroundColor: '#D9E1EA' }, stepLineActive: { backgroundColor: '#7FA8E3' },
-  partnerSummary: { minHeight: 66, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D9E4F0', paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 12 }, partnerIcon: { width: 39, height: 39, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' }, partnerCopy: { flex: 1 }, partnerEyebrow: { color: '#708096', fontSize: 9.5, textTransform: 'uppercase' }, partnerTitle: { color: palette.navy, fontSize: 14, fontWeight: '700', marginTop: 2 },
   errorBox: { borderRadius: 12, backgroundColor: '#FEF3F2', borderWidth: 1, borderColor: '#FECDCA', padding: 11, flexDirection: 'row', gap: 8, marginBottom: 12 }, errorText: { flex: 1, color: '#B42318', fontSize: 11.5, lineHeight: 16 },
   section: { borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5EF', marginBottom: 12, overflow: 'hidden', shadowColor: '#102A4C', shadowOpacity: 0.035, shadowRadius: 8, elevation: 1 }, sectionHeader: { minHeight: 64, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FBFDFF', borderBottomWidth: 1, borderBottomColor: '#E7EDF4' }, sectionNumber: { width: 31, height: 31, borderRadius: 10, backgroundColor: '#0A3B8F', alignItems: 'center', justifyContent: 'center' }, sectionNumberText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' }, sectionHeading: { flex: 1 }, sectionTitle: { color: palette.navy, fontSize: 15, fontWeight: '800' }, sectionSubtitle: { color: '#6D7B8D', fontSize: 10.5, lineHeight: 14, marginTop: 2 }, sectionBody: { padding: 13 },
   field: { marginBottom: 13 }, fieldLabel: { color: '#344054', fontSize: 11.5, fontWeight: '700', marginBottom: 6 }, required: { color: '#D92D20' }, inputShell: { minHeight: 50, borderRadius: 12, borderWidth: 1, borderColor: '#D7E0EA', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }, inputShellMultiline: { minHeight: 82, alignItems: 'flex-start' }, inputDisabled: { backgroundColor: '#F3F6FA' }, input: { flex: 1, minHeight: 48, color: '#172033', fontSize: 13.5, fontWeight: '400' }, inputMultiline: { minHeight: 76, paddingTop: 12, textAlignVertical: 'top' }, privacyNote: { color: '#557067', fontSize: 9.8, lineHeight: 14, backgroundColor: '#F0FAF6', borderRadius: 9, padding: 9, marginTop: -4 },
