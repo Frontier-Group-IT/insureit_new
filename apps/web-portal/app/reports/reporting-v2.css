@@ -2412,3 +2412,31 @@
     border-right: 0;
   }
 }
+
+
+/* Neutral report dropdown selection/focus */
+.reports-reference-header .report-header-select,
+.reports-reference-header .report-header-select:hover,
+.reports-reference-header .report-header-select:focus,
+.reports-reference-header .report-header-select:focus-visible {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.reports-reference-header .report-header-select option {
+  background: #ffffff;
+  color: #344862;
+}
+
+.reports-reference-header .report-header-select option:checked {
+  background: #f7f8fa;
+  color: #344862;
+}
+
+.reports-overview-reference [role="menu"] [role="menuitem"]:focus,
+.reports-overview-reference [role="menu"] [role="menuitem"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
