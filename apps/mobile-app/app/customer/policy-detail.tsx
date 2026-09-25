@@ -8,6 +8,7 @@ import { getCurrentSession } from '@/lib/auth';
 import { getOperationalCustomerContexts } from '@/lib/customer-context';
 import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { supabase } from '@/lib/supabase';
+import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -129,7 +130,7 @@ export default function PolicyDetailScreen() {
         <View style={styles.heroLayout}>
           <View style={[styles.heroAccent, { backgroundColor: renewalTone(renewalState.tone).accent }]} />
           <View style={styles.heroTop}>
-            <Text style={styles.policyNo} numberOfLines={1}>{policy.policy_no}</Text>
+            <Text style={styles.policyNo} numberOfLines={1}>{policy.source === 'external' ? formatExternalPolicyNumber(policy.policy_no) : policy.policy_no}</Text>
             <StatusBadge state={renewalState.tone} label={compactPolicyStatusLabel(policy.end_date)} />
           </View>
           <View style={styles.heroMetaRow}>
