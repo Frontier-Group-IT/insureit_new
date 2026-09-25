@@ -201,12 +201,15 @@ export async function ensureCustomerForUser(
   return null;
 }
 
-export async function getOnboardingApplicationForUser(userId: string): Promise<CustomerOnboardingApplication | null> {
-  const { data, error } = await supabase
+export async function getOnboardingApplicationForUser(userId: string, includeTerminal = false): Promise<CustomerOnboardingApplication | null> {
+  let query = supabase
     .from('customer_onboarding_applications')
     .select('*')
-    .eq('profile_id', userId)
-    .not('status', 'in', '(approved,rejected,cancelled)')
+    .eq('profile_id', userId);
+
+  if (!includeTerminal) query = query.not('status', 'in', '(approved,rejected,cancelled)');
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -338,7 +341,16 @@ export async function syncCustomerSignupDetails(
   const phone = details.phone.trim();
   const email = details.email?.trim() || null;
 
-  return ensureCustomerSignupProfile(user, { fullName, phone, email });
+  const profile = await ensureCustomerSignupProfile(user, { fullName, phone, email });
+  const onboarding = await getOnboardingApplicationForUser(user.id);
+  if (onboarding?.source === 'customer_app' && onboarding.status === 'not_started' && onboarding.partner_type === null) {
+    const { error } = await supabase
+      .from('customer_onboarding_applications')
+      .update({ partner_type: 'individual_proprietor' })
+      .eq('id', onboarding.id);
+    if (error) throw error;
+  }
+  return profile;
 }
 
 async function ensureCustomerSignupProfile(
