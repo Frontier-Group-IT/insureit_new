@@ -245,7 +245,7 @@ function buildInsurerExposure(renewals:RenewalReport,claims:ClaimsReport):ChartR
   const map=new Map<string,{name:string;renewal:number;claims:number}>();
   for(const r of renewals.insurers){const key=r.insurer_name.trim().toLowerCase();map.set(key,{name:r.insurer_name||"Unassigned",renewal:r.premium_at_risk||0,claims:0});}
   for(const c of claims.insurers){const key=c.insurer_name.trim().toLowerCase();const current=map.get(key)??{name:c.insurer_name||"Unassigned",renewal:0,claims:0};current.claims+=c.estimated_loss||0;map.set(key,current);}
-  return [...map.entries()].map(([key,v])=>({key,label:shortName(v.name),count:0,amount:v.renewal,secondary:v.claims})).sort((a,b)=>(b.amount+b.secondary)-(a.amount+a.secondary)).slice(0,5);
+  return [...map.entries()].map(([key,v])=>({key,label:shortName(v.name),count:0,amount:v.renewal/100000,secondary:v.claims/100000})).sort((a,b)=>(b.amount+b.secondary)-(a.amount+a.secondary)).slice(0,5);
 }
 
 function row(key:string,label:string,count:number,amount:number):ChartRow{return{key,label,count,amount:amount/100000,secondary:0}}
