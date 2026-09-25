@@ -1,3 +1,14 @@
+## 2026-09-25 — Claims heading moved directly above search
+
+- Branch: `refine/partner-claims-heading-above-search`.
+- Removed the Claims hero subheading `Support. Settle. Keep Your Business Moving.` completely.
+- Kept only the `Claims` heading and moved it to the lower-left of the hero using a bottom-based position so it sits directly above the overlapping search field.
+- Claims banner artwork, Home-matched logo/activity/profile controls, search/filter controls, KPI cards, claim cards, data, permissions, pagination and navigation remain unchanged.
+- The same change is mirrored in `scripts/partner/compat/partner-claims-reference-0-1.tsx`, and the Partner 0.1.0 OTA workflow now fails if the removed subheading or old subtitle styling reappears.
+- **IMPLEMENTED only. NOT MERGED, NOT OTA-PUBLISHED, NO APK/AAB BUILD.**
+
+---
+
 ## 2026-09-25 — Claims header aligned with Partner Home
 
 - Branch: `refine/partner-claims-home-header-match`.
