@@ -10,6 +10,7 @@ import { findActiveManagedClaim } from '@/lib/active-managed-claim';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
+import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
 
@@ -280,7 +281,7 @@ export default function StartClaimScreen() {
                 </View>
                 <View style={styles.policyCopy}>
                   <Text style={[styles.policyMode, styles.policyModeCompact]}>{selectedPolicy.source === 'external' ? 'SELF TRACKED CLAIM' : 'SANKALP MANAGED CLAIM'}</Text>
-                  <Text style={[styles.policyNo, styles.policyNoCompact]}>{selectedPolicy.policy_no}</Text>
+                  <Text style={[styles.policyNo, styles.policyNoCompact]}>{selectedPolicy.source === 'external' ? formatExternalPolicyNumber(selectedPolicy.policy_no) : selectedPolicy.policy_no}</Text>
                   <Text style={[styles.policyInsurer, styles.policyInsurerCompact]}>{selectedInsurer?.name ?? 'Insurance company'} · {selectedPolicy.policy_type}</Text>
                   <Text style={[styles.policyDates, styles.policyDatesCompact]}>{formatDate(selectedPolicy.start_date)} – {formatDate(selectedPolicy.end_date)}</Text>
                 </View>
