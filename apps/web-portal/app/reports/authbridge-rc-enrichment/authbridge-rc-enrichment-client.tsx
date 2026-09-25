@@ -35,9 +35,18 @@ const CLIENT_PROVIDER_SPACING_MS = 1_600;
 const MAX_CONSECUTIVE_REQUEST_FAILURES = 3;
 const TERMINAL = new Set<LookupStatus>(["success", "no_data"]);
 const FAILED = new Set<LookupStatus>(["provider_error", "request_error"]);
+const LOOKUP_STATUSES = new Set<LookupStatus>(["success", "no_data", "invalid", "provider_error", "request_error"]);
+const AUTHBRIDGE_STATUS_HEADER = "authbridgelookupstatus";
+const METADATA_HEADERS = [
+  "AuthBridge Lookup Status",
+  "AuthBridge Source",
+  "AuthBridge Provider Code",
+  "AuthBridge Message",
+  "AuthBridge Transaction ID",
+  "AuthBridge Looked Up At",
+] as const;
 
 export default function AuthbridgeRcEnrichmentClient() {
-  const workbookRef = useRef<XLSX.WorkBook | null>(null);
   const stopRequestedRef = useRef(false);
   const [loaded, setLoaded] = useState<LoadedSheet | null>(null);
   const [results, setResults] = useState<Record<string, LookupResult>>({});
@@ -64,7 +73,6 @@ export default function AuthbridgeRcEnrichmentClient() {
     setTestPassed(false);
     setLoaded(null);
     setRunProgress(null);
-    workbookRef.current = null;
     if (!file) return;
 
     try {
@@ -73,9 +81,16 @@ export default function AuthbridgeRcEnrichmentClient() {
       const firstSheetName = workbook.SheetNames[0];
       if (!firstSheetName) throw new Error("The workbook does not contain a worksheet.");
       const worksheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: "", raw: false });
-      if (!rows.length) throw new Error("The first worksheet is empty.");
+      const rawRows = XLSX.utils.sheet_to_json<unknown[]>(worksheet, { header: 1, defval: "", raw: false });
+      if (!rawRows.length) throw new Error("The first worksheet is empty.");
 
+      const rawHeaders = rawRows[0].map((value) => normalizeHeader(value));
+      const enrichmentStarts = rawHeaders.reduce<number[]>((indexes, header, index) => {
+        if (header === AUTHBRIDGE_STATUS_HEADER) indexes.push(index);
+        return indexes;
+      }, []);
+      const sourceWidth = enrichmentStarts[0] ?? Math.max(...rawRows.map((row) => row.length), 1);
+      const rows = rawRows.map((row) => row.slice(0, sourceWidth));
       const headers = rows[0].map((value) => normalizeHeader(value));
       const registrationColumn = headers.findIndex((header) =>
         ["registrationnumber", "vehiclerc", "rcnumber", "vehicleregistrationnumber"].includes(header),
@@ -100,9 +115,16 @@ export default function AuthbridgeRcEnrichmentClient() {
         validUnique.push(rc);
       }
 
-      workbookRef.current = workbook;
+      const restoredResults = restoreExistingResults(rawRows, enrichmentStarts, registrationColumn);
+      const restoredCount = Object.keys(restoredResults).length;
+      setResults(restoredResults);
       setLoaded({ fileName: file.name, rows, registrationColumn, validUnique, invalidRowCount, duplicateRowCount });
-      setMessage(`Loaded ${rows.length - 1} rows with ${validUnique.length} unique supported registration numbers.`);
+      setMessage(
+        `Loaded ${rows.length - 1} rows with ${validUnique.length} unique supported registration numbers.` +
+        (restoredCount
+          ? ` Restored ${restoredCount.toLocaleString("en-IN")} saved AuthBridge result${restoredCount === 1 ? "" : "s"}${enrichmentStarts.length > 1 ? ` from ${enrichmentStarts.length} historical enrichment blocks` : ""}. Future downloads will contain one canonical AuthBridge block.`
+          : ""),
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not read the workbook.");
     }
@@ -276,23 +298,15 @@ export default function AuthbridgeRcEnrichmentClient() {
   }
 
   function downloadEnrichedWorkbook() {
-    if (!loaded || !workbookRef.current) return;
+    if (!loaded) return;
     const fieldHeaders = [...new Set(
       Object.values(results).flatMap((result) => Object.keys(result.fields ?? {})),
     )].sort((a, b) => a.localeCompare(b));
-    const metadataHeaders = [
-      "AuthBridge Lookup Status",
-      "AuthBridge Source",
-      "AuthBridge Provider Code",
-      "AuthBridge Message",
-      "AuthBridge Transaction ID",
-      "AuthBridge Looked Up At",
-    ];
     const originalWidth = Math.max(...loaded.rows.map((row) => row.length), 1);
     const outputRows = loaded.rows.map((sourceRow, rowIndex) => {
       const row = [...sourceRow];
       while (row.length < originalWidth) row.push("");
-      if (rowIndex === 0) return [...row, ...metadataHeaders, ...fieldHeaders];
+      if (rowIndex === 0) return [...row, ...METADATA_HEADERS, ...fieldHeaders];
 
       const rc = normalizeRegistration(row[loaded.registrationColumn]);
       if (!isValidRegistration(rc)) {
@@ -316,7 +330,7 @@ export default function AuthbridgeRcEnrichmentClient() {
     worksheet["!cols"] = outputRows[0].map((value, index) => ({ wch: Math.min(Math.max(String(value ?? "").length + 2, index < originalWidth ? 14 : 18), 42) }));
     const output = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(output, worksheet, "AuthBridge Enriched");
-    XLSX.writeFile(output, `${stripExtension(loaded.fileName)} - AuthBridge enriched.xlsx`, { compression: true });
+    XLSX.writeFile(output, `${baseWorkbookName(loaded.fileName)} - AuthBridge enriched.xlsx`, { compression: true });
   }
 
   const progressText = runProgress
@@ -416,6 +430,55 @@ export default function AuthbridgeRcEnrichmentClient() {
   );
 }
 
+function restoreExistingResults(rows: unknown[][], enrichmentStarts: number[], registrationColumn: number) {
+  const restored: Record<string, LookupResult> = {};
+  if (!enrichmentStarts.length) return restored;
+  const headerRow = rows[0] ?? [];
+
+  for (const row of rows.slice(1)) {
+    const registrationNumber = normalizeRegistration(row[registrationColumn]);
+    if (!isValidRegistration(registrationNumber)) continue;
+
+    for (let blockIndex = enrichmentStarts.length - 1; blockIndex >= 0; blockIndex -= 1) {
+      const start = enrichmentStarts[blockIndex];
+      const end = enrichmentStarts[blockIndex + 1] ?? Math.max(headerRow.length, row.length);
+      const statusCandidate = String(row[start] ?? "").trim() as LookupStatus;
+      if (!LOOKUP_STATUSES.has(statusCandidate)) continue;
+
+      const sourceCandidate = String(row[start + 1] ?? "").trim();
+      const source: LookupResult["source"] = sourceCandidate === "cache" || sourceCandidate === "validation"
+        ? sourceCandidate
+        : "authbridge";
+      const providerCodeValue = String(row[start + 2] ?? "").trim();
+      const parsedProviderCode = providerCodeValue ? Number(providerCodeValue) : null;
+      const fields: LookupResult["fields"] = {};
+
+      for (let column = start + METADATA_HEADERS.length; column < end; column += 1) {
+        const header = String(headerRow[column] ?? "").trim();
+        const value = row[column];
+        if (!header || value === "" || value === null || value === undefined) continue;
+        fields[header] = typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+          ? value
+          : String(value);
+      }
+
+      restored[registrationNumber] = {
+        registrationNumber,
+        status: statusCandidate,
+        source,
+        providerCode: parsedProviderCode !== null && Number.isFinite(parsedProviderCode) ? parsedProviderCode : null,
+        message: nullableCell(row[start + 3]),
+        transactionId: nullableCell(row[start + 4]),
+        lookedUpAt: nullableCell(row[start + 5]),
+        fields,
+      };
+      break;
+    }
+  }
+
+  return restored;
+}
+
 function requestErrorResult(registrationNumber: string, message: string): LookupResult {
   return {
     registrationNumber,
@@ -450,8 +513,17 @@ function isValidRegistration(value: string) {
   return /^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{1,4}$/.test(value) || /^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$/.test(value);
 }
 
+function nullableCell(value: unknown) {
+  const normalized = String(value ?? "").trim();
+  return normalized || null;
+}
+
 function stripExtension(value: string) {
   return value.replace(/\.(xlsx|xls)$/i, "");
+}
+
+function baseWorkbookName(value: string) {
+  return stripExtension(value).split(/\s+-\s+AuthBridge\b/i)[0].trim();
 }
 
 function sleep(ms: number) {
