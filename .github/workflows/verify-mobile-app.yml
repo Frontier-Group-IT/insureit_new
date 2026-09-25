@@ -92,6 +92,9 @@ jobs:
       - name: Customer secure multi-account regression
         run: node apps/mobile-app/scripts/customer-multi-account-security-regression.mjs
 
+      - name: Customer catalog logo regression
+        run: node apps/mobile-app/scripts/customer-catalog-logo-regression.mjs
+
       - name: Customer Add Vehicle Policy Type regression
         run: node apps/mobile-app/scripts/customer-add-vehicle-policy-type-regression.mjs
 
