@@ -41,6 +41,7 @@ export function ReportQueryShortcuts({
         <span className="sr-only">{label}</span>
         <CalendarDays className="h-3.5 w-3.5 shrink-0" />
         <select
+          className="report-header-select"
           value={activeValue}
           aria-label={label}
           onChange={(event) => router.push(buildHref(pathname, currentQuery, param, event.target.value))}
