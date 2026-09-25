@@ -8,7 +8,7 @@
 - Existing `applyBusiness()` behavior is preserved: URL query updates, category reset outside Non Motor, and report page reset behavior are unchanged.
 - Because Business and Portfolio use the shared `ReportCompactFilters` top-level business selector, the visual correction is shared across those report pages.
 - No report data, calculations, export, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, or native runtime changes.
-- **IMPLEMENTED ON BRANCH; replacement PR pending after rebase; not merged; not deployed.**
+- Replacement PR #2400 passed canonical `Verify web portal` workflow #4645, including regressions, typecheck, lint, and production build.\n- Merge commit: `daaa59a840b94b56490952b02759e15e32677e5b`.\n- **MERGED; production deployment not verified in this step.**
 
 ---
 
