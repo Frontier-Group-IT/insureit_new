@@ -89,11 +89,17 @@ function customerGreetingIdentity(value: string | null | undefined) {
 function buildOpeningLine(context: ExternalRenewalVoiceStartContext) {
   const { firstName, salutation } = customerGreetingIdentity(context.customer_name);
   const addressee = [firstName, salutation].filter(Boolean).join(" ");
-  const brand = stringVariable(context.calling_brand) ?? "Frontier JCB";
+  const explicitBrand = stringVariable(context.calling_brand);
+  const isTataCommercial = context.campaign_type === "tata_commercial_renewal";
+  const brand = isTataCommercial ? explicitBrand : explicitBrand ?? "Frontier JCB";
   const isRepeat = Boolean(context.repeat_call);
-  const intro = addressee
-    ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ ${brand} से।`
-    : `नमस्ते, मैं अंजना बोल रही हूँ ${brand} से।`;
+  const intro = brand
+    ? addressee
+      ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ ${brand} से।`
+      : `नमस्ते, मैं अंजना बोल रही हूँ ${brand} से।`
+    : addressee
+      ? `नमस्ते ${addressee}, मैं अंजना बोल रही हूँ।`
+      : "नमस्ते, मैं अंजना बोल रही हूँ।";
 
   if (isRepeat) {
     const followUp = context.last_call_disposition === "follow_up"
@@ -102,7 +108,7 @@ function buildOpeningLine(context: ExternalRenewalVoiceStartContext) {
     return intro + followUp;
   }
 
-  if (context.campaign_type === "tata_commercial_renewal") {
+  if (isTataCommercial) {
     return `${intro} Tata commercial vehicle की insurance renewal के लिए call किया है—अभी दो मिनट हैं?`;
   }
 

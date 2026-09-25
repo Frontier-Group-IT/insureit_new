@@ -559,3 +559,8 @@ The same branch removes the fixed voice-campaign customer/source-row ceiling fro
 - voice-campaign database counter constraints.
 
 The upload file-size guard and all calling safety controls remain unchanged. Production must apply `20260924173500_remove_voice_campaign_row_limit.sql` before deploying the web change.
+
+
+## Tata caller identity fallback correction — 2026-09-24
+
+Tata Commercial calls must not inherit the legacy Frontier JCB caller fallback. The website now distinguishes campaign identity from vehicle context: if `campaign_type=tata_commercial_renewal` and `calling_brand` is absent, `opening_line` uses a brand-neutral Anjna introduction. If an explicit authorized `calling_brand` is supplied, that exact brand may be spoken. Standard/non-Tata renewal flows retain the existing Frontier JCB fallback for compatibility.
