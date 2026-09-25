@@ -403,7 +403,6 @@ export default function ProfileScreen() {
             <Text style={styles.kycVaultTitle}>Documents & KYC</Text>
             <Text style={styles.kycVaultSub}>{documents.length ? `${documents.length} document${documents.length === 1 ? '' : 's'} stored safely` : 'Keep PAN, Aadhaar, GST and other KYC files ready'}</Text>
           </View>
-          <View style={styles.kycVaultCount}><Text style={styles.kycVaultCountText}>{documents.length}</Text></View>
           <MaterialCommunityIcons name={documentsOpen ? 'chevron-up' : 'chevron-down'} size={24} color={palette.navy} />
         </Pressable>
 
@@ -553,8 +552,6 @@ const styles = StyleSheet.create({
   kycVaultCopy: { flex: 1, minWidth: 0 },
   kycVaultTitle: { color: palette.navy, fontSize: 14.5, fontWeight: '900' },
   kycVaultSub: { color: palette.slate, fontSize: 10.7, lineHeight: 15, fontWeight: '800', marginTop: 3 },
-  kycVaultCount: { minWidth: 30, height: 30, borderRadius: 15, backgroundColor: '#0B63CE', alignItems: 'center', justifyContent: 'center', shadowColor: '#0B63CE', shadowOpacity: .22, shadowRadius: 7, elevation: 2 },
-  kycVaultCountText: { color: '#FFFFFF', fontSize: 12, fontWeight: '900' },
   kycVaultSummary: { flexDirection: 'row', gap: 7, paddingHorizontal: 10, paddingBottom: 10 },
   kycMiniStat: { flex: 1, minHeight: 38, borderRadius: 12, backgroundColor: '#F8FBFF', borderWidth: 1, borderColor: '#E1EAF4', alignItems: 'center', justifyContent: 'center', gap: 2 },
   kycMiniStatValue: { color: '#0B63CE', fontSize: 14, lineHeight: 16, fontWeight: '900' },
