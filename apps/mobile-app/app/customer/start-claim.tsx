@@ -10,6 +10,7 @@ import { findActiveManagedClaim } from '@/lib/active-managed-claim';
 import { getCurrentSession, makeClaimNumber } from '@/lib/auth';
 import { customerAccountTitle, getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
+import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { formatExternalPolicyNumber } from '@/lib/policy-number-display';
 import { palette } from '@/lib/theme';
 import type { InsuranceCompany, Vehicle } from '@/lib/types';
@@ -270,11 +271,11 @@ export default function StartClaimScreen() {
                 <View style={[styles.policyIcon, styles.policyIconCompact]}>
                   <Image
                     accessible={false}
-                    source={selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon}
+                    source={getInsurerLogoSource(selectedInsurer?.name) ?? (selectedPolicy.source === 'external' ? selfTrackedPolicyIcon : managedPolicyIcon)}
                     style={[
                       styles.policyIconArtwork,
                       styles.policyIconArtworkCompact,
-                      selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
+                      !getInsurerLogoSource(selectedInsurer?.name) && selectedPolicy.source === 'external' && styles.selfTrackedPolicyIconArtwork,
                     ]}
                     resizeMode="contain"
                   />
