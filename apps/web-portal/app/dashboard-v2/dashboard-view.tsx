@@ -746,7 +746,7 @@ function MetricRail({ item, divided }: { item: RailMetric; divided: boolean }) {
       <Icon src={item.icon} size={35} />
       <div className="min-w-0 flex-1">
         {item.secondary ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-[0.82fr_1.18fr] gap-3">
             <div className="min-w-0">
               <p className="portal-display whitespace-normal break-words text-[21px] font-semibold leading-tight tracking-[-.02em] text-[#10213D]">{item.value}</p>
               <p className="mt-1 whitespace-normal break-words text-[7px] font-black uppercase leading-relaxed tracking-[.075em] text-[#5D6C83]">{item.label}</p>
