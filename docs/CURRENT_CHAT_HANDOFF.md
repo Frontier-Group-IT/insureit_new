@@ -1,3 +1,17 @@
+## 2026-09-25 — Customer App catalog logo fix
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-catalog-logo-mapping`.
+
+- Root cause: Customer Policies already calls the shared catalog resolver, but the mobile catalog did not actually bundle Tata or Toyota vehicle-brand assets even though canonical Tata/Toyota logos existed elsewhere in the repo under the web portal assets. That forced the generic car fallback icon.
+- Added mobile-bundled Tata and Toyota PNGs derived directly from those existing repo assets.
+- Added canonical mappings for `Tata`, `Tata Motors`, `Toyota`, and Toyota Kirloskar naming variants.
+- HDFC ERGO's PNG already existed in the mobile bundle; hardened aliases for common legal-name variants including HDFC ERGO General Insurance Company Limited / Co. Ltd.
+- Production database inspection confirmed the marked policies resolve to make values `Tata` and `Toyota`, while HDFC ERGO rows use both `HDFC ERGO` and `HDFC ERGO General Insurance Company Limited`.
+- Added `customer-catalog-logo-regression.mjs` to mobile verification.
+- No database/schema/RLS/native dependency/runtime/APK/AAB change.
+
+---
+
 ## 2026-09-25 — Customer My Claims card cleanup
 
 - Branch: `ui/customer-claims-remove-second-icon`.
