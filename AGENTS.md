@@ -47,6 +47,9 @@ Do not paste implementation transcripts, raw logs, secrets, private data, giant 
 
 ### Latest implementation ledger
 
+- **2026-09-25 — Voice Integration control cleanup:** branch `ui/voice-integration-controls-cleanup`; Production control now exposes only the currently valid Pause or Resume action as the primary button, moves Sarvam connection test and refresh to compact icon actions, removes redundant full-size Queue/Recovery navigation buttons, and corrects the stale 100-customer campaign-limit copy. No calling logic, API contract, schema, migration, DNC, webhook, retry, or campaign behavior change. **IMPLEMENTED; PR/CI/merge/deployment pending.**
+
+
 - **2026-09-24 — Varun Vehicle Transfer schema deployment gate:** branch `fix/varun-vehicle-transfer-schema-gate`; adds dedicated GitHub Actions workflow `apply-varun-vehicle-transfer-permission.yml` for migration `20260924185500_varun_vehicle_transfer_permission.sql` and registers that migration in the production deployment gate, so the permission override is applied/verified before production release. **IMPLEMENTED; PR/CI/merge/deployment pending.**
 
 - **2026-09-24 — Reports retention amount/% split:** branch `refine/reports-retention-amount-percent-columns`; on Reports > Business, all record tables that previously combined retention amount and retention percentage in one cell now use separate **Retention Amount** and **%** columns for Insurer, RM Performance, and Intermediary/Source views. Retention calculations remain unchanged (`retention / pay-in × 100`); Management Pack/readiness summary retention displays are unchanged because they do not use the combined table-column format. No schema, migration, RLS, permission, export, APK/AAB, or native-runtime changes. **IMPLEMENTED; PR/CI/merge/deployment pending.**
