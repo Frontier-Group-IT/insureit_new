@@ -1,3 +1,16 @@
+## 2026-09-25 — Customer Add Vehicle class-aware capacity validation
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-vehicle-capacity-validation`.
+
+- Fixes Customer App Add Vehicle showing `Enter a valid GVW.` for vehicle classes where GVW is not applicable.
+- Capacity validation is now class-aware: GCV/CPM → GVW, PCV → seating capacity, TWP/PCP/MISD → engine capacity.
+- RC-fetched zero/non-positive capacity values (for example `GVW = 0`) are treated as unavailable and are not copied into hidden form state.
+- RC-fetched capacity is applied only to the field appropriate for the fetched vehicle class.
+- Changing vehicle class clears hidden/inapplicable capacity state so stale values cannot block Save Vehicle.
+- RPC payload now naturally sends `null` for inapplicable capacity fields.
+- No Supabase migration, API/RPC/RLS contract, native dependency/config, runtime-version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-25 — Customer Profile KYC visibility + default Individual KYC
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-kyc-default-individual`.
