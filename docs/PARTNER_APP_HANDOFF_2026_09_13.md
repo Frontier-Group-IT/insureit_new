@@ -1,3 +1,14 @@
+## 2026-09-25 — More header aligned with Home and Profile heading added
+
+- Branch: `refine/partner-more-home-header-profile`.
+- More now uses the same accepted Home-style hero branding constants: 30x35 logo mark, 14px `insureit` / `Partner` text, 33x33 activity/clock control, and a 35x35 white initials profile avatar using the resolved logged-in identity.
+- Added a `Profile` heading inside the More hero using the same compact 14px heading scale.
+- Existing More banner artwork, profile summary card, WORK / INSIGHTS / GROW & LEARN / ACCOUNT sections, navigation routes, sign-out behavior, permissions and business logic remain unchanged.
+- The same changes are mirrored in `scripts/partner/compat/partner-more-reference-0-1.tsx`; the approved Partner 0.1.0 OTA workflow now verifies these header markers before publishing to the installed `0.1.0 (5)` app.
+- **IMPLEMENTED only. NOT MERGED, NOT OTA-PUBLISHED, NO APK/AAB BUILD.**
+
+---
+
 ## 2026-09-25 — Claims heading moved directly above search
 
 - Branch: `refine/partner-claims-heading-above-search`.
