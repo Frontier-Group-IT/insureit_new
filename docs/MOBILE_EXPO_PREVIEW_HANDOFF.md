@@ -1,3 +1,18 @@
+## 2026-09-25 — Customer Profile KYC visibility + default Individual KYC
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `fix/customer-kyc-default-individual`.
+
+- Fixes Customer App Profile so KYC visibility is based on onboarding status instead of whether a customer master exists.
+- Profile now loads the latest onboarding record including terminal states; `approved` shows `Verified account`, while incomplete KYC shows `KYC pending` / `Continue KYC` as appropriate.
+- Removes the Customer App Partner Type selection stage from the self-signup KYC journey.
+- New Customer App signups default their onboarding shell to `individual_proprietor` without changing the existing `not_started` status.
+- Profile KYC action always opens the Individual KYC route directly.
+- The old `/customer/kyc/partner-type` route remains as a compatibility redirect to Individual KYC so old links/bookmarks cannot reopen the removed selector.
+- Individual KYC no longer shows the Partner Type summary and its stepper is now `Details → Documents → Review`; back navigation returns to Profile.
+- Group/Corporate/Dealership screens are not deleted and remain available for non-self-signup/admin-managed flows.
+- No Supabase migration, API/RPC contract, RLS, native dependency/config, runtime-version, permission, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
 ## 2026-09-25 — Customer Policies external policy-number masking
 
 **IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `ui/customer-external-policy-number-mask`.
