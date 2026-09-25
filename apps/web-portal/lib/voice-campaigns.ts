@@ -79,7 +79,9 @@ type VoiceCampaignOpportunityRow = {
 type VoiceCampaignAttemptRow = {
   opportunity_id: string;
   submission_status: string;
+  connectivity_status: string | null;
   call_disposition: string | null;
+  retry_attempt: number;
   created_at: string;
 };
 
@@ -170,7 +172,11 @@ export type VoiceCampaignMemberView = VoiceCampaignMemberRow & {
   insurer: string | null;
   policyExpiryDate: string | null;
   attemptStatus: string | null;
+  latestConnectivityStatus: string | null;
   callDisposition: string | null;
+  attemptCount: number;
+  retryAttempt: number;
+  retryable: boolean;
 };
 
 function normalizeHeader(value: unknown) {
@@ -452,7 +458,7 @@ export async function createVoiceCampaignFromWorkbook(input: {
   const parsedWorkbook = parseWorkbook(input.fileBuffer);
   const isTataRenewal = parsedWorkbook.campaignType === "tata_commercial_renewal";
   const tataGrouped = isTataRenewal ? groupTataRenewalRows(parsedWorkbook.rows) : null;
-  const rows = tataGrouped?.rows ?? parsedWorkbook.rows.map((row) => ({ ...row, vehicles: [{
+  const rows = tataGrouped?.rows ?? parsedWorkbook.rows.map((row) => ({ ...row, mobile: row.mobile ?? row.secondaryMobile, vehicles: [{
     registrationNumber: row.registrationNumber,
     manufacturer: row.manufacturer,
     model: row.model,
@@ -795,6 +801,86 @@ export async function setVoiceCampaignStatus(campaignId: string, action: "start"
   return { status };
 }
 
+export async function requeueRetryableVoiceCampaignFailures(
+  campaignId: string,
+  opportunityId?: string | null,
+) {
+  const admin = createSupabaseAdminClient();
+
+  const { data: campaign } = await admin
+    .from("voice_campaigns")
+    .select("status")
+    .eq("id", campaignId)
+    .maybeSingle<{ status: string }>();
+
+  if (!campaign || !["running", "paused"].includes(campaign.status)) {
+    throw new Error("Only a running or paused campaign can retry calls.");
+  }
+
+  let memberQuery = admin
+    .from("voice_campaign_members")
+    .select("id,opportunity_id,dispatch_status")
+    .eq("campaign_id", campaignId)
+    .eq("import_status", "accepted")
+    .eq("enrichment_status", "ready");
+
+  if (opportunityId) memberQuery = memberQuery.eq("opportunity_id", opportunityId);
+
+  const { data: members, error: memberError } = await memberQuery
+    .limit(10000)
+    .returns<Array<{ id: string; opportunity_id: string; dispatch_status: string }>>();
+
+  if (memberError) throw new Error("Could not read campaign retry candidates.");
+
+  const candidates = (members ?? []).filter((member) => member.dispatch_status !== "pending");
+  if (!candidates.length) return { requeued: 0 };
+
+  const opportunityIds = candidates.map((member) => member.opportunity_id);
+  const { data: attempts, error: attemptError } = await admin
+    .from("external_renewal_voice_attempts")
+    .select("opportunity_id,submission_status,connectivity_status,created_at")
+    .eq("voice_campaign_id", campaignId)
+    .in("opportunity_id", opportunityIds)
+    .order("created_at", { ascending: false })
+    .returns<Array<{
+      opportunity_id: string;
+      submission_status: string;
+      connectivity_status: string | null;
+      created_at: string;
+    }>>();
+
+  if (attemptError) throw new Error("Could not read the latest campaign call results.");
+
+  const latestByOpportunity = new Map<string, { submission_status: string; connectivity_status: string | null }>();
+  for (const attempt of attempts ?? []) {
+    if (!latestByOpportunity.has(attempt.opportunity_id)) {
+      latestByOpportunity.set(attempt.opportunity_id, attempt);
+    }
+  }
+
+  const retryableIds = candidates
+    .filter((member) => {
+      const latest = latestByOpportunity.get(member.opportunity_id);
+      return Boolean(latest && ["busy", "no_answer"].includes(latest.connectivity_status ?? ""));
+    })
+    .map((member) => member.id);
+
+  if (!retryableIds.length) return { requeued: 0 };
+
+  const { error: updateError } = await admin
+    .from("voice_campaign_members")
+    .update({
+      dispatch_status: "pending",
+      dispatch_error: null,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", retryableIds);
+
+  if (updateError) throw new Error("Could not queue the selected calls for retry.");
+
+  return { requeued: retryableIds.length };
+}
+
 export async function getVoiceCampaignDetail(campaignId: string) {
   const admin = createSupabaseAdminClient();
 
@@ -817,6 +903,7 @@ export async function getVoiceCampaignDetail(campaignId: string) {
   const opportunityIds = (members ?? []).map((row) => row.opportunity_id);
   const opportunityMap = new Map<string, VoiceCampaignOpportunityRow>();
   const attemptMap = new Map<string, VoiceCampaignAttemptRow>();
+  const attemptCountMap = new Map<string, number>();
 
   if (opportunityIds.length) {
     const { data: opportunities } = await admin
@@ -829,12 +916,13 @@ export async function getVoiceCampaignDetail(campaignId: string) {
 
     const { data: attempts } = await admin
       .from("external_renewal_voice_attempts")
-      .select("opportunity_id,submission_status,call_disposition,created_at")
+      .select("opportunity_id,submission_status,connectivity_status,call_disposition,retry_attempt,created_at")
       .eq("voice_campaign_id", campaignId)
       .order("created_at", { ascending: false })
       .returns<VoiceCampaignAttemptRow[]>();
 
     for (const row of attempts ?? []) {
+      attemptCountMap.set(row.opportunity_id, (attemptCountMap.get(row.opportunity_id) ?? 0) + 1);
       if (!attemptMap.has(row.opportunity_id)) attemptMap.set(row.opportunity_id, row);
     }
   }
@@ -861,7 +949,16 @@ export async function getVoiceCampaignDetail(campaignId: string) {
         text(overrides, "insuranceCompany") ?? text(enrichment, "insuranceCompany") ?? opportunity?.current_insurer ?? null,
       policyExpiryDate: text(overrides, "policyExpiryDate") ?? text(enrichment, "policyExpiryDate") ?? null,
       attemptStatus: attempt?.submission_status ?? null,
+      latestConnectivityStatus: attempt?.connectivity_status ?? null,
       callDisposition: attempt?.call_disposition ?? null,
+      attemptCount: attemptCountMap.get(row.opportunity_id) ?? 0,
+      retryAttempt: attempt?.retry_attempt ?? 0,
+      retryable:
+        Boolean(attempt) &&
+        ["busy", "no_answer"].includes(attempt?.connectivity_status ?? "") &&
+        row.enrichment_status === "ready" &&
+        row.import_status === "accepted" &&
+        row.dispatch_status !== "pending",
     };
   });
 
@@ -875,6 +972,7 @@ export async function getVoiceCampaignDetail(campaignId: string) {
       pendingDispatch: views.filter(
         (row) => row.enrichment_status === "ready" && row.dispatch_status === "pending",
       ).length,
+      retryable: views.filter((row) => row.retryable).length,
     },
   };
 }

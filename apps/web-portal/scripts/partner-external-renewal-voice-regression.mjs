@@ -53,6 +53,8 @@ const currentVoiceState = fs.readFileSync(path.join(repoRoot, "docs/SARVAM_VOICE
 const voiceCampaignModel = fs.readFileSync(path.join(root, "lib/voice-campaigns.ts"), "utf8");
 const voiceCampaignDetailPage = fs.readFileSync(path.join(root, "app/system/voice-integration/campaigns/[id]/page.tsx"), "utf8");
 const voiceCampaignExportRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/campaigns/[id]/export/route.ts"), "utf8");
+const voiceCampaignRetryRoute = fs.readFileSync(path.join(root, "app/api/system/voice-integration/campaigns/[id]/retry/route.ts"), "utf8");
+const voiceCampaignRunner = fs.readFileSync(path.join(root, "components/voice/voice-campaign-runner.tsx"), "utf8");
 
 function assert(condition, message) {
   if (!condition) {
@@ -355,6 +357,13 @@ assert(!sarvamClient.includes('const brand = stringVariable(context.calling_bran
 assert(sarvamClient.includes('const brand = isTataCommercial ? explicitBrand : explicitBrand ?? "Frontier JCB"'), "Frontier JCB fallback remains limited to non-Tata renewal flows");
 assert(sarvamClient.includes('मैं अंजना बोल रही हूँ।'), "Tata opening can remain brand-neutral when no calling brand is supplied");
 assert(!sarvamClient.includes("policy renewal के बारे में call किया था—दो मिनट बात कर सकते हैं क्या?"), "legacy opening sentence is not sent to Sarvam");
+assert(voiceCampaignModel.includes("row.mobile ?? row.secondaryMobile"), "campaign import falls back to Second number when the primary mobile is missing or invalid");
+assert(voiceCampaignModel.includes("requeueRetryableVoiceCampaignFailures"), "campaign model exposes controlled retry preparation for failed calls");
+assert(voiceCampaignRetryRoute.includes('viewer.role !== "it_super_user"'), "campaign retry requires exact IT Super User role");
+assert(voiceCampaignRetryRoute.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "campaign retry requires critical system access");
+assert(voiceCampaignRunner.includes("Retry busy / unanswered"), "campaign UI exposes manual retry for retryable failed calls");
+assert(voiceCampaignModel.includes('["busy", "no_answer"]'), "campaign retry is limited to busy or unanswered call results");
+assert(itDispatchModel.includes("retry_attempt: (previousAttempts ?? []).length"), "new campaign attempts record their retry attempt number");
 assert(voiceCampaignModel.includes('name.trim().toLowerCase() === "renewal"'), "Tata campaign import explicitly selects the Renewal sheet");
 assert(voiceCampaignModel.includes('"tata_commercial_renewal"'), "voice campaign model carries the Tata Commercial campaign type");
 assert(voiceCampaignModel.includes("groupTataRenewalRows"), "Tata repeated mobiles are grouped before campaign membership");
