@@ -10,6 +10,7 @@ import { getCurrentSession, getCustomerForUser } from '@/lib/auth';
 import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone } from '@/lib/claim-service-mode';
 import { supabase } from '@/lib/supabase';
+import { getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { palette } from '@/lib/theme';
 import type { Claim, ClaimDocument, ClaimStatus, ClaimTask, InsuranceCompany, Policy, Vehicle } from '@/lib/types';
 
@@ -152,31 +153,27 @@ export default function ClaimsScreen() {
             <View style={[styles.accentBar, { backgroundColor: palette.navy }]} />
 
             <View style={styles.claimTop}>
+              {getVehicleBrandLogoSource(vehicle?.make) ? (
+                <View style={styles.manufacturerIcon}>
+                  <Image source={getVehicleBrandLogoSource(vehicle?.make)!} resizeMode="contain" style={styles.manufacturerIconImage} />
+                </View>
+              ) : null}
               <View style={[styles.statusIcon, { backgroundColor: externalClaim ? '#F7FAFF' : tone.soft }]}>
                 <Image source={claimCardIcon(claim.current_status, externalClaim, completed)} resizeMode="contain" style={styles.statusIconImage} />
               </View>
               <View style={styles.claimTitleCopy}>
                 <Text style={[styles.modeLabel, { color: externalClaim ? externalStatusColor : tone.accent }]}>{externalClaim ? externalModeLabel : claimStageLabel(claim.current_status)}</Text>
                 <Text style={styles.vehicleNo} numberOfLines={1}>{vehicle?.vehicle_no ?? 'Vehicle linked'}</Text>
-                <Text style={styles.vehicleMeta} numberOfLines={1}>{[vehicle?.make, vehicle?.model].filter(Boolean).join(' · ') || insurer?.name || 'Claim record'}</Text>
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={21} color={externalClaim ? '#0A43A3' : tone.accent} />
+              <View style={styles.milestoneRight}>
+                <Text style={styles.milestoneRightValue} numberOfLines={2}>{externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.substage ?? claim.current_status}</Text>
+              </View>
             </View>
 
             <View style={styles.identityRow}>
-              <View style={styles.identityBlock}><Text style={styles.identityLabel}>CONTROL NO.</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.claim_no}</Text></View>
+              <View style={styles.identityBlock}><Text style={styles.identityLabel}>INCIDENT</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.accident_at ? formatDate(claim.accident_at) : '-'}</Text></View>
+              <View style={[styles.identityBlock, styles.identityBlockCenter]}><Text style={styles.identityLabel}>CONTROL NO.</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.claim_no}</Text></View>
               <View style={[styles.identityBlock, styles.identityBlockRight]}><Text style={styles.identityLabel}>CLAIM NO.</Text><Text style={styles.identityValue} numberOfLines={1}>{claim.insurer_claim_no || 'Awaiting insurer'}</Text></View>
-            </View>
-
-            <View style={styles.currentRow}>
-              <View style={styles.currentCopy}>
-                <Text style={styles.currentLabel}>{externalClaim ? 'CURRENT MILESTONE' : 'CURRENT STATUS'}</Text>
-                <Text style={styles.currentValue}>{externalClaim ? externalCurrentMilestone(claimMilestones) : internalProjection?.substage ?? claim.current_status}</Text>
-              </View>
-              <View style={styles.incidentCopy}>
-                <Text style={styles.currentLabel}>INCIDENT</Text>
-                <Text style={styles.incidentValue}>{claim.accident_at ? formatDate(claim.accident_at) : '-'}</Text>
-              </View>
             </View>
 
             {assistanceRequested ? <View style={styles.assistancePill}><MaterialCommunityIcons name="clock-outline" size={13} color="#805700" /><Text style={styles.assistancePillText}>Assistance requested</Text></View> : null}
@@ -246,5 +243,5 @@ function policyExpiryEndOfDay(value?: string | null) { if (!value || !/^\d{4}-\d
 const styles = StyleSheet.create({
   pageHeader: { marginBottom: 12 }, eyebrow: { color: '#0A43A3', fontSize: 10, fontWeight: '900', letterSpacing: 1 }, pageTitle: { color: palette.navy, fontSize: 24, fontWeight: '900', marginTop: 2 }, pageSubtitle: { color: '#667085', fontSize: 11.5, lineHeight: 16, fontWeight: '600', marginTop: 3 },
   filterScroller: { maxHeight: 44, marginTop: 10, marginBottom: 12 }, filterWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 14 }, filterChip: { minHeight: 36, borderRadius: 999, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', alignItems: 'center', justifyContent: 'center' }, filterChipActive: { backgroundColor: palette.navy, borderColor: palette.navy }, filterText: { color: palette.slate, fontSize: 11, fontWeight: '900' }, filterTextActive: { color: '#FFFFFF' },
-  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 10 }, statusIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' }, statusIconImage: { width: 32, height: 32 }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, vehicleMeta: { color: '#7A8799', fontSize: 10, fontWeight: '600', marginTop: 2 }, identityRow: { marginTop: 11, paddingTop: 10, paddingHorizontal: 9, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 10 }, identityBlock: { flex: 1, minWidth: 0 }, identityBlockRight: { flex: 0, alignItems: 'flex-end' }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.8, fontWeight: '900', marginTop: 2 }, currentRow: { marginTop: 10, borderRadius: 12, backgroundColor: '#F8FAFC', padding: 9, flexDirection: 'row', gap: 10 }, currentCopy: { flex: 1, minWidth: 0 }, incidentCopy: { alignItems: 'flex-end' }, currentLabel: { color: '#98A2B3', fontSize: 8.3, fontWeight: '900', letterSpacing: 0.4 }, currentValue: { color: palette.navy, fontSize: 11.2, fontWeight: '900', marginTop: 2 }, incidentValue: { color: '#344054', fontSize: 10.5, fontWeight: '800', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
+  claimCard: { borderWidth: 1, borderRadius: 17, padding: 12, paddingLeft: 17, marginBottom: 10, overflow: 'hidden', backgroundColor: '#FFFFFF' }, externalCard: { backgroundColor: '#FBFDFF' }, accentBar: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 }, claimTop: { flexDirection: 'row', alignItems: 'center', gap: 8 }, manufacturerIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E4EAF2', alignItems: 'center', justifyContent: 'center' }, manufacturerIconImage: { width: 26, height: 26 }, statusIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }, statusIconImage: { width: 29, height: 29 }, claimTitleCopy: { flex: 1, minWidth: 0 }, modeLabel: { fontSize: 9, fontWeight: '900', letterSpacing: 0.6 }, vehicleNo: { color: palette.navy, fontSize: 17, fontWeight: '900', marginTop: 1 }, milestoneRight: { maxWidth: 112, alignItems: 'flex-end', justifyContent: 'center' }, milestoneRightValue: { color: palette.navy, fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'right' }, identityRow: { marginTop: 11, paddingTop: 10, paddingHorizontal: 9, borderTopWidth: 1, borderTopColor: '#EEF2F6', flexDirection: 'row', gap: 8 }, identityBlock: { flex: 1, minWidth: 0 }, identityBlockCenter: { alignItems: 'center' }, identityBlockRight: { alignItems: 'flex-end' }, identityLabel: { color: '#98A2B3', fontSize: 8.5, fontWeight: '900', letterSpacing: 0.4 }, identityValue: { color: '#344054', fontSize: 10.3, fontWeight: '900', marginTop: 2 }, assistancePill: { alignSelf: 'flex-start', marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, backgroundColor: '#FFF4CC', paddingHorizontal: 9, paddingVertical: 5 }, assistancePillText: { color: '#805700', fontSize: 9, fontWeight: '900' }, expiredClaimWarning: { marginTop: 9, borderRadius: 10, backgroundColor: '#FFF1F0', padding: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }, expiredClaimWarningText: { color: '#B42318', fontSize: 9.5, fontWeight: '900' }, managedMeta: { color: '#7A8799', fontSize: 9.5, fontWeight: '600', marginTop: 8 },
 });
