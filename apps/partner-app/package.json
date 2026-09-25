@@ -15,6 +15,7 @@
     "verify:pre-apk": "node scripts/verify-pre-apk-freeze.mjs",
     "verify:phase6": "node scripts/verify-phase6-native-foundation.mjs",
     "verify:uat": "node scripts/verify-pre-apk-uat.mjs",
+    "verify:ota-release": "node scripts/verify-ota-release-contracts.mjs",
     "build:web": "expo export --platform web --output-dir dist-web"
   },
   "dependencies": {
