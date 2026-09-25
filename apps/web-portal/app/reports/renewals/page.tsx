@@ -16,6 +16,7 @@ export const revalidate=0;
 
 const HORIZONS=[{value:"30",label:"30 days"},{value:"60",label:"60 days"},{value:"90",label:"90 days"},{value:"180",label:"180 days"},{value:"365",label:"365 days"}] as const;
 type Props={searchParams:Promise<RenewalQuery&{register?:string}>};
+type ChartRow={key:string;label:string;count:number;amount:number;secondary:number};
 
 export default async function RenewalReportsPage({searchParams}:Props){
   const profile=await requireCapability("view_reports");
