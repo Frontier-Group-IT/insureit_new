@@ -292,6 +292,19 @@ But the webhook result RPC later overwrites the parent attempt's `retry_attempt`
 
 Therefore the stored `retry_attempt` column is not a reliable measure of how many local campaign attempts were made for the opportunity. Counting actual attempt rows per opportunity is the reliable metric used above.
 
+### Attempt creation occurred in large bursts
+
+For the 612-member **TATA Breaking** campaign, local attempt rows were created in concentrated minute-level waves between roughly 10:52Z and 11:55Z on 25 Sep. Examples include:
+- 91 attempts in one minute
+- 98 attempts in one minute
+- 108 attempts in one minute
+- 99 attempts in one minute
+- 100 attempts in one minute
+
+This matches the campaign runner's batched dispatch design and repeated queue/retry passes, rather than human users opening individual records manually.
+
+The current runner calls `dispatch-batch` repeatedly, and each batch processes up to 3 pending campaign members. The client loops up to 40 batch requests per queueing action. For a large campaign this is expected to generate many serverless invocations and related Supabase reads/writes. When busy/no-answer members are requeued, the same machinery runs again.
+
 ### No evidence of a duplicate-webhook storm
 
 The latest 24h shows:
