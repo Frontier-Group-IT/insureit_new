@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -22,6 +23,9 @@ export default function ProfileScreen() {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [onboarding, setOnboarding] = useState<CustomerOnboardingApplication | null>(null);
   const [documents, setDocuments] = useState<CustomerDocument[]>([]);
+  const [profilePhoto, setProfilePhoto] = useState<CustomerDocument | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,7 +86,19 @@ export default function ProfileScreen() {
           ? await supabase.from('customer_documents').select('*').eq('customer_id', nextCustomer.id).order('created_at', { ascending: false })
           : { data: [] };
         if (!active) return;
-        setProfile(nextProfile); setCustomer(nextCustomer); setOnboarding(nextOnboarding); setDocuments(documentResult.data ?? []);
+        const loadedDocuments = documentResult.data ?? [];
+        const latestProfilePhoto = loadedDocuments.find((document) => document.document_type === 'Profile Photo') ?? null;
+        setProfile(nextProfile);
+        setCustomer(nextCustomer);
+        setOnboarding(nextOnboarding);
+        setProfilePhoto(latestProfilePhoto);
+        setDocuments(loadedDocuments.filter((document) => document.document_type !== 'Profile Photo'));
+        if (latestProfilePhoto) {
+          const signedPhoto = await supabase.storage.from(latestProfilePhoto.storage_bucket).createSignedUrl(latestProfilePhoto.storage_path, 3600);
+          if (active && signedPhoto.data?.signedUrl) setAvatarUri(signedPhoto.data.signedUrl);
+        } else {
+          setAvatarUri(null);
+        }
         setDraft({ name: nextCustomer?.contact_name ?? nextProfile?.full_name ?? '', phone: nextCustomer?.phone ?? nextProfile?.phone ?? '', email: nextCustomer?.email ?? nextProfile?.email ?? '', address: nextCustomer?.address ?? '' });
       } catch {
         if (active) setMessage({ text: 'We could not load your profile. Please try again.', type: 'error' });
@@ -179,6 +195,84 @@ export default function ProfileScreen() {
     }
   }
 
+  async function changeProfilePhoto() {
+    if (!customer || !profile || avatarUploading) return;
+
+    setMessage(null);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.82,
+    });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+      setMessage({ text: 'Please choose a profile photo below 5 MB.', type: 'error' });
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      const response = await fetch(asset.uri);
+      const body = await response.arrayBuffer();
+      if (body.byteLength > 5 * 1024 * 1024) {
+        setMessage({ text: 'Please choose a profile photo below 5 MB.', type: 'error' });
+        return;
+      }
+
+      const extension = profilePhotoExtension(asset.fileName, asset.mimeType);
+      const fileName = asset.fileName?.trim() || `profile-photo.${extension}`;
+      const storagePath = `${customer.id}/profile/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+      const uploadResult = await supabase.storage.from('customer-documents').upload(storagePath, body, {
+        contentType: asset.mimeType ?? 'image/jpeg',
+        upsert: false,
+      });
+      if (uploadResult.error) {
+        setMessage({ text: 'Profile photo upload failed. Please try again.', type: 'error' });
+        return;
+      }
+
+      const { data, error } = await supabase.from('customer_documents').insert({
+        customer_id: customer.id,
+        document_type: 'Profile Photo',
+        file_name: fileName,
+        storage_bucket: 'customer-documents',
+        storage_path: storagePath,
+        mime_type: asset.mimeType ?? 'image/jpeg',
+        file_size: body.byteLength,
+        uploaded_by: profile.id,
+      }).select('*').single();
+
+      if (error || !data) {
+        await supabase.storage.from('customer-documents').remove([storagePath]);
+        setMessage({ text: 'Profile photo could not be saved. Please try again.', type: 'error' });
+        return;
+      }
+
+      const signedPhoto = await supabase.storage.from(data.storage_bucket).createSignedUrl(data.storage_path, 3600);
+      if (!signedPhoto.data?.signedUrl) {
+        setMessage({ text: 'Profile photo saved, but it could not be displayed yet.', type: 'error' });
+        return;
+      }
+
+      const previousPhoto = profilePhoto;
+      setProfilePhoto(data);
+      setAvatarUri(signedPhoto.data.signedUrl);
+      setMessage({ text: 'Profile photo updated.', type: 'success' });
+
+      if (previousPhoto) {
+        await supabase.from('customer_documents').delete().eq('id', previousPhoto.id);
+        await supabase.storage.from(previousPhoto.storage_bucket).remove([previousPhoto.storage_path]);
+      }
+    } catch {
+      setMessage({ text: 'Profile photo upload failed. Please try again.', type: 'error' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
   async function uploadCustomerDocument() {
     if (!customer || !profile || documentUploading) return;
     setMessage(null);
@@ -263,7 +357,22 @@ export default function ProfileScreen() {
 
       <View style={styles.hero}>
         <View style={styles.heroShield}><MaterialCommunityIcons name="shield-check-outline" size={72} color="rgba(255,255,255,0.13)" /></View>
-        <Animated.View style={[styles.avatarShell, { transform: [{ translateY: avatarLift }, { scale: avatarScale }] }]}><Image source={avatarIllustration} style={styles.avatarImage} resizeMode="cover" /></Animated.View>
+        <Animated.View style={[styles.avatarStage, { transform: [{ translateY: avatarLift }, { scale: avatarScale }] }]}>
+          <View style={styles.avatarShell}>
+            <Image source={avatarUri ? { uri: avatarUri } : avatarIllustration} style={[styles.avatarImage, !avatarUri && styles.avatarIllustrationImage]} resizeMode="cover" />
+          </View>
+          {customer ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              disabled={avatarUploading}
+              onPress={() => void changeProfilePhoto()}
+              style={[styles.avatarCamera, avatarUploading && styles.avatarCameraDisabled]}
+            >
+              <MaterialCommunityIcons name={avatarUploading ? 'progress-upload' : 'camera'} size={17} color="#FFFFFF" />
+            </Pressable>
+          ) : null}
+        </Animated.View>
         <View style={styles.identity}><Text style={styles.customerName}>{displayName}</Text><Text style={styles.customerId}>{customer ? `Customer ID: ${customer.customer_code}` : 'Customer profile not activated'}</Text><View style={[styles.verified, !customer && styles.pendingVerification]}><MaterialCommunityIcons name={customer ? 'check-circle' : 'clock-outline'} size={15} color={customer ? '#69D6BA' : '#FFD27A'} /><Text style={[styles.verifiedText, !customer && styles.pendingVerificationText]}>{customer ? 'Verified account' : kycAwaitingReview ? 'KYC under review' : 'KYC pending'}</Text></View></View>
       </View>
 
@@ -375,6 +484,13 @@ function Section({ title, icon, iconSource, action, onAction, children }: { titl
 function ActionRow({ icon, label, value, onPress }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; label: string; value?: string; onPress: () => void }) { return <Pressable accessibilityRole="button" onPress={onPress} style={styles.actionRow}><View style={styles.rowIcon}><MaterialCommunityIcons name={icon} size={19} color={roleTheme.customer.accent} /></View><Text style={styles.rowLabel} numberOfLines={value ? 1 : 2}>{label}</Text>{value ? <Text style={styles.rowValue} numberOfLines={1}>{value}</Text> : null}<MaterialCommunityIcons name="chevron-right" size={19} color="#9BACBE" /></Pressable>; }
 function TextField({ label, ...props }: { label: string } & React.ComponentProps<typeof TextInput>) { return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><TextInput style={styles.fieldInput} placeholderTextColor="#8090A6" {...props} /></View>; }
 function documentIcon(document: CustomerDocument): keyof typeof MaterialCommunityIcons.glyphMap { if (document.mime_type?.startsWith('image/')) return 'image-outline'; if (document.mime_type === 'application/pdf' || /\.pdf$/i.test(document.file_name)) return 'file-pdf-box'; return 'file-document-outline'; }
+function profilePhotoExtension(fileName?: string | null, mimeType?: string | null) {
+  const fromName = fileName?.includes('.') ? fileName.split('.').pop()?.toLowerCase() : null;
+  if (fromName && ['jpg', 'jpeg', 'png', 'webp'].includes(fromName)) return fromName;
+  if (mimeType === 'image/png') return 'png';
+  if (mimeType === 'image/webp') return 'webp';
+  return 'jpg';
+}
 function formatAddress(customer: Customer | null) {
   if (!customer) return '';
 
@@ -413,7 +529,7 @@ const styles = StyleSheet.create({
   successToastTitle: { color: '#05603A', fontSize: 13, lineHeight: 17, fontWeight: '900' },
   successToastText: { color: '#067647', fontSize: 13, lineHeight: 18, fontWeight: '700' },
   pageHeading: { marginTop: 0, marginBottom: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, pageTitle: { color: palette.ink, fontSize: 18, lineHeight: 23, fontWeight: '900' },
-  hero: { minHeight: 177, marginHorizontal: -14, marginTop: 0, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 16, backgroundColor: '#061D43', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 14 }, heroShield: { position: 'absolute', right: 18, top: 23 }, avatarShell: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: '#EAF2FF', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: .3, shadowRadius: 12, elevation: 5 }, avatarImage: { width: '100%', height: '100%', transform: [{ scale: 1.24 }, { translateY: 11 }] }, identity: { flex: 1, minWidth: 0 }, customerName: { color: '#FFFFFF', fontSize: 21, fontWeight: '900' }, customerId: { color: '#BDD2F2', fontSize: 11.5, fontWeight: '700', marginTop: 4 }, verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, borderRadius: 99, backgroundColor: 'rgba(52,183,139,.16)', paddingHorizontal: 8, paddingVertical: 5 }, verifiedText: { color: '#A5E5CD', fontSize: 10.5, fontWeight: '900' }, pendingVerification: { backgroundColor: 'rgba(238,172,55,.17)' }, pendingVerificationText: { color: '#FFDFA0' },
+  hero: { minHeight: 177, marginHorizontal: -14, marginTop: 0, paddingHorizontal: 22, paddingTop: 28, paddingBottom: 16, backgroundColor: '#061D43', overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 14 }, heroShield: { position: 'absolute', right: 18, top: 23 }, avatarStage: { width: 118, height: 118, position: 'relative', alignItems: 'center', justifyContent: 'center' }, avatarShell: { width: 112, height: 112, borderRadius: 56, backgroundColor: '#FFFFFF', borderWidth: 3, borderColor: '#EAF2FF', overflow: 'hidden', shadowColor: '#000000', shadowOpacity: .3, shadowRadius: 12, elevation: 5 }, avatarImage: { width: '100%', height: '100%' }, avatarIllustrationImage: { transform: [{ scale: 1.24 }, { translateY: 11 }] }, avatarCamera: { position: 'absolute', right: 1, bottom: 5, width: 34, height: 34, borderRadius: 17, backgroundColor: '#0B63CE', borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', zIndex: 3, elevation: 7, shadowColor: '#000000', shadowOpacity: .22, shadowRadius: 5, shadowOffset: { width: 0, height: 2 } }, avatarCameraDisabled: { opacity: .62 }, identity: { flex: 1, minWidth: 0 }, customerName: { color: '#FFFFFF', fontSize: 21, fontWeight: '900' }, customerId: { color: '#BDD2F2', fontSize: 11.5, fontWeight: '700', marginTop: 4 }, verified: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, borderRadius: 99, backgroundColor: 'rgba(52,183,139,.16)', paddingHorizontal: 8, paddingVertical: 5 }, verifiedText: { color: '#A5E5CD', fontSize: 10.5, fontWeight: '900' }, pendingVerification: { backgroundColor: 'rgba(238,172,55,.17)' }, pendingVerificationText: { color: '#FFDFA0' },
   kycActionCard: { minHeight: 74, marginTop: 10, borderRadius: 16, backgroundColor: '#F1F7FF', borderWidth: 1, borderColor: '#CFE1F7', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }, kycActionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D4E6FA', alignItems: 'center', justifyContent: 'center' }, kycActionCopy: { flex: 1, minWidth: 0 }, kycActionTitle: { color: palette.navy, fontSize: 13.5, fontWeight: '800' }, kycActionText: { color: '#5E6E82', fontSize: 9.8, lineHeight: 14, marginTop: 3 }, reviewPill: { borderRadius: 99, backgroundColor: '#FFF3D6', paddingHorizontal: 8, paddingVertical: 5 }, reviewPillText: { color: '#875B0E', fontSize: 8.8, fontWeight: '700' },
   section: { borderRadius: 17, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', marginTop: 10, overflow: 'hidden', shadowColor: palette.ink, shadowOpacity: .035, shadowRadius: 8, elevation: 1 }, sectionHeader: { minHeight: 48, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#E8EEF5' }, sectionTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 9 }, sectionIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F5F8FC', alignItems: 'center', justifyContent: 'center' }, cardHeaderArtwork: { width: 27, height: 27 }, cardHeaderArtworkLarge: { width: 37, height: 37 }, sectionTitle: { color: palette.navy, fontSize: 14, fontWeight: '900' }, sectionAction: { minHeight: 30, paddingHorizontal: 5, justifyContent: 'center' }, sectionActionText: { color: '#0B63CE', fontSize: 11, fontWeight: '900' },
   actionRow: { minHeight: 48, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 9, borderBottomWidth: 1, borderBottomColor: '#EEF2F6' }, rowIcon: { width: 27, alignItems: 'center' }, rowLabel: { flex: 1, color: palette.ink, fontSize: 11.8, fontWeight: '700' }, rowValue: { maxWidth: 105, color: palette.slate, fontSize: 10.5, fontWeight: '800', textAlign: 'right' },

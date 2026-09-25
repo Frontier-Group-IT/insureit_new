@@ -1,3 +1,17 @@
+## 2026-09-25 — Customer App profile photo picker
+
+**IMPLEMENTED, NOT MERGED/PUBLISHED:** branch `feature/customer-profile-photo-picker`.
+
+- Customer App → Profile adds a small camera action over the lower-right edge of the circular profile avatar.
+- Tapping the camera action opens the Expo image-library picker with square crop/edit behavior and accepts image files only.
+- The selected photo uploads to the existing private `customer-documents` bucket under the authenticated customer's folder and persists as document type `Profile Photo`.
+- Profile photos are intentionally excluded from the visible Documents & KYC count/list so the avatar upload does not inflate KYC documents.
+- The latest stored profile photo is loaded through a signed URL on subsequent profile opens; replacing it performs best-effort cleanup of the previous profile-photo record/object after the new photo is safely saved.
+- Existing profile/contact/KYC behavior is unchanged. No schema, migration, RLS, native dependency/config, runtime-version, APK/AAB, or OTA publication change.
+- Evidence state: **IMPLEMENTED; PR/CI/merge/OTA pending; NO APK/AAB CREATED.**
+
+---
+
 ## 2026-09-25 — Customer signup creates customer master; KYC has no review stage
 
 - Branch: `feature/customer-signup-direct-master-kyc-submit`.
