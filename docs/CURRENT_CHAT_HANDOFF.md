@@ -1,3 +1,16 @@
+## 2026-09-25 — Hide Non-Motor policy product subline in Policy Register
+
+- Branch: `fix/non-motor-hide-policy-product-subline`.
+- PR: #2405.
+- In `apps/web-portal/app/policies/policy-workspace.tsx`, `PolicyTypeLink()` now suppresses the secondary `policy_product` line when `businessLine === "Non Motor"`.
+- Non-Motor rows now show only **Non Motor • <category>** in the Policy / Product column.
+- Motor rows keep the existing secondary product-line behavior.
+- The stored `policy_product` value is unchanged and remains available elsewhere.
+- Search/filter logic, insurer data/logo column, policy details, calculations, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, and native runtime are unchanged.
+- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
+
+---
+
 ## 2026-09-25 — Customer App secure multi-account switching (final security hardening)
 
 **IMPLEMENTED, REVERSIBLE, NOT YET MERGED/PUBLISHED:** rebuilt from current `main`.
