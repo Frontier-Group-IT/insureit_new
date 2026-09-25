@@ -102,3 +102,7 @@ Privacy and evidence rules:
 ## Tata Commercial Renewal extension — 2026-09-24
 
 Branch `feat/tata-commercial-renewal-voice` extends the campaign importer without changing the Sarvam execution-layer model. Standard RC + Mobile campaigns continue to work. An approved Tata workbook is detected by its `Renewal` sheet and Tata column family; `Breaking Case` is excluded. The source-row ceiling is raised to 500 by a dedicated migration, repeated callable mobiles are grouped to one prospect with multi-vehicle context, and Tata-provided customer/vehicle/insurer/policy/expiry values remain campaign-scoped evidence. Tata source context can satisfy the campaign enrichment gate without an AuthBridge lookup. Upload still never initiates calls. See `docs/SARVAM_TATA_COMMERCIAL_RENEWAL_2026_09_24.md`.
+
+### Large-campaign export hardening — 2026-09-25
+
+Production campaign export exposed a scale bug after campaign upload capacity was expanded. A 612-member campaign with 1,298 call attempts and 1,294 attempt-event rows returned HTTP 500 because the report queried all attempt UUIDs in one `.in(...)` filter, and the same code still capped campaign members at 100. The export loader now pages campaign members and call attempts, chunks opportunity/attempt-event UUID lookups, and pages event rows per chunk. This removes the 100-member truncation and avoids oversized Supabase/PostgREST filters while preserving the existing 33-column XLSX, masked mobile numbers, IT-Super-User authorization and transcript exclusion. Dedicated regression: `voice-campaign-export:regression`.
