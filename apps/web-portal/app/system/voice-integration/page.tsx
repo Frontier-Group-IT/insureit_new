@@ -162,7 +162,6 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
     operationalPolicy.withinCallingWindow &&
     campaignDispatchable;
   const staleActiveAttempts = (attempts ?? []).filter((attempt) => isStaleActiveAttempt(attempt, Date.now()));
-  const latestWebhookEvent = attemptEvents?.[0] ?? null;
 
   const actionNotice =
     quickAdd === "failed"
@@ -401,8 +400,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
           ) : null}
         </section>
 
-        <section className="grid gap-3 xl:grid-cols-[1.55fr_.75fr]">
-          <div id="voice-queue" className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
+        <section id="voice-queue" className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
             <div className="flex items-center justify-between gap-3">
               <SectionTitle icon={PhoneCall} title="Calling queue" />
               <div className="flex items-center gap-1 text-[8px] font-bold">
@@ -488,22 +486,6 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <div className="rounded-xl border border-[#DDE6F0] bg-white p-2.5 shadow-[0_3px_12px_rgba(31,55,86,0.035)]">
-            <SectionTitle icon={Activity} title="Campaign" />
-            <div className="mt-2 divide-y divide-[#EDF2F7] rounded-xl border border-[#E4EBF3]">
-              <InfoRow label="State" value={labelize(campaignLifecycle.status)} />
-              <InfoRow label="Verified" value={campaignLifecycle.ok ? "Yes" : "No"} />
-              <InfoRow label="Window" value={`${operationalPolicy.start}–${operationalPolicy.end}`} />
-              <InfoRow label="Webhook" value={webhookObserved ? "Healthy" : "Not seen"} />
-              <InfoRow label="Last callback" value={formatDateTime(latestWebhookEvent?.created_at ?? null)} />
-              <InfoRow label="Partner control" value="Disabled" />
-            </div>
-            <div className="mt-2 rounded-lg bg-[#F4F7FB] px-3 py-2 text-[8.5px] text-[#64748B]">
-              Calling is centrally controlled by IT.
-            </div>
-          </div>
         </section>
 
         {staleActiveAttempts.length ? (
@@ -650,14 +632,5 @@ function MetricPill({ label, value, good = false }: { label: string; value: numb
     <span className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${good ? "bg-emerald-50 text-emerald-700" : "bg-[#F1F4F8] text-[#64748B]"}`}>
       {label} <strong>{value}</strong>
     </span>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-3 py-2 text-[8.5px]">
-      <span className="font-semibold text-[#7A8AA0]">{label}</span>
-      <span className="text-right font-bold text-[#29415F]">{value}</span>
-    </div>
   );
 }
