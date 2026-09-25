@@ -594,6 +594,8 @@ begin
 end;
 $$;
 
+revoke all on function public.finalize_standalone_customer_app_kyc() from public;
+
 drop trigger if exists finalize_standalone_customer_app_kyc
   on public.customer_onboarding_applications;
 create trigger finalize_standalone_customer_app_kyc
