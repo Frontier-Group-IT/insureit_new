@@ -104,8 +104,10 @@ export default async function NewVoiceCampaignPage({
                 Upload Excel sheet
               </span>
               <span className="mt-1 block text-[8.5px] text-[#72849C]">
-                Standard: <strong>RC No.</strong> + <strong>Mobile No.</strong>. Tata workbook:
-                <strong> Renewal</strong> sheet is detected automatically; <strong>Breaking Case</strong> is ignored.
+                Standard: <strong>RC No.</strong> + <strong>Contact Number</strong>, with optional
+                <strong> Second number</strong>. If the primary number is missing or invalid, the secondary
+                number is used automatically. Tata workbook: <strong>Renewal</strong> sheet is detected
+                automatically; <strong>Breaking Case</strong> is ignored.
               </span>
               <input
                 type="file"
