@@ -1,82 +1,265 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { ReportQueryShortcuts } from "@/components/reports/report-query-shortcuts";
 import { ReportCompactFilters } from "@/components/reports/report-compact-filters";
-import { ReportEmptyState, ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
+import { ReportExportLink, ReportPageShell } from "@/components/reports/report-page-shell";
 import { getInsurerLogo } from "@/lib/insurer-logo";
 import { requireCapability } from "@/lib/master-data-server";
-import { loadRenewalReport, type RenewalBucket, type RenewalFilters, type RenewalQuery, type RenewalReport } from "@/lib/reports/renewals";
+import { emptyClaimsReport, loadClaimsReport, type ClaimsReport, type ClaimsRow } from "@/lib/reports/claims";
+import { loadRenewalReport, type RenewalBucket, type RenewalFilters, type RenewalQuery, type RenewalReport, type RenewalRow } from "@/lib/reports/renewals";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const dynamic="force-dynamic";
+export const revalidate=0;
 
-const HORIZONS = [{value:"30",label:"30 days"},{value:"60",label:"60 days"},{value:"90",label:"90 days"},{value:"180",label:"180 days"},{value:"365",label:"365 days"}] as const;
-type Props={searchParams:Promise<RenewalQuery>};
+const HORIZONS=[{value:"30",label:"30 days"},{value:"60",label:"60 days"},{value:"90",label:"90 days"},{value:"180",label:"180 days"},{value:"365",label:"365 days"}] as const;
+type Props={searchParams:Promise<RenewalQuery&{register?:string}>};
 
 export default async function RenewalReportsPage({searchParams}:Props){
   const profile=await requireCapability("view_reports");
   const query=await searchParams;
-  let payload:Awaited<ReturnType<typeof loadRenewalReport>>|null=null; let loadError=false;
-  try{payload=await loadRenewalReport(profile,query)}catch(error){console.error("[reports] renewal report failed",error instanceof Error?error.message:"unknown error");loadError=true}
-  const report=payload?.report??emptyReport(); const filters=payload?.filters??fallbackFilters();
-  const pages=Math.max(1,Math.ceil(report.register.total_count/Math.max(report.register.page_size,1)));
-  const exportHref=href("/reports/export/renewals",filters,undefined);
-  return <AppShell title="Reports"><ReportPageShell
-    title="Renewal pipeline"
-    loadError={loadError}
-    actions={<ReportExportLink href={exportHref}/>} 
-    controls={
-      <ReportQueryShortcuts
-        label="Horizon"
-        param="horizon"
-        activeValue={String(filters.horizonDays)}
-        options={HORIZONS}
-        showActiveFilterCount={false}
-        trailing={<ReportCompactFilters
-          path="/reports/renewals"
-          businessLine={filters.businessLine}
-          category={filters.category}
-          categories={report.filters.categories}
-          period=""
-          fromDate={null}
-          toDate={null}
-          fields={[
-            { name:"insurer", label:"Insurance company", value:filters.insurerId ?? "", options:report.filters.insurers.map((x)=>({value:x.id,label:x.name})) },
-            { name:"rm", label:"Relationship manager", value:filters.rmEmployeeId ?? "", options:report.filters.rms.map((x)=>({value:x.id,label:x.name})) },
-            { name:"intermediary", label:"Partner / intermediary", value:filters.intermediaryCode ?? "", options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name !== x.code ? `${x.name} · ${x.code}` : x.name})) },
-            { name:"bucket", label:"Expiry bucket", value:filters.bucket ?? "", options:bucketOptions().map((x)=>({value:x.key,label:x.label})) },
-          ]}
-        />}
-      />
+  let renewalPayload:Awaited<ReturnType<typeof loadRenewalReport>>|null=null;
+  let claimsReport:ClaimsReport=emptyClaimsReport();
+  let claimRows:ClaimsRow[]=[];
+  let loadError=false;
+
+  try{
+    const [renewal,claims]=await Promise.all([
+      loadRenewalReport(profile,query),
+      loadClaimsReport(profile,{period:"all"},200),
+    ]);
+    renewalPayload=renewal;
+    claimsReport=claims.report;
+    claimRows=[...claims.report.register.rows];
+
+    const claimPages=Math.max(1,Math.ceil(claims.report.register.total_count/Math.max(claims.report.register.page_size,1)));
+    for(let page=2;page<=claimPages;page++){
+      const next=await loadClaimsReport(profile,{period:"all",page:String(page)},200);
+      claimRows.push(...next.report.register.rows);
     }
+  }catch(error){
+    console.error("[reports] portfolio dashboard failed",error instanceof Error?error.message:"unknown error");
+    loadError=true;
+  }
+
+  const report=renewalPayload?.report??emptyRenewalReport();
+  const filters=renewalPayload?.filters??fallbackFilters();
+  const registerTab=query.register==="claims"?"claims":"renewals";
+  const exportHref=href("/reports/export/renewals",filters);
+  const renewalPipeline=buildRenewalPipeline(report);
+  const claimsAging=buildClaimsAging(claimRows);
+  const claimStatuses=buildClaimStatuses(claimsReport);
+  const insurerExposure=buildInsurerExposure(report,claimsReport);
+  const claimExposure=claimsReport.summary.estimated_loss;
+  const renewalRows=report.register.rows.slice(0,5);
+  const claimsRows=claimRows.slice(0,5);
+
+  return <AppShell title="Reports"><ReportPageShell
+    title="Portfolio"
+    loadError={loadError}
+    actions={<ReportExportLink href={exportHref}/>}
+    controls={<ReportQueryShortcuts
+      label="Horizon"
+      param="horizon"
+      activeValue={String(filters.horizonDays)}
+      options={HORIZONS}
+      showActiveFilterCount={false}
+      trailing={<ReportCompactFilters
+        path="/reports/renewals"
+        businessLine={filters.businessLine}
+        category={filters.category}
+        categories={report.filters.categories}
+        period=""
+        fromDate={null}
+        toDate={null}
+        fields={[
+          {name:"insurer",label:"Insurance company",value:filters.insurerId??"",options:report.filters.insurers.map((x)=>({value:x.id,label:x.name}))},
+          {name:"rm",label:"Relationship manager",value:filters.rmEmployeeId??"",options:report.filters.rms.map((x)=>({value:x.id,label:x.name}))},
+          {name:"intermediary",label:"Partner / intermediary",value:filters.intermediaryCode??"",options:report.filters.intermediaries.map((x)=>({value:x.code,label:x.name!==x.code?`${x.name} · ${x.code}`:x.name}))},
+        ]}
+      />}
+    />}
   >
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-      <Metric label="Upcoming" value={integer(report.summary.upcoming_policy_count)}/><Metric label="Due in 30 days" value={integer(report.summary.due_30_count)}/><Metric label="Due in 90 days" value={integer(report.summary.due_90_count)}/><Metric label="Expired" value={integer(report.summary.expired_policy_count)}/><Metric label="Customers" value={integer(report.summary.customer_count)}/><Metric label="Net premium at risk" value={currency(report.summary.premium_at_risk)}/>
-    </section>
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">{normalizedBuckets(report).map(x=><Link key={x.key} href={href("/reports/renewals",filters,x.key)} className="rounded-xl border border-[#e2e7ee] bg-white px-4 py-3 transition hover:border-[#bfc9db]"><p className="text-[8px] font-black uppercase tracking-[0.08em] text-[#8994a5]">{x.label}</p><div className="mt-1.5 flex items-end justify-between gap-3"><p className="text-[18px] font-semibold text-[#1e2d49]">{integer(x.policy_count)}</p><p className="text-[9px] font-bold text-[#59687c]">{currency(x.net_premium)}</p></div></Link>)}</section>
-    <section className="grid gap-4 xl:grid-cols-2"><article className="portal-card overflow-hidden"><Header title="Insurance company exposure"/><InsurerTable rows={report.insurers}/></article><article className="portal-card overflow-hidden"><Header title="RM renewal exposure"/><RmTable rows={report.rms}/></article></section>
-    <section className="portal-card overflow-hidden">
-      <div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">Renewal register</h2></div>
-      <Register rows={report.register.rows}/><Pagination page={report.register.page} pages={pages} total={report.register.total_count} prev={href("/reports/renewals",filters,filters.bucket,Math.max(1,report.register.page-1))} next={href("/reports/renewals",filters,filters.bucket,report.register.page+1)}/>
-    </section>
-  </ReportPageShell></AppShell>
+    <div className="portfolio-ref">
+      <section className="portfolio-kpis portfolio-card">
+        <Kpi label="Active Policies" value={integer(report.summary.upcoming_policy_count)} note="Current renewal portfolio"/>
+        <Kpi label="Renewal Premium at Risk" value={compactMoney(report.summary.premium_at_risk)} note="Current renewal horizon"/>
+        <Kpi label="Renewals 30d" value={integer(report.summary.due_30_count)} note="Due in next 30 days"/>
+        <Kpi label="Open Claims" value={integer(claimsReport.summary.open_claim_count)} note="Current open claims"/>
+        <Kpi label="Claim Exposure" value={compactMoney(claimExposure)} note="Estimated loss exposure"/>
+        <Kpi label="Avg Claim Age" value={integer(claimsReport.summary.average_open_age_days)+" days"} note="Open claims"/>
+      </section>
+
+      <section className="portfolio-grid portfolio-grid-top">
+        <article className="portfolio-card">
+          <CardHead title="Renewal Pipeline" action="By Renewal Bucket"/>
+          <DualBarChart rows={renewalPipeline} primaryLabel="Policies (Count)" secondaryLabel="Premium at Risk (₹ L)" primaryKey="count" secondaryKey="amount"/>
+        </article>
+        <article className="portfolio-card">
+          <CardHead title="Claims Aging" action="By Aging Bucket"/>
+          <DualBarChart rows={claimsAging} primaryLabel="Claims (Count)" secondaryLabel="Exposure (₹ L)" primaryKey="count" secondaryKey="amount"/>
+        </article>
+      </section>
+
+      <section className="portfolio-grid portfolio-grid-bottom">
+        <article className="portfolio-card">
+          <CardHead title="Claim Status"/>
+          <ClaimStatus rows={claimStatuses}/>
+        </article>
+        <article className="portfolio-card">
+          <CardHead title="Portfolio Exposure by Insurer" action="Top 5 Insurers"/>
+          <DualBarChart rows={insurerExposure} primaryLabel="Renewal at Risk (₹ L)" secondaryLabel="Claim Exposure (₹ L)" primaryKey="amount" secondaryKey="secondary"/>
+        </article>
+      </section>
+
+      <section className="portfolio-card portfolio-register">
+        <div className="portfolio-register-head">
+          <div className="portfolio-register-tabs">
+            <Link className={registerTab==="renewals"?"active":""} href={registerHref(filters,"renewals")}>Renewals Register</Link>
+            <Link className={registerTab==="claims"?"active":""} href={registerHref(filters,"claims")}>Claims Register</Link>
+          </div>
+          <Link className="portfolio-view-all" href={registerTab==="claims"?"/reports/claims":"/reports/renewals"}>View all <ArrowRight className="h-3.5 w-3.5"/></Link>
+        </div>
+        {registerTab==="renewals"?<RenewalRegister rows={renewalRows}/>:<ClaimsRegister rows={claimsRows}/>}
+      </section>
+    </div>
+  </ReportPageShell></AppShell>;
 }
 
-function Metric({label,value}:{label:string;value:string}){return <article className="portal-card px-4 py-4 sm:px-5"><p className="text-[9px] font-black uppercase tracking-[0.1em] text-[#7c899b]">{label}</p><p className="mt-2 text-[22px] font-semibold tracking-[-0.03em] text-[#14213c]">{value}</p></article>}
-function Header({title}:{title:string}){return <div className="border-b border-[#e9edf3] px-5 py-4"><h2 className="text-[14px] font-bold text-[#1b2943]">{title}</h2></div>}
-function InsurerTable({rows}:{rows:RenewalReport["insurers"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[700px]"><thead><tr className="bg-[#f8fafc] text-[8.3px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Insurance company</th><th className="px-3 py-3 text-right">Upcoming</th><th className="px-3 py-3 text-right">Due 30</th><th className="px-3 py-3 text-right">Expired</th><th className="px-3 py-3 text-right">Nearest</th><th className="px-5 py-3 text-right">Net premium at risk</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map((x,i)=>{const logo=getInsurerLogo(x.insurer_name);return <tr key={`${x.id??"none"}-${i}`} className="text-[10px]"><td className="px-5 py-3.5 font-semibold text-[#283851]"><div className="flex min-w-0 items-center gap-2">{logo?<Image src={logo} alt={x.insurer_name?`${x.insurer_name} logo`:"Insurance company"} width={24} height={24} className="max-h-6 max-w-6 shrink-0 object-contain"/>:null}<span className="min-w-0 truncate">{x.insurer_name}</span></div></td><td className="px-3 py-3.5 text-right">{integer(x.upcoming_policy_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.due_30_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.expired_count)}</td><td className="px-3 py-3.5 text-right">{date(x.nearest_expiry)}</td><td className="px-5 py-3.5 text-right font-bold">{currency(x.premium_at_risk)}</td></tr>})}</tbody></table></div>}
-function RmTable({rows}:{rows:RenewalReport["rms"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[700px]"><thead><tr className="bg-[#f8fafc] text-[8.3px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Relationship manager</th><th className="px-3 py-3 text-right">Upcoming</th><th className="px-3 py-3 text-right">Customers</th><th className="px-3 py-3 text-right">Due 30</th><th className="px-3 py-3 text-right">Expired</th><th className="px-5 py-3 text-right">Net premium at risk</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=><tr key={x.rm_name} className="text-[10px]"><td className="px-5 py-3.5 font-semibold text-[#283851]">{x.rm_name}</td><td className="px-3 py-3.5 text-right">{integer(x.upcoming_policy_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.customer_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.due_30_count)}</td><td className="px-3 py-3.5 text-right">{integer(x.expired_count)}</td><td className="px-5 py-3.5 text-right font-bold">{currency(x.premium_at_risk)}</td></tr>)}</tbody></table></div>}
-function Register({rows}:{rows:RenewalReport["register"]["rows"]}){if(!rows.length)return <Empty/>;return <div className="overflow-x-auto"><table className="w-full min-w-[1220px]"><thead><tr className="bg-[#f8fafc] text-[8.1px] font-black uppercase tracking-[.07em] text-[#7c899b]"><th className="px-5 py-3 text-left">Expiry</th><th className="px-3 py-3 text-left">Policy</th><th className="px-3 py-3 text-left">Customer / risk</th><th className="px-3 py-3 text-center">Insurer</th><th className="px-3 py-3 text-left">RM / intermediary</th><th className="px-3 py-3 text-right">Days</th><th className="px-3 py-3 text-right">Net premium</th><th className="px-3 py-3 text-left">Bucket</th><th className="px-5 py-3 text-center">Open</th></tr></thead><tbody className="divide-y divide-[#edf0f4]">{rows.map(x=>{const logo=getInsurerLogo(x.insurer_name);return <tr key={x.id} className="text-[10px] hover:bg-[#fbfcfe]"><td className="px-5 py-3.5 font-bold text-[#24344f]">{date(x.end_date)}</td><td className="px-3 py-3.5"><p className="font-semibold">{x.policy_no}</p><p className="text-[8.5px] text-[#8490a1]">{x.business_line} · {x.category}</p></td><td className="px-3 py-3.5"><p className="font-semibold">{x.customer_name}</p><p className="text-[8.5px] text-[#8490a1]">{x.risk_reference || x.vehicle_no || "—"}</p></td><td className="px-3 py-3.5 text-center"><span className="flex items-center justify-center">{logo?<Image src={logo} alt={x.insurer_name?`${x.insurer_name} logo`:"Insurance company"} width={28} height={24} className="max-h-6 max-w-[34px] shrink-0 object-contain"/>:<ShieldCheck className="h-4 w-4 text-[#7c899b]"/>}</span></td><td className="px-3 py-3.5"><p className="font-semibold">{x.rm_name}</p><p className="text-[8.5px] text-[#8490a1]">{x.intermediary_code??"—"}</p></td><td className={`px-3 py-3.5 text-right font-bold ${x.days_to_expiry<0?"text-red-700":"text-[#34445e]"}`}>{x.days_to_expiry}</td><td className="px-3 py-3.5 text-right font-bold">{currency(x.net_premium)}</td><td className="px-3 py-3.5"><span className="rounded-md bg-[#eef2f7] px-2 py-1 text-[8.5px] font-bold text-[#4d5d73]">{bucketLabel(x.renewal_bucket)}</span></td><td className="px-5 py-3.5 text-center"><Link href={`/policies/${x.id}`} className="inline-grid h-8 w-8 place-items-center rounded-lg border border-[#d9e1ec] text-[#425b8f]"><ExternalLink className="h-3.5 w-3.5"/></Link></td></tr>})}</tbody></table></div>}
-function Pagination({page,pages,total,prev,next}:{page:number;pages:number;total:number;prev:string;next:string}){return <div className="flex items-center justify-between border-t border-[#edf0f4] px-5 py-3 text-[9.5px] text-[#738095]"><span>{integer(total)} records</span><div className="flex items-center gap-2"><Link aria-disabled={page<=1} href={page<=1?"#":prev} className={`rounded-md border px-3 py-1.5 font-bold ${page<=1?"pointer-events-none opacity-40":""}`}>Previous</Link><span>{page} / {pages}</span><Link aria-disabled={page>=pages} href={page>=pages?"#":next} className={`rounded-md border px-3 py-1.5 font-bold ${page>=pages?"pointer-events-none opacity-40":""}`}>Next</Link></div></div>}
-function Empty(){return <ReportEmptyState/>}
-function bucketOptions(){return [{key:"expired" as RenewalBucket,label:"Expired"},{key:"due_30" as RenewalBucket,label:"0–30 days"},{key:"due_31_60" as RenewalBucket,label:"31–60 days"},{key:"due_61_90" as RenewalBucket,label:"61–90 days"},{key:"due_91_180" as RenewalBucket,label:"91–180 days"},{key:"due_181_365" as RenewalBucket,label:"181–365 days"}]}
-function normalizedBuckets(report:RenewalReport){const map=new Map(report.buckets.map(x=>[x.key,x]));return bucketOptions().map(x=>map.get(x.key)??{...x,policy_count:0,gross_premium:0,net_premium:0})}
-function bucketLabel(key:RenewalBucket){return bucketOptions().find(x=>x.key===key)?.label??key}
-function href(base:string,f:RenewalFilters,bucket?:RenewalBucket|null,page?:number){const p=new URLSearchParams();p.set("horizon",String(f.horizonDays));if(f.insurerId)p.set("insurer",f.insurerId);if(f.rmEmployeeId)p.set("rm",f.rmEmployeeId);if(f.intermediaryCode)p.set("intermediary",f.intermediaryCode);if(f.businessLine)p.set("business",f.businessLine);if(f.category)p.set("category",f.category);if(bucket)p.set("bucket",bucket);if(page&&page>1)p.set("page",String(page));return `${base}?${p.toString()}`}
-function currency(v:number){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v)}
-function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v)}
-function date(v:string|null){if(!v)return "—";const d=new Date(`${v}T00:00:00+05:30`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(d)}
-function emptyReport():RenewalReport{return{summary:{upcoming_policy_count:0,expired_policy_count:0,due_30_count:0,due_90_count:0,customer_count:0,premium_at_risk:0,premium_due_30:0,nearest_expiry:null},buckets:[],insurers:[],rms:[],filters:{insurers:[],rms:[],intermediaries:[],categories:[]},register:{rows:[],total_count:0,page:1,page_size:25}}}
+function Kpi({label,value,note}:{label:string;value:string;note:string}){
+  return <article className="portfolio-kpi">
+    <div className="portfolio-kpi-label">{label}<Info className="h-3 w-3"/></div>
+    <div className="portfolio-kpi-value">{value}</div>
+    <div className="portfolio-kpi-note">{note}</div>
+  </article>;
+}
+
+function CardHead({title,action}:{title:string;action?:string}){
+  return <div className="portfolio-card-head"><h2>{title}</h2>{action?<button type="button">{action} <span>⌄</span></button>:null}</div>;
+}
+
+type ChartRow={key:string;label:string;count:number;amount:number;secondary:number};
+function DualBarChart({rows,primaryLabel,secondaryLabel,primaryKey,secondaryKey}:{rows:ChartRow[];primaryLabel:string;secondaryLabel:string;primaryKey:"count"|"amount";secondaryKey:"amount"|"secondary"}){
+  const primaryMax=Math.max(...rows.map(r=>r[primaryKey]),1);
+  const secondaryMax=Math.max(...rows.map(r=>r[secondaryKey]),1);
+  return <div className="portfolio-chart">
+    <div className="portfolio-legend"><span><i className="primary"/>{primaryLabel}</span><span><i className="secondary"/>{secondaryLabel}</span></div>
+    <div className="portfolio-chart-plot">
+      {rows.map(row=>{
+        const p=row[primaryKey],s=row[secondaryKey];
+        return <div className="portfolio-chart-group" key={row.key}>
+          <div className="portfolio-chart-bars">
+            <div className="portfolio-bar-wrap"><strong>{formatChartValue(p,primaryKey)}</strong><i className="portfolio-bar primary" style={{height:`${Math.max(p?5:0,(p/primaryMax)*100)}%`}}/></div>
+            <div className="portfolio-bar-wrap"><strong>{formatChartValue(s,secondaryKey)}</strong><i className="portfolio-bar secondary" style={{height:`${Math.max(s?5:0,(s/secondaryMax)*100)}%`}}/></div>
+          </div>
+          <span className="portfolio-chart-label">{row.label}</span>
+        </div>;
+      })}
+    </div>
+  </div>;
+}
+
+function ClaimStatus({rows}:{rows:Array<{status:string;count:number;share:number}>}){
+  if(!rows.length)return <div className="portfolio-empty">No claim status data available</div>;
+  const max=Math.max(...rows.map(x=>x.count),1);
+  return <div className="portfolio-status">
+    <div className="portfolio-status-head"><span>#</span><span>Status</span><span>Claims (Count)</span><span>Share</span></div>
+    {rows.map((row,index)=><div className="portfolio-status-row" key={row.status}>
+      <span>{index+1}</span>
+      <strong>{pretty(row.status)}</strong>
+      <div className="portfolio-status-bar"><i style={{width:`${Math.max(4,(row.count/max)*100)}%`}}/><em>{integer(row.count)}</em></div>
+      <span>{row.share.toFixed(1)}%</span>
+    </div>)}
+  </div>;
+}
+
+function RenewalRegister({rows}:{rows:RenewalRow[]}){
+  if(!rows.length)return <div className="portfolio-empty">No renewal records available</div>;
+  return <div className="portfolio-table-wrap"><table className="portfolio-table"><thead><tr><th>Expiry Date</th><th>Customer / Risk</th><th>Insurer</th><th>Status / Bucket</th><th className="num">Premium at Risk (₹)</th><th>Policy #</th><th/></tr></thead><tbody>
+    {rows.map(row=><tr key={row.id}>
+      <td>{date(row.end_date)}</td>
+      <td><strong>{row.customer_name}</strong><small>{row.risk_reference||row.vehicle_no||"—"}</small></td>
+      <td><InsurerCell name={row.insurer_name}/></td>
+      <td><span className={bucketClass(row.renewal_bucket)}>{bucketLabel(row.renewal_bucket)}</span></td>
+      <td className="num">{currency(row.net_premium)}</td>
+      <td>{row.policy_no}</td>
+      <td className="arrow"><Link href={`/policies/${row.id}`}><ArrowRight className="h-3.5 w-3.5"/></Link></td>
+    </tr>)}
+  </tbody></table></div>;
+}
+
+function ClaimsRegister({rows}:{rows:ClaimsRow[]}){
+  if(!rows.length)return <div className="portfolio-empty">No claim records available</div>;
+  return <div className="portfolio-table-wrap"><table className="portfolio-table"><thead><tr><th>Claim Date</th><th>Customer / Risk</th><th>Insurer</th><th>Status</th><th className="num">Exposure (₹)</th><th>Claim #</th><th/></tr></thead><tbody>
+    {rows.map(row=><tr key={row.id}>
+      <td>{dateTime(row.accident_at||row.created_at)}</td>
+      <td><strong>{row.customer_name}</strong><small>{row.vehicle_no||row.policy_no||"—"}</small></td>
+      <td><InsurerCell name={row.insurer_name}/></td>
+      <td><span className="portfolio-pill portfolio-pill-blue">{pretty(row.status)}</span></td>
+      <td className="num">{currency(row.estimated_loss)}</td>
+      <td>{row.claim_no||"—"}</td>
+      <td className="arrow"><Link href={`/claims/${row.id}`}><ArrowRight className="h-3.5 w-3.5"/></Link></td>
+    </tr>)}
+  </tbody></table></div>;
+}
+
+function InsurerCell({name}:{name:string}){
+  const logo=getInsurerLogo(name);
+  return <span className="portfolio-insurer">{logo?<Image src={logo} alt="" width={20} height={20} className="portfolio-insurer-logo"/>:null}<span>{name||"Unassigned"}</span></span>;
+}
+
+function buildRenewalPipeline(report:RenewalReport):ChartRow[]{
+  const map=new Map(report.buckets.map(x=>[x.key,x]));
+  const get=(key:RenewalBucket)=>map.get(key)??{policy_count:0,net_premium:0};
+  const expired=get("expired"),d30=get("due_30"),d60=get("due_31_60"),d90=get("due_61_90"),d180=get("due_91_180"),d365=get("due_181_365");
+  return [
+    row("expired","Expired",expired.policy_count,expired.net_premium),
+    row("0_30","0 – 30 days",d30.policy_count,d30.net_premium),
+    row("31_60","31 – 60 days",d60.policy_count,d60.net_premium),
+    row("61_90","61 – 90 days",d90.policy_count,d90.net_premium),
+    row("90_plus","90+ days",d180.policy_count+d365.policy_count,d180.net_premium+d365.net_premium),
+  ];
+}
+
+function buildClaimsAging(rows:ClaimsRow[]):ChartRow[]{
+  const defs=[
+    {key:"0_7",label:"0 – 7 days",min:0,max:7},
+    {key:"8_15",label:"8 – 15 days",min:8,max:15},
+    {key:"16_30",label:"16 – 30 days",min:16,max:30},
+    {key:"31_60",label:"31 – 60 days",min:31,max:60},
+    {key:"60_plus",label:"60+ days",min:61,max:Number.POSITIVE_INFINITY},
+  ];
+  return defs.map(def=>{
+    const matches=rows.filter(r=>r.age_days>=def.min&&r.age_days<=def.max);
+    return row(def.key,def.label,matches.length,matches.reduce((sum,r)=>sum+(r.estimated_loss||0),0));
+  });
+}
+
+function buildClaimStatuses(report:ClaimsReport){
+  const total=Math.max(report.statuses.reduce((sum,row)=>sum+row.claim_count,0),1);
+  return [...report.statuses].sort((a,b)=>b.claim_count-a.claim_count).slice(0,5).map(x=>({status:x.status,count:x.claim_count,share:(x.claim_count/total)*100}));
+}
+
+function buildInsurerExposure(renewals:RenewalReport,claims:ClaimsReport):ChartRow[]{
+  const map=new Map<string,{name:string;renewal:number;claims:number}>();
+  for(const r of renewals.insurers){const key=r.insurer_name.trim().toLowerCase();map.set(key,{name:r.insurer_name||"Unassigned",renewal:r.premium_at_risk||0,claims:0});}
+  for(const c of claims.insurers){const key=c.insurer_name.trim().toLowerCase();const current=map.get(key)??{name:c.insurer_name||"Unassigned",renewal:0,claims:0};current.claims+=c.estimated_loss||0;map.set(key,current);}
+  return [...map.entries()].map(([key,v])=>({key,label:shortName(v.name),count:0,amount:v.renewal/100000,secondary:v.claims/100000})).sort((a,b)=>(b.amount+b.secondary)-(a.amount+a.secondary)).slice(0,5);
+}
+
+function row(key:string,label:string,count:number,amount:number):ChartRow{return{key,label,count,amount:amount/100000,secondary:0}}
+function formatChartValue(value:number,key:"count"|"amount"|"secondary"){return key==="count"?integer(value):new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(value)}
+function compactMoney(v:number){const n=Math.abs(v||0);if(n>=1e7)return "₹"+new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(n/1e7)+"Cr";if(n>=1e5)return "₹"+new Intl.NumberFormat("en-IN",{maximumFractionDigits:1}).format(n/1e5)+"L";return currency(n)}
+function shortName(name:string){const cleaned=name.replace(/General Insurance Company Limited|Insurance Company Limited|General Insurance Co\. Limited|Limited/gi,"").trim();return cleaned.split(" ").slice(0,2).join(" ")||name}
+function pretty(value:string){return value.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase())}
+function bucketLabel(key:RenewalBucket){return ({expired:"Expired",due_30:"0 – 30 days",due_31_60:"31 – 60 days",due_61_90:"61 – 90 days",due_91_180:"91 – 180 days",due_181_365:"181 – 365 days"} as Record<RenewalBucket,string>)[key]}
+function bucketClass(key:RenewalBucket){if(key==="due_30")return"portfolio-pill portfolio-pill-green";if(key==="due_31_60")return"portfolio-pill portfolio-pill-amber";if(key==="expired")return"portfolio-pill portfolio-pill-red";return"portfolio-pill portfolio-pill-orange"}
+function registerHref(f:RenewalFilters,tab:"renewals"|"claims"){const p=new URLSearchParams();p.set("horizon",String(f.horizonDays));if(f.insurerId)p.set("insurer",f.insurerId);if(f.rmEmployeeId)p.set("rm",f.rmEmployeeId);if(f.intermediaryCode)p.set("intermediary",f.intermediaryCode);if(f.businessLine)p.set("business",f.businessLine);if(f.category)p.set("category",f.category);if(tab==="claims")p.set("register","claims");return `/reports/renewals?${p.toString()}`}
+function href(base:string,f:RenewalFilters){const p=new URLSearchParams();p.set("horizon",String(f.horizonDays));if(f.insurerId)p.set("insurer",f.insurerId);if(f.rmEmployeeId)p.set("rm",f.rmEmployeeId);if(f.intermediaryCode)p.set("intermediary",f.intermediaryCode);if(f.businessLine)p.set("business",f.businessLine);if(f.category)p.set("category",f.category);return `${base}?${p.toString()}`}
+function date(v:string|null){if(!v)return"—";const d=new Date(`${v}T00:00:00+05:30`);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(d)}
+function dateTime(v:string|null){if(!v)return"—";const d=new Date(v);return Number.isNaN(d.getTime())?v:new Intl.DateTimeFormat("en-IN",{day:"2-digit",month:"short",year:"numeric",timeZone:"Asia/Kolkata"}).format(d)}
+function currency(v:number){return new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",maximumFractionDigits:0}).format(v||0)}
+function integer(v:number){return new Intl.NumberFormat("en-IN",{maximumFractionDigits:0}).format(v||0)}
+function emptyRenewalReport():RenewalReport{return{summary:{upcoming_policy_count:0,expired_policy_count:0,due_30_count:0,due_90_count:0,customer_count:0,premium_at_risk:0,premium_due_30:0,nearest_expiry:null},buckets:[],insurers:[],rms:[],filters:{insurers:[],rms:[],intermediaries:[],categories:[]},register:{rows:[],total_count:0,page:1,page_size:25}}}
 function fallbackFilters():RenewalFilters{return{horizonDays:365,insurerId:null,rmEmployeeId:null,intermediaryCode:null,businessLine:null,category:null,bucket:null,page:1}}
