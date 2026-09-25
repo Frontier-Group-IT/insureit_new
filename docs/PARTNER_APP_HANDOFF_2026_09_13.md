@@ -1,3 +1,15 @@
+## 2026-09-25 — Claims header aligned with Partner Home
+
+- Branch: `refine/partner-claims-home-header-match`.
+- User requested the Claims header logo, activity/notification control, profile avatar, and header font sizing to match the Partner Home screen exactly while preserving the Claims-specific banner artwork and the rest of the Claims experience.
+- Claims now uses the same Home header visual constants for branding: 30x35 logo mark, 14px `insureit` / `Partner` text, 33x33 clock button with Home contrast treatment, 35x35 white profile avatar, and matching top-row spacing.
+- Claims title typography is reduced to the Home header scale (14px) and the supporting subtitle is compacted to remain subordinate without changing its wording.
+- Existing claim summary/list RPCs, search/filter/sort behavior, KPI cards, claim cards, pagination, claim-detail navigation, permissions, schema, and business logic remain unchanged.
+- The same header treatment is mirrored in `scripts/partner/compat/partner-claims-reference-0-1.tsx`, and the approved Partner 0.1.0 OTA workflow now validates the Home-matched Claims header before publish.
+- **IMPLEMENTED only. NOT MERGED, NOT OTA-PUBLISHED, NO APK/AAB BUILD.**
+
+---
+
 ## 2026-09-19 — Claims reference-layout redesign for installed Partner 0.1.0 (5)
 
 - Branch: `ui/partner-claims-reference-redesign`.
