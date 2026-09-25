@@ -113,6 +113,9 @@ jobs:
       - name: Managed claim card parity regression
         run: node apps/mobile-app/scripts/managed-claim-card-parity-regression.mjs
 
+      - name: Customer claims card icon/status regression
+        run: node apps/mobile-app/scripts/customer-claims-card-icon-status-regression.mjs
+
       - name: Customer External Claim list identity regression
         run: node apps/mobile-app/scripts/customer-external-claim-list-regression.mjs
 
