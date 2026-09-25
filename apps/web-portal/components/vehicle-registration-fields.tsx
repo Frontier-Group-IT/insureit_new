@@ -2,7 +2,6 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/auth";
 import { displayVehicleRegistrationNumber } from "@/lib/vehicle-registration";
 
 export type VehicleRegistrationMode = "registered" | "unregistered";
@@ -90,15 +89,9 @@ export function VehicleRegistrationFields({
     const timeout = window.setTimeout(() => controller.abort(), 65_000);
 
     try {
-      const supabase = createSupabaseBrowserClient();
-      const { data } = await supabase.auth.getSession();
-      const accessToken = data.session?.access_token;
-      if (!accessToken) throw new Error("Please sign in again to fetch RC details.");
-
       const response = await fetch("/api/vehicles/rc-lookup", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },
