@@ -317,11 +317,11 @@ assert(!worklistPage.includes("getSarvamPartnerDispatchReadiness"), "Partner wor
 
 assert(readinessPage.includes('viewer.role !== "it_super_user"'), "voice production control center requires exact IT Super User role");
 assert(readinessPage.includes('hasEffectiveCapability(viewer, "manage_system", "approve")'), "voice production control center requires critical system access");
-assert(readinessPage.includes("Production control center for AI renewal calling"), "voice page is production-oriented rather than experimental");
-assert(readinessPage.includes("Production control"), "voice page exposes compact production controls");
-assert(readinessPage.includes("Access & policy"), "voice page exposes compact access and policy status");
-assert(readinessPage.includes("Partner actions"), "voice page shows Partner action authority state");
-assert(readinessPage.includes('value="Disabled"'), "Partner AI actions are visibly disabled in production control");
+assert(readinessPage.includes("Voice Integration"), "voice page retains the production Voice Integration workspace");
+assert(readinessPage.includes("CompactHealthStatus"), "voice page consolidates readiness into the compact health strip");
+assert(readinessPage.includes("More voice controls"), "rare production controls are behind the compact overflow control");
+assert(!readinessPage.includes("Access & policy"), "voice page does not restore the large access-policy dashboard section");
+assert(!readinessPage.includes('title="Production control"'), "voice page does not restore the large production-control dashboard section");
 assert(readinessPage.includes("Calling queue"), "voice page exposes the IT-controlled production calling queue");
 assert(readinessPage.includes('action="/api/system/voice-integration/dispatch"'), "eligible queue rows can be dispatched only from the IT system route");
 assert(readinessPage.includes("Pause Campaign"), "voice admin page can pause an active configured campaign");
