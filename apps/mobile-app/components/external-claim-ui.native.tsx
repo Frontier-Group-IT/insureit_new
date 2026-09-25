@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SELF_MANAGED_MILESTONES, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
+import { getInsurerLogoSource, getVehicleBrandLogoSource } from '@/lib/catalog-logos';
 import { supabase } from '@/lib/supabase';
 
 const sharedUi = require('./external-claim-ui.tsx') as Record<string, any>;
@@ -75,6 +76,9 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
   const currentIndex = stageIndexFor(pathname, milestoneKey);
   const stage = SELF_MANAGED_MILESTONES[currentIndex] ?? SELF_MANAGED_MILESTONES[0];
   const { claimNo, insurerName, vehicleNo, policyNo, vehicleMeta } = props;
+  const vehicleMake = vehicleMeta?.split('·')[0]?.trim() || '';
+  const vehicleLogo = getVehicleBrandLogoSource(vehicleMake);
+  const insurerLogo = getInsurerLogoSource(insurerName);
 
   return (
     <View style={styles.card}>
@@ -82,8 +86,8 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
       <View style={styles.glowSmall} />
 
       <View style={styles.headerRow}>
-        <View style={[styles.iconBadge, styles.stageBadge]}>
-          <Image source={require('../assets/claims/claim-intimation.png')} style={styles.badgeArtwork} resizeMode="contain" />
+        <View style={styles.stageBadge}>
+          <Image source={require('../assets/claims/claim-intimation.png')} style={styles.stageArtwork} resizeMode="contain" />
         </View>
         <Text style={styles.headerTitle} numberOfLines={1}>{stage.label}</Text>
         <Text style={styles.claimNoValue} numberOfLines={1}>{claimNo || 'New claim'}</Text>
@@ -93,20 +97,11 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
 
       <View style={styles.infoGrid}>
         <View style={styles.infoSection}>
-          <View style={styles.mainInfoRow}>
-            <View style={[styles.iconBadge, styles.vehicleBadge]}>
-              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.badgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.mainInfoLine} numberOfLines={1}>
-              <Text style={styles.mainInfoLabel}>Vehicle: </Text>
-              <Text style={styles.mainInfoValue}>{vehicleNo || 'Vehicle'}</Text>
-            </Text>
+          <View style={styles.logoTile}>
+            <Image source={vehicleLogo || require('../assets/claims/fleet-vehicle.png')} style={vehicleLogo ? styles.brandLogo : styles.fallbackArtwork} resizeMode="contain" />
           </View>
-
-          <View style={styles.secondaryInfoRow}>
-            <View style={[styles.iconBadge, styles.makeModelBadge]} accessible={false}>
-              <Image source={require('../assets/claims/fleet-vehicle.png')} style={styles.badgeArtwork} resizeMode="contain" />
-            </View>
+          <View style={styles.infoCopy}>
+            <Text style={styles.primaryValue} numberOfLines={1}>{vehicleNo || 'Vehicle'}</Text>
             <Text accessibilityLabel={`Make and model: ${vehicleMeta || 'Not available'}`} style={styles.secondaryValue} numberOfLines={1}>{vehicleMeta || '—'}</Text>
           </View>
         </View>
@@ -114,20 +109,11 @@ export function ClaimIdentityCard(props: ClaimIdentityCardProps) {
         <View style={styles.sectionDivider} />
 
         <View style={styles.infoSection}>
-          <View style={styles.mainInfoRow}>
-            <View style={[styles.iconBadge, styles.policyBadge]}>
-              <Image source={require('../assets/claims/policy.png')} style={styles.badgeArtwork} resizeMode="contain" />
-            </View>
-            <Text style={styles.mainInfoLine} numberOfLines={1}>
-              <Text style={[styles.mainInfoLabel, styles.policyMainLabel]}>Policy: </Text>
-              <Text style={styles.mainInfoValue}>{policyNo || '—'}</Text>
-            </Text>
+          <View style={styles.logoTile}>
+            <Image source={insurerLogo || require('../assets/claims/policy.png')} style={insurerLogo ? styles.brandLogo : styles.fallbackArtwork} resizeMode="contain" />
           </View>
-
-          <View style={styles.secondaryInfoRow}>
-            <View style={[styles.iconBadge, styles.insurerBadge]} accessible={false}>
-              <Image source={require('../assets/claims/accounts-finance.png')} style={styles.badgeArtwork} resizeMode="contain" />
-            </View>
+          <View style={styles.infoCopy}>
+            <Text style={styles.primaryValue} numberOfLines={1}>{policyNo || '—'}</Text>
             <Text accessibilityLabel={`Insurance company: ${insurerName || 'Not available'}`} style={styles.secondaryValue} numberOfLines={2}>{insurerName || 'Insurance company'}</Text>
           </View>
         </View>
@@ -232,41 +218,35 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     width: '100%',
-    borderRadius: 18,
-    backgroundColor: '#062D70',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
+    borderRadius: 15,
+    backgroundColor: '#073A86',
+    paddingHorizontal: 10,
+    paddingTop: 7,
+    paddingBottom: 8,
     marginBottom: 10,
     shadowColor: '#062D70',
-    shadowOpacity: 0.16,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
-  glowLarge: { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: '#0C58C8', right: -95, top: -105, opacity: 0.26 },
-  glowSmall: { position: 'absolute', width: 110, height: 110, borderRadius: 55, borderWidth: 1, borderColor: 'rgba(120,169,255,0.16)', right: -20, top: -62 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 32 },
-  iconBadge: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  badgeArtwork: { width: 21, height: 21 },
-  stageBadge: { backgroundColor: '#0B51BE' },
-  headerTitle: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 17, lineHeight: 21, fontWeight: '900' },
-  claimNoValue: { maxWidth: '38%', color: '#FFFFFF', fontSize: 13.5, lineHeight: 17, fontWeight: '900', textAlign: 'right', letterSpacing: 0.1 },
-  headerDivider: { height: 1, backgroundColor: 'rgba(174,204,255,0.24)', marginTop: 8, marginBottom: 8 },
-  infoGrid: { flexDirection: 'row', alignItems: 'stretch', minWidth: 0 },
-  infoSection: { flex: 1, minWidth: 0, paddingHorizontal: 4 },
-  sectionDivider: { width: 1, backgroundColor: 'rgba(174,204,255,0.18)', marginHorizontal: 5, marginVertical: 1 },
-  mainInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
-  vehicleBadge: { backgroundColor: '#EAF2FF' },
-  policyBadge: { backgroundColor: '#E8F7F1' },
-  mainInfoLine: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 10.4, lineHeight: 14 },
-  mainInfoLabel: { color: '#D8E7FF', fontWeight: '800' },
-  policyMainLabel: { color: '#A9E7D0' },
-  mainInfoValue: { color: '#FFFFFF', fontWeight: '900' },
-  secondaryInfoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, minWidth: 0 },
-  makeModelBadge: { backgroundColor: '#E8F1FF' },
-  insurerBadge: { backgroundColor: '#FFF2D8' },
-  secondaryValue: { flex: 1, minWidth: 0, color: '#EAF2FF', fontSize: 8.8, lineHeight: 11.5, fontWeight: '700' },
+  glowLarge: { position: 'absolute', width: 135, height: 135, borderRadius: 68, backgroundColor: '#0C58C8', right: -72, top: -79, opacity: 0.22 },
+  glowSmall: { position: 'absolute', width: 84, height: 84, borderRadius: 42, borderWidth: 1, borderColor: 'rgba(120,169,255,0.14)', right: -8, top: -48 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 25 },
+  stageBadge: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#0B51BE', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  stageArtwork: { width: 17, height: 17 },
+  headerTitle: { flex: 1, minWidth: 0, color: '#FFFFFF', fontSize: 12.5, lineHeight: 16, fontWeight: '900' },
+  claimNoValue: { maxWidth: '36%', color: '#FFFFFF', fontSize: 10.5, lineHeight: 13, fontWeight: '900', textAlign: 'right', letterSpacing: 0.1 },
+  headerDivider: { height: 1, backgroundColor: 'rgba(174,204,255,0.22)', marginTop: 5, marginBottom: 6 },
+  infoGrid: { flexDirection: 'row', alignItems: 'stretch', minWidth: 0, minHeight: 48 },
+  infoSection: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 2 },
+  sectionDivider: { width: 1, backgroundColor: 'rgba(174,204,255,0.16)', marginHorizontal: 6, marginVertical: 1 },
+  logoTile: { width: 38, height: 38, borderRadius: 8, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' },
+  brandLogo: { width: 30, height: 30 },
+  fallbackArtwork: { width: 25, height: 25 },
+  infoCopy: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  primaryValue: { color: '#FFFFFF', fontSize: 10.2, lineHeight: 13, fontWeight: '900' },
+  secondaryValue: { color: '#EAF2FF', fontSize: 8.2, lineHeight: 10.5, fontWeight: '700', marginTop: 2 },
   actionSection: { marginTop: 0, marginBottom: 6 },
   actionRow: { flexDirection: 'row', alignItems: 'stretch', gap: 9 },
   previousButton: { flex: 1, minHeight: 52, borderRadius: 15, borderWidth: 1, borderColor: '#AFC8EA', backgroundColor: '#F9FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10 },
