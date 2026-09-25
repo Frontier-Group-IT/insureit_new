@@ -1,8 +1,8 @@
 "use client";
 
-import { SlidersHorizontal, X } from "lucide-react";
+import { Building2, ChevronDown, SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 export type ReportCompactFilterOption = { value: string; label: string };
 export type ReportCompactFilterField = {
@@ -40,6 +40,8 @@ export function ReportCompactFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  const [businessOpen, setBusinessOpen] = useState(false);
+  const businessRef = useRef<HTMLDivElement>(null);
   const [draftCategory, setDraftCategory] = useState(category ?? "");
   const [draft, setDraft] = useState<Record<string, string>>(() => Object.fromEntries(fields.map((field) => [field.name, field.value])));
 
@@ -49,13 +51,28 @@ export function ReportCompactFilters({
   }, [category, fields]);
 
   useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+    if (!open && !businessOpen) return;
+
+    const onPointerDown = (event: MouseEvent) => {
+      if (businessOpen && businessRef.current && !businessRef.current.contains(event.target as Node)) {
+        setBusinessOpen(false);
+      }
     };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setBusinessOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, businessOpen]);
 
   const activeCount = useMemo(() => {
     let count = businessLine === "Non Motor" && category ? 1 : 0;
@@ -68,6 +85,7 @@ export function ReportCompactFilters({
   }, [businessLine, category, fields, fromDate, period, toDate]);
 
   function applyBusiness(value: string) {
+    setBusinessOpen(false);
     const next = new URLSearchParams(searchParams.toString());
     if (value === "Motor" || value === "Non Motor") next.set("business", value);
     else next.delete("business");
@@ -130,18 +148,49 @@ export function ReportCompactFilters({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative">
-          <span className="sr-only">Business line</span>
-          <select
-            value={businessLine ?? ""}
-            onChange={(event) => applyBusiness(event.target.value)}
-            className="h-9 min-w-[148px] rounded-lg border border-[#d9e0e8] bg-white px-3 pr-8 text-[10.5px] font-bold text-[#344054] outline-none transition hover:border-[#b9c5d2] focus:border-[#7692b6] focus:ring-2 focus:ring-[#e9f0f7]"
+        <div ref={businessRef} className="relative">
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={businessOpen}
+            onClick={() => setBusinessOpen((current) => !current)}
+            className="inline-flex h-9 min-w-[148px] items-center justify-between gap-2 rounded-lg border border-[#d9e0e8] bg-white px-3 text-[10.5px] font-bold text-[#344054] outline-none transition hover:border-[#b9c5d2] hover:bg-[#f8fafc] focus-visible:border-[#b9c5d2] focus-visible:ring-1 focus-visible:ring-[#d7dee7]"
           >
-            <option value="">All Business</option>
-            <option value="Motor">Motor</option>
-            <option value="Non Motor">Non Motor</option>
-          </select>
-        </label>
+            <span className="inline-flex items-center gap-2">
+              <Building2 className="h-3.5 w-3.5 text-[#61738a]" />
+              <span>{businessLine ?? "All Business"}</span>
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-[#61738a]" />
+          </button>
+
+          {businessOpen ? (
+            <div
+              role="menu"
+              aria-label="Business line"
+              className="absolute right-0 top-[calc(100%+6px)] z-50 min-w-[165px] overflow-hidden rounded-lg border border-[#d8e0eb] bg-white p-1.5 shadow-[0_14px_35px_rgba(25,45,78,0.16)]"
+            >
+              {[
+                { value: "", label: "All Business" },
+                { value: "Motor", label: "Motor" },
+                { value: "Non Motor", label: "Non Motor" },
+              ].map((option) => {
+                const selected = (businessLine ?? "") === option.value;
+                return (
+                  <button
+                    key={option.value || "all"}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={selected}
+                    onClick={() => applyBusiness(option.value)}
+                    className={`flex w-full items-center rounded-md px-3 py-2 text-left text-[11px] font-semibold text-[#344862] transition hover:bg-[#f1f3f5] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#d7dee7] ${selected ? "bg-[#f7f8fa]" : "bg-white"}`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
         <button
           type="button"
           onClick={() => setOpen(true)}
