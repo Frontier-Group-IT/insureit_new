@@ -690,4 +690,15 @@ set status = 'active',
     is_primary = true,
     updated_at = now();
 
+-- Existing standalone mobile submissions should follow the new no-review
+-- contract too. Re-setting status invokes the new finalizer after the safe
+-- customer-master repair above.
+update public.customer_onboarding_applications
+set status = status,
+    updated_at = now()
+where source = 'customer_app'
+  and status = 'submitted'
+  and group_customer_id is null
+  and profile_id is not null;
+
 commit;
