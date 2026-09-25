@@ -16,7 +16,7 @@ export type ClaimsReport={
 };
 export type ClaimsRow={id:string;claim_no:string;status:string;service_mode:string|null;created_at:string;accident_at:string|null;age_days:number;customer_name:string;customer_code:string;vehicle_no:string;policy_no:string;insurer_name:string;rm_name:string;intermediary_code:string;estimated_loss:number;approved_amount:number;settlement_amount:number;document_count:number;pending_documents:number;rejected_documents:number};
 
-export async function loadClaimsReport(profile:ViewerProfile,query:ClaimsQuery){
+export async function loadClaimsReport(profile:ViewerProfile,query:ClaimsQuery,pageSize=25){
   const filters=resolveClaimsFilters(query);
   const [customerIds,scope]=await Promise.all([
     getAccessibleCustomerIds(profile.id,profile.role,"view_reports"),
@@ -25,10 +25,10 @@ export async function loadClaimsReport(profile:ViewerProfile,query:ClaimsQuery){
   if(customerIds!==null&&customerIds.length===0)return{report:emptyClaimsReport(filters.page),filters,scopeMode:scope.mode};
   const admin=createSupabaseAdminClient();
   const {data,error}=await admin.rpc("get_claims_report",{
-    p_customer_ids:customerIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_status:filters.status,p_service_mode:filters.serviceMode,p_page:filters.page,p_page_size:25
+    p_customer_ids:customerIds,p_from_date:filters.fromDate,p_to_date:filters.toDate,p_insurer_id:filters.insurerId,p_status:filters.status,p_service_mode:filters.serviceMode,p_page:filters.page,p_page_size:pageSize
   });
   if(error)throw new Error(`Claims report query failed: ${error.message}`);
-  return{report:normalizeClaimsReport(data,filters.page),filters,scopeMode:scope.mode};
+  return{report:normalizeClaimsReport(data,filters.page,pageSize),filters,scopeMode:scope.mode};
 }
 
 export function resolveClaimsFilters(query:ClaimsQuery):ClaimsFilters{
@@ -44,7 +44,7 @@ export function resolveClaimsFilters(query:ClaimsQuery):ClaimsFilters{
   return{period,fromDate,toDate,insurerId:validUuid(query.insurer),status:cleanText(query.status,80),serviceMode:isMode(query.mode)?query.mode:null,page:positiveInteger(query.page)};
 }
 
-function normalizeClaimsReport(value:unknown,page:number):ClaimsReport{
+function normalizeClaimsReport(value:unknown,page:number,pageSize=25):ClaimsReport{
   const raw=objectValue(value),summary=objectValue(raw.summary),documents=objectValue(raw.documents),register=objectValue(raw.register),filters=objectValue(raw.filters);
   return{
     summary:{claim_count:numberValue(summary.claim_count),open_claim_count:numberValue(summary.open_claim_count),settled_claim_count:numberValue(summary.settled_claim_count),rejected_claim_count:numberValue(summary.rejected_claim_count),average_open_age_days:numberValue(summary.average_open_age_days),estimated_loss:numberValue(summary.estimated_loss),approved_amount:numberValue(summary.approved_amount),settlement_amount:numberValue(summary.settlement_amount),claims_with_pending_documents:numberValue(summary.claims_with_pending_documents),claims_with_rejected_documents:numberValue(summary.claims_with_rejected_documents)},
@@ -53,7 +53,7 @@ function normalizeClaimsReport(value:unknown,page:number):ClaimsReport{
     insurers:arrayValue(raw.insurers).map(row=>{const x=objectValue(row);return{id:nullableString(x.id),insurer_name:stringValue(x.insurer_name),claim_count:numberValue(x.claim_count),open_claim_count:numberValue(x.open_claim_count),estimated_loss:numberValue(x.estimated_loss),settlement_amount:numberValue(x.settlement_amount)}}),
     documents:{pending_documents:numberValue(documents.pending_documents),rejected_documents:numberValue(documents.rejected_documents),claims_with_pending_documents:numberValue(documents.claims_with_pending_documents),claims_with_rejected_documents:numberValue(documents.claims_with_rejected_documents)},
     filters:{insurers:arrayValue(filters.insurers).map(row=>{const x=objectValue(row);return{id:stringValue(x.id),name:stringValue(x.name)}}).filter(x=>x.id&&x.name),statuses:arrayValue(filters.statuses).map(stringValue).filter(Boolean),service_modes:arrayValue(filters.service_modes).map(stringValue).filter(Boolean)},
-    register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||25}
+    register:{rows:arrayValue(register.rows).map(normalizeRow),total_count:numberValue(register.total_count),page:numberValue(register.page)||page,page_size:numberValue(register.page_size)||pageSize}
   };
 }
 function normalizeRow(row:unknown):ClaimsRow{const x=objectValue(row);return{id:stringValue(x.id),claim_no:stringValue(x.claim_no),status:stringValue(x.status),service_mode:nullableString(x.service_mode),created_at:stringValue(x.created_at),accident_at:nullableString(x.accident_at),age_days:numberValue(x.age_days),customer_name:stringValue(x.customer_name),customer_code:stringValue(x.customer_code),vehicle_no:stringValue(x.vehicle_no),policy_no:stringValue(x.policy_no),insurer_name:stringValue(x.insurer_name),rm_name:stringValue(x.rm_name),intermediary_code:stringValue(x.intermediary_code),estimated_loss:numberValue(x.estimated_loss),approved_amount:numberValue(x.approved_amount),settlement_amount:numberValue(x.settlement_amount),document_count:numberValue(x.document_count),pending_documents:numberValue(x.pending_documents),rejected_documents:numberValue(x.rejected_documents)}}
