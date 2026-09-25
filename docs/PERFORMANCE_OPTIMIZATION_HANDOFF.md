@@ -1,3 +1,9 @@
+## 2026-09-25 Reports persistent workspace navigation
+
+**IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `perf/reports-smooth-tab-navigation-v3` moves only the four primary reporting workspaces (Overview, Business, Portfolio, Operations) under a shared route-group layout. The global AppShell, Reports title, and primary report tabs now persist across those sibling route transitions; each page keeps its existing server-side data loader and injects its existing filter/export controls into the persistent header through a client portal.
+
+Automatic prefetch remains disabled on the primary report tabs because these report routes can execute heavy server/database reads. The change therefore targets navigation stability without speculatively loading Business, Portfolio, or Operations data before the user clicks. Report calculations, route URLs, search-param filter contracts, permission checks, exports, schema, RLS, and database logic are unchanged.
+
 ## 2026-09-22 Partner Portal low-risk loading/prefetch Phase 1
 
 **IMPLEMENTED, NOT MERGED/DEPLOYED:** branch `perf/partner-low-risk-loading-prefetch`, PR #2251, introduces only reversible front-end/request-loading changes for the Partner Portal.
