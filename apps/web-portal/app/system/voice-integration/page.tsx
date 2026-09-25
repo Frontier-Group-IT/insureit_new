@@ -265,7 +265,7 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
             )}
           </div>
           <p className="mt-1 text-[8.5px] text-[#71839A]">
-            Create a campaign from Excel using RC No. and Mobile No. only. Maximum 100 customers.
+            Create a campaign from Excel/CSV. Campaign size is governed by upload processing capacity, not a fixed customer limit.
           </p>
           {!voiceCampaignState.schemaReady ? (
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[8.5px] font-semibold text-amber-800">
@@ -336,43 +336,48 @@ export default async function VoiceIntegrationPage({ searchParams }: VoiceIntegr
 
         <section className="rounded-2xl border border-[#DDE6F0] bg-white p-3 shadow-[0_5px_18px_rgba(31,55,86,0.04)]">
           <SectionTitle icon={ServerCog} title="Production control">
-            <Link href="/system/voice-integration" className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-[#D6E0EC] px-2.5 text-[8.5px] font-bold text-[#536984]">
-              <RefreshCw className="h-3 w-3" /> Refresh
-            </Link>
+            <div className="flex items-center gap-1.5">
+              <form action="/api/system/voice-integration/sarvam-connection-test" method="post">
+                <PendingButton
+                  disabled={!connectionConfigReady}
+                  pendingLabel=""
+                  className="grid h-7 w-7 place-items-center rounded-lg border border-[#D6E0EC] bg-white text-[#536984] transition hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label="Test Sarvam connection"
+                  title="Test Sarvam connection"
+                >
+                  <Wifi className="h-3 w-3" />
+                </PendingButton>
+              </form>
+              <Link
+                href="/system/voice-integration"
+                className="grid h-7 w-7 place-items-center rounded-lg border border-[#D6E0EC] bg-white text-[#536984] transition hover:bg-[#F8FAFC]"
+                aria-label="Refresh voice integration"
+                title="Refresh"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Link>
+            </div>
           </SectionTitle>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-            <form action="/api/system/voice-integration/sarvam-connection-test" method="post">
-              <ControlButton icon={Wifi} label="Test Connection" disabled={!connectionConfigReady} />
-            </form>
+
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E4EBF3] bg-[#FAFCFF] px-3 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[7px] font-black uppercase tracking-[.06em] text-[#8998AA]">Campaign state</p>
+              <p className="mt-0.5 text-[9px] font-bold text-[#29415F]">{labelize(campaignLifecycle.status)}</p>
+            </div>
 
             {campaignLifecycle.status === "active" ? (
               <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
                 <input type="hidden" name="action" value="pause" />
                 <ControlButton icon={Pause} label="Pause Campaign" />
               </form>
-            ) : (
-              <div className="flex h-10 items-center gap-2 rounded-lg border border-[#E1E8F0] bg-[#F8FAFC] px-3 text-[9px] font-bold text-[#9AA8B9]">
-                <Pause className="h-3.5 w-3.5" /> Pause Campaign
-              </div>
-            )}
-
-            {campaignLifecycle.status === "paused" ? (
+            ) : campaignLifecycle.status === "paused" ? (
               <form action="/api/system/voice-integration/sarvam-campaign-status" method="post">
                 <input type="hidden" name="action" value="resume" />
                 <ControlButton icon={Play} label="Resume Campaign" primary />
               </form>
             ) : (
-              <div className="flex h-10 items-center gap-2 rounded-lg border border-[#E1E8F0] bg-[#F8FAFC] px-3 text-[9px] font-bold text-[#9AA8B9]">
-                <Play className="h-3.5 w-3.5" /> Resume Campaign
-              </div>
+              <span className="text-[8px] font-semibold text-[#8798AC]">Pause / Resume unavailable</span>
             )}
-
-            <a href="#voice-queue" className="flex h-10 items-center gap-2 rounded-lg border border-[#D6E0EC] bg-white px-3 text-[9px] font-bold text-[#263D5E] hover:bg-[#F8FAFC]">
-              <CalendarClock className="h-3.5 w-3.5 text-[#3156B8]" /> Queue
-            </a>
-            <a href="#recent-attempts" className="flex h-10 items-center gap-2 rounded-lg border border-[#D6E0EC] bg-white px-3 text-[9px] font-bold text-[#263D5E] hover:bg-[#F8FAFC]">
-              <RotateCcw className="h-3.5 w-3.5 text-[#3156B8]" /> Recovery
-            </a>
           </div>
         </section>
 
@@ -605,7 +610,7 @@ function ControlButton({ icon: Icon, label, disabled = false, primary = false }:
     <PendingButton
       disabled={disabled}
       pendingLabel={`${label}…`}
-      className={`flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-[9px] font-bold transition disabled:cursor-not-allowed disabled:opacity-45 ${primary ? "border-[#102A56] bg-[#102A56] text-white" : "border-[#D6E0EC] bg-white text-[#263D5E] hover:bg-[#F8FAFC]"}`}
+      className={`inline-flex h-8 min-w-[132px] items-center justify-center gap-1.5 rounded-lg border px-3 text-[8.5px] font-bold transition disabled:cursor-not-allowed disabled:opacity-45 ${primary ? "border-[#102A56] bg-[#102A56] text-white" : "border-[#D6E0EC] bg-white text-[#263D5E] hover:bg-[#F8FAFC]"}`}
     >
       <Icon className="h-3.5 w-3.5" /> {label}
     </PendingButton>
