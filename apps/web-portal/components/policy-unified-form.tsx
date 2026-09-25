@@ -108,6 +108,7 @@ type Props = {
   nonMotorActivityStatus?: ReactNode;
   commercialAccess?: boolean;
   preselectedCustomerId?: string | null;
+  preselectedVehicleId?: string | null;
   sourceIntakeId?: string | null;
   initialDraftRevision?: number | null;
   initialRegistrationMode?: VehicleRegistrationMode;
@@ -162,7 +163,7 @@ function shiftedPolicyEnd(newStart:string,oldStart:string,oldEnd:string){if(!/^\
 function boolValue(value: string | null) { return value==="true"||value==="Yes"||value==="YES"; }
 const registrationValidationMessage="Enter a valid Registration number.";
 
-export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, nonMotorInitialValues, nonMotorExistingDocuments, nonMotorActivityStatus, commercialAccess = true, preselectedCustomerId = null, sourceIntakeId = null, initialDraftRevision = null, initialRegistrationMode = "registered", authoritativeInitialValues = false }: Props) {
+export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources, manufacturers = [], initialValues, nonMotorInitialValues, nonMotorExistingDocuments, nonMotorActivityStatus, commercialAccess = true, preselectedCustomerId = null, preselectedVehicleId = null, sourceIntakeId = null, initialDraftRevision = null, initialRegistrationMode = "registered", authoritativeInitialValues = false }: Props) {
   const router = useRouter();
   const [form,setForm]=useState<FormState>(()=>stateFrom(initialValues));
   const [vehicleRegistrationMode,setVehicleRegistrationMode]=useState<VehicleRegistrationMode>(initialRegistrationMode);
@@ -182,7 +183,7 @@ export function PolicyUnifiedForm({ mode, insurers, customers = [], rms, sources
   const [ownershipConflict,setOwnershipConflict]=useState<PolicyOwnershipConflict|null>(null);
   const [businessConflict,setBusinessConflict]=useState<PolicyBusinessConflict|null>(null);
   const [replacementConflict,setReplacementConflict]=useState<Extract<PolicyBusinessConflict,{type:"coverage_overlap"}>|null>(null);
-  const [selectedExistingVehicleId,setSelectedExistingVehicleId]=useState<string|null>(null);
+  const [selectedExistingVehicleId,setSelectedExistingVehicleId]=useState<string|null>(preselectedVehicleId);
   const [pendingPayload,setPendingPayload]=useState<PolicyOnboardingPayload|null>(null);
   const draftHydrated=useRef(false);
   const [isLookingUp,startLookup]=useTransition();
