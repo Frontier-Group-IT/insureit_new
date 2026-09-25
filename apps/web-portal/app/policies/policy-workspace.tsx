@@ -547,7 +547,7 @@ function PolicyTypeLink({ policy, openingDocumentId, onOpenDocument }: { policy:
     <div className="flex min-w-0 items-center gap-2">
       <Link prefetch={false} href={`/policies/${policy.id}/edit`} title={policy.policy_no} className="min-w-0 text-[12px] text-[#0F172A] hover:text-[#17365D] hover:underline">
         <span className="block truncate"><span className="font-bold">{businessLine}</span><span aria-hidden="true" className="mx-1 text-[11px] font-normal">•</span><span className="font-normal">{category || "-"}</span></span>
-        {product && product.toLowerCase() !== category.toLowerCase() ? <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{product}</span> : null}
+        {businessLine !== "Non Motor" && product && product.toLowerCase() !== category.toLowerCase() ? <span className="block truncate text-[8.5px] leading-3.5 text-[#7C899B]">{product}</span> : null}
       </Link>
       {policyCopy ? (
         <button type="button" onClick={() => onOpenDocument(policyCopy)} disabled={openingDocumentId === policyCopy.id} aria-label={`Open policy copy for ${policy.policy_no}`} title={policyCopy.file_name ? `Open policy copy: ${policyCopy.file_name}` : "Open policy copy"} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F3E8FF] text-[#7c3aed] transition hover:bg-[#E9D5FF] hover:text-[#6D28D9] disabled:cursor-wait disabled:opacity-50">

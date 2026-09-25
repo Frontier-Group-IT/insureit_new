@@ -1,13 +1,13 @@
-## 2026-09-25 — Customer App Add Vehicle error popup UX
+## 2026-09-25 — Hide Non-Motor policy product subline in Policy Register
 
-- Branch: `fix/customer-add-vehicle-error-popups-v2`.
-- Customer App → Add Vehicle no longer renders the general inline red error banner.
-- Validation errors, RC lookup failures, duplicate-vehicle errors, vehicle-save errors, policy-save errors and policy-copy upload/size errors use one compact modal.
-- Missing insurer popup is exactly: **Insurer not selected** / **Please select the insurer first to save the policy details.** with **Cancel** and **Select Insurer** actions; Select Insurer opens the insurer selector.
-- RC loading and successful fetch/confirmation notices remain inline because they are informational rather than errors.
-- Added `customer-add-vehicle-error-popup-regression.mjs` and wired it into `Verify mobile app`.
-- No schema, RLS, API/RPC contract, native runtime, APK/AAB, or production database change.
-- **IMPLEMENTED; PR/CI/merge/OTA pending.**
+- Branch: `fix/non-motor-hide-policy-product-subline`.
+- PR: #2405.
+- In `apps/web-portal/app/policies/policy-workspace.tsx`, `PolicyTypeLink()` now suppresses the secondary `policy_product` line when `businessLine === "Non Motor"`.
+- Non-Motor rows now show only **Non Motor • <category>** in the Policy / Product column.
+- Motor rows keep the existing secondary product-line behavior.
+- The stored `policy_product` value is unchanged and remains available elsewhere.
+- Search/filter logic, insurer data/logo column, policy details, calculations, schema, migration, RLS, permissions, mobile app, Partner app, APK/AAB, and native runtime are unchanged.
+- **IMPLEMENTED / PR OPEN; not merged; not deployed.**
 
 ---
 
