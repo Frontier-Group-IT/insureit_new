@@ -8,7 +8,6 @@ export function ReportToolbarPortal({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setTarget(document.getElementById("reports-workspace-toolbar"));
-    return () => setTarget(null);
   }, []);
 
   return target ? createPortal(children, target) : null;
