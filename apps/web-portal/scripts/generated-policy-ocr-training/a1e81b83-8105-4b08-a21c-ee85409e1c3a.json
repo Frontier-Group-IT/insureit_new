@@ -1,0 +1,58 @@
+{
+  "parser_id": "united_india_motor_v1",
+  "ground_truth": {
+    "section_02": {
+      "vehicle_make": "Harley Davidson",
+      "vehicle_class": "GCV",
+      "vehicle_model": "Load Carrier",
+      "vehicle_capacity": "2",
+      "vehicle_rto_name": "up71",
+      "vehicle_fuel_type": "Petrol",
+      "vehicle_rto_state": "up",
+      "vehicle_engine_number": "SYNENGINEB7A1F195DC60",
+      "vehicle_chassis_number": "SYNCHASSISB7A1F195DC60",
+      "vehicle_manufacturing_year": 2008,
+      "vehicle_registration_number": "SYNREGB7A1F195DC60",
+      "vehicle_registration_status": "registered"
+    },
+    "section_03": {
+      "idv": 0,
+      "cpa_opted": true,
+      "od_premium": 57.5,
+      "tp_premium": 57.5,
+      "valid_from": "2026-07-09",
+      "valid_upto": "2027-07-08",
+      "cpa_premium": 100,
+      "printed_gst": 31.225,
+      "insurer_name": "United India Insurance Company Limited",
+      "policy_number": "SYN-B7A1F195DC60",
+      "policy_product": "Third Party",
+      "printed_net_premium": 215,
+      "printed_gross_premium": 246.225
+    }
+  },
+  "parser_version": "united_india_motor_v1.1.0+layout-uiic_gcv_3w_tp-v5",
+  "schema_version": "policy_ocr_training_candidate_v2",
+  "evidence_labels": {
+    "idv": "IDV / Sum Insured · Page 1",
+    "cpa_opted": "Owner-driver CPA · Page 1",
+    "od_premium": "OD premium · Page 1",
+    "tax_amount": "GST / Tax · Page 2",
+    "tp_premium": "Policy Product · Page 1",
+    "cpa_premium": "Owner-driver CPA · Page 2",
+    "insurer_name": "Insurer Header · Page 1",
+    "vehicle_make": "Vehicle Make · Page 1",
+    "gross_premium": "Gross / Total Payable · Page 2",
+    "total_premium": "Net Premium · Page 2",
+    "vehicle_class": "Vehicle Class · Page 1",
+    "policy_product": "Policy product · Page 1",
+    "policy_end_date": "Vehicle Registration Number · Page 1",
+    "vehicle_capacity": "Vehicle Capacity · Page 1",
+    "policy_start_date": "Vehicle Registration Number · Page 1",
+    "vehicle_engine_number": "Engine Number · Page 1",
+    "vehicle_chassis_number": "Chassis Number · Page 1",
+    "vehicle_manufacturing_year": "Manufacturing Year · Page 1",
+    "vehicle_registration_number": "Vehicle Registration Number · Page 1",
+    "vehicle_registration_status": "Vehicle Registration Status · Page 1"
+  }
+}
