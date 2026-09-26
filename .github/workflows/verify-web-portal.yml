@@ -37,6 +37,8 @@ jobs:
           cache-dependency-path: apps/web-portal/package.json
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: PostgREST high-volume row-cap audit
+        run: node scripts/postgrest-row-cap-audit.mjs
       - name: Access control V2 catalogue regression
         run: npm run access-control:v2-regression
       - name: Access control V2 scope and compatibility regression
@@ -188,6 +190,7 @@ jobs:
             echo "## Web portal verification gate"
             echo
             echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Data safety: high-volume PostgREST reads are bounded/paged before client aggregation"
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Policy Intake Policy Register quick-link, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Claim regressions: spot multi-upload/intimation, External Claim read-only legacy protection, and External Claim canonical Operations workflow"
