@@ -1,0 +1,106 @@
+name: Apply private voice Phase 1 isolation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/202609260001_private_voice_phase1_isolation.sql'
+      - '.github/workflows/apply-private-voice-phase1-isolation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply isolated private voice schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/202609260001_private_voice_phase1_isolation.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Ensure private voice isolation migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='202609260001'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/202609260001_private_voice_phase1_isolation.sql
+            supabase migration repair --linked --status applied 202609260001
+          fi
+
+      - name: Verify private voice isolation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            with expected(name) as (
+              values
+                ('private_voice_campaigns'),
+                ('private_voice_campaign_members'),
+                ('private_voice_agent_versions'),
+                ('private_voice_attempts'),
+                ('private_voice_attempt_events'),
+                ('private_voice_sessions'),
+                ('private_voice_turns'),
+                ('private_voice_training_examples'),
+                ('private_voice_evaluations')
+            )
+            select
+              (select count(*) = 9
+                 from expected e
+                 where to_regclass('public.' || e.name) is not null) as all_private_tables_ready,
+              (select count(*) = 9
+                 from expected e
+                 join pg_class c on c.oid = to_regclass('public.' || e.name)
+                 where c.relrowsecurity) as all_private_tables_rls_enabled,
+              to_regclass('public.voice_campaigns') is not null as sarvam_campaign_table_preserved,
+              to_regclass('public.external_renewal_voice_attempts') is not null as sarvam_attempt_table_preserved;
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"all_private_tables_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"all_private_tables_rls_enabled"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"sarvam_campaign_table_preserved"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"sarvam_attempt_table_preserved"[[:space:]]*:[[:space:]]*true'
