@@ -3,6 +3,7 @@ import { VehicleForm } from "@/components/forms";
 import { VehicleCreatedActionPopup } from "@/components/vehicle-created-action-popup";
 import { AppShell } from "@/components/shell";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireAnyCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -26,9 +27,9 @@ export default async function NewVehiclePage({ searchParams }: { searchParams: P
   const params = await searchParams;
 
   const [customersResult, manufacturersResult, brandsResult, handoffCustomerResult] = await Promise.all([
-    admin.from("customers").select("id, company_name, contact_name, phone, email").order("created_at", { ascending: false }).returns<CustomerOption[]>(),
-    admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
-    admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
+    fetchAllPages<CustomerOption, unknown>((from, to) => admin.from("customers").select("id, company_name, contact_name, phone, email").order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to).returns<CustomerOption[]>()),
+    fetchAllPages<ManufacturerId, unknown>((from, to) => admin.from("vehicle_manufacturers").select("id").eq("is_active", true).order("id", { ascending: true }).range(from, to).returns<ManufacturerId[]>()),
+    fetchAllPages<BrandOption, unknown>((from, to) => admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).order("manufacturer_id", { ascending: true }).range(from, to).returns<BrandOption[]>()),
     params.customer_id
       ? admin.from("customers").select("id, company_name, contact_name, phone, email").eq("id", params.customer_id).maybeSingle<CustomerOption>()
       : Promise.resolve({ data: null, error: null }),
