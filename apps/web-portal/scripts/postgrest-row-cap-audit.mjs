@@ -23,13 +23,8 @@ const highRiskTables = new Set([
   "vehicles",
 ]);
 
-const explicitBoundingMethods = [
-  ".range(", ".limit(", ".single(", ".maybeSingle(",
-];
-const narrowingMethods = [
-  ".eq(", ".in(", ".is(", ".match(", ".contains(", ".containedBy(",
-  ".lt(", ".lte(", ".gt(", ".gte(", ".like(", ".ilike(", ".or(", ".not(",
-];
+const explicitBoundingMethods = [".range(", ".limit(", ".single(", ".maybeSingle("];
+const mutationMethods = [".insert(", ".upsert(", ".update(", ".delete("];
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -52,11 +47,18 @@ for (const root of roots) {
       if (!highRiskTables.has(table)) continue;
       const start = match.index ?? 0;
       const semicolon = source.indexOf(";", start);
-      const end = semicolon === -1 ? Math.min(source.length, start + 2500) : Math.min(source.length, semicolon + 1);
+      const end = semicolon === -1 ? Math.min(source.length, start + 3000) : Math.min(source.length, semicolon + 1);
       const chain = source.slice(start, end);
       if (!chain.includes(".select(")) continue;
+      if (mutationMethods.some((method) => chain.includes(method))) continue;
       if (explicitBoundingMethods.some((method) => chain.includes(method))) continue;
-      if (narrowingMethods.some((method) => chain.includes(method))) continue;
+
+      // Query-builder assignments are sometimes bounded a few lines later (for example
+      // `let query = ...select(...)` followed by conditional filters and `query.limit(2)`).
+      // Treat a nearby explicit bound as safe while still flagging broad list reads.
+      const nearby = source.slice(start, Math.min(source.length, start + 1800));
+      if (explicitBoundingMethods.some((method) => nearby.includes(method))) continue;
+
       const line = source.slice(0, start).split("\n").length;
       findings.push({ file, line, table, chain: chain.replace(/\s+/g, " ").slice(0, 500) });
     }
