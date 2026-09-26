@@ -175,6 +175,10 @@ jobs:
         run: npm run policy-ocr:worker-regression
       - name: Controlled OCR orchestrator regression
         run: npm run policy-ocr:orchestrator-regression
+      - name: Private voice training redaction regression
+        run: node --experimental-strip-types scripts/private-voice-training-redaction-regression.ts
+      - name: Private voice dataset versioning regression
+        run: node --experimental-strip-types scripts/private-voice-dataset-versioning-regression.ts
       - name: Typecheck
         run: npm run typecheck
       - name: Lint
@@ -194,6 +198,7 @@ jobs:
             echo "- Access control: V2 catalogue, scope, legacy compatibility, portal lifecycle, employee portal governance, release-blocker, Backoffice data-entry, policy-intake workflow, Policy Intake Policy Register quick-link, Partner web core, external renewal intake visibility, external renewal Administration import, Partner push-device registration and Partner push-template regressions"
             echo "- Vehicle regressions: canonical NEW prefix and standard/BH-series registration validation"
             echo "- Claim regressions: spot multi-upload/intimation, External Claim read-only legacy protection, and External Claim canonical Operations workflow"
+            echo "- Private voice regressions: training redaction including identity-mismatch provider narratives, permanent-test boundaries and deterministic dataset snapshot hashes"
             echo "- Performance regressions: expensive register create/edit workflow links do not auto-prefetch"
             echo "- OCR regressions: IFFCO structured, IFFCO, Digit, New India, New India Enhanced Covers, additional insurers, ICICI Lombard, Tata AIG bundled two-wheeler, approved layouts, production rerun refinement, production benchmark siblings, production rounds 2, 3, 4 UIIC, 5 UIIC precision, 6 UIIC residual, 7 UIIC precision guard, 8 fresh20 precision, 9 fresh20 Digit recovery, 10 UIIC GCV Package and 12 UIIC GCV Make/Model, post-training replay safety, onboarding Section 02/03 import, premium training workflow, protected worker"
             echo "- Static checks: typecheck and lint"

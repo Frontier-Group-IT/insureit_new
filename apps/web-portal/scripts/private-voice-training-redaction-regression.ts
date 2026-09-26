@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
-import { redactTrainingText } from "../lib/private-voice/training-redaction";
+// @ts-expect-error -- Node 22 strip-types requires the explicit .ts extension for this directly executed regression.
+import { redactTrainingText } from "../lib/private-voice/training-redaction.ts";
 
 const identity = {
   customer_name: "Shrankhala Mishra",
@@ -36,5 +37,28 @@ const result = redactTrainingText(
 assert.equal(result.includes("Shrankhala"), false);
 assert.equal(result.includes("Mishra"), false);
 assert.equal(result.includes("Suzuki Access"), true);
+
+const mismatchedIdentity = {
+  customer_name: "Different Customer",
+  mobile: null,
+  registration_no: null,
+};
+assert.equal(
+  redactTrainingText("The customer, Ananya, requested a callback tomorrow.", mismatchedIdentity),
+  "The customer, [CUSTOMER], requested a callback tomorrow.",
+  "provider narrative names must be redacted even when they do not match the opportunity identity",
+);
+assert.equal(
+  redactTrainingText("Customer Vikram expressed interest in renewal.", mismatchedIdentity),
+  "Customer [CUSTOMER] expressed interest in renewal.",
+);
+assert.equal(
+  redactTrainingText("The insured named Priya Singh requested assistance.", mismatchedIdentity),
+  "The insured named [CUSTOMER] requested assistance.",
+);
+assert.equal(
+  redactTrainingText("Mr. Vikram Rao confirmed the details.", mismatchedIdentity),
+  "[CUSTOMER] confirmed the details.",
+);
 
 console.log("Private voice training redaction regression passed.");

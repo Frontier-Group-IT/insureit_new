@@ -18,6 +18,7 @@ import { AppShell } from "@/components/shell";
 import { getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getPrivateVoiceRuntimeConfig } from "@/lib/private-voice/config";
+import { getTrainingGovernanceOverview } from "@/lib/private-voice/training-governance";
 import { getTrainingLibraryOverview } from "@/lib/private-voice/training-library";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export const revalidate = 0;
 const phases = [
   ["0", "Baseline & isolation", "Complete", "Working Sarvam path documented and protected as an independent fallback."],
   ["1", "Private runtime foundation", "Complete", "Isolated schema, provider contracts and private configuration boundary."],
-  ["2", "Training & evaluation data", "Current", "Curate privacy-safe historical outcomes into training, validation and untouched test sets."],
+  ["2", "Training & evaluation data", "Current", "Human review, permanent-test protection and frozen reproducible dataset releases."],
   ["3–5", "Agent brain & tools", "Next", "Text agent, deterministic state machine, memory and controlled business tools."],
   ["6–7", "Speech & real-time gateway", "Planned", "Provider-neutral STT/TTS/telephony adapters, streaming audio and barge-in."],
   ["8–11", "Shadow → pilot → A/B", "Planned", "Shadow evaluation, internal calls, controlled customers and measured rollout."],
@@ -40,7 +41,7 @@ function param(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function outcomeValue(outcome: Record<string, unknown> | null, key: string) {
+function outcomeValue(outcome: Record<string, unknown> | null | undefined, key: string) {
   const value = outcome?.[key];
   return typeof value === "string" && value.trim() ? value : "—";
 }
@@ -52,9 +53,10 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
     redirect("/access-denied");
   }
 
-  const [config, library] = await Promise.all([
+  const [config, library, governance] = await Promise.all([
     Promise.resolve(getPrivateVoiceRuntimeConfig()),
     getTrainingLibraryOverview(),
+    getTrainingGovernanceOverview(),
   ]);
   const resolvedParams: Record<string, string | string[] | undefined> = searchParams ? await searchParams : {};
 
@@ -63,6 +65,13 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
   const skipped = param(resolvedParams.skipped);
   const screenedOut = param(resolvedParams.screened_out);
   const stageError = param(resolvedParams.training_error);
+  const reviewState = param(resolvedParams.review_state);
+  const reviewDecision = param(resolvedParams.review_decision);
+  const reviewError = param(resolvedParams.review_error);
+  const freezeState = param(resolvedParams.freeze_state);
+  const datasetVersion = param(resolvedParams.dataset_version);
+  const freezeError = param(resolvedParams.freeze_error);
+  const freezeReady = governance.approved.training > 0 && governance.approved.validation > 0 && governance.approved.test > 0;
 
   return (
     <AppShell title="Insureit Agent">
@@ -75,7 +84,7 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
                   <LockKeyhole className="h-3 w-3" /> IT Super User
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[8px] font-black uppercase tracking-[.08em] text-violet-700">
-                  <CircleDashed className="h-3 w-3" /> Phase 2 · training library
+                  <CircleDashed className="h-3 w-3" /> Phase 2 · review & versioning
                 </span>
               </div>
               <div className="mt-3 flex items-center gap-3">
@@ -84,7 +93,7 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
                 </span>
                 <div>
                   <h1 className="text-[20px] font-black tracking-[-.035em] text-[#142B50]">Insureit Agent</h1>
-                  <p className="mt-0.5 text-[10px] leading-5 text-[#647891]">Private voice-agent training foundation · built from privacy-safe historical outcomes while Sarvam remains untouched.</p>
+                  <p className="mt-0.5 text-[10px] leading-5 text-[#647891]">Private voice-agent training foundation · reviewed, privacy-safe and reproducible while Sarvam remains untouched.</p>
                 </div>
               </div>
             </div>
@@ -102,28 +111,26 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
             <div>
               <p className="text-[10px] font-black text-emerald-900">Sarvam production calling remains independent.</p>
-              <p className="mt-0.5 text-[9px] leading-4 text-emerald-800/80">Phase 2 only reads normalized historical outcomes and writes curated examples into the isolated private training table. It does not dispatch calls, alter Sarvam attempts, or enable private telephony.</p>
+              <p className="mt-0.5 text-[9px] leading-4 text-emerald-800/80">Phase 2 only curates isolated private training records. Review and dataset freeze actions cannot dispatch calls, alter Sarvam attempts or enable private telephony.</p>
             </div>
           </div>
         </section>
 
         {stageState === "success" ? (
-          <section className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-[9px] font-semibold text-blue-800">
-            Dataset staging finished: <strong>{staged ?? "0"}</strong> new examples staged · {skipped ?? "0"} existing candidates skipped · {screenedOut ?? "0"} low-signal candidates screened out.
-          </section>
+          <Notice tone="blue">Dataset staging finished: <strong>{staged ?? "0"}</strong> new examples staged · {skipped ?? "0"} existing candidates skipped · {screenedOut ?? "0"} low-signal candidates screened out.</Notice>
         ) : null}
-        {stageState === "failed" ? (
-          <section className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[9px] font-semibold text-red-800">{stageError ?? "Training-library staging failed."}</section>
-        ) : null}
+        {stageState === "failed" ? <Notice tone="red">{stageError ?? "Training-library staging failed."}</Notice> : null}
+        {reviewState === "success" ? <Notice tone="blue">Human review saved: <strong>{reviewDecision ?? "decision"}</strong>.</Notice> : null}
+        {reviewState === "failed" ? <Notice tone="red">{reviewError ?? "Training review failed."}</Notice> : null}
+        {freezeState === "success" ? <Notice tone="blue">Frozen dataset created: <strong>{datasetVersion ?? "new version"}</strong>.</Notice> : null}
+        {freezeState === "failed" ? <Notice tone="red">{freezeError ?? "Dataset freeze failed."}</Notice> : null}
 
         <section id="training-library" className="rounded-2xl border border-[#DDE6F0] bg-white p-4 shadow-[0_4px_18px_rgba(31,55,86,.045)]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <SectionHeading icon={Database} title="Training Library" subtitle="Curated from normalized historical call outcomes; raw transcripts are not copied into the private dataset." />
             <form action="/api/system/private-voice/training-library/stage" method="post" className="flex items-center gap-2">
               <input type="hidden" name="limit" value="200" />
-              <button type="submit" className="h-9 rounded-xl bg-[#102A56] px-4 text-[8.5px] font-black text-white shadow-[0_8px_20px_rgba(16,42,86,.15)] hover:bg-[#17386e]">
-                Stage next 200 eligible calls
-              </button>
+              <button type="submit" className="h-9 rounded-xl bg-[#102A56] px-4 text-[8.5px] font-black text-white shadow-[0_8px_20px_rgba(16,42,86,.15)] hover:bg-[#17386e]">Stage next 200 eligible calls</button>
             </form>
           </div>
 
@@ -149,16 +156,73 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
                   <span className="font-semibold">{outcomeValue(example.target_outcome, "disposition")}</span>
                   <span className="line-clamp-2 leading-4">{outcomeValue(example.target_outcome, "conversation_summary")}</span>
                 </div>
-              )) : (
-                <div className="px-4 py-8 text-center text-[9px] text-[#8091A5]">No examples staged yet. Use the staging action to create privacy-redacted draft candidates.</div>
-              )}
+              )) : <div className="px-4 py-8 text-center text-[9px] text-[#8091A5]">No examples staged yet.</div>}
             </div>
 
             <div className="space-y-2">
               <RuleCard icon={CheckCircle2} title="Eligible source rule" text="Completed + connected + completed provider result, at least 20 seconds, persisted call summary and structured disposition." />
-              <RuleCard icon={ShieldCheck} title="Privacy rule" text="Customer name, mobile, RC-like values and long identifiers are redacted before a training example is written. Raw transcripts are not persisted by the current Sarvam workflow." />
-              <RuleCard icon={Split} title="Stable split rule" text="Deterministic 70% training · 15% validation · 15% permanent-test candidate split based on the source attempt UUID." />
-              <RuleCard icon={PhoneCall} title="Low-signal screen" text="Empty/failed/busy/non-connected calls are excluded. Generic no-response/no-audio no-decision summaries are screened from training candidates." />
+              <RuleCard icon={ShieldCheck} title="Privacy rule" text="Full/partial customer names, mobile, RC-like values and long identifiers are redacted before staging. Raw transcripts are not persisted." />
+              <RuleCard icon={Split} title="Stable split rule" text="Deterministic 70% training · 15% validation · 15% permanent-test candidate split based on source attempt UUID." />
+              <RuleCard icon={PhoneCall} title="Low-signal screen" text="Empty/failed/busy/non-connected calls are excluded. Generic no-response/no-audio no-decision summaries are screened." />
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[#DDE6F0] bg-white p-4 shadow-[0_4px_18px_rgba(31,55,86,.045)]">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <SectionHeading icon={CheckCircle2} title="Human Review Queue" subtitle="Approve or exclude redacted draft examples. Split assignment is immutable; permanent-test candidates remain test-only." />
+            <div className="grid grid-cols-3 gap-2">
+              <MiniKpi label="Approved train" value={governance.approved.training} />
+              <MiniKpi label="Approved val" value={governance.approved.validation} />
+              <MiniKpi label="Approved test" value={governance.approved.test} />
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-2xl border border-[#E4EAF2]">
+            <div className="grid grid-cols-[72px_110px_1fr_150px] gap-2 bg-[#F7F9FC] px-3 py-2 text-[7.5px] font-black uppercase tracking-[.06em] text-[#7B8CA1]">
+              <span>Split</span><span>Disposition</span><span>Redacted summary</span><span className="text-right">Decision</span>
+            </div>
+            {governance.reviewQueue.length ? governance.reviewQueue.map((example) => (
+              <div key={example.id} className="grid grid-cols-[72px_110px_1fr_150px] items-center gap-2 border-t border-[#EDF1F6] px-3 py-2.5 text-[8px] text-[#516982]">
+                <span className={`font-black ${example.split === "test" ? "text-violet-700" : "text-[#3156B8]"}`}>{example.split ?? "—"}</span>
+                <span className="font-semibold">{outcomeValue(example.target_outcome as Record<string, unknown> | null, "disposition")}</span>
+                <span className="line-clamp-2 leading-4">{outcomeValue(example.target_outcome as Record<string, unknown> | null, "conversation_summary")}</span>
+                <form action="/api/system/private-voice/training-library/review" method="post" className="flex justify-end gap-1.5">
+                  <input type="hidden" name="example_id" value={example.id} />
+                  <button name="decision" value="exclude" className="h-7 rounded-lg border border-red-200 bg-red-50 px-2.5 text-[7.5px] font-black text-red-700 hover:bg-red-100">Exclude</button>
+                  <button name="decision" value="approve" className="h-7 rounded-lg bg-[#102A56] px-2.5 text-[7.5px] font-black text-white hover:bg-[#17386e]">Approve</button>
+                </form>
+              </div>
+            )) : <div className="px-4 py-8 text-center text-[9px] text-[#8091A5]">No draft examples waiting for review.</div>}
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[#DDE6F0] bg-white p-4 shadow-[0_4px_18px_rgba(31,55,86,.045)]">
+          <div className="grid gap-4 xl:grid-cols-[.85fr_1.15fr]">
+            <div>
+              <SectionHeading icon={Workflow} title="Frozen Dataset Release" subtitle="Create an immutable, hashed snapshot only after all three approved splits are represented." />
+              <div className="mt-3 rounded-xl border border-violet-200 bg-violet-50/60 p-3 text-[8.5px] leading-4 text-violet-900">
+                Permanent-test examples are frozen as test-only and cannot be promoted into training or validation. Frozen membership snapshots are immutable at the database layer.
+              </div>
+              <form action="/api/system/private-voice/datasets/freeze" method="post" className="mt-3 space-y-2">
+                <input name="notes" maxLength={500} placeholder="Optional release note" className="h-9 w-full rounded-xl border border-[#DDE6F0] bg-white px-3 text-[8.5px] text-[#334D6B] outline-none focus:border-[#3156B8]" />
+                <button type="submit" disabled={!freezeReady} className="h-9 w-full rounded-xl bg-[#102A56] px-4 text-[8.5px] font-black text-white enabled:hover:bg-[#17386e] disabled:cursor-not-allowed disabled:bg-slate-300">
+                  {freezeReady ? "Freeze approved dataset" : "Approve training + validation + test first"}
+                </button>
+              </form>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-[#E4EAF2]">
+              <div className="grid grid-cols-[1fr_72px_72px_72px_110px] gap-2 bg-[#F7F9FC] px-3 py-2 text-[7.5px] font-black uppercase tracking-[.06em] text-[#7B8CA1]">
+                <span>Version</span><span>Train</span><span>Val</span><span>Test</span><span>Frozen</span>
+              </div>
+              {governance.versions.length ? governance.versions.map((version) => (
+                <div key={version.id} className="grid grid-cols-[1fr_72px_72px_72px_110px] gap-2 border-t border-[#EDF1F6] px-3 py-2.5 text-[8px] text-[#516982]">
+                  <span className="font-black text-[#3156B8]">{version.version}</span>
+                  <span>{version.training_count}</span><span>{version.validation_count}</span><span>{version.test_count}</span>
+                  <span>{new Date(version.frozen_at).toLocaleDateString("en-IN")}</span>
+                </div>
+              )) : <div className="px-4 py-8 text-center text-[9px] text-[#8091A5]">No frozen dataset release yet.</div>}
             </div>
           </div>
         </section>
@@ -178,21 +242,26 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
           </section>
 
           <section className="rounded-2xl border border-[#DDE6F0] bg-white p-4 shadow-[0_4px_18px_rgba(31,55,86,.045)]">
-            <SectionHeading icon={BrainCircuit} title="Phase 2 realization" subtitle="The current production store has outcomes and summaries, not raw conversation turns." />
+            <SectionHeading icon={BrainCircuit} title="Phase 2 realization" subtitle="Structured outcomes are usable now; raw conversation turns are not present in the historical store." />
             <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[8.5px] leading-4 text-amber-900">
-              Historical Sarvam attempts persist normalized disposition, interest, objection, follow-up and call summary, but intentionally do not persist raw transcripts. This library therefore builds behavior/outcome examples from structured summaries now; any larger transcript corpus must later enter through an explicit privacy-reviewed import pipeline rather than being inferred from missing data.
+              Historical Sarvam attempts persist normalized disposition, interest, objection, follow-up and call summary, but intentionally do not persist raw transcripts. Full transcript corpora must later enter through an explicit privacy-reviewed import pipeline.
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <FutureCard icon={Database} title="Transcript import" text="Separate privacy-reviewed source pipeline" />
-              <FutureCard icon={FlaskConical} title="Human review" text="Approve / exclude / relabel examples" />
-              <FutureCard icon={Workflow} title="Dataset versions" text="Freeze reproducible training releases" />
-              <FutureCard icon={BrainCircuit} title="Evaluation harness" text="Phase 3 agent replay against permanent test" />
+              <FutureCard icon={CheckCircle2} title="Human review" text="Implemented · approve / exclude" state="Implemented" />
+              <FutureCard icon={Workflow} title="Dataset versions" text="Implemented · immutable hashed snapshots" state="Implemented" />
+              <FutureCard icon={BrainCircuit} title="Evaluation harness" text="Next · Phase 3 text-agent replay" />
             </div>
           </section>
         </div>
       </div>
     </AppShell>
   );
+}
+
+function Notice({ tone, children }: { tone: "blue" | "red"; children: React.ReactNode }) {
+  const classes = tone === "red" ? "border-red-200 bg-red-50 text-red-800" : "border-blue-200 bg-blue-50 text-blue-800";
+  return <section className={`rounded-2xl border px-4 py-3 text-[9px] font-semibold ${classes}`}>{children}</section>;
 }
 
 function SectionHeading({ icon: Icon, title, subtitle }: { icon: typeof BrainCircuit; title: string; subtitle: string }) {
@@ -209,10 +278,14 @@ function Kpi({ label, value, tone = "default" }: { label: string; value: number;
   return <div className={`rounded-xl border px-3 py-2.5 ${classes}`}><p className="text-[7px] font-black uppercase tracking-[.055em] text-[#7C8DA2]">{label}</p><p className="mt-1 text-[16px] font-black tracking-[-.03em] text-[#213A59]">{value.toLocaleString("en-IN")}</p></div>;
 }
 
+function MiniKpi({ label, value }: { label: string; value: number }) {
+  return <div className="min-w-[84px] rounded-xl border border-[#E3EAF2] bg-[#FBFCFE] px-2.5 py-2"><p className="text-[6.5px] font-black uppercase tracking-[.05em] text-[#8191A5]">{label}</p><p className="mt-0.5 text-[12px] font-black text-[#263C59]">{value}</p></div>;
+}
+
 function RuleCard({ icon: Icon, title, text }: { icon: typeof ShieldCheck; title: string; text: string }) {
   return <div className="rounded-xl border border-[#E7EDF4] bg-[#FBFCFE] p-3"><div className="flex items-center gap-2"><Icon className="h-3.5 w-3.5 text-[#3156B8]" /><p className="text-[8.5px] font-black text-[#334D6B]">{title}</p></div><p className="mt-1.5 text-[8px] leading-4 text-[#75879C]">{text}</p></div>;
 }
 
-function FutureCard({ icon: Icon, title, text }: { icon: typeof Database; title: string; text: string }) {
-  return <div className="rounded-xl border border-[#E7EDF4] bg-[#FBFCFE] p-3"><div className="flex items-center justify-between"><Icon className="h-4 w-4 text-[#3156B8]" /><span className="rounded-full bg-slate-100 px-2 py-0.5 text-[7px] font-black text-slate-500">Planned</span></div><p className="mt-2 text-[9px] font-black text-[#2B415E]">{title}</p><p className="mt-1 text-[8px] text-[#7A8BA0]">{text}</p></div>;
+function FutureCard({ icon: Icon, title, text, state = "Planned" }: { icon: typeof Database; title: string; text: string; state?: "Planned" | "Implemented" }) {
+  return <div className="rounded-xl border border-[#E7EDF4] bg-[#FBFCFE] p-3"><div className="flex items-center justify-between"><Icon className="h-4 w-4 text-[#3156B8]" /><span className={`rounded-full px-2 py-0.5 text-[7px] font-black ${state === "Implemented" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{state}</span></div><p className="mt-2 text-[9px] font-black text-[#2B415E]">{title}</p><p className="mt-1 text-[8px] text-[#7A8BA0]">{text}</p></div>;
 }
