@@ -7,6 +7,7 @@ import { hasEffectiveCapability } from "@/lib/effective-permissions";
 import { getAccessiblePolicyRmEmployeeIds, getSalesExecutivePolicyIds } from "@/lib/policy-access-scope";
 import { loadPolicyIntakeReviewSummary } from "@/lib/policy-intake-review-summary";
 import { requireCapability } from "@/lib/master-data-server";
+import { fetchAllPostgrestRows } from "@/lib/postgrest-pagination";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
 import { PolicyWorkspace } from "./policy-workspace";
@@ -100,12 +101,13 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       return <AppShell title="Policies"><BackofficePolicyRegister rows={[]} /></AppShell>;
     }
 
-    const { data, error } = await admin
+    const { data, error } = await fetchAllPostgrestRows<BackofficePolicyRow>((from, to) => admin
       .from("policies")
       .select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no,chassis_no,engine_no),insurance_companies(name)")
       .in("id", ownPolicyIds)
       .order("created_at", { ascending: false })
-      .returns<BackofficePolicyRow[]>();
+      .range(from, to)
+      .returns<BackofficePolicyRow[]>());
 
     const finishedAt = performance.now();
     logPortalRoutePerformance("/policies", {
@@ -137,10 +139,16 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
       });
       return <AppShell title="Policies"><PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} /><BackofficePolicyRegister rows={[]} /></AppShell>;
     }
-    let safeQuery = admin.from("policies").select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no,chassis_no,engine_no),insurance_companies(name)").order("created_at", { ascending: false });
-    if (accessibleRmEmployeeIds !== null) safeQuery = safeQuery.in("rm_employee_id", accessibleRmEmployeeIds);
     const [policyResult, policyIntakeSummary] = await Promise.all([
-      safeQuery.returns<BackofficePolicyRow[]>(),
+      fetchAllPostgrestRows<BackofficePolicyRow>((from, to) => {
+        let safeQuery = admin
+          .from("policies")
+          .select("id,policy_no,policy_type,start_date,end_date,insured_declared_value,premium_amount,customers!inner(company_name,contact_name),vehicles(vehicle_no,chassis_no,engine_no),insurance_companies(name)")
+          .order("created_at", { ascending: false })
+          .range(from, to);
+        if (accessibleRmEmployeeIds !== null) safeQuery = safeQuery.in("rm_employee_id", accessibleRmEmployeeIds);
+        return safeQuery.returns<BackofficePolicyRow[]>();
+      }),
       policyIntakeSummaryPromise,
     ]);
     const { data, error } = policyResult;
@@ -166,19 +174,26 @@ export default async function PoliciesPage({ searchParams }: { searchParams?: Pr
     return <AppShell title="Policies"><PolicyIntakePolicyRegisterLinksPortal summary={policyIntakeSummary} /><PolicyWorkspace rows={[]} sourceOptions={[]} /></AppShell>;
   }
 
-  const activeSourcesPromise = admin
+  const activeSourcesPromise = fetchAllPostgrestRows<IntermediarySourceRow>((from, to) => admin
     .from("intermediaries")
     .select("intermediary_type, intermediary_code, display_name")
     .in("intermediary_type", ["partner", "posp", "misp"])
     .eq("account_status", "active")
     .order("display_name", { ascending: true })
-    .returns<IntermediarySourceRow[]>();
+    .range(from, to)
+    .returns<IntermediarySourceRow[]>());
 
-  let query = admin.from("policies").select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, rm_name, rm_employee_id, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)").order("created_at", { ascending: false });
-  if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
   const [sourceResult, policyResult, policyIntakeSummary] = await Promise.all([
     activeSourcesPromise,
-    query.returns<PolicyRow[]>(),
+    fetchAllPostgrestRows<PolicyRow>((from, to) => {
+      let query = admin
+        .from("policies")
+        .select("id, policy_no, policy_type, policy_product, business_line, issuance_date, created_at, start_date, end_date, insured_declared_value, intermediary_type, intermediary_code, rm_name, rm_employee_id, policy_premium_details(gross_premium), policy_documents(id, document_type, file_name), customers!inner(company_name, contact_name), vehicles(vehicle_no, chassis_no, engine_no), insurance_companies(name), non_motor_policy_details(category, risk_title, risk_location, transit_from, transit_to, nature_of_business, liability_type, risk_details), claims(count)")
+        .order("created_at", { ascending: false })
+        .range(from, to);
+      if (accessibleRmEmployeeIds !== null) query = query.in("rm_employee_id", accessibleRmEmployeeIds);
+      return query.returns<PolicyRow[]>();
+    }),
     policyIntakeSummaryPromise,
   ]);
 

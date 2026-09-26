@@ -5,12 +5,20 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { fetchAllPostgrestRows } from "@/lib/postgrest-pagination";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { appRoles, roleLabels } from "@/lib/roles";
 import { type EmployeeRow } from "./employee-forms";
 import { EmployeeDirectoryWorkspace } from "./employee-directory-workspace";
 
 const NO_EMPLOYEE_ID = "00000000-0000-0000-0000-000000000000";
+const AUTH_PAGE_SIZE = 1000;
+
+type PortalProfileRow = { id: string; role: string };
+type EmployeeQueryRow = Omit<EmployeeRow, "profile_id" | "portal_role" | "portal_status"> & {
+  portal_profile: PortalProfileRow | PortalProfileRow[] | null;
+};
+type ManagerRow = Pick<EmployeeRow, "id" | "employee_code" | "full_name">;
 
 export default async function EmployeesPage({ searchParams }: { searchParams?: Promise<{ q?: string; status?: string }> }) {
   const accessToken = await getServerAccessToken();
@@ -26,19 +34,36 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   const initialStatus = params.status === "inactive" ? "inactive" : "active";
   const supabase = await createServerSupabaseClient();
 
-  let query = supabase
-    .from("employees")
-    .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id, role)")
-    .order("full_name");
-  let managerQuery = supabase.from("employees").select("id, employee_code, full_name").eq("employment_status", "active").order("full_name");
+  const [employeeResult, managerResult] = await Promise.all([
+    fetchAllPostgrestRows<EmployeeQueryRow>((from, to) => {
+      let query = supabase
+        .from("employees")
+        .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id, role)")
+        .order("full_name")
+        .range(from, to);
+      if (scope.mode !== "organization") {
+        const employeeIds = scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID];
+        query = query.in("id", employeeIds);
+      }
+      return query.returns<EmployeeQueryRow[]>();
+    }),
+    fetchAllPostgrestRows<ManagerRow>((from, to) => {
+      let query = supabase
+        .from("employees")
+        .select("id, employee_code, full_name")
+        .eq("employment_status", "active")
+        .order("full_name")
+        .range(from, to);
+      if (scope.mode !== "organization") {
+        const employeeIds = scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID];
+        query = query.in("id", employeeIds);
+      }
+      return query.returns<ManagerRow[]>();
+    }),
+  ]);
 
-  if (scope.mode !== "organization") {
-    const employeeIds = scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID];
-    query = query.in("id", employeeIds);
-    managerQuery = managerQuery.in("id", employeeIds);
-  }
-
-  const [{ data, error }, managerResult] = await Promise.all([query, managerQuery]);
+  const data = employeeResult.data;
+  const error = employeeResult.error;
   const profileRows = (data ?? []).map((row) => {
     const portalProfile = Array.isArray(row.portal_profile) ? row.portal_profile[0] : row.portal_profile;
     return { row, portalProfile };
@@ -48,12 +73,14 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   const profileIds = profileRows.map(({ portalProfile }) => portalProfile?.id).filter((id): id is string => Boolean(id));
   if (profileIds.length) {
     const admin = createSupabaseAdminClient();
-    const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (!authUsersError) {
+    for (let page = 1; ; page += 1) {
+      const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({ page, perPage: AUTH_PAGE_SIZE });
+      if (authUsersError) break;
       for (const user of authUsers.users) {
         if (!profileIds.includes(user.id)) continue;
         authStatusById.set(user.id, user.email_confirmed_at ? "active" : "invited");
       }
+      if (authUsers.users.length < AUTH_PAGE_SIZE) break;
     }
   }
 
