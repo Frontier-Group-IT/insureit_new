@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-// @ts-ignore -- Node 22 strip-types requires the explicit .ts extension for this directly executed regression.
+// @ts-expect-error -- Node 22 strip-types requires the explicit .ts extension for this directly executed regression.
 import { assertFreezeSplitCoverage, buildDatasetSnapshot, hashDatasetSnapshot, type ReviewableTrainingExample } from "../lib/private-voice/dataset-versioning.ts";
 
 function example(id: string, split: "training" | "validation" | "test", permanentTestCandidate = split === "test"): ReviewableTrainingExample {
