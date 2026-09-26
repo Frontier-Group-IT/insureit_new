@@ -11,7 +11,7 @@ const reportBusiness = await readFile(new URL("../lib/reports/policy-business.ts
 const reportPage = await readFile(new URL("../app/reports/(workspace)/business/page.tsx", import.meta.url), "utf8");
 const reportMigration = await readFile(new URL("../../../supabase/migrations/20260915163500_policy_business_report_net_premium_v5.sql", import.meta.url), "utf8");
 
-const mainQuery = page.match(/let query = admin\.from\("policies"\)\.select\("([^"]+)"\)/)?.[1] ?? "";
+const mainQuery = page.match(/let\s+query\s*=\s*admin\s*\.from\("policies"\)\s*\.select\("([^"]+)"\)/s)?.[1] ?? "";
 assert.ok(mainQuery, "Policies page should keep an explicit main register select.");
 assert.ok(!mainQuery.includes("premium_amount"), "Main policy register should not fetch unused premium_amount.");
 assert.ok(!mainQuery.includes("mime_type"), "Main policy register should not fetch unused policy document mime_type.");
