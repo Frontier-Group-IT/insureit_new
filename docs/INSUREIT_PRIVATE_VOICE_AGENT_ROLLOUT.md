@@ -156,13 +156,17 @@ Goals:
 - isolated private campaign/attempt/session/event/training/evaluation schema;
 - independent private configuration namespace and kill switches;
 - provider-neutral TypeScript contracts;
+- a separate private status/execution API namespace;
 - UI visibility into the isolation boundary;
 - no Sarvam-path mutation and no live calling.
 
 Phase 1 repository implementation:
 - `apps/web-portal/lib/private-voice/contracts.ts`
 - `apps/web-portal/lib/private-voice/config.ts`
+- `apps/web-portal/app/api/system/private-voice/status/route.ts`
+- `apps/web-portal/app/api/system/private-voice/dispatch/route.ts`
 - `supabase/migrations/202609260001_private_voice_phase1_isolation.sql`
+- `.github/workflows/apply-private-voice-phase1-isolation.yml`
 - updated `/system/voice-integration/insureit-agent` page.
 
 Prepared isolated tables:
@@ -188,6 +192,10 @@ Independent environment namespace:
 - `PRIVATE_VOICE_TTS_PROVIDER`
 
 Defaults remain OFF/unconfigured. No Sarvam flag is reused.
+
+The Phase 1 read-only status endpoint is IT-Super-User-only and exposes only safe configuration state. The separate private dispatch endpoint is deliberately hard-locked and always returns HTTP 409 in Phase 1; it cannot place a call or write an attempt. This reserves the private execution namespace without creating a shortcut into the Sarvam production dispatcher.
+
+A dedicated schema workflow is prepared to apply and verify the nine private tables after merge. It verifies all nine tables, RLS, and continued presence of the existing Sarvam campaign/attempt tables.
 
 **Important:** migration committed in Phase 1 is not the same as migration applied. Do not report these tables as present in production until the migration is explicitly applied and verified.
 
@@ -262,20 +270,26 @@ Before meaningful production migration target:
 - introduced provider-neutral private voice contracts;
 - introduced independent configuration/kill-switch namespace with all execution flags OFF by default;
 - prepared nine isolated private-agent tables with RLS enabled and no browser policies;
+- introduced an IT-Super-User-only private status endpoint;
+- introduced a separate private dispatch endpoint that is intentionally locked with HTTP 409 during Phase 1;
+- prepared a dedicated schema-application/verification workflow for the private tables;
 - upgraded the `Insureit Agent` page from Phase 0 placeholder to Phase 1 foundation dashboard showing data boundaries, configuration flags and provider contracts;
 - preserved the working Sarvam system without edits.
+
+### Important release-gate realization
+The repository's production deployment workflow intentionally rejects any Supabase migration that does not have an explicit automated schema-deployment mapping. The new private migration therefore must not be merged until `deploy-production.yml` explicitly recognizes `202609260001_private_voice_phase1_isolation.sql` and waits for `apply-private-voice-phase1-isolation.yml`. This is a release-safety requirement, not a private-agent functional dependency.
 
 ### Not implemented / not authorized
 - migration not yet applied to Supabase;
 - no telephony provider implementation;
 - no STT/TTS/LLM implementation;
 - no provider credentials;
-- no private dispatcher/webhook;
+- no private dispatcher engine/provider call/webhook;
 - no live private calls;
 - no writes to Sarvam campaign/attempt tables.
 
 ### Evidence state
-**IMPLEMENTED on feature branch; PR/CI/merge/migration application pending.**
+**IMPLEMENTED on feature branch; PR #2443 open; latest CI/merge/migration application pending. Do not merge until the production migration gate is wired and the latest Verify web portal run passes.**
 
 ### Next safe step
-Complete PR verification first. After merge/application approval, verify the isolated schema exists without modifying Sarvam tables. Then Phase 2 can build a privacy-safe Training Library extractor/reviewer without enabling telephony.
+Wire the private migration into the production schema wait gate, rerun canonical PR verification, and only then consider Phase 1 merge/application. After the isolated schema is verified, Phase 2 can build a privacy-safe Training Library extractor/reviewer without enabling telephony.
