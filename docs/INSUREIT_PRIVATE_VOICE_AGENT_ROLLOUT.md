@@ -2,7 +2,7 @@
 
 > **Created:** 2026-09-25  
 > **Current phase:** Phase 1 — technical isolation  
-> **Evidence state:** IMPLEMENTED on feature branch; PR/CI/merge/migration application pending  
+> **Evidence state:** IMPLEMENTED on feature branch; production migration gate wired; canonical PR verification passed; merge/migration application pending  
 > **Production calling state:** DISABLED / NOT IMPLEMENTED  
 > **Existing Sarvam managed-agent system:** preserved unchanged as production fallback
 
@@ -197,6 +197,8 @@ The Phase 1 read-only status endpoint is IT-Super-User-only and exposes only saf
 
 A dedicated schema workflow is prepared to apply and verify the nine private tables after merge. It verifies all nine tables, RLS, and continued presence of the existing Sarvam campaign/attempt tables.
 
+The production deployment wait gate now explicitly recognizes `202609260001_private_voice_phase1_isolation.sql`, rejects unrelated migrations in the same release, and waits for `apply-private-voice-phase1-isolation.yml` before allowing the downstream production deployment path to continue.
+
 **Important:** migration committed in Phase 1 is not the same as migration applied. Do not report these tables as present in production until the migration is explicitly applied and verified.
 
 ## Phase 2 — Training and evaluation dataset
@@ -273,11 +275,12 @@ Before meaningful production migration target:
 - introduced an IT-Super-User-only private status endpoint;
 - introduced a separate private dispatch endpoint that is intentionally locked with HTTP 409 during Phase 1;
 - prepared a dedicated schema-application/verification workflow for the private tables;
+- wired the private migration into the production schema wait gate with an unrelated-migration rejection guard;
 - upgraded the `Insureit Agent` page from Phase 0 placeholder to Phase 1 foundation dashboard showing data boundaries, configuration flags and provider contracts;
 - preserved the working Sarvam system without edits.
 
-### Important release-gate realization
-The repository's production deployment workflow intentionally rejects any Supabase migration that does not have an explicit automated schema-deployment mapping. The new private migration therefore must not be merged until `deploy-production.yml` explicitly recognizes `202609260001_private_voice_phase1_isolation.sql` and waits for `apply-private-voice-phase1-isolation.yml`. This is a release-safety requirement, not a private-agent functional dependency.
+### Release-gate result
+`deploy-production.yml` now explicitly recognizes `supabase/migrations/202609260001_private_voice_phase1_isolation.sql` and waits for `.github/workflows/apply-private-voice-phase1-isolation.yml`. The gate also rejects any unrelated migration bundled into this private-voice release before deployment can proceed.
 
 ### Not implemented / not authorized
 - migration not yet applied to Supabase;
@@ -289,7 +292,7 @@ The repository's production deployment workflow intentionally rejects any Supaba
 - no writes to Sarvam campaign/attempt tables.
 
 ### Evidence state
-**IMPLEMENTED on feature branch; PR #2443 open; latest CI/merge/migration application pending. Do not merge until the production migration gate is wired and the latest Verify web portal run passes.**
+**IMPLEMENTED on feature branch; PR #2443 open. Verify web portal run #4716 passed on gate-wiring commit `281b7b6664fb6865d69b9d444c03d830d4d7ae75`. This documentation commit requires the canonical PR verification to pass again before merge. Migration application and merge remain pending.**
 
 ### Next safe step
-Wire the private migration into the production schema wait gate, rerun canonical PR verification, and only then consider Phase 1 merge/application. After the isolated schema is verified, Phase 2 can build a privacy-safe Training Library extractor/reviewer without enabling telephony.
+Wait for the canonical verification on the latest PR head to pass. After explicit merge approval, allow the dedicated schema workflow to apply and verify only the isolated private schema. Then Phase 2 can build a privacy-safe Training Library extractor/reviewer without enabling telephony.
