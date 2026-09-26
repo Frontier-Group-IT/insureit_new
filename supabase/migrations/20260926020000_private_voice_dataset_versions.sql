@@ -8,7 +8,7 @@ alter table public.private_voice_training_examples
 create table if not exists public.private_voice_dataset_versions (
   id uuid primary key default gen_random_uuid(),
   version text not null unique,
-  status text not null default 'frozen' check (status in ('frozen','retired')),
+  status text not null default 'building' check (status in ('building','frozen','failed','retired')),
   notes text,
   manifest jsonb not null default '{}'::jsonb,
   training_count integer not null default 0 check (training_count >= 0),
@@ -16,7 +16,7 @@ create table if not exists public.private_voice_dataset_versions (
   test_count integer not null default 0 check (test_count >= 0),
   created_by uuid,
   frozen_by uuid,
-  frozen_at timestamptz not null default now(),
+  frozen_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -56,5 +56,5 @@ create trigger private_voice_dataset_members_immutable_update
 before update or delete on public.private_voice_dataset_members
 for each row execute function public.prevent_private_voice_dataset_member_mutation();
 
-comment on table public.private_voice_dataset_versions is 'Frozen, reproducible private voice training/evaluation dataset releases.';
+comment on table public.private_voice_dataset_versions is 'Versioned private voice training/evaluation dataset releases; only status=frozen is a valid reproducible release.';
 comment on table public.private_voice_dataset_members is 'Immutable snapshots of approved private voice examples; permanent-test rows remain test-only.';
