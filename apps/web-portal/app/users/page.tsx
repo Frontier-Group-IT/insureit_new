@@ -4,6 +4,7 @@ import { createProfileRecord } from "@/app/actions";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
+import { fetchAllPostgrestRows } from "@/lib/postgrest-pagination";
 import { appRoles, designationOptions, roleLabels } from "@/lib/roles";
 import { UserManagementWorkspace, type ProfileRow } from "./user-management-workspace";
 
@@ -16,11 +17,12 @@ export default async function UsersPage({ searchParams }: { searchParams?: Promi
 
   const params = (await searchParams) ?? {};
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
+  const { data, error } = await fetchAllPostgrestRows<ProfileRecord>((from, to) => supabase
     .from("profiles")
     .select("id, full_name, email, role, phone, employee_code, reporting_manager_id, department, designation, is_active")
     .order("created_at", { ascending: false })
-    .returns<ProfileRecord[]>();
+    .range(from, to)
+    .returns<ProfileRecord[]>());
 
   const profiles = data ?? [];
   const directReportCounts = new Map<string, number>();
