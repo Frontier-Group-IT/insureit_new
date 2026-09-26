@@ -3,6 +3,7 @@ import { Scale } from "lucide-react";
 import { AppShell } from "@/components/shell";
 import { CommercialReviewClient, type CommercialReviewRow } from "@/app/policies/commercial-review/commercial-review-client";
 import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import type { CommercialStatus } from "./actions";
@@ -25,18 +26,18 @@ export default async function PolicyCommercialReviewPage() {
 
   const admin = createSupabaseAdminClient();
   const [policiesResult, premiumResult, payinResult, payoutResult, insurersResult, intermediariesResult, eventsResult, vehiclesResult] = await Promise.all([
-    admin.from("policies").select("id,policy_no,insurance_company_id,issuance_date,start_date,intermediary_type,intermediary_code,vehicle_id,business_line").order("issuance_date", { ascending: false }).returns<PolicyRow[]>(),
-    admin.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount").returns<PremiumRow[]>(),
-    admin.from("policy_payin_details").select("policy_id,projected_od_percent,projected_tp_percent,insurer_scheme_amount,total_projected_payin,commercial_status,commercial_note,commercial_reviewed_at,updated_at").returns<PayinRow[]>(),
-    admin.from("policy_intermediary_payouts").select("policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,commercial_status,commercial_note,commercial_reviewed_at,updated_at,created_at").order("created_at", { ascending: false }).returns<PayoutRow[]>(),
-    admin.from("insurance_companies").select("id,name").returns<InsurerRow[]>(),
-    admin.from("intermediaries").select("intermediary_code,intermediary_type,display_name,legal_name").returns<IntermediaryRow[]>(),
-    admin.from("commercial_control_events").select("policy_id,commercial_side,action,note,created_at").order("created_at", { ascending: false }).limit(500).returns<EventRow[]>(),
-    admin.from("vehicles").select("id,vehicle_type").returns<VehicleRow[]>(),
+    fetchAllPages<PolicyRow, unknown>((from, to) => admin.from("policies").select("id,policy_no,insurance_company_id,issuance_date,start_date,intermediary_type,intermediary_code,vehicle_id,business_line").order("issuance_date", { ascending: false }).range(from, to).returns<PolicyRow[]>()),
+    fetchAllPages<PremiumRow, unknown>((from, to) => admin.from("policy_premium_details").select("policy_id,od_premium,tp_premium,cpa_amount").order("policy_id", { ascending: true }).range(from, to).returns<PremiumRow[]>()),
+    fetchAllPages<PayinRow, unknown>((from, to) => admin.from("policy_payin_details").select("policy_id,projected_od_percent,projected_tp_percent,insurer_scheme_amount,total_projected_payin,commercial_status,commercial_note,commercial_reviewed_at,updated_at").order("policy_id", { ascending: true }).range(from, to).returns<PayinRow[]>()),
+    fetchAllPages<PayoutRow, unknown>((from, to) => admin.from("policy_intermediary_payouts").select("policy_id,intermediary_type,intermediary_code,od_payout_percent,tp_payout_percent,gross_payout,commercial_status,commercial_note,commercial_reviewed_at,updated_at,created_at").order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to).returns<PayoutRow[]>()),
+    fetchAllPages<InsurerRow, unknown>((from, to) => admin.from("insurance_companies").select("id,name").order("id", { ascending: true }).range(from, to).returns<InsurerRow[]>()),
+    fetchAllPages<IntermediaryRow, unknown>((from, to) => admin.from("intermediaries").select("intermediary_code,intermediary_type,display_name,legal_name").order("intermediary_code", { ascending: true }).range(from, to).returns<IntermediaryRow[]>()),
+    fetchAllPages<EventRow, unknown>((from, to) => admin.from("commercial_control_events").select("policy_id,commercial_side,action,note,created_at").order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to).returns<EventRow[]>()),
+    fetchAllPages<VehicleRow, unknown>((from, to) => admin.from("vehicles").select("id,vehicle_type").order("id", { ascending: true }).range(from, to).returns<VehicleRow[]>()),
   ]);
 
   const error = policiesResult.error ?? premiumResult.error ?? payinResult.error ?? payoutResult.error ?? insurersResult.error ?? intermediariesResult.error ?? eventsResult.error ?? vehiclesResult.error;
-  if (error) throw new Error(`Unable to load Pay-In / Payout: ${error.message}`);
+  if (error) throw new Error(`Unable to load Pay-In / Payout: ${error instanceof Error ? error.message : String(error)}`);
 
   const premiumByPolicy = new Map((premiumResult.data ?? []).map((row) => [row.policy_id, row]));
   const payinByPolicy = new Map((payinResult.data ?? []).map((row) => [row.policy_id, row]));
