@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, FileText, ShieldCheck, Upload } from "lucide-react";
 import { convertLifeHealthCaseToPolicy, uploadLifeHealthCaseDocument } from "@/app/policies/life-health-policy-actions";
@@ -14,6 +14,7 @@ type CaseData = {
   remarks: string; finalPolicyId: string | null; finalPolicyNo: string | null; finalPolicyCode: string | null; convertedAt: string | null;
 };
 type DocumentRow = { id: string; document_type: string; file_name: string; created_at: string };
+type IssueState = { policyNumber: string; issuanceDate: string; startDate: string; endDate: string; finalPremium: string; sumInsured: string };
 
 type Props = { caseData: CaseData; documents: DocumentRow[] };
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
@@ -35,7 +36,7 @@ export function LifeHealthCaseDetail({ caseData, documents }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [uploading, startUpload] = useTransition();
   const [converting, startConvert] = useTransition();
-  const [issue, setIssue] = useState({ policyNumber: "", issuanceDate: today(), startDate: today(), endDate: plusYearMinusDay(today()), finalPremium: String(caseData.premiumAmount || ""), sumInsured: "" });
+  const [issue, setIssue] = useState<IssueState>({ policyNumber: "", issuanceDate: today(), startDate: today(), endDate: plusYearMinusDay(today()), finalPremium: String(caseData.premiumAmount || ""), sumInsured: "" });
   const isIssued = Boolean(caseData.finalPolicyId);
 
   function upload(documentType: string, file: File | null) {
@@ -116,13 +117,13 @@ export function LifeHealthCaseDetail({ caseData, documents }: Props) {
   );
 }
 
-function IssuePanel({ issue, setIssue, hasPolicyCopy, converting, onConvert }: { issue: Record<string, string>; setIssue: (value: any) => void; hasPolicyCopy: boolean; converting: boolean; onConvert: (file: File | null) => void }) {
+function IssuePanel({ issue, setIssue, hasPolicyCopy, converting, onConvert }: { issue: IssueState; setIssue: Dispatch<SetStateAction<IssueState>>; hasPolicyCopy: boolean; converting: boolean; onConvert: (file: File | null) => void }) {
   const [copy, setCopy] = useState<File | null>(null);
-  const update = (key: string, value: string) => setIssue((current: Record<string, string>) => ({ ...current, [key]: value }));
+  const update = (key: keyof IssueState, value: string) => setIssue((current) => ({ ...current, [key]: value }));
   return <div><div className="border-b bg-[#F8FAFC] px-4 py-4"><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Close case</p><h2 className="mt-1 text-[13px] font-semibold text-[#17365D]">Mark Policy Issued</h2><p className="mt-1 text-[8.5px] leading-4 text-[#667085]">Enter only the final issuance details. Case data and existing documents are reused automatically.</p></div><div className="space-y-3 px-4 py-4"><MiniField label="Policy number" value={issue.policyNumber} onChange={(value) => update("policyNumber", value.toUpperCase())} /><MiniField label="Issuance date" type="date" value={issue.issuanceDate} onChange={(value) => update("issuanceDate", value)} /><MiniField label="Policy start date" type="date" value={issue.startDate} onChange={(value) => { update("startDate", value); update("endDate", plusYearMinusDay(value)); }} /><MiniField label="Policy end / maturity date" type="date" value={issue.endDate} onChange={(value) => update("endDate", value)} /><MiniField label="Final premium" value={issue.finalPremium} onChange={(value) => update("finalPremium", value.replace(/[^0-9.]/g, ""))} /><MiniField label="Sum assured / insured" value={issue.sumInsured} onChange={(value) => update("sumInsured", value.replace(/[^0-9.]/g, ""))} placeholder="Optional" /><div><label className={labelClass}>Policy copy {!hasPolicyCopy ? <span className="text-red-500">*</span> : null}</label><label className="flex min-h-10 cursor-pointer items-center justify-between gap-2 rounded-xl border border-[#D8DEE9] bg-white px-3 text-[9px] font-semibold text-[#315B9A]"><span className="truncate">{copy?.name || (hasPolicyCopy ? "Already uploaded — replace optional" : "Choose issued policy copy")}</span><Upload className="h-3.5 w-3.5 shrink-0" /><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => setCopy(event.target.files?.[0] ?? null)} /></label></div><button type="button" onClick={() => onConvert(copy)} disabled={converting} className="w-full rounded-xl bg-[#17365D] px-4 py-3 text-[10px] font-bold text-white disabled:opacity-60">{converting ? "Creating policy…" : "Create Policy & Close Case"}</button><p className="text-[8px] leading-4 text-[#7A8798]">The case is marked Issued only after the policy record, Life/Health details, premium details and document links are all created successfully.</p></div></div>;
 }
 
-function Card({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon?: React.ReactNode; children: React.ReactNode }) { return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="border-b bg-[#FBFCFE] px-4 py-3"><div className="flex items-center gap-2 text-[#17365D]">{icon}<h2 className="text-[12px] font-semibold">{title}</h2></div>{subtitle ? <p className="mt-1 text-[8.5px] text-[#667085]">{subtitle}</p> : null}</div><div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div></section>; }
+function Card({ title, subtitle, icon, children }: { title: string; subtitle?: string; icon?: ReactNode; children: ReactNode }) { return <section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="border-b bg-[#FBFCFE] px-4 py-3"><div className="flex items-center gap-2 text-[#17365D]">{icon}<h2 className="text-[12px] font-semibold">{title}</h2></div>{subtitle ? <p className="mt-1 text-[8.5px] text-[#667085]">{subtitle}</p> : null}</div><div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">{children}</div></section>; }
 function Info({ label, value }: { label: string; value: string }) { return <div className="min-w-0"><p className="text-[8px] font-bold uppercase tracking-[.06em] text-[#7A8798]">{label}</p><p className="mt-1 truncate text-[10.5px] font-semibold text-[#17365D]" title={value}>{value}</p></div>; }
 function InfoLine({ label, value }: { label: string; value: string }) { return <div className="flex items-start justify-between gap-3 border-b border-[#E8EDF3] pb-2 text-[9.5px]"><span className="text-[#667085]">{label}</span><span className="text-right font-semibold text-[#17365D]">{value}</span></div>; }
 function MiniField({ label, value, onChange, type = "text", placeholder }: { label: string; value: string; onChange: (value: string) => void; type?: string; placeholder?: string }) { return <div><label className={labelClass}>{label}</label><input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className={inputClass} /></div>; }
