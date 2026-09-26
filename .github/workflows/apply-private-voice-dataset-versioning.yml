@@ -1,0 +1,114 @@
+name: Apply private voice dataset versioning
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/20260926020000_private_voice_dataset_versions.sql'
+      - '.github/workflows/apply-private-voice-dataset-versioning.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    name: Apply private voice dataset versioning schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Checkout exact main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" || {
+            echo "::error::Checkout is not the exact current main."
+            exit 1
+          }
+
+      - name: Verify migration configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$SUPABASE_ACCESS_TOKEN"
+          test -n "$SUPABASE_DB_PASSWORD"
+          test -n "$SUPABASE_PROJECT_REF"
+          test -f supabase/migrations/20260926020000_private_voice_dataset_versions.sql
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+
+      - name: Ensure dataset versioning migration is applied
+        shell: bash
+        run: |
+          set -euo pipefail
+          applied=$(supabase db query --linked --output-format json "
+            select exists(
+              select 1 from supabase_migrations.schema_migrations
+              where version='20260926020000'
+            ) as applied;
+          ")
+          if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
+            echo "Migration already recorded as applied; skipping execution."
+          else
+            supabase db query --linked --file supabase/migrations/20260926020000_private_voice_dataset_versions.sql
+            supabase migration repair --linked --status applied 20260926020000
+          fi
+
+      - name: Verify private voice dataset governance contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          result=$(supabase db query --linked --output-format json "
+            select
+              to_regclass('public.private_voice_dataset_versions') is not null as versions_table_ready,
+              to_regclass('public.private_voice_dataset_members') is not null as members_table_ready,
+              exists (
+                select 1 from information_schema.columns
+                where table_schema='public'
+                  and table_name='private_voice_training_examples'
+                  and column_name='reviewed_by'
+              ) as reviewed_by_ready,
+              exists (
+                select 1 from information_schema.columns
+                where table_schema='public'
+                  and table_name='private_voice_training_examples'
+                  and column_name='updated_at'
+              ) as updated_at_ready,
+              coalesce((select relrowsecurity from pg_class where oid=to_regclass('public.private_voice_dataset_versions')), false) as versions_rls_enabled,
+              coalesce((select relrowsecurity from pg_class where oid=to_regclass('public.private_voice_dataset_members')), false) as members_rls_enabled,
+              exists (
+                select 1 from pg_trigger
+                where tgrelid=to_regclass('public.private_voice_dataset_members')
+                  and tgname='private_voice_dataset_members_immutable_update'
+                  and not tgisinternal
+              ) as immutable_trigger_ready,
+              to_regclass('public.voice_campaigns') is not null as sarvam_campaign_table_preserved,
+              to_regclass('public.external_renewal_voice_attempts') is not null as sarvam_attempt_table_preserved;
+          ")
+          echo "$result"
+          echo "$result" | grep -Eq '"versions_table_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"members_table_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"reviewed_by_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"updated_at_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"versions_rls_enabled"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"members_rls_enabled"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"immutable_trigger_ready"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"sarvam_campaign_table_preserved"[[:space:]]*:[[:space:]]*true'
+          echo "$result" | grep -Eq '"sarvam_attempt_table_preserved"[[:space:]]*:[[:space:]]*true'
