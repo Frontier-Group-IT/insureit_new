@@ -3,9 +3,11 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Image, Modal, NativeModules, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 
 import { EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
+import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { getOperationalCustomerContexts, type CustomerAccountContext } from '@/lib/customer-context';
 import { supabase } from '@/lib/supabase';
 import { palette } from '@/lib/theme';
@@ -814,7 +816,7 @@ function RenewalSuccessModal({ visible, onClose }: { visible: boolean; onClose: 
   );
 }
 
-function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusTone?: 'active' | 'due' | 'expired' | 'upcoming'; badge?: string }) {
+function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: ImageSourcePropType | null; statusTone?: 'active' | 'due' | 'expired' | 'upcoming'; badge?: string }) {
   return (
     <View style={styles.infoBlock}>
       <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
@@ -1060,7 +1062,7 @@ function insurerImage(name?: string | null) {
   if (normalized.includes('hdfc')) return insurerLogos.hdfc;
   if (normalized.includes('bajaj') || normalized.includes('allianz') || normalized.includes('alliance')) return insurerLogos.bajaj;
   if (normalized.includes('tata') || normalized.includes('aig')) return insurerLogos.tata;
-  return null;
+  return getInsurerLogoSource(name);
 }
 
 function formatDate(value?: string | null) {
