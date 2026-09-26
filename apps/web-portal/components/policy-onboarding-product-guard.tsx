@@ -24,6 +24,25 @@ function fieldControl(labelText: string) {
   return container.querySelector("select, input") as HTMLSelectElement | HTMLInputElement | null;
 }
 
+function syncSourcingDateProxy() {
+  const labels = Array.from(document.querySelectorAll("label"));
+  const label = labels.find((item) => item.textContent?.trim().toLowerCase().startsWith("policy issuance date"));
+  const container = label?.parentElement;
+  if (!container) return;
+  const actualDate = container.querySelector('input[type="date"]') as HTMLInputElement | null;
+  if (!actualDate) return;
+  let proxy = container.querySelector('input[data-life-health-source-date="true"]') as HTMLInputElement | null;
+  if (!proxy) {
+    proxy = document.createElement("input");
+    proxy.type = "hidden";
+    proxy.dataset.lifeHealthSourceDate = "true";
+    const formattedContainer = label?.nextElementSibling;
+    if (formattedContainer) container.insertBefore(proxy, formattedContainer);
+    else container.appendChild(proxy);
+  }
+  proxy.value = actualDate.value;
+}
+
 function setReactValue(input: HTMLInputElement, value: string) {
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
   setter?.call(input, value);
@@ -59,6 +78,7 @@ function addInlineMeta(cell: HTMLElement | null, key: string, label: string, val
 }
 
 function syncSourceMeta(sources: LifeHealthSourceOption[]) {
+  syncSourcingDateProxy();
   const leadSource = fieldControl("Lead source") as HTMLSelectElement | null;
   const selected = sources.find((item) => item.value === leadSource?.value);
   const intermediaryType = fieldControl("Intermediary type");
