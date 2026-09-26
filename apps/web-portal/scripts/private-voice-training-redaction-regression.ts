@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { redactTrainingText } from "../lib/private-voice/training-redaction.ts";
+import { redactTrainingText } from "../lib/private-voice/training-redaction";
 
 const identity = {
   customer_name: "Shrankhala Mishra",
