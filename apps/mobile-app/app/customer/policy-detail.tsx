@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
+import { Image, Linking, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
 import { Card, EmptyState, LoadingState, Screen } from '@/components/ui';
 import { getCurrentSession } from '@/lib/auth';
@@ -27,6 +27,16 @@ type PolicyPremiumDetails = {
   cpa_amount: number | null;
 };
 
+type PolicyCopyDocument = {
+  id: string;
+  file_name: string;
+  storage_bucket: string;
+  storage_path: string;
+  mime_type: string | null;
+  file_size: number | null;
+  created_at: string;
+};
+
 type PolicyDisplay = {
   id: string;
   customer_id: string;
@@ -48,6 +58,8 @@ export default function PolicyDetailScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [company, setCompany] = useState<InsuranceCompany | null>(null);
   const [premiumDetails, setPremiumDetails] = useState<PolicyPremiumDetails | null>(null);
+  const [policyCopy, setPolicyCopy] = useState<PolicyCopyDocument | null>(null);
+  const [policyCopyUrl, setPolicyCopyUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -81,19 +93,51 @@ export default function PolicyDetailScreen() {
       if (!active) return;
       if (next) setPolicy({ ...next, source: nextSource });
       if (next) {
-        const [vehicleResult, companyResult, premiumResult] = await Promise.all([
+        const documentQuery = nextSource === 'sibl'
+          ? (supabase as any)
+              .from('policy_documents')
+              .select('id,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
+              .eq('policy_id', next.id)
+              .eq('document_type', 'policy_copy')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+          : (supabase as any)
+              .from('customer_documents')
+              .select('id,file_name,storage_bucket,storage_path,mime_type,file_size,created_at')
+              .eq('external_policy_id', next.id)
+              .eq('customer_id', next.customer_id)
+              .eq('document_type', 'policy_copy')
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+        const [vehicleResult, companyResult, premiumResult, documentResult] = await Promise.all([
           supabase.from('vehicles').select('*').eq('id', next.vehicle_id).in('customer_id', ids).maybeSingle(),
           supabase.from('insurance_companies').select('*').eq('id', next.insurance_company_id).maybeSingle(),
           nextSource === 'sibl'
             ? (supabase as any).from('policy_premium_details').select('od_premium,tp_premium,cpa_amount').eq('policy_id', next.id).maybeSingle()
             : Promise.resolve({ data: null }),
+          documentQuery,
         ]);
         if (!active) return;
         setVehicle(vehicleResult.data);
         setCompany(companyResult.data);
         setPremiumDetails((premiumResult.data ?? null) as PolicyPremiumDetails | null);
+
+        const nextPolicyCopy = (documentResult.data ?? null) as PolicyCopyDocument | null;
+        setPolicyCopy(nextPolicyCopy);
+        setPolicyCopyUrl(null);
+        if (nextPolicyCopy?.storage_bucket && nextPolicyCopy.storage_path) {
+          const signedUrlResult = await supabase.storage
+            .from(nextPolicyCopy.storage_bucket)
+            .createSignedUrl(nextPolicyCopy.storage_path, 10 * 60);
+          if (active && !signedUrlResult.error) {
+            setPolicyCopyUrl(signedUrlResult.data?.signedUrl ?? null);
+          }
+        }
       }
-      setLoading(false);
+      if (active) setLoading(false);
     })();
     return () => {
       active = false;
@@ -107,6 +151,11 @@ export default function PolicyDetailScreen() {
     if (days <= 30) return { label: 'Renewal due', action: true, tone: 'warning' as const, helper: `${days} day${days === 1 ? '' : 's'} left to renew` };
     return { label: 'Active', action: false, tone: 'success' as const, helper: `${days} day${days === 1 ? '' : 's'} remaining` };
   }, [policy]);
+
+  async function openPolicyCopy() {
+    if (!policyCopyUrl) return;
+    await Linking.openURL(policyCopyUrl);
+  }
 
   if (loading) return <Screen title="Policy Detail"><LoadingState /></Screen>;
   if (!policy) return <Screen title="Policy Detail"><EmptyState title="Policy not found" body="Please choose another policy from your list." /></Screen>;
@@ -163,6 +212,42 @@ export default function PolicyDetailScreen() {
             <HeroMetric image={policyDetailIcons.premium} label="CPA Amount" value={formatCurrency(premiumDetails?.cpa_amount)} />
           </View>
         </View>
+
+        {policyCopy ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View policy copy"
+            disabled={!policyCopyUrl}
+            onPress={() => void openPolicyCopy()}
+            style={({ pressed }) => [styles.policyCopyCard, pressed && policyCopyUrl && styles.policyCopyCardPressed]}
+          >
+            <View style={styles.policyCopyIcon}>
+              <MaterialCommunityIcons name="file-document-check-outline" size={25} color="#0A43A3" />
+            </View>
+            <View style={styles.policyCopyContent}>
+              <Text style={styles.policyCopyTitle}>Policy copy</Text>
+              <Text style={styles.policyCopyFileName} numberOfLines={1}>{policyCopy.file_name || 'Policy document'}</Text>
+              <Text style={styles.policyCopyMeta}>{formatFileSize(policyCopy.file_size)}</Text>
+            </View>
+            <View style={[styles.policyCopyAction, !policyCopyUrl && styles.policyCopyActionDisabled]}>
+              <Text style={[styles.policyCopyActionText, !policyCopyUrl && styles.policyCopyActionTextDisabled]}>{policyCopyUrl ? 'View' : 'Unavailable'}</Text>
+              <MaterialCommunityIcons name={policyCopyUrl ? 'open-in-new' : 'lock-outline'} size={17} color={policyCopyUrl ? '#0A43A3' : '#8A97A8'} />
+            </View>
+          </Pressable>
+        ) : (
+          <Card style={styles.policyCopyCard}>
+            <View style={styles.policyCopyIconMuted}>
+              <MaterialCommunityIcons name="file-document-outline" size={25} color="#78879A" />
+            </View>
+            <View style={styles.policyCopyContent}>
+              <Text style={styles.policyCopyTitle}>Policy copy</Text>
+              <Text style={styles.policyCopyMissing}>Policy copy not uploaded</Text>
+            </View>
+            <View style={styles.policyCopyMissingPill}>
+              <Text style={styles.policyCopyMissingPillText}>Not available</Text>
+            </View>
+          </Card>
+        )}
 
         {vehicle ? (
           <Pressable
@@ -289,6 +374,13 @@ function formatCurrency(value?: number | null) {
   return value === null || value === undefined ? '-' : `INR ${Number(value).toLocaleString('en-IN')}`;
 }
 
+function formatFileSize(value?: number | null) {
+  if (!value || value <= 0) return 'Policy document';
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function renewalTone(tone: 'success' | 'warning' | 'danger' | 'neutral') {
   if (tone === 'success') return { accent: '#12805C', soft: '#E8F8F0', background: '#F7FCF9', border: '#BFE6D5' };
   if (tone === 'warning') return { accent: '#B7791F', soft: '#FFF4E2', background: '#FFFBF3', border: '#F0D9AC' };
@@ -326,6 +418,22 @@ const styles = StyleSheet.create({
 
   statusBadge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   statusText: { fontSize: 9, lineHeight: 12, fontWeight: '900' },
+
+  policyCopyCard: { minHeight: 76, marginBottom: 8, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 11, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  policyCopyCardPressed: { opacity: 0.82, transform: [{ scale: 0.995 }] },
+  policyCopyIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#EEF5FF', borderWidth: 1, borderColor: '#D5E5FB', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  policyCopyIconMuted: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F4F7FA', borderWidth: 1, borderColor: '#E3E8EF', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  policyCopyContent: { flex: 1, minWidth: 0 },
+  policyCopyTitle: { color: palette.navy, fontSize: 14, lineHeight: 17, fontWeight: '900' },
+  policyCopyFileName: { color: '#33445C', fontSize: 11.5, lineHeight: 15, fontWeight: '700', marginTop: 2 },
+  policyCopyMeta: { color: '#78879A', fontSize: 9.5, lineHeight: 12, fontWeight: '600', marginTop: 2 },
+  policyCopyMissing: { color: '#78879A', fontSize: 11.5, lineHeight: 15, fontWeight: '700', marginTop: 3 },
+  policyCopyAction: { minHeight: 34, borderRadius: 11, backgroundColor: '#EEF5FF', paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  policyCopyActionDisabled: { backgroundColor: '#F3F5F7' },
+  policyCopyActionText: { color: '#0A43A3', fontSize: 10.5, fontWeight: '900' },
+  policyCopyActionTextDisabled: { color: '#8A97A8' },
+  policyCopyMissingPill: { borderRadius: 999, backgroundColor: '#F3F5F7', paddingHorizontal: 9, paddingVertical: 6 },
+  policyCopyMissingPillText: { color: '#7C8796', fontSize: 9, fontWeight: '800' },
 
   vehicleCard: { minHeight: 78, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE8F4', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
   vehicleCardPressed: { opacity: 0.82, transform: [{ scale: 0.995 }] },

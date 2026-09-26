@@ -95,6 +95,9 @@ jobs:
       - name: Customer catalog logo regression
         run: node apps/mobile-app/scripts/customer-catalog-logo-regression.mjs
 
+      - name: Customer policy copy section regression
+        run: node apps/mobile-app/scripts/customer-policy-copy-section-regression.mjs
+
       - name: Customer Add Vehicle Policy Type regression
         run: node apps/mobile-app/scripts/customer-add-vehicle-policy-type-regression.mjs
 
@@ -151,6 +154,7 @@ jobs:
             echo "- Static checks: TypeScript typecheck and Expo lint"
             echo "- Customer loading regression: normal Customer page loading resolves through route-aware dashboard/list/detail/form skeletons while non-Customer loader behavior is preserved"
             echo "- Customer multi-account security regression: secrets stay in SecureStore, failed add-account sessions roll back, Home headers expose switching, offline sign-out preserves unrelated accounts, and startup retains per-user context"
+            echo "- Customer policy copy regression: internal and external policy details resolve policy_copy documents through customer-readable tables and short-lived signed URLs"
             echo "- Add Vehicle regression: Policy Type is absent from the Customer Add Vehicle UI while vehicle-linked policy creation remains Motor-backed"
             echo "- Add Vehicle error popup regression: validation, RC lookup, vehicle save, policy save and policy-copy errors use the shared popup; insurer-missing uses Select Insurer"
             echo "- Start Claim / production OTA regression: Draft persistence precedes navigation and downloaded startup updates are activated"
