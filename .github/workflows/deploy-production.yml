@@ -117,7 +117,7 @@ jobs:
             echo "Managed claim document protection detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260903193000_complete_spot_survey_atomically.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-spot-survey-completion-migration.yml"
-            echo "Spot survey completion migration detected. Waiting for its schema workflow..."
+            echo "Spot surveyor completion migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260905180000_vehicle_rc_lookup_cache.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-vehicle-rc-cache.yml"
             echo "Vehicle RC cache migration detected. Waiting for its schema workflow..."
@@ -304,6 +304,15 @@ jobs:
           elif grep -qx 'supabase/migrations/20260925103000_customer_signup_direct_master_kyc_submit.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-customer-signup-direct-master-kyc-submit.yml"
             echo "Customer signup direct-master/KYC-submit migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/202609260001_private_voice_phase1_isolation.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vx 'supabase/migrations/202609260001_private_voice_phase1_isolation.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::Private Voice Phase 1 release contains an unrelated migration:"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-private-voice-phase1-isolation.yml"
+            echo "Private Voice Phase 1 isolation migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
