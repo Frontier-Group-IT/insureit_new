@@ -8,6 +8,7 @@ import { VehicleForm } from "@/components/forms";
 import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
@@ -76,18 +77,19 @@ export default async function EditVehiclePage({ params, searchParams }: { params
   if (vehicleResult.error) throw new Error(`Unable to load vehicle details: ${vehicleResult.error.message}`);
   if (!vehicleResult.data) notFound();
 
-  let customersRequest = admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false });
-  if (accessibleCustomerIds !== null) customersRequest = customersRequest.in("id", accessibleCustomerIds);
-
   const [customersResult, manufacturersResult, brandsResult, policiesResult] = await Promise.all([
-    customersRequest.returns<CustomerOption[]>(),
-    admin.from("vehicle_manufacturers").select("id").eq("is_active", true).returns<ManufacturerId[]>(),
-    admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).returns<BrandOption[]>(),
+    fetchAllPages<CustomerOption, unknown>((from, to) => {
+      let request = admin.from("customers").select("id, company_name, contact_name").order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to);
+      if (accessibleCustomerIds !== null) request = request.in("id", accessibleCustomerIds);
+      return request.returns<CustomerOption[]>();
+    }),
+    fetchAllPages<ManufacturerId, unknown>((from, to) => admin.from("vehicle_manufacturers").select("id").eq("is_active", true).order("id", { ascending: true }).range(from, to).returns<ManufacturerId[]>()),
+    fetchAllPages<BrandOption, unknown>((from, to) => admin.from("vehicle_manufacturer_brands").select("manufacturer_id, brand_name").eq("is_active", true).order("brand_name", { ascending: true }).order("manufacturer_id", { ascending: true }).range(from, to).returns<BrandOption[]>()),
     admin.from("policies").select("id,policy_no,start_date,end_date,policy_documents(id,document_type)").eq("vehicle_id", id).order("end_date", { ascending: false }).limit(20).returns<VehicleLinkedPolicy[]>(),
   ]);
 
-  if (customersResult.error) throw new Error(`Unable to load customers: ${customersResult.error.message}`);
-  if (manufacturersResult.error || brandsResult.error) throw new Error(`Unable to load vehicle makes: ${manufacturersResult.error?.message ?? brandsResult.error?.message}`);
+  if (customersResult.error) throw new Error(`Unable to load customers: ${String(customersResult.error)}`);
+  if (manufacturersResult.error || brandsResult.error) throw new Error(`Unable to load vehicle makes: ${String(manufacturersResult.error ?? brandsResult.error)}`);
   if (policiesResult.error) throw new Error(`Unable to load linked policies: ${policiesResult.error.message}`);
 
   const customerOptions = (customersResult.data ?? []).map((customer) => ({ value: customer.id, label: customer.contact_name }));
