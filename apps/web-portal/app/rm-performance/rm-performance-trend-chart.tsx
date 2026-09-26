@@ -43,9 +43,22 @@ export function RmPerformanceTrendChart({ rows }: { rows: TrendRow[] }) {
       ) : null}
 
       <div className="mt-1 grid grid-cols-6 gap-1 text-center">
-        {values.map((row, index) => (
-          <button key={row.month} type="button" onMouseEnter={() => setHoveredIndex(index)} onFocus={() => setHoveredIndex(index)} className={"text-[9px] font-bold transition-colors " + (hoveredIndex === index ? "text-[#17365D]" : "text-[#657286]")}>{monthLabel(row.month)}</button>
-        ))}
+        {values.map((row, index) => {
+          const active = hoveredIndex === index;
+          return (
+            <button
+              key={row.month}
+              type="button"
+              onMouseEnter={() => setHoveredIndex(index)}
+              onFocus={() => setHoveredIndex(index)}
+              className={"min-w-0 rounded-lg px-0.5 py-1 transition-colors " + (active ? "bg-[#F3F7FC]" : "hover:bg-[#F7F9FC]")}
+            >
+              <span className={"block text-[9px] font-black " + (active ? "text-[#17365D]" : "text-[#5F6E83]")}>{monthLabel(row.month)}</span>
+              <span className="mt-0.5 block truncate text-[9px] font-black text-[#17365D]">{compactMoney(row.net_premium)}</span>
+              <span className="mt-0.5 block truncate text-[8px] font-semibold text-[#68778B]">{number(row.policy_count)} policies</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
