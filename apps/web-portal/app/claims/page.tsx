@@ -5,6 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { operationsQueueForKey } from "@/lib/claim-workflow";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { hasEffectiveCapability } from "@/lib/effective-permissions";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
@@ -45,14 +46,17 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
   const admin = createSupabaseAdminClient();
 
   let data: QueueClaimRow[] = [];
-  let error: { message?: string } | null = null;
+  let error: unknown = null;
   if (accessibleCustomerIds === null || accessibleCustomerIds.length) {
-    let request = admin
-      .from("claims")
-      .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, claim_service_mode, assistance_status, policy_service_source, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
-      .order("updated_at", { ascending: false });
-    if (accessibleCustomerIds !== null) request = request.in("customer_id", accessibleCustomerIds);
-    const result = await request.returns<QueueClaimRow[]>();
+    const result = await fetchAllPages<QueueClaimRow, unknown>((from, to) => {
+      let request = admin
+        .from("claims")
+        .select("id, claim_no, insurer_claim_no, current_status, accident_at, created_at, claim_service_mode, assistance_status, policy_service_source, customers(company_name, contact_name, phone), vehicles(vehicle_no, make, model), policies(policy_no), insurance_companies(name), assignee:profiles!claims_assigned_to_fkey(full_name)")
+        .order("updated_at", { ascending: false })
+        .range(from, to);
+      if (accessibleCustomerIds !== null) request = request.in("customer_id", accessibleCustomerIds);
+      return request.returns<QueueClaimRow[]>();
+    });
     data = result.data ?? [];
     error = result.error;
   }
