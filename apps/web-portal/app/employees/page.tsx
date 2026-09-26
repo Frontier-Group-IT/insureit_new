@@ -14,6 +14,12 @@ import { EmployeeDirectoryWorkspace } from "./employee-directory-workspace";
 const NO_EMPLOYEE_ID = "00000000-0000-0000-0000-000000000000";
 const AUTH_PAGE_SIZE = 1000;
 
+type PortalProfileRow = { id: string; role: string };
+type EmployeeQueryRow = Omit<EmployeeRow, "profile_id" | "portal_role" | "portal_status"> & {
+  portal_profile: PortalProfileRow | PortalProfileRow[] | null;
+};
+type ManagerRow = Pick<EmployeeRow, "id" | "employee_code" | "full_name">;
+
 export default async function EmployeesPage({ searchParams }: { searchParams?: Promise<{ q?: string; status?: string }> }) {
   const accessToken = await getServerAccessToken();
   const { profile } = await getAuthenticatedProfile(accessToken);
@@ -29,7 +35,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   const supabase = await createServerSupabaseClient();
 
   const [employeeResult, managerResult] = await Promise.all([
-    fetchAllPostgrestRows<any>((from, to) => {
+    fetchAllPostgrestRows<EmployeeQueryRow>((from, to) => {
       let query = supabase
         .from("employees")
         .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id, role)")
@@ -39,9 +45,9 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
         const employeeIds = scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID];
         query = query.in("id", employeeIds);
       }
-      return query;
+      return query.returns<EmployeeQueryRow[]>();
     }),
-    fetchAllPostgrestRows<{ id: string; employee_code: string; full_name: string }>((from, to) => {
+    fetchAllPostgrestRows<ManagerRow>((from, to) => {
       let query = supabase
         .from("employees")
         .select("id, employee_code, full_name")
@@ -52,7 +58,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
         const employeeIds = scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID];
         query = query.in("id", employeeIds);
       }
-      return query;
+      return query.returns<ManagerRow[]>();
     }),
   ]);
 
