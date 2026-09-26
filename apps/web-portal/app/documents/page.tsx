@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/shell";
 import { StatusBadge } from "@/components/ui";
 import { createServerSupabaseClient } from "@/lib/auth-server";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 type DocumentRow = {
   id: string;
@@ -16,11 +17,12 @@ type DocumentRow = {
 
 export default async function DocumentsPage() {
   const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase
+  const { data, error } = await fetchAllPages<DocumentRow, unknown>((from, to) => supabase
     .from("claim_documents")
     .select("id, claim_id, document_type, file_name, verification_status, created_at, claims(claim_no, current_status), customers(company_name, contact_name)")
     .order("created_at", { ascending: false })
-    .returns<DocumentRow[]>();
+    .range(from, to)
+    .returns<DocumentRow[]>());
 
   return (
     <AppShell title="Document verification">
