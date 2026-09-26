@@ -24,6 +24,10 @@ type DatasetVersionRow = {
   frozen_at: string;
 };
 
+type ApprovedSplitRow = {
+  split: "training" | "validation" | "test" | "excluded" | null;
+};
+
 function assertPermanentTestBoundary(example: ReviewableTrainingExample) {
   const permanent = example.quality_labels?.permanent_test_candidate === true;
   if (example.split === "test" && !permanent) throw new Error("Test candidate is missing the permanent-test marker.");
@@ -174,7 +178,8 @@ export async function getTrainingGovernanceOverview() {
     .from("private_voice_training_examples")
     .select("split")
     .eq("source_type", SOURCE_TYPE)
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .returns<ApprovedSplitRow[]>();
   if (approvedError) throw new Error("Could not count approved training examples.");
 
   const approved = { training: 0, validation: 0, test: 0 };
