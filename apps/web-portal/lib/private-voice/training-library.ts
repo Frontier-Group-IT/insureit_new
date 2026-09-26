@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { redactTrainingText } from "@/lib/private-voice/training-redaction";
 
 const SOURCE_TYPE = "historical_call";
 const DEFAULT_STAGE_LIMIT = 200;
@@ -73,24 +74,6 @@ function textLooksLowSignal(summary: string, disposition: string | null, interes
   if (disposition !== "no_decision" || (interest && interest !== "unknown")) return false;
   const normalized = summary.toLowerCase();
   return LOW_SIGNAL_PATTERNS.some((pattern) => normalized.includes(pattern));
-}
-
-function replaceLiteral(value: string, literal: string | null | undefined, replacement: string) {
-  if (!literal?.trim()) return value;
-  return value.split(literal).join(replacement);
-}
-
-function redactSensitiveText(value: string | null, identity?: OpportunityIdentity) {
-  let result = String(value ?? "").trim();
-  if (!result) return "";
-
-  result = replaceLiteral(result, identity?.customer_name, "[CUSTOMER]");
-  result = replaceLiteral(result, identity?.mobile, "[MOBILE]");
-  result = replaceLiteral(result, identity?.registration_no, "[RC]");
-  result = result.replace(/\b(?:\+?91[-\s]?)?[6-9]\d{9}\b/g, "[MOBILE]");
-  result = result.replace(/\b[A-Z]{2}[\s-]?\d{1,2}[\s-]?[A-Z]{0,3}[\s-]?\d{4}\b/gi, "[RC]");
-  result = result.replace(/\b\d{12,}\b/g, "[LONG_ID]");
-  return result;
 }
 
 function durationBucket(value: number | string | null) {
@@ -237,10 +220,10 @@ export async function stageHistoricalTrainingCandidates(limit = DEFAULT_STAGE_LI
       target_outcome: {
         disposition: attempt.call_disposition,
         customer_interest: attempt.customer_interest,
-        customer_objection: redactSensitiveText(attempt.customer_objection, identity),
+        customer_objection: redactTrainingText(attempt.customer_objection, identity),
         follow_up_required: attempt.follow_up_required,
         follow_up_at_present: Boolean(attempt.follow_up_at),
-        conversation_summary: redactSensitiveText(attempt.call_summary, identity),
+        conversation_summary: redactTrainingText(attempt.call_summary, identity),
       },
       quality_labels: {
         source_quality: "eligible",

@@ -188,8 +188,23 @@ The staging action is explicit/manual; page load does not mutate data.
 ### Verification findings — preserved history
 
 - Canonical PR run **#4719** passed the regression suite but failed TypeScript because the optional Next.js `searchParams` fallback inferred as `{}`. The page now resolves search params through an explicit `Record<string, string | string[] | undefined>` boundary. No customer/runtime data was affected.
-- Canonical PR run **#4720** then passed all regressions and TypeScript but failed lint only on two `@typescript-eslint/no-explicit-any` findings in the small shared Supabase count-query callback. The callback is now narrowly documented/suppressed at that unavoidable generated-query-builder boundary rather than disabling lint for the file. No production behavior was affected.
-- A fresh canonical run is required for the latest head before merge.
+- Canonical PR run **#4720** then passed all regressions and TypeScript but failed lint only on two `@typescript-eslint/no-explicit-any` findings in the small shared Supabase count-query callback. The callback was narrowly documented/suppressed at that unavoidable generated-query-builder boundary rather than disabling lint for the file. No production behavior was affected.
+- Canonical latest-head run **#4722** passed regressions, typecheck, lint and production build. PR #2445 merged as `0bdc0907d83a2db7fd3bcdc605a59dc85fa5aaa5`.
+
+### Controlled pre-staging privacy review — 2026-09-26
+
+Before writing any training examples, a read-only preview of eligible historical summaries was inspected. The preview found a real privacy edge case: a summary could contain only the customer's first name while the source identity field contained a longer full name, so exact full-name replacement alone could leave that first-name token visible.
+
+No training rows had been staged when this was found (`private_voice_training_examples` historical-call count remained zero).
+
+A follow-up branch `fix/private-voice-training-redaction-review` now:
+- moves redaction into a dedicated pure helper;
+- performs case-insensitive full-name replacement;
+- additionally redacts individual customer-name tokens of three or more letters;
+- preserves the existing mobile, RC and long-ID redaction rules;
+- adds a regression covering partial-name, case-insensitive-name, mobile, RC and long-ID leakage.
+
+The controlled first batch must remain blocked until this redaction hardening passes canonical CI and is merged.
 
 ### Not implemented / not authorized
 - no raw transcript import yet;
@@ -202,10 +217,10 @@ The staging action is explicit/manual; page load does not mutate data.
 - no writes to Sarvam campaign/attempt tables.
 
 ### Evidence state
-**IMPLEMENTED on feature branch; PR #2445 open; final CI pending.**
+**PR #2445 MERGED after Verify web portal #4722. Redaction hardening is IMPLEMENTED on `fix/private-voice-training-redaction-review`; CI/merge pending. No historical training rows staged yet.**
 
 ### Next safe step
-Require the latest `Verify web portal` run to pass regressions, typecheck, lint and production build. After merge approval, stage a controlled first batch through the UI and inspect redaction/split quality before implementing human review and dataset versioning. Phase 3 must not train or evaluate an LLM until the permanent-test boundary and review workflow are proven.
+Run canonical verification for the redaction-hardening branch. After it is green and merged, stage a small controlled batch, inspect every stored example for residual identity leakage and split correctness, then implement human review plus frozen dataset versioning. Phase 3 must not train or evaluate an LLM until the permanent-test boundary and review workflow are proven.
 
 ## Phase 3 — Text-only private agent
 
@@ -269,4 +284,4 @@ PR #2442 merged; baseline/isolation/UI shell completed; no private runtime or ca
 PR #2443 merged after Verify web portal #4717. Isolated private schema/config/provider contracts delivered. Production database check later confirmed private schema presence. Private outbound remains disabled.
 
 ## 2026-09-26 — Phase 2
-Training Library pipeline/UI implemented on `feature/insureit-private-voice-phase2-training-library`. Historical normalized outcomes are curated with explicit eligibility, low-signal screening, privacy redaction and deterministic 70/15/15 splits. Raw transcript absence was confirmed and recorded. First PR verification exposed and fixed a search-param typing issue; the next run exposed and fixed a narrow lint boundary in the shared count helper. **PR #2445 open; final latest-head verification pending; merge/deployment not performed.**
+PR #2445 merged as `0bdc0907d83a2db7fd3bcdc605a59dc85fa5aaa5` after Verify web portal #4722 passed. Training Library pipeline/UI, explicit eligibility, low-signal screening, privacy redaction and deterministic 70/15/15 splits are now merged. A read-only pre-staging review then found a partial customer-name redaction edge case before any training rows were written. Follow-up hardening is implemented on `fix/private-voice-training-redaction-review`; CI/merge pending. Private calling remains disabled.
