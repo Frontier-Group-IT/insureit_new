@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 
+// @ts-ignore -- Node 22 strip-types requires the explicit .ts extension for this directly executed regression.
 import {
   assertFreezeSplitCoverage,
   buildDatasetSnapshot,
