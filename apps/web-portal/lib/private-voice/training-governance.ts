@@ -16,14 +16,17 @@ const DATASET_INSERT_BATCH_SIZE = 500;
 
 export type TrainingReviewDecision = "approve" | "exclude";
 
-type DatasetVersionRow = {
+type DatasetBuildRow = {
   id: string;
   version: string;
   status: string;
   training_count: number;
   validation_count: number;
   test_count: number;
-  frozen_at: string | null;
+};
+
+type DatasetVersionRow = DatasetBuildRow & {
+  frozen_at: string;
 };
 
 type ApprovedSplitRow = {
@@ -161,8 +164,8 @@ export async function freezeApprovedDataset(input: { reviewerId: string; notes?:
       frozen_by: null,
       frozen_at: null,
     })
-    .select("id,version,status,training_count,validation_count,test_count,frozen_at")
-    .single<DatasetVersionRow>();
+    .select("id,version,status,training_count,validation_count,test_count")
+    .single<DatasetBuildRow>();
   if (datasetError || !dataset) throw new Error("Could not create the dataset version candidate.");
 
   try {
@@ -204,6 +207,7 @@ export async function getTrainingGovernanceOverview() {
       .from("private_voice_dataset_versions")
       .select("id,version,status,training_count,validation_count,test_count,frozen_at")
       .eq("status", "frozen")
+      .not("frozen_at", "is", null)
       .order("frozen_at", { ascending: false })
       .limit(8)
       .returns<DatasetVersionRow[]>(),
