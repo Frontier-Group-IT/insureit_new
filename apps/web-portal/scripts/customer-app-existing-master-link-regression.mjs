@@ -23,7 +23,7 @@ for (const expected of [
   'link_customer_app_profile_to_existing_master',
   'merge_customer_app_duplicate_into_existing_master',
   "existing.creation_channel is distinct from 'direct_customer_onboarding'",
-  "signup.creation_channel = 'direct_customer_onboarding'",
+  "c.creation_channel = 'direct_customer_onboarding'",
   'candidate_count = 1',
   'update public.customers\n    set profile_id = signup_profile_id',
   'delete from public.customers where id = signup_row.id',
