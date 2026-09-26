@@ -1,0 +1,66 @@
+name: Temporary Customer Vehicle Insurer Logo Edit
+
+on:
+  push:
+    branches:
+      - ui/customer-vehicles-insurer-logo-fallback
+    paths:
+      - .github/workflows/temp-customer-vehicle-insurer-logo-edit.yml
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ui/customer-vehicles-insurer-logo-fallback
+          fetch-depth: 0
+
+      - name: Apply focused insurer-logo edit
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('apps/mobile-app/app/customer/vehicles.tsx')
+          text = path.read_text()
+
+          replacements = [
+              (
+                  "import { Animated, Image, Modal, NativeModules, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';",
+                  "import { Animated, Image, Modal, NativeModules, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';\nimport type { ImageSourcePropType } from 'react-native';",
+              ),
+              (
+                  "import { getCurrentSession } from '@/lib/auth';",
+                  "import { getCurrentSession } from '@/lib/auth';\nimport { getInsurerLogoSource } from '@/lib/catalog-logos';",
+              ),
+              (
+                  "function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: number | null; statusTone?: 'active' | 'due' | 'expired' | 'upcoming'; badge?: string }) {",
+                  "function InfoBlock({ icon, iconBg, iconColor, label, value, logo, statusTone, badge }: { icon: keyof typeof MaterialCommunityIcons.glyphMap; iconBg: string; iconColor: string; label: string; value: string; logo?: ImageSourcePropType | null; statusTone?: 'active' | 'due' | 'expired' | 'upcoming'; badge?: string }) {",
+              ),
+              (
+                  "  return null;\n}\n\nfunction formatDate(value?: string | null) {",
+                  "  return getInsurerLogoSource(name);\n}\n\nfunction formatDate(value?: string | null) {",
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected source fragment not found: {old[:120]}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+
+      - name: Remove temporary workflow from branch
+        run: rm .github/workflows/temp-customer-vehicle-insurer-logo-edit.yml
+
+      - name: Commit focused change
+        run: |
+          git config user.name "insureit-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/vehicles.tsx .github/workflows/temp-customer-vehicle-insurer-logo-edit.yml
+          git commit -m "Show insurer logos on Customer My Vehicles"
+          git push origin HEAD:ui/customer-vehicles-insurer-logo-fallback
