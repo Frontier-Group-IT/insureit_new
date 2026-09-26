@@ -184,11 +184,18 @@ Implemented on the branch:
 - deterministic stable JSON snapshots with SHA-256 hashes;
 - freeze gate requiring at least one approved training, validation and permanent-test example;
 - permanent-test candidates cannot be frozen into training/validation;
+- cumulative dataset releases include the full approved corpus, loaded through deterministic pagination and written in bounded membership batches so Supabase response/insert limits cannot silently truncate a release;
 - review queue, approved split counts, freeze action and frozen-version history in the Insureit Agent UI;
-- pure dataset-versioning regression coverage;
-- additional training-redaction regression coverage for identity-mismatch narrative names.
+- private-voice redaction and dataset-versioning regressions are directly runnable and executed by canonical `Verify web portal` CI;
+- additional training-redaction regression coverage for identity-mismatch narrative names;
+- dedicated `apply-private-voice-dataset-versioning.yml` schema workflow verifies the Phase 2 tables, review columns, RLS, immutable-member trigger and preserved Sarvam tables;
+- guarded production deployment recognizes `20260926020000_private_voice_dataset_versions.sql` and waits for the Phase 2 schema workflow before Vercel deployment.
 
 The migration is committed but **not applied merely by creating PR #2453**. Merge is not migration application and migration application is not deployment.
+
+### 2026-09-26 pre-merge hardening realization
+
+A final review-thread audit after earlier green CI found three repository-level gaps that were not proven by the prior run: the Phase 2 migration was not yet wired into the production deployment gate, the approved-example freeze query could be truncated by the Supabase row cap, and the new private-voice regression files were typechecked but not executed by canonical CI. All three were fixed on the same PR branch before merge consideration. This follow-up did not apply any migration, enable private calling, or change Sarvam behavior.
 
 ### Current safety boundary
 
@@ -203,11 +210,11 @@ Not implemented / not authorized:
 
 ### Evidence state
 
-**PR #2445 MERGED; PR #2447 MERGED; controlled 25-row batch APPLIED; follow-up privacy review found and sanitized one identity-mismatch narrative first-name leak; PR #2453 IMPLEMENTED and previously passed canonical Verify web portal #4737 before the latest redaction-hardening commits. Latest-head CI must pass again before merge. Dataset-versioning migration NOT APPLIED. Private calling remains disabled.**
+**PR #2445 MERGED; PR #2447 MERGED; controlled 25-row batch APPLIED; follow-up privacy review found and sanitized one identity-mismatch narrative first-name leak; PR #2453 IMPLEMENTED with migration-gate wiring, deterministic full-corpus paging/batched membership writes, and canonical private-voice regression execution added after a final review-thread audit. Latest-head canonical CI must pass again before merge. Dataset-versioning migration NOT APPLIED. Private calling remains disabled.**
 
 ### Next safe step
 
-Get the latest PR #2453 head fully green in canonical `Verify web portal`. Do not merge on failed CI. After explicit merge authorization, apply/verify the dataset-versioning migration before exposing the review/freeze UI as operational. Then human-review the controlled 25-row batch, freeze the first reproducible dataset release, verify snapshot hashes/split boundaries, and only then begin Phase 3 text-agent evaluation against the untouched permanent-test set.
+Get the latest PR #2453 head fully green in canonical `Verify web portal`. Do not merge on failed CI. After explicit merge authorization, allow the dedicated Phase 2 schema workflow to apply/verify the dataset-versioning migration before exposing the review/freeze UI as operational. Then human-review the controlled 25-row batch, freeze the first reproducible dataset release, verify snapshot hashes/split boundaries, and only then begin Phase 3 text-agent evaluation against the untouched permanent-test set.
 
 ## Phase 3 — Text-only private agent
 
@@ -271,4 +278,4 @@ PR #2442 merged; baseline/isolation/UI shell completed; no private runtime or ca
 PR #2443 merged after Verify web portal #4717. Isolated private schema/config/provider contracts delivered. Production database check confirmed private schema presence. Private outbound remains disabled.
 
 ## 2026-09-26 — Phase 2
-PR #2445 merged after Verify web portal #4722. PR #2447 then merged after Verify web portal #4725 to harden partial-name redaction before staging. A controlled first batch of 25 draft examples (16 train / 7 validation / 2 test) was applied. A later narrative audit found one provider-generated first-name introduction that did not match the source identity; that private training row was sanitized and the branch redaction helper/regression was hardened for identity-mismatch narrative names. PR #2453 implements human approve/exclude review plus immutable hashed frozen-dataset releases; latest-head CI is required before merge and its migration is not yet applied. Private calling remains disabled.
+PR #2445 merged after Verify web portal #4722. PR #2447 then merged after Verify web portal #4725 to harden partial-name redaction before staging. A controlled first batch of 25 draft examples (16 train / 7 validation / 2 test) was applied. A later narrative audit found one provider-generated first-name introduction that did not match the source identity; that private training row was sanitized and the branch redaction helper/regression was hardened for identity-mismatch narrative names. PR #2453 implements human approve/exclude review plus immutable hashed frozen-dataset releases. A final pre-merge audit then added the missing Phase 2 schema deployment gate, deterministic full-corpus paging/batched membership writes, and canonical execution of the private-voice regressions. Latest-head CI is required before merge and its migration is not yet applied. Private calling remains disabled.
