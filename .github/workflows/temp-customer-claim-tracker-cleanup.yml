@@ -1,0 +1,71 @@
+name: Temporary Customer Claim Tracker Cleanup
+
+on:
+  push:
+    branches:
+      - ui/customer-claim-tracker-cleanup
+    paths:
+      - .github/workflows/temp-customer-claim-tracker-cleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  edit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: ui/customer-claim-tracker-cleanup
+          fetch-depth: 0
+
+      - name: Apply focused Claim Tracker cleanup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('apps/mobile-app/app/customer/claim-detail.tsx')
+          s = p.read_text()
+          replacements = [
+              (
+                  "import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';",
+                  "import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';\nimport type { ImageSourcePropType } from 'react-native';"
+              ),
+              (
+                  "import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';",
+                  "import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';\nimport { getInsurerLogoSource } from '@/lib/catalog-logos';"
+              ),
+              (
+                  "          <Text style={styles.pageEyebrow}>CLAIMS</Text>\n          <Text style={styles.pageTitle}>Claim Tracker</Text>",
+                  "          <Text style={styles.pageTitle}>Claim Tracker</Text>"
+              ),
+              (
+                  "      {!settled ? <Pressable",
+                  "      {selfManaged && !settled ? <Pressable"
+              ),
+              (
+                  "      <SectionHeader title=\"Claim Journey\" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />",
+                  "      <SectionHeader title=\"Claim Journey\" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} logo={getInsurerLogoSource(insurer?.name)} />"
+              ),
+              (
+                  "function SectionHeader({ title, subtitle, expanded, onPress }: { title: string; subtitle: string; expanded: boolean; onPress: () => void }) {\n  const compactJourney = title === 'Claim Journey';\n  const artwork = title === 'Claim Journey' ? require('../../assets/claims/claims.png') : title === 'Documents' ? require('../../assets/claims/claim-documents.png') : require('../../assets/claims/claim-approval.png');",
+                  "function SectionHeader({ title, subtitle, expanded, onPress, logo }: { title: string; subtitle: string; expanded: boolean; onPress: () => void; logo?: ImageSourcePropType | null }) {\n  const compactJourney = title === 'Claim Journey';\n  const artwork = logo ?? (title === 'Claim Journey' ? require('../../assets/claims/claims.png') : title === 'Documents' ? require('../../assets/claims/claim-documents.png') : require('../../assets/claims/claim-approval.png'));"
+              ),
+          ]
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit(f'Missing expected target: {old[:100]}')
+              s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+
+      - name: Remove temporary workflow from branch
+        run: rm .github/workflows/temp-customer-claim-tracker-cleanup.yml
+
+      - name: Commit focused change
+        run: |
+          git config user.name "insureit-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add apps/mobile-app/app/customer/claim-detail.tsx .github/workflows/temp-customer-claim-tracker-cleanup.yml
+          git commit -m "Clean up Customer Claim Tracker presentation"
+          git push origin HEAD:ui/customer-claim-tracker-cleanup
