@@ -5,6 +5,7 @@ import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel"
 import { BackofficeCustomerRegister } from "@/components/backoffice-customer-register";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
 import { requireCapability } from "@/lib/master-data-server";
+import { fetchAllPostgrestRows } from "@/lib/postgrest-pagination";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
 import { CustomerWorkspace } from "./customer-workspace";
@@ -53,12 +54,15 @@ export default async function CustomersPage() {
     );
   }
 
-  let request = admin
-    .from("customers")
-    .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles:vehicles!vehicles_customer_id_fkey(count), policies(count), claims(count)")
-    .order("created_at", { ascending: false });
-  if (accessibleIds !== null) request = request.in("id", accessibleIds);
-  const customersResult = await request.returns<CustomerRow[]>();
+  const customersResult = await fetchAllPostgrestRows<CustomerRow>((from, to) => {
+    let request = admin
+      .from("customers")
+      .select("id, customer_code, partner_type, company_name, contact_name, phone, city, fleet_size_band, onboarding_status, vehicles:vehicles!vehicles_customer_id_fkey(count), policies(count), claims(count)")
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (accessibleIds !== null) request = request.in("id", accessibleIds);
+    return request.returns<CustomerRow[]>();
+  });
   const finishedAt = performance.now();
   logPortalRoutePerformance("/customers", {
     auth_ms: afterAuth - startedAt,
