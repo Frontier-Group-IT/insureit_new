@@ -313,6 +313,15 @@ jobs:
             fi
             schema_workflow="apply-private-voice-phase1-isolation.yml"
             echo "Private Voice Phase 1 isolation migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260926020000_private_voice_dataset_versions.sql' <<<"$changed_migrations"; then
+            unexpected_migrations=$(grep -vx 'supabase/migrations/20260926020000_private_voice_dataset_versions.sql' <<<"$changed_migrations" || true)
+            if [[ -n "$unexpected_migrations" ]]; then
+              echo "::error::Private Voice Phase 2 dataset release contains an unrelated migration:"
+              echo "$unexpected_migrations"
+              exit 1
+            fi
+            schema_workflow="apply-private-voice-dataset-versioning.yml"
+            echo "Private Voice Phase 2 dataset versioning migration detected. Waiting for its schema workflow..."
           else
             echo "::error::Supabase migration changed without a matching automated schema deployment gate:"
             echo "$changed_migrations"
