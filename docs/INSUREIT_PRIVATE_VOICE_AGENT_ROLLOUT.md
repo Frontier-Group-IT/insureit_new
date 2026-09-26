@@ -185,6 +185,12 @@ The Insureit Agent page now shows:
 
 The staging action is explicit/manual; page load does not mutate data.
 
+### Verification findings — preserved history
+
+- Canonical PR run **#4719** passed the regression suite but failed TypeScript because the optional Next.js `searchParams` fallback inferred as `{}`. The page now resolves search params through an explicit `Record<string, string | string[] | undefined>` boundary. No customer/runtime data was affected.
+- Canonical PR run **#4720** then passed all regressions and TypeScript but failed lint only on two `@typescript-eslint/no-explicit-any` findings in the small shared Supabase count-query callback. The callback is now narrowly documented/suppressed at that unavoidable generated-query-builder boundary rather than disabling lint for the file. No production behavior was affected.
+- A fresh canonical run is required for the latest head before merge.
+
 ### Not implemented / not authorized
 - no raw transcript import yet;
 - no human approve/exclude/relabel workflow yet;
@@ -196,10 +202,10 @@ The staging action is explicit/manual; page load does not mutate data.
 - no writes to Sarvam campaign/attempt tables.
 
 ### Evidence state
-**IMPLEMENTED on feature branch; PR/CI/merge/deployment pending.**
+**IMPLEMENTED on feature branch; PR #2445 open; final CI pending.**
 
 ### Next safe step
-Run repository verification and create the Phase 2 PR. After merge, stage a controlled first batch through the UI and inspect redaction/split quality before implementing human review and dataset versioning. Phase 3 should not train or evaluate an LLM until the permanent-test boundary and review workflow are proven.
+Require the latest `Verify web portal` run to pass regressions, typecheck, lint and production build. After merge approval, stage a controlled first batch through the UI and inspect redaction/split quality before implementing human review and dataset versioning. Phase 3 must not train or evaluate an LLM until the permanent-test boundary and review workflow are proven.
 
 ## Phase 3 — Text-only private agent
 
@@ -263,4 +269,4 @@ PR #2442 merged; baseline/isolation/UI shell completed; no private runtime or ca
 PR #2443 merged after Verify web portal #4717. Isolated private schema/config/provider contracts delivered. Production database check later confirmed private schema presence. Private outbound remains disabled.
 
 ## 2026-09-26 — Phase 2
-Training Library pipeline/UI implemented on `feature/insureit-private-voice-phase2-training-library`. Historical normalized outcomes are curated with explicit eligibility, low-signal screening, privacy redaction and deterministic 70/15/15 splits. Raw transcript absence was confirmed and recorded. **PR/CI/merge/deployment pending.**
+Training Library pipeline/UI implemented on `feature/insureit-private-voice-phase2-training-library`. Historical normalized outcomes are curated with explicit eligibility, low-signal screening, privacy redaction and deterministic 70/15/15 splits. Raw transcript absence was confirmed and recorded. First PR verification exposed and fixed a search-param typing issue; the next run exposed and fixed a narrow lint boundary in the shared count helper. **PR #2445 open; final latest-head verification pending; merge/deployment not performed.**
