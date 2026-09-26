@@ -1,0 +1,27 @@
+import Link from "next/link";
+import { AppShell } from "@/components/shell";
+import { requirePolicyCreator } from "@/lib/policy-access-server";
+import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type CaseRow = { id: string; case_number: string; business_line: string; status: string; sourcing_date: string; product_name: string; proposal_number: string; premium_amount: number; customer_id: string; insurance_company_id: string; rm_name: string | null; lead_source: string | null; final_policy_id: string | null; created_at: string };
+type CustomerRow = { id: string; contact_name: string; company_name: string | null; phone: string };
+type InsurerRow = { id: string; name: string };
+
+export default async function LifeHealthCasesPage() {
+  await requirePolicyCreator();
+  const admin = createSupabaseAdminClient();
+  const { data: rows, error } = await admin.from("life_health_cases").select("id,case_number,business_line,status,sourcing_date,product_name,proposal_number,premium_amount,customer_id,insurance_company_id,rm_name,lead_source,final_policy_id,created_at").order("created_at", { ascending: false }).limit(500).returns<CaseRow[]>();
+  if (error) return <AppShell title="Life / Health Cases"><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-[10px] text-red-700">Life / Health cases could not be loaded.</div></AppShell>;
+  const customerIds = Array.from(new Set((rows ?? []).map((row) => row.customer_id)));
+  const insurerIds = Array.from(new Set((rows ?? []).map((row) => row.insurance_company_id)));
+  const [customersResult, insurersResult] = await Promise.all([
+    customerIds.length ? admin.from("customers").select("id,contact_name,company_name,phone").in("id", customerIds).returns<CustomerRow[]>() : Promise.resolve({ data: [] as CustomerRow[], error: null }),
+    insurerIds.length ? admin.from("insurance_companies").select("id,name").in("id", insurerIds).returns<InsurerRow[]>() : Promise.resolve({ data: [] as InsurerRow[], error: null }),
+  ]);
+  const customerMap = new Map((customersResult.data ?? []).map((item) => [item.id, item]));
+  const insurerMap = new Map((insurersResult.data ?? []).map((item) => [item.id, item.name]));
+  return <AppShell title="Life / Health Cases"><div className="mx-auto max-w-[1480px] space-y-4 pb-8"><div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#D9E2F0] bg-white px-4 py-3 shadow-sm"><div><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Case register</p><h1 className="mt-1 text-[15px] font-semibold text-[#17365D]">Life & Health Cases</h1></div><Link href="/policies/new" className="rounded-xl bg-[#17365D] px-4 py-2.5 text-[10px] font-bold text-white">Add Policy / Case</Link></div><section className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[1180px] text-left text-[10px]"><thead className="border-b bg-[#F8FAFC] text-[8px] uppercase tracking-[.05em] text-[#64748B]"><tr><th className="px-4 py-3">Case</th><th className="px-3 py-3">Customer</th><th className="px-3 py-3">Insurer / Product</th><th className="px-3 py-3">Proposal</th><th className="px-3 py-3">Sourcing</th><th className="px-3 py-3">RM / Source</th><th className="px-3 py-3 text-right">Premium</th><th className="px-3 py-3">Status</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody className="divide-y divide-[#E8EDF3]">{(rows ?? []).map((row) => { const customer = customerMap.get(row.customer_id); const name = customer?.company_name?.trim() || customer?.contact_name || "Customer"; return <tr key={row.id} className="hover:bg-[#FAFCFF]"><td className="px-4 py-3"><p className="font-bold text-[#17365D]">{row.case_number}</p><p className="mt-0.5 text-[8px] text-[#667085]">{row.business_line}</p></td><td className="px-3 py-3"><p className="font-semibold text-[#17203A]">{name}</p><p className="mt-0.5 text-[8px] text-[#667085]">{customer?.phone || "—"}</p></td><td className="px-3 py-3"><p className="font-semibold text-[#17203A]">{insurerMap.get(row.insurance_company_id) || "Insurer"}</p><p className="mt-0.5 max-w-[210px] truncate text-[8px] text-[#667085]">{row.product_name}</p></td><td className="px-3 py-3 font-medium">{row.proposal_number}</td><td className="px-3 py-3">{row.sourcing_date}</td><td className="px-3 py-3"><p className="font-medium">{row.rm_name || "—"}</p><p className="mt-0.5 max-w-[180px] truncate text-[8px] text-[#667085]">{row.lead_source || "—"}</p></td><td className="px-3 py-3 text-right font-semibold">₹{Number(row.premium_amount || 0).toLocaleString("en-IN")}</td><td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-[8px] font-bold ${row.final_policy_id ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>{row.final_policy_id ? "Issued" : "Awaiting policy"}</span></td><td className="px-4 py-3 text-right"><Link href={`/policies/life-health-cases/${row.id}`} className="rounded-lg border border-[#CAD7E7] bg-white px-2.5 py-1.5 text-[8.5px] font-bold text-[#315B9A]">{row.final_policy_id ? "View" : "Open / Issue"}</Link></td></tr>; })}</tbody></table></div>{!(rows ?? []).length ? <div className="px-4 py-16 text-center text-[10px] text-[#667085]">No Life / Health cases yet.</div> : null}</section></div></AppShell>;
+}
