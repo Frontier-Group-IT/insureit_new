@@ -96,16 +96,6 @@ export async function freezeApprovedDataset(input: { reviewerId: string; notes?:
   const counts = assertFreezeSplitCoverage(approved);
   approved.forEach(assertPermanentTestBoundary);
 
-  const sourceIds = approved.map((example) => example.id);
-  const { count: alreadyFrozen, error: membershipError } = await admin
-    .from("private_voice_dataset_members")
-    .select("id", { count: "exact", head: true })
-    .in("training_example_id", sourceIds);
-  if (membershipError) throw new Error("Could not verify dataset membership.");
-  if ((alreadyFrozen ?? 0) > 0) {
-    throw new Error("At least one approved example is already part of a frozen dataset. Freeze requires a clean approved pool.");
-  }
-
   const version = datasetVersionName();
   const now = new Date().toISOString();
   const manifest = {
