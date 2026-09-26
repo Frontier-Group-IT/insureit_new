@@ -1,5 +1,6 @@
 import type { AppRole, Capability } from "@/lib/roles";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { getActiveEmployeePermissionOverride } from "@/lib/permission-management";
 import { cache } from "react";
 
@@ -10,7 +11,7 @@ const hierarchyRoles: AppRole[] = ["sales_head", "zonal_head", "asm", "sales_man
 
 type EmployeeLink = { id: string; reporting_manager_id: string | null };
 type ProfileLink = { id: string; employee_id: string | null };
-type ApplicationLink = { application_id: string };
+type ApplicationLink = { id?: string; application_id: string };
 type IntermediaryLink = {
   id: string;
   application_id: string | null;
@@ -18,7 +19,7 @@ type IntermediaryLink = {
   associate_employee_id?: string | null;
   associate_profile_id?: string | null;
 };
-type ImportRowLink = { import_batch_id: string; normalized_data: Record<string, unknown> | null };
+type ImportRowLink = { id?: string; import_batch_id: string; normalized_data: Record<string, unknown> | null };
 type CustomerLink = { id: string };
 type CustomerIdLink = { customer_id: string };
 type ScopeOverride = { scope_type: string; expires_at: string | null };
@@ -51,12 +52,25 @@ export const getEmployeeAccessScope = cache(async (profileId: string, role: stri
 
   let employeeIds = [currentProfile.employee_id];
   if (requestedMode === "hierarchy") {
-    const { data: employees } = await admin.from("employees").select("id,reporting_manager_id").eq("employment_status", "active").returns<EmployeeLink[]>();
+    const { data: employees } = await fetchAllPages<EmployeeLink, unknown>((from, to) => admin
+      .from("employees")
+      .select("id,reporting_manager_id")
+      .eq("employment_status", "active")
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<EmployeeLink[]>());
     employeeIds = descendantIds(currentProfile.employee_id, employees ?? []);
   }
 
   const { data: profiles } = employeeIds.length
-    ? await admin.from("profiles").select("id,employee_id").in("employee_id", employeeIds).eq("is_active", true).returns<ProfileLink[]>()
+    ? await fetchAllPages<ProfileLink, unknown>((from, to) => admin
+        .from("profiles")
+        .select("id,employee_id")
+        .in("employee_id", employeeIds)
+        .eq("is_active", true)
+        .order("id", { ascending: true })
+        .range(from, to)
+        .returns<ProfileLink[]>())
     : { data: [] as ProfileLink[] };
   const profileIds = Array.from(new Set([profileId, ...(profiles ?? []).map((profile) => profile.id)]));
   return { mode: requestedMode, employeeIds, profileIds };
@@ -75,36 +89,50 @@ export async function getAccessibleCustomerIds(profileId: string, role: string |
       `created_by.in.(${scope.profileIds.join(",")})`,
       `assigned_agent_id.in.(${scope.profileIds.join(",")})`,
     ];
-    const { data } = await admin.from("customers").select("id").or(filters.join(",")).returns<CustomerLink[]>();
+    const { data } = await fetchAllPages<CustomerLink, unknown>((from, to) => admin
+      .from("customers")
+      .select("id")
+      .or(filters.join(","))
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<CustomerLink[]>());
     for (const row of data ?? []) if (row.id) customerIds.add(row.id);
   }
 
   const intermediaryIds = await getAccessibleIntermediaryIds(profileId, role, capability);
   if (intermediaryIds?.length) {
-    const [{ data: customerLinks }, { data: intermediaries }] = await Promise.all([
-      admin
+    const [customerLinksResult, intermediariesResult] = await Promise.all([
+      fetchAllPages<CustomerIdLink, unknown>((from, to) => admin
         .from("intermediary_customer_links")
         .select("customer_id")
         .in("intermediary_id", intermediaryIds)
-        .returns<CustomerIdLink[]>(),
-      admin
+        .order("customer_id", { ascending: true })
+        .range(from, to)
+        .returns<CustomerIdLink[]>()),
+      fetchAllPages<IntermediaryLink, unknown>((from, to) => admin
         .from("intermediaries")
         .select("id,application_id,intermediary_code")
         .in("id", intermediaryIds)
-        .returns<IntermediaryLink[]>(),
+        .order("id", { ascending: true })
+        .range(from, to)
+        .returns<IntermediaryLink[]>()),
     ]);
+    const customerLinks = customerLinksResult.data ?? [];
+    const intermediaries = intermediariesResult.data ?? [];
 
-    for (const row of customerLinks ?? []) if (row.customer_id) customerIds.add(row.customer_id);
+    for (const row of customerLinks) if (row.customer_id) customerIds.add(row.customer_id);
 
     const intermediaryCodes = Array.from(new Set(
-      (intermediaries ?? []).map((row) => row.intermediary_code).filter((code): code is string => Boolean(code))
+      intermediaries.map((row) => row.intermediary_code).filter((code): code is string => Boolean(code))
     ));
     if (intermediaryCodes.length) {
-      const { data: policyCustomers } = await admin
+      const { data: policyCustomers } = await fetchAllPages<CustomerIdLink, unknown>((from, to) => admin
         .from("policies")
         .select("customer_id")
         .in("intermediary_code", intermediaryCodes)
-        .returns<CustomerIdLink[]>();
+        .order("id", { ascending: true })
+        .range(from, to)
+        .returns<CustomerIdLink[]>());
       for (const row of policyCustomers ?? []) if (row.customer_id) customerIds.add(row.customer_id);
     }
   }
@@ -121,8 +149,13 @@ export async function getAccessibleIntermediaryApplicationIds(profileId: string,
   const filters: string[] = [];
   if (scope.profileIds.length) filters.push(`associate_profile_id.in.(${scope.profileIds.join(",")})`);
   if (scope.employeeIds.length) filters.push(`associate_employee_id.in.(${scope.employeeIds.join(",")})`);
-  const request = admin.from("posp_misp_onboarding_profiles").select("application_id");
-  const { data } = await request.or(filters.join(",")).returns<ApplicationLink[]>();
+  const { data } = await fetchAllPages<ApplicationLink, unknown>((from, to) => admin
+    .from("posp_misp_onboarding_profiles")
+    .select("id,application_id")
+    .or(filters.join(","))
+    .order("id", { ascending: true })
+    .range(from, to)
+    .returns<ApplicationLink[]>());
   return Array.from(new Set((data ?? []).map((row) => row.application_id).filter(Boolean)));
 }
 
@@ -132,10 +165,12 @@ export async function getAccessibleImportBatchIds(profileId: string, role: strin
   if (!scope.employeeIds.length && !scope.profileIds.length) return [];
 
   const admin = createSupabaseAdminClient();
-  const { data } = await admin
+  const { data } = await fetchAllPages<ImportRowLink, unknown>((from, to) => admin
     .from("posp_misp_import_rows")
-    .select("import_batch_id,normalized_data")
-    .returns<ImportRowLink[]>();
+    .select("id,import_batch_id,normalized_data")
+    .order("id", { ascending: true })
+    .range(from, to)
+    .returns<ImportRowLink[]>());
 
   const employeeIds = new Set(scope.employeeIds);
   const profileIds = new Set(scope.profileIds);
@@ -158,21 +193,25 @@ export async function getAccessibleIntermediaryIds(profileId: string, role: stri
   if (scope.employeeIds.length) directFilters.push(`associate_employee_id.in.(${scope.employeeIds.join(",")})`);
 
   if (directFilters.length) {
-    const { data: directIntermediaries } = await admin
+    const { data: directIntermediaries } = await fetchAllPages<IntermediaryLink, unknown>((from, to) => admin
       .from("intermediaries")
       .select("id,application_id,associate_employee_id,associate_profile_id")
       .or(directFilters.join(","))
-      .returns<IntermediaryLink[]>();
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<IntermediaryLink[]>());
     for (const row of directIntermediaries ?? []) if (row.id) intermediaryIds.add(row.id);
   }
 
   const applicationIds = await getAccessibleIntermediaryApplicationIds(profileId, role, capability);
   if (applicationIds?.length) {
-    const { data: applicationIntermediaries } = await admin
+    const { data: applicationIntermediaries } = await fetchAllPages<IntermediaryLink, unknown>((from, to) => admin
       .from("intermediaries")
       .select("id,application_id")
       .in("application_id", applicationIds)
-      .returns<IntermediaryLink[]>();
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<IntermediaryLink[]>());
     for (const row of applicationIntermediaries ?? []) if (row.id) intermediaryIds.add(row.id);
   }
 

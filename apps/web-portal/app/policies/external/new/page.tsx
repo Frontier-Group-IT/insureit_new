@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireExternalPolicyCreator } from "@/lib/policy-access-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getActiveInsuranceCompanyOptions } from "@/lib/reference-data-cache";
@@ -18,16 +19,17 @@ export default async function NewExternalPolicyPage() {
   if (accessibleCustomerIds !== null && !accessibleCustomerIds.length) redirect("/access-denied");
 
   const admin = createSupabaseAdminClient();
-  let customerQuery = admin.from("customers").select("id,contact_name,company_name,phone").order("contact_name", { ascending: true });
-  let vehicleQuery = admin.from("vehicles").select("id,customer_id,vehicle_no,make,model,vehicle_type").order("vehicle_no", { ascending: true });
-  if (accessibleCustomerIds !== null) {
-    customerQuery = customerQuery.in("id", accessibleCustomerIds);
-    vehicleQuery = vehicleQuery.in("customer_id", accessibleCustomerIds);
-  }
-
   const [customersResult, vehiclesResult, activeInsurerOptions] = await Promise.all([
-    customerQuery.returns<CustomerRow[]>(),
-    vehicleQuery.returns<VehicleRow[]>(),
+    fetchAllPages<CustomerRow, unknown>((from, to) => {
+      let query = admin.from("customers").select("id,contact_name,company_name,phone").order("contact_name", { ascending: true }).order("id", { ascending: true }).range(from, to);
+      if (accessibleCustomerIds !== null) query = query.in("id", accessibleCustomerIds);
+      return query.returns<CustomerRow[]>();
+    }),
+    fetchAllPages<VehicleRow, unknown>((from, to) => {
+      let query = admin.from("vehicles").select("id,customer_id,vehicle_no,make,model,vehicle_type").order("vehicle_no", { ascending: true }).order("id", { ascending: true }).range(from, to);
+      if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
+      return query.returns<VehicleRow[]>();
+    }),
     getActiveInsuranceCompanyOptions(),
   ]);
 
