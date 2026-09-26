@@ -35,9 +35,6 @@ export default async function RmPerformancePage({
             <h1 className="portal-display mt-1.5 text-[29px] font-semibold tracking-[-.03em] text-[#10213D]">
               {isRm ? "My Performance" : "RM Performance"}
             </h1>
-            <p className="mt-1 text-[12px] font-medium text-[#5F6D7F]">
-              Fast daily and month-to-date business reference.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -82,16 +79,13 @@ export default async function RmPerformancePage({
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
             <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} />
             <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} bordered />
-            <MtdContextPanel rows={data.ytdTrend} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} />
+            <MtdContextPanel rows={data.ytdTrend} />
           </div>
         </section>
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="flex items-center justify-between border-b border-[#E9EDF3] px-5 py-3.5">
-            <div>
-              <h2 className="text-[14px] font-bold text-[#172744]">RM Daily Summary</h2>
-              <p className="mt-0.5 text-[11px] font-medium text-[#657286]">Primary figures first, source detail immediately below</p>
-            </div>
+            <h2 className="text-[14px] font-bold text-[#172744]">RM Daily Summary</h2>
             <span className="text-[10.5px] font-semibold text-[#647286]">{data.rows.length} RM{data.rows.length === 1 ? "" : "s"}</span>
           </div>
 
@@ -128,7 +122,7 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, bordered 
   );
 }
 
-function MtdContextPanel({ rows, motor, nonMotor }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"]; motor: number; nonMotor: number }) {
+function MtdContextPanel({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
   const latest = rows.at(-1);
   const previous = rows.at(-2);
   const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
@@ -144,16 +138,8 @@ function MtdContextPanel({ rows, motor, nonMotor }: { rows: Awaited<ReturnType<t
         </div>
         {movement !== null ? <span className={"rounded-full px-2 py-1 text-[9px] font-black " + (movement >= 0 ? "bg-[#EAF7F2] text-[#14745D]" : "bg-[#FDEEEE] text-[#B54747]")}>{movement >= 0 ? "+" : ""}{movement.toFixed(1)}%</span> : null}
       </div>
-      <div className="mt-2 grid grid-cols-[minmax(0,1fr)_96px] items-end gap-3">
-        <div className="min-w-0"><RmPerformanceTrendChart rows={rows} /></div>
-        <div className="space-y-2 border-l border-[#EEF1F5] pl-3">
-          <div><p className="text-[9px] font-black uppercase tracking-[.07em] text-[#687589]">Latest</p><p className="mt-0.5 text-[10.5px] font-bold text-[#24364F]">{latest ? compactMoney(latest.net_premium) : "—"}</p></div>
-          <div><p className="text-[9px] font-black uppercase tracking-[.07em] text-[#687589]">Policies</p><p className="mt-0.5 text-[10.5px] font-bold text-[#24364F]">{latest ? number(latest.policy_count) : "—"}</p></div>
-        </div>
-      </div>
-      <div className="mt-2 grid grid-cols-2 gap-3 border-t border-[#EEF1F5] pt-2">
-        <div><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#687589]">Motor MTD</p><p className="mt-0.5 text-[10.5px] font-bold text-[#34445B]">{money(motor)}</p></div>
-        <div><p className="text-[9px] font-semibold uppercase tracking-[.06em] text-[#687589]">Non-Motor MTD</p><p className="mt-0.5 text-[10.5px] font-bold text-[#34445B]">{money(nonMotor)}</p></div>
+      <div className="mt-2 min-w-0">
+        <RmPerformanceTrendChart rows={rows} />
       </div>
     </div>
   );
@@ -162,5 +148,4 @@ function MtdContextPanel({ rows, motor, nonMotor }: { rows: Awaited<ReturnType<t
 function Empty({ label }: { label: string }) { return <div className="px-5 py-8 text-center text-[11px] font-semibold text-[#667386]">{label}</div>; }
 function money(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function number(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
-function compactMoney(value: number) { const n = Math.abs(value || 0); if (n >= 10000000) return "₹" + (value / 10000000).toFixed(2) + " Cr"; if (n >= 100000) return "₹" + (value / 100000).toFixed(1) + " L"; if (n >= 1000) return "₹" + (value / 1000).toFixed(1) + " K"; return money(value); }
 function formatDate(value: string) { return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(new Date(value)); }
