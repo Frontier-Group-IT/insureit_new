@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   nextLabel: { fontSize: 8.5, fontWeight: '900', letterSpacing: .4 },
   nextTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', marginTop: 2 },
   nextBody: { color: '#FFFFFF', fontSize: 10.3, lineHeight: 14, fontWeight: '600', marginTop: 3 },
-  compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF' },
+  compactPolicyAction: { minHeight: 30, borderRadius: 10, paddingHorizontal: 9, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: '#FFFFFF', marginLeft: 'auto' },
   compactPolicyActionText: { color: palette.navy, fontSize: 9.5, fontWeight: '900' },
   actionPressed: { opacity: 0.86, transform: [{ scale: 0.97 }] },
   miniStat: { flex: 1, minHeight: 53, borderRadius: 12, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DCE5F0', padding: 8, justifyContent: 'center' },
