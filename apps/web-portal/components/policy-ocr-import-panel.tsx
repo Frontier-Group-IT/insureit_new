@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { Eraser, FileUp } from "lucide-react";
-import { extractPolicyDocument, type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
+import { extractAndStagePolicyDocument } from "@/app/policies/policy-ocr-import-actions";
+import { type PolicyOcrField } from "@/app/policies/policy-ocr-actions";
 import { filterPolicyOcrUserWarnings } from "@/lib/policy-ocr-user-warnings";
 
 const INSURED_NAME_FIELD = ["insured", "name"].join("_");
@@ -67,7 +68,6 @@ const APPLY_ORDER = [
   "policy_start_date",
   "policy_end_date",
 ];
-
 
 export type PolicyOcrImportContext = {
   mode: "create" | "edit";
@@ -177,7 +177,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
     if (file instanceof File) setDocumentName(file.name);
 
     startTransition(async () => {
-      const result = await extractPolicyDocument(formData);
+      const result = await extractAndStagePolicyDocument(formData);
       if (!result.ok) {
         setError(result.error);
         return;
@@ -253,7 +253,7 @@ export function PolicyOcrImportPanel({ variant = "header", context, onApply, onC
           <div className="pr-4">
             <div className="mb-2 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[.12em] text-[#55708F]"><span className="grid h-6 w-9 place-items-center rounded-lg bg-[#EAF1FB] text-[#173B67]">02–03</span>Policy onboarding</div>
             <h2 id="policy-import-title" className="text-[18px] font-bold tracking-[-.01em] text-[#102A4C]">Import policy details</h2>
-            <p className="mt-1.5 max-w-3xl text-[10px] leading-5 text-[#667085]">Read vehicle and policy information from one policy copy. Nothing is booked or saved until you review the extracted values and complete policy onboarding.</p>
+            <p className="mt-1.5 max-w-3xl text-[10px] leading-5 text-[#667085]">Read vehicle and policy information from one policy copy. The same uploaded copy is saved for reuse as the policy document when onboarding is completed.</p>
           </div>
           <button type="button" onClick={closeModal} disabled={pending} className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#D8E0EA] bg-white text-[20px] font-light text-[#526277] transition hover:bg-[#F4F7FA] disabled:opacity-50" aria-label="Close">×</button>
         </header>
