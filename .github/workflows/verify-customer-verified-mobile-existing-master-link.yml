@@ -1,0 +1,41 @@
+name: Verify customer verified-mobile master link
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20260926121500_customer_verified_mobile_existing_master_link.sql'
+      - '.github/workflows/apply-customer-verified-mobile-existing-master-link.yml'
+      - '.github/workflows/verify-customer-verified-mobile-existing-master-link.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify migration safety contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          file='supabase/migrations/20260926121500_customer_verified_mobile_existing_master_link.sql'
+          test -f "$file"
+          grep -Fq 'select u.phone into v_auth_phone' "$file"
+          grep -Fq 'public.normalize_customer_mobile(v_auth_phone)' "$file"
+          grep -Fq 'public.normalize_customer_identity_name(c.contact_name) = v_name_key' "$file"
+          grep -Fq "v_candidate_count > 1" "$file"
+          grep -Fq 'Account linking requires review' "$file"
+          grep -Fq 'public.customer_signup_master_is_empty' "$file"
+          grep -Fq "creation_channel is distinct from 'direct_customer_onboarding'" "$file"
+          grep -Fq 'customer_mobile_signup_claimed_existing' "$file"
+          grep -Fq 'duplicate_customer_retained_for_audit' "$file"
+          grep -Fq 'do $$' "$file"
+
+      - name: Verify no broad phone-only fleet access was introduced
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R "from('vehicles').*phone" apps/mobile-app --include='*.ts' --include='*.tsx'
+          ! grep -R 'from("vehicles").*phone' apps/mobile-app --include='*.ts' --include='*.tsx'
