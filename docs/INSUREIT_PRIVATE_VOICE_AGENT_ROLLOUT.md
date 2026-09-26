@@ -164,17 +164,11 @@ After redaction hardening, a controlled first batch of **25** eligible historica
 - 7 validation;
 - 2 permanent-test candidates.
 
-The controlled batch was additionally prefiltered to exclude any source summary/objection that still contained a customer-name token. A post-insert audit of all 25 stored rows confirmed:
-- 0 split mismatches;
-- 0 full-name leaks;
-- 0 customer-name-token leaks;
-- 0 mobile literal/generic leaks;
-- 0 RC literal/generic leaks;
-- 0 long-ID leaks;
-- 0 non-draft rows;
-- 0 unexpected conversation payloads.
+The first audit verified split integrity, identifier redaction, draft-only state and no raw conversation payloads. A later manual narrative review found **one summary containing a provider-generated first-name introduction that did not match the opportunity identity**, so identity-based redaction could not detect it. That row was immediately sanitized in the private training table; the follow-up SQL check confirmed the detected narrative-name pattern count returned to zero.
 
-No raw transcript turns were stored. The test examples remain marked permanent-test candidates.
+The current Phase 2 branch now additionally redacts common provider narrative-name patterns such as `The customer, <Name>, ...`, `customer named <Name>`, titled names, and `Customer <Name> expressed/said/...`, even when the source opportunity identity is different. Regression coverage includes this identity-mismatch case. This finding does not affect the Sarvam source tables or production calling.
+
+No raw transcript turns are stored. The test examples remain marked permanent-test candidates.
 
 ### Human review + frozen dataset versioning — CURRENT PR #2453
 
@@ -191,7 +185,8 @@ Implemented on the branch:
 - freeze gate requiring at least one approved training, validation and permanent-test example;
 - permanent-test candidates cannot be frozen into training/validation;
 - review queue, approved split counts, freeze action and frozen-version history in the Insureit Agent UI;
-- pure dataset-versioning regression coverage.
+- pure dataset-versioning regression coverage;
+- additional training-redaction regression coverage for identity-mismatch narrative names.
 
 The migration is committed but **not applied merely by creating PR #2453**. Merge is not migration application and migration application is not deployment.
 
@@ -208,11 +203,11 @@ Not implemented / not authorized:
 
 ### Evidence state
 
-**PR #2445 MERGED; PR #2447 MERGED; controlled 25-row batch APPLIED and privacy-audited; PR #2453 IMPLEMENTED with canonical CI pending. Dataset-versioning migration NOT APPLIED. Private calling remains disabled.**
+**PR #2445 MERGED; PR #2447 MERGED; controlled 25-row batch APPLIED; follow-up privacy review found and sanitized one identity-mismatch narrative first-name leak; PR #2453 IMPLEMENTED and previously passed canonical Verify web portal #4737 before the latest redaction-hardening commits. Latest-head CI must pass again before merge. Dataset-versioning migration NOT APPLIED. Private calling remains disabled.**
 
 ### Next safe step
 
-Get PR #2453 fully green in canonical `Verify web portal`. Do not merge on failed CI. After explicit merge authorization, apply/verify the dataset-versioning migration before exposing the review/freeze UI as operational. Then human-review the controlled 25-row batch, freeze the first reproducible dataset release, verify snapshot hashes/split boundaries, and only then begin Phase 3 text-agent evaluation against the untouched permanent-test set.
+Get the latest PR #2453 head fully green in canonical `Verify web portal`. Do not merge on failed CI. After explicit merge authorization, apply/verify the dataset-versioning migration before exposing the review/freeze UI as operational. Then human-review the controlled 25-row batch, freeze the first reproducible dataset release, verify snapshot hashes/split boundaries, and only then begin Phase 3 text-agent evaluation against the untouched permanent-test set.
 
 ## Phase 3 — Text-only private agent
 
@@ -276,4 +271,4 @@ PR #2442 merged; baseline/isolation/UI shell completed; no private runtime or ca
 PR #2443 merged after Verify web portal #4717. Isolated private schema/config/provider contracts delivered. Production database check confirmed private schema presence. Private outbound remains disabled.
 
 ## 2026-09-26 — Phase 2
-PR #2445 merged after Verify web portal #4722. PR #2447 then merged after Verify web portal #4725 to harden partial-name redaction before staging. A controlled first batch of 25 draft examples (16 train / 7 validation / 2 test) was applied and passed full stored-data privacy/split audit. PR #2453 now implements human approve/exclude review plus immutable hashed frozen-dataset releases; CI pending and its migration is not yet applied. Private calling remains disabled.
+PR #2445 merged after Verify web portal #4722. PR #2447 then merged after Verify web portal #4725 to harden partial-name redaction before staging. A controlled first batch of 25 draft examples (16 train / 7 validation / 2 test) was applied. A later narrative audit found one provider-generated first-name introduction that did not match the source identity; that private training row was sanitized and the branch redaction helper/regression was hardened for identity-mismatch narrative names. PR #2453 implements human approve/exclude review plus immutable hashed frozen-dataset releases; latest-head CI is required before merge and its migration is not yet applied. Private calling remains disabled.
