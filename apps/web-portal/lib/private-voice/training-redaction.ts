@@ -4,6 +4,15 @@ export type TrainingRedactionIdentity = {
   registration_no?: string | null;
 };
 
+const GENERIC_IDENTITY_TOKENS = new Set([
+  "customer",
+  "insured",
+  "caller",
+  "unknown",
+  "name",
+  "named",
+]);
+
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -19,7 +28,9 @@ function redactCustomerName(value: string, customerName: string | null | undefin
   if (!normalized) return value;
 
   let result = replaceLiteralInsensitive(value, normalized, "[CUSTOMER]");
-  const nameTokens = [...new Set(normalized.match(/[A-Za-z]{3,}/g) ?? [])].sort((a, b) => b.length - a.length);
+  const nameTokens = [...new Set(normalized.match(/[A-Za-z]{3,}/g) ?? [])]
+    .filter((token) => !GENERIC_IDENTITY_TOKENS.has(token.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
   for (const token of nameTokens) {
     result = result.replace(new RegExp(`\\b${escapeRegex(token)}\\b`, "gi"), "[CUSTOMER]");
   }
@@ -49,11 +60,16 @@ export function redactTrainingText(value: string | null, identity?: TrainingReda
   let result = String(value ?? "").trim();
   if (!result) return "";
 
-  result = redactCustomerName(result, identity?.customer_name);
+  // Provider-generated narrative names must be removed before identity-token replacement so generic
+  // role words such as "Customer" cannot destroy the narrative pattern and leave a mismatched name behind.
   result = redactNarrativeNamePatterns(result);
-  result = replaceLiteralInsensitive(result, identity?.mobile, "[MOBILE]");
-  result = replaceLiteralInsensitive(result, identity?.registration_no, "[RC]");
+  result = redactCustomerName(result, identity?.customer_name);
+
+  // Redact the whole phone expression before literal replacement so country-code prefixes do not remain.
   result = result.replace(/\b(?:\+?91[-\s]?)?[6-9]\d{9}\b/g, "[MOBILE]");
+  result = replaceLiteralInsensitive(result, identity?.mobile, "[MOBILE]");
+
+  result = replaceLiteralInsensitive(result, identity?.registration_no, "[RC]");
   result = result.replace(/\b[A-Z]{2}[\s-]?\d{1,2}[\s-]?[A-Z]{0,3}[\s-]?\d{4}\b/gi, "[RC]");
   result = result.replace(/\b\d{12,}\b/g, "[LONG_ID]");
   return result;
