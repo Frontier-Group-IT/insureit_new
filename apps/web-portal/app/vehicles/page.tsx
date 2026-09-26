@@ -3,6 +3,7 @@ import { AppShell } from "@/components/shell";
 import { BackofficeVehicleRegister } from "@/components/backoffice-vehicle-register";
 import { ItSuperUserDeletePanel } from "@/components/it-super-user-delete-panel";
 import { getAccessibleCustomerIds } from "@/lib/employee-access-scope";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { requireCapability } from "@/lib/master-data-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { logPortalRoutePerformance } from "@/lib/performance-observability";
@@ -48,12 +49,15 @@ export default async function VehiclesPage() {
     return <AppShell title="Vehicles">{profile.role === "backoffice_executive" ? <BackofficeVehicleRegister rows={[]} /> : <VehicleWorkspace rows={[]} />}</AppShell>;
   }
 
-  let query = admin
-    .from("vehicles")
-    .select("id, customer_id, vehicle_no, vehicle_type, make, model, permit_no, chassis_no, engine_no, registration_status, customers:customers!vehicles_customer_id_fkey(company_name, contact_name), policies(count), claims(count)")
-    .order("created_at", { ascending: false });
-  if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
-  const { data, error } = await query.returns<VehicleRow[]>();
+  const { data, error } = await fetchAllPages<VehicleRow, unknown>((from, to) => {
+    let query = admin
+      .from("vehicles")
+      .select("id, customer_id, vehicle_no, vehicle_type, make, model, permit_no, chassis_no, engine_no, registration_status, customers:customers!vehicles_customer_id_fkey(company_name, contact_name), policies(count), claims(count)")
+      .order("created_at", { ascending: false })
+      .range(from, to);
+    if (accessibleCustomerIds !== null) query = query.in("customer_id", accessibleCustomerIds);
+    return query.returns<VehicleRow[]>();
+  });
   const finishedAt = performance.now();
   logPortalRoutePerformance("/vehicles", {
     auth_ms: afterAuth - startedAt,
