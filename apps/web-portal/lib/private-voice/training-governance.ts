@@ -11,6 +11,8 @@ import {
 } from "@/lib/private-voice/dataset-versioning";
 
 const SOURCE_TYPE = "historical_call";
+const DATASET_PAGE_SIZE = 500;
+const DATASET_INSERT_BATCH_SIZE = 500;
 
 export type TrainingReviewDecision = "approve" | "exclude";
 
@@ -32,6 +34,54 @@ function assertPermanentTestBoundary(example: ReviewableTrainingExample) {
   const permanent = example.quality_labels?.permanent_test_candidate === true;
   if (example.split === "test" && !permanent) throw new Error("Test candidate is missing the permanent-test marker.");
   if (example.split !== "test" && permanent) throw new Error("Permanent-test candidate cannot be used outside the test split.");
+}
+
+async function loadAllApprovedExamples(): Promise<ReviewableTrainingExample[]> {
+  const admin = createSupabaseAdminClient();
+  const approved: ReviewableTrainingExample[] = [];
+
+  for (let from = 0; ; from += DATASET_PAGE_SIZE) {
+    const to = from + DATASET_PAGE_SIZE - 1;
+    const { data, error } = await admin
+      .from("private_voice_training_examples")
+      .select("id,source_type,source_reference,split,status,context,conversation,target_outcome,quality_labels,reviewed_by,reviewed_at,created_at")
+      .eq("source_type", SOURCE_TYPE)
+      .eq("status", "approved")
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)
+      .returns<(ReviewableTrainingExample & { created_at?: string })[]>();
+
+    if (error) throw new Error("Could not load approved training examples.");
+    const page = data ?? [];
+    approved.push(...page);
+    if (page.length < DATASET_PAGE_SIZE) break;
+  }
+
+  return approved;
+}
+
+async function insertDatasetMembers(
+  datasetVersionId: string,
+  examples: ReviewableTrainingExample[],
+) {
+  const admin = createSupabaseAdminClient();
+
+  for (let index = 0; index < examples.length; index += DATASET_INSERT_BATCH_SIZE) {
+    const batch = examples.slice(index, index + DATASET_INSERT_BATCH_SIZE).map((example) => {
+      const snapshot = buildDatasetSnapshot(example);
+      return {
+        dataset_version_id: datasetVersionId,
+        training_example_id: example.id,
+        split: example.split,
+        example_snapshot: snapshot,
+        example_hash: hashDatasetSnapshot(snapshot),
+      };
+    });
+
+    const { error } = await admin.from("private_voice_dataset_members").insert(batch);
+    if (error) throw new Error("Could not freeze dataset membership.");
+  }
 }
 
 export async function reviewTrainingExample(input: {
@@ -83,16 +133,7 @@ function datasetVersionName() {
 
 export async function freezeApprovedDataset(input: { reviewerId: string; notes?: string | null }) {
   const admin = createSupabaseAdminClient();
-  const { data: examples, error: examplesError } = await admin
-    .from("private_voice_training_examples")
-    .select("id,source_type,source_reference,split,status,context,conversation,target_outcome,quality_labels,reviewed_by,reviewed_at")
-    .eq("source_type", SOURCE_TYPE)
-    .eq("status", "approved")
-    .order("created_at", { ascending: true })
-    .returns<ReviewableTrainingExample[]>();
-  if (examplesError) throw new Error("Could not load approved training examples.");
-
-  const approved = examples ?? [];
+  const approved = await loadAllApprovedExamples();
   const counts = assertFreezeSplitCoverage(approved);
   approved.forEach(assertPermanentTestBoundary);
 
@@ -124,21 +165,11 @@ export async function freezeApprovedDataset(input: { reviewerId: string; notes?:
     .single<DatasetVersionRow>();
   if (datasetError || !dataset) throw new Error("Could not create the frozen dataset version.");
 
-  const members = approved.map((example) => {
-    const snapshot = buildDatasetSnapshot(example);
-    return {
-      dataset_version_id: dataset.id,
-      training_example_id: example.id,
-      split: example.split,
-      example_snapshot: snapshot,
-      example_hash: hashDatasetSnapshot(snapshot),
-    };
-  });
-
-  const { error: membersError } = await admin.from("private_voice_dataset_members").insert(members);
-  if (membersError) {
+  try {
+    await insertDatasetMembers(dataset.id, approved);
+  } catch (error) {
     await admin.from("private_voice_dataset_versions").delete().eq("id", dataset.id);
-    throw new Error("Could not freeze dataset membership.");
+    throw error;
   }
 
   return dataset;
