@@ -66,7 +66,7 @@ export function redactTrainingText(value: string | null, identity?: TrainingReda
   result = redactCustomerName(result, identity?.customer_name);
 
   // Redact the whole phone expression before literal replacement so country-code prefixes do not remain.
-  result = result.replace(/\b(?:\+?91[-\s]?)?[6-9]\d{9}\b/g, "[MOBILE]");
+  result = result.replace(/(?:\+?91[-\s]?[6-9]\d{9}\b|\b[6-9]\d{9}\b)/g, "[MOBILE]");
   result = replaceLiteralInsensitive(result, identity?.mobile, "[MOBILE]");
 
   result = replaceLiteralInsensitive(result, identity?.registration_no, "[RC]");
