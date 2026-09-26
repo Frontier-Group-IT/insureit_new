@@ -23,7 +23,7 @@ type DatasetVersionRow = {
   training_count: number;
   validation_count: number;
   test_count: number;
-  frozen_at: string;
+  frozen_at: string | null;
 };
 
 type ApprovedSplitRow = {
@@ -144,35 +144,50 @@ export async function freezeApprovedDataset(input: { reviewerId: string; notes?:
     split_policy: "deterministic_70_15_15",
     permanent_test_locked: true,
     example_count: approved.length,
-    frozen_at: now,
+    created_at: now,
   };
 
   const { data: dataset, error: datasetError } = await admin
     .from("private_voice_dataset_versions")
     .insert({
       version,
-      status: "frozen",
+      status: "building",
       notes: input.notes?.trim() || null,
       manifest,
       training_count: counts.training,
       validation_count: counts.validation,
       test_count: counts.test,
       created_by: input.reviewerId,
-      frozen_by: input.reviewerId,
-      frozen_at: now,
+      frozen_by: null,
+      frozen_at: null,
     })
     .select("id,version,status,training_count,validation_count,test_count,frozen_at")
     .single<DatasetVersionRow>();
-  if (datasetError || !dataset) throw new Error("Could not create the frozen dataset version.");
+  if (datasetError || !dataset) throw new Error("Could not create the dataset version candidate.");
 
   try {
     await insertDatasetMembers(dataset.id, approved);
+
+    const frozenAt = new Date().toISOString();
+    const { data: frozen, error: freezeError } = await admin
+      .from("private_voice_dataset_versions")
+      .update({ status: "frozen", frozen_by: input.reviewerId, frozen_at: frozenAt, updated_at: frozenAt })
+      .eq("id", dataset.id)
+      .eq("status", "building")
+      .select("id,version,status,training_count,validation_count,test_count,frozen_at")
+      .single<DatasetVersionRow>();
+    if (freezeError || !frozen) throw new Error("Could not finalize the frozen dataset version.");
+
+    return frozen;
   } catch (error) {
-    await admin.from("private_voice_dataset_versions").delete().eq("id", dataset.id);
+    const failedAt = new Date().toISOString();
+    await admin
+      .from("private_voice_dataset_versions")
+      .update({ status: "failed", updated_at: failedAt })
+      .eq("id", dataset.id)
+      .eq("status", "building");
     throw error;
   }
-
-  return dataset;
 }
 
 export async function getTrainingGovernanceOverview() {
@@ -188,6 +203,7 @@ export async function getTrainingGovernanceOverview() {
     admin
       .from("private_voice_dataset_versions")
       .select("id,version,status,training_count,validation_count,test_count,frozen_at")
+      .eq("status", "frozen")
       .order("frozen_at", { ascending: false })
       .limit(8)
       .returns<DatasetVersionRow[]>(),
