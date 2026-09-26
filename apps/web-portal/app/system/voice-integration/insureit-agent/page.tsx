@@ -52,11 +52,11 @@ export default async function InsureitAgentPage({ searchParams }: PageProps) {
     redirect("/access-denied");
   }
 
-  const [config, library, resolvedParams] = await Promise.all([
+  const [config, library] = await Promise.all([
     Promise.resolve(getPrivateVoiceRuntimeConfig()),
     getTrainingLibraryOverview(),
-    searchParams ?? Promise.resolve({}),
   ]);
+  const resolvedParams: Record<string, string | string[] | undefined> = searchParams ? await searchParams : {};
 
   const stageState = param(resolvedParams.training_stage);
   const staged = param(resolvedParams.staged);
