@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { FolderTree, Search } from "lucide-react";
+import { CalendarDays, FolderTree, Search } from "lucide-react";
 import { FormSubmitButton } from "@/components/form-submit-button";
 import { FreshAccountReviewLink } from "./applications/account-review-back-link";
 import { createLinkedIntermediaryAccount } from "./applications/[id]/account-review-actions";
@@ -16,6 +16,7 @@ export type PartnerRegisterRow = {
   partnerId: string;
   accountType: string;
   assignedRm: string;
+  onboardingDate: string;
   linkedLabel: string;
   linkedHref: string | null;
   portalAccess: string;
@@ -53,21 +54,34 @@ export function PartnerRegisterClient({
   const initialFilter = initialStatus === "active" || initialStatus === "onboarding" ? initialStatus : "";
   const [status, setStatus] = useState(initialFilter);
   const [selectedFilter, setSelectedFilter] = useState<PartnerFilter>(initialFilter || "all");
+  const [rmFilter, setRmFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const normalized = search.trim().toLowerCase();
+
+  const rmOptions = useMemo(() => Array.from(new Set(rows.map((row) => row.assignedRm).filter(Boolean))).sort((a, b) => a.localeCompare(b)), [rows]);
   const searchedRows = useMemo(() => normalized ? rows.filter((row) => row.searchText.includes(normalized)) : rows, [normalized, rows]);
-  const counts = useMemo(() => searchedRows.reduce((acc, row) => {
+  const scopedRows = useMemo(() => searchedRows.filter((row) => {
+    if (rmFilter && row.assignedRm !== rmFilter) return false;
+    const date = indiaDateKey(row.onboardingDate);
+    if (dateFrom && date < dateFrom) return false;
+    if (dateTo && date > dateTo) return false;
+    return true;
+  }), [searchedRows, rmFilter, dateFrom, dateTo]);
+  const counts = useMemo(() => scopedRows.reduce((acc, row) => {
     if (row.active) acc.active += 1;
     else acc.onboarding += 1;
     return acc;
-  }, { active: 0, onboarding: 0 }), [searchedRows]);
-  const visibleRows = status === "active" ? searchedRows.filter((row) => row.active) : status === "onboarding" ? searchedRows.filter((row) => !row.active) : searchedRows;
+  }, { active: 0, onboarding: 0 }), [scopedRows]);
+  const visibleRows = status === "active" ? scopedRows.filter((row) => row.active) : status === "onboarding" ? scopedRows.filter((row) => !row.active) : scopedRows;
   const totalRecords = visibleRows.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / PARTNER_PAGE_SIZE));
   const pageStartIndex = (currentPage - 1) * PARTNER_PAGE_SIZE;
   const pageRows = visibleRows.slice(pageStartIndex, pageStartIndex + PARTNER_PAGE_SIZE);
   const showingStart = totalRecords === 0 ? 0 : pageStartIndex + 1;
   const showingEnd = totalRecords === 0 ? 0 : Math.min(pageStartIndex + PARTNER_PAGE_SIZE, totalRecords);
+  const extraFilterCount = Number(Boolean(rmFilter)) + Number(Boolean(dateFrom)) + Number(Boolean(dateTo));
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -95,6 +109,13 @@ export function PartnerRegisterClient({
     setCurrentPage(1);
   }
 
+  function clearExtraFilters() {
+    setRmFilter("");
+    setDateFrom("");
+    setDateTo("");
+    setCurrentPage(1);
+  }
+
   return (
     <div className="mx-auto max-w-[1480px] space-y-4 pb-6">
       {success ? <WorkflowSuccessToast message={successMessage} durationMs={4000} /> : null}
@@ -111,33 +132,40 @@ export function PartnerRegisterClient({
               <FolderTree className="h-3.5 w-3.5" />
               Groups
             </Link>
-            <FilterButton label="All" count={searchedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
+            <FilterButton label="All" count={scopedRows.length} active={selectedFilter === "all"} onClick={() => selectFilter("all")} />
             <FilterButton label="Active" count={counts.active} active={selectedFilter === "active"} onClick={() => selectFilter("active")} />
             <FilterButton label="Onboarding" count={counts.onboarding} active={selectedFilter === "onboarding"} onClick={() => selectFilter("onboarding")} />
           </div>
         </div>
-        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search or status filter.</p></div>}
+        <div className="flex flex-wrap items-end gap-2 border-b border-[#E7ECF3] bg-white px-5 py-2.5">
+          <label className="min-w-[190px]">
+            <span className="mb-1 block text-[7.5px] font-bold uppercase tracking-[.08em] text-[#8190A4]">Assigned RM</span>
+            <select value={rmFilter} onChange={(event) => { setRmFilter(event.target.value); setCurrentPage(1); }} className="h-8 w-full rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-semibold text-[#26374F] outline-none focus:border-[#315FEA]">
+              <option value="">All RMs</option>
+              {rmOptions.map((rm) => <option key={rm} value={rm}>{rm}</option>)}
+            </select>
+          </label>
+          <div className="flex items-end gap-2">
+            <div className="pb-2 text-[#8090A5]" title="Onboarding date"><CalendarDays className="h-3.5 w-3.5" /></div>
+            <label>
+              <span className="mb-1 block text-[7.5px] font-bold uppercase tracking-[.08em] text-[#8190A4]">Onboarding from</span>
+              <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => { setDateFrom(event.target.value); setCurrentPage(1); }} className="h-8 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-medium text-[#26374F] outline-none focus:border-[#315FEA]" />
+            </label>
+            <label>
+              <span className="mb-1 block text-[7.5px] font-bold uppercase tracking-[.08em] text-[#8190A4]">Onboarding to</span>
+              <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => { setDateTo(event.target.value); setCurrentPage(1); }} className="h-8 rounded-lg border border-[#D8E1EC] bg-white px-2.5 text-[9.5px] font-medium text-[#26374F] outline-none focus:border-[#315FEA]" />
+            </label>
+          </div>
+          {extraFilterCount ? <button type="button" onClick={clearExtraFilters} className="mb-0.5 h-8 rounded-lg px-2.5 text-[8.5px] font-bold text-[#526178] hover:bg-[#F1F5F9] hover:text-[#17365D]">Clear filters ({extraFilterCount})</button> : null}
+        </div>
+        {loadError ? <div className="px-4 py-12 text-center text-[11px] text-red-700">The register could not be loaded. Please refresh the page and try again.</div> : pageRows.length ? <PartnerTable rows={pageRows} /> : <div className="px-4 py-16 text-center"><p className="text-[12px] font-semibold">No records found</p><p className="mt-1 text-[10px] text-[#64748B]">Try changing the search, RM, onboarding date or status filter.</p></div>}
         {!loadError ? (
           <div className="flex flex-col gap-3 border-t border-[#E7ECF3] bg-white px-4 py-3.5 text-[10px] text-[#64748B] sm:flex-row sm:items-center sm:justify-between">
             <span>Showing {showingStart}–{showingEnd} of {totalRecords}</span>
             <div className="flex items-center gap-3 self-end sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                disabled={currentPage <= 1}
-                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]"
-              >
-                Previous
-              </button>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]">Previous</button>
               <span className="min-w-[42px] text-center font-medium text-[#526178]">{currentPage} / {totalPages}</span>
-              <button
-                type="button"
-                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                disabled={currentPage >= totalPages}
-                className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]"
-              >
-                Next
-              </button>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage >= totalPages} className="inline-flex h-8 items-center justify-center rounded-lg border border-[#DCE5EF] bg-white px-3 font-medium text-[#526178] transition-colors enabled:hover:bg-[#F8FAFC] disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#B6C0CF]">Next</button>
             </div>
           </div>
         ) : null}
@@ -147,16 +175,7 @@ export function PartnerRegisterClient({
 }
 
 function FilterButton({ label, count, active, onClick }: { label: string; count: number; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-full px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#E7E7E7] text-[#17203A]" : "text-[#526178] hover:bg-[#E7E7E7] hover:text-[#17203A]"}`}
-    >
-      {label} <span className="ml-1">{count}</span>
-    </button>
-  );
+  return <button type="button" onClick={onClick} aria-pressed={active} className={`rounded-full px-2.5 py-1.5 transition-colors duration-150 ${active ? "bg-[#E7E7E7] text-[#17203A]" : "text-[#526178] hover:bg-[#E7E7E7] hover:text-[#17203A]"}`}>{label} <span className="ml-1">{count}</span></button>;
 }
 
 function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
@@ -164,32 +183,21 @@ function PartnerTable({ rows }: { rows: PartnerRegisterRow[] }) {
 }
 
 function renderAction(row: PartnerRegisterRow) {
-  if (row.linkedHref) {
-    return (
-      <FreshAccountReviewLink href={row.linkedHref} className={partnerViewActionClassName}>
-        View {row.createType.toUpperCase()}
-      </FreshAccountReviewLink>
-    );
-  }
-  if (!row.active) {
-    return (
-      <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerReviewActionClassName}>
-        Review
-      </FreshAccountReviewLink>
-    );
-  }
+  if (row.linkedHref) return <FreshAccountReviewLink href={row.linkedHref} className={partnerViewActionClassName}>View {row.createType.toUpperCase()}</FreshAccountReviewLink>;
+  if (!row.active) return <FreshAccountReviewLink href={`/intermediaries/applications/${row.applicationId}`} className={partnerReviewActionClassName}>Review</FreshAccountReviewLink>;
   if (!row.canCreateLinked) return <span className="text-[#94A3B8]">-</span>;
   return <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.applicationId} /><input type="hidden" name="registration_type" value={row.createType} /><FormSubmitButton label={`Create ${row.createType.toUpperCase()}`} pendingLabel={`Creating ${row.createType.toUpperCase()}...`} className={partnerCreateActionClassName} /></form>;
 }
 
+function indiaDateKey(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+
 function Status({ value, tone = "default" }: { value: string; tone?: "default" | "linked" | "portal" | "account" }) {
   const normalized = value.toLowerCase();
-  const cls = tone === "linked"
-    ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-violet-200 bg-violet-50 text-violet-700"
-    : tone === "portal"
-      ? "border-sky-200 bg-sky-50 text-sky-700"
-      : tone === "account"
-        ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
+  const cls = tone === "linked" ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-violet-200 bg-violet-50 text-violet-700" : tone === "portal" ? "border-sky-200 bg-sky-50 text-sky-700" : tone === "account" ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-700";
   return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>;
 }
