@@ -26,11 +26,31 @@ function redactCustomerName(value: string, customerName: string | null | undefin
   return result;
 }
 
+function redactNarrativeNamePatterns(value: string) {
+  const properName = "[A-Z][A-Za-z'’\\-]{1,30}(?:\\s+[A-Z][A-Za-z'’\\-]{1,30}){0,3}";
+  let result = value;
+
+  // Historical provider summaries sometimes introduce a first name that does not match the opportunity identity.
+  result = result.replace(new RegExp(`\\b(The customer|Customer),\\s+${properName},`, "g"), "$1, [CUSTOMER],");
+  result = result.replace(new RegExp(`\\b(customer|insured|caller) named\\s+${properName}\\b`, "g"), "$1 named [CUSTOMER]");
+  result = result.replace(new RegExp(`\\b(?:Mr|Mrs|Ms|Shri|Smt)\\.?\\s+${properName}\\b`, "g"), "[CUSTOMER]");
+  result = result.replace(
+    new RegExp(
+      `\\b(The customer|Customer)\\s+(${properName})(?=\\s+(?:said|stated|expressed|confirmed|requested|mentioned|informed|reported|asked|wants|wanted|agreed|declined|shared|explained)\\b)`,
+      "g",
+    ),
+    "$1 [CUSTOMER]",
+  );
+
+  return result;
+}
+
 export function redactTrainingText(value: string | null, identity?: TrainingRedactionIdentity) {
   let result = String(value ?? "").trim();
   if (!result) return "";
 
   result = redactCustomerName(result, identity?.customer_name);
+  result = redactNarrativeNamePatterns(result);
   result = replaceLiteralInsensitive(result, identity?.mobile, "[MOBILE]");
   result = replaceLiteralInsensitive(result, identity?.registration_no, "[RC]");
   result = result.replace(/\b(?:\+?91[-\s]?)?[6-9]\d{9}\b/g, "[MOBILE]");
