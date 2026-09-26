@@ -120,6 +120,8 @@ function safeContext(attempt: HistoricalAttempt, identity?: OpportunityIdentity)
 
 async function exactCount(
   table: "external_renewal_voice_attempts" | "private_voice_training_examples",
+  // Supabase's generated query-builder type differs by table at runtime; keep the small shared filter helper local.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   configure: (query: any) => any,
 ) {
   const admin = createSupabaseAdminClient();
