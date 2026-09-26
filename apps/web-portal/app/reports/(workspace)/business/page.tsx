@@ -41,10 +41,10 @@ export default async function ReportsPage({ searchParams }: Props) {
   const financeQuery: FinanceQuery = { ...query, period: query.period ?? "mtd", page: "1", pageSize: "5000" };
 
   const [businessResult, financeResult] = await Promise.all([
-    loadPolicyBusinessNetReport(profile, businessQuery)
+    loadCompletePolicyBusinessNetReport(profile, businessQuery)
       .then((data) => ({ data, error: null as unknown }))
       .catch((error) => ({ data: null, error })),
-    loadFinanceReport(profile, financeQuery)
+    loadCompleteFinanceReport(profile, financeQuery)
       .then((data) => ({ data, error: null as unknown }))
       .catch((error) => ({ data: null, error })),
   ]);
@@ -142,6 +142,70 @@ export default async function ReportsPage({ searchParams }: Props) {
         </section>
       </ReportPageShell>
   );
+}
+
+async function loadCompletePolicyBusinessNetReport(
+  profile: Parameters<typeof loadPolicyBusinessNetReport>[0],
+  query: PolicyBusinessQuery,
+) {
+  const first = await loadPolicyBusinessNetReport(profile, query);
+  const pageSize = Math.max(first.report.register.page_size, 1);
+  const totalPages = Math.max(1, Math.ceil(first.report.register.total_count / pageSize));
+  if (totalPages === 1) return first;
+
+  const remaining = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) =>
+      loadPolicyBusinessNetReport(profile, {
+        ...query,
+        page: String(index + 2),
+        pageSize: String(pageSize),
+      }),
+    ),
+  );
+  const allRows = [first, ...remaining].flatMap((result) => result.report.register.rows);
+  const uniqueRows = Array.from(new Map(allRows.map((row) => [row.id, row])).values());
+  return {
+    ...first,
+    report: {
+      ...first.report,
+      register: {
+        ...first.report.register,
+        rows: uniqueRows,
+      },
+    },
+  };
+}
+
+async function loadCompleteFinanceReport(
+  profile: Parameters<typeof loadFinanceReport>[0],
+  query: FinanceQuery,
+) {
+  const first = await loadFinanceReport(profile, query);
+  const pageSize = Math.max(first.report.register.page_size, 1);
+  const totalPages = Math.max(1, Math.ceil(first.report.register.total_count / pageSize));
+  if (totalPages === 1) return first;
+
+  const remaining = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) =>
+      loadFinanceReport(profile, {
+        ...query,
+        page: String(index + 2),
+        pageSize: String(pageSize),
+      }),
+    ),
+  );
+  const allRows = [first, ...remaining].flatMap((result) => result.report.register.rows);
+  const uniqueRows = Array.from(new Map(allRows.map((row) => [row.id, row])).values());
+  return {
+    ...first,
+    report: {
+      ...first.report,
+      register: {
+        ...first.report.register,
+        rows: uniqueRows,
+      },
+    },
+  };
 }
 
 function CommercialFlow({ finance, policyCount }: { finance: FinanceReport; policyCount: number }) {
