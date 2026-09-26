@@ -1,9 +1,8 @@
 # INSUREIT Private Voice Agent Rollout
 
 > **Created:** 2026-09-25  
-> **Current phase:** Phase 1 — technical isolation  
-> **Evidence state:** IMPLEMENTED on feature branch; production migration gate wired; canonical PR verification passed; merge/migration application pending  
-> **Production calling state:** DISABLED / NOT IMPLEMENTED  
+> **Current phase:** Phase 2 — training and evaluation dataset foundation  
+> **Production calling state:** PRIVATE CALLING DISABLED / NOT IMPLEMENTED  
 > **Existing Sarvam managed-agent system:** preserved unchanged as production fallback
 
 ## Purpose
@@ -18,7 +17,7 @@ Every agent working on Voice AI must read this file before changing the private-
 
 Each progress entry must state: date/phase, exact implementation or realization, files/schema/providers affected, evidence state, safety/isolation impact, tests/evidence and next safe step.
 
-Never store secrets, phone numbers, raw transcripts, API keys, customer-sensitive payloads or private training examples here.
+Never store secrets, phone numbers, raw transcripts, API keys, customer-sensitive payloads or private training examples in this document.
 
 ---
 
@@ -41,46 +40,14 @@ Customer call
         ↓
 Sarvam campaign webhook
         ↓
-INSUREIT webhook validation + idempotency
+INSUREIT validation + idempotency
         ↓
-Normalized call result
-        ↓
-External Renewal state / follow-up / reporting
+Normalized call result / follow-up / reporting
 ```
 
-## Reusable INSUREIT capabilities
+Reusable INSUREIT capabilities include IT-Super-User authority, campaign imports, RC/mobile validation, Tata grouping, AuthBridge enrichment, customer/vehicle/policy context, renewal buckets, previous-call context, calling window, DNC/terminal suppression, one-active-attempt protection, retry rules, normalized outcomes, reporting and CRM follow-up projections.
 
-Reuse where safe instead of rebuilding:
-- IT Super User authority boundary;
-- Excel/CSV campaign import;
-- RC/mobile validation and secondary-number fallback;
-- Tata Commercial grouping/multi-vehicle handling;
-- AuthBridge RC/insurance enrichment and cache path;
-- Customer/vehicle/policy/external-renewal context;
-- renewal bucket / days-to-expiry calculations;
-- previous connected-call context;
-- calling-window safeguards;
-- DNC and terminal-state suppression;
-- one-active-attempt protection;
-- controlled retry rules;
-- campaign lifecycle/queue concepts;
-- normalized dispositions/structured outputs;
-- reporting/export logic;
-- CRM/follow-up projection rules.
-
-## Sarvam-specific components that remain untouched
-
-Examples include:
-- `apps/web-portal/lib/sarvam-renewal-call.ts`
-- `apps/web-portal/lib/sarvam-it-dispatch.ts`
-- `apps/web-portal/lib/sarvam-production-queue.ts`
-- Sarvam cohort/lifecycle/readiness/diagnostic modules;
-- Sarvam webhook and retry/reconciliation controls;
-- current Sarvam environment variables and production campaign binding.
-
-Private-agent work must not refactor these merely for code sharing during the isolated rollout.
-
-## Sarvam production database boundary
+Sarvam-specific production modules, provider bindings, webhooks, lifecycle controls, calling-window logic, retry controls and prompts remain independently operable and are not refactored merely to support the private system.
 
 Current Sarvam workflow writes to:
 - `voice_campaigns`
@@ -88,7 +55,7 @@ Current Sarvam workflow writes to:
 - `external_renewal_voice_attempts`
 - `external_renewal_voice_attempt_events`
 
-The private agent must never use these as writable private runtime state during the isolated rollout.
+Private-agent runtime state must not be written into those tables.
 
 ---
 
@@ -97,7 +64,7 @@ The private agent must never use these as writable private runtime state during 
 ```text
 INSUREIT business/customer context
           ↓
-Private Voice Campaign / Session
+Private campaign / session
           ↓
 Private dispatcher
           ↓
@@ -118,21 +85,9 @@ INSUREIT Agent Runtime
 Streaming TTS
           ↓
 Customer
-
-Private runtime state
-          ↓
-Private attempts / turns / evaluations
-          ↓
-Private reporting + A/B comparison
 ```
 
-Provider interfaces are replaceable:
-- `PrivateVoiceTelephonyProvider`
-- `PrivateVoiceSpeechToTextProvider`
-- `PrivateVoiceLanguageModelProvider`
-- `PrivateVoiceTextToSpeechProvider`
-
-Initial private-agent work may reuse Sarvam telephony/STT/TTS if useful, but the managed Sarvam conversational-agent layer remains independent.
+Provider interfaces remain replaceable: Telephony, STT, LLM and TTS.
 
 ---
 
@@ -140,36 +95,22 @@ Initial private-agent work may reuse Sarvam telephony/STT/TTS if useful, but the
 
 ## Phase 0 — Baseline, isolation and UI foundation — COMPLETE
 
+Delivered the working-system documentation, private-agent continuity rules, IT-only `Insureit Agent` workspace and explicit no-live-call boundary.
+
+PR #2442 passed `Verify web portal` workflow #4710 and merged as `9fdc75d21d3cfd1984fd5b460e9e2d1a434c5198`.
+
+## Phase 1 — Technical isolation — COMPLETE
+
 Delivered:
-- documented the working Sarvam architecture and reusable boundaries;
-- created this rollout source of truth;
-- added mandatory Voice AI continuity rules to `AGENTS.md` and Voice Integration `AGENTS.md`;
-- added Development → Voice Agents → `Insureit Agent`;
-- added IT-Super-User-only `/system/voice-integration/insureit-agent` UI shell;
-- no private live calls and no Sarvam production behavior changes.
+- provider-neutral private voice contracts;
+- independent `PRIVATE_VOICE_*` configuration and kill switches;
+- separate private status/dispatch API namespace;
+- isolated private schema;
+- dedicated schema workflow and production migration wait gate;
+- Phase 1 UI foundation;
+- private dispatch remains hard-locked and cannot place calls.
 
-PR #2442 passed `Verify web portal` workflow #4710 and was merged as `9fdc75d21d3cfd1984fd5b460e9e2d1a434c5198`. Deployment was not separately requested/verified in that step.
-
-## Phase 1 — Technical isolation — CURRENT
-
-Goals:
-- isolated private campaign/attempt/session/event/training/evaluation schema;
-- independent private configuration namespace and kill switches;
-- provider-neutral TypeScript contracts;
-- a separate private status/execution API namespace;
-- UI visibility into the isolation boundary;
-- no Sarvam-path mutation and no live calling.
-
-Phase 1 repository implementation:
-- `apps/web-portal/lib/private-voice/contracts.ts`
-- `apps/web-portal/lib/private-voice/config.ts`
-- `apps/web-portal/app/api/system/private-voice/status/route.ts`
-- `apps/web-portal/app/api/system/private-voice/dispatch/route.ts`
-- `supabase/migrations/202609260001_private_voice_phase1_isolation.sql`
-- `.github/workflows/apply-private-voice-phase1-isolation.yml`
-- updated `/system/voice-integration/insureit-agent` page.
-
-Prepared isolated tables:
+Prepared/applied private tables:
 - `private_voice_campaigns`
 - `private_voice_campaign_members`
 - `private_voice_attempts`
@@ -180,34 +121,89 @@ Prepared isolated tables:
 - `private_voice_training_examples`
 - `private_voice_evaluations`
 
-All private tables have RLS enabled with no direct browser policies in Phase 1, leaving them service-role-only by default.
+PR #2443 passed canonical `Verify web portal` run #4717 and merged as `910ed1464c1cc77f58b712343c35ddeb12a5d1bd`.
 
-Independent environment namespace:
-- `PRIVATE_VOICE_ENABLED`
-- `PRIVATE_VOICE_OUTBOUND_ENABLED`
-- `PRIVATE_VOICE_SHADOW_ENABLED`
-- `PRIVATE_VOICE_TELEPHONY_PROVIDER`
-- `PRIVATE_VOICE_STT_PROVIDER`
-- `PRIVATE_VOICE_LLM_PROVIDER`
-- `PRIVATE_VOICE_TTS_PROVIDER`
+### 2026-09-26 realization
+A direct production database readiness check confirmed the Phase 1 private tables are present (`private_voice_training_examples`, `private_voice_evaluations`, `private_voice_campaigns` resolved successfully). This updates the earlier pre-merge note that migration application was still pending. This verification did not enable private calling.
 
-Defaults remain OFF/unconfigured. No Sarvam flag is reused.
+## Phase 2 — Training and evaluation dataset — CURRENT
 
-The Phase 1 read-only status endpoint is IT-Super-User-only and exposes only safe configuration state. The separate private dispatch endpoint is deliberately hard-locked and always returns HTTP 409 in Phase 1; it cannot place a call or write an attempt. This reserves the private execution namespace without creating a shortcut into the Sarvam production dispatcher.
+Goal: build a privacy-safe historical-call curation pipeline with separate training, validation and permanent-test candidates. Teach structured behavior/outcomes rather than blindly imitating transcripts.
 
-A dedicated schema workflow is prepared to apply and verify the nine private tables after merge. It verifies all nine tables, RLS, and continued presence of the existing Sarvam campaign/attempt tables.
+### Phase 2 implementation on `feature/insureit-private-voice-phase2-training-library`
 
-The production deployment wait gate now explicitly recognizes `202609260001_private_voice_phase1_isolation.sql`, rejects unrelated migrations in the same release, and waits for `apply-private-voice-phase1-isolation.yml` before allowing the downstream production deployment path to continue.
+Added:
+- `apps/web-portal/lib/private-voice/training-library.ts`
+- `apps/web-portal/app/api/system/private-voice/training-library/stage/route.ts`
+- upgraded `/system/voice-integration/insureit-agent` to a real Training Library workspace.
 
-**Important:** migration committed in Phase 1 is not the same as migration applied. Do not report these tables as present in production until the migration is explicitly applied and verified.
+Historical-source eligibility requires:
+- `submission_status = completed`;
+- `connectivity_status = connected`;
+- `completion_status = completed`;
+- duration >= 20 seconds;
+- persisted `call_summary`;
+- persisted structured `call_disposition`.
 
-## Phase 2 — Training and evaluation dataset
+Additional low-signal screening removes generic no-response/no-audio `no_decision` examples before they are staged.
 
-Build a privacy-safe historical-call curation pipeline. Maintain separate training, validation and permanent untouched test sets. Exclude provider failures, empty/no-answer calls, corrupt transcripts and known poor/hallucinated examples. Teach structured behavior and decisions rather than blindly imitating transcripts.
+### Privacy boundary
+
+The staging pipeline never copies mobile, RC, customer name or raw provider payloads into the private training record. It resolves source identity only to redact sensitive literals from stored summaries/objections, applies generic mobile/RC/long-ID redaction, and stores only approved contextual features such as renewal bucket, days-to-expiry, repeat-call state, vehicle make/model and duration bucket.
+
+The source attempt UUID is retained as `source_reference` for traceability and de-duplication.
+
+### Dataset split
+
+Eligible source UUIDs are deterministically assigned:
+- 70% training;
+- 15% validation;
+- 15% permanent-test candidate.
+
+This keeps the split stable across repeated staging runs. Test rows are marked as permanent-test candidates in quality labels; later review/versioning work must ensure they are never used for training.
+
+### Important realization — raw transcript availability
+
+The current Sarvam production database intentionally persists normalized outcomes and `call_summary`, but **does not persist raw conversation transcripts/turns** in `external_renewal_voice_attempts` or `external_renewal_voice_attempt_events`.
+
+Therefore Phase 2 cannot honestly reconstruct full historical conversations from the current production database. The first Training Library uses privacy-redacted structured call summaries/outcomes only.
+
+If the user supplies the larger raw transcript corpus mentioned for training, it must enter through a separate privacy-reviewed import pipeline. Do not fabricate missing conversation turns from summaries.
+
+### Phase 2 UI
+
+The Insureit Agent page now shows:
+- historical attempt count;
+- eligible-source count;
+- automatically excluded-source count;
+- staged total;
+- training / validation / test counts;
+- recent redacted examples;
+- eligibility, privacy, split and low-signal rules;
+- explicit raw-transcript-not-stored notice;
+- IT-only `Stage next 200 eligible calls` action.
+
+The staging action is explicit/manual; page load does not mutate data.
+
+### Not implemented / not authorized
+- no raw transcript import yet;
+- no human approve/exclude/relabel workflow yet;
+- no frozen/versioned dataset releases yet;
+- no text LLM agent yet;
+- no evaluation replay engine yet;
+- no private telephony/STT/TTS;
+- no live private calls;
+- no writes to Sarvam campaign/attempt tables.
+
+### Evidence state
+**IMPLEMENTED on feature branch; PR/CI/merge/deployment pending.**
+
+### Next safe step
+Run repository verification and create the Phase 2 PR. After merge, stage a controlled first batch through the UI and inspect redaction/split quality before implementing human review and dataset versioning. Phase 3 should not train or evaluate an LLM until the permanent-test boundary and review workflow are proven.
 
 ## Phase 3 — Text-only private agent
 
-Build and evaluate the agent brain without telephony: natural Hindi/Hinglish/English, customer/vehicle/policy context, prior-call awareness, concise renewal flow, safe identity handling and structured outputs.
+Build and evaluate the agent brain without telephony: Hindi/Hinglish/English, customer/vehicle/policy context, prior-call awareness, concise renewal flow, safe identity handling and structured outputs.
 
 ## Phase 4 — Deterministic conversation state machine
 
@@ -227,11 +223,11 @@ Streaming audio, VAD/turn detection, partial transcripts, response streaming, ba
 
 ## Phase 8 — Shadow mode
 
-Sarvam remains authoritative and speaks to the customer. Private agent receives approved context/transcript in parallel and proposes next response/outcome only; it is not heard by the customer.
+Sarvam remains authoritative and speaks to the customer. Private agent receives approved context/transcript in parallel and proposes next response/outcome only.
 
 ## Phase 9 — Internal test calls
 
-Approved internal/test numbers only, including interruptions, silence, wrong-person, DNC, already-renewed, callback, quote, claims objections and multi-vehicle scenarios.
+Approved internal/test numbers only.
 
 ## Phase 10 — Controlled customer pilot
 
@@ -260,39 +256,11 @@ Before meaningful production migration target:
 
 # Progress log
 
-## 2026-09-25 — Phase 0 foundation
+## 2026-09-25 — Phase 0
+PR #2442 merged; baseline/isolation/UI shell completed; no private runtime or calling.
 
-**Evidence:** PR #2442; Verify web portal #4710 success; merged as `9fdc75d21d3cfd1984fd5b460e9e2d1a434c5198`. Deployment not separately verified.
+## 2026-09-26 — Phase 1
+PR #2443 merged after Verify web portal #4717. Isolated private schema/config/provider contracts delivered. Production database check later confirmed private schema presence. Private outbound remains disabled.
 
-**Safety:** no private runtime/schema/providers/live calling; Sarvam production behavior untouched.
-
-## 2026-09-26 — Phase 1 technical isolation
-
-### Implemented on `feature/insureit-private-voice-phase1`
-- introduced provider-neutral private voice contracts;
-- introduced independent configuration/kill-switch namespace with all execution flags OFF by default;
-- prepared nine isolated private-agent tables with RLS enabled and no browser policies;
-- introduced an IT-Super-User-only private status endpoint;
-- introduced a separate private dispatch endpoint that is intentionally locked with HTTP 409 during Phase 1;
-- prepared a dedicated schema-application/verification workflow for the private tables;
-- wired the private migration into the production schema wait gate with an unrelated-migration rejection guard;
-- upgraded the `Insureit Agent` page from Phase 0 placeholder to Phase 1 foundation dashboard showing data boundaries, configuration flags and provider contracts;
-- preserved the working Sarvam system without edits.
-
-### Release-gate result
-`deploy-production.yml` now explicitly recognizes `supabase/migrations/202609260001_private_voice_phase1_isolation.sql` and waits for `.github/workflows/apply-private-voice-phase1-isolation.yml`. The gate also rejects any unrelated migration bundled into this private-voice release before deployment can proceed.
-
-### Not implemented / not authorized
-- migration not yet applied to Supabase;
-- no telephony provider implementation;
-- no STT/TTS/LLM implementation;
-- no provider credentials;
-- no private dispatcher engine/provider call/webhook;
-- no live private calls;
-- no writes to Sarvam campaign/attempt tables.
-
-### Evidence state
-**IMPLEMENTED on feature branch; PR #2443 open. Verify web portal run #4716 passed on gate-wiring commit `281b7b6664fb6865d69b9d444c03d830d4d7ae75`. This documentation commit requires the canonical PR verification to pass again before merge. Migration application and merge remain pending.**
-
-### Next safe step
-Wait for the canonical verification on the latest PR head to pass. After explicit merge approval, allow the dedicated schema workflow to apply and verify only the isolated private schema. Then Phase 2 can build a privacy-safe Training Library extractor/reviewer without enabling telephony.
+## 2026-09-26 — Phase 2
+Training Library pipeline/UI implemented on `feature/insureit-private-voice-phase2-training-library`. Historical normalized outcomes are curated with explicit eligibility, low-signal screening, privacy redaction and deterministic 70/15/15 splits. Raw transcript absence was confirmed and recorded. **PR/CI/merge/deployment pending.**
