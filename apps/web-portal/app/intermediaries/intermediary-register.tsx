@@ -40,6 +40,7 @@ type ApplicationState = {
   final_type: string | null;
   draft_data: Record<string, unknown> | null;
   partner_record_id: string | null;
+  created_at: string;
 };
 type Filters = {
   search?: string;
@@ -51,7 +52,7 @@ type Filters = {
   error?: string;
 };
 const REGISTERED_STATUS = "iib_registered";
-const APPLICATION_SELECT = "id,registration_status,partner_status,requested_type,final_type,draft_data,partner_record_id";
+const APPLICATION_SELECT = "id,registration_status,partner_status,requested_type,final_type,draft_data,partner_record_id,created_at";
 
 export async function IntermediaryRegister({
   selectedType,
@@ -163,6 +164,7 @@ export async function IntermediaryRegister({
         partnerId,
         accountType: allowedType === "misp" ? "Business" : "Individual",
         assignedRm,
+        onboardingDate: app?.created_at ?? row.updated_at,
         linkedLabel,
         linkedHref: linked ? `/intermediaries/applications/${linked.id}` : null,
         portalAccess: portalAccessLabel(row.portal_access_status),
@@ -220,35 +222,15 @@ export async function IntermediaryRegister({
   );
 }
 
-function PartnerTable({
-  rows,
-  applicationMap,
-  linkedApplicationMap,
-  canReview,
-}: {
-  rows: IntermediaryRow[];
-  applicationMap: Map<string, ApplicationState>;
-  linkedApplicationMap: Map<string, ApplicationState>;
-  canReview: boolean;
-}) {
+function PartnerTable({ rows, applicationMap, linkedApplicationMap, canReview }: { rows: IntermediaryRow[]; applicationMap: Map<string, ApplicationState>; linkedApplicationMap: Map<string, ApplicationState>; canReview: boolean }) {
   return <div className="overflow-x-auto"><table className="w-full min-w-[1120px] table-fixed text-left text-[10.5px]"><thead className="border-b text-[8.5px] uppercase text-[#64748B]"><tr><th className="px-4 py-3">Partner Name</th><th className="px-3 py-3">Mobile Number</th><th className="px-3 py-3">Partner ID</th><th className="px-3 py-3">Type</th><th className="px-3 py-3">Assigned RM</th><th className="px-3 py-3">Linked account</th><th className="px-3 py-3">Portal access</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 pr-8 text-right">Action</th></tr></thead><tbody className="divide-y">{rows.map((row) => {
     const app = applicationMap.get(row.application_id as string);
     const linked = app?.partner_record_id ? linkedApplicationMap.get(app.partner_record_id) : undefined;
     const allowedType = app?.requested_type ?? row.requested_type;
     const linkedType = linked ? accountContext(linked) : allowedType;
-        const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
+    const assignedRm = textValue(app?.draft_data?.associate_name) ?? "Not assigned";
     const partnerComplete = app?.partner_status === "active_partner";
-    const action = !partnerComplete ? (
-      <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className={compactDarkActionClassName}>Open</FreshAccountReviewLink>
-    ) : linked ? (
-      <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className={compactDarkActionClassName}>Open {linkedType.toUpperCase()}</FreshAccountReviewLink>
-    ) : canReview ? (
-      <form action={createLinkedIntermediaryAccount}>
-        <input type="hidden" name="application_id" value={row.application_id as string} />
-        <input type="hidden" name="registration_type" value={allowedType} />
-        <FormSubmitButton label={`Create ${allowedType.toUpperCase()}`} pendingLabel={`Creating ${allowedType.toUpperCase()}...`} className={compactPrimaryActionClassName} />
-      </form>
-    ) : <span className="text-[#94A3B8]">—</span>;
+    const action = !partnerComplete ? <FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className={compactDarkActionClassName}>Open</FreshAccountReviewLink> : linked ? <FreshAccountReviewLink href={`/intermediaries/applications/${linked.id}`} className={compactDarkActionClassName}>Open {linkedType.toUpperCase()}</FreshAccountReviewLink> : canReview ? <form action={createLinkedIntermediaryAccount}><input type="hidden" name="application_id" value={row.application_id as string} /><input type="hidden" name="registration_type" value={allowedType} /><FormSubmitButton label={`Create ${allowedType.toUpperCase()}`} pendingLabel={`Creating ${allowedType.toUpperCase()}...`} className={compactPrimaryActionClassName} /></form> : <span className="text-[#94A3B8]">—</span>;
     return <tr key={row.id} className="h-[52px] transition hover:bg-[#F8FAFF]"><td className="truncate px-4 py-3"><FreshAccountReviewLink href={`/intermediaries/applications/${row.application_id}`} className="font-semibold text-[#0F2A55] hover:text-[#315FEA] hover:underline">{row.display_name}</FreshAccountReviewLink></td><td className="truncate px-3 py-3 font-medium text-[#17203A]" title={mobile10(row.mobile)}>{mobile10(row.mobile)}</td><td className="truncate px-3 py-3 font-semibold text-[#0F2A55]" title={displayIdentity(row, app, "partner")}>{displayIdentity(row, app, "partner")}</td><td className="px-3 py-3">{allowedType === "misp" ? "Business" : "Individual"}</td><td className={`truncate px-3 py-3 ${assignedRm === "Not assigned" ? "font-medium text-amber-700" : "text-[#17203A]"}`} title={assignedRm}>{assignedRm}</td><td className="px-3 py-3"><Status value={linked ? linkedAccountLabel(linkedType, linked.registration_status) : "Not created"} tone="linked" /></td><td className="px-3 py-3"><Status value={portalAccessLabel(row.portal_access_status)} tone="portal" /></td><td className="px-3 py-3"><Status value={partnerStatusLabel(app?.partner_status ?? row.account_status)} tone="account" /></td><td className="px-3 py-3 pr-8 text-right">{action}</td></tr>;
   })}</tbody></table></div>;
 }
@@ -265,130 +247,30 @@ function DefaultIntermediaryTable({ rows, applicationMap, selectedType, canRevie
   })}</tbody></table></div>;
 }
 
-function accountContext(app: ApplicationState | undefined): IntermediaryType {
-  const context = app?.draft_data?.account_context;
-  return context === "posp" || context === "misp" ? context : "partner";
-}
-
-function accountLabel(context: IntermediaryType, app: ApplicationState | undefined) {
-  if (context === "partner") return app?.partner_status === "active_partner" ? "Partner" : "Partner onboarding";
-  return `${context.toUpperCase()} onboarding`;
-}
-
-function deriveLifecycle(app: ApplicationState | undefined, context = accountContext(app)) {
-  const status = app?.registration_status ?? "";
-  if (context === "partner") {
-    if (app?.partner_status === "active_partner") return { stage: "Active Partner", account: "Active Partner" };
-    if (status === "documents_pending") return { stage: "Documents Pending", account: "Partner Onboarding" };
-    return { stage: "Pending Partner", account: "Partner Onboarding" };
-  }
-  if (status === REGISTERED_STATUS) return { stage: `Active ${context.toUpperCase()}`, account: `Active ${context.toUpperCase()}` };
-  if (status.includes("iib") || status.includes("upload")) return { stage: "IIB Upload Pending", account: "Under Onboarding" };
-  if (status.includes("agreement") && status.includes("complete")) return { stage: "IIB Upload Pending", account: "Under Onboarding" };
-  if (status.includes("agreement")) return { stage: "Agreement Pending", account: "Under Onboarding" };
-  if (status.includes("exam") && status.includes("pass")) return { stage: "Agreement Pending", account: "Under Onboarding" };
-  if (status.includes("training") && status.includes("complete")) return { stage: "Training Completed", account: "Under Onboarding" };
-  if (status.includes("training") || status.includes("exam")) return { stage: "Training Started", account: "Under Onboarding" };
-  return { stage: `${context.toUpperCase()} Onboarding Pending`, account: "Under Onboarding" };
-}
-
-function permanentCodes(row: IntermediaryRow) {
-  return [row.intermediary_code?.trim(), row.onboarding_id?.trim()].filter((value): value is string => Boolean(value) && !value!.startsWith("PENDING-"));
-}
-
-function displayIdentity(row: IntermediaryRow, app: ApplicationState | undefined, selectedType: IntermediaryType | null) {
-  const context = selectedType ?? accountContext(app);
-  const codes = permanentCodes(row);
-  if (context === "partner") {
-    return codes[0] ?? textValue(app?.draft_data?.legacy_partner_code) ?? "Partner ID pending";
-  }
-  return codes[0] ?? textValue(app?.draft_data?.legacy_registration_code) ?? textValue(app?.draft_data?.existing_registration_code) ?? `${context.toUpperCase()} ID pending`;
-}
-
-function parentPartnerId(row: IntermediaryRow, app: ApplicationState | undefined) {
-  const context = accountContext(app);
-  const codes = permanentCodes(row);
-  const prefixedPartnerId = codes.find((code) => code.startsWith("PART-"));
-  const linkedCode = textValue(app?.draft_data?.linked_partner_code) ?? textValue(app?.draft_data?.legacy_partner_code);
-  if (context === "partner") return "Self";
-  return linkedCode ?? prefixedPartnerId ?? "Partner ID pending";
-}
-
-function partnerLocation(row: IntermediaryRow, app: ApplicationState | undefined) {
-  const city = textValue(app?.draft_data?.city) ?? row.city;
-  const state = textValue(app?.draft_data?.state);
-  return [city, state].filter(Boolean).join(", ") || "—";
-}
-
-function linkedAccountLabel(type: IntermediaryType, status: string) {
-  if (status === REGISTERED_STATUS) return `${type.toUpperCase()} active`;
-  return `${type.toUpperCase()} onboarding`;
-}
-
-function portalAccessLabel(status: string) {
-  if (status === "active") return "Active";
-  if (status === "invited") return "Invitation sent";
-  if (status === "disabled" || status === "suspended") return "Disabled";
-  return "Not created";
-}
-
-function partnerStatusLabel(status: string) {
-  if (status === "active_partner" || status === "active") return "Active";
-  if (status === "suspended_partner" || status === "suspended") return "Suspended";
-  if (status === "inactive_partner" || status === "inactive") return "Inactive";
-  if (status === "rejected") return "Rejected";
-  return "Pending";
-}
-
-function registerFilterHref(base: string, search: string, status: string) {
-  const params = new URLSearchParams();
-  if (search) params.set("q", search);
-  if (status) params.set("account_status", status);
-  const query = params.toString();
-  return `${base}${query ? `?${query}` : ""}`;
-}
+function accountContext(app: ApplicationState | undefined): IntermediaryType { const context = app?.draft_data?.account_context; return context === "posp" || context === "misp" ? context : "partner"; }
+function accountLabel(context: IntermediaryType, app: ApplicationState | undefined) { if (context === "partner") return app?.partner_status === "active_partner" ? "Partner" : "Partner onboarding"; return `${context.toUpperCase()} onboarding`; }
+function deriveLifecycle(app: ApplicationState | undefined, context = accountContext(app)) { const status = app?.registration_status ?? ""; if (context === "partner") { if (app?.partner_status === "active_partner") return { stage: "Active Partner", account: "Active Partner" }; if (status === "documents_pending") return { stage: "Documents Pending", account: "Partner Onboarding" }; return { stage: "Pending Partner", account: "Partner Onboarding" }; } if (status === REGISTERED_STATUS) return { stage: `Active ${context.toUpperCase()}`, account: `Active ${context.toUpperCase()}` }; if (status.includes("iib") || status.includes("upload")) return { stage: "IIB Upload Pending", account: "Under Onboarding" }; if (status.includes("agreement") && status.includes("complete")) return { stage: "IIB Upload Pending", account: "Under Onboarding" }; if (status.includes("agreement")) return { stage: "Agreement Pending", account: "Under Onboarding" }; if (status.includes("exam") && status.includes("pass")) return { stage: "Agreement Pending", account: "Under Onboarding" }; if (status.includes("training") && status.includes("complete")) return { stage: "Training Completed", account: "Under Onboarding" }; if (status.includes("training") || status.includes("exam")) return { stage: "Training Started", account: "Under Onboarding" }; return { stage: `${context.toUpperCase()} Onboarding Pending`, account: "Under Onboarding" }; }
+function permanentCodes(row: IntermediaryRow) { return [row.intermediary_code?.trim(), row.onboarding_id?.trim()].filter((value): value is string => Boolean(value) && !value!.startsWith("PENDING-")); }
+function displayIdentity(row: IntermediaryRow, app: ApplicationState | undefined, selectedType: IntermediaryType | null) { const context = selectedType ?? accountContext(app); const codes = permanentCodes(row); if (context === "partner") return codes[0] ?? textValue(app?.draft_data?.legacy_partner_code) ?? "Partner ID pending"; return codes[0] ?? textValue(app?.draft_data?.legacy_registration_code) ?? textValue(app?.draft_data?.existing_registration_code) ?? `${context.toUpperCase()} ID pending`; }
+function parentPartnerId(row: IntermediaryRow, app: ApplicationState | undefined) { const context = accountContext(app); const codes = permanentCodes(row); const prefixedPartnerId = codes.find((code) => code.startsWith("PART-")); const linkedCode = textValue(app?.draft_data?.linked_partner_code) ?? textValue(app?.draft_data?.legacy_partner_code); if (context === "partner") return "Self"; return linkedCode ?? prefixedPartnerId ?? "Partner ID pending"; }
+function partnerLocation(row: IntermediaryRow, app: ApplicationState | undefined) { const city = textValue(app?.draft_data?.city) ?? row.city; const state = textValue(app?.draft_data?.state); return [city, state].filter(Boolean).join(", ") || "—"; }
+function linkedAccountLabel(type: IntermediaryType, status: string) { if (status === REGISTERED_STATUS) return `${type.toUpperCase()} active`; return `${type.toUpperCase()} onboarding`; }
+function portalAccessLabel(status: string) { if (status === "active") return "Active"; if (status === "invited") return "Invitation sent"; if (status === "disabled" || status === "suspended") return "Disabled"; return "Not created"; }
+function partnerStatusLabel(status: string) { if (status === "active_partner" || status === "active") return "Active"; if (status === "suspended_partner" || status === "suspended") return "Suspended"; if (status === "inactive_partner" || status === "inactive") return "Inactive"; if (status === "rejected") return "Rejected"; return "Pending"; }
+function registerFilterHref(base: string, search: string, status: string) { const params = new URLSearchParams(); if (search) params.set("q", search); if (status) params.set("account_status", status); const query = params.toString(); return `${base}${query ? `?${query}` : ""}`; }
 function mobile10(value: string | null | undefined) { const digits = value?.replace(/\D/g, "") ?? ""; return digits.length >= 10 ? digits.slice(-10) : digits || "—"; }
-function textValue(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
+function textValue(value: unknown) { return typeof value === "string" && value.trim() ? value.trim() : null; }
 
 async function buildRegisterCounter(admin: ReturnType<typeof createSupabaseAdminClient>, accessibleIds: string[] | null) {
   let countRequest = admin.from("intermediaries").select("id,intermediary_type,application_id");
   if (accessibleIds !== null) countRequest = accessibleIds.length ? countRequest.in("id", accessibleIds) : countRequest.in("id", ["00000000-0000-0000-0000-000000000000"]);
   const { data: allCounts } = await countRequest.returns<Array<{ id: string; intermediary_type: IntermediaryType; application_id: string | null }>>();
   const countAppIds = (allCounts ?? []).map((row) => row.application_id).filter((value): value is string => Boolean(value));
-  const { data: countApps } = countAppIds.length
-    ? await admin.from("intermediary_onboarding_applications").select(APPLICATION_SELECT).in("id", countAppIds).returns<ApplicationState[]>()
-    : { data: [] as ApplicationState[] };
+  const { data: countApps } = countAppIds.length ? await admin.from("intermediary_onboarding_applications").select(APPLICATION_SELECT).in("id", countAppIds).returns<ApplicationState[]>() : { data: [] as ApplicationState[] };
   const countStatusMap = new Map((countApps ?? []).map((item) => [item.id, item]));
-  return (type: IntermediaryType) =>
-    (allCounts ?? []).filter((row) => {
-      if (!row.application_id || row.intermediary_type !== type) return false;
-      const application = countStatusMap.get(row.application_id);
-      return Boolean(application && accountContext(application) === type);
-    }).length;
+  return (type: IntermediaryType) => (allCounts ?? []).filter((row) => { if (!row.application_id || row.intermediary_type !== type) return false; const application = countStatusMap.get(row.application_id); return Boolean(application && accountContext(application) === type); }).length;
 }
 
-function MetricFilter({ label, value, href, active }: { label: string; value: number; href: string; active: boolean }) {
-  return <Link href={href} className={`bg-white/90 px-4 py-3 ${active ? "bg-[#EEF2FF]" : ""}`}><p className="text-[9px] uppercase text-[#64748B]">{label}</p><p className="mt-1 text-xl font-semibold">{value}</p></Link>;
-}
-
-function metricHref(metric: IntermediaryType, search: string, activeMetric: IntermediaryType | null) {
-  const params = new URLSearchParams();
-  if (search) params.set("q", search);
-  if (activeMetric !== metric) params.set("type", metric);
-  const query = params.toString();
-  return `/intermediaries${query ? `?${query}` : ""}`;
-}
-
-function Status({ value, tone = "default" }: { value: string; tone?: "default" | "linked" | "portal" | "account" }) {
-  const normalized = value.toLowerCase();
-  const cls = tone === "linked"
-    ? "border-violet-200 bg-violet-50 text-violet-700"
-    : tone === "portal"
-      ? "border-sky-200 bg-sky-50 text-sky-700"
-      : tone === "account"
-        ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"
-        : "border-slate-200 bg-slate-50 text-slate-700";
-  return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>;
-}
+function MetricFilter({ label, value, href, active }: { label: string; value: number; href: string; active: boolean }) { return <Link href={href} className={`bg-white/90 px-4 py-3 ${active ? "bg-[#EEF2FF]" : ""}`}><p className="text-[9px] uppercase text-[#64748B]">{label}</p><p className="mt-1 text-xl font-semibold">{value}</p></Link>; }
+function metricHref(metric: IntermediaryType, search: string, activeMetric: IntermediaryType | null) { const params = new URLSearchParams(); if (search) params.set("q", search); if (activeMetric !== metric) params.set("type", metric); const query = params.toString(); return `/intermediaries${query ? `?${query}` : ""}`; }
+function Status({ value, tone = "default" }: { value: string; tone?: "default" | "linked" | "portal" | "account" }) { const normalized = value.toLowerCase(); const cls = tone === "linked" ? "border-violet-200 bg-violet-50 text-violet-700" : tone === "portal" ? "border-sky-200 bg-sky-50 text-sky-700" : tone === "account" ? normalized.includes("active") ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-700"; return <span className={`inline-flex rounded-md border px-2 py-1 text-[8.5px] font-semibold ${cls}`}>{value}</span>; }
