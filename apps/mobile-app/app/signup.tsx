@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   accountTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   accountIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#EAF3FF', alignItems: 'center', justifyContent: 'center' },
   accountCopy: { flex: 1, minWidth: 0 },
-  accountName: { color: '#071D49', fontSize: 15, fontWeight: '750' },
+  accountName: { color: '#071D49', fontSize: 15, fontWeight: '700' },
   accountCode: { color: '#64748B', fontSize: 11.5, marginTop: 2 },
   accountMetaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 13, paddingTop: 11, borderTopWidth: 1, borderTopColor: '#E8EEF6' },
   accountStat: { flex: 1, alignItems: 'center' },
@@ -394,6 +394,6 @@ const styles = StyleSheet.create({
   continueButton: { minHeight: 46, marginTop: 12, borderRadius: 12, backgroundColor: '#0B63CE', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   continueButtonPressed: { opacity: 0.9 },
   continueButtonDisabled: { opacity: 0.65 },
-  continueButtonText: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '750' },
+  continueButtonText: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' },
   accountHelp: { color: '#64748B', fontSize: 11.5, lineHeight: 16, textAlign: 'center', marginTop: 2 },
 });
