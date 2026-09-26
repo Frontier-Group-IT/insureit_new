@@ -6,6 +6,7 @@ import { canAccessPolicyCommercials } from "@/lib/policy-commercial-access";
 import { getDashboardCurrentData, type DashboardAccess } from "./dashboard-data";
 import { getDashboardBusinessData, type DashboardBusinessQuery } from "./dashboard-business";
 import { DashboardFullyLoaded } from "./dashboard-view";
+import styles from "./dashboard-readability.module.css";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -74,13 +75,15 @@ export default async function DashboardV2Page({ searchParams }: { searchParams: 
 
   return (
     <ClaimManagerShell title="Operations Overview" activeNav="dashboard">
-      <DashboardFullyLoaded
-        data={data}
-        access={access}
-        business={business}
-        canCreatePolicy={createPolicies || editPolicies}
-        canCreatePolicyIntake={createPolicyIntakes}
-      />
+      <div className={styles.readable}>
+        <DashboardFullyLoaded
+          data={data}
+          access={access}
+          business={business}
+          canCreatePolicy={createPolicies || editPolicies}
+          canCreatePolicyIntake={createPolicyIntakes}
+        />
+      </div>
     </ClaimManagerShell>
   );
 }
