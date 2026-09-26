@@ -5,7 +5,7 @@ import {
   buildDatasetSnapshot,
   hashDatasetSnapshot,
   type ReviewableTrainingExample,
-} from "../lib/private-voice/dataset-versioning";
+} from "../lib/private-voice/dataset-versioning.ts";
 
 function example(id: string, split: "training" | "validation" | "test", permanentTestCandidate = split === "test"): ReviewableTrainingExample {
   return {
