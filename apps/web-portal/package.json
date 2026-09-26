@@ -64,7 +64,8 @@
     "partner-web:core-regression": "node scripts/partner-web-core-regression.mjs && node scripts/partner-external-renewal-crm-regression.mjs && node scripts/partner-external-renewal-followup-regression.mjs && node scripts/partner-external-renewal-policy-intake-regression.mjs && node scripts/partner-external-renewal-intake-lifecycle-regression.mjs && node scripts/partner-external-renewal-voice-regression.mjs",
     "policy-ocr:icici-lombard-regression": "node --experimental-strip-types scripts/policy-ocr-icici-lombard-regression.ts && node --experimental-strip-types scripts/policy-ocr-icici-native-pdf-regression.ts",
     "vehicle-transfer:regression": "node scripts/vehicle-full-customer-transfer-regression.mjs",
-    "voice-campaign-export:regression": "node scripts/voice-campaign-export-regression.mjs"
+    "voice-campaign-export:regression": "node scripts/voice-campaign-export-regression.mjs",
+    "customer-app-master-link:regression": "node scripts/customer-app-existing-master-link-regression.mjs"
   },
   "dependencies": {
     "@insureit/claim-journey": "0.1.0",
