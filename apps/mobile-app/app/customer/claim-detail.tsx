@@ -4,11 +4,13 @@ import { projectInternalClaim } from '@insureit/claim-journey';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { ClaimFinancialSummary } from '@/components/external-claim-ui';
 import { EmptyState, LoadingState, Message, Screen } from '@/components/ui';
 import { hasAllRequiredDocuments, hasOutstandingRejectedDocumentsForStatus, requestedFinalDocumentTypesFor } from '@/lib/claim-documents';
+import { getInsurerLogoSource } from '@/lib/catalog-logos';
 import { SELF_MANAGED_MILESTONES, type ClaimMilestone, type ClaimMilestoneKey } from '@/lib/claim-service-mode';
 import { formatJourneyAmount, formatJourneyDate, stageMainAmount } from '@/lib/self-managed-claim-timeline';
 import { supabase } from '@/lib/supabase';
@@ -206,7 +208,6 @@ export default function ClaimDetailScreen() {
     <Screen title="Claim Tracker" showLogout showTitleHeader={false}>
       <View style={styles.pageHeading}>
         <View style={styles.pageHeadingCopy}>
-          <Text style={styles.pageEyebrow}>CLAIMS</Text>
           <Text style={styles.pageTitle}>Claim Tracker</Text>
         </View>
         {selfManaged ? <View style={styles.headingActions}>
@@ -276,7 +277,7 @@ export default function ClaimDetailScreen() {
         </View> : null}
       </View>
 
-      {!settled ? <Pressable
+      {selfManaged && !settled ? <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Open ${currentStage?.label ?? 'current milestone'}`}
         onPress={openCurrentStage}
@@ -294,7 +295,7 @@ export default function ClaimDetailScreen() {
         </View>
       </Pressable> : null}
 
-      <SectionHeader title="Claim Journey" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} />
+      <SectionHeader title="Claim Journey" subtitle={`${progress}% complete • ${currentStage?.label ?? claim.current_status}`} expanded={journeyExpanded} onPress={() => setJourneyExpanded((value) => !value)} logo={getInsurerLogoSource(insurer?.name)} />
       {journeyExpanded ? <View style={[styles.sectionBody, styles.journeyBody]}>{SELF_MANAGED_MILESTONES.map((stage, index) => {
         const done = selfManaged ? completedKeys.has(stage.key) : index < internalProjection.completedStageCount;
         const current = !settled && index === currentStageIndex;
@@ -454,9 +455,9 @@ function ProgressRing({ progress, compact = false }: { progress: number; compact
 }
 
 function InfoPair({ leftLabel, leftValue, rightLabel, rightValue }: { leftLabel: string; leftValue: string; rightLabel: string; rightValue: string }) { return <View style={styles.infoPair}><View style={{ flex: 1 }}><Text style={styles.infoLabel}>{leftLabel}</Text><Text style={styles.infoValue}>{leftValue}</Text></View><View style={{ flex: 1 }}><Text style={styles.infoLabel}>{rightLabel}</Text><Text style={styles.infoValue}>{rightValue}</Text></View></View>; }
-function SectionHeader({ title, subtitle, expanded, onPress }: { title: string; subtitle: string; expanded: boolean; onPress: () => void }) {
+function SectionHeader({ title, subtitle, expanded, onPress, logo }: { title: string; subtitle: string; expanded: boolean; onPress: () => void; logo?: ImageSourcePropType | null }) {
   const compactJourney = title === 'Claim Journey';
-  const artwork = title === 'Claim Journey' ? require('../../assets/claims/claims.png') : title === 'Documents' ? require('../../assets/claims/claim-documents.png') : require('../../assets/claims/claim-approval.png');
+  const artwork = logo ?? (title === 'Claim Journey' ? require('../../assets/claims/claims.png') : title === 'Documents' ? require('../../assets/claims/claim-documents.png') : require('../../assets/claims/claim-approval.png'));
   return <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={onPress} style={[styles.sectionHeader, compactJourney && styles.journeyHeader]}><Image source={artwork} style={[styles.sectionHeaderArtwork, compactJourney && styles.journeyHeaderArtwork]} resizeMode="contain" /><View style={styles.sectionHeaderCopy}><Text style={[styles.sectionTitle, compactJourney && styles.journeyHeaderTitle]}>{title}</Text><Text style={[styles.sectionSub, compactJourney && styles.journeyHeaderSub]}>{subtitle}</Text></View><MaterialCommunityIcons name={expanded ? 'chevron-up' : 'chevron-down'} size={compactJourney ? 16 : 22} color="#667C98" /></Pressable>;
 }
 const externalClaimTone = { accent:'#0A43A3',soft:'#EAF2FF',background:'#F7FAFF',border:'#BFD3EB' };
