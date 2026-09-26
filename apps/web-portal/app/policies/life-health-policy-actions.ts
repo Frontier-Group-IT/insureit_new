@@ -180,7 +180,7 @@ export async function createLifeHealthCase(formData: FormData): Promise<LifeHeal
   if (!PAYMENT_MODES.has(paymentMode)) return { ok: false, error: "Select a valid payment mode." };
   if (premiumAmount === null || premiumAmount < 0) return { ok: false, error: "Enter a valid premium amount." };
 
-  const sourceResolution = await resolvePolicyIntermediarySource({ issuanceDate: sourcingDate, intermediaryType, intermediaryCode, leadSource, rmName });
+  const sourceResolution = await resolvePolicyIntermediarySource({ intermediaryType, intermediaryCode, leadSource });
   if (!sourceResolution.ok) return { ok: false, error: sourceResolution.error };
 
   const { data: intermediary, error: intermediaryError } = await admin
