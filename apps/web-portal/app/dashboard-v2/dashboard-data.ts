@@ -268,6 +268,7 @@ export type DashboardCurrentData = {
 const closedClaimStatuses = new Set(["Claim Complete", "Settled", "Closed", "Rejected"]);
 const settledClaimStatuses = new Set(["Settled", "Claim Complete"]);
 const openIntermediaryQueueStatuses = new Set(["submitted", "under_review", "changes_requested"]);
+const dashboardPageSize = 1000;
 
 export async function getDashboardCurrentData(
   profile: ProfileLike | null | undefined,
@@ -309,25 +310,11 @@ export async function getDashboardCurrentData(
   ]);
 
   const policyRequest = access.viewPolicies && policyCustomerIds?.length !== 0
-    ? (() => {
-        let query = admin
-          .from("policies")
-          .select("id,customer_id,vehicle_id,insurance_company_id,policy_type,business_line,business_type,policy_product,status,issuance_date,created_at,end_date,intermediary_type,intermediary_code,lead_source,intermediary_group_id,intermediary_group_name")
-          .limit(15000);
-        if (policyCustomerIds !== null) query = query.in("customer_id", policyCustomerIds);
-        return query.returns<PolicyRow[]>();
-      })()
+    ? loadDashboardPolicies(admin, policyCustomerIds)
     : Promise.resolve({ data: [] as PolicyRow[], error: null });
 
   const vehicleRequest = access.viewVehicles && vehicleCustomerIds?.length !== 0
-    ? (() => {
-        let query = admin
-          .from("vehicles")
-          .select("id,customer_id,vehicle_no,vehicle_type,registration_status,authbridge_verified")
-          .limit(15000);
-        if (vehicleCustomerIds !== null) query = query.in("customer_id", vehicleCustomerIds);
-        return query.returns<VehicleRow[]>();
-      })()
+    ? loadDashboardVehicles(admin, vehicleCustomerIds)
     : Promise.resolve({ data: [] as VehicleRow[], error: null });
 
   const claimRequest = access.viewClaims && claimCustomerIds?.length !== 0
@@ -853,6 +840,46 @@ export async function getDashboardCurrentData(
     commercial,
     warnings,
   };
+}
+
+async function loadDashboardPolicies(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  customerIds: string[] | null,
+) {
+  const rows: PolicyRow[] = [];
+  for (let from = 0; ; from += dashboardPageSize) {
+    let query = admin
+      .from("policies")
+      .select("id,customer_id,vehicle_id,insurance_company_id,policy_type,business_line,business_type,policy_product,status,issuance_date,created_at,end_date,intermediary_type,intermediary_code,lead_source,intermediary_group_id,intermediary_group_name")
+      .order("id", { ascending: true })
+      .range(from, from + dashboardPageSize - 1);
+    if (customerIds !== null) query = query.in("customer_id", customerIds);
+    const result = await query.returns<PolicyRow[]>();
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < dashboardPageSize) return { data: rows, error: null };
+  }
+}
+
+async function loadDashboardVehicles(
+  admin: ReturnType<typeof createSupabaseAdminClient>,
+  customerIds: string[] | null,
+) {
+  const rows: VehicleRow[] = [];
+  for (let from = 0; ; from += dashboardPageSize) {
+    let query = admin
+      .from("vehicles")
+      .select("id,customer_id,vehicle_no,vehicle_type,registration_status,authbridge_verified")
+      .order("id", { ascending: true })
+      .range(from, from + dashboardPageSize - 1);
+    if (customerIds !== null) query = query.in("customer_id", customerIds);
+    const result = await query.returns<VehicleRow[]>();
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data ?? [];
+    rows.push(...page);
+    if (page.length < dashboardPageSize) return { data: rows, error: null };
+  }
 }
 
 type AmountAccumulator = { label: string; policies: number; amount: number };
