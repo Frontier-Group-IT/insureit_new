@@ -5,12 +5,31 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/shell";
 import { createServerSupabaseClient, getAuthenticatedProfile, getServerAccessToken } from "@/lib/auth-server";
 import { getEmployeeAccessScope } from "@/lib/employee-access-scope";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 import { appRoles, roleLabels } from "@/lib/roles";
 import { type EmployeeRow } from "./employee-forms";
 import { EmployeeDirectoryWorkspace } from "./employee-directory-workspace";
 
 const NO_EMPLOYEE_ID = "00000000-0000-0000-0000-000000000000";
+
+type EmployeeSourceRow = {
+  id: string;
+  employee_code: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  department: string;
+  designation: string;
+  vertical: string | null;
+  location: string | null;
+  reporting_manager_id: string | null;
+  reporting_manager_employee_code: string | null;
+  employment_status: "active" | "inactive";
+  portal_profile: { id: string; role: string | null } | { id: string; role: string | null }[] | null;
+};
+
+type ManagerRow = Pick<EmployeeRow, "id" | "employee_code" | "full_name">;
 
 export default async function EmployeesPage({ searchParams }: { searchParams?: Promise<{ q?: string; status?: string }> }) {
   const accessToken = await getServerAccessToken();
@@ -25,40 +44,54 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
   const params = (await searchParams) ?? {};
   const initialStatus = params.status === "inactive" ? "inactive" : "active";
   const supabase = await createServerSupabaseClient();
+  const scopedEmployeeIds = scope.mode !== "organization" ? (scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID]) : null;
 
-  let query = supabase
-    .from("employees")
-    .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id, role)")
-    .order("full_name");
-  let managerQuery = supabase.from("employees").select("id, employee_code, full_name").eq("employment_status", "active").order("full_name");
+  const [employeeResult, managerResult] = await Promise.all([
+    fetchAllPages<EmployeeSourceRow, unknown>((from, to) => {
+      let query = supabase
+        .from("employees")
+        .select("id, employee_code, full_name, phone, email, department, designation, vertical, location, reporting_manager_id, reporting_manager_employee_code, employment_status, portal_profile:profiles!profiles_employee_id_fkey(id, role)")
+        .order("full_name")
+        .range(from, to);
+      if (scopedEmployeeIds) query = query.in("id", scopedEmployeeIds);
+      return query.returns<EmployeeSourceRow[]>();
+    }),
+    fetchAllPages<ManagerRow, unknown>((from, to) => {
+      let query = supabase
+        .from("employees")
+        .select("id, employee_code, full_name")
+        .eq("employment_status", "active")
+        .order("full_name")
+        .range(from, to);
+      if (scopedEmployeeIds) query = query.in("id", scopedEmployeeIds);
+      return query.returns<ManagerRow[]>();
+    }),
+  ]);
 
-  if (scope.mode !== "organization") {
-    const employeeIds = scope.employeeIds.length ? scope.employeeIds : [NO_EMPLOYEE_ID];
-    query = query.in("id", employeeIds);
-    managerQuery = managerQuery.in("id", employeeIds);
-  }
-
-  const [{ data, error }, managerResult] = await Promise.all([query, managerQuery]);
-  const profileRows = (data ?? []).map((row) => {
+  const profileRows = (employeeResult.data ?? []).map((row) => {
     const portalProfile = Array.isArray(row.portal_profile) ? row.portal_profile[0] : row.portal_profile;
     return { row, portalProfile };
   });
 
   const authStatusById = new Map<string, "invited" | "active">();
-  const profileIds = profileRows.map(({ portalProfile }) => portalProfile?.id).filter((id): id is string => Boolean(id));
-  if (profileIds.length) {
+  const profileIds = new Set(profileRows.map(({ portalProfile }) => portalProfile?.id).filter((id): id is string => Boolean(id)));
+  if (profileIds.size) {
     const admin = createSupabaseAdminClient();
-    const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    if (!authUsersError) {
+    const perPage = 1000;
+    for (let page = 1; ; page += 1) {
+      const { data: authUsers, error: authUsersError } = await admin.auth.admin.listUsers({ page, perPage });
+      if (authUsersError) break;
       for (const user of authUsers.users) {
-        if (!profileIds.includes(user.id)) continue;
+        if (!profileIds.has(user.id)) continue;
         authStatusById.set(user.id, user.email_confirmed_at ? "active" : "invited");
       }
+      if (authUsers.users.length < perPage) break;
     }
   }
 
   const employees = profileRows.map(({ row, portalProfile }) => ({
     ...row,
+    portal_profile: undefined,
     profile_id: portalProfile?.id ?? null,
     portal_role: portalProfile?.role ?? null,
     portal_status: portalProfile?.id ? (authStatusById.get(portalProfile.id) ?? "active") : "none",
@@ -68,6 +101,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
     .filter((role) => role !== "customer" && role !== "intermediary")
     .map((role) => ({ value: role, label: roleLabels[role] }));
   const scopeLabel = scope.mode === "hierarchy" ? "Showing your reporting hierarchy." : scope.mode === "self" ? "Showing your employee record." : null;
+  const loadError = employeeResult.error || managerResult.error ? "The employee directory is temporarily unavailable. Please refresh the page or try again shortly." : null;
 
   return (
     <AppShell title="Employee Directory">
@@ -81,7 +115,7 @@ export default async function EmployeesPage({ searchParams }: { searchParams?: P
             {canManage ? <Link href="/employees/new" className="inline-flex h-10 items-center gap-2 rounded-md bg-[#071D49] px-4 text-[11px] font-semibold text-white"><Plus className="h-4 w-4" />Add employee</Link> : null}
           </div>
         </section>
-        <EmployeeDirectoryWorkspace employees={employees} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={error ? "The employee directory is temporarily unavailable. Please refresh the page or try again shortly." : null} />
+        <EmployeeDirectoryWorkspace employees={employees} managers={managers} portalRoles={portalRoles} canManage={canManage} canManagePortalAccess={canManagePortalAccess} initialQuery={params.q?.trim() ?? ""} initialStatus={initialStatus} loadError={loadError} />
       </div>
     </AppShell>
   );
