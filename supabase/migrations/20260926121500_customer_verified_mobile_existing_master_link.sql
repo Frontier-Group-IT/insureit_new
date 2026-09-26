@@ -1,6 +1,6 @@
 begin;
 
--- A verified Customer App phone must claim an existing customer master only when the
+-- A verified Customer App phone may claim an existing customer master only when the
 -- match is unambiguous. Phone numbers are not globally unique in INSUREIT, so the
 -- claim additionally requires an exact normalized customer-name match and an
 -- unowned active individual/proprietor master. Ambiguous matches fail closed.
@@ -97,9 +97,6 @@ begin
     where id = p_current_customer_id
     for update;
 
-    -- Never auto-relink a customer that has already accumulated business data or
-    -- completed/selected a portfolio identity. This keeps the repair reversible and
-    -- prevents cross-customer data movement.
     if v_current.id is null
        or v_current.creation_channel is distinct from 'direct_customer_onboarding'
        or v_current.partner_type is not null
@@ -108,7 +105,9 @@ begin
     end if;
   end if;
 
-  select count(*), min(c.id)
+  select
+    count(*),
+    (array_agg(c.id order by c.created_at, c.id))[1]
   into v_candidate_count, v_candidate_id
   from public.customers c
   where (p_current_customer_id is null or c.id <> p_current_customer_id)
@@ -257,11 +256,8 @@ begin
   from auth.users u
   where u.id = auth.uid();
 
-  if v_auth_phone is null then
-    raise exception 'A verified mobile number is required for Customer App account setup.';
-  end if;
-
-  if public.normalize_customer_mobile(v_auth_phone) <> public.normalize_customer_mobile(p_phone) then
+  if v_auth_phone is not null
+     and public.normalize_customer_mobile(v_auth_phone) <> public.normalize_customer_mobile(p_phone) then
     raise exception 'The submitted mobile number does not match the verified login number.';
   end if;
 
@@ -334,13 +330,14 @@ begin
     limit 1;
   end if;
 
-  -- Claim an existing operational master before creating a new Customer App master.
-  -- Also self-heal a fresh, empty direct-signup duplicate from earlier versions.
-  if v_customer.id is null
-     or (
-       v_customer.creation_channel = 'direct_customer_onboarding'
-       and v_customer.partner_type is null
-       and public.customer_signup_master_is_empty(v_customer.id)
+  if v_auth_phone is not null
+     and (
+       v_customer.id is null
+       or (
+         v_customer.creation_channel = 'direct_customer_onboarding'
+         and v_customer.partner_type is null
+         and public.customer_signup_master_is_empty(v_customer.id)
+       )
      ) then
     v_claimed_customer_id := public.try_claim_existing_customer_master(
       auth.uid(),
@@ -396,8 +393,6 @@ begin
         status = 'active',
         updated_at = now();
   elsif v_customer.profile_id = auth.uid() then
-    -- Do not overwrite an established master identity simply because a customer
-    -- typed different casing/spacing during OTP login. Membership is what grants access.
     insert into public.customer_memberships (
       customer_id, profile_id, invited_phone, invited_email,
       membership_role, is_primary, status, created_by
@@ -452,17 +447,28 @@ begin
   for r in
     select c.id, c.profile_id, c.contact_name, c.email
     from public.customers c
+    join auth.users u on u.id = c.profile_id
     where c.profile_id is not null
+      and u.phone is not null
       and c.creation_channel = 'direct_customer_onboarding'
       and c.partner_type is null
       and public.customer_signup_master_is_empty(c.id)
   loop
-    v_claimed := public.try_claim_existing_customer_master(
-      r.profile_id,
-      r.id,
-      r.contact_name,
-      r.email
-    );
+    begin
+      v_claimed := public.try_claim_existing_customer_master(
+        r.profile_id,
+        r.id,
+        r.contact_name,
+        r.email
+      );
+    exception
+      when raise_exception then
+        if sqlerrm like 'Multiple existing customer records match%' then
+          raise notice 'Skipped ambiguous customer mobile-link repair for profile %', r.profile_id;
+        else
+          raise;
+        end if;
+    end;
   end loop;
 end;
 $$;
