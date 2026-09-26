@@ -1,0 +1,73 @@
+.readable :global([class*="text-[6.5px]"]) {
+  font-size: 8px !important;
+  line-height: 1.4 !important;
+  color: #66758a !important;
+}
+
+.readable :global([class*="text-[7px]"]) {
+  font-size: 8.5px !important;
+  line-height: 1.4 !important;
+  color: #66758a !important;
+}
+
+.readable :global([class*="text-[7.2px]"]),
+.readable :global([class*="text-[7.5px]"]) {
+  font-size: 9px !important;
+  line-height: 1.42 !important;
+  color: #5f6f86 !important;
+}
+
+.readable :global([class*="text-[8px]"]) {
+  font-size: 9px !important;
+  line-height: 1.42 !important;
+  color: #5b6b82 !important;
+}
+
+.readable :global([class*="text-[8.5px]"]) {
+  font-size: 9.5px !important;
+  line-height: 1.42 !important;
+}
+
+.readable :global([class*="text-[#8B97A8]"]),
+.readable :global([class*="text-[#8A96A8]"]),
+.readable :global([class*="text-[#8995A7]"]),
+.readable :global([class*="text-[#8D98A9]"]),
+.readable :global([class*="text-[#8D99AA]"]),
+.readable :global([class*="text-[#96A1B1]"]),
+.readable :global([class*="text-[#99A3B2]"]),
+.readable :global([class*="text-[#A0AABB]"]),
+.readable :global([class*="text-[#A2ACBB]"]),
+.readable :global([class*="text-[#A3ADBC]"]),
+.readable :global([class*="text-[#A6B0BF]"]) {
+  color: #68778d !important;
+}
+
+.readable :global(a[href="/claims"][class*="min-h-[94px]"] .grid > div:first-child > p:nth-child(2)),
+.readable :global(a[href="/claims"][class*="min-h-[94px]"] .grid > div:nth-child(2) > p:nth-child(2)) {
+  font-size: 0 !important;
+  line-height: 1 !important;
+}
+
+.readable :global(a[href="/claims"][class*="min-h-[94px]"] .grid > div:first-child > p:nth-child(2)::after) {
+  content: "OPEN CASES";
+  font-size: 8.5px;
+  line-height: 1.35;
+  font-weight: 900;
+  letter-spacing: .075em;
+  color: #4f6078;
+}
+
+.readable :global(a[href="/claims"][class*="min-h-[94px]"] .grid > div:nth-child(2) > p:nth-child(2)::after) {
+  content: "SETTLED CASES";
+  font-size: 8.5px;
+  line-height: 1.35;
+  font-weight: 900;
+  letter-spacing: .075em;
+  color: #4f6078;
+}
+
+.readable :global(a[href="/claims"][class*="min-h-[94px]"] .grid > div > p:nth-child(3)) {
+  margin-top: 2px !important;
+  font-size: 8px !important;
+  color: #68778d !important;
+}
