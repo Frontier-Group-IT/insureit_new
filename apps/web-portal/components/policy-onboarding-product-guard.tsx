@@ -130,7 +130,7 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
         setLifeHealthType((current) => current === policyType ? current : policyType);
         if (target) setPortalTarget((current) => current === target ? current : target);
       } else {
-        if (lastPolicyType === "Life" || lastPolicyType === "Health" || portalTarget) restoreLifeHealthMounts();
+        if (lastPolicyType === "Life" || lastPolicyType === "Health" || document.querySelector("[data-life-health-portal='true']")) restoreLifeHealthMounts();
         setLifeHealthType(null);
         setPortalTarget(null);
       }
