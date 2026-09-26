@@ -46,30 +46,45 @@ export type RmPerformanceData = {
   sourceCoverageComplete: boolean;
 };
 
+const REPORT_PAGE_SIZE = 200;
+
 export async function loadRmPerformance(profile: ViewerProfile, query: RmPerformanceQuery): Promise<RmPerformanceData> {
   const selectedRmId = validUuid(query.rm);
   const today = indiaDate(new Date());
+  const monthStart = `${today.slice(0, 8)}01`;
+  const todayQuery = {
+    period: "custom",
+    from: today,
+    to: today,
+    rm: selectedRmId ?? undefined,
+    page: "1",
+    pageSize: String(REPORT_PAGE_SIZE),
+  } as const;
+  const mtdQuery = {
+    period: "custom",
+    from: monthStart,
+    to: today,
+    rm: selectedRmId ?? undefined,
+    page: "1",
+    pageSize: String(REPORT_PAGE_SIZE),
+  } as const;
 
   const [todayPayload, mtdPayload, ytdPayload] = await Promise.all([
-    loadPolicyBusinessNetReport(profile, {
-      period: "custom",
-      from: today,
-      to: today,
-      rm: selectedRmId ?? undefined,
-      page: "1",
-      pageSize: "5000",
-    }),
-    loadPolicyBusinessNetReport(profile, {
-      period: "mtd",
-      rm: selectedRmId ?? undefined,
-      page: "1",
-      pageSize: "5000",
-    }),
+    loadPolicyBusinessNetReport(profile, todayQuery),
+    loadPolicyBusinessNetReport(profile, mtdQuery),
     loadPolicyBusinessNetReport(profile, {
       period: "ytd",
       rm: selectedRmId ?? undefined,
       page: "1",
     }),
+  ]);
+
+  // The report RPC caps register pages at 200 rows even if a larger pageSize is requested.
+  // Summary/RM totals cover the full date range, so source breakdowns must explicitly read
+  // every register page or they silently become a recent-rows sample instead of true MTD.
+  const [todayRegisterRows, mtdRegisterRows] = await Promise.all([
+    loadCompleteRegisterRows(profile, todayQuery, todayPayload.report),
+    loadCompleteRegisterRows(profile, mtdQuery, mtdPayload.report),
   ]);
 
   const todayByRm = new Map(
@@ -87,8 +102,8 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     ]),
   );
 
-  const todaySources = aggregateSources(todayPayload.report.register.rows, intermediaryNames);
-  const mtdSources = aggregateSources(mtdPayload.report.register.rows, intermediaryNames);
+  const todaySources = aggregateSources(todayRegisterRows, intermediaryNames);
+  const mtdSources = aggregateSources(mtdRegisterRows, intermediaryNames);
 
   const rows = mtdPayload.report.rms
     .map((row) => {
@@ -127,9 +142,36 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     rows,
     recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
     sourceCoverageComplete:
-      todayPayload.report.register.total_count <= todayPayload.report.register.rows.length
-      && mtdPayload.report.register.total_count <= mtdPayload.report.register.rows.length,
+      todayRegisterRows.length >= todayPayload.report.register.total_count
+      && mtdRegisterRows.length >= mtdPayload.report.register.total_count,
   };
+}
+
+async function loadCompleteRegisterRows(
+  profile: ViewerProfile,
+  baseQuery: Parameters<typeof loadPolicyBusinessNetReport>[1],
+  firstReport: PolicyBusinessNetReport,
+): Promise<PolicyBusinessRow[]> {
+  const firstRows = firstReport.register.rows;
+  const totalCount = firstReport.register.total_count;
+  const pageSize = Math.max(1, firstReport.register.page_size || REPORT_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  if (totalPages <= 1) return firstRows;
+
+  const remaining = await Promise.all(
+    Array.from({ length: totalPages - 1 }, (_, index) => index + 2).map((page) =>
+      loadPolicyBusinessNetReport(profile, {
+        ...baseQuery,
+        page: String(page),
+        pageSize: String(pageSize),
+      }),
+    ),
+  );
+
+  return [
+    ...firstRows,
+    ...remaining.flatMap((payload) => payload.report.register.rows),
+  ];
 }
 
 type SourceAggregate = {
