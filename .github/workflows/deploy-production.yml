@@ -189,7 +189,7 @@ jobs:
             echo "Policy OCR reviewer/orchestrator migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906143000_persist_initial_document_submission.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-initial-document-submission-persistence.yml"
-            echo "Initial document submission persistence migration detected. Waiting for its schema workflow..."
+            echo "Initial document submission persistence detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/20260906190000_persist_managed_claim_stage_transitions.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-managed-claim-stage-persistence.yml"
             echo "Managed claim stage persistence detected. Waiting for its schema workflow..."
@@ -304,6 +304,9 @@ jobs:
           elif grep -qx 'supabase/migrations/20260925103000_customer_signup_direct_master_kyc_submit.sql' <<<"$changed_migrations"; then
             schema_workflow="apply-customer-signup-direct-master-kyc-submit.yml"
             echo "Customer signup direct-master/KYC-submit migration detected. Waiting for its schema workflow..."
+          elif grep -qx 'supabase/migrations/20260926130000_customer_app_existing_master_link.sql' <<<"$changed_migrations"; then
+            schema_workflow="apply-customer-app-existing-master-link.yml"
+            echo "Customer App existing-master link migration detected. Waiting for its schema workflow..."
           elif grep -qx 'supabase/migrations/202609260001_private_voice_phase1_isolation.sql' <<<"$changed_migrations"; then
             unexpected_migrations=$(grep -vx 'supabase/migrations/202609260001_private_voice_phase1_isolation.sql' <<<"$changed_migrations" || true)
             if [[ -n "$unexpected_migrations" ]]; then
