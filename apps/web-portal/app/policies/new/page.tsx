@@ -1,6 +1,6 @@
 import { loadPolicyIntakeOnboardingDraft } from "@/app/policy-intakes/handoff-actions";
 import { PolicyCommercialShell } from "@/components/policy-commercial-shell";
-import { type PolicyRmOption, type PolicySourceOption } from "@/components/policy-unified-form";
+import { type PolicyRmOption } from "@/components/policy-unified-form";
 import { PolicyOnboardingProductGuard } from "@/components/policy-onboarding-product-guard";
 import { PolicyRemarksActionStyle } from "@/components/policy-remarks-action-style";
 import { AppShell } from "@/components/shell";
@@ -16,6 +16,7 @@ type IntermediaryOption = {
   intermediary_type: "posp" | "misp" | "partner";
   display_name: string;
   intermediary_code: string | null;
+  mobile: string | null;
   associate_employee_id: string | null;
   application_id: string | null;
 };
@@ -70,7 +71,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     admin.from("customers").select("id,contact_name,company_name,phone,email").order("contact_name", { ascending: true }).limit(750).returns<CustomerRow[]>(),
     admin
       .from("intermediaries")
-      .select("id,intermediary_type,display_name,intermediary_code,associate_employee_id,application_id")
+      .select("id,intermediary_type,display_name,intermediary_code,mobile,associate_employee_id,application_id")
       .in("intermediary_type", ["posp", "misp", "partner"])
       .eq("account_status", "active")
       .order("display_name", { ascending: true })
@@ -134,7 +135,7 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
     const name = employee.full_name?.trim() || "Unnamed Sales Employee";
     return { value: name, label: employee.employee_code ? `${name} - ${employee.employee_code}` : name };
   });
-  const sourceOptions: PolicySourceOption[] = intermediaryRows
+  const sourceOptions = intermediaryRows
     .filter((item) => item.intermediary_code?.trim() && item.display_name?.trim())
     .map((item) => {
       const partnerRecordId = item.application_id ? partnerRecordByApplication.get(item.application_id) : null;
@@ -146,14 +147,15 @@ export default async function NewPolicyPage({ searchParams }: { searchParams: Pr
         label: item.display_name.trim(),
         code: item.intermediary_code!.trim(),
         rmName: associate?.full_name?.trim() || "",
-        rmCode: associate?.employee_code?.trim() || ""
+        rmCode: associate?.employee_code?.trim() || "",
+        mobile: item.mobile?.replace(/\D/g, "").slice(-10) || "",
       };
     });
 
   return (
     <AppShell title="Add Policy">
       <PolicyRemarksActionStyle />
-      <PolicyOnboardingProductGuard />
+      <PolicyOnboardingProductGuard insurers={insurerOptions} customers={customerOptions} sources={sourceOptions} />
       <PolicyCommercialShell
         mode="create"
         insurers={insurerOptions}
