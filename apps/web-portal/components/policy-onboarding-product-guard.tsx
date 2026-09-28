@@ -6,7 +6,7 @@ import { LifeHealthPolicyForm, type LifeHealthCustomerOption, type LifeHealthSou
 
 const SAOD_BLOCKED_CLASSES = new Set(["GCV", "PCV", "CPM", "MISD"]);
 type Props = { insurers: Array<{ label: string; value: string }>; customers: LifeHealthCustomerOption[]; sources: LifeHealthSourceOption[] };
-type LifeHealthMount = { formTarget: HTMLElement; summaryTarget: HTMLElement };
+type LifeHealthMount = { formTarget: HTMLElement; summaryTarget: HTMLElement; footerTarget: HTMLElement };
 
 function fieldControl(labelText: string) {
   const labels = Array.from(document.querySelectorAll("label"));
@@ -35,11 +35,11 @@ function setReactValue(input: HTMLInputElement, value: string) {
 function restoreLifeHealthMounts() {
   document.querySelectorAll<HTMLElement>("[data-life-health-layout='true']").forEach((layout) => {
     const source = layout.querySelector<HTMLElement>("[data-life-health-source='true']");
-    const notice = layout.nextElementSibling as HTMLElement | null;
     const parent = layout.parentElement;
+    const footer = parent?.querySelector<HTMLElement>("[data-life-health-footer='true']") ?? null;
     if (source && parent) { delete source.dataset.lifeHealthSource; parent.insertBefore(source, layout); }
+    footer?.remove();
     layout.remove();
-    if (notice?.dataset.lifeHealthNoticeHidden === "true") { notice.style.display = ""; delete notice.dataset.lifeHealthNoticeHidden; }
   });
   document.querySelectorAll<HTMLElement>("[data-life-health-notice-hidden='true']").forEach((notice) => { notice.style.display = ""; delete notice.dataset.lifeHealthNoticeHidden; });
 }
@@ -49,7 +49,8 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
   if (existing) {
     const formTarget = existing.querySelector<HTMLElement>("[data-life-health-portal='true']");
     const summaryTarget = existing.querySelector<HTMLElement>("[data-life-health-summary='true']");
-    if (formTarget && summaryTarget) return { formTarget, summaryTarget };
+    const footerTarget = existing.parentElement?.querySelector<HTMLElement>("[data-life-health-footer='true']") ?? null;
+    if (formTarget && summaryTarget && footerTarget) return { formTarget, summaryTarget, footerTarget };
   }
   const heading = Array.from(document.querySelectorAll("h2")).find((item) => item.textContent?.trim() === `${policyType} onboarding`);
   const notice = heading?.closest("section") as HTMLElement | null;
@@ -65,10 +66,12 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
   const left = document.createElement("div"); left.className = "space-y-3";
   const formTarget = document.createElement("div"); formTarget.dataset.lifeHealthPortal = "true";
   const summaryTarget = document.createElement("div"); summaryTarget.dataset.lifeHealthSummary = "true"; summaryTarget.className = "self-start";
+  const footerTarget = document.createElement("div"); footerTarget.dataset.lifeHealthFooter = "true"; footerTarget.className = "mt-3 w-full";
   source.dataset.lifeHealthSource = "true";
   parent.insertBefore(layout, source);
   left.appendChild(source); left.appendChild(formTarget); layout.appendChild(left); layout.appendChild(summaryTarget);
-  return { formTarget, summaryTarget };
+  parent.insertBefore(footerTarget, notice);
+  return { formTarget, summaryTarget, footerTarget };
 }
 
 export function PolicyOnboardingProductGuard({ insurers, customers, sources }: Props) {
@@ -83,7 +86,7 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
       if (policyType === "Life" || policyType === "Health") {
         const next = ensureLifeHealthMount(policyType);
         setLifeHealthType((current) => current === policyType ? current : policyType);
-        if (next) setMount((current) => current?.formTarget === next.formTarget ? current : next);
+        if (next) setMount((current) => current?.formTarget === next.formTarget && current?.footerTarget === next.footerTarget ? current : next);
       } else {
         if (lastPolicyType === "Life" || lastPolicyType === "Health" || document.querySelector("[data-life-health-layout='true']")) restoreLifeHealthMounts();
         setLifeHealthType(null); setMount(null);
@@ -120,5 +123,5 @@ export function PolicyOnboardingProductGuard({ insurers, customers, sources }: P
     return () => { document.removeEventListener("change", onChange, true); observer.disconnect(); window.clearInterval(timer); restoreLifeHealthMounts(); };
   }, [sources]);
 
-  return mount && lifeHealthType ? createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={insurers} customers={customers} sources={sources} summaryTarget={mount.summaryTarget} />, mount.formTarget) : null;
+  return mount && lifeHealthType ? createPortal(<LifeHealthPolicyForm policyType={lifeHealthType} insurers={insurers} customers={customers} sources={sources} summaryTarget={mount.summaryTarget} footerTarget={mount.footerTarget} />, mount.formTarget) : null;
 }
