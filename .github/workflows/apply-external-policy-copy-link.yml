@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'supabase/migrations/202609280001_link_customer_policy_copy_to_external_policy.sql'
+      - 'supabase/migrations/20260928061127_link_customer_policy_copy_to_external_policy.sql'
       - '.github/workflows/apply-external-policy-copy-link.yml'
 
 permissions:
@@ -44,7 +44,7 @@ jobs:
           test -n "$SUPABASE_ACCESS_TOKEN"
           test -n "$SUPABASE_DB_PASSWORD"
           test -n "$SUPABASE_PROJECT_REF"
-          test -f supabase/migrations/202609280001_link_customer_policy_copy_to_external_policy.sql
+          test -f supabase/migrations/20260928061127_link_customer_policy_copy_to_external_policy.sql
 
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
@@ -61,14 +61,14 @@ jobs:
           applied=$(supabase db query --linked --output-format json "
             select exists(
               select 1 from supabase_migrations.schema_migrations
-              where version='202609280001'
+              where version='20260928061127'
             ) as applied;
           ")
           if echo "$applied" | grep -Eq '"applied"[[:space:]]*:[[:space:]]*true'; then
             echo "Migration already recorded as applied; skipping execution."
           else
-            supabase db query --linked --file supabase/migrations/202609280001_link_customer_policy_copy_to_external_policy.sql
-            supabase migration repair --linked --status applied 202609280001
+            supabase db query --linked --file supabase/migrations/20260928061127_link_customer_policy_copy_to_external_policy.sql
+            supabase migration repair --linked --status applied 20260928061127
           fi
 
       - name: Verify policy copy link trigger
