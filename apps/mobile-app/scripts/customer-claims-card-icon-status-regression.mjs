@@ -19,7 +19,9 @@ function expectNotIncludes(value, label) {
 expectNotIncludes('styles.statusIcon', 'secondary claim/status icon render');
 expectNotIncludes('claimCardIcons', 'secondary claim/status icon asset map');
 expectNotIncludes('claimCardIcon(', 'secondary claim/status icon resolver');
-expectIncludes('externalClaim && styles.externalMilestoneRightValue', 'external milestone red style binding');
-expectIncludes("externalMilestoneRightValue: { color: '#C43838' }", 'external milestone red style');
+expectIncludes('internalProjection?.stageLabel ?? claim.current_status', 'internal actual journey stage label');
+expectNotIncludes('internalProjection?.substage ?? claim.current_status', 'internal customer-action substage on claim card');
+expectIncludes('styles.externalMilestoneRightValue', 'shared red milestone style binding');
+expectIncludes("externalMilestoneRightValue: { color: '#C43838' }", 'shared milestone red style');
 
 console.log('Customer claims card icon/status styling regression passed.');
