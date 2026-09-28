@@ -1,0 +1,30 @@
+/* Keep the Overview report controls compact and together in the shared header. */
+.reports-reference-toolbar .reports-overview-reference .ov-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.reports-reference-toolbar .reports-overview-reference .ov-toolbar > * {
+  flex: 0 0 auto;
+}
+
+.reports-reference-toolbar .reports-overview-reference .ov-control {
+  min-height: 32px;
+  height: 32px;
+  gap: 5px;
+  padding-inline: 9px;
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .reports-reference-toolbar .reports-overview-reference .ov-toolbar {
+    width: max-content;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+}
