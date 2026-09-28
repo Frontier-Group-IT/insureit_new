@@ -55,8 +55,8 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
 
         <section className="mt-3 overflow-hidden rounded-[18px] border border-[#DCE4EE] bg-white shadow-[0_10px_28px_rgba(30,49,80,.04)]">
           <div className="grid xl:grid-cols-[1fr_1fr_1.05fr]">
-            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} payin={todayFinance?.report.summary.projected_payin ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
-            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} payin={mtdFinance?.report.summary.projected_payin ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
+            <PerformancePanel eyebrow="TODAY" title={money(data.today.net_premium)} policies={data.today.policy_count} motor={data.today.motor_net_premium} nonMotor={data.today.non_motor_net_premium} life={mixAmount(data.today.category_mix, "life")} health={mixAmount(data.today.category_mix, "health")} payin={todayFinance?.report.summary.projected_payin ?? 0} payout={todayFinance?.report.summary.gross_payout ?? 0} />
+            <PerformancePanel eyebrow="MONTH TO DATE" title={money(data.mtd.net_premium)} policies={data.mtd.policy_count} motor={data.mtd.motor_net_premium} nonMotor={data.mtd.non_motor_net_premium} life={mixAmount(data.mtd.category_mix, "life")} health={mixAmount(data.mtd.category_mix, "health")} payin={mtdFinance?.report.summary.projected_payin ?? 0} payout={mtdFinance?.report.summary.gross_payout ?? 0} bordered />
             <MtdContextPanel rows={data.ytdTrend} />
           </div>
         </section>
@@ -70,27 +70,34 @@ export default async function RmPerformancePage({ searchParams }: { searchParams
   );
 }
 
-function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motor: number; nonMotor: number; payin: number; payout: number; bordered?: boolean }) {
+function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, health, payin, payout, bordered = false }: { eyebrow: string; title: string; policies: number; motor: number; nonMotor: number; life: number; health: number; payin: number; payout: number; bordered?: boolean }) {
   return (
     <div className={"px-5 py-3.5 " + (bordered ? "border-t border-[#E9EDF3] xl:border-l xl:border-t-0" : "")}>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0"><p className="text-[10px] font-black tracking-[.14em] text-[#566477]">{eyebrow}</p><p className="mt-1 truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div>
-        <div className="pt-1 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div>
+      <p className="text-[10px] font-black tracking-[.14em] text-[#566477]">{eyebrow}</p>
+      <div className="mt-1 grid grid-cols-[1.15fr_.85fr] gap-4">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-[24px] font-semibold tracking-[-.035em] text-[#13233E]">{title}</p><p className="text-[10px] font-medium text-[#647286]">Net Premium</p></div><div className="pt-0.5 text-right"><p className="text-[15px] font-black text-[#24364F]">{number(policies)}</p><p className="text-[10px] font-medium text-[#647286]">Policies</p></div></div>
+          <div className="mt-2.5 space-y-1.5 border-t border-[#EEF1F5] pt-2.5 text-[10px]"><p className="font-medium text-[#667386]">Projected Pay-in <strong className="ml-1 text-[#34445B]">{money(payin)}</strong></p><p className="font-medium text-[#667386]">Projected Payout <strong className="ml-1 text-[#34445B]">{money(payout)}</strong></p></div>
+        </div>
+        <div className="grid grid-cols-2 content-start gap-x-3 gap-y-2 border-l border-[#EEF1F5] pl-4 pt-1 text-[9.5px]">
+          <BusinessMetric label="Motor" value={motor} />
+          <BusinessMetric label="Non-Motor" value={nonMotor} />
+          <BusinessMetric label="Life" value={life} />
+          <BusinessMetric label="Health" value={health} />
+        </div>
       </div>
-      <div className="mt-2.5 grid grid-cols-2 gap-x-4 border-t border-[#EEF1F5] pt-2.5 text-[10.5px]">
-        <span className="font-medium text-[#667386]">Pay-in <strong className="ml-1 text-[#34445B]">{money(payin)}</strong></span>
-        <span className="font-medium text-[#667386]">Payout <strong className="ml-1 text-[#34445B]">{money(payout)}</strong></span>
-      </div>
-      <div className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 text-[10.5px]"><span className="font-medium text-[#667386]">Motor <strong className="ml-1 text-[#34445B]">{money(motor)}</strong></span><span className="font-medium text-[#667386]">Non-Motor <strong className="ml-1 text-[#34445B]">{money(nonMotor)}</strong></span></div>
     </div>
   );
 }
+
+function BusinessMetric({ label, value }: { label: string; value: number }) { return <div className="min-w-0"><p className="font-medium text-[#667386]">{label}</p><p className="truncate font-black text-[#34445B]">{money(value)}</p></div>; }
 
 function MtdContextPanel({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
   const latest = rows.at(-1); const previous = rows.at(-2); const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
   return <div className="border-t border-[#E9EDF3] px-5 py-3.5 xl:border-l xl:border-t-0"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2"><div className="grid h-7 w-7 place-items-center rounded-lg bg-[#EEF4FF] text-[#315B9A]"><TrendingUp className="h-3.5 w-3.5" /></div><div><p className="text-[10px] font-black tracking-[.15em] text-[#566477]">MTD CONTEXT</p><p className="mt-0.5 text-[10px] font-medium text-[#69778A]">Recent monthly production</p></div></div>{movement !== null ? <span className={"rounded-full px-2 py-1 text-[9px] font-black " + (movement >= 0 ? "bg-[#EAF7F2] text-[#14745D]" : "bg-[#FDEEEE] text-[#B54747]")}>{movement >= 0 ? "+" : ""}{movement.toFixed(1)}%</span> : null}</div><div className="mt-2 min-w-0"><RmPerformanceTrendChart rows={rows} /></div></div>;
 }
 
+function mixAmount(rows: Array<{ category: string; net_premium: number }>, key: string) { return rows.filter((row) => row.category.trim().toLowerCase() === key).reduce((sum, row) => sum + row.net_premium, 0); }
 function Empty({ label }: { label: string }) { return <div className="px-5 py-8 text-center text-[11px] font-semibold text-[#667386]">{label}</div>; }
 function money(value: number) { return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0); }
 function number(value: number) { return new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0); }
