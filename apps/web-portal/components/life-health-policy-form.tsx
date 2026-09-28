@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, FileText, IndianRupee, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileText, IndianRupee, Upload, X } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
 import { CustomerSearchField } from "@/components/customer-search-field";
 
@@ -19,6 +19,7 @@ const inputClass = "h-10 w-full rounded-xl border border-[#D8DEE9] bg-white px-3
 const labelClass = "mb-1.5 flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.055em] text-[#475467]";
 const PAYMENT_FREQUENCIES = ["Monthly", "Quarterly", "Half Yearly", "Annually", "One Time"];
 const PAYMENT_MODES = ["Cash", "Cheque", "NEFT/RTGS", "UPI", "Credit/Debit Card", "Net Banking"];
+const YEAR_OPTIONS = Array.from({ length: 50 }, (_, index) => `${index + 1} Year${index === 0 ? "" : "s"}`);
 const money = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 });
 
 function sourceSnapshot(sources: LifeHealthSourceOption[]): SourceSnapshot {
@@ -47,25 +48,27 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, sources,
 
   function chooseCustomer(id: string) { const selected = customers.find((item) => item.id === id); setForm((current) => ({ ...current, customerId: id, insuredName: selected?.name ?? "", phone: selected?.phone ?? "", email: selected?.email ?? "" })) }
   function submit() {
-    setError(null); const source = sourceSnapshot(sources); const data = new FormData(); data.set("businessLine", policyType);
-    Object.entries(source).forEach(([key, value]) => data.set(key, value)); Object.entries(form).forEach(([key, value]) => data.set(key, value)); for (const [key, file] of Object.entries(files)) if (file) data.set(key, file);
-    startTransition(async () => { const result = await createLifeHealthCase(data); if (!result.ok) { setError(result.error); return } router.push(`/policies/life-health-cases/${result.caseId}?created=1`); router.refresh() });
+    setError(null);
+    const source = sourceSnapshot(sources);
+    const data = new FormData();
+    data.set("businessLine", policyType);
+    Object.entries(source).forEach(([key, value]) => data.set(key, value));
+    Object.entries(form).forEach(([key, value]) => data.set(key, value));
+    for (const [key, file] of Object.entries(files)) if (file) data.set(key, file);
+    startTransition(async () => {
+      try {
+        const result = await createLifeHealthCase(data);
+        if (!result.ok) { setError(result.error || "The policy could not be saved. Please review the details and try again."); return; }
+        router.push(`/policies/life-health-cases/${result.caseId}?created=1`);
+        router.refresh();
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "The policy could not be saved. Please review the details and try again.");
+      }
+    });
   }
 
   const summary = <FollowSummary completion={completion} proposal={form.proposalNumber} insurer={selectedInsurer} product={form.productName} customer={form.insuredName} mobile={form.phone} premium={form.premiumAmount} frequency={form.paymentFrequency} paymentMode={form.paymentMode} documentCount={documentCount} />;
-  const bottomSection = <section className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm">
-    <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between">
-      <div className="grid flex-1 gap-2 sm:grid-cols-3 xl:max-w-[900px]">
-        <DocumentTile label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} />
-        <DocumentTile label="Benefit Illustration" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} />
-        <DocumentTile label="Premium Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} />
-      </div>
-      <div className="flex shrink-0 justify-end gap-2">
-        <Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link>
-        <button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button>
-      </div>
-    </div>
-  </section>;
+  const bottomSection = <section className="w-full rounded-2xl border border-[#D9E2F0] bg-white shadow-sm"><div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-center xl:justify-between"><div className="grid flex-1 gap-2 sm:grid-cols-3 xl:max-w-[900px]"><DocumentTile label="Proposal Form" file={files.proposalForm} onChange={(file) => setFiles((c) => ({ ...c, proposalForm: file }))} /><DocumentTile label="Benefit Illustration" file={files.benefitIllustration} onChange={(file) => setFiles((c) => ({ ...c, benefitIllustration: file }))} /><DocumentTile label="Premium Receipt" file={files.premiumReceipt} onChange={(file) => setFiles((c) => ({ ...c, premiumReceipt: file }))} /></div><div className="flex shrink-0 justify-end gap-2"><Link href="/policies/life-health-cases" className="inline-flex h-10 items-center justify-center rounded-xl border border-[#CBD5E1] px-4 text-[10px] font-semibold text-[#344054]">View Cases</Link><button type="button" onClick={submit} disabled={isPending} className="inline-flex h-10 items-center justify-center rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white disabled:opacity-60">{isPending ? "Creating case…" : "Create Case"}</button></div></div></section>;
 
   return <>
     <div className="space-y-3">
@@ -73,60 +76,30 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, sources,
         <Segmented value={form.customerMode} onChange={(value) => setForm((current) => ({ ...current, customerMode: value, customerId: value === "new" ? "" : current.customerId }))} />
         {form.customerMode === "existing" ? <div className="md:col-span-1 xl:col-span-3"><CustomerSearchField label="Customer / proposer" name="life_health_customer_id" options={customerOptions} defaultValue={form.customerId} required portalResults onSelectionChange={chooseCustomer} /></div> : <><Field label="Client / proposer name" value={form.insuredName} onChange={(e) => update("insuredName", e.target.value)} placeholder="Name on proposal" required /><Field label="Client mobile number" value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="10 digit mobile" required /><Field label="Email" value={form.email} onChange={(e) => update("email", e.target.value)} type="email" placeholder="Optional" /></>}
       </Section>
-
       <Section number="03" title="Policy product & case details" contentClassName="md:grid-cols-2 xl:grid-cols-3">
         <Select label="Insurance company" value={form.insurerId} onChange={(e) => update("insurerId", e.target.value)} required><option value="">Select insurer</option>{insurers.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>
         <Field label="Product name" value={form.productName} onChange={(e) => update("productName", e.target.value)} placeholder="Product / plan name" required />
         <Field label="Case / proposal number" value={form.proposalNumber} onChange={(e) => update("proposalNumber", e.target.value.toUpperCase())} placeholder="Proposal number" required />
-        <Field label="PPT · Premium Paying Term" value={form.ppt} onChange={(e) => update("ppt", e.target.value)} placeholder="e.g. 10 Years / Single Pay" />
-        <Field label="PD · Policy Duration / Term" value={form.pd} onChange={(e) => update("pd", e.target.value)} placeholder="e.g. 20 Years / 1 Year" />
+        <Select label="PPT · Premium Paying Term" value={form.ppt} onChange={(e) => update("ppt", e.target.value)}><option value="">Select term</option><option value="Single Pay">Single Pay</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select>
+        <Select label="PD · Policy Duration / Term" value={form.pd} onChange={(e) => update("pd", e.target.value)}><option value="">Select term</option>{YEAR_OPTIONS.map((item) => <option key={item} value={item}>{item}</option>)}</Select>
         <Select label="Payment frequency" value={form.paymentFrequency} onChange={(e) => update("paymentFrequency", e.target.value)} required><option value="">Select frequency</option>{PAYMENT_FREQUENCIES.map((item) => <option key={item}>{item}</option>)}</Select>
       </Section>
-
-      <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-[minmax(0,.8fr)_minmax(0,.8fr)_minmax(0,1.6fr)]">
-        <Field label="Premium amount" value={form.premiumAmount} onChange={(e) => update("premiumAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00" required />
-        <Select label="Payment mode" value={form.paymentMode} onChange={(e) => update("paymentMode", e.target.value)} required><option value="">Select payment mode</option>{PAYMENT_MODES.map((item) => <option key={item}>{item}</option>)}</Select>
-        <div className="md:col-span-2 xl:col-span-1"><label className={labelClass}>Remarks</label><textarea value={form.remarks} onChange={(e) => update("remarks", e.target.value)} rows={2} placeholder="Optional servicing / underwriting note" className="min-h-10 w-full resize-none rounded-xl border border-[#D8DEE9] bg-white px-3 py-2.5 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></div>
-      </Section>
-
-      {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-[10px] font-semibold text-red-700">{error}</div> : null}
+      <Section number="04" title="Premium & payment" contentClassName="md:grid-cols-2 xl:grid-cols-[minmax(0,.8fr)_minmax(0,.8fr)_minmax(0,1.6fr)]"><Field label="Premium amount" value={form.premiumAmount} onChange={(e) => update("premiumAmount", numeric(e.target.value))} inputMode="decimal" placeholder="₹ 0.00" required /><Select label="Payment mode" value={form.paymentMode} onChange={(e) => update("paymentMode", e.target.value)} required><option value="">Select payment mode</option>{PAYMENT_MODES.map((item) => <option key={item}>{item}</option>)}</Select><div className="md:col-span-2 xl:col-span-1"><label className={labelClass}>Remarks</label><textarea value={form.remarks} onChange={(e) => update("remarks", e.target.value)} rows={2} placeholder="Optional servicing / underwriting note" className="min-h-10 w-full resize-none rounded-xl border border-[#D8DEE9] bg-white px-3 py-2.5 text-[11px] font-medium text-[#17203A] outline-none transition placeholder:text-[#98A2B3] focus:border-[#315B9A] focus:ring-2 focus:ring-[#DCE8FA]" /></div></Section>
     </div>
     {summaryTarget ? createPortal(summary, summaryTarget) : summary}
     {footerTarget ? createPortal(bottomSection, footerTarget) : <div className="mt-3">{bottomSection}</div>}
+    {error ? <ErrorModal message={error} onClose={() => setError(null)} /> : null}
   </>;
 }
 
+function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
+  return <div className="fixed inset-0 z-[1000] grid place-items-center bg-slate-950/35 p-4" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-md rounded-2xl border border-red-100 bg-white shadow-2xl"><div className="flex items-start gap-3 p-5"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-50 text-red-600"><AlertTriangle className="h-5 w-5" /></span><div className="min-w-0 flex-1"><h3 id="policy-error-title" className="text-[14px] font-bold text-[#17203A]">Unable to save policy</h3><p className="mt-1.5 text-[11px] leading-5 text-[#667085]">{message}</p></div><button type="button" onClick={onClose} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#667085] hover:bg-[#F2F4F7]" aria-label="Close error"><X className="h-4 w-4" /></button></div><div className="flex justify-end border-t border-[#EAECF0] px-5 py-3"><button type="button" onClick={onClose} className="h-9 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white">OK</button></div></div></div>;
+}
+
 function FollowSummary({ completion, proposal, insurer, product, customer, mobile, premium, frequency, paymentMode, documentCount }: { completion: number; proposal: string; insurer: string; product: string; customer: string; mobile: string; premium: string; frequency: string; paymentMode: string; documentCount: number }) {
-  const anchorRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ left: number; width: number; top: number } | null>(null);
-
-  useEffect(() => {
-    let frame = 0;
-    const anchor = anchorRef.current;
-    const boundary = anchor?.closest("[data-life-health-layout='true']") as HTMLElement | null;
-    if (!anchor || !boundary) { setPosition(null); return; }
-    const updatePosition = () => {
-      if (window.innerWidth < 1280 || !anchorRef.current) { setPosition(null); return; }
-      const anchorRect = anchorRef.current.getBoundingClientRect();
-      const boundaryRect = boundary.getBoundingClientRect();
-      const fixedCard = document.getElementById("life-health-summary-fixed-card");
-      const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0;
-      const preferredTop = Math.max(anchorRect.top, 172);
-      const boundaryTop = cardHeight > 0 ? boundaryRect.bottom - cardHeight : preferredTop;
-      setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.min(preferredTop, boundaryTop) });
-    };
-    const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(updatePosition); };
-    updatePosition(); frame = requestAnimationFrame(updatePosition);
-    window.addEventListener("resize", schedule); window.addEventListener("scroll", schedule, true);
-    const observer = new ResizeObserver(schedule); observer.observe(boundary); observer.observe(document.documentElement);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", schedule); window.removeEventListener("scroll", schedule, true); observer.disconnect(); };
-  }, []);
-
-  const card = <aside id="life-health-summary-fixed-card" className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]">
-    <div className="flex items-center gap-3 border-b bg-[#F8FAFC] px-4 py-3"><div className="min-w-0 flex-1"><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#64748B]">Policy status</p><h3 className="mt-0.5 truncate text-[13px] font-semibold text-[#17365D]">Onboarding summary</h3></div><CompletionRing value={completion}/><span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold ${completion >= 100 ? "bg-[#E8F7EF] text-[#14845B]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>{completion >= 100 ? "Complete" : "In progress"}</span></div>
-    <div className="space-y-3 px-4 py-3"><SummaryBlock title="Case" rows={[["Proposal", proposal || "Not entered"], ["Insurer", insurer], ["Product", product || "Not entered"]]} /><SummaryBlock title="Customer" rows={[["Name", customer || "Not selected"], ["Mobile", mobile || "—"]]} /><div><div className="mb-1.5 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><IndianRupee className="h-3.5 w-3.5" /></span><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Premium</p></div><p className="text-[17px] font-bold text-[#17365D]">{money.format(Number(premium || 0))}</p><p className="mt-1 text-[9px] text-[#667085]">{frequency || "Frequency pending"} · {paymentMode || "Mode pending"}</p></div><div className="rounded-xl border border-[#DCE6F1] bg-[#F8FBFE] px-3 py-2.5"><div className="flex items-center justify-between"><span className="text-[9px] font-bold text-[#17365D]">Documents</span><span className={`rounded-full px-2 py-1 text-[8px] font-bold ${documentCount === 3 ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#F1F4F8] text-[#667085]"}`}>{documentCount} / 3 uploaded</span></div></div></div>
-  </aside>;
-
+  const anchorRef = useRef<HTMLDivElement>(null); const [position, setPosition] = useState<{ left: number; width: number; top: number } | null>(null);
+  useEffect(() => { let frame = 0; const anchor = anchorRef.current; const boundary = anchor?.closest("[data-life-health-layout='true']") as HTMLElement | null; if (!anchor || !boundary) { setPosition(null); return; } const updatePosition = () => { if (window.innerWidth < 1280 || !anchorRef.current) { setPosition(null); return; } const anchorRect = anchorRef.current.getBoundingClientRect(); const boundaryRect = boundary.getBoundingClientRect(); const fixedCard = document.getElementById("life-health-summary-fixed-card"); const cardHeight = fixedCard?.getBoundingClientRect().height ?? 0; const preferredTop = Math.max(anchorRect.top, 172); const boundaryTop = cardHeight > 0 ? boundaryRect.bottom - cardHeight : preferredTop; setPosition({ left: anchorRect.left, width: anchorRect.width, top: Math.min(preferredTop, boundaryTop) }); }; const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(updatePosition); }; updatePosition(); frame = requestAnimationFrame(updatePosition); window.addEventListener("resize", schedule); window.addEventListener("scroll", schedule, true); const observer = new ResizeObserver(schedule); observer.observe(boundary); observer.observe(document.documentElement); return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", schedule); window.removeEventListener("scroll", schedule, true); observer.disconnect(); }; }, []);
+  const card = <aside id="life-health-summary-fixed-card" className="overflow-hidden rounded-2xl border border-[#D9E2F0] bg-white shadow-[0_10px_30px_rgba(15,23,42,.10)]"><div className="flex items-center gap-3 border-b bg-[#F8FAFC] px-4 py-3"><div className="min-w-0 flex-1"><p className="text-[8px] font-bold uppercase tracking-[.11em] text-[#64748B]">Policy status</p><h3 className="mt-0.5 truncate text-[13px] font-semibold text-[#17365D]">Onboarding summary</h3></div><CompletionRing value={completion}/><span className={`shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold ${completion >= 100 ? "bg-[#E8F7EF] text-[#14845B]" : "bg-[#FFF3CD] text-[#A96A00]"}`}>{completion >= 100 ? "Complete" : "In progress"}</span></div><div className="space-y-3 px-4 py-3"><SummaryBlock title="Case" rows={[["Proposal", proposal || "Not entered"], ["Insurer", insurer], ["Product", product || "Not entered"]]} /><SummaryBlock title="Customer" rows={[["Name", customer || "Not selected"], ["Mobile", mobile || "—"]]} /><div><div className="mb-1.5 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-lg bg-[#EEF4FB] text-[#315B9A]"><IndianRupee className="h-3.5 w-3.5" /></span><p className="text-[8px] font-bold uppercase tracking-[.1em] text-[#64748B]">Premium</p></div><p className="text-[17px] font-bold text-[#17365D]">{money.format(Number(premium || 0))}</p><p className="mt-1 text-[9px] text-[#667085]">{frequency || "Frequency pending"} · {paymentMode || "Mode pending"}</p></div><div className="rounded-xl border border-[#DCE6F1] bg-[#F8FBFE] px-3 py-2.5"><div className="flex items-center justify-between"><span className="text-[9px] font-bold text-[#17365D]">Documents</span><span className={`rounded-full px-2 py-1 text-[8px] font-bold ${documentCount === 3 ? "bg-[#EAF7F2] text-[#18794E]" : "bg-[#F1F4F8] text-[#667085]"}`}>{documentCount} / 3 uploaded</span></div></div></div></aside>;
   return <div ref={anchorRef} className="min-h-[1px] w-full">{position && typeof document !== "undefined" ? createPortal(<div style={{ position: "fixed", left: position.left, width: position.width, top: position.top, zIndex: 30 }}>{card}</div>, document.body) : card}</div>;
 }
 
