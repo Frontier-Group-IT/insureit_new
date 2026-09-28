@@ -64,9 +64,9 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
   return (
     <article
       onClick={handleCardClick}
-      className={`rounded-xl border bg-white p-2.5 shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
+      className={`rounded-xl border bg-white ${hasNoFiles ? "px-2.5 py-2" : "p-2.5"} shadow-[0_6px_16px_rgba(7,29,73,0.028)] ${allVerified ? "border-green-200" : "border-[#E2EAF4]"} ${hasMultipleFiles ? "cursor-pointer" : ""}`}
     >
-      <div className={`flex items-center justify-between gap-2 ${showDocumentRows || hasNoFiles ? "mb-2" : ""}`}>
+      <div className={`flex items-center justify-between gap-2 ${showDocumentRows ? "mb-2" : ""}`}>
         {hasMultipleFiles ? (
           <button
             type="button"
@@ -139,12 +139,7 @@ export function Stage3DocumentVerificationGroup({ item, claim, verifications }: 
             <ClaimDocumentCollapsedStatus verifiedCount={verifiedFileCount} pendingCount={pendingFileCount} showLabels />
           </div>
         ) : null
-      ) : (
-        <div id={contentId} className="flex min-h-11 items-center gap-2">
-          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${item.accent}`}><div className="text-[22px] leading-none">{item.icon}</div></div>
-          <ReplaceDocumentButton claimId={claim.id} customerId={claim.customer_id} documentType={item.documentType} label={item.title} actionLabel="Upload" />
-        </div>
-      )}
+      ) : null}
     </article>
   );
 }
