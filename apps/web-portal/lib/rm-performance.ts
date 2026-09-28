@@ -40,6 +40,8 @@ export type RmPerformanceData = {
   };
   today: PolicyBusinessNetReport["summary"];
   mtd: PolicyBusinessNetReport["summary"];
+  todayCategoryMix: PolicyBusinessNetReport["category_mix"];
+  mtdCategoryMix: PolicyBusinessNetReport["category_mix"];
   ytdTrend: PolicyBusinessNetReport["trend"];
   rows: RmPerformanceRow[];
   recentPolicies: PolicyBusinessNetReport["register"]["rows"];
@@ -138,6 +140,8 @@ export async function loadRmPerformance(profile: ViewerProfile, query: RmPerform
     filters: { rms: mtdPayload.report.filters.rms },
     today: todayPayload.report.summary,
     mtd: mtdPayload.report.summary,
+    todayCategoryMix: todayPayload.report.category_mix,
+    mtdCategoryMix: mtdPayload.report.category_mix,
     ytdTrend: ytdPayload.report.trend.slice(-6),
     rows,
     recentPolicies: mtdPayload.report.register.rows.slice(0, 10),
@@ -219,32 +223,15 @@ function aggregateSources(
 }
 
 function mergeSources(today: SourceAggregate[], mtd: SourceAggregate[]): RmSourcePerformance[] {
-  const todayMap = new Map(today.map((item) => [item.key, item]));
-  return mtd.map((item) => {
-    const current = todayMap.get(item.key);
-    return {
-      key: item.key,
-      label: item.label,
-      type: item.type,
-      todayPolicies: current?.policies ?? 0,
-      todayNetPremium: current?.netPremium ?? 0,
-      mtdPolicies: item.policies,
-      mtdNetPremium: item.netPremium,
-    };
-  });
+  const merged = new Map<string, RmSourcePerformance>();
+  for (const source of mtd) merged.set(source.key, { key: source.key, label: source.label, type: source.type, todayPolicies: 0, todayNetPremium: 0, mtdPolicies: source.policies, mtdNetPremium: source.netPremium });
+  for (const source of today) {
+    const current = merged.get(source.key);
+    if (current) { current.todayPolicies = source.policies; current.todayNetPremium = source.netPremium; }
+    else merged.set(source.key, { key: source.key, label: source.label, type: source.type, todayPolicies: source.policies, todayNetPremium: source.netPremium, mtdPolicies: 0, mtdNetPremium: 0 });
+  }
+  return [...merged.values()].sort((a, b) => b.mtdNetPremium - a.mtdNetPremium || b.mtdPolicies - a.mtdPolicies || a.label.localeCompare(b.label));
 }
 
-function validUuid(value: string | undefined) {
-  return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-    ? value
-    : null;
-}
-
-function indiaDate(date: Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
+function validUuid(value: string | undefined) { return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value) ? value : null; }
+function indiaDate(date: Date) { return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).format(date); }
