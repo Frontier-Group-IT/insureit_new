@@ -4,7 +4,7 @@ import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState, useTransition, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, FileText, IndianRupee, Upload, X } from "lucide-react";
+import { CheckCircle2, FileText, IndianRupee, Upload } from "lucide-react";
 import { createLifeHealthCase } from "@/app/policies/life-health-policy-actions";
 import { CustomerSearchField } from "@/components/customer-search-field";
 
@@ -33,6 +33,26 @@ function sourceSnapshot(sources: LifeHealthSourceOption[]): SourceSnapshot {
   return { sourcingDate, intermediaryType, sourceId, leadSource: selected?.label ?? "", intermediaryCode: selected?.code ?? "", rmName: selected?.rmName ?? "", rmCode: selected?.rmCode ?? "" };
 }
 
+function firstValidationError(source: SourceSnapshot, form: State) {
+  const requiredFields: Array<[string, string]> = [
+    ["Policy Issuance Date", source.sourcingDate],
+    ["Intermediary Type", source.intermediaryType],
+    ["Lead Source", source.sourceId],
+    [form.customerMode === "existing" ? "Customer / Proposer" : "Client / Proposer Name", form.customerMode === "existing" ? form.customerId : form.insuredName],
+    ...(form.customerMode === "new" ? [["Client Mobile Number", form.phone] as [string, string]] : []),
+    ["Insurance Company", form.insurerId],
+    ["Product Name", form.productName],
+    ["Case / Proposal Number", form.proposalNumber],
+    ["Payment Frequency", form.paymentFrequency],
+    ["Premium Amount", form.premiumAmount],
+    ["Payment Mode", form.paymentMode],
+  ];
+  const missing = requiredFields.find(([, value]) => !String(value).trim());
+  if (missing) return `${missing[0]} is required.`;
+  if (form.customerMode === "new" && !/^\d{10}$/.test(form.phone)) return "Client Mobile Number must be 10 digits.";
+  return null;
+}
+
 export function LifeHealthPolicyForm({ policyType, insurers, customers, sources, summaryTarget, footerTarget }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<State>({ customerMode: "new", customerId: "", insuredName: "", phone: "", email: "", insurerId: "", productName: "", proposalNumber: "", ppt: "", pd: "", paymentFrequency: "", premiumAmount: "", paymentMode: "", remarks: "" });
@@ -50,6 +70,8 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, sources,
   function submit() {
     setError(null);
     const source = sourceSnapshot(sources);
+    const validationError = firstValidationError(source, form);
+    if (validationError) { setError(validationError); return; }
     const data = new FormData();
     data.set("businessLine", policyType);
     Object.entries(source).forEach(([key, value]) => data.set(key, value));
@@ -93,7 +115,7 @@ export function LifeHealthPolicyForm({ policyType, insurers, customers, sources,
 }
 
 function ErrorModal({ message, onClose }: { message: string; onClose: () => void }) {
-  return <div className="fixed inset-0 z-[1000] grid place-items-center bg-slate-950/35 p-4" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-md rounded-2xl border border-red-100 bg-white shadow-2xl"><div className="flex items-start gap-3 p-5"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-red-50 text-red-600"><AlertTriangle className="h-5 w-5" /></span><div className="min-w-0 flex-1"><h3 id="policy-error-title" className="text-[14px] font-bold text-[#17203A]">Unable to save policy</h3><p className="mt-1.5 text-[11px] leading-5 text-[#667085]">{message}</p></div><button type="button" onClick={onClose} className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[#667085] hover:bg-[#F2F4F7]" aria-label="Close error"><X className="h-4 w-4" /></button></div><div className="flex justify-end border-t border-[#EAECF0] px-5 py-3"><button type="button" onClick={onClose} className="h-9 rounded-xl bg-[#17365D] px-5 text-[10px] font-bold text-white">OK</button></div></div></div>;
+  return <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#17365D]/55 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="policy-error-title"><div className="w-full max-w-[505px] overflow-hidden rounded-[20px] bg-white shadow-2xl"><div className="flex flex-col items-center px-7 pb-7 pt-7 text-center"><span className="grid h-14 w-14 place-items-center rounded-full bg-[#FFF3E8] text-[25px] font-semibold leading-none text-[#E66A19]">!</span><h3 id="policy-error-title" className="mt-5 text-[18px] font-bold text-[#102A4C]">Check details</h3><p className="mt-3 text-[13px] leading-5 text-[#7A869A]">{message}</p></div><div className="border-t border-[#DDE4EC] p-4"><button type="button" onClick={onClose} className="h-12 w-full rounded-xl bg-[#173F6D] text-[13px] font-bold text-white transition hover:bg-[#12355E]">OK</button></div></div></div>;
 }
 
 function FollowSummary({ completion, proposal, insurer, product, customer, mobile, premium, frequency, paymentMode, documentCount }: { completion: number; proposal: string; insurer: string; product: string; customer: string; mobile: string; premium: string; frequency: string; paymentMode: string; documentCount: number }) {
