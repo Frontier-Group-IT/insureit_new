@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PersistentPolicyErrorGuard } from "./persistent-policy-error-guard";
 import { PolicyVehicleRequiredFields } from "./policy-vehicle-required-fields";
 import "./policy-summary-width.css";
 
@@ -7,6 +8,7 @@ export default function PolicyOnboardingLayout({ children }: { children: ReactNo
     <>
       {children}
       <PolicyVehicleRequiredFields />
+      <PersistentPolicyErrorGuard />
     </>
   );
 }
