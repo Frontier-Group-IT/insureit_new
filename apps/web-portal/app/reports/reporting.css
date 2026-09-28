@@ -118,6 +118,21 @@
   background: var(--report-surface-muted) !important;
 }
 
+.report-page-shell .report-export-action {
+  border-color: #0e5da5 !important;
+  border-radius: 9px !important;
+  background: #0e5da5 !important;
+  color: #fff !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+}
+
+.report-page-shell .report-export-action:hover {
+  border-color: #0b4d89 !important;
+  background: #0b4d89 !important;
+  color: #fff !important;
+}
+
 /* KPI tier 1: direct grid children using the portal-card metric pattern. */
 .report-page-shell > section.grid > article.portal-card {
   min-height: 92px;
