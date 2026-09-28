@@ -12,7 +12,7 @@ assert.match(source, /if \(filter === 'Completed'\) return externalClaim \? exte
 assert.match(source, /if \(externalCompleted \|\| claim\.claim_service_mode !== 'self_managed'\) return false;/, 'Broker-managed External Claims must not inherit Internal customer Action Required state.');
 assert.match(source, /if \(externalClaim\) return !externalCompleted && claim\.current_status !== 'Rejected';/, 'Open filtering must close a fully completed External milestone journey.');
 assert.match(source, /getVehicleBrandLogoSource\(vehicle\?\.make\)/, 'Customer claim cards must resolve the linked vehicle manufacturer logo.');
-assert.match(source, /styles\.milestoneRightValue[\s\S]*externalClaim \? externalCurrentMilestone\(claimMilestones\) : internalProjection\?\.substage/, 'External Claim cards must show their current milestone at the far right of the top row.');
+assert.match(source, /styles\.milestoneRightValue[\s\S]*externalClaim \? externalCurrentMilestone\(claimMilestones\) : internalProjection\?\.stageLabel/, 'External Claim cards must keep their current milestone at the far right while Internal Claims use their actual journey stage.');
 assert.match(source, /<Text style=\{styles\.identityLabel\}>INCIDENT<\/Text>[\s\S]*<Text style=\{styles\.identityLabel\}>CONTROL NO\.<\/Text>[\s\S]*<Text style=\{styles\.identityLabel\}>CLAIM NO\.<\/Text>/, 'Claim cards must show Incident, Control No. and Claim No. in one summary row.');
 assert.doesNotMatch(source, /styles\.vehicleMeta/, 'Claim cards must not show manufacturer/model text below the vehicle number.');
 assert.doesNotMatch(source, /name="chevron-right"/, 'Claim cards must not show the old far-right chevron.');
