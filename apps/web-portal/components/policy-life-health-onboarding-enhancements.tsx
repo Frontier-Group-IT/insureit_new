@@ -20,15 +20,31 @@ function syncRmEmployeeId(sources: OnboardingSource[]) {
   if (!container || !rmMeta) return;
 
   const existing = container.querySelector<HTMLElement>("[data-rm-employee-id]");
-  if (policyType !== "Life" && policyType !== "Health") { existing?.remove(); return; }
+  if (policyType !== "Life" && policyType !== "Health") {
+    existing?.remove();
+    rmMeta.style.removeProperty("display");
+    return;
+  }
 
   const rmCode = sources.find((source) => source.value === leadSelect.value)?.rmCode?.trim() ?? "";
-  if (!rmCode) { existing?.remove(); return; }
+  if (!rmCode) {
+    existing?.remove();
+    rmMeta.style.removeProperty("display");
+    return;
+  }
 
-  if (existing) { existing.textContent = `ID · ${rmCode}`; return; }
+  // Keep the employee ID immediately to the right of the RM metadata.
+  rmMeta.style.display = "inline-flex";
+  rmMeta.style.verticalAlign = "middle";
+
+  if (existing) {
+    existing.textContent = `ID · ${rmCode}`;
+    return;
+  }
+
   const id = document.createElement("span");
   id.dataset.rmEmployeeId = "true";
-  id.className = "ml-2 mt-1.5 inline-flex min-h-[18px] items-center text-[10px] font-semibold text-[#244C73]";
+  id.className = "ml-3 mt-1.5 inline-flex min-h-[18px] items-center align-middle text-[10px] font-semibold text-[#244C73]";
   id.textContent = `ID · ${rmCode}`;
   rmMeta.insertAdjacentElement("afterend", id);
 }
