@@ -62,9 +62,9 @@ function ensureLifeHealthMount(policyType: "Life" | "Health"): LifeHealthMount |
   const layout = document.createElement("div");
   layout.dataset.lifeHealthLayout = "true";
   layout.className = "grid gap-4 xl:grid-cols-[minmax(0,1fr)_336px]";
-  const left = document.createElement("div"); left.className = "space-y-4";
+  const left = document.createElement("div"); left.className = "space-y-3";
   const formTarget = document.createElement("div"); formTarget.dataset.lifeHealthPortal = "true";
-  const summaryTarget = document.createElement("div"); summaryTarget.dataset.lifeHealthSummary = "true"; summaryTarget.className = "self-start xl:sticky xl:top-[150px]";
+  const summaryTarget = document.createElement("div"); summaryTarget.dataset.lifeHealthSummary = "true"; summaryTarget.className = "self-start";
   source.dataset.lifeHealthSource = "true";
   parent.insertBefore(layout, source);
   left.appendChild(source); left.appendChild(formTarget); layout.appendChild(left); layout.appendChild(summaryTarget);
