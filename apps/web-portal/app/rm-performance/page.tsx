@@ -86,10 +86,10 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, hea
           <InlineMetric label="Life" value={life} />
           <InlineMetric label="Health" value={health} />
         </div>
-        <div className="space-y-2 border-l border-[#DDE5EF] pl-4">
-          <BusinessMetric label="Proj. Pay-in" value={payin} />
-          <BusinessMetric label="Proj. Payout" value={payout} />
-          <BusinessMetric label="Retention" value={retention} />
+        <div className="space-y-1.5 border-l border-[#DDE5EF] pl-4">
+          <InlineMetric label="Proj. Pay-in" value={payin} />
+          <InlineMetric label="Proj. Payout" value={payout} />
+          <InlineMetric label="Retention" value={retention} />
           <p className="pt-0.5 text-[8px] font-semibold text-[#7B8798]">* Pay-in is less TDS</p>
         </div>
       </div>
@@ -98,7 +98,6 @@ function PerformancePanel({ eyebrow, title, policies, motor, nonMotor, life, hea
 }
 
 function InlineMetric({ label, value }: { label: string; value: number }) { return <div className="flex min-w-0 items-center justify-between gap-2"><span className="font-medium text-[#667386]">{label}</span><span className="truncate font-black text-[#34445B]">{money(value)}</span></div>; }
-function BusinessMetric({ label, value }: { label: string; value: number }) { return <div className="min-w-0"><p className="font-medium text-[#667386]">{label}</p><p className="truncate font-black text-[#34445B]">{money(value)}</p></div>; }
 
 function MtdContextPanel({ rows }: { rows: Awaited<ReturnType<typeof loadRmPerformance>>["ytdTrend"] }) {
   const latest = rows.at(-1); const previous = rows.at(-2); const movement = latest && previous && previous.net_premium > 0 ? ((latest.net_premium - previous.net_premium) / previous.net_premium) * 100 : null;
