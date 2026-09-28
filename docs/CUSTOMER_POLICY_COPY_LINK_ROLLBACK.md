@@ -1,0 +1,1 @@
+Rollback: drop trigger `trg_link_customer_policy_copy_to_external_policy` on `public.customer_documents`, then drop function `public.link_customer_policy_copy_to_external_policy()`. The reported record's explicit foreign-key repair should remain intact.

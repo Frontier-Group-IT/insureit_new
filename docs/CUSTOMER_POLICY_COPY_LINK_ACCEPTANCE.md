@@ -1,0 +1,1 @@
+Acceptance: future Customer App policy-copy inserts that omit `external_policy_id` are linked only when the database can identify exactly one recent same-customer/same-user Customer App external policy; otherwise no guess is made. Existing explicit links are never overwritten.
