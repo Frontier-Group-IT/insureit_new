@@ -5,8 +5,13 @@ import { createPortal } from "react-dom";
 
 type CapturedError = { title: string; message: string };
 
+const FALLBACK_ATTRIBUTE = "data-persistent-policy-error-fallback";
+
 function isPolicyErrorDialog(element: Element): element is HTMLElement {
   if (!(element instanceof HTMLElement)) return false;
+  // Never treat the guard's own fallback as a source dialog. Doing so causes
+  // the MutationObserver to alternately clear and recreate the fallback.
+  if (element.hasAttribute(FALLBACK_ATTRIBUTE)) return false;
   const role = element.getAttribute("role");
   if (role !== "dialog" && role !== "alertdialog") return false;
   const text = element.textContent ?? "";
@@ -69,7 +74,7 @@ export function PersistentPolicyErrorGuard() {
   if (!fallback || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[11000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="persistent-policy-error-title">
+    <div data-persistent-policy-error-fallback className="fixed inset-0 z-[11000] grid min-h-[100dvh] w-screen place-items-center bg-[#071D49]/60 p-4 backdrop-blur-[2px]" role="alertdialog" aria-modal="true" aria-labelledby="persistent-policy-error-title">
       <div className="w-full max-w-[420px] overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_24px_70px_rgba(7,29,73,.38)]">
         <div className="px-6 pb-5 pt-6 text-center">
           <div className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-[#FFF3E8] text-[19px] font-bold text-[#D45B16] ring-6 ring-[#FFF8F2]">!</div>
