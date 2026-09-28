@@ -430,12 +430,6 @@ export default function AddVehicleScreen() {
 
         <FormSection title="Vehicle ownership" icon="truck-outline" tone="vehicle">
           <RcLookupField value={vehicleNo} state={rcLookupState} valid={rcReady} fetched={rcLookupState === 'success' && lastFetchedRc === normalizedRc} onChangeText={changeVehicleNo} onFetch={() => void fetchRcDetails()} />
-          {rcLookupMessage && rcLookupState !== 'error' ? (
-            <View style={[styles.rcStatus, rcLookupState === 'success' ? styles.rcStatusSuccess : styles.rcStatusInfo]}>
-              {rcLookupState === 'loading' ? <ActivityIndicator size="small" color="#0A43A3" /> : <MaterialCommunityIcons name={rcLookupState === 'success' ? 'check-circle-outline' : 'information-outline'} size={17} color={rcLookupState === 'success' ? '#12805C' : '#0A43A3'} />}
-              <Text style={styles.rcStatusText}>{rcLookupMessage}</Text>
-            </View>
-          ) : null}
           <PremiumDateField label="Registration date" value={registrationDate} onPress={() => setDateTarget({ label: 'Registration date', value: registrationDate, onChange: setRegistrationDate })} />
           <MakeDropdown required manufacturers={manufacturers} selectedMake={make} query={makeQuery} open={makeOpen} onToggle={() => setMakeOpen((value) => !value)} onQueryChange={setMakeQuery} onSelect={(value) => { setMake(value); setMakeQuery(''); setMakeOpen(false); }} />
           <View style={styles.twoColumnRow}>
@@ -570,7 +564,7 @@ function FuelDropdown({ value, onSelect }: { value: string; onSelect: (value: st
 
 function SearchInsurer({ query, selectedInsurer, companies, open, onToggle, onChange, onSelect, locked = false }: { query: string; selectedInsurer: InsuranceCompany | null; companies: InsuranceCompany[]; open: boolean; onToggle: () => void; onChange: (value: string) => void; onSelect: (company: InsuranceCompany) => void; locked?: boolean }) {
   if (locked) {
-    return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell, styles.fetchedInsurerThreeRowShell]}><View style={styles.fetchedInsurerRows}><Text style={styles.fetchedInsurerText}>••••••••••••••••••••••••••••</Text><Text style={styles.fetchedInsurerText}>••••••••••••••••••••••••</Text><Text style={styles.fetchedInsurerText}>••••••••••••••••••••</Text></View></View></View>;
+    return <View style={styles.field}><Text style={styles.fieldLabel}>Insurer</Text><View style={[styles.inputShell, styles.fetchedInsurerShell]}><Text style={styles.fetchedInsurerText} numberOfLines={1}>••••••••••••••••••••••••••••</Text></View></View>;
   }
   return (
     <AnchoredSearchSelect
@@ -835,7 +829,7 @@ const styles = StyleSheet.create({
   policyHintText: { flex: 1, color: '#607089', fontSize: 10.3, lineHeight: 14, fontWeight: '700' },
   fetchedLockedField: { opacity: 1 },
   fetchedInsurerShell: { backgroundColor: '#F7FAFD', borderColor: '#D7E0EA', paddingHorizontal: 12 },
-  fetchedInsurerText: { color: '#C7D0DC', fontSize: 12.6, fontWeight: '600', letterSpacing: 0.35, lineHeight: 14 },
+  fetchedInsurerText: { flex: 1, color: '#C7D0DC', fontSize: 12.6, fontWeight: '600', letterSpacing: 0.35, lineHeight: 14 },
   fetchedInsurerThreeRowShell: { minHeight: 64, paddingVertical: 8, alignItems: 'flex-start' },
   fetchedInsurerRows: { flex: 1, justifyContent: 'center', gap: 2 },
   lockedCodeField: { backgroundColor: '#EEF2F6', opacity: 0.72 },
