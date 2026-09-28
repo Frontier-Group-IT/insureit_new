@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { createSupabaseAdminClient } from "@/lib/supabase-admin";
 
-export type SelectOption = { value: string; label: string };
+export type SelectOption = { value: string; label: string; segment?: "general" | "life" | "health" };
 export type SalesManagerOption = SelectOption;
 export type ImportSalesManagerOption = { id: string; fullName: string; employeeCode: string | null };
 export type PospMispAssociateOption = {
@@ -34,14 +34,18 @@ export const getActiveInsuranceCompanyOptions = unstable_cache(
     const admin = createSupabaseAdminClient();
     const { data, error } = await admin
       .from("insurance_companies")
-      .select("id,name")
+      .select("id,name,segment")
       .eq("is_active", true)
       .order("name", { ascending: true })
-      .returns<Array<{ id: string; name: string }>>();
+      .returns<Array<{ id: string; name: string; segment: "general" | "life" | "health" | null }>>();
     if (error) throw error;
-    return (data ?? []).map((insurer) => ({ value: insurer.id, label: insurer.name }));
+    return (data ?? []).map((insurer) => ({
+      value: insurer.id,
+      label: insurer.name,
+      segment: insurer.segment === "general" || insurer.segment === "life" || insurer.segment === "health" ? insurer.segment : undefined,
+    }));
   },
-  ["reference-active-insurance-company-options"],
+  ["reference-active-insurance-company-options-v2-segment"],
   { revalidate: 300, tags: ["reference:insurance-companies"] },
 );
 
